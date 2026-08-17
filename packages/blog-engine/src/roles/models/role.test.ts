@@ -94,7 +94,7 @@ describe("Role custom-role creation", () => {
 	});
 
 	test("creating a role with an unknown permission key is rejected", async () => {
-		expect(
+		await expect(
 			Role.create(db, {
 				name: "bogus",
 				label: "Bogus",
@@ -105,9 +105,9 @@ describe("Role custom-role creation", () => {
 	});
 
 	test("creating a role whose name collides with a built-in is rejected", async () => {
-		expect(Role.create(db, { name: "admin", label: "Impostor", permissions: [] })).rejects.toThrow(
-			/already exists/,
-		);
+		await expect(
+			Role.create(db, { name: "admin", label: "Impostor", permissions: [] }),
+		).rejects.toThrow(/already exists/);
 	});
 });
 
@@ -154,7 +154,7 @@ describe("Role built-in protection", () => {
 	});
 
 	test("deleting a built-in role is rejected; a custom role can be deleted", async () => {
-		expect(Role.destroy(db, "role_admin")).rejects.toThrow(/Built-in/);
+		await expect(Role.destroy(db, "role_admin")).rejects.toThrow(/Built-in/);
 
 		let role = await Role.create(db, { name: "temp", label: "Temp", permissions: [] });
 		await Role.destroy(db, role.id);

@@ -44,7 +44,7 @@ describe("Subject", () => {
 			});
 
 			// Should throw on duplicate email
-			expect(
+			await expect(
 				Subject.register(db, {
 					email: "test@example.com",
 					username: "user2",
@@ -150,14 +150,14 @@ describe("Subject", () => {
 
 		test("rejects a duplicate id", async () => {
 			await Subject.import(db, { id: "dup-id", email: "a@example.com", username: "a" });
-			expect(
+			await expect(
 				Subject.import(db, { id: "dup-id", email: "b@example.com", username: "b" }),
 			).rejects.toBeInstanceOf(Subject.ConflictError);
 		});
 
 		test("rejects a duplicate email", async () => {
 			await Subject.import(db, { id: "id-1", email: "same@example.com", username: "a" });
-			expect(
+			await expect(
 				Subject.import(db, { id: "id-2", email: "same@example.com", username: "b" }),
 			).rejects.toBeInstanceOf(Subject.ConflictError);
 		});

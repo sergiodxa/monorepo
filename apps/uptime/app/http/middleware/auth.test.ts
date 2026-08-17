@@ -165,7 +165,7 @@ describe("auth middleware session helpers", () => {
 	});
 
 	test("throws a clear error when the session middleware has not run", async () => {
-		expect(
+		await expect(
 			run([
 				asyncContext(),
 				() => {

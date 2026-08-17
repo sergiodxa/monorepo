@@ -120,7 +120,7 @@ describe("AuthorizationCode", () => {
 		});
 
 		test("throws AlreadyConsumedError for non-existent code", async () => {
-			expect(AuthorizationCode.consume(db, "non-existent-code")).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, "non-existent-code")).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
 		});
@@ -141,7 +141,7 @@ describe("AuthorizationCode", () => {
 			await AuthorizationCode.consume(db, code);
 
 			// Second consume should throw AlreadyConsumedError
-			expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
 		});
@@ -164,7 +164,7 @@ describe("AuthorizationCode", () => {
 				code,
 			]);
 
-			expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.ExpiredCodeError,
 			);
 		});
@@ -188,12 +188,12 @@ describe("AuthorizationCode", () => {
 			]);
 
 			// First consume throws ExpiredCodeError but deletes the code
-			expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.ExpiredCodeError,
 			);
 
 			// Second consume throws AlreadyConsumedError because code was deleted
-			expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
 		});
@@ -231,10 +231,10 @@ describe("AuthorizationCode", () => {
 			expect(deletedCount).toBe(2);
 
 			// Verify codes are deleted
-			expect(AuthorizationCode.consume(db, code1)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, code1)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
-			expect(AuthorizationCode.consume(db, code2)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, code2)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
 		});
@@ -290,7 +290,7 @@ describe("AuthorizationCode", () => {
 			expect(deletedCount).toBe(1);
 
 			// Expired code should be gone
-			expect(AuthorizationCode.consume(db, expiredCode)).rejects.toThrow(
+			await expect(AuthorizationCode.consume(db, expiredCode)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
 

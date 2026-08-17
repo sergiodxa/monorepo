@@ -153,7 +153,7 @@ describe(AccessToken.name, () => {
 			let differentRawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 			let differentKeyPair = [await JWK.importKeyPair(differentRawKeyPair)];
 
-			expect(JWT.verify(signedToken, differentKeyPair)).rejects.toThrow();
+			await expect(JWT.verify(signedToken, differentKeyPair)).rejects.toThrow();
 		});
 
 		test("throws for expired token", async () => {
@@ -171,7 +171,7 @@ describe(AccessToken.name, () => {
 
 			let signedToken = await expiredToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
-			expect(JWT.verify(signedToken, testKeyPair)).rejects.toThrow();
+			await expect(JWT.verify(signedToken, testKeyPair)).rejects.toThrow();
 		});
 
 		test("throws for token not yet valid (nbf in future)", async () => {
@@ -188,15 +188,15 @@ describe(AccessToken.name, () => {
 
 			let signedToken = await futureToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
-			expect(JWT.verify(signedToken, testKeyPair)).rejects.toThrow();
+			await expect(JWT.verify(signedToken, testKeyPair)).rejects.toThrow();
 		});
 
 		test("throws for malformed JWT string", async () => {
-			expect(JWT.verify("not.a.valid.jwt", testKeyPair)).rejects.toThrow();
+			await expect(JWT.verify("not.a.valid.jwt", testKeyPair)).rejects.toThrow();
 		});
 
 		test("throws for completely invalid token", async () => {
-			expect(JWT.verify("invalid-token", testKeyPair)).rejects.toThrow();
+			await expect(JWT.verify("invalid-token", testKeyPair)).rejects.toThrow();
 		});
 	});
 

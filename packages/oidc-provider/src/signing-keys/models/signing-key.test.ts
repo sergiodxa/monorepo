@@ -171,10 +171,10 @@ describe("SigningKey algorithm handling", () => {
 	test("reports a row naming an algorithm it cannot import", async () => {
 		let id = await store("HS256", JWK.Algorithm.ES256);
 
-		expect(SigningKey.getCurrent(db)).rejects.toThrow(
+		await expect(SigningKey.getCurrent(db)).rejects.toThrow(
 			`Signing key ${id} names an unsupported algorithm: HS256`,
 		);
-		expect(SigningKey.getAll(db)).rejects.toThrow(
+		await expect(SigningKey.getAll(db)).rejects.toThrow(
 			SigningKey.UnsupportedAlgorithmError as unknown as ErrorConstructor,
 		);
 	});

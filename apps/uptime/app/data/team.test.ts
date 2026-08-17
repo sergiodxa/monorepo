@@ -464,7 +464,7 @@ describe("Team.joinByDomain", () => {
 	test("throws when the email has no usable hostname", async () => {
 		let { db } = createTestDatabase();
 		let joiner = buildIdToken({ email: "" });
-		expect(Team.joinByDomain(db, joiner)).rejects.toThrow("Invalid email format");
+		await expect(Team.joinByDomain(db, joiner)).rejects.toThrow("Invalid email format");
 	});
 });
 
@@ -594,7 +594,7 @@ describe("Team.setRole", () => {
 		let { db } = createTestDatabase();
 		let team = await Team.createTeam(db, buildIdToken());
 
-		expect(Team.setRole(db, team.id, crypto.randomUUID(), "admin")).rejects.toThrow(
+		await expect(Team.setRole(db, team.id, crypto.randomUUID(), "admin")).rejects.toThrow(
 			/No membership/,
 		);
 	});

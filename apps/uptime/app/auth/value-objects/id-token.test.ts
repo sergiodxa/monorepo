@@ -71,7 +71,7 @@ describe("IdToken", () => {
 		let keyPair = await generateSigningKey();
 		let token = await signToken({ sub: "user-1", aud: "someone-else", iss: ISSUER }, keyPair);
 
-		expect(verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID)).rejects.toThrow();
+		await expect(verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID)).rejects.toThrow();
 	});
 
 	test("rejects a token whose issuer doesn't match auth.sergiodxa.com", async () => {
@@ -81,7 +81,7 @@ describe("IdToken", () => {
 			keyPair,
 		);
 
-		expect(verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID)).rejects.toThrow();
+		await expect(verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID)).rejects.toThrow();
 	});
 
 	test("rejects a token signed with a key that doesn't match the verification key", async () => {
@@ -89,7 +89,7 @@ describe("IdToken", () => {
 		let unrelatedKeyPair = await generateSigningKey();
 		let token = await signToken({ sub: "user-1", aud: CLIENT_ID, iss: ISSUER }, signingKeyPair);
 
-		expect(
+		await expect(
 			verifyIdToken(token, await publishedKeys(unrelatedKeyPair), CLIENT_ID),
 		).rejects.toThrow();
 	});

@@ -180,7 +180,7 @@ describe("recordAdhocPing billing", () => {
 		expect(() => record()).not.toThrow();
 		expect(pingResults.dataPoints).toHaveLength(1);
 
-		expect(Promise.all(deferred.splice(0))).rejects.toThrow("polar unavailable");
+		await expect(Promise.all(deferred.splice(0))).rejects.toThrow("polar unavailable");
 	});
 
 	test("doesn't throw when the ingest is refused", async () => {
@@ -189,7 +189,7 @@ describe("recordAdhocPing billing", () => {
 		expect(() => record()).not.toThrow();
 
 		// Best-effort by design: a refused event is logged and dropped, never retried.
-		expect(Promise.all(deferred.splice(0))).resolves.toBeDefined();
+		await expect(Promise.all(deferred.splice(0))).resolves.toBeDefined();
 		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 });

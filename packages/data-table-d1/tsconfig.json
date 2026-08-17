@@ -1,7 +1,13 @@
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*"],
+	"include": [
+		"src/**/*",
+		"../../types/bun-test.d.ts"
+	],
 	"compilerOptions": {
-		"types": ["@cloudflare/workers-types", "bun"]
+		"types": [
+			"@cloudflare/workers-types",
+			"bun"
+		]
 	}
 }

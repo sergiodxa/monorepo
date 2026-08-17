@@ -168,7 +168,7 @@ describe("trackCost", () => {
 		let boom = new Error("job failed");
 		let ledger = new CostLedger({ handler: "queue" });
 
-		expect(
+		await expect(
 			trackCost(ledger, async () => {
 				apportionCostByTeam(["team-1"]);
 				throw boom;
@@ -314,7 +314,7 @@ describe("CostLedger self-accounting", () => {
 		// all a single-team flush makes, so the binding is itself again afterwards.
 		spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
 
-		expect(
+		await expect(
 			trackCost(new CostLedger({ handler: "fetch" }), async () => {
 				apportionCostByTeam(["team-1"]);
 				return "done";

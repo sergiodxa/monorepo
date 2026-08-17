@@ -272,7 +272,7 @@ describe("CheckHttpJob input", () => {
 	test("throws Job.NonRetriableError on invalid input", async () => {
 		let job = new CheckHttpJob({ logger: new BatchedLogger("test") }, { monitorId: "monitor-1" });
 
-		expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
+		await expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
 		expect(doFetchMock).not.toHaveBeenCalled();
 	});
 });
@@ -580,7 +580,7 @@ describe("CheckHttpJob error handling", () => {
 		);
 
 		// Resolving rather than rejecting is what makes `Job.run` ack the message.
-		expect(runJob(db, monitor.id)).resolves.toBeDefined();
+		await expect(runJob(db, monitor.id)).resolves.toBeDefined();
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 
@@ -598,7 +598,7 @@ describe("CheckHttpJob error handling", () => {
 			{ id: `${monitor.id}:1`, monitorId: monitor.id, scheduledAt: 1 },
 		);
 
-		expect(makeContainer(db).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
+		await expect(makeContainer(db).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).toBeNull();
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
@@ -618,7 +618,7 @@ describe("CheckHttpJob error handling", () => {
 			{ id: `${monitor.id}:1`, monitorId: monitor.id, scheduledAt: 1 },
 		);
 
-		expect(makeContainer(broken).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
+		await expect(makeContainer(broken).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
 		expect(
 			logger.events.find((entry) => entry.event === "job.check_http.infrastructure_error"),
 		).toBeDefined();
@@ -1001,7 +1001,7 @@ describe("CheckHttpJob cached status", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
 
 		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
 		expect(updated?.last_status).toBeNull();
@@ -1105,7 +1105,7 @@ describe("CheckHttpJob metering", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
 
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});

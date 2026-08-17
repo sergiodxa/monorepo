@@ -308,7 +308,7 @@ describe("NotifyJob", () => {
 	test("never retries a message whose shape is invalid", async () => {
 		let { db } = createTestDatabase();
 
-		expect(
+		await expect(
 			runJob(db, { type: "notify", monitorType: "carrier-pigeon", monitorId: "monitor-1" }),
 		).rejects.toBeInstanceOf(Job.NonRetriableError);
 	});
@@ -323,7 +323,7 @@ describe("NotifyJob", () => {
 			is_enabled: true,
 		});
 
-		expect(
+		await expect(
 			runJob(db, {
 				type: "notify",
 				monitorType: "tcp",
@@ -348,7 +348,7 @@ describe("NotifyJob", () => {
 			throw new Error("D1 unavailable");
 		});
 
-		expect(
+		await expect(
 			runJob(db, {
 				type: "notify",
 				monitorType: "tcp",

@@ -219,7 +219,7 @@ describe("Passkey", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent passkey", async () => {
-			expect(Passkey.updateCounter(db, "non-existent", 5)).rejects.toThrow("record");
+			await expect(Passkey.updateCounter(db, "non-existent", 5)).rejects.toThrow("record");
 		});
 	});
 
@@ -244,7 +244,7 @@ describe("Passkey", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent passkey", async () => {
-			expect(Passkey.rename(db, "non-existent", "Name")).rejects.toThrow("record");
+			await expect(Passkey.rename(db, "non-existent", "Name")).rejects.toThrow("record");
 		});
 	});
 
@@ -268,7 +268,7 @@ describe("Passkey", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent passkey", async () => {
-			expect(Passkey.destroy(db, "non-existent")).rejects.toThrow("record");
+			await expect(Passkey.destroy(db, "non-existent")).rejects.toThrow("record");
 		});
 	});
 });

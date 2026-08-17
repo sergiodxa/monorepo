@@ -196,7 +196,7 @@ describe("Customer.portal", () => {
 	test("throws when the owner has no Polar customer", async () => {
 		let polar = fakePolar({ getExternalCustomer: async () => null });
 
-		expect(Customer.portal(polar, "owner-1")).rejects.toThrow(
+		await expect(Customer.portal(polar, "owner-1")).rejects.toThrow(
 			"No Polar customer found for owner owner-1",
 		);
 	});
@@ -206,7 +206,7 @@ describe("Customer.cancelSubscriptions", () => {
 	test("does nothing when the owner has no active monitoring subscription", async () => {
 		let polar = fakePolar({ listActiveSubscriptions: async () => [] });
 
-		expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
+		await expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
 	});
 
 	test("revokes every active subscription to the monitoring product", async () => {
@@ -245,6 +245,6 @@ describe("Customer.cancelSubscriptions", () => {
 			},
 		});
 
-		expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
+		await expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
 	});
 });

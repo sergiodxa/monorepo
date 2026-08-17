@@ -9,7 +9,8 @@
 		"resources/**/*",
 		"routes/**/*",
 		"vite.config.ts",
-		"worker-configuration.d.ts"
+		"worker-configuration.d.ts",
+		"../../types/bun-test.d.ts"
 	],
 	"compilerOptions": {
 		"noEmit": true,

@@ -87,6 +87,8 @@ describe("GET /app", () => {
 	test("throws when a signed-in viewer has no team membership at all", async () => {
 		let { db } = createTestDatabase();
 
-		expect(getAppIndex(db, VIEWER)).rejects.toThrow(`Viewer ${VIEWER.id} has no team membership`);
+		await expect(getAppIndex(db, VIEWER)).rejects.toThrow(
+			`Viewer ${VIEWER.id} has no team membership`,
+		);
 	});
 });

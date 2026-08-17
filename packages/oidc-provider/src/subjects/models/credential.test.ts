@@ -117,7 +117,7 @@ describe("Credential", () => {
 		});
 
 		test("throws InvalidCredentialError for non-existent credential", async () => {
-			expect(Credential.verify(db, "non-existent-id", "anyPassword")).rejects.toThrow(
+			await expect(Credential.verify(db, "non-existent-id", "anyPassword")).rejects.toThrow(
 				Credential.InvalidCredentialError,
 			);
 		});
@@ -186,7 +186,7 @@ describe("Credential", () => {
 		});
 
 		test("throws InvalidCredentialError for non-existent credential", async () => {
-			expect(Credential.updatePassword(db, "non-existent-id", "newPassword")).rejects.toThrow(
+			await expect(Credential.updatePassword(db, "non-existent-id", "newPassword")).rejects.toThrow(
 				Credential.InvalidCredentialError,
 			);
 		});

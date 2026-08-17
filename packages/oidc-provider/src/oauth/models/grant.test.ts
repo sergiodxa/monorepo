@@ -139,7 +139,7 @@ describe("Grant", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent grant", async () => {
-			expect(Grant.destroy(db, "non-existent")).rejects.toThrow("record");
+			await expect(Grant.destroy(db, "non-existent")).rejects.toThrow("record");
 		});
 	});
 });

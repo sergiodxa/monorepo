@@ -316,7 +316,7 @@ describe("ReportCostsJob", () => {
 			http.post(ANALYTICS_URL, () => HttpResponse.text("upstream error", { status: 500 })),
 		);
 
-		expect(run()).rejects.toThrow(Job.RetryError);
+		await expect(run()).rejects.toThrow(Job.RetryError);
 	});
 
 	test("asks the queue to redeliver when Polar rejects the batch", async () => {
@@ -324,7 +324,7 @@ describe("ReportCostsJob", () => {
 		serve([costRow(team.id)], { ingestStatus: 500 });
 
 		// Safe to redeliver precisely because `externalId` deduplicates.
-		expect(run()).rejects.toThrow(Job.RetryError);
+		await expect(run()).rejects.toThrow(Job.RetryError);
 	});
 
 	test("sends nothing and completes when the day recorded no cost", async () => {

@@ -389,7 +389,7 @@ describe("HttpCheck probe failures", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		expect(new HttpCheck(options()).probe()).rejects.toThrow(
+		await expect(new HttpCheck(options()).probe()).rejects.toThrow(
 			"Durable Object reset because its code was updated",
 		);
 	});

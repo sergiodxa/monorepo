@@ -1,6 +1,6 @@
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "../../types/bun-test.d.ts"],
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
