@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import type { DurationInput } from "@pkg/duration";
 
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
 import * as s from "remix/data-schema";
+import { describe, expect, test } from "vitest";
 
 import type { ReplayStore } from "./replay-store";
 import type { SignedDelivery } from "./sign";

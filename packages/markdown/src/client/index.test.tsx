@@ -1,7 +1,6 @@
-import { describe, expect, test } from "vitest";
-
 import Markdoc from "@markdoc/markdoc";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { MarkdownView } from "./index";
 

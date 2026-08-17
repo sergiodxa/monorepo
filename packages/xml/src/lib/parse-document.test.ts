@@ -1,6 +1,5 @@
-import { describe, expect, test } from "vitest";
-
 import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { parseDocument } from "./parse-document";
 

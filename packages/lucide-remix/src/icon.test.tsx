@@ -5,9 +5,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { Icon } from "./icon.js";
 

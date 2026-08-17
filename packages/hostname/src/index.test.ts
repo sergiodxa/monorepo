@@ -1,3 +1,7 @@
+import type { HttpResponseResolver } from "msw";
+
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 /**
  * Covers the unified Cloudflare for SaaS custom-hostname client: request/response
  * schema validation and error mapping to {@link HostnameApiError}, the configurable
@@ -9,11 +13,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
-
-import type { HttpResponseResolver } from "msw";
-
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 
 import type { HostnameResult } from "./index";
 

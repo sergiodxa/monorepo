@@ -1,6 +1,5 @@
-import { describe, expect, test } from "vitest";
-
 import Prism from "prismjs";
+import { describe, expect, test } from "vitest";
 
 import { normalizeLanguage } from "./fence";
 

@@ -1,7 +1,6 @@
-import { describe, expect, test } from "vitest";
-
 import { isFailure, isSuccess } from "@pkg/result";
 import * as s from "remix/data-schema";
+import { describe, expect, test } from "vitest";
 
 import { Markdown, MarkdownParseError } from "./index";
 

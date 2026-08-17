@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { DurationString } from "./types";
 

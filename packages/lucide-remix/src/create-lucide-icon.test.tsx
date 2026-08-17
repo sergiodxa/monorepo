@@ -6,9 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { createLucideIcon } from "./create-lucide-icon.js";
 

@@ -1,3 +1,9 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
+import { isFailure, isSuccess } from "@pkg/result";
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
+import * as f from "remix/data-schema/form-data";
 /**
  * Covers `validate()` across every input shape it accepts — `FormData`,
  * `URLSearchParams`, `Request` (JSON, urlencoded and multipart bodies) and plain
@@ -10,13 +16,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
-
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-
-import { isFailure, isSuccess } from "@pkg/result";
-import * as s from "remix/data-schema";
-import { email, minLength } from "remix/data-schema/checks";
-import * as f from "remix/data-schema/form-data";
 
 import { validate, ValidationError } from "./index";
 

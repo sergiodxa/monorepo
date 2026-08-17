@@ -1,8 +1,7 @@
-import { describe, expect, test } from "vitest";
-
 import type { RemixElement, RemixNode, VirtualRoot, VirtualRootOptions } from "remix/ui";
 
 import { route } from "remix/routes";
+import { describe, expect, test } from "vitest";
 
 import {
 	createAction,

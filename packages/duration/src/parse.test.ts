@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { InvalidDurationError } from "./invalid-duration-error";
 import { parse } from "./parse";

@@ -1,3 +1,5 @@
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 /**
  * Unit tests for the OIDC relying-party helpers. Focus is on the security-critical
  * claim validation in {@link verifyIdToken}, the S256 PKCE derivation, and the
@@ -8,9 +10,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
-
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 
 import {
 	buildAuthorizationUrl,

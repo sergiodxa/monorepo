@@ -1,6 +1,5 @@
-import { describe, expect, test } from "vitest";
-
 import { generateUUID } from "@pkg/uuid";
+import { describe, expect, test } from "vitest";
 
 import { encode } from "./lib/base32";
 import {

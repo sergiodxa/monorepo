@@ -1,6 +1,5 @@
-import { describe, expect, test } from "vitest";
-
 import { Location } from "@pkg/location";
+import { describe, expect, test } from "vitest";
 
 import {
 	accepted,

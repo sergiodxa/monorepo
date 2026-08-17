@@ -1,6 +1,5 @@
-import { describe, expect, test } from "vitest";
-
 import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { XML, XMLParseError, XMLStringifyError } from "./index";
 
