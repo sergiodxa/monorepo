@@ -6,10 +6,10 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",
-		"cf:deploy": "wrangler deploy",
-		"cf:typegen": "wrangler types",
-		"db:local:migrate": "wrangler d1 migrations apply blog-saas-platform --local",
-		"db:remote:migrate": "wrangler d1 migrations apply blog-saas-platform --remote",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"db:local:migrate": "bunx wrangler d1 migrations apply blog-saas-platform --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply blog-saas-platform --remote",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

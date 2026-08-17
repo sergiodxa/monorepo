@@ -7,11 +7,11 @@
 		"build": "vite build --config vite.config.browser.ts && vite build --config vite.config.client.ts && vite build",
 		"build:client": "vite build --config vite.config.browser.ts && vite build --config vite.config.client.ts",
 		"start": "vite preview",
-		"cf:deploy": "wrangler deploy",
-		"cf:typegen": "wrangler types",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
 		"db:local:drop": "rm -rf ./.wrangler",
-		"db:local:migrate": "wrangler d1 migrations apply auth-saas-platform --local",
-		"db:remote:migrate": "wrangler d1 migrations apply auth-saas-platform --remote",
+		"db:local:migrate": "bunx wrangler d1 migrations apply auth-saas-platform --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply auth-saas-platform --remote",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
