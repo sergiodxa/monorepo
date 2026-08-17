@@ -22,7 +22,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n as I18n } from "i18next";
+import type { TFunction } from "@pkg/i18n";
 import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
@@ -77,7 +77,7 @@ type RunFlowButtonProps = {
  * the monitor rather than a failure of the thing it watches, and its detail is the only place that
  * says which.
  */
-export function runToast(t: I18n["t"], name: string, run: RunResponse): AppToast {
+export function runToast(t: TFunction, name: string, run: RunResponse): AppToast {
 	if (run.status === null) {
 		return {
 			title: t("page.flowMonitors.run.toast.refused", { name }),

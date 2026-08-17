@@ -24,7 +24,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n as I18n } from "i18next";
+import type { TFunction } from "@pkg/i18n";
 import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
@@ -137,7 +137,7 @@ async function waitForCheck(
  * it was — an unchanged run is not news, and must stay silent.
  */
 export function transitionToast(
-	t: I18n["t"],
+	t: TFunction,
 	name: string,
 	previous: string | null,
 	current: "up" | "down" | "degraded" | null,
