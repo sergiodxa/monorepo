@@ -1,15 +1,12 @@
 /**
- * Under `bun test`, `import.meta.env` is Bun's live alias for `process.env` —
- * `import.meta.env.DEV` is not derived from `NODE_ENV` the way a Vite-style
- * bundler would derive it, it is simply `process.env.DEV`. That means both of
- * `debug()`'s branches are directly reachable in a plain `bun:test` file by
- * setting or deleting `process.env.DEV` around each assertion, with no need
- * for module mocking.
+ * `import.meta.env.DEV` reads through to `process.env.DEV` at call time, so both
+ * of `debug()`'s branches are reachable by setting or deleting `process.env.DEV`
+ * around each assertion, with no module mocking.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { declarations, serialize } from "../internal/serialize";
 
