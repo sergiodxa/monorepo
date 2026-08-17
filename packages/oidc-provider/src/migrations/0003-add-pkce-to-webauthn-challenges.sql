@@ -1,4 +1,13 @@
--- Add PKCE columns to webauthn_challenges table for OAuth 2.1 compliance
--- This ensures PKCE protection is maintained through the WebAuthn flow
-ALTER TABLE webauthn_challenges ADD COLUMN pkce_challenge TEXT;
-ALTER TABLE webauthn_challenges ADD COLUMN pkce_method TEXT CHECK(pkce_method IN ('S256', 'plain'));
+-- Superseded by 0001-init.sql, which now creates webauthn_challenges with pkce_challenge
+-- and pkce_method already on it. This file kept the OAuth 2.1 PKCE columns flowing to
+-- databases created before that table definition was amended.
+--
+-- Its body is deliberately empty rather than deleted. SQLite has no
+-- `ADD COLUMN IF NOT EXISTS`, so re-running the ALTERs against a database that got the
+-- columns from 0001 fails with `duplicate column name`, which aborts the whole chain and
+-- makes a fresh database impossible to provision. Every database that ever needed these
+-- ALTERs has already journaled this id and will skip it; a database that has not journaled
+-- it is necessarily new enough to have the columns from 0001.
+--
+-- The id stays in the chain so the journal reads the same on old and new databases.
+SELECT 1;
