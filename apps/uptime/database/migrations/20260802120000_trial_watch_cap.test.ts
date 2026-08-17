@@ -17,7 +17,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 

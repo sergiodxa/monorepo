@@ -14,8 +14,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type { Result } from "@pkg/result";
@@ -25,6 +23,7 @@ import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { failure, success } from "@pkg/result";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
 
@@ -63,7 +62,7 @@ interface PingQueueMessage {
  */
 let queue: QueueMock<PingQueueMessage> = createQueue<PingQueueMessage>({ name: "uptime" });
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 /**
  * `Monitor.getStats*` now reads its p99 from Analytics Engine (see the method's
@@ -71,10 +70,10 @@ await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: qu
  * round trip, and so the scope each entry point passes is observable; the SQL text itself
  * is covered in `app/services/analytics.test.ts`.
  */
-let p99Query = mock(async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> =>
+let p99Query = vi.fn(async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> =>
 	success(null),
 );
-await mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
+vi.doMock("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
 let { default: Monitor } = await import("~/app/data/monitor");
 
