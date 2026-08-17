@@ -7,10 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { SentinelRow } from "./sentinel-row";
 

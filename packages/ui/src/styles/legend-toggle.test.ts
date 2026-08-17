@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers `legendToggle()` as pure `css()` output: the exact rule block a
  * chart root composes to hide a categorical slot once its paired legend's
@@ -6,9 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { CHART_COLOR_SLOT_COUNT } from "./chart-palette";
 import { legendToggle } from "./legend-toggle";

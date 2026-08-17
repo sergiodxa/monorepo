@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers {@link rtlAwareGradientDirection} as pure `css()` output: the exact
  * property set and values every rangeable gradient track composes into its
@@ -6,9 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { rtlAwareGradientDirection } from "./rtl-aware-gradient-direction";
 

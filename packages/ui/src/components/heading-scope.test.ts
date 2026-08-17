@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-
 import type { Handle } from "remix/ui";
+
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HeadingLevel } from "./heading-scope";
 
@@ -70,11 +70,11 @@ describe(resolveHeadingLevel.name, () => {
 
 	describe("dev-only warning", () => {
 		let originalDev: string | undefined;
-		let warnSpy: ReturnType<typeof spyOn>;
+		let warnSpy: ReturnType<typeof vi.spyOn>;
 
 		beforeEach(() => {
 			originalDev = process.env.DEV;
-			warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+			warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 		});
 
 		afterEach(() => {

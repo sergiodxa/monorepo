@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * These factories were rewritten to compose `@pkg/u/animation`'s
  * `keyframes()`/`animationHost()` instead of one hand-written style object.
@@ -11,9 +13,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { pulse, shimmer, spin, textShimmer } from "./keyframes";
 

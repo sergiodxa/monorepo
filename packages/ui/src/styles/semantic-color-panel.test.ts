@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers {@link semanticColorPanel} as pure `css()` output: the exact
  * `&[data-color="..."]` branch set a tinted panel's host composes into its
@@ -6,9 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { semanticColorPanel } from "./semantic-color-panel";
 

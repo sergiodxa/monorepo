@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { CSSMixinDescriptor } from "remix/ui";
+
+import { describe, expect, test } from "vitest";
 
 import { durations, easings } from "../animations/tokens";
 

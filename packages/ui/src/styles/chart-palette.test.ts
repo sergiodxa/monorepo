@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers {@link chartPalette} as pure `css()` output: the exact rule block
  * painting one property from whichever categorical slot an element's own
@@ -7,9 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { CHART_COLOR_SLOT_COUNT, chartPalette } from "./chart-palette";
 

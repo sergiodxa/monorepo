@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers `graphicHostStyle()` as pure `css()` output: the exact property set
  * and values a leading graphic slot mixes into its own host element.
@@ -5,9 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { graphicHostStyle } from "./graphic-host";
 

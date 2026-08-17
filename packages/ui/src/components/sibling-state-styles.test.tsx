@@ -9,9 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { ColorSwatchPicker } from "./color-swatch-picker";
 import { RadioGroup } from "./radio-group";

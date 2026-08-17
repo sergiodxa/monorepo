@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
 import { focusItem, isPrintableKey, labelFor, queryItems, setRovingTabindex } from "./keyboard-nav";
 
@@ -28,7 +28,7 @@ function createItem(
 
 	return {
 		tabIndex: -1,
-		focus: overrides.focus ?? mock(() => {}),
+		focus: overrides.focus ?? vi.fn(() => {}),
 		matches: (selector: string) => disabled && selector === ':disabled, [aria-disabled="true"]',
 		getAttribute: (name: string) =>
 			name === "data-search-value" ? (overrides.searchValue ?? null) : null,
@@ -59,14 +59,14 @@ describe(queryItems.name, () => {
 		let first = createItem();
 		let second = createItem();
 		let root = {
-			querySelectorAll: mock(() => [first, second]),
+			querySelectorAll: vi.fn(() => [first, second]),
 		} as unknown as HTMLElement;
 
 		expect(queryItems(root, '[role^="menuitem"]')).toEqual([first, second]);
 	});
 
 	test("passes the selector straight through to querySelectorAll", () => {
-		let querySelectorAll = mock(() => []);
+		let querySelectorAll = vi.fn(() => []);
 		let root = { querySelectorAll } as unknown as HTMLElement;
 
 		queryItems(root, '[role="menuitem"]');
@@ -78,14 +78,14 @@ describe(queryItems.name, () => {
 		let enabled = createItem({ disabled: false });
 		let disabled = createItem({ disabled: true });
 		let root = {
-			querySelectorAll: mock(() => [enabled, disabled]),
+			querySelectorAll: vi.fn(() => [enabled, disabled]),
 		} as unknown as HTMLElement;
 
 		expect(queryItems(root, "*")).toEqual([enabled]);
 	});
 
 	test("returns an empty array when nothing matches", () => {
-		let root = { querySelectorAll: mock(() => []) } as unknown as HTMLElement;
+		let root = { querySelectorAll: vi.fn(() => []) } as unknown as HTMLElement;
 
 		expect(queryItems(root, "*")).toEqual([]);
 	});
@@ -135,8 +135,8 @@ describe(setRovingTabindex.name, () => {
 
 describe(focusItem.name, () => {
 	test("assigns roving tabindex and moves real focus to item", () => {
-		let focusFirst = mock(() => {});
-		let focusSecond = mock(() => {});
+		let focusFirst = vi.fn(() => {});
+		let focusSecond = vi.fn(() => {});
 		let first = createItem({ focus: focusFirst });
 		let second = createItem({ focus: focusSecond });
 		let items = [first, second];

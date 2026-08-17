@@ -17,11 +17,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { globSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { Glob } from "bun";
+import { describe, expect, test } from "vitest";
+
+/** Absolute path to `src/components/`, the directory the purity rule covers. */
+const COMPONENTS_DIR = dirname(fileURLToPath(import.meta.url));
 
 /** Bindings from `remix/ui` that carry behavior and may never appear in a component module. */
 const BANNED_BINDINGS = ["on", "ref", "createMixin"];
@@ -142,10 +145,9 @@ describe("findPurityViolations (scanner self-check)", () => {
 
 /** Component modules covered by the purity rule: every `.ts`/`.tsx` file under `src/components/` except the barrel and test files. */
 function listComponentModules(): string[] {
-	let glob = new Glob("**/*.{ts,tsx}");
 	let files: string[] = [];
 
-	for (let relative of glob.scanSync({ cwd: import.meta.dir })) {
+	for (let relative of globSync("**/*.{ts,tsx}", { cwd: COMPONENTS_DIR })) {
 		if (/^index\.tsx?$/.test(relative)) continue;
 		if (relative.endsWith(".test.ts") || relative.endsWith(".test.tsx")) continue;
 		files.push(relative);
@@ -167,7 +169,7 @@ describe("component purity (src/components/**)", () => {
 
 	for (let relative of modules) {
 		test(`${relative} imports only css/attrs/types from remix/ui`, () => {
-			let source = readFileSync(join(import.meta.dir, relative), "utf8");
+			let source = readFileSync(join(COMPONENTS_DIR, relative), "utf8");
 
 			expect(findPurityViolations(source)).toEqual([]);
 		});

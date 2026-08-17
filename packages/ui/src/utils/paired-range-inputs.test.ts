@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
 import { findPairedRangeInputs } from "./paired-range-inputs";
 
@@ -23,7 +23,7 @@ function createInput(): HTMLInputElement {
 function createHost(results: (HTMLInputElement | null)[]): HTMLElement {
 	let calls = 0;
 	return {
-		querySelector: mock(() => results[calls++] ?? null),
+		querySelector: vi.fn(() => results[calls++] ?? null),
 	} as unknown as HTMLElement;
 }
 
@@ -60,7 +60,7 @@ describe(findPairedRangeInputs.name, () => {
 	test("queries with a selector combining the attribute and each value", () => {
 		let selectors: string[] = [];
 		let host = {
-			querySelector: mock((selector: string) => {
+			querySelector: vi.fn((selector: string) => {
 				selectors.push(selector);
 				return createInput();
 			}),

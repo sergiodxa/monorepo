@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { AccessibleNameProps } from "./warn-if-no-accessible-name";
 
@@ -18,11 +18,11 @@ import { warnIfNoAccessibleLabel, warnIfNoAccessibleName } from "./warn-if-no-ac
 const MESSAGE = "Example: needs an accessible name.";
 
 let originalDev: string | undefined;
-let warnSpy: ReturnType<typeof spyOn>;
+let warnSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
 	originalDev = process.env.DEV;
-	warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+	warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {

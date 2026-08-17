@@ -31,12 +31,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { globSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { Glob } from "bun";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import type { AriaViolation } from "../../../../test/aria-tokens";
 
@@ -62,10 +62,10 @@ function markup(html: string): string {
 
 describe("ARIA token attributes", () => {
 	test("no module hands a boolean to a token-valued ARIA attribute", () => {
-		let root = join(import.meta.dir, "..");
+		let root = join(dirname(fileURLToPath(import.meta.url)), "..");
 		let violations: AriaViolation[] = [];
 
-		for (let file of new Glob("**/*.{ts,tsx}").scanSync(root)) {
+		for (let file of globSync("**/*.{ts,tsx}", { cwd: root })) {
 			if (file.includes(".test.")) continue;
 			violations.push(...findAriaViolations(file, readFileSync(join(root, file), "utf8")));
 		}

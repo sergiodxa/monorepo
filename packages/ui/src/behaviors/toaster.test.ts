@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Toaster } from "./toaster";
 
@@ -24,18 +24,18 @@ describe(Toaster.name, () => {
 	let now: number;
 	let timers: FakeTimer[];
 	let nextTimerId: number;
-	let dateNowSpy: ReturnType<typeof spyOn>;
-	let setTimeoutSpy: ReturnType<typeof spyOn>;
-	let clearTimeoutSpy: ReturnType<typeof spyOn>;
+	let dateNowSpy: ReturnType<typeof vi.spyOn>;
+	let setTimeoutSpy: ReturnType<typeof vi.spyOn>;
+	let clearTimeoutSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
 		now = 0;
 		timers = [];
 		nextTimerId = 0;
 
-		dateNowSpy = spyOn(Date, "now").mockImplementation(() => now);
+		dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
 
-		setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+		setTimeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((
 			callback: () => void,
 			delay?: number,
 		) => {
@@ -44,7 +44,7 @@ describe(Toaster.name, () => {
 			return id as unknown as ReturnType<typeof setTimeout>;
 		}) as typeof setTimeout);
 
-		clearTimeoutSpy = spyOn(globalThis, "clearTimeout").mockImplementation(((id: number) => {
+		clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout").mockImplementation(((id: number) => {
 			timers = timers.filter((timer) => timer.id !== id);
 		}) as typeof clearTimeout);
 	});

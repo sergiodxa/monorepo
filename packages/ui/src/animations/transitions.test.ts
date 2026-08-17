@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers the enter/exit animation factories as pure `css()` output: the
  * `enterExit()` composer's selector defaults, `@starting-style`/reduced-motion
@@ -7,9 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { durations, easings } from "./tokens";
 import { enterExit, fade, slide, zoom } from "./transitions";

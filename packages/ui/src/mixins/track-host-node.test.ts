@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { MixinHandle } from "remix/ui";
+
+import { describe, expect, test } from "vitest";
 
 import { trackHostNode } from "./track-host-node";
 

@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor } from "remix/ui";
+
 /**
  * Covers {@link fieldStackLayout} as pure `css()` output: the single-column
  * layout and its `0.25rem` gap, with no DOM and no rendering involved.
@@ -5,9 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { CSSMixinDescriptor } from "remix/ui";
+import { describe, expect, test } from "vitest";
 
 import { fieldStackLayout } from "./field-stack-layout";
 
