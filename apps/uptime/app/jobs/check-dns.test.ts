@@ -28,8 +28,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
@@ -40,6 +38,7 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DnsRecordImport } from "~/app/data/dns-monitor-record";
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
@@ -96,7 +95,7 @@ function sweepOf(name: string, outcomes: DnsQueryOutcome[]): DnsNameSweep {
  * Resolves nothing and fails nothing, which is the neutral sweep: no answers means no diff,
  * so a test that doesn't care about records gets `ok` and zeroed counters.
  */
-let sweepDnsNameMock = mock(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
+let sweepDnsNameMock = vi.fn(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
 
 /**
  * The queue the sweep notifies through and the dataset it reports checks to. Both live at
@@ -107,9 +106,9 @@ let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
-let sendBatch = spyOn(queue, "sendBatch");
+let sendBatch = vi.spyOn(queue, "sendBatch");
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
@@ -119,11 +118,11 @@ await mock.module("cloudflare:workers", () => ({
  * below are the ones the sweep actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
-await mock.module("~/app/services/dns-check", () => ({
+vi.doMock("~/app/services/dns-check", () => ({
 	...realDnsCheckModule,
 	sweepDnsName: sweepDnsNameMock,
 }));
@@ -352,12 +351,12 @@ describe("CheckDnsJob", () => {
 		let failing = await seedMonitor(db, { domain: "fails.example.com" });
 		let healthy = await seedMonitor(db, { domain: "ok.example.com", last_status: "error" });
 
-		let listNames = spyOn(DnsMonitorRecord, "listNames").mockImplementation(
-			async (_db: Database, monitorId: string) => {
+		let listNames = vi
+			.spyOn(DnsMonitorRecord, "listNames")
+			.mockImplementation(async (_db: Database, monitorId: string) => {
 				if (monitorId === failing.id) throw new Error("D1 read failed");
 				return [];
-			},
-		);
+			});
 
 		try {
 			let job = await runJob(db);
@@ -712,12 +711,12 @@ describe("CheckDnsJob ping reporting", () => {
 		let failing = await seedMonitor(db, { domain: "fails.example.com" });
 		let healthy = await seedMonitor(db, { domain: "ok.example.com" });
 
-		let listNames = spyOn(DnsMonitorRecord, "listNames").mockImplementation(
-			async (_db: Database, monitorId: string) => {
+		let listNames = vi
+			.spyOn(DnsMonitorRecord, "listNames")
+			.mockImplementation(async (_db: Database, monitorId: string) => {
 				if (monitorId === failing.id) throw new Error("D1 read failed");
 				return [];
-			},
-		);
+			});
 
 		try {
 			await runJob(db);

@@ -13,14 +13,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -57,10 +56,10 @@ function recordCall(helper: NotifyCall["helper"]) {
 	};
 }
 
-let notifyTcpResultMock = mock(recordCall("tcp"));
-let notifyDnsResultMock = mock(recordCall("dns"));
-let notifyCronJobResultMock = mock(recordCall("cron"));
-let notifySslResultMock = mock(recordCall("ssl"));
+let notifyTcpResultMock = vi.fn(recordCall("tcp"));
+let notifyDnsResultMock = vi.fn(recordCall("dns"));
+let notifyCronJobResultMock = vi.fn(recordCall("cron"));
+let notifySslResultMock = vi.fn(recordCall("ssl"));
 
 /**
  * `~/app/data/monitor` imports `env` from `cloudflare:workers` at module load, and the
@@ -68,11 +67,11 @@ let notifySslResultMock = mock(recordCall("ssl"));
  * for runs from this package's own directory too. Nothing on the routing path this file
  * covers reaches a binding, so none is supplied and one that got read would fail by name.
  */
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let realAlertsModule = await import("~/app/services/alerts");
 
-await mock.module("~/app/services/alerts", () => ({
+vi.doMock("~/app/services/alerts", () => ({
 	...realAlertsModule,
 	notifyTcpResult: notifyTcpResultMock,
 	notifyDnsResult: notifyDnsResultMock,

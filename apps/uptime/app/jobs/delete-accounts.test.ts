@@ -18,8 +18,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { NormalizedMessage, Transport } from "@pkg/mail";
 import type { PolarClient } from "@pkg/polar";
 import type { Database } from "remix/data-table";
@@ -32,6 +30,7 @@ import { PolarClient as PolarClientClass } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database as DatabaseClass } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
 
@@ -117,18 +116,18 @@ function notifiedAddresses(messages: readonly NormalizedMessage[]) {
 /** A Polar client that reports one active subscription and accepts its revocation. */
 function createFakePolar() {
 	return {
-		listActiveSubscriptions: mock(async () => [polarSubscription()]),
-		revokeSubscription: mock(async () => polarSubscription({ status: "revoked" })),
+		listActiveSubscriptions: vi.fn(async () => [polarSubscription()]),
+		revokeSubscription: vi.fn(async () => polarSubscription({ status: "revoked" })),
 	};
 }
 
 /** A Polar client that is unreachable, which must abort an erasure with nothing deleted. */
 function createFailingPolar() {
 	return {
-		listActiveSubscriptions: mock(async () => {
+		listActiveSubscriptions: vi.fn(async () => {
 			throw new Error("Polar unavailable");
 		}),
-		revokeSubscription: mock(async () => polarSubscription()),
+		revokeSubscription: vi.fn(async () => polarSubscription()),
 	};
 }
 
@@ -292,7 +291,7 @@ describe("DeleteAccountsJob", () => {
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
 
 		let polar = createFakePolar();
-		polar.listActiveSubscriptions = mock(async () => []);
+		polar.listActiveSubscriptions = vi.fn(async () => []);
 		await runJob(db, polar);
 
 		expect(polar.revokeSubscription).not.toHaveBeenCalled();
@@ -435,11 +434,11 @@ describe("DeleteAccountsJob", () => {
 
 		// Fails for the first subject only, so the run has to carry on to the second.
 		let polar = {
-			listActiveSubscriptions: mock(async (externalCustomerId: string) => {
+			listActiveSubscriptions: vi.fn(async (externalCustomerId: string) => {
 				if (externalCustomerId === "subject-1") throw new Error("Polar unavailable");
 				return [];
 			}),
-			revokeSubscription: mock(async () => polarSubscription()),
+			revokeSubscription: vi.fn(async () => polarSubscription()),
 		};
 
 		await runJob(db, polar);

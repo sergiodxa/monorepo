@@ -34,18 +34,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
-
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type { IngestEvent } from "@pkg/polar";
@@ -66,6 +54,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 
@@ -86,7 +75,7 @@ import {
 } from "~/database/schema";
 
 /** The `GeoFetchDO` stub the job calls through `env.GEO_FETCH.get(id).fetch(...)`. */
-let doFetchMock = mock(
+let doFetchMock = vi.fn(
 	async (_url?: string, _init?: { method?: string }) =>
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
@@ -118,12 +107,12 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
  * asserted below is the one `ingestPings` actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 /** The queue the check's own path never sends to, kept so a stray send would be recorded. */
 let queue: QueueMock = createQueue();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		QUEUE: queue,

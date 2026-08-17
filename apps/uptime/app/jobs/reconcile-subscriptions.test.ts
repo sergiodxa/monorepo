@@ -12,14 +12,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, spyOn, test } from "bun:test";
-
 import type { Subscription as PolarSubscription } from "@pkg/polar";
 
 import { BatchedLogger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
@@ -29,7 +28,7 @@ import { monitors, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
-spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
 
 let db: Db;
 

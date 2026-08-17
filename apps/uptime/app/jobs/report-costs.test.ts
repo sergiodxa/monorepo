@@ -17,18 +17,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
@@ -38,6 +26,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
 import { RATE_CARD_VERSION } from "~/app/lib/cost-rates";
@@ -56,7 +45,7 @@ const INGEST_URL = "https://api.polar.sh/v1/events/ingest";
  */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "test-account",
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
@@ -87,8 +76,8 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-spyOn(console, "info").mockImplementation(() => {});
-spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

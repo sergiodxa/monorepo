@@ -15,8 +15,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
@@ -25,6 +23,7 @@ import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { InsertCronJobMonitor } from "~/database/schema";
@@ -40,9 +39,9 @@ import { createTestDatabase } from "~/app/lib/test/db";
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
-let sendBatch = spyOn(queue, "sendBatch");
+let sendBatch = vi.spyOn(queue, "sendBatch");
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { CheckCronJobsJob } = await import("./check-cron-jobs");
 

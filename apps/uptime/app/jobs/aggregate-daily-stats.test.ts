@@ -14,14 +14,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { Result } from "@pkg/result";
 
 import { BatchedLogger } from "@pkg/logger";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DailyStatsInput } from "~/app/data/monitor-daily-stats";
 import type { HttpDailyAggregate } from "~/app/services/analytics";
@@ -29,11 +28,11 @@ import type { HttpDailyAggregate } from "~/app/services/analytics";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { monitorDailyStats } from "~/database/schema";
 
-let getHttpDailyAggregateMock = mock(async (): Promise<Result<HttpDailyAggregate[], Error>> =>
+let getHttpDailyAggregateMock = vi.fn(async (): Promise<Result<HttpDailyAggregate[], Error>> =>
 	success([]),
 );
 
-await mock.module("~/app/services/analytics", () => ({
+vi.doMock("~/app/services/analytics", () => ({
 	getHttpDailyAggregate: getHttpDailyAggregateMock,
 }));
 
@@ -57,7 +56,7 @@ class FakeMonitorDailyStats extends realDailyStatsModule.default {
 	}
 }
 
-await mock.module("~/app/data/monitor-daily-stats", () => ({
+vi.doMock("~/app/data/monitor-daily-stats", () => ({
 	...realDailyStatsModule,
 	default: FakeMonitorDailyStats,
 }));
@@ -90,7 +89,7 @@ function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[
 	 * real implementation, or `MonitorDailyStats.upsertDay`'s own reads/writes would break.
 	 */
 	let original = (db.exec as (...args: unknown[]) => Promise<unknown>).bind(db);
-	(db as unknown as { exec: unknown }).exec = mock(
+	(db as unknown as { exec: unknown }).exec = vi.fn(
 		async (statement: unknown, values?: unknown[]) => {
 			if (typeof statement !== "string") return original(statement, values);
 			let table = /from\s+(\w+)/i.exec(statement)?.[1];

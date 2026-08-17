@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DeadLetterJob } from "~/app/jobs/dead-letter";
 
-let ack = mock();
-let retry = mock();
-let consoleError = spyOn(console, "error").mockImplementation(() => {});
+let ack = vi.fn();
+let retry = vi.fn();
+let consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
 beforeEach(() => {
 	ack.mockReset();

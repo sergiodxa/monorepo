@@ -25,8 +25,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
@@ -37,6 +35,7 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { TcpCheckResult } from "~/app/services/tcp-check";
@@ -47,7 +46,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { tcpMonitors, teams } from "~/database/schema";
 
-let checkTcpConnectionMock = mock(
+let checkTcpConnectionMock = vi.fn(
 	async (_host: string, _port: number, _timeoutMs: number): Promise<TcpCheckResult> => ({
 		status: "up",
 		responseTimeMs: 10,
@@ -63,12 +62,12 @@ let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
-let sendBatch = spyOn(queue, "sendBatch");
+let sendBatch = vi.spyOn(queue, "sendBatch");
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
-await mock.module("~/app/services/tcp-check", () => ({
+vi.doMock("~/app/services/tcp-check", () => ({
 	checkTcpConnection: checkTcpConnectionMock,
 }));
 
@@ -78,7 +77,7 @@ await mock.module("~/app/services/tcp-check", () => ({
  * below are the ones the sweep actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 let { CheckTcpJob } = await import("./check-tcp");
 

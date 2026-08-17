@@ -14,8 +14,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
@@ -24,6 +22,7 @@ import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { SslStatus } from "~/app/services/ssl-info";
@@ -38,7 +37,7 @@ interface CalculateCall {
 }
 
 let calculateCalls: CalculateCall[] = [];
-let calculateSslStatusMock = mock(
+let calculateSslStatusMock = vi.fn(
 	(
 		expiresAt: number | null,
 		warningDays: number,
@@ -60,13 +59,13 @@ let calculateSslStatusMock = mock(
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
-let sendBatch = spyOn(queue, "sendBatch");
+let sendBatch = vi.spyOn(queue, "sendBatch");
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let realSslInfoModule = await import("~/app/services/ssl-info");
 
-await mock.module("~/app/services/ssl-info", () => ({
+vi.doMock("~/app/services/ssl-info", () => ({
 	...realSslInfoModule,
 	calculateSslStatus: calculateSslStatusMock,
 }));

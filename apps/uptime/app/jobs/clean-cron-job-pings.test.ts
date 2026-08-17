@@ -8,11 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";

@@ -17,8 +17,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Transport } from "@pkg/mail";
 
 import { AuthSDK, SubjectNotFoundError } from "@pkg/auth-sdk";
@@ -28,6 +26,7 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { DigestPeriod } from "~/app/data/team-digest";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
