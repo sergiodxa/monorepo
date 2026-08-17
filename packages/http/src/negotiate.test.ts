@@ -38,7 +38,7 @@ describe(accepts, () => {
 });
 
 describe(AcceptList, () => {
-	describe(AcceptList.prototype.includes, () => {
+	describe(AcceptList.prototype.includes.name, () => {
 		test("matches exact MIME type", () => {
 			let list = new AcceptList("application/json");
 			expect(list.includes("application/json")).toBe(true);
@@ -81,7 +81,7 @@ describe(AcceptList, () => {
 		});
 	});
 
-	describe(AcceptList.prototype.all, () => {
+	describe(AcceptList.prototype.all.name, () => {
 		test("returns types in preference order", () => {
 			let list = new AcceptList("text/html, application/json;q=0.9");
 			let types = list.all();
@@ -105,7 +105,7 @@ describe(AcceptList, () => {
 		});
 	});
 
-	describe(AcceptList.prototype.preferred, () => {
+	describe(AcceptList.prototype.preferred.name, () => {
 		test("returns first matching type", () => {
 			let list = new AcceptList("text/html, application/json");
 			let preferred = list.preferred("application/json", "text/html");
@@ -125,7 +125,7 @@ describe(AcceptList, () => {
 		});
 	});
 
-	describe(AcceptList.prototype.toShortType, () => {
+	describe(AcceptList.prototype.toShortType.name, () => {
 		test("converts application/json to json", () => {
 			let list = new AcceptList("*/*");
 			expect(list.toShortType("application/json")).toBe("json");

@@ -14,13 +14,13 @@ import { describe, expect, test } from "bun:test";
 import { Policies } from "./policies";
 
 describe(Policies, () => {
-	describe(Policies.noStore, () => {
+	describe(Policies.noStore.name, () => {
 		test("keeps the response out of every cache", () => {
 			expect(Policies.noStore().toString()).toBe("no-store");
 		});
 	});
 
-	describe(Policies.private, () => {
+	describe(Policies.private.name, () => {
 		test("stores only in the client's own cache, for the given age", () => {
 			expect(Policies.private({ maxAge: "5 minutes" }).toString()).toBe("private, max-age=300");
 		});
@@ -30,13 +30,13 @@ describe(Policies, () => {
 		});
 	});
 
-	describe(Policies.immutable, () => {
+	describe(Policies.immutable.name, () => {
 		test("is public for a year and skips revalidation", () => {
 			expect(Policies.immutable().toString()).toBe("public, max-age=31536000, immutable");
 		});
 	});
 
-	describe(Policies.revalidate, () => {
+	describe(Policies.revalidate.name, () => {
 		test("revalidates every reuse and stays out of shared caches", () => {
 			expect(Policies.revalidate().toString()).toBe("private, no-cache");
 		});

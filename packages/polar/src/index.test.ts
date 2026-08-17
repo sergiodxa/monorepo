@@ -34,7 +34,7 @@ let validateEventImpl: (
 	secret: string,
 ) => unknown = () => ({ type: "checkout.updated" });
 
-mock.module("@polar-sh/sdk/webhooks.js", () => ({
+void mock.module("@polar-sh/sdk/webhooks.js", () => ({
 	WebhookVerificationError: SDKWebhookVerificationError,
 	validateEvent: (body: string, headers: Record<string, string>, secret: string) => {
 		validateEventCalls.push({ body, headers, secret });
@@ -42,7 +42,7 @@ mock.module("@polar-sh/sdk/webhooks.js", () => ({
 	},
 }));
 
-mock.module("@polar-sh/sdk/models/errors/polarerror.js", () => ({
+void mock.module("@polar-sh/sdk/models/errors/polarerror.js", () => ({
 	PolarError: class PolarError extends Error {},
 }));
 
@@ -62,7 +62,7 @@ let subscriptionsListImpl: () => unknown[][] = () => [[{ id: "sub_1" }], [{ id: 
 let discountsListImpl: () => unknown[][] = () => [[{ id: "disc_1" }], [{ id: "disc_2" }]];
 let ordersListImpl: () => unknown[][] = () => [[{ id: "ord_1" }], [{ id: "ord_2" }]];
 
-mock.module("@polar-sh/sdk", () => ({
+void mock.module("@polar-sh/sdk", () => ({
 	Polar: class Polar {
 		accessToken: string;
 		constructor(opts: { accessToken: string }) {
@@ -324,7 +324,7 @@ describe("PolarClient", () => {
 			},
 		});
 
-		await expect(polar.getCustomer("cus_1")).rejects.toThrow("Secret not found");
+		expect(polar.getCustomer("cus_1")).rejects.toThrow("Secret not found");
 
 		await polar.getCustomer("cus_1");
 		expect(attempts).toBe(2);
@@ -473,9 +473,7 @@ describe("PolarClient", () => {
 				throw new Error("network error");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			await expect(polar.listActiveSubscriptions("ext_1", "prod_1")).rejects.toThrow(
-				"network error",
-			);
+			expect(polar.listActiveSubscriptions("ext_1", "prod_1")).rejects.toThrow("network error");
 		});
 	});
 
@@ -517,7 +515,7 @@ describe("PolarClient", () => {
 				throw new Error("network error");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			await expect(polar.listDiscounts()).rejects.toThrow("network error");
+			expect(polar.listDiscounts()).rejects.toThrow("network error");
 		});
 	});
 
@@ -723,7 +721,7 @@ describe("PolarClient", () => {
 
 	test("ingestEvents throws when an event identifies no customer", async () => {
 		let polar = new PolarClient({ accessToken: "t" });
-		await expect(polar.ingestEvents([{ name: "infra.cost.daily" }])).rejects.toThrow(
+		expect(polar.ingestEvents([{ name: "infra.cost.daily" }])).rejects.toThrow(
 			/names neither a customerId nor an externalCustomerId/,
 		);
 	});

@@ -42,7 +42,7 @@ function createHandler() {
 		get calls() {
 			return calls;
 		},
-		async next() {
+		next: async () => {
 			calls += 1;
 			return new Response("handler body");
 		},

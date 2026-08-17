@@ -81,7 +81,7 @@ describe("validate", () => {
 			if (isFailure(result)) {
 				expect(result.error).toBeInstanceOf(ValidationError);
 				expect(result.error.issues.length).toBeGreaterThan(0);
-				expect(result.error.issues[0].message).toBe("Invalid email format");
+				expect(result.error.issues[0]?.message).toBe("Invalid email format");
 			}
 		});
 
@@ -184,7 +184,7 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toBe("Invalid JSON in request body");
+				expect(result.error.issues[0]?.message).toBe("Invalid JSON in request body");
 			}
 		});
 
@@ -217,7 +217,7 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toBe("Invalid email format");
+				expect(result.error.issues[0]?.message).toBe("Invalid email format");
 			}
 		});
 	});
@@ -248,7 +248,7 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toBe("Invalid email format");
+				expect(result.error.issues[0]?.message).toBe("Invalid email format");
 			}
 		});
 
@@ -286,7 +286,7 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toBe("Invalid email format");
+				expect(result.error.issues[0]?.message).toBe("Invalid email format");
 			}
 		});
 
@@ -355,8 +355,8 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toContain("Unsupported content-type");
-				expect(result.error.issues[0].message).toContain("text/plain");
+				expect(result.error.issues[0]?.message).toContain("Unsupported content-type");
+				expect(result.error.issues[0]?.message).toContain("text/plain");
 			}
 		});
 
@@ -370,7 +370,7 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toContain("Unsupported content-type");
+				expect(result.error.issues[0]?.message).toContain("Unsupported content-type");
 			}
 		});
 	});
@@ -396,7 +396,7 @@ describe("validate", () => {
 
 			expect(isFailure(result)).toBe(true);
 			if (isFailure(result)) {
-				expect(result.error.issues[0].message).toBe("Value must not be empty");
+				expect(result.error.issues[0]?.message).toBe("Value must not be empty");
 			}
 		});
 	});

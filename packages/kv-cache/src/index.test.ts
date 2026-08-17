@@ -158,7 +158,7 @@ function createFakeKV() {
 		namespace,
 		puts,
 		/** Collects a deferred write so the test can await it. */
-		waitUntil(promise: Promise<unknown>) {
+		waitUntil: (promise: Promise<unknown>) => {
 			pending.push(promise);
 		},
 		/** Awaits every deferred write recorded so far. */

@@ -34,7 +34,7 @@ describe("createRecordingCache", () => {
 	test("records the call before failing, so a failure is still observable", async () => {
 		let cache = createRecordingCache({ failWith: new Error("edge unavailable") });
 
-		await expect(cache.purge({ tags: ["posts"] })).rejects.toThrow("edge unavailable");
+		expect(cache.purge({ tags: ["posts"] })).rejects.toThrow("edge unavailable");
 		expect(cache.purges).toEqual([{ tags: ["posts"] }]);
 	});
 
@@ -44,13 +44,13 @@ describe("createRecordingCache", () => {
 		await cache.purge({ tags: ["posts"] });
 		cache.failWith(new Error("edge unavailable"));
 
-		await expect(cache.purge({ tags: ["posts"] })).rejects.toThrow("edge unavailable");
+		expect(cache.purge({ tags: ["posts"] })).rejects.toThrow("edge unavailable");
 	});
 
 	test("resets recorded calls and any configured failure", async () => {
 		let cache = createRecordingCache({ failWith: new Error("edge unavailable") });
 
-		await expect(cache.purge({ everything: true })).rejects.toThrow("edge unavailable");
+		expect(cache.purge({ everything: true })).rejects.toThrow("edge unavailable");
 		cache.reset();
 
 		expect(cache.purges).toEqual([]);

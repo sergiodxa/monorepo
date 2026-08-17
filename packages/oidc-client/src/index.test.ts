@@ -221,13 +221,19 @@ describe("discover", () => {
 			authorization_endpoint: "https://a.example.com/authorize",
 			token_endpoint: "https://a.example.com/token",
 		};
-		let fetchMock = mock(async () => new Response(JSON.stringify(doc), { status: 200 }));
+		let fetchMock = mock(
+			async (_input: RequestInfo | URL, _init?: RequestInit) =>
+				new Response(JSON.stringify(doc), { status: 200 }),
+		);
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		let metadata = await discover("https://a.example.com");
 		expect(metadata.token_endpoint).toBe("https://a.example.com/token");
-		let requested = new URL((fetchMock.mock.calls[0]![0] as URL).toString());
-		expect(requested.pathname).toBe("/.well-known/openid-configuration");
+		let requested = fetchMock.mock.calls[0]?.[0];
+		expect(requested).toBeInstanceOf(URL);
+		if (requested instanceof URL) {
+			expect(requested.pathname).toBe("/.well-known/openid-configuration");
+		}
 	});
 
 	test("caches by issuer across calls", async () => {
@@ -247,7 +253,7 @@ describe("discover", () => {
 		globalThis.fetch = mock(
 			async () => new Response("nope", { status: 500 }),
 		) as unknown as typeof fetch;
-		await expect(discover("https://c.example.com")).rejects.toThrow("OIDC discovery failed: 500");
+		expect(discover("https://c.example.com")).rejects.toThrow("OIDC discovery failed: 500");
 	});
 });
 
@@ -259,7 +265,8 @@ describe("exchangeCode", () => {
 
 	test("posts with Basic auth and returns the id token", async () => {
 		let fetchMock = mock(
-			async () => new Response(JSON.stringify({ id_token: "the.id.token" }), { status: 200 }),
+			async (_input: RequestInfo | URL, _init?: RequestInit) =>
+				new Response(JSON.stringify({ id_token: "the.id.token" }), { status: 200 }),
 		);
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -272,12 +279,12 @@ describe("exchangeCode", () => {
 		});
 		expect(result.idToken).toBe("the.id.token");
 
-		let init = fetchMock.mock.calls[0]![1] as RequestInit;
-		expect(init.method).toBe("POST");
-		let headers = init.headers as Record<string, string>;
+		let [, init] = fetchMock.mock.calls[0] ?? [];
+		expect(init?.method).toBe("POST");
+		let headers = init?.headers as Record<string, string>;
 		expect(headers.authorization).toBe(`Basic ${btoa("client-123:secret")}`);
-		let body = (init.body as URLSearchParams).get("grant_type");
-		expect(body).toBe("authorization_code");
+		let body = init?.body as URLSearchParams;
+		expect(body.get("grant_type")).toBe("authorization_code");
 	});
 
 	test("throws with the provider error when present", async () => {
@@ -285,7 +292,7 @@ describe("exchangeCode", () => {
 			async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }),
 		) as unknown as typeof fetch;
 
-		await expect(
+		expect(
 			exchangeCode(metadata, {
 				clientId: "c",
 				clientSecret: "s",
@@ -301,7 +308,7 @@ describe("exchangeCode", () => {
 			async () => new Response(JSON.stringify({}), { status: 200 }),
 		) as unknown as typeof fetch;
 
-		await expect(
+		expect(
 			exchangeCode(metadata, {
 				clientId: "c",
 				clientSecret: "s",
