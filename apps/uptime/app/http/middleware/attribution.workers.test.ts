@@ -16,6 +16,7 @@
 import type { Middleware } from "remix/router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
+import { env } from "cloudflare:test";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { describe, expect, test } from "vitest";
@@ -113,7 +114,7 @@ describe("attribution middleware", () => {
 		let router = createRouter({
 			middleware: [
 				headRequests(),
-				createSessionMiddleware(createFakeKV(), "s3cr3t", false) as Middleware,
+				createSessionMiddleware(env.KV, "s3cr3t", false) as Middleware,
 				attribution,
 			],
 		});
@@ -151,27 +152,3 @@ describe("attribution middleware", () => {
 		expect(record).toBeUndefined();
 	});
 });
-
-/** Builds an in-memory `KVNamespace` fake, so the session round-trips without a real binding. */
-function createFakeKV(): KVNamespace {
-	let values = new Map<string, string>();
-
-	return {
-		async get(key: string) {
-			return values.get(key) ?? null;
-		},
-		async getWithMetadata(key: string) {
-			return { value: values.get(key) ?? null, metadata: null, cacheStatus: null };
-		},
-		async put(key: string, value: string | ArrayBuffer | ReadableStream | ArrayBufferView) {
-			if (typeof value !== "string") return;
-			values.set(key, value);
-		},
-		async delete(key: string) {
-			values.delete(key);
-		},
-		async list() {
-			return { keys: [], list_complete: true, cursor: "" };
-		},
-	} as unknown as KVNamespace;
-}

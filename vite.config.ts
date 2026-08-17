@@ -58,6 +58,25 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	},
 };
 
+/**
+ * The Workers-pool project for `apps/uptime`, taking its bindings from the app's own wrangler
+ * config. Only the tests that would otherwise stand in for a binding live here; the app's
+ * database-backed tests need `node:sqlite`, which workerd does not have, so they stay on the
+ * threads pool.
+ *
+ * Declared apart from the `projects` array for the same reason as {@link BLOG_WORKERS_PROJECT}.
+ */
+const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	root: "apps/uptime",
+	plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
+	resolve: { tsconfigPaths: true },
+	test: {
+		name: "uptime-workers",
+		include: ["**/*.workers.test.ts?(x)"],
+		testTimeout: 20_000,
+	},
+};
+
 const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	root: "apps/blog",
 	plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
@@ -125,6 +144,9 @@ export default defineConfig({
 				test: {
 					name: "uptime",
 					include: ["**/*.test.ts?(x)"],
+					// `*.workers.test.ts` belongs to `uptime-workers`. Vitest's defaults are spread
+					// back in because naming `exclude` replaces them.
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
 					// Not inherited from the top-level `test` block: a project ignores it, so the
 					// 5s default applies unless set here. The slowest files spend ~4s applying
@@ -154,6 +176,7 @@ export default defineConfig({
 			},
 			BLOG_WORKERS_PROJECT,
 			PACKAGES_WORKERS_PROJECT,
+			UPTIME_WORKERS_PROJECT,
 			{
 				root: "apps/r3-auth",
 				plugins: [cloudflareWorkersStub()],
