@@ -10,12 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { expect, test } from "bun:test";
+import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { isFailure, isSuccess, success } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { PermissionSet } from "./permissions";
 import type { ToolContext } from "./plugin";
@@ -36,13 +37,20 @@ import {
 import { connectStdioPlugin } from "./transport-stdio";
 
 /** Absolute path of this package, the acceptance runs' working directory. */
-const PACKAGE_DIR = resolve(import.meta.dir, "..");
+const PACKAGE_DIR = resolve(import.meta.dirname, "..");
 
 /** The reference plugin the transport tests connect to. */
-const DEMO_PLUGIN = join(import.meta.dir, "plugins", "demo.ts");
+const DEMO_PLUGIN = join(import.meta.dirname, "plugins", "demo.ts");
 
 /** How long a CLI acceptance run may take: it spawns a CLI and a plugin. */
 const CLI_TIMEOUT_MS = 60_000;
+
+/**
+ * The Bun executable, found on PATH. The CLI and the demo plugin are Bun
+ * programs, so they are spawned by name rather than through `process.execPath`,
+ * which names whichever runtime happens to be running this file.
+ */
+const BUN_EXECUTABLE = "bun";
 
 /** Make a temp directory for a config or suite fixture; caller removes it. */
 function makeTempDir(): string {
@@ -68,18 +76,20 @@ function makeContext(root: string): ToolContext {
 
 /** Run the `spec` CLI as a child and collect its output and exit code. */
 async function runCli(args: string[]): Promise<{ stdout: string; exitCode: number }> {
-	let child = Bun.spawn({
-		cmd: [process.execPath, join(PACKAGE_DIR, "src", "cli.ts"), ...args],
+	let child = spawn(BUN_EXECUTABLE, [join(PACKAGE_DIR, "src", "cli.ts"), ...args], {
 		cwd: PACKAGE_DIR,
-		stdin: "ignore",
-		stdout: "pipe",
-		stderr: "pipe",
+		stdio: ["ignore", "pipe", "pipe"],
 	});
-	let [stdout, stderr, exitCode] = await Promise.all([
-		new Response(child.stdout).text(),
-		new Response(child.stderr).text(),
-		child.exited,
-	]);
+	let stdout = "";
+	let stderr = "";
+	child.stdout?.setEncoding("utf8");
+	child.stderr?.setEncoding("utf8");
+	child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
+	child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
+	let exitCode = await new Promise<number>((settle, reject) => {
+		child.once("error", reject);
+		child.once("close", (code: number | null) => settle(code ?? 1));
+	});
 	return { stdout: `${stdout}${stderr}`, exitCode };
 }
 
@@ -248,7 +258,7 @@ test("launchDeniedError is a permission-style diagnostic naming the flag", () =>
 test(
 	"connectStdioPlugin round-trips a call and dispose kills the child",
 	async () => {
-		let connected = await connectStdioPlugin([process.execPath, DEMO_PLUGIN], "demo");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, DEMO_PLUGIN], "demo");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) throw connected.error;
 		let plugin = connected.data;
@@ -273,7 +283,7 @@ test(
 	"connectDeclaredPlugins launches a declaration and fails cleanly on a bad command",
 	async () => {
 		let ok = await connectDeclaredPlugins([
-			{ namespace: "demo", command: [process.execPath, DEMO_PLUGIN] },
+			{ namespace: "demo", command: [BUN_EXECUTABLE, DEMO_PLUGIN] },
 		]);
 		expect(isSuccess(ok)).toBe(true);
 		if (!isSuccess(ok)) throw ok.error;
@@ -291,7 +301,7 @@ test(
 		let bad = await connectDeclaredPlugins([
 			{
 				namespace: "nope",
-				command: [process.execPath, join(import.meta.dir, "no-such-plugin.ts")],
+				command: [BUN_EXECUTABLE, join(import.meta.dirname, "no-such-plugin.ts")],
 			},
 		]);
 		expect(isFailure(bad)).toBe(true);

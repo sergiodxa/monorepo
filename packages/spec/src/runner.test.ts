@@ -7,12 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { failure, isFailure, success } from "@pkg/result";
+import { afterEach, describe, expect, test } from "vitest";
 
 import type { SuiteResult } from "./diagnostics";
 import type { Grants } from "./permissions";
@@ -260,7 +262,7 @@ function createProbePlugin(): {
 			active += 1;
 			if (active > peak) peak = active;
 			let start = performance.now();
-			await Bun.sleep(ms);
+			await sleep(ms);
 			active -= 1;
 			spans.push({ start, end: performance.now() });
 			return success(null);
@@ -490,11 +492,11 @@ test "beta three fails" {
 		// `bun cli.ts` entry the gate uses) with `--concurrency=8`, and assert it
 		// still passes with zero failures. `spec` is on PATH via the repo's
 		// node_modules/.bin so the meta-tests can spawn nested `spec` children.
-		let packageDir = resolve(import.meta.dir, "..");
+		let packageDir = resolve(import.meta.dirname, "..");
 		let binDir = resolve(packageDir, "..", "..", "node_modules", ".bin");
-		let child = Bun.spawn({
-			cmd: [
-				join(binDir, "spec"),
+		let child = spawn(
+			join(binDir, "spec"),
+			[
 				"run",
 				"spec",
 				"--allow-run=spec,echo",
@@ -503,21 +505,26 @@ test "beta three fails" {
 				"--allow-env=SPEC_ENV_FIXTURE",
 				"--concurrency=8",
 			],
-			cwd: packageDir,
-			env: {
-				...process.env,
-				PATH: `${binDir}:${process.env.PATH ?? ""}`,
-				SPEC_ENV_FIXTURE: "fixture-value",
+			{
+				cwd: packageDir,
+				env: {
+					...process.env,
+					PATH: `${binDir}:${process.env.PATH ?? ""}`,
+					SPEC_ENV_FIXTURE: "fixture-value",
+				},
+				stdio: ["ignore", "pipe", "pipe"],
 			},
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
+		);
+		let stdout = "";
+		let stderr = "";
+		child.stdout?.setEncoding("utf8");
+		child.stderr?.setEncoding("utf8");
+		child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
+		child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
+		let exitCode = await new Promise<number>((settle, reject) => {
+			child.once("error", reject);
+			child.once("close", (code: number | null) => settle(code ?? 1));
 		});
-		let [stdout, stderr, exitCode] = await Promise.all([
-			new Response(child.stdout).text(),
-			new Response(child.stderr).text(),
-			child.exited,
-		]);
 		let report = `dogfood --concurrency=8 output:\n${stdout}${stderr}`;
 
 		expect(exitCode, report).toBe(0);

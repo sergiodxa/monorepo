@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { isFailure, isSuccess, success } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "./plugin";
 import type { Value } from "./values";
@@ -21,7 +22,15 @@ import { SpecError } from "./errors";
 import { connectStdioPlugin } from "./transport-stdio";
 
 /** The demo plugin's path, resolved from this file's directory. */
-const DEMO_PLUGIN_PATH = path.join(import.meta.dir, "plugins", "demo.ts");
+const DEMO_PLUGIN_PATH = path.join(import.meta.dirname, "plugins", "demo.ts");
+
+/**
+ * The Bun executable, found on PATH. Every child here is a Bun program — a
+ * TypeScript plugin, or a `-e` script written against Bun APIs — so it is
+ * spawned by name rather than through `process.execPath`, which names whichever
+ * runtime happens to be running this file.
+ */
+const BUN_EXECUTABLE = "bun";
 
 /**
  * A raw NDJSON plugin written against the wire protocol directly (no
@@ -104,7 +113,7 @@ async function waitFor(predicate: () => boolean, timeoutMs: number): Promise<boo
 	let deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		if (predicate()) return true;
-		await Bun.sleep(25);
+		await sleep(25);
 	}
 	return predicate();
 }
@@ -121,7 +130,7 @@ function isProcessAlive(pid: number): boolean {
 
 describe("connectStdioPlugin", () => {
 	test("connects to the demo plugin and caches its descriptors", async () => {
-		let connected = await connectStdioPlugin([process.execPath, DEMO_PLUGIN_PATH], "demo");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, DEMO_PLUGIN_PATH], "demo");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let plugin = connected.data;
@@ -135,7 +144,7 @@ describe("connectStdioPlugin", () => {
 	});
 
 	test("round-trips calls over the pipe", async () => {
-		let connected = await connectStdioPlugin([process.execPath, DEMO_PLUGIN_PATH], "demo");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, DEMO_PLUGIN_PATH], "demo");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let plugin = connected.data;
@@ -156,7 +165,7 @@ describe("connectStdioPlugin", () => {
 	});
 
 	test("serves concurrent calls in request order", async () => {
-		let connected = await connectStdioPlugin([process.execPath, DEMO_PLUGIN_PATH], "demo");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, DEMO_PLUGIN_PATH], "demo");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let plugin = connected.data;
@@ -172,7 +181,7 @@ describe("connectStdioPlugin", () => {
 	});
 
 	test("maps a plugin tool failure back to a SpecError", async () => {
-		let connected = await connectStdioPlugin([process.execPath, DEMO_PLUGIN_PATH], "demo");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, DEMO_PLUGIN_PATH], "demo");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let plugin = connected.data;
@@ -189,7 +198,7 @@ describe("connectStdioPlugin", () => {
 	});
 
 	test("preserves a known wire error code and maps unknown codes to tool-error", async () => {
-		let connected = await connectStdioPlugin([process.execPath, "-e", RAW_PLUGIN_SCRIPT], "raw");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, "-e", RAW_PLUGIN_SCRIPT], "raw");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let plugin = connected.data;
@@ -211,7 +220,7 @@ describe("connectStdioPlugin", () => {
 	});
 
 	test("forwards the caller's workspace root over the wire", async () => {
-		let connected = await connectStdioPlugin([process.execPath, "-e", RAW_PLUGIN_SCRIPT], "raw");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, "-e", RAW_PLUGIN_SCRIPT], "raw");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let result = await connected.data.call(
@@ -226,7 +235,7 @@ describe("connectStdioPlugin", () => {
 	test("gives the child no environment beyond PATH", async () => {
 		process.env.SPEC_TRANSPORT_SENTINEL = "must-not-leak";
 		try {
-			let connected = await connectStdioPlugin([process.execPath, "-e", RAW_PLUGIN_SCRIPT], "raw");
+			let connected = await connectStdioPlugin([BUN_EXECUTABLE, "-e", RAW_PLUGIN_SCRIPT], "raw");
 			expect(isSuccess(connected)).toBe(true);
 			if (!isSuccess(connected)) return;
 			let result = await connected.data.call("env", [], stubContext("/tmp/spec-transport-root"));
@@ -243,7 +252,7 @@ describe("connectStdioPlugin", () => {
 
 	test("fails the handshake when the child exits without replying", async () => {
 		let connected = await connectStdioPlugin(
-			[process.execPath, "-e", EXITING_PLUGIN_SCRIPT],
+			[BUN_EXECUTABLE, "-e", EXITING_PLUGIN_SCRIPT],
 			"exiting",
 		);
 		expect(isFailure(connected)).toBe(true);
@@ -258,7 +267,7 @@ describe("connectStdioPlugin", () => {
 		let pidfile = path.join(directory, "pid");
 		try {
 			let connected = await connectStdioPlugin(
-				[process.execPath, "-e", SILENT_PLUGIN_SCRIPT, pidfile],
+				[BUN_EXECUTABLE, "-e", SILENT_PLUGIN_SCRIPT, pidfile],
 				"silent",
 			);
 			expect(isFailure(connected)).toBe(true);
@@ -275,7 +284,7 @@ describe("connectStdioPlugin", () => {
 	}, 10_000);
 
 	test("rejects a pending call when the plugin exits mid-call", async () => {
-		let connected = await connectStdioPlugin([process.execPath, "-e", RAW_PLUGIN_SCRIPT], "raw");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, "-e", RAW_PLUGIN_SCRIPT], "raw");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let plugin = connected.data;
@@ -295,7 +304,7 @@ describe("connectStdioPlugin", () => {
 	});
 
 	test("fails a call when the plugin replies with a malformed line", async () => {
-		let connected = await connectStdioPlugin([process.execPath, "-e", RAW_PLUGIN_SCRIPT], "raw");
+		let connected = await connectStdioPlugin([BUN_EXECUTABLE, "-e", RAW_PLUGIN_SCRIPT], "raw");
 		expect(isSuccess(connected)).toBe(true);
 		if (!isSuccess(connected)) return;
 		let result = await connected.data.call(
