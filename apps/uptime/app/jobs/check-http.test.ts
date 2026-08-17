@@ -17,8 +17,9 @@
  * point and enforces the platform's cardinality and size limits, and alert dispatch runs for
  * real against the test database and is observed through the `alert_events` rows it
  * leaves behind — which is what makes the "no duplicate alert" assertions meaningful.
- * `globalThis.fetch` stands in for webhook delivery, and for the Analytics Engine SQL API
- * the check no longer needs to ask anything of.
+ * MSW serves the two endpoints the pipeline reaches for — webhook delivery, and the
+ * Analytics Engine SQL API the check no longer needs to ask anything of — on separate
+ * handlers, so a delivery is observed as the request it is.
  *
  * Polar is the one dependency held as a double: the container is handed a client whose
  * `ingestEventsSafe` is spied on, so the ping the job bills can be asserted — its
@@ -34,7 +35,17 @@
  */
 
 import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
@@ -51,6 +62,8 @@ import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
@@ -210,7 +223,7 @@ async function seedAlert(db: Database, monitorId: string) {
 			name: "On call",
 			notify_on_recovery: true,
 			cooldown_minutes: 0,
-			config: { strategy: "webhook", config: { url: "https://hooks.test/alert", secret: "" } },
+			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
 		} as never,
 		{ touch: true, returnRow: true },
 	);
@@ -241,9 +254,31 @@ function derivedObjectNames(): string[] {
 	return geoFetch.resolutions.map((resolution) => resolution.name);
 }
 
-/** Set to make the Analytics Engine SQL API fail instead of answering. */
-let analyticsUnavailable = false;
-let realFetch = globalThis.fetch;
+/** The Analytics Engine SQL API endpoint, which the check reads nothing from any more. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/test-account/analytics_engine/sql";
+
+/** The endpoint {@link seedAlert}'s webhook alert delivers to. */
+let WEBHOOK_URL = "https://hooks.test/alert";
+
+/** The endpoint each webhook delivery the alert dispatch made went to, in order. */
+let deliveries: string[] = [];
+
+/**
+ * MSW serving the two endpoints the pipeline reaches for. They are default handlers rather
+ * than per-test ones because every check may touch either, and `onUnhandledRequest: "error"`
+ * turns any third destination into a failure instead of a silent request.
+ */
+let server = setupServer(
+	http.post(SQL_URL, () => HttpResponse.json({ data: [] })),
+	http.post(WEBHOOK_URL, ({ request }) => {
+		deliveries.push(request.url);
+		return HttpResponse.text("ok");
+	}),
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 beforeEach(() => {
 	doFetchMock.mockReset();
@@ -254,18 +289,7 @@ beforeEach(() => {
 	geoFetch.reset();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
-	analyticsUnavailable = false;
-	realFetch = globalThis.fetch;
-	globalThis.fetch = (async (input: unknown) => {
-		// Webhook alert deliveries go through the same global; only the SQL API is canned.
-		if (!String(input).includes("analytics_engine")) return new Response("ok", { status: 200 });
-		if (analyticsUnavailable) throw new Error("analytics unavailable");
-		return new Response(JSON.stringify({ data: [] }), { status: 200 });
-	}) as never;
-});
-
-afterEach(() => {
-	globalThis.fetch = realFetch;
+	deliveries.length = 0;
 });
 
 describe("CheckHttpJob input", () => {
@@ -969,13 +993,16 @@ describe("CheckHttpJob alerting", () => {
 		await seedAlert(db, monitor.id);
 		// The previous status comes from the monitor row now, so the SQL API being down
 		// cannot silence a recovery the way it used to.
-		analyticsUnavailable = true;
+		server.use(http.post(SQL_URL, () => HttpResponse.error()));
 
 		await runJob(db, monitor.id);
 
 		let events = await db.findMany(alertEvents, { where: { monitor_id: monitor.id } });
 		expect(events).toHaveLength(1);
 		expect(events[0]?.event_type).toBe("up");
+		// The row is written before delivery is attempted, so the wire is what proves the
+		// recovery was actually announced.
+		expect(deliveries).toEqual([WEBHOOK_URL]);
 	});
 });
 

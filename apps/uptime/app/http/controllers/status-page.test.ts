@@ -7,9 +7,8 @@
  * middleware at all, so only `ctx.locale`/`ctx.i18next` are seeded — no
  * `ctx.team`/`ctx.membership`. `getTeamHttpSummaries` hits `queryAnalyticsCached`,
  * which reads `env.KV` — an in-memory namespace that really stores, so a repeated
- * render inside the cache window is served from it — and otherwise calls the real
- * `fetch()` against the Analytics Engine SQL API, so `globalThis.fetch` is stubbed
- * too.
+ * render inside the cache window is served from it — and otherwise queries the
+ * Analytics Engine SQL API, which MSW serves.
  *
  * The last two cases cover the response's cache policy rather than its markup: the
  * headers it advertises, and the `304` a viewer holding a current copy gets back.
@@ -21,7 +20,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -34,6 +33,8 @@ import {
 } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
@@ -74,6 +75,21 @@ await mock.module("cloudflare:workers", () => ({
 }));
 
 let { default: publicStatusPageModule } = await import("./status-page");
+
+/** The Analytics Engine SQL API endpoint the page's summaries are queried through. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/** MSW server standing in for the Analytics Engine SQL API. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** Answers every SQL query with `rows`, the shape `getTeamHttpSummaries` reads. */
+function serveSummaries(rows: unknown[]) {
+	server.use(http.post(SQL_URL, () => HttpResponse.json({ data: rows })));
+}
 
 /** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
@@ -227,22 +243,16 @@ describe("GET /status/:slug", () => {
 			order: 0,
 		});
 
-		globalThis.fetch = mock(async () => {
-			return new Response(
-				JSON.stringify({
-					data: [
-						{
-							monitorId: monitor.id,
-							totalChecks: 10,
-							upChecks: 10,
-							degradedChecks: 0,
-							downChecks: 0,
-							maxResponseTimeMs: 120,
-						},
-					],
-				}),
-			);
-		}) as unknown as typeof fetch;
+		serveSummaries([
+			{
+				monitorId: monitor.id,
+				totalChecks: 10,
+				upChecks: 10,
+				degradedChecks: 0,
+				downChecks: 0,
+				maxResponseTimeMs: 120,
+			},
+		]);
 
 		let response = await get(db, page.slug);
 
@@ -292,6 +302,9 @@ describe("GET /status/:slug", () => {
 			display_name: "Website",
 			order: 0,
 		});
+
+		// The label is what this case is about, so the monitor has no summary rows to speak of.
+		serveSummaries([]);
 
 		let body = await (await get(db, page.slug)).text();
 
@@ -343,6 +356,8 @@ describe("GET /status/:slug", () => {
 			display_name: "   ",
 			order: 0,
 		});
+
+		serveSummaries([]);
 
 		let body = await (await get(db, page.slug)).text();
 
@@ -414,9 +429,7 @@ describe("GET /status/:slug", () => {
 			order: 0,
 		});
 
-		globalThis.fetch = mock(async () => {
-			return new Response(JSON.stringify({ data: [] }));
-		}) as unknown as typeof fetch;
+		serveSummaries([]);
 
 		let response = await get(db, page.slug);
 		let body = await response.text();
@@ -457,9 +470,7 @@ describe("GET /status/:slug", () => {
 
 		// No monitors attached, but `getTeamHttpSummaries` still queries Analytics
 		// Engine for the team, so the SQL API fetch needs a stub either way.
-		globalThis.fetch = mock(async () => {
-			return new Response(JSON.stringify({ data: [] }));
-		}) as unknown as typeof fetch;
+		serveSummaries([]);
 
 		let response = await get(db, page.slug);
 
@@ -478,9 +489,7 @@ describe("GET /status/:slug", () => {
 		let { db, team } = await createFixture();
 		let page = await createPublicPage(db, team.id, "acme-cache");
 
-		globalThis.fetch = mock(async () => {
-			return new Response(JSON.stringify({ data: [] }));
-		}) as unknown as typeof fetch;
+		serveSummaries([]);
 
 		let response = await get(db, page.slug);
 
@@ -500,9 +509,7 @@ describe("GET /status/:slug", () => {
 		let { db, team } = await createFixture();
 		let page = await createPublicPage(db, team.id, "acme-conditional");
 
-		globalThis.fetch = mock(async () => {
-			return new Response(JSON.stringify({ data: [] }));
-		}) as unknown as typeof fetch;
+		serveSummaries([]);
 
 		let first = await get(db, page.slug);
 		let tag = first.headers.get("ETag");
