@@ -92,14 +92,18 @@ Client-only SPA (no SSR)  -> apps/r3-gallery
 
 #### wire-into-the-monorepo - @rules/wire-into-the-monorepo.md
 
-A new app is a Bun workspace: extend the root `tsconfig.json`, take `@pkg/*` as
-`workspace:*`, keep test files inside the tsconfig `include`, and put lint or format
-exceptions in the root `vite.config.ts` rather than a config file in the app.
+A new app is a Bun workspace: extend the root `tsconfig.json`, register the app as a Vitest
+project, take `@pkg/*` as `workspace:*`, keep test files inside the tsconfig `include`, and
+put lint or format exceptions in the root `vite.config.ts` rather than a config file in the app.
 
 ```jsonc
 // apps/team-ops/tsconfig.json
 { "extends": "../../tsconfig.json", "include": ["app/**/*", "../../types/bun-test.d.ts"] }
 ```
+
+The project entry is the step that fails silently: an app missing from `test.projects` runs
+none of its tests and still exits 0. Add it with the app, then prove it with
+`vp test run --project team-ops`.
 
 #### app-gitignore-entries - @rules/app-gitignore-entries.md
 

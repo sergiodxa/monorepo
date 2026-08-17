@@ -7,7 +7,7 @@ tags: [packages, bootstrapping, structure]
 # The Minimum Files a New Package Needs
 
 Six files make a package that resolves from every workspace, runs its tests under
-`bun test --isolate`, and passes `vp check`. Everything below is the whole content, not a
+`bun run test`, and passes `vp check`. Everything below is the whole content, not a
 sketch. Write these, run `bun install` at the repo root, and the workspace is real.
 
 Substitute `slugify` for the package name throughout.
@@ -121,7 +121,8 @@ function gets its own file — see
 
 ### `src/index.test.ts`
 
-Colocated with the module it covers, `bun:test` only, no external runner.
+Colocated with the module it covers, and under `src/` — that is what the packages Vitest
+project collects.
 
 ```ts
 /**
@@ -133,7 +134,7 @@ Colocated with the module it covers, `bun:test` only, no external runner.
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { slugify } from "./index.js";
 

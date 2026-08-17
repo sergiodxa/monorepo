@@ -35,7 +35,7 @@ to, or rejected by, the checks CI runs.
 }
 ```
 
-`../../types/bun-test.d.ts` corrects the `bun:test` async matcher chains, so
+`../../types/bun-test.d.ts` corrects `bun-types`' async matcher chains, so
 `await expect(p).rejects.toThrow()` type-checks with the `await` that Vitest will require.
 Every workspace adds it to `include` rather than duplicating the declaration.
 
@@ -80,14 +80,17 @@ in this repo, and adding one is the exception being asked for, not the fix.
 
 ```bash
 bun install
-vp check                     # or `bun check`; `bun check:fix` applies autofixes
-vp lint packages/slugify     # scope a check to one workspace while iterating
-bun test --isolate           # the whole suite, from the repo root
-bun test packages/slugify    # a single scope; no --isolate needed
+vp check                          # or `bun check`; `bun check:fix` applies autofixes
+vp lint packages/slugify          # scope a check to one workspace while iterating
+bun run test                      # the whole suite, from the repo root
+vp test run packages/slugify      # a single scope, still from the root
 ```
 
-`--isolate` is what keeps one file's `mock.module()` out of every file that runs after it,
-so a full-suite run without it invents failures.
+A package needs no entry in `test.projects`: one Vitest project covers them all through
+`packages/*/src/**/*.test.ts?(x)`, because no package uses a `~/*` alias or ships its own
+Vite config. Keep tests under `src/` — that glob is what collects them, and a test outside
+it is not reported as skipped, it is never seen. Apps are the opposite case and each need
+their own project entry.
 
 ## Rules
 
@@ -95,4 +98,5 @@ so a full-suite run without it invents failures.
 2. Include `../../types/bun-test.d.ts`, and never add an `exclude` for test files
 3. Declare every dependency the package imports; `@pkg/*` as `workspace:*`, test-only ones under `devDependencies`
 4. Add lint or format exceptions to `lint.overrides` / `fmt.overrides` in the root `vite.config.ts`, never as a file in the package
-5. Run `vp check` and `bun test --isolate` from the repo root
+5. Keep tests under `src/`, so the packages Vitest project collects them
+6. Run `vp check` and `bun run test` from the repo root
