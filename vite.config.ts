@@ -33,6 +33,31 @@ import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
  * `pool` of its own — the plugin supplies it — and type checking the array then compares this
  * shape against every sibling and exceeds TypeScript's comparison depth (TS2321).
  */
+/**
+ * The Workers-pool project for packages. Bindings are declared inline rather than read from a
+ * wrangler config: a package has no Worker of its own, so there is no config to point at, and
+ * miniflare will create whatever a test names here.
+ *
+ * Declared apart from the `projects` array for the same reason as {@link BLOG_WORKERS_PROJECT}.
+ */
+const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	plugins: [
+		cloudflareTest({
+			miniflare: {
+				compatibilityDate: "2025-04-07",
+				compatibilityFlags: ["nodejs_compat"],
+				kvNamespaces: ["CACHE"],
+			},
+		}),
+	],
+	resolve: { tsconfigPaths: true },
+	test: {
+		name: "packages-workers",
+		include: ["packages/*/src/**/*.workers.test.ts?(x)"],
+		testTimeout: 20_000,
+	},
+};
+
 const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	root: "apps/blog",
 	plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
@@ -80,6 +105,10 @@ export default defineConfig({
 				test: {
 					name: "packages",
 					include: ["packages/*/src/**/*.test.ts?(x)"],
+					// `*.workers.test.ts` belongs to `packages-workers`: those files import
+					// `cloudflare:test`, which exists only inside the Workers pool. Vitest's
+					// defaults are spread back in because naming `exclude` replaces them.
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
 					// Not inherited from the top-level `test` block: a project ignores it, so the
 					// 5s default applies unless set here. The slowest files spend ~4s applying
@@ -124,6 +153,7 @@ export default defineConfig({
 				},
 			},
 			BLOG_WORKERS_PROJECT,
+			PACKAGES_WORKERS_PROJECT,
 			{
 				root: "apps/r3-auth",
 				plugins: [cloudflareWorkersStub()],
