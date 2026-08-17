@@ -12,7 +12,7 @@
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { describe, expect, test } from "vitest";
 
-import { createBunSqliteDatabaseAdapter } from "./shared/test/db";
+import { createSqliteDatabaseAdapter } from "./shared/test/db";
 
 import type { OIDCMetadata } from "./index";
 
@@ -39,7 +39,7 @@ let metadata: OIDCMetadata = {
  */
 function createEngine() {
 	let sqliteDb = openDatabase(":memory:");
-	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let adapter = createSqliteDatabaseAdapter(sqliteDb);
 	return createBlogEngine({
 		database: adapter,
 		auth: {

@@ -18,7 +18,7 @@ import { Database } from "remix/data-table";
 // Raw SQL of the control-plane schema; run verbatim to match production D1.
 import migration from "~/database/migrations/0001-init.sql?raw";
 
-import { createBunSqliteDatabaseAdapter } from "../../../../packages/blog-engine/src/shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../../../packages/blog-engine/src/shared/test/db";
 
 /** A live in-memory test database plus its underlying handle (call `close`). */
 export interface TestDatabase {
@@ -33,6 +33,6 @@ export interface TestDatabase {
 export function createTestDatabase(): TestDatabase {
 	let sqliteDb = openDatabase(":memory:");
 	sqliteDb.exec(migration);
-	let db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
+	let db = new Database(createSqliteDatabaseAdapter(sqliteDb));
 	return { db, sqliteDb };
 }

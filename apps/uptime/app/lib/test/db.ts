@@ -33,7 +33,7 @@ import {
 	type Predicate,
 } from "remix/data-table";
 
-interface BunSqliteAdapterOptions {
+interface SqliteAdapterOptions {
 	capabilities?: Partial<DatabaseCapabilities>;
 }
 
@@ -49,7 +49,7 @@ interface BunSqliteAdapterOptions {
  */
 export function createSqliteDatabaseAdapter(
 	db: SqliteDatabase,
-	options?: BunSqliteAdapterOptions,
+	options?: SqliteAdapterOptions,
 ): DatabaseDriver {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;

@@ -37,7 +37,7 @@ interface SqliteAdapterOptions {
  * @param options - Optional capability overrides.
  * @returns A data-table adapter backed by the given SQLite database.
  */
-export function createBunSqliteDatabaseAdapter(
+export function createSqliteDatabaseAdapter(
 	db: SqliteDatabase,
 	options?: SqliteAdapterOptions,
 ): DatabaseDriver {
@@ -860,7 +860,7 @@ function isInsertOperation(
  */
 export async function createTestDatabase() {
 	let sqliteDb = openDatabase(":memory:");
-	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let adapter = createSqliteDatabaseAdapter(sqliteDb);
 	await runMigrations(adapter);
 	let db = new Database(adapter);
 
