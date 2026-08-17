@@ -21,8 +21,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -39,6 +37,7 @@ import { createRouter } from "remix/router";
 import { createSession } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { QuickPingError, QuickPingResult } from "~/app/http/controllers/actions/ping";
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -49,7 +48,7 @@ import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({}),
 	waitUntil: () => {},
 	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */

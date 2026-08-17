@@ -26,8 +26,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { PolarClient as PolarClientType } from "@pkg/polar";
 import type { Middleware, RequestContext, RequestHandler, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -51,6 +49,7 @@ import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -75,7 +74,7 @@ let deferred: Promise<unknown>[] = [];
 /** The check's data point; nothing here asserts on it, but it has to land somewhere. */
 let pingResults = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -102,7 +101,7 @@ let dashboard = (await import("./dashboard")).default as Mapped;
 let quickPing = (await import("./dashboard-quick-ping")).default as Mapped;
 
 /** The entitlement gate logs every inconclusive lookup; the assertions read the HTML. */
-spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
 
 let BASE_URL = "https://uptime.test";
 

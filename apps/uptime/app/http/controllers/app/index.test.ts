@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Middleware } from "remix/router";
 
 import { ServiceContainer } from "@pkg/service-container";
@@ -17,6 +15,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
+import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

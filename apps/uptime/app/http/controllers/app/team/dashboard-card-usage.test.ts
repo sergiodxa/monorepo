@@ -11,8 +11,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -30,6 +28,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -49,7 +48,7 @@ let kv = createKVNamespace();
 let queue = createQueue();
 let pingResults = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
@@ -183,10 +182,10 @@ describe("dashboard-card-usage", () => {
 	test("renders the error fallback when both database queries fail", async () => {
 		let { db, team, membership } = await createFixture();
 		let failing = Object.create(db) as Database;
-		failing.exec = mock(async () => {
+		failing.exec = vi.fn(async () => {
 			throw new Error("no such table");
 		}) as unknown as Database["exec"];
-		failing.findMany = mock(async () => {
+		failing.findMany = vi.fn(async () => {
 			throw new Error("no such table");
 		}) as unknown as Database["findMany"];
 
