@@ -15,11 +15,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-
 import * as jose from "jose";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "./key-storage";
 
@@ -154,8 +153,8 @@ describe("generating and importing key pairs", () => {
 
 		expect(serialized.alg).toBe("ES256");
 		expect(serialized.id).toMatch(/^[0-9a-f-]{36}$/);
-		expect(serialized.publicKey).toStartWith("-----BEGIN PUBLIC KEY-----");
-		expect(serialized.privateKey).toStartWith("-----BEGIN PRIVATE KEY-----");
+		expect(serialized.publicKey).toMatch(/^-----BEGIN PUBLIC KEY-----/);
+		expect(serialized.privateKey).toMatch(/^-----BEGIN PRIVATE KEY-----/);
 		expect(serialized.created).toBeCloseTo(Date.now(), -4);
 	});
 
@@ -211,8 +210,8 @@ for (let { alg, kty, parameters } of ALGORITHMS) {
 
 			expect(serialized.alg).toBe(alg);
 			expect(serialized.id).toMatch(/^[0-9a-f-]{36}$/);
-			expect(serialized.publicKey).toStartWith("-----BEGIN PUBLIC KEY-----");
-			expect(serialized.privateKey).toStartWith("-----BEGIN PRIVATE KEY-----");
+			expect(serialized.publicKey).toMatch(/^-----BEGIN PUBLIC KEY-----/);
+			expect(serialized.privateKey).toMatch(/^-----BEGIN PRIVATE KEY-----/);
 			expect(serialized.created).toBeCloseTo(Date.now(), -4);
 		});
 
@@ -508,7 +507,7 @@ describe("signingKeys", () => {
 
 		let keys = await JWK.signingKeys(storage);
 
-		expect(keys).not.toBeEmpty();
+		expect(keys).not.toHaveLength(0);
 		expect([...storage.files.keys()].every((key) => key.startsWith("signing:key:"))).toBe(true);
 	});
 

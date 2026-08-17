@@ -9,7 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { describe, expect, test } from "vitest";
 
 import { Timing } from "./timing";
 
@@ -31,7 +33,7 @@ describe("Timing", () => {
 
 	test("reports the elapsed time after ending", async () => {
 		let timing = new Timing("db", "findUserById");
-		await Bun.sleep(MEASURABLE_DELAY_MS);
+		await sleep(MEASURABLE_DELAY_MS);
 		timing.end();
 
 		expect(timing.duration).toBeGreaterThan(0);
@@ -41,7 +43,7 @@ describe("Timing", () => {
 		let timing = new Timing("db", "findUserById");
 		timing.end();
 		let first = timing.duration;
-		await Bun.sleep(MEASURABLE_DELAY_MS);
+		await sleep(MEASURABLE_DELAY_MS);
 
 		expect(timing.duration).toBe(first);
 	});
@@ -60,7 +62,7 @@ describe("Timing", () => {
 
 	test("formats a completed entry with a two-decimal duration", async () => {
 		let timing = new Timing("db", "findUserById");
-		await Bun.sleep(MEASURABLE_DELAY_MS);
+		await sleep(MEASURABLE_DELAY_MS);
 		timing.end();
 
 		expect(timing.toString()).toMatch(/^db;desc="findUserById";dur=\d+\.\d{2}$/);

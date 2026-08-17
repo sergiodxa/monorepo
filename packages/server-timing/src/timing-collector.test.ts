@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { TimingCollector } from "./timing-collector";
 
@@ -27,7 +27,7 @@ describe("TimingCollector#measure", () => {
 
 		await collector.measure("db", "findUserById", async () => "ada");
 
-		expect(collector.toString()).toStartWith('db;desc="findUserById"');
+		expect(collector.toString()).toMatch(/^db;desc="findUserById"/);
 	});
 
 	test("re-throws a rejection but still records the measurement", async () => {
@@ -39,7 +39,7 @@ describe("TimingCollector#measure", () => {
 
 		await expect(promise).rejects.toThrow("boom");
 
-		expect(collector.toString()).toStartWith('db;desc="findUserById"');
+		expect(collector.toString()).toMatch(/^db;desc="findUserById"/);
 	});
 
 	test("keeps measurements in the order they were taken", async () => {
@@ -50,8 +50,8 @@ describe("TimingCollector#measure", () => {
 
 		let [first, second] = collector.toString().split(", ");
 
-		expect(first).toStartWith('auth;desc="authorize"');
-		expect(second).toStartWith('db;desc="findUserById"');
+		expect(first).toMatch(/^auth;desc="authorize"/);
+		expect(second).toMatch(/^db;desc="findUserById"/);
 	});
 });
 
@@ -79,7 +79,7 @@ describe("TimingCollector#toHeaders", () => {
 
 		collector.toHeaders(headers);
 
-		expect(headers.get("Server-Timing")).toStartWith('db;desc="findUserById"');
+		expect(headers.get("Server-Timing")).toMatch(/^db;desc="findUserById"/);
 	});
 
 	test("creates headers when none are given", async () => {
@@ -89,7 +89,7 @@ describe("TimingCollector#toHeaders", () => {
 		let headers = collector.toHeaders();
 
 		expect(headers).toBeInstanceOf(Headers);
-		expect(headers.get("Server-Timing")).toStartWith('db;desc="findUserById"');
+		expect(headers.get("Server-Timing")).toMatch(/^db;desc="findUserById"/);
 	});
 
 	test("replaces an existing header instead of appending to it", async () => {
@@ -99,6 +99,6 @@ describe("TimingCollector#toHeaders", () => {
 
 		collector.toHeaders(headers);
 
-		expect(headers.get("Server-Timing")).not.toInclude("upstream");
+		expect(headers.get("Server-Timing")).not.toContain("upstream");
 	});
 });

@@ -50,4 +50,7 @@ pathIgnorePatterns = [
 	"**/apps/blog-saas/app/services/analytics.test.ts",
 	"**/apps/blog-saas/bootstrap/worker.test.ts",
 	"**/packages/mail/**",
+	"**/packages/jwt/**",
+	"**/packages/server-timing/**",
+	"**/packages/sitemap/**",
 ]

@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeAll, describe, expect, test } from "bun:test";
-
 import * as jose from "jose";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import { JWK } from "./jwk";
 import { JWT } from "./jwt";

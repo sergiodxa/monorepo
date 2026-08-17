@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { Sitemap } from "./index";
 
@@ -77,9 +77,9 @@ describe("Sitemap", () => {
 			let xml = sitemap.toString();
 			expect(xml).toContain("<url><loc>https://example.com/page1</loc></url>");
 			expect(xml).toContain("<url><loc>https://example.com/page2</loc></url>");
-			expect(xml).toStartWith('<?xml version="1.0" encoding="UTF-8"?>');
+			expect(xml).toMatch(/^<\?xml version="1\.0" encoding="UTF-8"\?>/);
 			expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
-			expect(xml).toEndWith("</urlset>");
+			expect(xml).toMatch(/<\/urlset>$/);
 		});
 
 		test("generates valid XML with mixed URLs (with and without lastmod)", () => {
