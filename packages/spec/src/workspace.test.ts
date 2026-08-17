@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
@@ -15,6 +14,7 @@ import { isAbsolute, join } from "node:path";
 import type { Result } from "@pkg/result";
 
 import { failure, isSuccess, success, unwrap } from "@pkg/result";
+import { afterEach, describe, expect, test } from "vitest";
 
 import type { PermissionSet } from "./permissions";
 import type { Workspace } from "./workspace";

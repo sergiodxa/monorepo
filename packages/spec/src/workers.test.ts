@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import { isFailure } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { Grants } from "./permissions";
 import type { SuiteResult } from "./workers";
@@ -129,7 +129,7 @@ describe("the Workers entry point's import graph", () => {
 	test("reaches nothing that only a Bun or Node process provides", async () => {
 		let visited = new Set<string>();
 		let offences: string[] = [];
-		await walk(resolve(import.meta.dir, "workers.ts"));
+		await walk(resolve(import.meta.dirname, "workers.ts"));
 
 		/**
 		 * Follow every relative import from a module, recording any dependency on
@@ -160,7 +160,7 @@ describe("the Workers entry point's import graph", () => {
 		expect(offences).toEqual([]);
 		// A guard that silently stopped walking would also pass, so assert it
 		// actually reached the core it is meant to be vouching for.
-		expect([...visited].map((path) => path.replace(`${import.meta.dir}/`, ""))).toContain(
+		expect([...visited].map((path) => path.replace(`${import.meta.dirname}/`, ""))).toContain(
 			"executor.ts",
 		);
 	});

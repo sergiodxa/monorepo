@@ -6,9 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, isSuccess, success } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "../plugin";
 import type { Value } from "../values";

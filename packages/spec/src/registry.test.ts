@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, isSuccess, success } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { BlockNode, CommandNode, FixtureNode } from "./ast";
 import type { Plugin } from "./plugin";

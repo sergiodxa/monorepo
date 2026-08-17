@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,6 +14,7 @@ import { join } from "node:path";
 import type { Result } from "@pkg/result";
 
 import { isSuccess, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { ConfigPermissionEntry, Grants } from "./permissions";
 

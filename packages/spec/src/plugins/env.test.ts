@@ -8,11 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, test } from "bun:test";
-
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
+import { afterEach, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
 import type { PermissionSet } from "../permissions";

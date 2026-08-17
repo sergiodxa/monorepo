@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { loadSources } from "./sources";
 
@@ -53,7 +52,7 @@ describe("loadSources", () => {
 		let result = loadSources([{ path: "broken.spec", text: 'test "unclosed" {' }]);
 		if (!isFailure(result)) throw new Error("Expected a parse failure.");
 		expect(result.error.code).toBe("parse-error");
-		expect(result.error.message).toStartWith("broken.spec:");
+		expect(result.error.message).toMatch(/^broken\.spec:/);
 		expect(result.error.file).toBe("broken.spec");
 	});
 

@@ -7,13 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, isSuccess, success, unwrap } from "@pkg/result";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
 import type { PermissionSet } from "../permissions";

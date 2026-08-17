@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { BlockNode, SpecFileNode, StatementNode } from "./ast";
 import type { ParseError } from "./errors";

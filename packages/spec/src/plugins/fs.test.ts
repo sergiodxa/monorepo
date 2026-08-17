@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve as resolvePath, sep } from "node:path";
@@ -15,6 +14,7 @@ import { isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, isSuccess, success } from "@pkg/result";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { PermissionSet } from "../permissions";
 import type { ToolContext } from "../plugin";
