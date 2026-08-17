@@ -55,7 +55,9 @@ export function IntlProvider(handle: Handle<IntlProvider.Props, I18n>) {
 		let i18n = handle.props.i18n;
 
 		function onChange() {
-			handle.update();
+			// i18next's emitter calls listeners synchronously and drops what they
+			// return, so the re-render settles on its own after the event.
+			void handle.update();
 		}
 
 		i18n.on("languageChanged", onChange);
