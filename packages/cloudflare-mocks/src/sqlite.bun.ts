@@ -9,6 +9,8 @@ import { Database } from "bun:sqlite";
 
 import type { SqliteDatabase, SqliteStatement } from "./sqlite";
 
+import { toPositional } from "./sqlite";
+
 export type { SqliteDatabase, SqliteStatement } from "./sqlite";
 
 /**
@@ -29,15 +31,18 @@ export function openDatabase(filename: string): SqliteDatabase {
 				},
 
 				all(...values: unknown[]): Record<string, unknown>[] {
-					return statement.all(...(values as never[])) as Record<string, unknown>[];
+					return statement.all(...(toPositional(values) as never[])) as Record<string, unknown>[];
 				},
 
 				get(...values: unknown[]): Record<string, unknown> | null {
-					return statement.get(...(values as never[])) as Record<string, unknown> | null;
+					return statement.get(...(toPositional(values) as never[])) as Record<
+						string,
+						unknown
+					> | null;
 				},
 
 				run(...values: unknown[]): void {
-					statement.run(...(values as never[]));
+					statement.run(...(toPositional(values) as never[]));
 				},
 			};
 		},
@@ -49,7 +54,7 @@ export function openDatabase(filename: string): SqliteDatabase {
 				return;
 			}
 
-			database.prepare(sql).run(...(values as never[]));
+			database.prepare(sql).run(...(toPositional(values) as never[]));
 		},
 	};
 }

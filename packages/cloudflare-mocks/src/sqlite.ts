@@ -58,3 +58,16 @@ export interface SqliteDatabase {
 	 */
 	exec(sql: string, ...values: unknown[]): void;
 }
+
+/**
+ * Normalizes bindings passed as a single array into a positional list.
+ *
+ * `bun:sqlite` treats `run([a, b])` as two positional bindings; `node:sqlite` reads the array
+ * as a named-parameter object and fails with `Unknown named parameter '0'`. Callers in this
+ * repo use both spellings, so both implementations flatten here and behave the same.
+ * @param values Bindings as passed by the caller.
+ * @returns The bindings as a positional list.
+ */
+export function toPositional(values: unknown[]): unknown[] {
+	return values.length === 1 && Array.isArray(values[0]) ? (values[0] as unknown[]) : values;
+}
