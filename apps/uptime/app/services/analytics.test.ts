@@ -6,18 +6,31 @@
  * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings are
  * an in-memory KV namespace and a recording Analytics Engine dataset installed through
  * `mock.module("cloudflare:workers", ...)`, so a cache hit is a value the writer really
- * stored; the Analytics Engine SQL HTTP API is stubbed via a mocked global `fetch`.
+ * stored; the SQL HTTP API is intercepted with MSW, so every assertion about a query reads
+ * the request that actually went out rather than the arguments a stand-in was handed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { isFailure } from "@pkg/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 /**
  * The dashboard cache and the ping dataset. Both live at module scope because the module
@@ -58,6 +71,45 @@ let {
 /** The Analytics Engine SQL API endpoint every query POSTs to. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
 
+/** MSW server intercepting the Analytics Engine SQL API. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** One query as it went on the wire, recorded by {@link interceptSql}. */
+interface SqlRequest {
+	url: string;
+	method: string;
+	body: string;
+	headers: Headers;
+}
+
+/**
+ * Answers the SQL endpoint with `respond` and records every query that reaches it. The
+ * returned array doubles as the call log — its length is how many queries ran, which is the
+ * only way a cache hit can prove it queried nothing.
+ * @param respond Builds the answer for each query the endpoint receives.
+ */
+function interceptSql(respond: () => Response): SqlRequest[] {
+	let requests: SqlRequest[] = [];
+
+	server.use(
+		http.post(SQL_URL, async ({ request }) => {
+			requests.push({
+				url: request.url,
+				method: request.method,
+				body: await request.text(),
+				headers: request.headers,
+			});
+			return respond();
+		}),
+	);
+
+	return requests;
+}
+
 beforeEach(async () => {
 	// The namespace outlives the test that seeded it, so every key goes before the next one
 	// runs — a cache entry inherited from an earlier test would turn a miss into a hit.
@@ -67,32 +119,25 @@ beforeEach(async () => {
 	kvGet.mockClear();
 	kvPut.mockClear();
 	pingResults.reset();
-	globalThis.fetch = mock(
-		async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-	) as unknown as typeof fetch;
 });
 
 describe("queryAnalytics", () => {
 	test("POSTs the SQL text with the account id and bearer token from env", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => HttpResponse.json({ data: [] }));
 
 		await queryAnalytics("SELECT 1");
 
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		let [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(url).toBe(SQL_URL);
-		expect(init.method).toBe("POST");
-		expect(init.body).toBe("SELECT 1");
-		let headers = init.headers as Record<string, string>;
-		expect(headers.Authorization).toBe("Bearer token-1");
-		expect(headers["Content-Type"]).toBe("text/plain");
+		expect(queries).toHaveLength(1);
+		let [query] = queries;
+		expect(query?.url).toBe(SQL_URL);
+		expect(query?.method).toBe("POST");
+		expect(query?.body).toBe("SELECT 1");
+		expect(query?.headers.get("Authorization")).toBe("Bearer token-1");
+		expect(query?.headers.get("Content-Type")).toBe("text/plain");
 	});
 
 	test("returns the response's data array wrapped in a success Result", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [{ monitorId: "m1" }] })),
-		) as unknown as typeof fetch;
+		interceptSql(() => HttpResponse.json({ data: [{ monitorId: "m1" }] }));
 
 		let result = await queryAnalytics<{ monitorId: string }>("SELECT 1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -100,9 +145,7 @@ describe("queryAnalytics", () => {
 	});
 
 	test("returns an empty array when the response body has no `data` field", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({})),
-		) as unknown as typeof fetch;
+		interceptSql(() => HttpResponse.json({}));
 
 		let result = await queryAnalytics("SELECT 1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -110,10 +153,9 @@ describe("queryAnalytics", () => {
 	});
 
 	test("returns a failure Result describing the status when the response isn't ok", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response("nope", { status: 500, statusText: "Internal Server Error" }),
-		) as unknown as typeof fetch;
+		interceptSql(
+			() => new HttpResponse("nope", { status: 500, statusText: "Internal Server Error" }),
+		);
 
 		let result = await queryAnalytics("SELECT 1");
 		expect(isFailure(result)).toBe(true);
@@ -125,12 +167,13 @@ describe("queryAnalytics", () => {
 describe("queryAnalyticsCached", () => {
 	test("returns the cached value from KV without querying Analytics Engine on a cache hit", async () => {
 		await kv.put("cache:key", JSON.stringify([{ cached: true }]));
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => {
+			throw new Error("a cache hit must not query Analytics Engine");
+		});
 
 		let result = await queryAnalyticsCached("cache:key", 60, "SELECT 1");
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(queries).toEqual([]);
 		if (isFailure(result)) throw new Error("expected success");
 		// Parsed rows rather than the stored text, so the read asked KV to decode the JSON.
 		expect(result.data).toEqual([{ cached: true }]);
@@ -138,9 +181,7 @@ describe("queryAnalyticsCached", () => {
 	});
 
 	test("queries Analytics Engine and populates the KV cache on a cache miss", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [{ fresh: true }] })),
-		) as unknown as typeof fetch;
+		interceptSql(() => HttpResponse.json({ data: [{ fresh: true }] }));
 
 		let result = await queryAnalyticsCached("cache:key", 120, "SELECT 1");
 
@@ -154,9 +195,7 @@ describe("queryAnalyticsCached", () => {
 	});
 
 	test("does not populate the KV cache when the underlying query fails", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response("nope", { status: 500 }),
-		) as unknown as typeof fetch;
+		interceptSql(() => new HttpResponse("nope", { status: 500 }));
 
 		let result = await queryAnalyticsCached("cache:key", 120, "SELECT 1");
 
@@ -261,23 +300,20 @@ describe("writePingResult", () => {
 
 describe("getTeamHttpSummaries", () => {
 	test("derives 'down' when any check in the window was down, even alongside degraded/up checks", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: "m1",
-								totalChecks: 10,
-								upChecks: 5,
-								degradedChecks: 2,
-								downChecks: 3,
-								maxResponseTimeMs: 900,
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{
+						monitorId: "m1",
+						totalChecks: 10,
+						upChecks: 5,
+						degradedChecks: 2,
+						downChecks: 3,
+						maxResponseTimeMs: 900,
+					},
+				],
+			}),
+		);
 
 		let result = await getTeamHttpSummaries("team-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -293,23 +329,20 @@ describe("getTeamHttpSummaries", () => {
 	});
 
 	test("derives 'degraded' when there are no down checks but at least one degraded check", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: "m1",
-								totalChecks: 10,
-								upChecks: 8,
-								degradedChecks: 2,
-								downChecks: 0,
-								maxResponseTimeMs: 300,
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{
+						monitorId: "m1",
+						totalChecks: 10,
+						upChecks: 8,
+						degradedChecks: 2,
+						downChecks: 0,
+						maxResponseTimeMs: 300,
+					},
+				],
+			}),
+		);
 
 		let result = await getTeamHttpSummaries("team-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -317,23 +350,20 @@ describe("getTeamHttpSummaries", () => {
 	});
 
 	test("derives 'up' when every check succeeded", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: "m1",
-								totalChecks: 10,
-								upChecks: 10,
-								degradedChecks: 0,
-								downChecks: 0,
-								maxResponseTimeMs: 100,
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{
+						monitorId: "m1",
+						totalChecks: 10,
+						upChecks: 10,
+						degradedChecks: 0,
+						downChecks: 0,
+						maxResponseTimeMs: 100,
+					},
+				],
+			}),
+		);
 
 		let result = await getTeamHttpSummaries("team-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -341,23 +371,20 @@ describe("getTeamHttpSummaries", () => {
 	});
 
 	test("derives 'pending' when there are no checks in the 24h window at all", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: "m1",
-								totalChecks: 0,
-								upChecks: 0,
-								degradedChecks: 0,
-								downChecks: 0,
-								maxResponseTimeMs: 0,
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{
+						monitorId: "m1",
+						totalChecks: 0,
+						upChecks: 0,
+						degradedChecks: 0,
+						downChecks: 0,
+						maxResponseTimeMs: 0,
+					},
+				],
+			}),
+		);
 
 		let result = await getTeamHttpSummaries("team-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -365,29 +392,24 @@ describe("getTeamHttpSummaries", () => {
 	});
 
 	test("scopes the query to the given team and caches the raw rows under a versioned key", async () => {
-		let fetchMock = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: "m1",
-								totalChecks: 4,
-								upChecks: 4,
-								degradedChecks: 0,
-								downChecks: 0,
-								maxResponseTimeMs: 50,
-							},
-						],
-					}),
-				),
+		let queries = interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{
+						monitorId: "m1",
+						totalChecks: 4,
+						upChecks: 4,
+						degradedChecks: 0,
+						downChecks: 0,
+						maxResponseTimeMs: 50,
+					},
+				],
+			}),
 		);
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await getTeamHttpSummaries("team-9");
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(init.body as string).toContain("index1 = 'team-9'");
+		expect(queries[0]?.body).toContain("index1 = 'team-9'");
 		// The rows as the query returned them, under the versioned key, with the dashboard's
 		// floor TTL — which only the write's options can say.
 		expect(await kv.get<unknown[]>("cache:team-9:dashboard:v1:httpSummaries", "json")).toEqual([
@@ -421,12 +443,13 @@ describe("getTeamHttpSummaries", () => {
 				},
 			]),
 		);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => {
+			throw new Error("a cached rollup must not re-query Analytics Engine");
+		});
 
 		let result = await getTeamHttpSummaries("team-1");
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(queries).toEqual([]);
 		if (isFailure(result)) throw new Error("expected success");
 		expect(result.data).toEqual([
 			{
@@ -442,18 +465,15 @@ describe("getTeamHttpSummaries", () => {
 
 describe("getMonitorSparkline", () => {
 	test("returns points oldest-first, reversing the newest-first query order", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{ timestamp: "2026-07-09T00:02:00Z", responseTimeMs: 30 },
-							{ timestamp: "2026-07-09T00:01:00Z", responseTimeMs: 20 },
-							{ timestamp: "2026-07-09T00:00:00Z", responseTimeMs: 10 },
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{ timestamp: "2026-07-09T00:02:00Z", responseTimeMs: 30 },
+					{ timestamp: "2026-07-09T00:01:00Z", responseTimeMs: 20 },
+					{ timestamp: "2026-07-09T00:00:00Z", responseTimeMs: 10 },
+				],
+			}),
+		);
 
 		let result = await getMonitorSparkline("team-1", "monitor-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -465,35 +485,28 @@ describe("getMonitorSparkline", () => {
 	});
 
 	test("uses the given limit in the query and defaults to 20", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => HttpResponse.json({ data: [] }));
 
 		await getMonitorSparkline("team-1", "monitor-1");
-		let [, defaultInit] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(defaultInit.body as string).toContain("LIMIT 20");
+		expect(queries[0]?.body).toContain("LIMIT 20");
 
-		fetchMock.mockClear();
 		await getMonitorSparkline("team-1", "monitor-1", 5);
-		let [, customInit] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(customInit.body as string).toContain("LIMIT 5");
+		expect(queries[1]?.body).toContain("LIMIT 5");
 	});
 });
 
 describe("getTeamHttpSparklines", () => {
 	test("groups rows by monitorId and returns each group oldest-first", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{ monitorId: "m1", timestamp: "2026-07-09T00:02:00Z", responseTimeMs: 30 },
-							{ monitorId: "m2", timestamp: "2026-07-09T00:01:30Z", responseTimeMs: 99 },
-							{ monitorId: "m1", timestamp: "2026-07-09T00:01:00Z", responseTimeMs: 20 },
-							{ monitorId: "m1", timestamp: "2026-07-09T00:00:00Z", responseTimeMs: 10 },
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{ monitorId: "m1", timestamp: "2026-07-09T00:02:00Z", responseTimeMs: 30 },
+					{ monitorId: "m2", timestamp: "2026-07-09T00:01:30Z", responseTimeMs: 99 },
+					{ monitorId: "m1", timestamp: "2026-07-09T00:01:00Z", responseTimeMs: 20 },
+					{ monitorId: "m1", timestamp: "2026-07-09T00:00:00Z", responseTimeMs: 10 },
+				],
+			}),
+		);
 
 		let result = await getTeamHttpSparklines("team-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -515,9 +528,7 @@ describe("getTeamHttpSparklines", () => {
 			responseTimeMs: index,
 		})).reverse();
 
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: rows })),
-		) as unknown as typeof fetch;
+		interceptSql(() => HttpResponse.json({ data: rows }));
 
 		let result = await getTeamHttpSparklines("team-1");
 		if (isFailure(result)) throw new Error("expected success");
@@ -528,22 +539,18 @@ describe("getTeamHttpSparklines", () => {
 	});
 
 	test("scopes the query to the given team, http monitors, and requested limit", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => HttpResponse.json({ data: [] }));
 
 		await getTeamHttpSparklines("team-9", 250);
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let body = init.body as string;
+		let body = queries[0]?.body ?? "";
 		expect(body).toContain("index1 = 'team-9'");
 		expect(body).toContain("blob2 = 'http'");
 		expect(body).toContain("LIMIT 250");
 	});
 
 	test("returns a failure Result when the underlying query fails", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response("nope", { status: 503 }),
-		) as unknown as typeof fetch;
+		interceptSql(() => new HttpResponse("nope", { status: 503 }));
 
 		let result = await getTeamHttpSparklines("team-1");
 		expect(isFailure(result)).toBe(true);
@@ -552,22 +559,19 @@ describe("getTeamHttpSparklines", () => {
 
 describe("getHttpDailyAggregate", () => {
 	test("returns the raw Analytics Engine rows for the given UTC day", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: "m1",
-								totalChecks: 100,
-								successfulChecks: 98,
-								avgResponseTimeMs: 120.5,
-								maxResponseTimeMs: 900,
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		interceptSql(() =>
+			HttpResponse.json({
+				data: [
+					{
+						monitorId: "m1",
+						totalChecks: 100,
+						successfulChecks: 98,
+						avgResponseTimeMs: 120.5,
+						maxResponseTimeMs: 900,
+					},
+				],
+			}),
+		);
 
 		let result = await getHttpDailyAggregate("2026-07-08");
 		if (isFailure(result)) throw new Error("expected success");
@@ -583,21 +587,17 @@ describe("getHttpDailyAggregate", () => {
 	});
 
 	test("scopes the query to the requested date's 24-hour UTC window", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => HttpResponse.json({ data: [] }));
 
 		await getHttpDailyAggregate("2026-07-08");
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let body = init.body as string;
+		let body = queries[0]?.body ?? "";
 		expect(body).toContain("2026-07-08 00:00:00");
 		expect(body).toContain("blob2 = 'http'");
 	});
 
 	test("returns a failure Result when the query fails, without a success wrapper", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response("nope", { status: 503 }),
-		) as unknown as typeof fetch;
+		interceptSql(() => new HttpResponse("nope", { status: 503 }));
 
 		let result = await getHttpDailyAggregate("2026-07-08");
 		expect(isFailure(result)).toBe(true);
@@ -607,19 +607,17 @@ describe("getHttpDailyAggregate", () => {
 describe("getHttpP99ResponseTime", () => {
 	/** The one-row shape the weighted-quantile query returns. */
 	function p99Response(p99ResponseTimeMs: number | null, totalChecks: number | null) {
-		return new Response(JSON.stringify({ data: [{ p99ResponseTimeMs, totalChecks }] }));
+		return HttpResponse.json({ data: [{ p99ResponseTimeMs, totalChecks }] });
 	}
 
 	test("weights the quantile by _sample_interval over a 24-hour window", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => p99Response(410, 1200));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => p99Response(410, 1200));
 
 		let result = await getHttpP99ResponseTime({ teamId: "team-9" });
 
 		if (isFailure(result)) throw new Error("expected success");
 		expect(result.data).toBe(410);
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let body = init.body as string;
+		let body = queries[0]?.body ?? "";
 		expect(body).toContain("quantileExactWeighted(0.99)(double1, _sample_interval)");
 		expect(body).toContain("SUM(_sample_interval * double2) AS totalChecks");
 		expect(body).toContain("timestamp >= NOW() - INTERVAL '24' HOUR");
@@ -627,13 +625,11 @@ describe("getHttpP99ResponseTime", () => {
 	});
 
 	test("scopes a team query by index1 and caches it under the team's p99 key", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => p99Response(250, 10));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => p99Response(250, 10));
 
 		await getHttpP99ResponseTime({ teamId: "team-9" });
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(init.body as string).toContain("index1 = 'team-9'");
+		expect(queries[0]?.body).toContain("index1 = 'team-9'");
 		expect(kvGet).toHaveBeenCalledWith("cache:team-9:dashboard:v1:p99", "json");
 		expect(await kv.get<unknown[]>("cache:team-9:dashboard:v1:p99", "json")).toEqual([
 			{ p99ResponseTimeMs: 250, totalChecks: 10 },
@@ -648,26 +644,25 @@ describe("getHttpP99ResponseTime", () => {
 			"cache:team-1:dashboard:v1:p99",
 			JSON.stringify([{ p99ResponseTimeMs: 99, totalChecks: 5 }]),
 		);
-		let fetchMock = mock(async (..._args: unknown[]) => p99Response(1, 1));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => {
+			throw new Error("a cached p99 row must not re-query Analytics Engine");
+		});
 
 		let result = await getHttpP99ResponseTime({ teamId: "team-1" });
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(queries).toEqual([]);
 		if (isFailure(result)) throw new Error("expected success");
 		expect(result.data).toBe(99);
 	});
 
 	test("scopes a monitor query by blob1 and never touches the cache", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => p99Response(700, 42));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => p99Response(700, 42));
 
 		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
 
 		if (isFailure(result)) throw new Error("expected success");
 		expect(result.data).toBe(700);
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let body = init.body as string;
+		let body = queries[0]?.body ?? "";
 		expect(body).toContain("blob1 = 'monitor-1'");
 		expect(body).not.toContain("index1");
 		expect(kvGet).not.toHaveBeenCalled();
@@ -675,9 +670,7 @@ describe("getHttpP99ResponseTime", () => {
 	});
 
 	test("returns null when the window holds no checks, even though the aggregate returns a row", async () => {
-		globalThis.fetch = mock(async (..._args: unknown[]) =>
-			p99Response(0, 0),
-		) as unknown as typeof fetch;
+		interceptSql(() => p99Response(0, 0));
 
 		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
 		if (isFailure(result)) throw new Error("expected success");
@@ -685,9 +678,7 @@ describe("getHttpP99ResponseTime", () => {
 	});
 
 	test("returns null when the query comes back with no rows at all", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
+		interceptSql(() => HttpResponse.json({ data: [] }));
 
 		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
 		if (isFailure(result)) throw new Error("expected success");
@@ -695,9 +686,7 @@ describe("getHttpP99ResponseTime", () => {
 	});
 
 	test("returns a failure Result when the query fails", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response("nope", { status: 503 }),
-		) as unknown as typeof fetch;
+		interceptSql(() => new HttpResponse("nope", { status: 503 }));
 
 		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
 		expect(isFailure(result)).toBe(true);
@@ -707,12 +696,13 @@ describe("getHttpP99ResponseTime", () => {
 		// Cached text that is not JSON, so the decode the read asks for is what fails. A KV
 		// read really can throw, and a dashboard must not go down with it.
 		await kv.put("cache:team-1:dashboard:v1:p99", "}not json{");
-		let fetchMock = mock(async (..._args: unknown[]) => p99Response(1, 1));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let queries = interceptSql(() => {
+			throw new Error("a failed cache read must not fall through to Analytics Engine");
+		});
 
 		let result = await getHttpP99ResponseTime({ teamId: "team-1" });
 
 		expect(isFailure(result)).toBe(true);
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(queries).toEqual([]);
 	});
 });
