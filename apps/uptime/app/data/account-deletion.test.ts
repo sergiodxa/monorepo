@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import AccountDeletion from "~/app/data/account-deletion";
 import { createTestDatabase } from "~/app/lib/test/db";

@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Customer as PolarCustomer, PolarClient, Subscription } from "@pkg/polar";
+
+import { describe, expect, test } from "vitest";
 
 import IdToken from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";

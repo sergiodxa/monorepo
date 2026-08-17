@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TrialDailyStatsInput } from "~/app/data/trial-daily-stats";
 

@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import { createTestDatabase } from "~/app/lib/test/db";

@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 import { claimDue } from "~/app/lib/scheduling";
@@ -23,7 +23,7 @@ import { dnsMonitors, monitors, tcpMonitors, teams } from "~/database/schema";
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
 /** `stateFor` logs every unknown owner; silenced so the suite's output stays readable. */
-spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
 
 let db: Db;
 

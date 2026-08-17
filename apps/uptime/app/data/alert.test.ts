@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type {
 	Database,
 	DataManipulationOperation,
 	DataManipulationResult,
 	DatabaseDriver,
 } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AlertConfig } from "~/database/schema";
 

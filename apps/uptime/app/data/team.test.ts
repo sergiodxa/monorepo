@@ -10,11 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { describe, expect, test, vi } from "vitest";
 
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
 
@@ -54,7 +53,7 @@ import {
  * evaluates. Nothing here reaches the queue; the seed only creates monitors and reads them
  * back, so a send that did happen would surface as an unexpected recorded message.
  */
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
 
 let { default: Monitor } = await import("~/app/data/monitor");
 

@@ -13,8 +13,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -27,6 +25,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -114,9 +113,9 @@ async function renderCheckout(
 
 function createFakePolar(overrides: Partial<Record<string, unknown>> = {}): PolarClient {
 	return {
-		getExternalCustomer: mock(async () => ({ id: "cus_1" })),
-		createCheckoutSession: mock(async () => ({ url: "https://polar.sh/checkout/123" })),
-		createPortalSession: mock(async () => ({ url: "https://polar.sh/portal/123" })),
+		getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
+		createCheckoutSession: vi.fn(async () => ({ url: "https://polar.sh/checkout/123" })),
+		createPortalSession: vi.fn(async () => ({ url: "https://polar.sh/portal/123" })),
 		...overrides,
 	} as unknown as PolarClient;
 }
@@ -147,8 +146,8 @@ describe("checkout page", () => {
 			{ touch: true, returnRow: true },
 		);
 		let polar = createFakePolar({
-			getExternalCustomer: mock(async () => ({ id: "cus_1" })),
-			createCheckoutSession: mock(async () => ({ url: "https://polar.sh/checkout/123" })),
+			getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
+			createCheckoutSession: vi.fn(async () => ({ url: "https://polar.sh/checkout/123" })),
 		});
 
 		let response = await renderCheckout(db, team, membership, polar);
@@ -165,8 +164,8 @@ describe("checkout page", () => {
 			{ touch: true, returnRow: true },
 		);
 		let polar = createFakePolar({
-			getExternalCustomer: mock(async () => ({ id: "cus_1" })),
-			createPortalSession: mock(async () => ({ url: "https://polar.sh/portal/123" })),
+			getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
+			createPortalSession: vi.fn(async () => ({ url: "https://polar.sh/portal/123" })),
 		});
 		// Entitlement comes from the D1 projection now, not from a Polar lookup (ADR-005).
 		await createActiveSubscription(db, team.owner_id);
