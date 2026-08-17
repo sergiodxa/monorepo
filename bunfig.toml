@@ -39,4 +39,5 @@ pathIgnorePatterns = [
 	"**/packages/http/**",
 	"**/packages/crypto/**",
 	"**/packages/result/**",
-, "**/apps/r3-auth/app/data/subject.test.ts"]
+	"**/apps/r3-auth/app/data/subject.test.ts",
+]
