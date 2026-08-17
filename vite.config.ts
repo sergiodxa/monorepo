@@ -78,6 +78,22 @@ export default defineConfig({
 						"packages/cloudflare-mocks/src/**/*.test.ts?(x)",
 						"packages/oidc-provider/src/**/*.test.ts?(x)",
 						"packages/blog-engine/src/**/*.test.ts?(x)",
+						"packages/spec/src/executor.test.ts",
+						"packages/spec/src/expectation.test.ts",
+						"packages/spec/src/lexer.test.ts",
+						"packages/spec/src/loader.test.ts",
+						"packages/spec/src/parser.test.ts",
+						"packages/spec/src/permissions.test.ts",
+						"packages/spec/src/plugins/demo.test.ts",
+						"packages/spec/src/plugins/env.test.ts",
+						"packages/spec/src/plugins/fs.test.ts",
+						"packages/spec/src/plugins/http.test.ts",
+						"packages/spec/src/plugins/url.test.ts",
+						"packages/spec/src/registry.test.ts",
+						"packages/spec/src/reporter.test.ts",
+						"packages/spec/src/sources.test.ts",
+						"packages/spec/src/workers.test.ts",
+						"packages/spec/src/workspace.test.ts",
 					],
 					pool: "threads",
 				},
@@ -110,6 +126,15 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "r3-auth",
+					// Most tests here build a whole app in `beforeEach` — every migration against a
+					// fresh in-memory database, and an RSA signing key generated into R2 on the
+					// first request that needs one. That fits inside the 10s default hook timeout
+					// when this project runs alone, but not while the other projects are competing
+					// for the same cores, which showed up as hooks timing out in roughly one run in
+					// two. Set on the project because a `test` option beside `projects` is not
+					// inherited by them.
+					hookTimeout: 60_000,
+					testTimeout: 60_000,
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
 				},
