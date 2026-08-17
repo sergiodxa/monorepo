@@ -152,6 +152,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 - `db.transaction()` is atomic only on `@pkg/data-table-sqlstorage` (Durable Object SQLite). `@pkg/data-table-d1` has no interactive transactions, so any multi-step mutation that may run on D1 MUST be written D1-safe (single-statement/upsert or compensating operations)
 - MUST isolate per-tenant caches by keying them on the tenant's `Database` instance, so one tenant's data can never leak to another
+- MUST keep every migration chain applicable to an empty database, since that is how a new tenant is provisioned — `test/migration-replay.test.ts` replays each chain with SQLite's double-quoted string literals disabled and fails on anything new. Never `ALTER TABLE ADD COLUMN` for a column an earlier migration already creates, and when a table rebuild renames a column, the `SELECT` must read the **old** name: with DQS on, as the adapters run, `"new_name"` silently evaluates to the string `'new_name'` for every row instead of failing
 
 ### Security
 
