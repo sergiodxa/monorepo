@@ -19,10 +19,12 @@ const parser = new Markdown({ frontmatter: s.object({}) });
 
 /**
  * Parses markdown source into a Markdoc render tree, or `null` when empty/invalid.
+ * The tree is opaque here — `MarkdownView` is what knows how to render it — so the
+ * return type stays `unknown`, which already admits the `null` empty/invalid case.
  * @param raw - Markdown source.
  * @returns The parsed content tree, or `null`.
  */
-export function parseMarkdown(raw: string): unknown | null {
+export function parseMarkdown(raw: string): unknown {
 	if (!raw.trim()) return null;
 	let result = parser.parse(raw);
 	if (isFailure(result)) return null;

@@ -25,7 +25,7 @@ export default createAction(
 	routes.cms.dashboard,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let user = await getAuthUser();
+		let user = getAuthUser();
 		if (!user) {
 			return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 		}

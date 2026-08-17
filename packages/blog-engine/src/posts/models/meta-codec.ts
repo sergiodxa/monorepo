@@ -8,6 +8,8 @@
  */
 import type { PostTypeDefinition, FieldKind } from "../../post-types/models/post-type";
 
+import { asText } from "../../shared/text";
+
 import type { Post } from "./post";
 
 /**
@@ -20,8 +22,8 @@ export interface PostMetaValues {
 }
 
 /**
- * Encodes a native field value to its `post_meta.value` (TEXT) storage form
- * (booleans as `"1"`/`"0"`, tags as a JSON array, everything else stringified).
+ * Encodes a native field value to its `post_meta.value` (TEXT) storage form (booleans
+ * as `"1"`/`"0"`, tags as a JSON array, everything else via {@link asText}).
  * @param kind - The field kind driving the encoding.
  * @param value - The native value to encode.
  * @returns The TEXT form to store.
@@ -33,7 +35,7 @@ export function encodeFieldValue(kind: FieldKind, value: unknown): string {
 		case "tags":
 			return JSON.stringify(Array.isArray(value) ? value : []);
 		default:
-			return value === undefined || value === null ? "" : String(value);
+			return asText(value);
 	}
 }
 

@@ -21,6 +21,7 @@ import routes from "../../routes";
 import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
+import { fieldText } from "../../shared/text";
 import { PostType, type FieldDefinition, type PostTypeInput } from "../models/post-type";
 
 /**
@@ -51,15 +52,15 @@ function label(user: { display_name: string; email: string } | null): string {
  * @throws {SyntaxError} When the fields textarea is not valid JSON.
  */
 function readForm(formData: FormData): PostTypeInput {
-	let fieldsRaw = String(formData.get("fields") ?? "[]");
+	let fieldsRaw = fieldText(formData, "fields", "[]");
 	let fields: FieldDefinition[] = [];
 	let parsed: unknown = JSON.parse(fieldsRaw);
 	if (Array.isArray(parsed)) fields = parsed as FieldDefinition[];
 	return {
-		name: String(formData.get("name") ?? "").trim(),
-		path: String(formData.get("path") ?? "").trim(),
-		label: String(formData.get("label") ?? "").trim(),
-		description: String(formData.get("description") ?? ""),
+		name: fieldText(formData, "name").trim(),
+		path: fieldText(formData, "path").trim(),
+		label: fieldText(formData, "label").trim(),
+		description: fieldText(formData, "description"),
 		fields,
 		visible: formData.get("visible") != null,
 	};
@@ -76,9 +77,9 @@ function safeReadForm(formData: FormData): Partial<PostTypeInput> {
 		return readForm(formData);
 	} catch {
 		return {
-			name: String(formData.get("name") ?? ""),
-			path: String(formData.get("path") ?? ""),
-			label: String(formData.get("label") ?? ""),
+			name: fieldText(formData, "name"),
+			path: fieldText(formData, "path"),
+			label: fieldText(formData, "label"),
 			fields: [],
 		};
 	}

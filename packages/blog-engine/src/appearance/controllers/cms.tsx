@@ -20,6 +20,7 @@ import routes from "../../routes";
 import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
+import { fieldText } from "../../shared/text";
 import { DEFAULT_THEME, resolveTheme, type ThemeSettings } from "../theme/theme";
 
 /**
@@ -138,7 +139,7 @@ export default createController(routes.cms.appearance, {
 			let ctx = getContext();
 			let formData = ctx.formData;
 			let get = (key: string, fallback: string) =>
-				String(formData.get(key) ?? fallback).trim() || fallback;
+				fieldText(formData, key, fallback).trim() || fallback;
 			let theme: ThemeSettings = {
 				accent: get("accent", DEFAULT_THEME.accent),
 				background: get("background", DEFAULT_THEME.background),
@@ -152,11 +153,7 @@ export default createController(routes.cms.appearance, {
 			};
 
 			await Settings.set(db, "theme", theme);
-			await Settings.set(
-				db,
-				"custom_css",
-				String(formData.get("custom_css") ?? "").slice(0, 32 * 1024),
-			);
+			await Settings.set(db, "custom_css", fieldText(formData, "custom_css").slice(0, 32 * 1024));
 			return redirect("/cms/appearance", { status: redirect.Status.SeeOther });
 		}),
 	},

@@ -17,6 +17,7 @@ import { requirePermission } from "../../auth/middleware/require-permission";
 import routes from "../../routes";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
+import { fieldText } from "../../shared/text";
 import { Settings } from "../models/settings";
 
 /** `/cms/settings` — site title/description/language (gated by `settings.manage`). */
@@ -25,7 +26,7 @@ export default createController(routes.cms.settings, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			let [title, description, language] = await Promise.all([
 				Settings.siteTitle(db),
@@ -84,13 +85,9 @@ export default createController(routes.cms.settings, {
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let formData = ctx.formData;
-			await Settings.set(
-				db,
-				"site_title",
-				String(formData.get("site_title") ?? "").trim() || "My Blog",
-			);
-			await Settings.set(db, "site_description", String(formData.get("site_description") ?? ""));
-			await Settings.set(db, "language", String(formData.get("language") ?? "en").trim() || "en");
+			await Settings.set(db, "site_title", fieldText(formData, "site_title").trim() || "My Blog");
+			await Settings.set(db, "site_description", fieldText(formData, "site_description"));
+			await Settings.set(db, "language", fieldText(formData, "language", "en").trim() || "en");
 			return redirect("/cms/settings", { status: redirect.Status.SeeOther });
 		}),
 	},

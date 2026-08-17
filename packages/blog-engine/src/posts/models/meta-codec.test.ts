@@ -50,6 +50,13 @@ describe("encodeFieldValue / decodeFieldValue", () => {
 		expect(encodeFieldValue("markdown", "# Hi")).toBe("# Hi");
 		expect(decodeFieldValue("url", "https://example.com")).toBe("https://example.com");
 	});
+
+	test("a structured value stores as JSON instead of [object Object]", () => {
+		expect(encodeFieldValue("text", { a: 1 })).toBe('{"a":1}');
+		expect(encodeFieldValue("text", ["a", "b"])).toBe('["a","b"]');
+		expect(encodeFieldValue("text", 42)).toBe("42");
+		expect(encodeFieldValue("text", null)).toBe("");
+	});
 });
 
 describe("createMetaCodec", () => {

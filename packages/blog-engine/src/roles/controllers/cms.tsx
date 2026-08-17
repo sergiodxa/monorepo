@@ -22,6 +22,7 @@ import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { PERMISSIONS, PERMISSION_KEYS, type Permission } from "../../shared/permissions";
+import { fieldText } from "../../shared/text";
 import { Role, type RoleInput, type RoleWithPermissions } from "../models/role";
 
 /**
@@ -53,9 +54,9 @@ function label(user: { display_name: string; email: string } | null): string {
 function readForm(formData: FormData): RoleInput {
 	let permissions = PERMISSION_KEYS.filter((key) => formData.get(`perm_${key}`) != null);
 	return {
-		name: String(formData.get("name") ?? "").trim(),
-		label: String(formData.get("label") ?? "").trim(),
-		description: String(formData.get("description") ?? ""),
+		name: fieldText(formData, "name").trim(),
+		label: fieldText(formData, "label").trim(),
+		description: fieldText(formData, "description"),
 		permissions,
 	};
 }

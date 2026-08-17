@@ -14,6 +14,7 @@ import type { PostTypeDefinition } from "../../post-types/models/post-type";
 import type { PostMetaValues } from "../../posts/models/meta-codec";
 
 import { parseMarkdown } from "../markdown";
+import { asText } from "../text";
 
 import * as s from "./styles";
 
@@ -100,7 +101,7 @@ export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 			return content ? <MarkdownView content={content} /> : <></>;
 		}
 		if (kind === "url") {
-			let url = String(value ?? "");
+			let url = asText(value);
 			return url ? <a href={url}>{url}</a> : <></>;
 		}
 		if (kind === "boolean") return <span mix={[s.meta]}>{value ? "Yes" : "No"}</span>;
@@ -116,7 +117,7 @@ export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 				</>
 			);
 		}
-		return <p>{String(value ?? "")}</p>;
+		return <p>{asText(value)}</p>;
 	};
 }
 

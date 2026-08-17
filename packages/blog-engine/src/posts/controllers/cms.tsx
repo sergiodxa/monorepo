@@ -28,6 +28,7 @@ import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { type Permission } from "../../shared/permissions";
+import { entryText, fieldText } from "../../shared/text";
 import { createMetaCodec, type PostMetaValues } from "../models/meta-codec";
 import { Post } from "../models/post";
 
@@ -232,16 +233,16 @@ function renderForm(
  * @returns The decoded metadata values (including `title`).
  */
 function readMeta(formData: FormData, type: PostTypeDefinition): PostMetaValues {
-	let meta: PostMetaValues = { title: String(formData.get("title") ?? "").trim() };
+	let meta: PostMetaValues = { title: fieldText(formData, "title").trim() };
 	for (let field of type.fields) {
 		let raw = formData.get(`meta_${field.key}`);
 		if (field.kind === "boolean") meta[field.key] = raw != null;
 		else if (field.kind === "tags") {
-			meta[field.key] = String(raw ?? "")
+			meta[field.key] = entryText(raw)
 				.split(",")
 				.map((tag) => tag.trim())
 				.filter(Boolean);
-		} else meta[field.key] = String(raw ?? "");
+		} else meta[field.key] = entryText(raw);
 	}
 	return meta;
 }
@@ -262,7 +263,7 @@ function requireType(db: Database, typeName: string): Promise<PostTypeDefinition
  * @returns The ISO publish timestamp, or null when blank/invalid.
  */
 function parsePublishedAt(formData: FormData): string | null {
-	let raw = String(formData.get("published_at") ?? "").trim();
+	let raw = fieldText(formData, "published_at").trim();
 	if (!raw) return null;
 	let ts = Date.parse(raw);
 	return Number.isNaN(ts) ? null : new Date(ts).toISOString();
@@ -283,7 +284,7 @@ export default createController(routes.cms.posts, {
 			let { typeName } = ds.parse(TypeParams, ctx.params);
 			let type = await requireType(db, typeName);
 			if (!type) return notFound("Unknown post type");
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			if (!user) return forbidden("Forbidden");
 			let permissions = await getPermissions();
 
@@ -343,7 +344,7 @@ export default createController(routes.cms.posts, {
 			let { typeName } = ds.parse(TypeParams, ctx.params);
 			let type = await requireType(db, typeName);
 			if (!type) return notFound("Unknown post type");
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 			let siteTitle = await Settings.siteTitle(db);
@@ -367,7 +368,7 @@ export default createController(routes.cms.posts, {
 			let { typeName } = ds.parse(TypeParams, ctx.params);
 			let type = await requireType(db, typeName);
 			if (!type) return notFound("Unknown post type");
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
@@ -389,7 +390,7 @@ export default createController(routes.cms.posts, {
 					{ status: 400 },
 				);
 			}
-			let slug = String(formData.get("slug") ?? "").trim() || slugify(meta.title);
+			let slug = fieldText(formData, "slug").trim() || slugify(meta.title);
 			let publishedAt = permissions.has("posts.publish") ? parsePublishedAt(formData) : null;
 
 			await Post.createForType(
@@ -406,7 +407,7 @@ export default createController(routes.cms.posts, {
 			let { typeName, id } = ds.parse(PostParams, ctx.params);
 			let type = await requireType(db, typeName);
 			if (!type) return notFound("Unknown post type");
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
@@ -443,7 +444,7 @@ export default createController(routes.cms.posts, {
 			let { typeName, id } = ds.parse(PostParams, ctx.params);
 			let type = await requireType(db, typeName);
 			if (!type) return notFound("Unknown post type");
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
@@ -455,7 +456,7 @@ export default createController(routes.cms.posts, {
 
 			let meta = readMeta(formData, type);
 			if (!meta.title) return badRequest("Title is required");
-			let slug = String(formData.get("slug") ?? "").trim() || existing.slug;
+			let slug = fieldText(formData, "slug").trim() || existing.slug;
 			// Publishing is a permission: writers cannot change published_at.
 			let publishedAt = permissions.has("posts.publish")
 				? parsePublishedAt(formData)
@@ -470,7 +471,7 @@ export default createController(routes.cms.posts, {
 			let { typeName, id } = ds.parse(PostParams, ctx.params);
 			let type = await requireType(db, typeName);
 			if (!type) return notFound("Unknown post type");
-			let user = await getAuthUser();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 

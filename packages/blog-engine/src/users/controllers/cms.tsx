@@ -23,6 +23,7 @@ import routes from "../../routes";
 import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
+import { fieldText } from "../../shared/text";
 import { User } from "../models/user";
 
 /**
@@ -162,7 +163,7 @@ export default createController(routes.cms.users, {
 		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { id } = ds.parse(RouteParams, ctx.params);
-			let roleId = String(ctx.formData.get("role_id") ?? "");
+			let roleId = fieldText(ctx.formData, "role_id");
 			try {
 				await User.changeRole(db, id, roleId);
 			} catch (error) {
@@ -178,7 +179,7 @@ export default createController(routes.cms.users, {
 			if (!target) return notFound("Not found");
 
 			let postCount = await Post.countByAuthor(db, target.id);
-			let reassignTo = String(ctx.formData.get("reassign_to") ?? "").trim();
+			let reassignTo = fieldText(ctx.formData, "reassign_to").trim();
 			try {
 				if (postCount > 0) {
 					if (reassignTo) await Post.reassignAuthor(db, target.id, reassignTo);
