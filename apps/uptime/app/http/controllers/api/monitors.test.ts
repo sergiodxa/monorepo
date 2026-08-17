@@ -24,7 +24,7 @@ import routes from "~/routes/web";
 
 /**
  * `app/data/monitor.ts` (imported by `./monitors`) reads `env` from `cloudflare:workers`
- * at module load time, so it has to resolve under `bun test`. These endpoints touch no
+ * at module load time, so it has to resolve under the test runner. These endpoints touch no
  * binding, and the empty strict env proves it: any read would throw by the binding's name
  * instead of quietly answering `undefined`.
  */

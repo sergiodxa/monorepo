@@ -14,7 +14,7 @@
  * outright, which is the assertion that the metering path is genuinely absent.
  *
  * `HttpCheck` is faked rather than mocked at the network level, since the real one probes
- * through a Durable Object that `bun test` has no runtime for; the options it was constructed
+ * through a Durable Object that the test runner has no runtime for; the options it was constructed
  * with are recorded so the probe's own configuration can be asserted on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

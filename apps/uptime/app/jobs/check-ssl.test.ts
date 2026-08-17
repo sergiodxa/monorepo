@@ -52,8 +52,8 @@ let calculateSslStatusMock = vi.fn(
  * test captures `env` on import, so `beforeEach` empties it rather than re-creating it.
  *
  * `~/app/data/monitor` (imported transitively by `./check-ssl`) imports `env` from
- * `cloudflare:workers` too. The repo-root `bunfig.toml` preload stubs the module
- * automatically for `bun test` run from the repo root, but its placeholder bindings aren't
+ * `cloudflare:workers` too. The `cloudflareWorkersStub()` plugin in the root
+ * `vite.config.ts` stubs the module automatically, but its placeholder bindings aren't
  * callable, so the real queue is installed here.
  */
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });

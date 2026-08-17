@@ -2,7 +2,7 @@
  * Unit tests for {@link warnIfNoAccessibleName} and
  * {@link warnIfNoAccessibleLabel}: each assertion drives the check against a
  * minimal props/children fixture with `console.warn` spied on, and dev mode
- * toggled through `process.env.DEV` the same way `bun:test` already exercises
+ * toggled through `process.env.DEV` the same way the suite already exercises
  * other dev-only warnings in this package (see `heading-scope.test.ts`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

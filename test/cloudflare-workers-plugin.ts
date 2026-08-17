@@ -3,10 +3,9 @@
  * statically `import { env } from "cloudflare:workers"` load under Vitest without the
  * Workers runtime.
  *
- * This is the Vitest counterpart of the `bun test` preload: same deterministic
- * `test-<KEY>` placeholders, same reason for existing. A test that needs specific bindings
- * still calls `vi.doMock("cloudflare:workers", …)` and dynamically imports its subject,
- * which overrides this default for that file.
+ * Every binding read answers with a deterministic `test-<KEY>` placeholder. A test that
+ * needs specific bindings still calls `vi.doMock("cloudflare:workers", …)` and dynamically
+ * imports its subject, which overrides this default for that file.
  *
  * `waitUntil` and `DurableObject` are exported even though the default does nothing with
  * them: a module's export set is fixed at link time, so a source file that statically

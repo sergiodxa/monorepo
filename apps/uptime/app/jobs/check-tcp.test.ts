@@ -14,7 +14,7 @@
  * row, so it produces no ping either.
  *
  * `checkTcpConnection` is mocked — raw TCP connectivity needs `cloudflare:sockets`, which
- * is unavailable under `bun test` — while the `QUEUE` and `PING_RESULTS` bindings are
+ * no runtime outside workerd provides — while the `QUEUE` and `PING_RESULTS` bindings are
  * in-memory implementations installed through `cloudflare:workers`, so the enqueued messages
  * and the data points asserted on are the ones that really landed on them. Polar is a real
  * client with its one ingestion call spied on, so the events asserted here are the ones the

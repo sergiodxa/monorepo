@@ -14,7 +14,7 @@ function Greeting(handle: Handle) {
 	};
 }
 
-// Runs while `globalThis.document` is still undefined — the ambient bun:test
+// Runs while `globalThis.document` is still undefined — the default Vitest
 // environment has no browser globals, so this is the "server" case for free.
 describe(setIntl, () => {
 	test("throws when called outside of a browser", () => {
