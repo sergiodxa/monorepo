@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import type { Database } from "remix/data-table";
+
+import { describe, expect, test } from "vitest";
 
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";

@@ -15,11 +15,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "vitest";
-
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { applyMigration, applyMigrations } from "~/app/lib/test/db";
 
