@@ -1,5 +1,8 @@
-.wrangler
-dist
-node_modules
+# Artifacts the root .gitignore does not already cover.
+
+# Folders
+/.wrangler
+
+# Files
 .dev.vars
 worker-configuration.d.ts

@@ -1,14 +1,11 @@
+# Artifacts the root .gitignore does not already cover.
+
 # Folders
-/node_modules
-/.cache
-/.react-router
 /.wrangler
-/coverage
-/build
+# Browser and tenant bundles emitted here by `bun run build` and served by the
+# ASSETS binding; every file under it is generated, so the whole folder is ignored.
 /assets
 
 # Files
-.DS_Store
 .dev.vars
 worker-configuration.d.ts
-tsconfig.tsbuildinfo

@@ -1,1 +1,5 @@
+# Artifacts the root .gitignore does not already cover.
+
+# Folders
+# The PokéAPI dataset fetched by `bun run download:pokeapi`.
 /json
