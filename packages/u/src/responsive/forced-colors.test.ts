@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { forcedColorAdjust } from "../a11y/forced-color-adjust";
 import { bg } from "../color/bg";

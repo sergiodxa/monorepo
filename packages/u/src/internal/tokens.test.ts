@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import {
 	blur,
@@ -189,7 +189,7 @@ describe("containerLength", () => {
 
 	test("never emits a var() reference, which an at-rule condition cannot read", () => {
 		for (let name of ["xs", "sm", "md", "lg", "xl", "2xl"] as const) {
-			expect(containerLength(name)).not.toInclude("var(");
+			expect(containerLength(name)).not.toContain("var(");
 		}
 	});
 

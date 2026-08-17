@@ -4,7 +4,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
@@ -27,7 +27,7 @@ describe("at", () => {
 	test("resolves a named step to a literal length, never a var() reference", async () => {
 		for (let size of ["xs", "sm", "md", "lg", "xl", "2xl"] as const) {
 			let condition = (await serialize(at(size, p(4)))).match(/@container [^{]+/)?.[0];
-			expect(condition).not.toInclude("var(");
+			expect(condition).not.toContain("var(");
 		}
 	});
 
