@@ -10,14 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { createCookie } from "remix/cookie";
 import { asyncContext, getContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
 import { createRouter, type Middleware } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
+import { describe, expect, test } from "vitest";
 
 import {
 	auth,

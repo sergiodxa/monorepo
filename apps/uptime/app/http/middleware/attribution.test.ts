@@ -13,13 +13,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Middleware } from "remix/router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
+import { describe, expect, test } from "vitest";
 
 import type { TrialAttribution } from "~/app/http/middleware/attribution";
 

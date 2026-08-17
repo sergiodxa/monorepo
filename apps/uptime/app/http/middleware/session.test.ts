@@ -11,9 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { createRouter } from "remix/router";
+import { describe, expect, test } from "vitest";
 
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 

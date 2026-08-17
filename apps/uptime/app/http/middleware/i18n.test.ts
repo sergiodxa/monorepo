@@ -13,8 +13,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
@@ -22,6 +20,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
+import { describe, expect, test } from "vitest";
 
 import UserPreferences from "~/app/data/user-preferences";
 import { language } from "~/app/http/cookies";
