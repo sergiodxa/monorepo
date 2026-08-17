@@ -1,3 +1,6 @@
+import { JWK, JWT } from "@pkg/jwt";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
 /**
  * Unit tests for the ID-token verification key service. The JWKS endpoint is served
  * by a mock server, so the tests cover what the service is actually responsible for:
@@ -7,11 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-
-import { JWK, JWT } from "@pkg/jwt";
-import { HttpResponse, http } from "msw";
-import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
@@ -99,7 +98,7 @@ describe("IdTokenVerificationKeyService", () => {
 		let second = new IdTokenVerificationKeyService();
 
 		expect(first.value).not.toBe(second.value);
-		await expect(first.value).resolves.toBeFunction();
-		await expect(second.value).resolves.toBeFunction();
+		await expect(first.value).resolves.toBeTypeOf("function");
+		await expect(second.value).resolves.toBeTypeOf("function");
 	});
 });

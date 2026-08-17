@@ -8,9 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { ZoneFileImport, ZoneFileRejectionReason } from "~/app/services/zone-file";
 
@@ -19,12 +20,16 @@ import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
 const DOMAIN = "sergiodxa.com";
 
 /** A genuine export, so the supported subset is measured against real provider output. */
-const EXPORT_FIXTURE = await Bun.file(`${import.meta.dir}/fixtures/sergiodxa.com.txt`).text();
+const EXPORT_FIXTURE = readFileSync(
+	new URL("./fixtures/sergiodxa.com.txt", import.meta.url),
+	"utf8",
+);
 
 /** Real RRsets plus one line per refused construct, which no export would contain. */
-const RECONSTRUCTED_FIXTURE = await Bun.file(
-	`${import.meta.dir}/fixtures/sergiodxa.com.reconstructed.zone`,
-).text();
+const RECONSTRUCTED_FIXTURE = readFileSync(
+	new URL("./fixtures/sergiodxa.com.reconstructed.zone", import.meta.url),
+	"utf8",
+);
 
 /** Parses text against `sergiodxa.com`, failing the test rather than the type when the cap trips. */
 function parse(input: string, domain = DOMAIN): ZoneFileImport {
@@ -90,9 +95,9 @@ describe("parseZoneFile", () => {
 				(record) => record.name === "cf-bounce._domainkey.auth.sergiodxa.com",
 			);
 
-			expect(dkim?.value).toStartWith("v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkq");
-			expect(dkim?.value).toEndWith("TixDSJwIDAQAB");
-			expect(dkim?.value).not.toInclude('"');
+			expect(dkim?.value).toMatch(/^v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkq/);
+			expect(dkim?.value).toMatch(/TixDSJwIDAQAB$/);
+			expect(dkim?.value).not.toContain('"');
 		});
 
 		test("counts a record written twice as the one record it is", () => {

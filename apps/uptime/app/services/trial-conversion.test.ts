@@ -17,11 +17,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
@@ -140,7 +139,7 @@ describe("the conversion window, per attempt", () => {
 
 		await convert();
 
-		expect(await created()).toBeEmpty();
+		expect(await created()).toHaveLength(0);
 	});
 
 	test("claims nothing for an address that never left a lead", async () => {
@@ -149,7 +148,7 @@ describe("the conversion window, per attempt", () => {
 
 		await convert();
 
-		expect(await created()).toBeEmpty();
+		expect(await created()).toHaveLength(0);
 	});
 });
 
@@ -189,7 +188,7 @@ describe("matching a subject to a lead", () => {
 
 		await convertAs("he.llo@gmail.com");
 
-		expect(await created()).toBeEmpty();
+		expect(await created()).toHaveLength(0);
 	});
 });
 
@@ -279,7 +278,7 @@ describe("the history a claimed target arrives with", () => {
 		await convert();
 
 		let [monitor] = await created();
-		expect(await history(monitor?.id ?? "")).toBeEmpty();
+		expect(await history(monitor?.id ?? "")).toHaveLength(0);
 		expect(monitor?.last_checked_at).toBeNull();
 	});
 
@@ -306,7 +305,7 @@ describe("the history a claimed target arrives with", () => {
 		let watchId = await attempt(lead.id, "https://example.com", 1);
 		await hourlyWeek(watchId, 1);
 
-		let listResults = spyOn(TrialWatch, "listResults").mockRejectedValue(new Error("nope"));
+		let listResults = vi.spyOn(TrialWatch, "listResults").mockRejectedValue(new Error("nope"));
 
 		try {
 			await convert();
@@ -429,7 +428,7 @@ describe("the funnel record", () => {
 
 		await convert();
 
-		expect(await created()).toBeEmpty();
+		expect(await created()).toHaveLength(0);
 		expect(await TrialConversion.findByOwner(db, AUTHOR_ID)).not.toBeNull();
 	});
 
@@ -478,12 +477,12 @@ describe("the funnel record", () => {
 	test("a failure recording it costs nobody their monitors", async () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://example.com", 1);
-		spyOn(TrialConversion, "recordSignup").mockRejectedValue(new Error("insert failed"));
+		vi.spyOn(TrialConversion, "recordSignup").mockRejectedValue(new Error("insert failed"));
 
 		await convert();
 
 		expect(await created()).toHaveLength(1);
-		spyOn(TrialConversion, "recordSignup").mockRestore();
+		vi.spyOn(TrialConversion, "recordSignup").mockRestore();
 	});
 });
 
@@ -497,14 +496,14 @@ describe("the account-created funnel event", () => {
 
 	beforeEach(() => {
 		logged = [];
-		spyOn(console, "info").mockImplementation((...args: unknown[]) => {
+		vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => {
 			let [entry] = args;
 			if (entry && typeof entry === "object") logged.push(entry as Record<string, unknown>);
 		});
 	});
 
 	afterEach(() => {
-		spyOn(console, "info").mockRestore();
+		vi.spyOn(console, "info").mockRestore();
 	});
 
 	/** Every `funnel.account_created` line this run emitted. */
@@ -568,20 +567,20 @@ describe("the account-created funnel event", () => {
 	test("an address that never left a lead emits nothing", async () => {
 		await convert();
 
-		expect(events()).toBeEmpty();
+		expect(events()).toHaveLength(0);
 	});
 });
 
 describe("never blocking sign-in", () => {
 	afterEach(() => {
-		spyOn(Lead, "findByEmail").mockRestore();
-		spyOn(Monitor, "create").mockRestore();
+		vi.spyOn(Lead, "findByEmail").mockRestore();
+		vi.spyOn(Monitor, "create").mockRestore();
 	});
 
 	test("swallows a failure in the lookup that decides whether there is anything to claim", async () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://example.com", 1);
-		spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
+		vi.spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
 
 		await expect(convert()).resolves.toBeUndefined();
 	});
@@ -589,7 +588,7 @@ describe("never blocking sign-in", () => {
 	test("swallows a failure while creating a monitor, leaving the attempt unclaimed", async () => {
 		let lead = await createLead();
 		let watchId = await attempt(lead.id, "https://example.com", 1);
-		spyOn(Monitor, "create").mockRejectedValue(new Error("insert failed"));
+		vi.spyOn(Monitor, "create").mockRejectedValue(new Error("insert failed"));
 
 		await convert();
 
@@ -600,7 +599,7 @@ describe("never blocking sign-in", () => {
 		let lead = await createLead();
 		await threeAttempts(lead.id, 30);
 		let create = Monitor.create.bind(Monitor);
-		spyOn(Monitor, "create")
+		vi.spyOn(Monitor, "create")
 			.mockImplementationOnce(async () => {
 				throw new Error("insert failed");
 			})

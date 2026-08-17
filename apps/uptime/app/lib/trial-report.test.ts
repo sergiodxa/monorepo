@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import type { Segmentable } from "~/app/lib/trial-report";
 
@@ -71,11 +71,11 @@ describe("segmentsOver", () => {
  */
 describe("incidentsFrom", () => {
 	test("reports nothing for a target that never failed", () => {
-		expect(incidentsFrom([at(0, "up"), at(HOUR, "up")])).toBeEmpty();
+		expect(incidentsFrom([at(0, "up"), at(HOUR, "up")])).toHaveLength(0);
 	});
 
 	test("reports nothing for a target that was only ever slow", () => {
-		expect(incidentsFrom([at(0, "up"), at(HOUR, "degraded")])).toBeEmpty();
+		expect(incidentsFrom([at(0, "up"), at(HOUR, "degraded")])).toHaveLength(0);
 	});
 
 	test("groups consecutive failures into one incident, counting its checks", () => {
@@ -115,6 +115,6 @@ describe("incidentsFrom", () => {
 	});
 
 	test("reports nothing for a target with no checks at all", () => {
-		expect(incidentsFrom([])).toBeEmpty();
+		expect(incidentsFrom([])).toHaveLength(0);
 	});
 });
