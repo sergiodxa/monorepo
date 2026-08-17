@@ -532,6 +532,21 @@ interface SentEmailRecord {
 `MockSqlStorageCursor` and `MockSqlStorageStatement` are exported as well, so a test can
 assert a cursor's identity if it needs to.
 
+## SQLite driver
+
+`createD1Database()` and `createSqlStorage()` run real SQL, so the package needs a SQLite
+engine — and Bun and Node ship different ones that cannot resolve each other: `bun:sqlite`
+does not exist under Node, and Bun cannot resolve `node:sqlite`.
+
+`@pkg/cloudflare-mocks/sqlite` resolves to whichever the current runtime has, through the
+`bun` export condition, so the same test file works under `bun test` and under Vitest without
+either module appearing in the other's module graph. Both implementations satisfy one narrow
+interface covering only what the mocks call; the Node one normalizes a missed `get()` to
+`null` and reports an empty column list where `node:sqlite` throws, so the two behave
+identically at the call sites.
+
+Nothing outside this package should import either implementation directly.
+
 ## Where the mock is more permissive than the platform
 
 A mock is not the platform. These are the differences that matter, so a test that passes here

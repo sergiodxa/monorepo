@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Database } from "bun:sqlite";
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 /** Value shapes SQLite accepts as a positional binding. */
 type SqliteBinding = string | number | null | Uint8Array;
@@ -127,7 +127,7 @@ export class MockSqlStorageStatement {}
  * @example let sql = createSqlStorage(); sql.exec("CREATE TABLE t (id INTEGER)");
  */
 export function createSqlStorage(options?: SqlStorageMockOptions): SqlStorage {
-	let sqlite = new Database(options?.filename ?? ":memory:");
+	let sqlite = openDatabase(options?.filename ?? ":memory:");
 
 	/** Reads a single numeric scalar out of SQLite, used for size and change counts. */
 	function readScalar(sql: string): number {
@@ -160,7 +160,7 @@ export function createSqlStorage(options?: SqlStorageMockOptions): SqlStorage {
 		if (statement.columnNames.length > 0) {
 			rows = statement.all(...bound).map((row) => toRow<T>(row));
 		} else if (bound.length === 0) {
-			sqlite.run(query);
+			sqlite.exec(query);
 		} else {
 			statement.run(...bound);
 		}

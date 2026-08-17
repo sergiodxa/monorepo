@@ -1,0 +1,47 @@
+/**
+ * {@link SqliteDatabase} over `bun:sqlite`, selected by the `bun` export condition on
+ * `@pkg/cloudflare-mocks/sqlite`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { Database } from "bun:sqlite";
+
+import type { SqliteDatabase, SqliteStatement } from "./sqlite";
+
+/**
+ * Opens an in-memory SQLite database.
+ * @param filename SQLite file to open; `:memory:` for a private database.
+ * @returns The database, narrowed to the surface the mocks use.
+ */
+export function openDatabase(filename: string): SqliteDatabase {
+	let database = new Database(filename);
+
+	return {
+		query(sql: string): SqliteStatement {
+			let statement = database.query(sql);
+
+			return {
+				get columnNames(): string[] {
+					return [...statement.columnNames];
+				},
+
+				all(...values: unknown[]): Record<string, unknown>[] {
+					return statement.all(...(values as never[])) as Record<string, unknown>[];
+				},
+
+				get(...values: unknown[]): Record<string, unknown> | null {
+					return statement.get(...(values as never[])) as Record<string, unknown> | null;
+				},
+
+				run(...values: unknown[]): void {
+					statement.run(...(values as never[]));
+				},
+			};
+		},
+
+		exec(sql: string): void {
+			database.exec(sql);
+		},
+	};
+}

@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Database } from "bun:sqlite";
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { splitSqlStatements } from "./sql-script";
 
@@ -68,7 +68,7 @@ export interface D1DatabaseMockOptions {
  * @example let db = createD1Database(); await db.exec("CREATE TABLE t (id INTEGER)");
  */
 export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMock {
-	let sqlite = new Database(options?.filename ?? ":memory:");
+	let sqlite = openDatabase(options?.filename ?? ":memory:");
 	let prepared = new WeakMap<D1PreparedStatement, { text: string; values: unknown[] }>();
 	let bookmark = 0;
 
@@ -157,15 +157,15 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 			return plan;
 		});
 
-		sqlite.run("BEGIN");
+		sqlite.exec("BEGIN");
 
 		try {
 			let results = plans.map((plan) => toResult<T>(execute(plan.text, plan.values)));
-			sqlite.run("COMMIT");
+			sqlite.exec("COMMIT");
 			bookmark += 1;
 			return results;
 		} catch (error) {
-			sqlite.run("ROLLBACK");
+			sqlite.exec("ROLLBACK");
 			throw error;
 		}
 	}
@@ -179,7 +179,7 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 		let statements = splitSqlStatements(query);
 		let started = performance.now();
 
-		for (let statement of statements) sqlite.run(statement);
+		for (let statement of statements) sqlite.exec(statement);
 
 		return { count: statements.length, duration: performance.now() - started };
 	}
