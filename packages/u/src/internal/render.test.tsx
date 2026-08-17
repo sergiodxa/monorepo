@@ -9,9 +9,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
-
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { bg } from "../color/bg";
 import { border } from "../color/border";
