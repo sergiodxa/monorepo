@@ -14,14 +14,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { QueueMock } from "@pkg/cloudflare-mocks";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type { Result } from "@pkg/result";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { failure, success } from "@pkg/result";
 import { Database } from "remix/data-table";
 
@@ -30,7 +31,7 @@ import type { HttpP99Scope } from "~/app/services/analytics";
 import {
 	applyMigrations,
 	compileSqliteStatement,
-	createBunSqliteDatabaseAdapter,
+	createSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/lib/test/db";
 import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/polar";
@@ -46,8 +47,6 @@ import {
 	tcpMonitors,
 	teams,
 } from "~/database/schema";
-
-import type { SQLQueryBindings } from "bun:sqlite";
 
 /** The message body `Monitor.ping` passes to `env.QUEUE.send(...)`. */
 interface PingQueueMessage {
@@ -95,10 +94,10 @@ beforeEach(() => {
  */
 function createPlanRecordingDatabase() {
 	let plans: string[][] = [];
-	let sqliteDb = new SqliteDatabase(":memory:");
+	let sqliteDb = openDatabase(":memory:");
 	applyMigrations(sqliteDb);
 
-	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let adapter = createSqliteDatabaseAdapter(sqliteDb);
 	let observed: DatabaseDriver = {
 		...adapter,
 		async execute(request: DataManipulationRequest) {
@@ -128,8 +127,8 @@ function explain(sqliteDb: SqliteDatabase, sql: string, values: unknown[]): stri
 	}
 }
 
-/** Narrows a compiled binding to something `bun:sqlite` accepts. */
-function toBinding(value: unknown): SQLQueryBindings {
+/** Narrows a compiled binding to something the SQLite driver accepts. */
+function toBinding(value: unknown): unknown {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "string") return value;
 	if (typeof value === "number") return value;

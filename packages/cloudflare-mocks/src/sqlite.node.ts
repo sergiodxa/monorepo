@@ -9,6 +9,8 @@ import { DatabaseSync } from "node:sqlite";
 
 import type { SqliteDatabase, SqliteStatement } from "./sqlite";
 
+export type { SqliteDatabase, SqliteStatement } from "./sqlite";
+
 /**
  * Opens an in-memory SQLite database.
  * @param filename SQLite file to open; `:memory:` for a private database.
@@ -48,8 +50,14 @@ export function openDatabase(filename: string): SqliteDatabase {
 			};
 		},
 
-		exec(sql: string): void {
-			database.exec(sql);
+		exec(sql: string, ...values: unknown[]): void {
+			// Only the no-binding form can carry a multi-statement script.
+			if (values.length === 0) {
+				database.exec(sql);
+				return;
+			}
+
+			database.prepare(sql).run(...(values as never[]));
 		},
 	};
 }

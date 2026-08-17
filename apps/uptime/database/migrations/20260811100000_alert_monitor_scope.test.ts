@@ -15,8 +15,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
+
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { applyMigration, applyMigrations } from "~/app/lib/test/db";
 
@@ -26,13 +29,13 @@ const MIGRATION = "20260811100000_alert_monitor_scope.sql";
 let sqlite: SqliteDatabase;
 
 beforeEach(() => {
-	sqlite = new SqliteDatabase(":memory:");
+	sqlite = openDatabase(":memory:");
 	applyMigrations(sqlite, MIGRATION);
 });
 
 /** One alert as the schema held it before this migration: no `monitor_type` column. */
 function seedAlert(alert: { id: string; monitorId: string | null; name?: string }) {
-	sqlite.run(
+	sqlite.exec(
 		`INSERT INTO alerts (id, created_at, updated_at, team_id, monitor_id, config, name,
 		                     notify_on_recovery, cooldown_minutes)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,

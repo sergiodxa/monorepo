@@ -15,8 +15,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
+
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { applyMigration, applyMigrations } from "~/app/lib/test/db";
 
@@ -26,13 +29,13 @@ const MIGRATION = "20260811110000_maintenance_monitor_scope.sql";
 let sqlite: SqliteDatabase;
 
 beforeEach(() => {
-	sqlite = new SqliteDatabase(":memory:");
+	sqlite = openDatabase(":memory:");
 	applyMigrations(sqlite, MIGRATION);
 });
 
 /** One window as the schema held it before this migration: no `monitor_type` column. */
 function seedWindow(window: { id: string; monitorId: string | null; name?: string }) {
-	sqlite.run(
+	sqlite.exec(
 		`INSERT INTO maintenance_windows (id, created_at, updated_at, team_id, monitor_id, name,
 		                                  starts_at, ends_at, suppress_alerts, show_on_status_page)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

@@ -34,7 +34,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
 import {
 	afterAll,
 	afterEach,
@@ -48,6 +47,7 @@ import {
 } from "bun:test";
 
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type { IngestEvent } from "@pkg/polar";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
@@ -57,6 +57,7 @@ import {
 	createEnv,
 	createQueue,
 } from "@pkg/cloudflare-mocks";
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -72,7 +73,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import {
 	applyMigrations,
 	compileSqliteStatement,
-	createBunSqliteDatabaseAdapter,
+	createSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/lib/test/db";
 import {
@@ -83,8 +84,6 @@ import {
 	monitors,
 	teams,
 } from "~/database/schema";
-
-import type { SQLQueryBindings } from "bun:sqlite";
 
 /** The `GeoFetchDO` stub the job calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = mock(
@@ -694,10 +693,10 @@ interface ObservedStatement {
  */
 function createObservedDatabase() {
 	let statements: ObservedStatement[] = [];
-	let sqliteDb = new SqliteDatabase(":memory:");
+	let sqliteDb = openDatabase(":memory:");
 	applyMigrations(sqliteDb);
 
-	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let adapter = createSqliteDatabaseAdapter(sqliteDb);
 	let observed: DatabaseDriver = {
 		...adapter,
 		async execute(request: DataManipulationRequest) {
@@ -723,7 +722,7 @@ function createObservedDatabase() {
  *
  * Returns an empty plan for anything SQLite won't explain (an `INSERT` of literal
  * values has no interesting plan) rather than failing the test that asked.
- * @param sqliteDb Open `bun:sqlite` database with the schema applied.
+ * @param sqliteDb Open SQLite database with the schema applied.
  * @param sql Statement text as compiled for D1.
  * @param values Bindings for the statement.
  * @returns One string per plan step, e.g. `SEARCH monitors USING INDEX ...`.
@@ -753,8 +752,8 @@ function tableScans(statements: ObservedStatement[]): string[] {
 	);
 }
 
-/** Narrows a compiled binding to something `bun:sqlite` accepts. */
-function toBinding(value: unknown): SQLQueryBindings {
+/** Narrows a compiled binding to something the SQLite driver accepts. */
+function toBinding(value: unknown): unknown {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "string") return value;
 	if (typeof value === "number") return value;

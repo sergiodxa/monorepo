@@ -49,8 +49,12 @@ export interface SqliteDatabase {
 	query(sql: string): SqliteStatement;
 
 	/**
-	 * Executes SQL for its effect, without bindings.
-	 * @param sql One or more SQL statements.
+	 * Executes SQL for its effect, discarding any rows.
+	 *
+	 * With no bindings the argument may be a `;`-separated script; with bindings it has to
+	 * be a single statement, because only a prepared statement can take them.
+	 * @param sql SQL to run.
+	 * @param values Positional bindings.
 	 */
-	exec(sql: string): void;
+	exec(sql: string, ...values: unknown[]): void;
 }

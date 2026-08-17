@@ -25,7 +25,7 @@ import { alertEvents } from "~/database/schema";
 
 /**
  * Patches a test database's driver so writes to the given JSON-typed columns are
- * `JSON.stringify`-d before binding and `JSON.parse`-d back on read. The bun:sqlite
+ * `JSON.stringify`-d before binding and `JSON.parse`-d back on read. The SQLite
  * test adapter binds column values as-is with no column-type awareness, so passing a
  * plain object into a `c.json()` column (here, `snapshot`) throws at the SQLite
  * binding layer. This codec is required to exercise `record()`'s snapshot branch

@@ -4,7 +4,7 @@
  * tables, cron via `cron_job_pings`) and `MonitorDailyStats.upsertDay`'s
  * replace-on-rerun idempotency. `getHttpDailyAggregate` is mocked since Analytics
  * Engine access has its own service-level tests. The DNS/TCP/cron branches read via raw
- * `db.exec()` SELECTs, which the shared `createTestDatabase()` bun:sqlite adapter can't
+ * `db.exec()` SELECTs, which the shared `createTestDatabase()` SQLite adapter can't
  * return rows for (its `shouldReadStatement` always treats `"raw"` operations as
  * writes), so those tests patch `db.exec` on the test's own database instance to return
  * canned aggregate rows, exercising the job's write/rounding/status-classification

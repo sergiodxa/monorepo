@@ -16,6 +16,7 @@
 
 import { describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type {
 	DataManipulationRequest,
 	DataManipulationResult,
@@ -38,13 +39,11 @@ import { renderToStream } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectMonitor, SelectTeam } from "~/database/schema";
 
-import { createBunSqliteDatabaseAdapter, createTestDatabase } from "~/app/lib/test/db";
+import { createSqliteDatabaseAdapter, createTestDatabase } from "~/app/lib/test/db";
 import { createActiveSubscription } from "~/app/lib/test/polar";
 import en from "~/app/locales/en";
 import { memberships, monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
-
-import type { Database as SqliteDatabase } from "bun:sqlite";
 
 await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
@@ -150,7 +149,7 @@ function createRawFailingDatabase(
 	sqliteDb: SqliteDatabase,
 	rows?: Record<string, unknown>[],
 ): Database {
-	let inner = createBunSqliteDatabaseAdapter(sqliteDb);
+	let inner = createSqliteDatabaseAdapter(sqliteDb);
 
 	let adapter: DatabaseDriver = {
 		...inner,

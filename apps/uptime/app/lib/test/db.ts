@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase, type SQLQueryBindings } from "bun:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type {
 	DatabaseCapabilities,
 	DataManipulationOperation,
@@ -24,6 +24,7 @@ import type {
 	TransactionToken,
 } from "remix/data-table";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import {
 	Database,
 	getTableColumnDefinitions,
@@ -40,13 +41,13 @@ interface BunSqliteAdapterOptions {
  * Creates a database adapter for Bun's SQLite that mirrors the D1 adapter used in
  * production. This allows models, jobs, and controllers to be tested against an
  * in-memory SQLite database instead of a mock.
- * @param db - An open Bun `bun:sqlite` database instance.
+ * @param db - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
  * @param options - Optional capability overrides for the adapter.
  * @returns A `DatabaseDriver` backed by the given SQLite database.
  * @example
- * let adapter = createBunSqliteDatabaseAdapter(new SqliteDatabase(":memory:"));
+ * let adapter = createSqliteDatabaseAdapter(openDatabase(":memory:"));
  */
-export function createBunSqliteDatabaseAdapter(
+export function createSqliteDatabaseAdapter(
 	db: SqliteDatabase,
 	options?: BunSqliteAdapterOptions,
 ): DatabaseDriver {
@@ -83,7 +84,7 @@ export function createBunSqliteDatabaseAdapter(
 
 			/**
 			 * `c.json()` columns hold JS objects/arrays at the model layer, but neither
-			 * `bun:sqlite` nor D1's binder accepts anything but strings/numbers/booleans/
+			 * the SQLite driver nor D1's binder accepts anything but strings/numbers/booleans/
 			 * null — encode them to JSON text before binding. `decodeColumns` undoes
 			 * this, and the boolean-to-integer narrowing SQLite forces, on rows read back.
 			 */
@@ -91,7 +92,7 @@ export function createBunSqliteDatabaseAdapter(
 
 			let statement = compileSqliteStatement(operation);
 			let values = normalizeStatementValues(statement.values);
-			let stmt = db.prepare(statement.text);
+			let stmt = db.query(statement.text);
 
 			let isReadStatement = shouldReadStatement(operation);
 
@@ -129,7 +130,7 @@ export function createBunSqliteDatabaseAdapter(
 				assertTransaction(transaction);
 			}
 
-			db.run(sql);
+			db.exec(sql);
 		},
 
 		async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
@@ -137,7 +138,7 @@ export function createBunSqliteDatabaseAdapter(
 				assertTransaction(transaction);
 			}
 
-			let statement = db.prepare("select 1 from sqlite_master where type = ? and name = ? limit 1");
+			let statement = db.query("select 1 from sqlite_master where type = ? and name = ? limit 1");
 			let row = statement.get("table", table.name);
 
 			return row !== null && row !== undefined;
@@ -152,14 +153,14 @@ export function createBunSqliteDatabaseAdapter(
 				assertTransaction(transaction);
 			}
 
-			let statement = db.prepare("pragma table_info(" + quoteIdentifier(table.name) + ")");
+			let statement = db.query("pragma table_info(" + quoteIdentifier(table.name) + ")");
 			let rows = statement.all() as Array<Record<string, unknown>>;
 
 			return rows.some((row) => row.name === column);
 		},
 
 		async beginTransaction(_options?: TransactionOptions): Promise<TransactionToken> {
-			db.run("BEGIN");
+			db.exec("BEGIN");
 
 			transactionCounter += 1;
 			let token = { id: "tx_" + String(transactionCounter) };
@@ -170,29 +171,29 @@ export function createBunSqliteDatabaseAdapter(
 
 		async commitTransaction(token: TransactionToken): Promise<void> {
 			assertTransaction(token);
-			db.run("COMMIT");
+			db.exec("COMMIT");
 			transactions.delete(token.id);
 		},
 
 		async rollbackTransaction(token: TransactionToken): Promise<void> {
 			assertTransaction(token);
-			db.run("ROLLBACK");
+			db.exec("ROLLBACK");
 			transactions.delete(token.id);
 		},
 
 		async createSavepoint(token: TransactionToken, name: string): Promise<void> {
 			assertTransaction(token);
-			db.run("SAVEPOINT " + quoteIdentifier(name));
+			db.exec("SAVEPOINT " + quoteIdentifier(name));
 		},
 
 		async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
 			assertTransaction(token);
-			db.run("ROLLBACK TO SAVEPOINT " + quoteIdentifier(name));
+			db.exec("ROLLBACK TO SAVEPOINT " + quoteIdentifier(name));
 		},
 
 		async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
 			assertTransaction(token);
-			db.run("RELEASE SAVEPOINT " + quoteIdentifier(name));
+			db.exec("RELEASE SAVEPOINT " + quoteIdentifier(name));
 		},
 
 		/**
@@ -201,16 +202,16 @@ export function createBunSqliteDatabaseAdapter(
 		 * clean schema should call {@link createTestDatabase} again.
 		 */
 		async wipe(): Promise<void> {
-			throw new Error("bun:sqlite test adapter wipe is not supported");
+			throw new Error("SQLite test adapter wipe is not supported");
 		},
 
-		/** The caller owns the `bun:sqlite` handle, so there is nothing to release. */
+		/** The caller owns the SQLite handle, so there is nothing to release. */
 		close(): void {},
 	};
 }
 
 /**
- * Neither `bun:sqlite` nor D1's binder accepts a plain object/array as a bound
+ * Neither the SQLite driver nor D1's binder accepts a plain object/array as a bound
  * value, but `c.json()` columns (e.g. `alerts.config`, `alert_events.snapshot`,
  * `api_keys.scopes`) are always given real JS values at the model layer, so every
  * adapter has to encode on the way in and decode on the way out.
@@ -921,8 +922,8 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 	});
 }
 
-function normalizeStatementValues(values: unknown[]): SQLQueryBindings[] {
-	return values.map((value) => (value === undefined ? null : value)) as SQLQueryBindings[];
+function normalizeStatementValues(values: unknown[]): unknown[] {
+	return values.map((value) => (value === undefined ? null : value));
 }
 
 function normalizeAffectedRowsForReader(
@@ -1038,7 +1039,7 @@ function isInsertOperation(
  * one file with {@link applyMigration}. Without it every test starts from a database the
  * migration has already run against and has nothing left to do.
  *
- * @param sqliteDb - An open Bun `bun:sqlite` database instance.
+ * @param sqliteDb - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
  * @param before - Filename to stop before, exclusive. Applies everything when omitted.
  */
 export function applyMigrations(sqliteDb: SqliteDatabase, before?: string): void {
@@ -1052,11 +1053,11 @@ export function applyMigrations(sqliteDb: SqliteDatabase, before?: string): void
 
 /**
  * Applies one named migration, for the test that seeded the rows it is meant to convert.
- * @param sqliteDb - An open Bun `bun:sqlite` database instance.
+ * @param sqliteDb - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
  * @param file - Filename inside `database/migrations/`, extension included.
  */
 export function applyMigration(sqliteDb: SqliteDatabase, file: string): void {
-	sqliteDb.run(readFileSync(join(migrationsDirectory(), file), "utf8"));
+	sqliteDb.exec(readFileSync(join(migrationsDirectory(), file), "utf8"));
 }
 
 /** Absolute path of `database/migrations/`, resolved from this module rather than the cwd. */
@@ -1068,16 +1069,16 @@ function migrationsDirectory(): string {
  * Creates an in-memory test database with every migration applied, wrapped as a
  * `remix/data-table` `Database` the same way `app/lib/container.ts` wraps the
  * production D1 database (epoch-ms `now()`, since timestamp columns are `c.integer()`).
- * @returns The remix `db` handle, the underlying `bun:sqlite` instance, and the
+ * @returns The remix `db` handle, the underlying SQLite instance, and the
  * driver between them, which a test can wrap to intercept statements.
  * @example
  * let { db } = createTestDatabase();
  */
 export function createTestDatabase() {
-	let sqliteDb = new SqliteDatabase(":memory:");
+	let sqliteDb = openDatabase(":memory:");
 	applyMigrations(sqliteDb);
 
-	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let adapter = createSqliteDatabaseAdapter(sqliteDb);
 	let db = new Database(adapter, { now: () => Date.now() });
 
 	return { db, sqliteDb, adapter };

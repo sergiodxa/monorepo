@@ -17,8 +17,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
+
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { applyMigration, applyMigrations } from "~/app/lib/test/db";
 
@@ -30,7 +33,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 let sqlite: SqliteDatabase;
 
 beforeEach(() => {
-	sqlite = new SqliteDatabase(":memory:");
+	sqlite = openDatabase(":memory:");
 	applyMigrations(sqlite, MIGRATION);
 });
 
@@ -45,7 +48,7 @@ function seedLead(lead: {
 	lastDigestAt?: number | null;
 	emailsSent?: number;
 }) {
-	sqlite.run(
+	sqlite.exec(
 		`INSERT INTO leads (id, created_at, updated_at, email, unsubscribe_token, locale,
 		                    consented_at, last_digest_at, emails_sent)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -67,7 +70,7 @@ function seedLead(lead: {
 function seedWatch(watch: { id: string; leadId: string; url: string; createdAt?: number }) {
 	let createdAt = watch.createdAt ?? Date.UTC(2026, 6, 1);
 
-	sqlite.run(
+	sqlite.exec(
 		`INSERT INTO trial_watches (id, created_at, updated_at, lead_id, url, expires_at,
 		                            converts_until)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -299,7 +302,7 @@ describe("trial watch cap migration: collision merge", () => {
 		applyMigration(sqlite, MIGRATION);
 
 		expect(() =>
-			sqlite.run(
+			sqlite.exec(
 				`INSERT INTO leads (id, created_at, updated_at, email, normalized_email,
 				                    unsubscribe_token, locale, emails_sent)
 				 VALUES ('dupe', 1, 1, 'x@y.com', 'hello@sergiodxa.com', 'token-dupe', 'en', 0)`,
