@@ -64,7 +64,7 @@ Workspace manifests will keep local workspace ranges:
 }
 ```
 
-The namespace migration will update package manifests, app manifests, source imports, tool aliases, templates, documentation, and repo rules that reference `@pkg/*`.
+The namespace migration will update package manifests, app manifests, source imports, tool aliases, the `create-app` / `create-package` skills, documentation, and repo rules that reference `@pkg/*`. (The skills replaced the `templates/` directory this originally named; see [ADR-035](./ADR-035-vite-plus-as-the-single-toolchain.md).)
 
 ### Source Imports
 
@@ -293,7 +293,7 @@ The script should print the selected target package, internal dependency order, 
 1. Rename all package names from `@pkg/*` to `@sdxc/*`.
 2. Update all workspace dependency references.
 3. Update source imports and exports.
-4. Update tool aliases, templates, documentation, and rules.
+4. Update tool aliases, the `create-app` / `create-package` skills, documentation, and rules.
 5. Run `bun install`, `bun typecheck`, and relevant tests.
 
 ### Phase 2: ESM Import Compatibility

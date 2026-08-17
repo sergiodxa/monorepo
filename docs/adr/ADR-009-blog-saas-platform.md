@@ -10,9 +10,12 @@ Blog Durable Object, control-plane schema/models, dashboard (OIDC login, blog CR
 provisioning), and scaffolded services/crons for custom domains and billing. The
 external-integration surfaces (Polar webhook signature verification, Cloudflare for
 SaaS hostname activation UX) are wired but need real credentials and hardening
-before GA. Note: `apps/blog-saas` uses the Laravel-style `templates/app` layout
+before GA. Note: `apps/blog-saas` uses the Laravel-style app layout
 (bootstrap/, routes/, app/http/…) rather than the `src/`-based layout sketched below,
-matching the repo's current app convention. The self-hosted D1 example is documented
+matching the repo's current app convention. That layout was `templates/app` when this was
+written; the directory was removed by
+[ADR-035](./ADR-035-vite-plus-as-the-single-toolchain.md) and the `create-app` skill
+documents the layout now. The self-hosted D1 example is documented
 in the engine README rather than shipped as a separate app.
 
 ## Background
@@ -346,7 +349,7 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 ### Self-Hosted Bootstrap (the "WordPress on your own server" case)
 
 ```typescript
-// bootstrap/worker.ts of a self-hosted blog (candidate for templates/)
+// bootstrap/worker.ts of a self-hosted blog (candidate for an example app)
 import { createBlogEngine, type BlogEngine } from "@pkg/blog-engine";
 import { createD1DataTableAdapter } from "@pkg/data-table-d1";
 

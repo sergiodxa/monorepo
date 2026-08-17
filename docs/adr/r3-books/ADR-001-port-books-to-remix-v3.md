@@ -4,6 +4,10 @@
 
 **Accepted** - 2026-07-30 (deployed 2026-07-30; soaking before the OLD APP is deleted)
 
+> **Historical note:** the `templates/app` this port scaffolded from no longer exists — it
+> was removed by [ADR-035](../ADR-035-vite-plus-as-the-single-toolchain.md) and replaced by the
+> `create-app` skill. References to it below record how the app was built, not a path to follow.
+
 ## How To Use This Document
 
 This ADR is the implementation spec for porting the books app to Remix v3. It was written after a full read of the app so an implementation session can start coding without re-deriving anything.

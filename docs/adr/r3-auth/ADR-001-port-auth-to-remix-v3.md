@@ -4,6 +4,11 @@
 
 **Proposed** - 2026-07-30
 
+> **`templates/app` no longer exists.** It was removed by [ADR-035](../ADR-035-vite-plus-as-the-single-toolchain.md) and replaced by the `create-app` skill
+> (`.agents/skills/create-app/`), which documents the minimum file set and where to copy
+> each piece from. Read "scaffold from `templates/app`" below as "scaffold with the
+> `create-app` skill"; the file layout the ADR then describes still applies.
+
 ## How To Use This Document
 
 This ADR is the implementation spec for porting the auth app to Remix v3. It was written after a full exploration of the app so an implementation session can start coding without re-deriving anything.
@@ -1084,7 +1089,7 @@ Would inherit the domain, queue, and crons automatically.
 
 - OLD APP key files: `apps/auth/wrangler.jsonc`, `app/entry.worker.ts`, `app/routes.ts`, `db/schema.ts`, `app/config.ts`, `app/session.ts`, `app/modules/{oauth2,jwks,rate-limit}.ts`, `app/services/oidc.ts`, `app/entities/`, `app/models/`, `app/middleware/`, `app/helpers/`, `app/strategies/github.ts`, `app/jobs/`, `app/routes/`
 - Client apps that must keep working: `apps/blog/app/auth/`, `apps/uptime/app/auth/`, `packages/auth-sdk/src/index.ts`
-- Scaffold: `templates/app/`
+- Scaffold: the `create-app` skill (`.agents/skills/create-app/`), which replaced `templates/app/`
 - Remix v3 vendor docs: `docs/vendor/@remix-run/{fetch-router,ui,data-schema,data-table,auth,auth-middleware,session-middleware,cop-middleware,render-middleware,response,session,cookie}/`
 - Related ADRs: [r3-uptime ADR-001 (the previous port of this shape)](../r3-uptime/ADR-001-port-uptime-to-remix-v3.md), [ADR-010 auth-saas completion and tenant migration](../ADR-010-auth-saas-completion-and-tenant-migration.md), [ADR-011 OIDC provider engine package](../ADR-011-oidc-provider-engine-package.md), [ADR-008 service container](../ADR-008-service-container-for-remix-v3.md), [ADR-013 Remix UI for application interfaces](../ADR-013-remix-ui-for-application-interfaces.md), [ADR-014 r3-ui component library](../ADR-014-r3-ui-component-library-on-remix-ui.md), [auth ADR-002 self-login OAuth flow](../auth/ADR-002-self-login-oauth-flow.md), [auth ADR-005 OAuth2/OIDC spec compliance](../auth/ADR-005-oauth2-oidc-spec-compliance.md), [ADR-002 SSO logout with id_token_hint](../ADR-002-sso-logout-with-id-token-hint.md), [ADR-003 OIDC back-channel logout](../ADR-003-oidc-backchannel-logout.md)
 - Repo rules: root `AGENTS.md`, `apps/auth/AGENTS.md` (security rules to carry over), `docs/guides/{app-documentation,package-documentation,adr-writing}.md`
