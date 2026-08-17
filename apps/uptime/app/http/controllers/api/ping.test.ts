@@ -21,15 +21,25 @@
  * result lands in `PING_RESULTS`. The limiter really counts per key and the dataset really
  * records what it was handed, so the budget is exhausted rather than faked, and `GEO_FETCH`
  * answers every probe with a canned response while recording the region it was asked for.
- * `cloudflare:sockets` and the global `fetch` stand in for the TCP and DNS checks the same
- * way their own service tests stub them, and the Polar ingest runs under a `waitUntil` the
- * harness drains so the billed event can be asserted.
+ * `cloudflare:sockets` stands in for the TCP check the same way its own service test does,
+ * the DNS check's resolver is served by MSW, and the Polar ingest runs under a `waitUntil`
+ * the harness drains so the billed event can be asserted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
@@ -41,6 +51,8 @@ import {
 } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -224,20 +236,30 @@ async function errorBody(response: Response) {
 	return (await response.json()) as { error: { code: string; message: string } };
 }
 
-/** Makes the global `fetch` answer every DoH query with `values`. */
-function resolveDnsWith(values: string[]) {
-	globalThis.fetch = mock(
-		async () =>
-			new Response(
-				JSON.stringify({
-					Status: 0,
-					Answer: values.map((data) => ({ name: "example.com", type: 1, TTL: 300, data })),
-				}),
-			),
-	) as unknown as typeof fetch;
-}
+/** The DNS-over-HTTPS resolver the DNS check queries. */
+let DOH_URL = "https://cloudflare-dns.com/dns-query";
 
-let originalFetch = globalThis.fetch;
+/**
+ * MSW server standing in for the DNS resolver. Every other check type goes through a
+ * binding, so `onUnhandledRequest: "error"` also pins that none of them reach the network.
+ */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** Makes the resolver answer every DoH query with `values`. */
+function resolveDnsWith(values: string[]) {
+	server.use(
+		http.get(DOH_URL, () =>
+			HttpResponse.json({
+				Status: 0,
+				Answer: values.map((data) => ({ name: "example.com", type: 1, TTL: 300, data })),
+			}),
+		),
+	);
+}
 
 beforeEach(() => {
 	doFetchMock.mockReset();
@@ -245,7 +267,6 @@ beforeEach(() => {
 		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 	);
 	openSocket = async () => {};
-	globalThis.fetch = originalFetch;
 	geoFetch.reset();
 	pingResults.reset();
 	costs.reset();
@@ -530,16 +551,15 @@ describe("POST /api/v1/ping dns", () => {
 	test("still answers 200 when the lookup fails", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
-		globalThis.fetch = mock(async () => {
-			throw new Error("DNS unavailable");
-		}) as unknown as typeof fetch;
+		// The resolver being unreachable, not answering with an error status.
+		server.use(http.get(DOH_URL, () => HttpResponse.error()));
 
 		let response = await dispatch(db, { key, body: { type: "dns", domain: "example.com" } });
 
 		expect(response.status).toBe(200);
 		let { data } = await pingBody(response);
 		expect(data.ping.status).toBe("error");
-		expect(data.ping.errorMessage).toBe("DNS unavailable");
+		expect(data.ping.errorMessage).toBe("Failed to fetch");
 	});
 });
 

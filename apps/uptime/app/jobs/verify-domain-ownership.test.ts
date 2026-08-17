@@ -3,42 +3,59 @@
  * non-retriably, a missing or already-verified domain is a silent no-op, a matching
  * DNS-over-HTTPS TXT record marks the domain verified, a miss leaves it pending, and a
  * lookup failure is swallowed (the next `EnqueuePendingDomainsJob` sweep retries it).
- * The DNS-over-HTTPS call is exercised by mocking the global `fetch`.
+ * The DNS-over-HTTPS resolver is served by MSW, so a lookup the job should skip has no
+ * route to the network at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 
 import TeamDomain from "~/app/data/team-domain";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { createTestDatabase } from "~/app/lib/test/db";
 
-let originalFetch = globalThis.fetch;
+/** The DNS-over-HTTPS resolver the job queries for the TXT record. */
+let DNS_URL = "https://cloudflare-dns.com/dns-query";
 
-afterEach(() => {
-	globalThis.fetch = originalFetch;
+/** MSW server standing in for the DNS-over-HTTPS resolver. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** Every DNS query the job issued, in order, so a test can assert it was or wasn't made. */
+let lookups: { url: string; accept: string | null }[] = [];
+
+beforeEach(() => {
+	lookups = [];
 });
 
-/** Stubs `fetch` to return a DNS-JSON response with the given TXT record `Answer`s. */
-function stubDnsResponse(answers: Array<{ data: string }> | undefined) {
-	globalThis.fetch = mock(async () => {
-		let body: { Answer?: Array<{ name: string; type: number; TTL: number; data: string }> } = {};
-		if (answers) {
-			body.Answer = answers.map((answer) => ({
-				name: "_ping-verification.example.com",
-				type: 16,
-				TTL: 60,
-				data: answer.data,
-			}));
-		}
-		return new Response(JSON.stringify(body));
-	}) as unknown as typeof fetch;
+/** Serves the resolver a DNS-JSON body carrying the given TXT record `Answer`s. */
+function serveDnsAnswers(answers: Array<{ data: string }> | undefined) {
+	server.use(
+		http.get(DNS_URL, ({ request }) => {
+			lookups.push({ url: request.url, accept: request.headers.get("Accept") });
+			let body: { Answer?: Array<{ name: string; type: number; TTL: number; data: string }> } = {};
+			if (answers) {
+				body.Answer = answers.map((answer) => ({
+					name: "_ping-verification.example.com",
+					type: 16,
+					TTL: 60,
+					data: answer.data,
+				}));
+			}
+			return HttpResponse.json(body);
+		}),
+	);
 }
 
 describe("VerifyDomainOwnershipJob.perform", () => {
@@ -59,8 +76,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 	});
 
 	test("does nothing when the domain does not exist", async () => {
-		stubDnsResponse([]);
-		let fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock>;
+		serveDnsAnswers([]);
 
 		await container.scope(async () => {
 			let job = new VerifyDomainOwnershipJob(
@@ -70,14 +86,13 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 			await job.perform();
 		});
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(lookups).toBeEmpty();
 	});
 
 	test("does nothing when the domain is already verified", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
 		await TeamDomain.markVerified(db, domain.id);
-		stubDnsResponse([]);
-		let fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock>;
+		serveDnsAnswers([]);
 
 		await container.scope(async () => {
 			let job = new VerifyDomainOwnershipJob(
@@ -87,18 +102,24 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 			await job.perform();
 		});
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(lookups).toBeEmpty();
 	});
 
 	test("marks the domain verified when the TXT record matches", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
-		stubDnsResponse([{ data: JSON.stringify(`ping_${domain.id}`) }]);
+		serveDnsAnswers([{ data: JSON.stringify(`ping_${domain.id}`) }]);
 		let logger = new BatchedLogger("test");
 
 		await container.scope(async () => {
 			let job = new VerifyDomainOwnershipJob({ logger }, { teamDomainId: domain.id });
 			await job.perform();
 		});
+
+		// The record the job looks up is the contract with the team that published it.
+		let query = new URL(lookups[0]?.url ?? "");
+		expect(query.searchParams.get("name")).toBe("_ping-verification.example.com");
+		expect(query.searchParams.get("type")).toBe("TXT");
+		expect(lookups[0]?.accept).toBe("application/dns-json");
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).not.toBeNull();
@@ -111,7 +132,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 
 	test("leaves the domain pending when the TXT record does not match", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
-		stubDnsResponse([{ data: JSON.stringify("some_other_value") }]);
+		serveDnsAnswers([{ data: JSON.stringify("some_other_value") }]);
 		let logger = new BatchedLogger("test");
 
 		await container.scope(async () => {
@@ -130,7 +151,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 
 	test("leaves the domain pending when there is no Answer at all", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
-		stubDnsResponse(undefined);
+		serveDnsAnswers(undefined);
 		let logger = new BatchedLogger("test");
 
 		await container.scope(async () => {
@@ -149,9 +170,8 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 
 	test("swallows a DNS lookup failure and logs it instead of throwing", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
-		globalThis.fetch = mock(async () => {
-			throw new Error("network down");
-		}) as unknown as typeof fetch;
+		// A transport failure, so the job sees a rejected call rather than an error status.
+		server.use(http.get(DNS_URL, () => HttpResponse.error()));
 		let logger = new BatchedLogger("test");
 
 		await container.scope(async () => {
@@ -165,6 +185,6 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		let event = logger.events.find(
 			(entry) => entry.event === "job.verify_domain_ownership.lookup_failed",
 		);
-		expect(event?.error).toBe("network down");
+		expect(event?.error).toBe("Failed to fetch");
 	});
 });
