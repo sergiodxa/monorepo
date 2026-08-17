@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { createTranslator } from "@pkg/i18n";
+import { describe, expect, test } from "vitest";
 
 import { transitionToast } from "./run-monitor-button";
 

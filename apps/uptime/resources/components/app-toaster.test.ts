@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { showToast } from "./app-toaster";
 
