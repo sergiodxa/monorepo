@@ -24,6 +24,12 @@ declare module "bun:test" {
 			: MatchersBuiltin<T>[Key];
 	};
 
+	// Narrowing these two to promise-returning matchers is deliberately an incompatible
+	// override of what `MatchersBuiltin` declares — that incompatibility is the correction.
+	// tsgolint reports it as TS2430; `tsc` does not, so `@ts-expect-error` would fail `tsc`
+	// with TS2578 for an unused directive, and `oxlint-disable` cannot suppress a TS
+	// diagnostic at all. `@ts-ignore` is the only directive both tools accept.
+	// @ts-ignore -- see above
 	interface Matchers<T> {
 		resolves: AsyncMatchers<Awaited<T>>;
 		rejects: AsyncMatchers<unknown>;
