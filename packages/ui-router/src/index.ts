@@ -141,7 +141,7 @@ export interface Middleware<context extends Context = Context> {
 	 * @param next Invokes the next middleware or final action.
 	 * @returns A result to short-circuit, or `undefined` to continue.
 	 */
-	(context: context, next: NextFunction): Awaitable<unknown | undefined | void>;
+	(context: context, next: NextFunction): Awaitable<unknown>;
 }
 
 /** Route action object with inline middleware. */
@@ -291,7 +291,7 @@ export interface RouterWindow {
 	/** Current browser location. */
 	readonly location: Location;
 	/** Browser history used for programmatic navigation. */
-	readonly history: History;
+	readonly history: RouterHistory;
 	/** Browser Navigation API used when available. */
 	readonly navigation?: RouterNavigation;
 	/** Subscribe to browser events such as `popstate`. */
@@ -306,6 +306,19 @@ export interface RouterWindow {
 		listener: EventListener,
 		options?: boolean | EventListenerOptions,
 	): void;
+}
+
+/**
+ * Browser history surface used by the router.
+ *
+ * Only the two entry-writing methods are declared, so tests and non-browser
+ * hosts can supply a double without implementing the whole `History` object.
+ */
+export interface RouterHistory {
+	/** Push a new history entry for the visible URL. */
+	pushState(state: unknown, unused: string, url?: string | URL | null): void;
+	/** Overwrite the current history entry with the visible URL. */
+	replaceState(state: unknown, unused: string, url?: string | URL | null): void;
 }
 
 /** Browser Navigation API surface used by the router. */
@@ -405,14 +418,18 @@ export interface UIRouter {
 	match(input?: RouterInput): RouteMatch | null;
 	/** Render the matching route handler without mounting into the DOM. */
 	render(input?: RouterInput): Promise<RemixNode>;
-	/** Navigate and refresh mounted roots. */
-	navigate(to: RouterInput, options?: NavigateOptions): Promise<void>;
+	/** Navigate and refresh mounted roots. Detached from the router, so it stays passable by reference. */
+	navigate(this: void, to: RouterInput, options?: NavigateOptions): Promise<void>;
 	/** Submit data through a route action, then navigate like a normal form submission. */
-	submit<data = unknown>(target: SubmitTarget, options?: SubmitOptions): Promise<data | undefined>;
+	submit<data = unknown>(
+		this: void,
+		target: SubmitTarget,
+		options?: SubmitOptions,
+	): Promise<data | undefined>;
 	/** Return a shared named fetcher or a unique unnamed fetcher. */
-	getFetcher<data = unknown>(name?: string): Fetcher<data>;
+	getFetcher<data = unknown>(this: void, name?: string): Fetcher<data>;
 	/** Re-run mounted roots for the latest rendered URL. */
-	revalidate(): Promise<void>;
+	revalidate(this: void): Promise<void>;
 	/** Mixin that makes a form submit through router navigation submissions. */
 	form(
 		options?: FormMixinOptions,
@@ -1388,7 +1405,12 @@ function formDataFromObject(object: Record<string, unknown>): FormData {
 	return formData;
 }
 
-/** Appends one object field to FormData. */
+/**
+ * Appends one object field to FormData.
+ *
+ * Primitives keep their plain string form; anything else is JSON encoded, so a
+ * nested object reaches the action as readable data instead of `[object Object]`.
+ */
 function appendFormValue(formData: FormData, name: string, value: unknown) {
 	if (value == null) return;
 	if (Array.isArray(value)) {
@@ -1399,8 +1421,16 @@ function appendFormValue(formData: FormData, name: string, value: unknown) {
 		formData.append(name, value);
 		return;
 	}
+	if (typeof value === "string") {
+		formData.append(name, value);
+		return;
+	}
+	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+		formData.append(name, String(value));
+		return;
+	}
 
-	formData.append(name, String(value));
+	formData.append(name, JSON.stringify(value));
 }
 
 /** Applies FormData fields to a GET submission URL. */

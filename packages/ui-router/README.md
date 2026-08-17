@@ -545,6 +545,10 @@ Object type for mapping direct route-map leaves. Each direct leaf route gets a h
 
 Result returned by `router.match`. It includes `url`, `route`, and decoded `params`.
 
+#### `RouterHistory`
+
+The two `History` methods the router actually calls, `pushState` and `replaceState`. A real `History` satisfies it, and a test double only has to implement those two.
+
 #### `RouterNavigation`
 
 Small browser Navigation API adapter used by `mount` and `navigate`. Override it in tests when you need to simulate `navigation.navigate` and `navigate` events.

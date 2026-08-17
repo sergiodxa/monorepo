@@ -11,7 +11,7 @@ import {
 	createRouter,
 	RouterProvider,
 	type RouterProviderValue,
-	type UIController,
+	type UIControllerActions,
 	type ViewHandler,
 } from "./index";
 
@@ -126,7 +126,7 @@ describe(createRouter.name, () => {
 		let controller = {
 			index: () => "index",
 			show: (ctx) => `show:${ctx.params.id}`,
-		} satisfies UIController<typeof routes.posts>;
+		} satisfies UIControllerActions<typeof routes.posts>;
 		let wrapped = createController(routes.posts, controller);
 
 		expect(wrapped).toBe(controller);
@@ -174,6 +174,28 @@ describe(createRouter.name, () => {
 		expect(fetcher.state).toBe("idle");
 	});
 
+	test("submits nested submit data as JSON instead of [object Object]", async () => {
+		let routes = route({
+			search: { method: "POST", pattern: "/search" },
+		});
+		let router = createRouter();
+
+		router.map(routes.search, async (ctx) => {
+			let formData = await ctx.request.formData();
+
+			return { filter: formData.get("filter") };
+		});
+
+		let fetcher = router.getFetcher<{ filter: FormDataEntryValue | null }>("search");
+
+		await fetcher.submit(
+			{ filter: { tag: "remix", draft: false } },
+			{ method: "POST", action: "/search", revalidate: false },
+		);
+
+		expect(fetcher.data).toEqual({ filter: `{"tag":"remix","draft":false}` });
+	});
+
 	test("fetcher submissions revalidate mounted roots", async () => {
 		let routes = route({
 			contact: {
@@ -192,6 +214,7 @@ describe(createRouter.name, () => {
 			render(node) {
 				rendered.push(readProviderRender(node).children);
 			},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -422,6 +445,7 @@ describe(createRouter.name, () => {
 			render(node) {
 				rendered.push(readProviderRender(node).children);
 			},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -558,6 +582,7 @@ describe(createRouter.name, () => {
 			render(node) {
 				rendered.push(readProviderRender(node).children);
 			},
+			reconcile() {},
 			dispose() {
 				disposed = true;
 			},
@@ -609,6 +634,7 @@ describe(createRouter.name, () => {
 				return true;
 			},
 			render() {},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -657,6 +683,7 @@ describe(createRouter.name, () => {
 			render(node) {
 				rendered.push(readProviderRender(node).children);
 			},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -706,6 +733,7 @@ describe(createRouter.name, () => {
 			render(node) {
 				rendered.push(readProviderRender(node).children);
 			},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -728,7 +756,7 @@ describe(createRouter.name, () => {
 						visibleURL = new URL(String(url), visibleURL).href;
 					},
 					replaceState() {},
-				} as History,
+				},
 				addEventListener(type, listener) {
 					if (type === "popstate") popstateListener = listener;
 				},
@@ -774,6 +802,7 @@ describe(createRouter.name, () => {
 			render(node) {
 				rendered.push(readProviderRender(node).children);
 			},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -797,14 +826,14 @@ describe(createRouter.name, () => {
 					replaceState() {
 						historyUsed = true;
 					},
-				} as History,
+				},
 				navigation: {
 					navigate(url, options) {
 						navigationOptions = options;
 						visibleURL = url;
 
 						let intercepted = Promise.resolve();
-						let event = {
+						let event = Object.assign(new Event("navigate"), {
 							canIntercept: true,
 							navigationType: options?.history ?? "push",
 							destination: {
@@ -816,7 +845,7 @@ describe(createRouter.name, () => {
 							intercept(interceptOptions: { handler(): Promise<void> | void }) {
 								intercepted = Promise.resolve(interceptOptions.handler());
 							},
-						} as Event;
+						});
 
 						navigateListener?.(event);
 
@@ -870,6 +899,7 @@ describe(createRouter.name, () => {
 				return true;
 			},
 			render() {},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
@@ -905,6 +935,7 @@ describe(createRouter.name, () => {
 				return true;
 			},
 			render() {},
+			reconcile() {},
 			dispose() {},
 			flush() {},
 		};
