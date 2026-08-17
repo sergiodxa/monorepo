@@ -77,7 +77,7 @@ describe("signing and verifying", () => {
 		let fromStatic = await JWT.sign(token, JWK.Algorithm.ES256, keys);
 
 		expect(fromInstance.split(".").slice(0, 2)).toEqual(fromStatic.split(".").slice(0, 2));
-		expect(await JWT.verify(fromInstance, keys)).toBeDefined();
+		await expect(JWT.verify(fromInstance, keys)).resolves.toBeDefined();
 	});
 
 	test("names the signing key in the header so a relying party can find it", async () => {
@@ -155,7 +155,9 @@ describe("choosing a key out of a set", () => {
 		expect(header.alg).toBe("RS256");
 		expect(header.kid).toBe(current.id);
 
-		expect(await JWT.verify(signed, mixed, { algorithms: [JWK.Algorithm.RS256] })).toBeDefined();
+		await expect(
+			JWT.verify(signed, mixed, { algorithms: [JWK.Algorithm.RS256] }),
+		).resolves.toBeDefined();
 	});
 
 	test("accepts a resolver as readily as the keys themselves", async () => {
@@ -165,7 +167,7 @@ describe("choosing a key out of a set", () => {
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 		let resolver = jose.createLocalJWKSet({ keys: keys.map((key) => key.jwk) });
 
-		expect(await JWT.verify(signed, resolver, VERIFY)).toBeDefined();
+		await expect(JWT.verify(signed, resolver, VERIFY)).resolves.toBeDefined();
 	});
 });
 
@@ -192,7 +194,7 @@ describe("verification failures", () => {
 		);
 
 		expect(JWT.verify(signed, keys, { issuer: "https://elsewhere.test" })).rejects.toThrow();
-		expect(await JWT.verify(signed, keys, { issuer: "https://auth.test" })).toBeDefined();
+		await expect(JWT.verify(signed, keys, { issuer: "https://auth.test" })).resolves.toBeDefined();
 	});
 
 	test("rejects a mismatched audience", async () => {
@@ -202,7 +204,7 @@ describe("verification failures", () => {
 		);
 
 		expect(JWT.verify(signed, keys, { audience: "client-2" })).rejects.toThrow();
-		expect(await JWT.verify(signed, keys, { audience: "client-1" })).toBeDefined();
+		await expect(JWT.verify(signed, keys, { audience: "client-1" })).resolves.toBeDefined();
 	});
 });
 
@@ -243,7 +245,7 @@ describe("time claims", () => {
 		);
 
 		expect(JWT.verify(signed, keys)).rejects.toThrow();
-		expect(await JWT.verify(signed, keys, { clockTolerance: 1200 })).toBeDefined();
+		await expect(JWT.verify(signed, keys, { clockTolerance: 1200 })).resolves.toBeDefined();
 	});
 });
 
@@ -470,10 +472,9 @@ describe("claims written as a length of time", () => {
 			pair,
 		]);
 
-		let rejection = await JWT.verify(signed, [pair], {
-			algorithms: [JWK.Algorithm.ES256],
-		}).catch((error: unknown) => error);
-		expect(rejection).toBeInstanceOf(Error);
+		await expect(
+			JWT.verify(signed, [pair], { algorithms: [JWK.Algorithm.ES256] }),
+		).rejects.toThrow();
 	});
 });
 

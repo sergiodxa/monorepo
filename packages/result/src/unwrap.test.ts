@@ -65,8 +65,7 @@ describe(unwrap, () => {
 	test("throws error from async failure result when no fallback provided", async () => {
 		let error = new Error("Async error");
 		let result = Promise.resolve(failure(error));
-		let rejection = await unwrap(result).catch((cause: unknown) => cause);
-		expect(rejection).toBe(error);
+		await expect(unwrap(result)).rejects.toThrow(error);
 	});
 
 	test("calls fallback with error from async failure result", async () => {

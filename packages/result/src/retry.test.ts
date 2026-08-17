@@ -249,9 +249,8 @@ describe(retry, () => {
 		// untyped callers, and a duration string is no longer accepted.
 		let delay = "100ms" as unknown as number;
 
-		let rejection = await retry(async () => success("done"), { times: 3, delay }).catch(
-			(error: unknown) => error,
+		await expect(retry(async () => success("done"), { times: 3, delay })).rejects.toThrow(
+			TypeError,
 		);
-		expect(rejection).toBeInstanceOf(TypeError);
 	});
 });

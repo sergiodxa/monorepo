@@ -46,7 +46,7 @@ describe(LanguageDetector, () => {
 			fallbackLanguage: "en",
 		});
 
-		expect(await detector.detect(makeRequest("/?lng=es"))).toBe("es");
+		await expect(detector.detect(makeRequest("/?lng=es"))).resolves.toBe("es");
 	});
 
 	test("supports a custom search parameter name", async () => {
@@ -56,7 +56,7 @@ describe(LanguageDetector, () => {
 			searchParamKey: "locale",
 		});
 
-		expect(await detector.detect(makeRequest("/?locale=es"))).toBe("es");
+		await expect(detector.detect(makeRequest("/?locale=es"))).resolves.toBe("es");
 	});
 
 	test("detects the language from a cookie", async () => {
@@ -69,7 +69,7 @@ describe(LanguageDetector, () => {
 
 		let request = makeRequest("/", { Cookie: await cookie.serialize("es") });
 
-		expect(await detector.detect(request)).toBe("es");
+		await expect(detector.detect(request)).resolves.toBe("es");
 	});
 
 	test("detects the language from a live session", async () => {
@@ -81,7 +81,7 @@ describe(LanguageDetector, () => {
 			fallbackLanguage: "en",
 		});
 
-		expect(await detector.detect(makeRequest(), session)).toBe("es");
+		await expect(detector.detect(makeRequest(), session)).resolves.toBe("es");
 	});
 
 	test("detects the language from session storage via the session cookie", async () => {
@@ -102,7 +102,7 @@ describe(LanguageDetector, () => {
 
 		let request = makeRequest("/", { Cookie: await sessionCookie.serialize(cookieValue) });
 
-		expect(await detector.detect(request)).toBe("es");
+		await expect(detector.detect(request)).resolves.toBe("es");
 	});
 
 	test("supports a custom session key", async () => {
@@ -115,7 +115,7 @@ describe(LanguageDetector, () => {
 			sessionKey: "language",
 		});
 
-		expect(await detector.detect(makeRequest(), session)).toBe("es");
+		await expect(detector.detect(makeRequest(), session)).resolves.toBe("es");
 	});
 
 	test("detects the language from the Accept-Language header", async () => {
@@ -126,7 +126,7 @@ describe(LanguageDetector, () => {
 
 		let request = makeRequest("/", { "Accept-Language": "es;q=0.9,en;q=0.8" });
 
-		expect(await detector.detect(request)).toBe("es");
+		await expect(detector.detect(request)).resolves.toBe("es");
 	});
 
 	test("header detection honors quality across unsupported ranges", async () => {
@@ -137,7 +137,7 @@ describe(LanguageDetector, () => {
 
 		let request = makeRequest("/", { "Accept-Language": "fr;q=1,es;q=0.5" });
 
-		expect(await detector.detect(request)).toBe("es");
+		await expect(detector.detect(request)).resolves.toBe("es");
 	});
 
 	test("falls back to a loose match on the primary language code", async () => {
@@ -146,7 +146,7 @@ describe(LanguageDetector, () => {
 			fallbackLanguage: "en",
 		});
 
-		expect(await detector.detect(makeRequest("/?lng=es-MX"))).toBe("es-ES");
+		await expect(detector.detect(makeRequest("/?lng=es-MX"))).resolves.toBe("es-ES");
 	});
 
 	test("detects the language with a custom findLocale lookup", async () => {
@@ -158,7 +158,7 @@ describe(LanguageDetector, () => {
 			},
 		});
 
-		expect(await detector.detect(makeRequest("/es/dashboard"))).toBe("es");
+		await expect(detector.detect(makeRequest("/es/dashboard"))).resolves.toBe("es");
 	});
 
 	test("earlier methods win over later ones", async () => {
@@ -174,7 +174,7 @@ describe(LanguageDetector, () => {
 			Cookie: await cookie.serialize("es"),
 		});
 
-		expect(await detector.detect(request)).toBe("fr");
+		await expect(detector.detect(request)).resolves.toBe("fr");
 	});
 
 	test("a custom order restricts and reorders the methods", async () => {
@@ -186,7 +186,7 @@ describe(LanguageDetector, () => {
 
 		let request = makeRequest("/?lng=fr", { "Accept-Language": "es" });
 
-		expect(await detector.detect(request)).toBe("es");
+		await expect(detector.detect(request)).resolves.toBe("es");
 	});
 
 	test("skips methods missing their required options", async () => {
@@ -196,7 +196,7 @@ describe(LanguageDetector, () => {
 			order: ["cookie", "session", "custom"],
 		});
 
-		expect(await detector.detect(makeRequest("/?lng=es"))).toBe("en");
+		await expect(detector.detect(makeRequest("/?lng=es"))).resolves.toBe("en");
 	});
 
 	test("ignores unsupported detected values and falls back", async () => {
@@ -205,7 +205,7 @@ describe(LanguageDetector, () => {
 			fallbackLanguage: "en",
 		});
 
-		expect(await detector.detect(makeRequest("/?lng=ja"))).toBe("en");
+		await expect(detector.detect(makeRequest("/?lng=ja"))).resolves.toBe("en");
 	});
 
 	test("returns the fallback language when nothing is detected", async () => {
@@ -214,6 +214,6 @@ describe(LanguageDetector, () => {
 			fallbackLanguage: "es",
 		});
 
-		expect(await detector.detect(makeRequest())).toBe("es");
+		await expect(detector.detect(makeRequest())).resolves.toBe("es");
 	});
 });
