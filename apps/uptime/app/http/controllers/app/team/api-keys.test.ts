@@ -8,7 +8,7 @@
  * (createHtmlRenderer)`, plus a `seedTeam` middleware standing in for the real
  * `requireUser`/`requireTeam`/`requireRole` chain. Neither `cloudflare:workers` nor
  * `~/app/services/analytics` is touched by this controller (it only reads
- * `~/app/data/api-key`), so no `mock.module` is needed.
+ * `~/app/data/api-key`), so no `vi.doMock` is needed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

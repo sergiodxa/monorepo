@@ -7,9 +7,10 @@
  * strict env would throw on that read instead of letting the guard answer. The
  * "degraded" (writes work, reads fail) branch is covered separately in
  * `healthcheck-analytics-engine-degraded.test.ts`, since `cloudflare:workers` is
- * mocked once per file via `mock.module` before the controller's dynamic import,
- * and Bun's module cache does not re-run a specifier's top-level code on a second
- * dynamic import within the same file.
+ * mocked once per file via `vi.doMock` before the controller's dynamic import, and a
+ * second dynamic import of the same specifier resolves to the instance already in
+ * Vitest's module registry rather than re-running its top-level code — so a second
+ * `vi.doMock` in this file would never reach the controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -13,7 +13,7 @@ import { describe, expect, test } from "vitest";
 import { showToast } from "./app-toaster";
 
 describe("showToast", () => {
-	// The ambient bun:test environment has no browser globals, so this is the server case.
+	// Vitest's default `node` environment has no browser globals, so this is the server case.
 	test("does nothing when there is no document to dispatch on", () => {
 		expect(() => showToast({ title: "Homepage is up", color: "success" })).not.toThrow();
 	});

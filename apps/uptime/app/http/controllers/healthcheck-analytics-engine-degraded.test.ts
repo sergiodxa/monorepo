@@ -6,9 +6,9 @@
  * returns a `failure()` Result. The controller must still respond 200, since writes
  * keep working even though the read API is down — see the source's docblock. Split into
  * its own file (rather than a second `describe` in
- * `healthcheck-analytics-engine.test.ts`) because Bun's module cache does not
- * re-run `cloudflare:workers`' mocked top-level code on a second dynamic import of
- * the controller within the same file.
+ * `healthcheck-analytics-engine.test.ts`) because a second dynamic import of the
+ * controller resolves to the instance already in Vitest's module registry, so
+ * re-mocking `cloudflare:workers` with `vi.doMock` there would never reach it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
