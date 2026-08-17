@@ -7,9 +7,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
 import { column as c, table } from "remix/data-table";
+import { describe, expect, test } from "vitest";
 
 import { DuplicateRecordError, ForeignKeyError, RecordNotFoundError } from "./db-errors";
 

@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { ensurePlatformProvisioned, resetPlatformBootstrap } from "./platform-bootstrap";
 

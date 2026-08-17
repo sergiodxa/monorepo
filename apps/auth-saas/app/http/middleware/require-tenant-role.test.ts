@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
 import requireTenantRole from "./require-tenant-role";
 
@@ -26,7 +26,7 @@ function buildContext(method: string, role: Role | undefined) {
 
 /** A `next` that records it ran and returns a sentinel 200 response. */
 function passthroughNext() {
-	let next = mock(async () => new Response("ok", { status: 200 }));
+	let next = vi.fn(async () => new Response("ok", { status: 200 }));
 	return next;
 }
 

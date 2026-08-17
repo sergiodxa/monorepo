@@ -9,11 +9,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-
 import { JWK, JWT } from "@pkg/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { verifyIdToken } from "./id-token-verify";
 

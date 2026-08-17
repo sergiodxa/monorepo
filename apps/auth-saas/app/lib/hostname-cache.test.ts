@@ -2,38 +2,31 @@
  * Behavioural tests for the hostname → tenant KV cache helpers: the key format, the
  * short TTL that lets a missed invalidation self-heal, and `invalidateHostnameCache`
  * which must delete exactly the cached key. `cloudflare:workers` is mocked with an
- * in-memory `HOSTNAMES_KV` namespace before the module under test is imported, so the
- * helper binds to it regardless of what other suites mock in the same process; no
- * real Cloudflare KV is touched.
+ * in-memory `HOSTNAMES_KV` namespace before the module under test is imported, since that
+ * module captures `env` at load time; no real Cloudflare KV is touched.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
-
-/** The namespace the helpers read and evict from, seeded per test. */
-let hostnamesKv = createKVNamespace();
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
- * Publishes the current namespace as the app's environment. Re-run per test so each one
- * invalidates entries of its own.
+ * The namespace the helpers read and evict from. One instance serves the whole file, and
+ * each test empties and re-seeds it in place, because the `env` published below is the one
+ * the module under test holds for good.
  */
-function bindEnv(): void {
-	void mock.module("cloudflare:workers", () => ({
-		env: createEnv<Cloudflare.Env>({ HOSTNAMES_KV: hostnamesKv }),
-	}));
-}
+let hostnamesKv = createKVNamespace();
 
-bindEnv();
+vi.doMock("cloudflare:workers", () => ({
+	env: createEnv<Cloudflare.Env>({ HOSTNAMES_KV: hostnamesKv }),
+}));
 
 let { HOSTNAME_CACHE_TTL, hostnameCacheKey, invalidateHostnameCache } =
 	await import("./hostname-cache");
 
 beforeEach(async () => {
-	hostnamesKv = createKVNamespace();
-	bindEnv();
+	hostnamesKv.reset();
 
 	for (let hostname of ["app.example.com", "one.example.com", "two.example.com"]) {
 		await hostnamesKv.put(hostnameCacheKey(hostname), "tenant-1");

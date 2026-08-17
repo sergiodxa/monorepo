@@ -43,4 +43,6 @@ pathIgnorePatterns = [
 	"**/apps/pkmn/**",
 	"**/apps/books/**",
 	"**/apps/auth-saas/**",
+	"**/packages/i18n/**",
+	"**/packages/seo/**",
 ]

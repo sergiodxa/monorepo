@@ -7,10 +7,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, isSuccess } from "@pkg/result";
 import { validate } from "@pkg/validate";
+import { describe, expect, test } from "vitest";
 
 import { HostMetadataSchema } from "./host-metadata";
 

@@ -9,10 +9,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, mock, test } from "bun:test";
-
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { describe, expect, test, vi } from "vitest";
 
 import subscriptionMiddleware from "./subscription";
 
@@ -29,7 +28,7 @@ function buildContext(tenant: { id: string; internal: boolean } | undefined) {
 
 /** A `next` that records it ran and returns a sentinel 200 response. */
 function passthroughNext() {
-	return mock(async () => new Response("passed", { status: 200 }));
+	return vi.fn(async () => new Response("passed", { status: 200 }));
 }
 
 /**
