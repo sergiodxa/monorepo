@@ -26,12 +26,12 @@ bun run --cwd apps/uptime db:local:migrate   # apply migrations to local D1
 bun run --cwd apps/uptime dev
 ```
 
-From the repo root: `bun run typecheck`, `bun run lint`, `bun test --isolate`, `bun run format:fix`.
+From the repo root: `bun check` (format, lint and type check in one pass) and `bun run test`.
 
 ## Deployment
 
 Before deploying, run the full verification suite from the repo root: `bun typecheck`,
-`bun lint`, `bun test --isolate`, `bun format`, `bun run --cwd apps/uptime build`,
+`bun lint`, `bun run test`, `bun format`, `bun run --cwd apps/uptime build`,
 and a Cloudflare dry run with `bunx wrangler deploy --dry-run` from this app.
 
 ```sh

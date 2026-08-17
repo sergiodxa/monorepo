@@ -427,10 +427,10 @@ held to from `src/test/properties.ts`:
 
 `CRON_FUZZ_ITERATIONS` raises the generated corpus from its default 2,000 for a deeper
 local sweep; the seed is fixed, so an expression a failure names is the one the next run
-produces. Past roughly ten thousand, raise `--timeout` too:
+produces. Past roughly ten thousand, raise `--testTimeout` too:
 
 ```bash
-CRON_FUZZ_ITERATIONS=60000 bun test --isolate --timeout 60000 packages/cron/src/
+CRON_FUZZ_ITERATIONS=60000 vp test run packages/cron/src/ --testTimeout=60000
 ```
 
 ## Pattern: Validating a submitted expression

@@ -87,8 +87,8 @@ events, which is why the bypass has its own regression test.
 
 ## Testing
 
-Run tests from the repo root with `bun run test` (or `bun test --isolate`) — a bare
-`bun test` leaks module mocks between files.
+Run tests from the repo root with `bun run test`, which runs them under Vitest. `vp test run
+--project books` scopes a run to this app.
 
 - **Router-level tests** go through `fetchApp()` in `app/lib/test/router.ts`, which
   builds the real router inside a container scope. External clients are replaced through
