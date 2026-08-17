@@ -45,8 +45,9 @@ describe("createEnv", () => {
 	test("stays awaitable and inspectable despite the strict read guard", async () => {
 		let env = createEnv({ CACHE: createKVNamespace() });
 
-		// A strict proxy must not break the probes runtimes and matchers perform.
-		expect(await env).toBeDefined();
+		// A strict proxy must not break the probes runtimes and matchers perform: resolving a
+		// value reads `then` off it, which a naive guard would reject as a missing binding.
+		expect(await Promise.resolve(env)).toBeDefined();
 		expect(Object.keys(env)).toEqual(["CACHE"]);
 		expect("DB" in env).toBe(false);
 	});

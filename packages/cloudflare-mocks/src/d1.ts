@@ -338,6 +338,23 @@ function toBinding(value: unknown): SqliteBinding {
 		return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
 
 	throw new Error(
-		`D1_TYPE_ERROR: Type '${typeof value}' not supported for value '${String(value)}'`,
+		`D1_TYPE_ERROR: Type '${typeof value}' not supported for value '${describeBinding(value)}'`,
 	);
+}
+
+/**
+ * Renders a rejected binding for the type error message. Objects are serialized instead of
+ * stringified so the message names the value that was missing a JSON encode, rather than
+ * reading `[object Object]` and leaving the caller to guess which argument was wrong.
+ */
+function describeBinding(value: unknown): string {
+	switch (typeof value) {
+		case "object":
+		case "function":
+			return JSON.stringify(value) ?? typeof value;
+		case "symbol":
+			return value.toString();
+		default:
+			return String(value);
+	}
 }

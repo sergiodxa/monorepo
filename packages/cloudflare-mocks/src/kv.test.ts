@@ -18,7 +18,7 @@ function createClockedNamespace(start = 0) {
 	return {
 		kv,
 		/** Moves the clock forward. */
-		advance(seconds: number): void {
+		advance: (seconds: number): void => {
 			clock += seconds * 1000;
 		},
 	};
@@ -228,7 +228,7 @@ describe("createKVNamespace", () => {
 		let kv = createKVNamespace();
 		// The platform's bulk endpoint serves text and json only, and its types say so, so
 		// this reaches the runtime guard the way an untyped caller would.
-		let read = kv.get as (keys: string[], type: string) => Promise<unknown>;
+		let read = kv.get.bind(kv) as (keys: string[], type: string) => Promise<unknown>;
 
 		await expect(read(["a"], "arrayBuffer")).rejects.toThrow(/not supported/);
 	});

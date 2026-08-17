@@ -31,9 +31,9 @@ describe("createDurableObjectNamespace", () => {
 
 		// Reached through a cast because the namespace was not parameterized with a branded
 		// Durable Object type; a binding taken from a generated `Env` types these directly.
-		let publish = (stub as unknown as { publish(slug: string): Promise<string> }).publish;
+		let rpc = stub as unknown as { publish(slug: string): Promise<string> };
 
-		expect(await publish("hello")).toBe("published:hello");
+		expect(await rpc.publish("hello")).toBe("published:hello");
 		expect(await (await stub.fetch("https://do/")).text()).toBe("ok");
 	});
 

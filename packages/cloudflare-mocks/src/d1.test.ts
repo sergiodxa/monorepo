@@ -144,8 +144,10 @@ describe("createD1Database", () => {
 			.bind(1, { nested: true });
 
 		// This is the bug class the mock exists to catch: a `json` column that was never
-		// encoded reaches the binder as an object.
+		// encoded reaches the binder as an object. The message has to name the value, since
+		// `[object Object]` would leave the caller guessing which argument was wrong.
 		await expect(statement.run()).rejects.toThrow(/D1_TYPE_ERROR/);
+		await expect(statement.run()).rejects.toThrow(/\{"nested":true\}/);
 	});
 
 	test("rejects a bound undefined, which D1 does not accept", async () => {
