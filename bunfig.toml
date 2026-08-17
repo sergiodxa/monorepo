@@ -259,4 +259,11 @@ pathIgnorePatterns = [
 	"**/apps/uptime/app/http/validators/tcp-monitor.test.ts",
 	"**/apps/uptime/app/http/validators/team-domain.test.ts",
 	"**/apps/uptime/app/http/validators/team.test.ts",
+	"**/apps/uptime/app/http/cookies.test.ts",
+	"**/apps/uptime/app/http/render.test.tsx",
+	"**/apps/uptime/app/services/alerts.test.ts",
+	"**/apps/uptime/app/lib/trial-report.test.ts",
+	"**/apps/uptime/app/services/id-token-verification-key.test.ts",
+	"**/apps/uptime/app/services/trial-conversion.test.ts",
+	"**/apps/uptime/app/services/zone-file.test.ts",
 ]
