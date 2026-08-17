@@ -11,9 +11,9 @@ whole bug classes: a mock that returns canned rows cannot notice that the SQL wa
 
 This package supplies the missing piece. Storage bindings really store: KV honours
 expiration, metadata, and cursor-paginated prefix listing, and `createD1Database()` /
-`createSqlStorage()` run SQL through [`bun:sqlite`](https://bun.sh/docs/api/sqlite), so a
-bad statement, a constraint violation, or a value that should have been JSON-encoded fails
-exactly where it would in production. Message and event bindings record what a Worker sent
+`createSqlStorage()` run SQL through the runtime's own SQLite, so a bad statement, a
+constraint violation, or a value that should have been JSON-encoded fails exactly where it
+would in production. Message and event bindings record what a Worker sent
 and, for queues, drive a consumer with the platform's `ack`/`retry` rules.
 
 Every factory returns a value typed against the corresponding interface from
