@@ -385,9 +385,31 @@ run together, because the app's wrangler config declares a queue consumer and a 
 that miniflare keeps alive. Vitest force-exits, the run reports 0, and CI passes in a clean
 clone; it is noise rather than a hang.
 
-### Worth doing next
+### `packages/data-table-d1`, split rather than converted
 
-`packages/data-table-d1` tests the production D1 adapter against a hand-written D1 shim over
-`node:sqlite`, which is the largest remaining fidelity gap. It needs splitting rather than
-converting: part of the file deliberately exercises a D1 that returns no `meta`, which a real
-binding never does, so those tests keep a shim while the rest move.
+The production D1 adapter had been tested entirely against a 120-line `D1Database` shim over
+`node:sqlite`. 20 of its 22 tests now run against a real D1 binding: the raw `exec` shapes, the
+`c.json()`/`c.boolean()` round trips, the observer's kinds and tables, and the row counters D1
+reports. The test documenting that a failing `transaction()` does **not** roll back earlier
+writes is the one that most wanted a real binding, and it passed unchanged — the shim had been
+faithful there.
+
+Two tests keep their shim, and with it the threads pool, because they need a `meta` the test
+controls: that the adapter reports the `duration` D1 sent rather than timing statements itself
+(the shim reports a fixed 1.5ms no real statement would take), and that it reports zeros when a
+statement comes back with no counters at all. A real binding cannot express either. Mutating the
+adapter to time durations locally fails both of those and none of the real-D1 tests, which is
+the split doing its job.
+
+Storage is shared across a file in this pool, so a setup helper calls `reset()` from
+`cloudflare:test` before applying its schema; without it the second test finds the first one's
+tables and rows.
+
+### Keeping the pool's bindings local
+
+`remoteBindings: false` is set on every project that reads a wrangler config. `apps/uptime`
+declares `send_email` with `remote: true`, and the pool honours that by opening a remote proxy
+session to the real account — which failed CI outright with _"In a non-interactive environment,
+it's necessary to set a `CLOUDFLARE_API_TOKEN`"_, and, where credentials do exist, quietly
+pointed a local test run at production. That session was also the handle behind the
+"something prevents the main process from exiting" warning, which went away with it.
