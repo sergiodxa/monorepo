@@ -47,6 +47,7 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 				compatibilityDate: "2025-04-07",
 				compatibilityFlags: ["nodejs_compat"],
 				kvNamespaces: ["CACHE"],
+				d1Databases: ["DB"],
 			},
 		}),
 	],
