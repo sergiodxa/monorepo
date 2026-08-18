@@ -68,7 +68,17 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
  */
 const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	root: "apps/uptime",
-	plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: "./wrangler.jsonc" },
+			// The app declares `send_email` with `remote: true`, and the pool honours that by
+			// opening a remote proxy session to the real account. It needs credentials, so CI
+			// fails outright with "necessary to set a CLOUDFLARE_API_TOKEN" — and where
+			// credentials do exist, a local test run reaches production. Neither is wanted:
+			// these tests assert against local KV, so every binding stays local.
+			remoteBindings: false,
+		}),
+	],
 	resolve: { tsconfigPaths: true },
 	test: {
 		name: "uptime-workers",
@@ -79,7 +89,15 @@ const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 
 const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	root: "apps/blog",
-	plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: "./wrangler.jsonc" },
+			// Every binding stays local. The app has no `remote: true` binding today; declaring
+			// this keeps a future one from opening a proxy session to the real account, which
+			// needs credentials CI does not have and would point tests at production.
+			remoteBindings: false,
+		}),
+	],
 	resolve: { tsconfigPaths: true },
 	test: {
 		name: "blog-workers",
