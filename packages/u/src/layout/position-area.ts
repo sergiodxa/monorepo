@@ -6,11 +6,8 @@ import { utility } from "../internal/descriptor";
 
 /**
  * Applies the CSS Anchor Positioning `position-area` property, placing an
- * absolutely/anchor-positioned element in a named region of the 3x3 grid
- * around its anchor. Kept as a loose `string` rather than an exhaustive
- * union — the full logical-position-keyword grammar (`"span-all"`,
- * `"x-start"`, `"block-end span-inline-end"`, ...) is large and not worth
- * enumerating here.
+ * anchor-positioned element in a named region of the 3x3 grid around its
+ * anchor. Accepts the whole logical-position-keyword grammar as a string.
  *
  * @example u.positionArea("top left")
  * @example css({ positionArea: "top left" })

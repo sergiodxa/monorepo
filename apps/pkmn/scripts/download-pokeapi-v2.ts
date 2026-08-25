@@ -1,12 +1,7 @@
 /**
- * Downloads the PokeAPI v2 content snapshot used by this app's content data layer.
- * It fetches the upstream `api-data` archive, extracts the versioned dataset, and
- * copies the `data/api/v2` directory into `apps/pkmn/json/pokeapi-v2`.
- *
- * This module is a standalone maintenance script rather than runtime game code.
- * It is intended to refresh the local checked-in content source from the upstream
- * dataset so the rest of the app can consume stable JSON files without making live
- * network requests to PokeAPI.
+ * Refreshes the checked-in content snapshot under `apps/pkmn/json/pokeapi-v2`
+ * from the upstream `api-data` archive, so the content data layer reads stable
+ * local JSON files.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

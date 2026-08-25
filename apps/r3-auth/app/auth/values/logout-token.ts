@@ -46,8 +46,8 @@ export default class LogoutToken extends JWT {
 	/**
 	 * Mints a logout token for one relying party.
 	 *
-	 * `sid` is written only when a session id is supplied, because a client that did
-	 * not ask for session-specific logout must not be told which session ended.
+	 * `sid` is written only when a session id is supplied, so the session identifier
+	 * reaches only the clients that require session-specific logout.
 	 *
 	 * @param subjectId - The person being logged out.
 	 * @param clientId - The relying party receiving the notification.

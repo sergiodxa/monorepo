@@ -30,17 +30,8 @@ export type AriaInvalid = boolean | "true" | "false" | "grammar" | "spelling";
 
 /**
  * What a field actually renders into `aria-invalid`: one of the tokens that
- * says something, or nothing at all for a valid field.
- *
- * Narrower than {@link AriaInvalid} on purpose, and the narrowing is the whole
- * point. `aria-invalid` takes a token, not a flag, so a `true` reaching the
- * attribute is serialized the way HTML wants booleans written — as the bare
- * name — leaving `aria-invalid=""`, which is not a token it recognizes and so
- * resolves to its default of valid. An invalid field would be announced as
- * fine. {@link resolveFieldWiring} therefore folds every accepted input into
- * one of these before it can reach an attribute, and a valid field is spelled
- * as the absent attribute rather than as `"false"`, since that is what absence
- * already means.
+ * says something, or nothing at all for a valid field. Serializing `true` as
+ * the bare attribute name yields `aria-invalid=""`, which resolves to valid.
  */
 export type AriaInvalidToken = "true" | "grammar" | "spelling";
 
@@ -85,13 +76,8 @@ export interface FieldWiring {
 
 /**
  * Computes the id and aria wiring a labeled, described, and validated field
- * convenience wrapper needs to link its composed parts together: the
- * control's resolved color role, its resolved invalid state, the ids
- * reserved for its description and error paragraphs — each derived from
- * `id` — and the joined `aria-describedby` value referencing whichever of
- * the two are present. A field wrapper calls this once, right after
- * destructuring its own props, keeping the id bookkeeping between its label,
- * control, description, and error identical across every field type.
+ * convenience wrapper needs: the resolved color role, resolved invalid
+ * state, description/error paragraph ids, and joined `aria-describedby`.
  *
  * @param id The field instance's own stable identifier, prefixed onto its description and error paragraph ids.
  * @param options The field's own color, error message, description, and invalid override.

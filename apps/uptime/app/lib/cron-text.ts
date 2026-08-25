@@ -1,8 +1,8 @@
 /**
  * The one place cron vocabulary becomes text a person reads: a parsed schedule's
  * descriptor into a sentence in the viewer's language, and a rejected expression into
- * a validation message. `@pkg/cron` returns structures and never copy, so every view
- * and action goes through here instead of hardcoding English next to an expression.
+ * a validation message. `@pkg/cron` returns structured descriptors, so every view and
+ * action sources its copy from here, keeping locale text centralized.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +22,7 @@ export interface ScheduleTextOptions {
 	t: TFunction;
 }
 
-/** A Sunday at UTC midnight, the anchor weekday index `0` names. Never leaves the module. */
+/** A Sunday at UTC midnight, the anchor weekday index `0` names. */
 const WEEKDAY_ANCHOR_MS = Date.UTC(2026, 0, 4);
 
 /** Milliseconds in a day, for stepping the weekday anchor. */
@@ -30,10 +30,8 @@ const MS_PER_DAY = 86_400_000;
 
 /**
  * Describes a stored cron expression in the viewer's language: the descriptor's `kind`
- * picks the sentence and its numeric fields are interpolated into it.
- *
- * An expression that no longer parses, and one with no concise shape, both fall back
- * to showing the expression itself, which is the honest answer rather than an error.
+ * picks the sentence and its numeric fields are interpolated into it. An expression that
+ * no longer parses, or has no concise shape, falls back to showing itself as typed.
  *
  * @param expression - The expression as stored on the monitor.
  * @param options - The request's translator and locale.
@@ -56,8 +54,10 @@ export function describeSchedule(expression: string, options: ScheduleTextOption
 			return t(`schedule.interval.${descriptor.unit}`, { count: descriptor.every });
 
 		case "hourly":
-			// A schedule firing at minute 0 of every hour reads as "every hour"; naming
-			// the minute only helps when it isn't the top of the hour.
+			/**
+			 * A schedule firing at minute 0 of every hour reads as "every hour"; naming the
+			 * minute only helps when it isn't the top of the hour.
+			 */
 			if (descriptor.minutes.length === 1 && descriptor.minutes[0] === 0) {
 				return t("schedule.hourly.onTheHour");
 			}

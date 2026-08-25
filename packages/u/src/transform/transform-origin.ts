@@ -22,19 +22,9 @@ export type TransformOriginValue =
 	| (string & {});
 
 /**
- * Sets the point every transform on the element pivots around. This is what
- * makes `u.scaleX()` grow a progress bar from its leading edge instead of
- * from its middle, and what makes a menu scale open from the corner it's
- * anchored to instead of from its centre.
- *
- * `transform-origin` is its own CSS property rather than a transform
- * function, so it's set outright and never joins the additive `transform`
- * composition the `transform/` function utilities share.
- *
- * The values are physical, not logical — CSS has no logical
- * `transform-origin` — so an origin that has to flip under RTL can't be
- * expressed here directly; drive it from a custom property instead and pass
- * that through the raw-string escape.
+ * Sets the pivot point for every transform on the element. It's its own CSS
+ * property, set outright rather than joining the additive `transform`
+ * composition. Values are physical only — drive an RTL-flipping origin from a custom property.
  *
  * @example u.transformOrigin()
  * @example css({ transformOrigin: "center" })

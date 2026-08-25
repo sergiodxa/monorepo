@@ -35,7 +35,6 @@ import AccessToken from "../values/access-token";
 import IdToken from "../values/id-token";
 import ScopeSet from "../values/scope-set";
 
-/** Validation schema for `authorization_code` grant request bodies. */
 let AuthorizationCodeSchema = s.object({
 	grant_type: s.literal("authorization_code"),
 	code: s.string(),
@@ -45,7 +44,6 @@ let AuthorizationCodeSchema = s.object({
 	code_verifier: s.optional(s.string()),
 });
 
-/** Validation schema for `refresh_token` grant request bodies. */
 let RefreshTokenSchema = s.object({
 	grant_type: s.literal("refresh_token"),
 	refresh_token: s.string(),
@@ -53,7 +51,6 @@ let RefreshTokenSchema = s.object({
 	client_secret: s.optional(s.string()),
 });
 
-/** Validation schema for `client_credentials` grant request bodies. */
 let ClientCredentialsSchema = s.object({
 	grant_type: s.literal("client_credentials"),
 	client_id: s.string(),
@@ -64,9 +61,8 @@ let ClientCredentialsSchema = s.object({
 
 /**
  * OAuth 2.0 Token endpoint (RFC 6749 Section 3.2).
- * Supports authorization_code, refresh_token, and client_credentials grant types.
- * Reads `grant_type` from the form body (and Basic auth for client credentials)
- * and dispatches to the matching grant handler.
+ * Supports authorization_code, refresh_token, and client_credentials grants,
+ * dispatching by `grant_type` (form body or Basic auth) to the matching handler.
  * @returns A JSON token `Response`, or an OAuth error `Response`.
  */
 export default createAction(
@@ -107,6 +103,7 @@ export default createAction(
 /**
  * Handles the authorization_code grant type (RFC 6749 Section 4.1.3).
  * Authorization codes are single-use per RFC 6749.
+ * Issues a refresh token only when `offline_access` was requested and granted.
  * @param db - Tenant database instance.
  * @param body - Parsed token request parameters (form body plus Basic-auth creds).
  * @param log - Request-scoped action logger.
@@ -303,9 +300,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	);
 	let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, signingKeys);
 
-	// Only hand out a refresh token when the client requested (and was granted, per the
-	// scope check above) `offline_access`; otherwise the session id is not exposed as a
-	// long-lived refresh credential.
 	let issueRefreshToken = authzData.scope.includes("offline_access");
 
 	log.info("Token issued successfully", {
@@ -473,8 +467,9 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 }
 
 /**
- * Handles the client_credentials grant type (RFC 6749 Section 4.4).
- * Only available to machine-to-machine (m2m) clients.
+ * Handles the client_credentials grant type (RFC 6749 Section 4.4), restricted
+ * to machine-to-machine (m2m) clients. Each requested resource (RFC 8707) must
+ * be registered and allow-listed, scoping minted tokens to authorized audiences.
  * @param db - Tenant database instance.
  * @param body - Parsed token request parameters (form body plus Basic-auth creds).
  * @param log - Request-scoped action logger.
@@ -548,8 +543,6 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	}
 
 	let resources = Array.isArray(resource) ? resource : resource ? [resource] : [];
-	// RFC 8707: every requested resource must be registered AND on the client's
-	// allow-list, otherwise a client could mint access tokens for arbitrary audiences.
 	if (resources.length > 0) {
 		let allowed = new Set(Client.parseAllowedResources(client));
 		for (let target of resources) {

@@ -10,13 +10,9 @@
 import type { SchemaOrg } from "./schema";
 
 /**
- * Serializes one node, or several, for a `<script type="application/ld+json">` body.
- *
- * Every `<` becomes its `<` unicode escape, so no string value inside the data can
- * emit a `</script` or `<!--` sequence and break out of the script element. The JSON
- * stays valid and parses back to the original text, since a JSON parser reads a literal
- * `<` and its unicode escape as the same character. Escaping that one character is
- * enough, so `&` is left alone and descriptions keep the text they were given.
+ * Serializes one node, or several, for a `<script type="application/ld+json">` body,
+ * escaping every `<` as its unicode form so embedded content can't emit a `</script`
+ * or `<!--` sequence, while the JSON still parses back to the exact original text.
  *
  * @param schema - One node or an array of nodes to place in a single script.
  * @returns The script body as a JSON string, safe to inject unescaped.

@@ -1,11 +1,8 @@
 /**
- * Verifies the species export: the pure shaper replaces exactly one entry inside
- * the whole `species.json` map (preserving every other species) and re-serializes
- * tab-indented with a trailing newline; it rejects invalid ids before any file
- * work. The server handler {@link runSpeciesExport} is exercised end to end with a
- * real write into a scratch entry of the real `species.json` (removed after),
- * and guards that malformed payloads and invalid ids fail without corrupting the
- * file.
+ * Verifies the species export: the pure shaper replaces exactly one entry in the
+ * whole `species.json` map, preserving every other species, and re-serializes
+ * tab-indented with a trailing newline. {@link runSpeciesExport} runs end to end
+ * against a scratch entry in the real file, which is restored after the suite.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -112,9 +109,7 @@ describe("shapeSpeciesExport", () => {
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) {
 			let parsed = JSON.parse(result.data.contents) as Record<string, Species>;
-			// Both species remain.
 			expect(Object.keys(parsed).sort()).toEqual(["BULBASAUR", "IVYSAUR"]);
-			// The replaced entry has the new value; the untouched one is unchanged.
 			expect(parsed.IVYSAUR!.number).toBe(999);
 			expect(parsed.BULBASAUR!.number).toBe(1);
 		}
@@ -131,7 +126,6 @@ describe("shapeSpeciesExport", () => {
 	});
 
 	test("adds a not-yet-present id without dropping others, and the result validates", () => {
-		// A realistic create-new flow: a fresh default species keyed by a new id.
 		let existing: Record<SpeciesId, Species> = {
 			BULBASAUR: { ...validSpecies(), number: 1 },
 			IVYSAUR: { ...validSpecies(), number: 2 },
@@ -141,10 +135,8 @@ describe("shapeSpeciesExport", () => {
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) {
 			let raw = JSON.parse(result.data.contents) as unknown;
-			// The whole-file map still validates through the content schema.
 			let parsed = parseSpecies(raw);
 			expect(Object.keys(parsed).sort()).toEqual(["BULBASAUR", "IVYSAUR", "MEW"]);
-			// Every existing entry survives untouched, plus the new one is present.
 			expect(parsed.BULBASAUR!.number).toBe(1);
 			expect(parsed.IVYSAUR!.number).toBe(2);
 			expect(parsed.MEW!.number).toBe(151);
@@ -174,11 +166,11 @@ describe("shapeSpeciesExport", () => {
 });
 
 describe("runSpeciesExport", () => {
-	// A scratch id written into the real species.json, removed after the suite.
 	let SCRATCH_ID = "EXPORT_TEST_SPECIES";
-	// The exact on-disk bytes, captured before any test writes, so the file can be
-	// restored byte-for-byte afterward instead of re-serialized from parsed data
-	// (which can reformat in ways `bun format:fix` would otherwise need to undo).
+	/**
+	 * The exact on-disk bytes, captured before any test writes, so the file is
+	 * restored byte-for-byte with its committed formatting intact.
+	 */
 	let originalContents: string;
 
 	beforeAll(async () => {
@@ -210,7 +202,6 @@ describe("runSpeciesExport", () => {
 		let malformed = { ...validSpecies(), types: ["sparkle"] };
 		let result = await runSpeciesExport({ id: "PIKACHU", species: malformed });
 		expect(isFailure(result)).toBe(true);
-		// The file still parses to the same set of ids (untouched).
 		let after = await currentIndex();
 		expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
 	});
@@ -228,10 +219,8 @@ describe("runSpeciesExport", () => {
 			expect(result.data.bytesWritten).toBeGreaterThan(0);
 
 			let after = await currentIndex();
-			// Every original species is still present, plus the new scratch entry.
 			expect(Object.keys(after)).toHaveLength(Object.keys(before).length + 1);
 			expect(after[SCRATCH_ID]).toBeDefined();
-			// A known original entry is unchanged.
 			expect(after.BULBASAUR).toEqual(before.BULBASAUR!);
 		}
 	});

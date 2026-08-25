@@ -74,9 +74,11 @@ function countHeader(response: Response, name: string): number {
 	return [...response.headers].filter(([header]) => header === name.toLowerCase()).length;
 }
 
+/**
+ * Refusals log in production and throw in development, so pin the mode and
+ * let the tests that care about the throw opt into it.
+ */
 beforeEach(() => {
-	// Refusals log in production and throw in development, so pin the mode and let
-	// the tests that care about the throw opt into it.
 	process.env.NODE_ENV = "production";
 });
 

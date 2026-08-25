@@ -1,9 +1,8 @@
 /**
- * Bun dev-tools server. It builds the client bundle with `Bun.build` at startup,
- * then serves requests through a `remix/router` router: a static HTML shell
- * for every tool page, the bundled client JS at `/client.js`, and a JSON export
- * action that writes authored content to disk. Development-only; refuses to start
- * unless `APP_ENV=development`.
+ * Bun dev-tools server: it builds the client bundle with `Bun.build` at startup,
+ * then serves a static HTML shell for every tool page, the bundled client JS at
+ * `/client.js`, and JSON export actions that write authored content to disk.
+ * Starts only under `APP_ENV=development`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,16 +20,15 @@ import routes from "./routes";
 import { runSpeciesExport } from "./species-export";
 import { runTrainerExport } from "./trainer-export";
 
-/** Default port for the dev server; chosen to avoid clashing with the game. */
+/** Default dev-server port, distinct from the game's so both can run at once. */
 const DEFAULT_PORT = 4321;
 
 /** Absolute path to the client entry that `Bun.build` bundles for the browser. */
 const CLIENT_ENTRY = new URL("./client.tsx", import.meta.url).pathname;
 
 /**
- * Static HTML shell served for every tool page. Contains the `#app` mount point
- * and loads the bundled client module, which renders the component tree CSR. No
- * server-side rendering happens here.
+ * Static HTML shell served for every tool page: the `#app` mount point plus the
+ * bundled client module, which renders the whole tree in the browser.
  */
 const HTML_SHELL = `<!doctype html>
 <html lang="en">
@@ -81,10 +79,9 @@ async function buildClientBundle(): Promise<string> {
 }
 
 /**
- * Builds the dev-tools router. Tool pages serve the HTML shell, `/client.js`
- * serves the pre-built bundle, and the export actions (text, binary, and sprite)
- * validate and write their payloads, mapping validation/path errors to 400/403
- * and success to 200.
+ * Builds the dev-tools router: tool pages serve the HTML shell, `/client.js`
+ * serves the pre-built bundle, and the export actions validate and write their
+ * payloads, mapping validation to 400, path rejections to 403, success to 200.
  *
  * @param clientBundle The bundled client JS to serve at `/client.js`.
  * @returns A configured router whose `fetch` handles every dev-tools request.
@@ -92,7 +89,6 @@ async function buildClientBundle(): Promise<string> {
 function createDevRouter(clientBundle: string) {
 	let router = createRouter();
 
-	/** Serves the static HTML shell for a tool page. */
 	function serveShell() {
 		return new Response(HTML_SHELL, {
 			headers: { "content-type": "text/html; charset=utf-8" },
@@ -113,10 +109,9 @@ function createDevRouter(clientBundle: string) {
 	});
 
 	/**
-	 * Runs a JSON export handler for a request: parses the body, invokes the
-	 * export function, and maps the outcome to a JSON response. A malformed body
-	 * or payload is a 400, a path-safety rejection a 403, and success returns the
-	 * handler's own result body.
+	 * Runs a JSON export handler: parses the body, invokes the export function,
+	 * and maps the outcome to JSON. A malformed body or payload is a 400, a
+	 * path-safety rejection a 403, and success returns the handler's own body.
 	 *
 	 * @param request The incoming export request.
 	 * @param run The export function to feed the parsed payload.
@@ -137,8 +132,6 @@ function createDevRouter(clientBundle: string) {
 
 		let result = await run(payload);
 		if (isFailure(result)) {
-			// A path-safety rejection is a forbidden target (403); a malformed
-			// payload is a bad request (400).
 			let status = result.error instanceof PathSafetyError ? 403 : 400;
 			return Response.json({ error: result.error.message }, { status });
 		}

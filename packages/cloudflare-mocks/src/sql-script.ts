@@ -7,11 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 /**
- * Splits a SQL script on statement boundaries.
- *
- * Only unquoted, uncommented semicolons split, so `INSERT INTO t VALUES ('a;b')` stays
- * one statement. Blank fragments and trailing separators are dropped, so a script ending
- * in `;` yields no empty final statement.
+ * Splits a SQL script into statements, honoring quoted and commented semicolons so
+ * `INSERT INTO t VALUES ('a;b')` stays one statement, and dropping blank fragments
+ * and a trailing separator so a script ending in `;` yields no empty final statement.
  * @param sql One or more `;`-separated SQL statements.
  * @returns The trimmed, non-empty statements in source order.
  * @example splitSqlStatements("SELECT 1; SELECT 2") // ["SELECT 1", "SELECT 2"]

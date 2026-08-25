@@ -1,12 +1,7 @@
 /**
- * Tests for the edit cron-job monitor page controller. Doesn't import
- * `~/app/data/monitor`, so no `cloudflare:workers` mock is needed. It's a plain GET
- * handler with no branch that re-renders the form with validation errors (that only
- * happens in the `actions/cron-jobs.ts` form-submission controller, tested
- * separately), so this only covers the 404 and the pre-filled-form 200 cases.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
- * matching the template in `app/http/controllers/app/team/http-monitors.test.ts`.
+ * Tests for the edit cron-job monitor page controller. Covers the 404 and
+ * pre-filled-form 200 cases; the validation-error re-render lives in the
+ * `actions/cron-jobs.ts` form-submission controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -107,9 +102,9 @@ async function send(
 }
 
 /**
- * The `value` of every `<option>` inside the timezone `<select>` that carries
- * `selected`. Exactly one may, since a second claimant leaves which one the browser
- * honours up to the browser rather than to the markup.
+ * The `value` of every `<option>` inside the timezone `<select>` that
+ * carries `selected`. Exactly one should, since a second claimant leaves
+ * the browser to decide which one wins.
  */
 function selectedTimezones(body: string): string[] {
 	let markup = /<select[^>]*\bname="timezone"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
@@ -153,8 +148,11 @@ describe("cronJobEdit", () => {
 		expect(body).toContain('value="0 0 * * *"');
 		expect(body).toContain(`action="${routes.actions.cronJob.update.href({ team: team.slug })}"`);
 		expect(body).toContain(`value="${monitor.id}"`);
-		// The grace period's +/- buttons only step once their island hydrates, and the page
-		// renders the same markup either way, so the payload naming it is the proof.
+		/**
+		 * The grace period's +/- buttons only step once their island hydrates, and
+		 * the page renders the same markup either way, so the payload naming it is
+		 * the proof.
+		 */
 		expect(body).toContain('"moduleUrl":"/resources/components/stepper-field.tsx"');
 		expect(body).toContain('command="--step-up" commandfor="cron-job-grace-period-seconds"');
 	});
@@ -178,7 +176,7 @@ describe("cronJobEdit", () => {
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
-		// Exactly one option claims `selected`, and it is the zone the job runs in.
+		/** Exactly one option claims `selected`, and it is the zone the job runs in. */
 		expect(selectedTimezones(body)).toEqual(["Europe/Madrid"]);
 	});
 
@@ -204,12 +202,12 @@ describe("cronJobEdit", () => {
 			return await (await send(db, team, membership, monitor.id)).text();
 		}
 
-		/*
-		 * Anchored to the attribute inside the switch's own tag rather than to the bare
-		 * word, which also appears in the component's `~ input:checked` CSS. `checked` is
-		 * an HTML boolean attribute: present at all — even as `checked="0"` for a `false`
-		 * that came back from SQLite as the integer 0 — means the switch renders ON, and
-		 * re-saving would flip the stored decision.
+		/**
+		 * Matching happens within the switch's own tag, since the bare word
+		 * `checked` also appears in the component's `~ input:checked` CSS. `checked`
+		 * is an HTML boolean attribute: its mere presence — even as `checked="0"`
+		 * for a `false` that came back from SQLite as the integer 0 — renders the
+		 * switch ON, and re-saving would flip the stored decision.
 		 */
 		let checkedInput = /<input[^>]*\bname="alert_on_late"[^>]*\schecked/;
 
@@ -236,7 +234,7 @@ describe("cronJobEdit", () => {
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
-		// UTC is offered as its own leading option, so the default keeps matching.
+		/** UTC is offered as its own leading option, so the default keeps matching. */
 		expect(selectedTimezones(body)).toEqual(["UTC"]);
 	});
 });

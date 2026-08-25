@@ -301,8 +301,6 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 			expect(body.error.code).toBe("VALIDATION_ERROR");
 			expect(body.error.message).toBe(`${field}: Unknown key`);
 
-			// The refusal is total: the identity stands, and so does the decision that rode
-			// along with it.
 			let stored = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
 			expect(stored?.name).toBe("example.com");
 			expect(stored?.record_type).toBe("A");

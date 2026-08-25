@@ -16,10 +16,8 @@ import { toBytes } from "./lib/bytes";
 /**
  * Compares two values byte for byte without an early exit.
  *
- * The whole of `left` is always scanned, so the running time depends on the
- * length of the inputs but not on where or whether they differ. Lengths are
- * assumed not to be secret: a length mismatch is detectable, only the content is
- * protected. Strings are compared as their UTF-8 bytes.
+ * The running time depends only on the length of the inputs; length leaks but
+ * byte content stays protected. Strings compare as their UTF-8 bytes.
  *
  * @param left First value, typically the expected one.
  * @param right Second value, typically the one supplied by a caller.
@@ -31,8 +29,6 @@ export function timingSafeEqual(left: BinaryLike, right: BinaryLike): boolean {
 	let a = toBytes(left);
 	let b = toBytes(right);
 
-	// An empty side cannot be folded into the loop below (there is no index to
-	// read from), so the only way both can match is if both are empty.
 	if (a.length === 0 || b.length === 0) return a.length === b.length;
 
 	let mismatch = a.length ^ b.length;

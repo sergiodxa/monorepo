@@ -10,11 +10,8 @@ import type { Middleware } from "remix/router";
 
 /**
  * Types an inline middleware callback against the router's request context.
- *
- * The current fetch-router `Middleware` type takes a single context-transform
- * parameter (defaulting to no transform); values a middleware attaches to the
- * context are declared through `declare module "remix/router"` augmentations,
- * so this helper only needs to contextually type `context`/`next`.
+ * Context values a middleware attaches are declared via `declare module
+ * "remix/router"` augmentations, so this only needs to type `context`/`next`.
  * @param middleware - The middleware function to type.
  * @returns The same middleware, typed as a `Middleware`.
  */

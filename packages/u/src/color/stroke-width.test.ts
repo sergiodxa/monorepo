@@ -1,4 +1,7 @@
 /**
+ * The serializer appends `px` to a unitless number on any property outside
+ * its allow-list, so these pin `stroke-width` to unitless SVG user units.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -18,8 +21,6 @@ describe("strokeWidth", () => {
 	});
 
 	test("the user-unit value keeps no unit, so the declaration survives the serializer", async () => {
-		// The serializer appends `px` to any unitless number on a property outside
-		// its allow-list, which would silently switch the stroke to pixel widths.
 		expect(await declarations(strokeWidth(2))).not.toContain("stroke-width: 2px");
 	});
 });

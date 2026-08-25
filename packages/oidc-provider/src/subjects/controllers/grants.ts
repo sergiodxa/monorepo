@@ -26,6 +26,7 @@ import Subject from "../models/subject";
 
 /**
  * `GET /api/subjects/:id/grants` — lists a subject's grants with client info.
+ * Client lookups run in a single batched query to avoid N+1 requests.
  * @returns A JSON `Response` with the grants, or `notFound` if the subject is missing.
  */
 export const index = createAction(
@@ -43,7 +44,6 @@ export const index = createAction(
 
 		let grants = await Grant.listBySubject(db, id);
 
-		// Fetch all unique client IDs in a single query to avoid N+1
 		let clientIds = [...new Set(grants.map((g) => g.client_id))];
 		let clients = await Client.listByIds(db, clientIds);
 		let clientMap = new Map(clients.map((c) => [c.id, c]));

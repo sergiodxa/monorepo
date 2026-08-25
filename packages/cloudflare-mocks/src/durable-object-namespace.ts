@@ -44,18 +44,16 @@ export interface DurableObjectNamespaceMock<
 	/**
 	 * Every resolution, in order, including repeats of the same name.
 	 *
-	 * Placement is the one thing a caller decides and cannot read back off the stub, so
-	 * recording it here is what lets a test assert an object was addressed in the region or
-	 * jurisdiction it was supposed to be.
+	 * Placement is the one thing a caller decides and cannot read back off the stub, so a
+	 * test asserts the region or jurisdiction an object was addressed in from here.
 	 */
 	readonly resolutions: readonly DurableObjectResolution[];
 
 	/**
 	 * Forgets every stub built so far, so the next resolution builds a fresh one.
 	 *
-	 * A binding installed once at module scope outlives the test that used it, and the
-	 * stubs it memoized outlive it too; this is how a `beforeEach` gets new objects without
-	 * re-creating the `env` the code under test already captured.
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets new objects without re-creating the `env` it already captured.
 	 */
 	reset(): void;
 }
@@ -63,10 +61,8 @@ export interface DurableObjectNamespaceMock<
 /**
  * Creates a Durable Object namespace binding.
  *
- * A name resolves to the same stub every time, which is the property the platform
- * guarantees and the one code under test relies on when it addresses an object by name
- * from more than one place. Ids carry the name they were derived from, so resolving
- * through `idFromName` and then `get` reaches the same object as `getByName`.
+ * A name resolves to the same stub every time, and an id carries the name it was
+ * derived from, so `idFromName` followed by `get` reaches the same object as `getByName`.
  * @param createStub Builds the object a name routes to.
  * @returns A `DurableObjectNamespace` binding that routes to those objects.
  * @example let blogs = createDurableObjectNamespace(() => async () => new Response("ok"));
@@ -75,8 +71,10 @@ export interface DurableObjectNamespaceMock<
 export function createDurableObjectNamespace<
 	T extends Rpc.DurableObjectBranded | undefined = undefined,
 >(createStub: DurableObjectStubFactory): DurableObjectNamespaceMock<T> {
-	// Shared with every jurisdiction-scoped view, so a name means the same object however it
-	// was reached, and one log records the whole binding's traffic.
+	/**
+	 * Shared with every jurisdiction-scoped view, so a name means the same object however it
+	 * was reached, and one log records the whole binding's traffic.
+	 */
 	let stubs = new Map<string, DurableObjectStub<T>>();
 	let names: string[] = [];
 	let resolutions: DurableObjectResolution[] = [];
@@ -138,16 +136,17 @@ export function createDurableObjectNamespace<
 
 			/**
 			 * Resolves an object by id.
+			 *
+			 * Refuses an id minted under a different jurisdiction, catching the sharding bug of
+			 * deriving an id from the unscoped binding and resolving it through a scoped view.
 			 * @param id Id produced by {@link idFromName} or {@link newUniqueId}.
 			 * @returns The stub the factory built for the name behind that id.
+			 * @throws When the id's jurisdiction does not match this view's jurisdiction.
 			 */
 			get(
 				id: DurableObjectId,
 				options?: DurableObjectNamespaceGetDurableObjectOptions,
 			): DurableObjectStub<T> {
-				// The platform refuses an id minted under a different jurisdiction, and code that
-				// shards by region gets this wrong in exactly one direction: it derives the id
-				// from the unscoped binding and resolves it through a scoped one.
 				if (id.jurisdiction !== jurisdiction) {
 					throw new Error(
 						`Durable Object id belongs to jurisdiction ${id.jurisdiction ?? "none"}, but the namespace is scoped to ${jurisdiction ?? "none"}`,
@@ -186,9 +185,8 @@ export function createDurableObjectNamespace<
 			/**
 			 * Scopes the namespace to a jurisdiction.
 			 *
-			 * The view shares this namespace's objects and log, and tags what it resolves, so
-			 * placement is asserted from {@link DurableObjectNamespaceMock.resolutions} rather
-			 * than taken on trust.
+			 * The view shares this namespace's objects and log, tagging what it resolves so
+			 * placement is asserted from {@link DurableObjectNamespaceMock.resolutions}.
 			 * @param scope Jurisdiction objects resolved through the view belong to.
 			 */
 			jurisdiction(scope: DurableObjectJurisdiction): DurableObjectNamespaceMock<T> {
@@ -210,15 +208,18 @@ function isHandler(built: FetcherHandler | object): built is FetcherHandler {
 	return typeof built === "function";
 }
 
-/** Wraps whatever the factory returned as a stub, giving it identity and a `fetch`. */
+/**
+ * Wraps whatever the factory returned as a stub, giving it identity and a `fetch`.
+ *
+ * The branded stub shape cannot be produced structurally, so it is assembled and cast
+ * once here, keeping every call site free of a cast.
+ */
 function toStub<T extends Rpc.DurableObjectBranded | undefined>(
 	name: string,
 	built: FetcherHandler | object,
 ): DurableObjectStub<T> {
 	let base = isHandler(built) ? createFetcher(built) : built;
 
-	// The one cast in the module: a branded stub type cannot be produced structurally, so
-	// the shape is assembled here and asserted once rather than at every call site.
 	return Object.assign(Object.create(null) as object, base, {
 		id: createId(name),
 		name,

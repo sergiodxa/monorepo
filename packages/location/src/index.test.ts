@@ -1,3 +1,9 @@
+/**
+ * Tests for the Location class covering construction, getters and setters,
+ * string and JSON serialization, and the `from`/`canParse` statics.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { Location } from "./index";
@@ -228,7 +234,7 @@ describe("Location", () => {
 			let clone = Location.from(original);
 
 			expect(clone?.toString()).toBe(original.toString());
-			expect(clone).not.toBe(original); // Different instances
+			expect(clone).not.toBe(original);
 		});
 
 		test("throws TypeError for invalid input", () => {

@@ -11,11 +11,9 @@
 import { form, get, post, route } from "remix/routes";
 
 /**
- * Every route this server serves, grouped by area.
- *
- * The paths are a frozen contract: relying parties hardcode `/authorize`,
- * `/oauth/token`, `/userinfo`, `/.well-known/jwks.json` and `/oidc/logout` instead of
- * reading discovery, so moving one of those is a coordinated client release.
+ * The paths below are a frozen contract: relying parties hardcode `/authorize`,
+ * `/oauth/token`, `/userinfo`, `/.well-known/jwks.json`, and `/oidc/logout` instead
+ * of reading discovery, so moving any of them needs a coordinated client release.
  *
  * @example
  * routes.admin.client.index.href({ clientId });
@@ -28,14 +26,9 @@ export default route({
 	/** GET renders the sign-in UI (or performs SSO); POST logs in with credentials. */
 	authorize: form("/authorize"),
 	/**
-	 * GET renders the confirmation for an email-verification token; POST spends it.
-	 *
-	 * Split across the two methods because the link is followed from an inbox, and an
-	 * inbox is read by scanners as well as by people: a `GET` that consumed the token
-	 * would let a mail scanner confirm the address and burn the link before the person
-	 * ever clicked it. Deliberately outside `/account`: the browser that opens the mail
-	 * often holds no session at all, and a guard there would answer a valid token with a
-	 * sign-in page.
+	 * GET renders the confirmation for a still-live token; POST spends it, split so a
+	 * mail scanner following the `GET` link cannot burn the token before the person
+	 * clicks, and reachable without a session so a valid token never meets a sign-in guard.
 	 */
 	verifyEmail: form("/verify-email"),
 

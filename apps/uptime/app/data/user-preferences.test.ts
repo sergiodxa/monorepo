@@ -1,16 +1,14 @@
 /**
  * Unit tests for the `UserPreferences` data-access model: the not-yet-set lookup
- * branch, and `setLanguage`'s create-then-update-in-place behavior for the same
- * subject.
+ * branch, and `setLanguage`'s create-then-update-in-place behavior for the subject.
  *
  * The email opt-out is the part worth the most cases, because every uncertain state has to read
  * as "send it" — no row, no list, a list that names something else, a list holding a string this
  * app no longer sends — and only a stored refusal naming the email may stop it. A `wants` that
  * defaulted the other way would still pass a test that only checked the refusal.
  *
- * The two writers share one private upsert, so each is tested for both of its branches and for
- * leaving the other's field alone: they are the two independent settings on one row, and a write
- * that replaced the row rather than the field would silently reset a language.
+ * The two writers share one private upsert, so each is tested for touching only its
+ * own field on that shared row, so a save cannot silently reset the other setting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -190,8 +188,8 @@ describe("UserPreferences.setUnsubscribedEmails", () => {
 	});
 
 	/**
-	 * The form posts the whole list, so a second save has to replace it rather than merge into
-	 * it: merging would make an unchecked switch unable to turn an email back on.
+	 * The form posts the whole list, so a second save replaces it entirely — only
+	 * full replacement lets an unchecked switch turn an email back on.
 	 */
 	test("replaces the whole stored list instead of adding to it", async () => {
 		let { db } = createTestDatabase();

@@ -1,3 +1,11 @@
+/**
+ * Traverses and queries XML element trees by predicate or by `/`-delimited
+ * child-name path.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { XML } from "../index";
 
 import { cloneElement } from "./clone-element";

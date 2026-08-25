@@ -1,3 +1,11 @@
+/**
+ * Unit tests for the isSuccess type guard, covering the truthiness check
+ * and the compile-time narrowing it gives callers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";
@@ -21,7 +29,6 @@ describe(isSuccess, () => {
 		let result: Result<number, Error> = success(42);
 
 		if (isSuccess(result)) {
-			// TypeScript should know result.data is number
 			let value: number = result.data;
 			expect(value).toBe(42);
 		}

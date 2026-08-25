@@ -1,3 +1,10 @@
+/**
+ * Unit tests for {@link PostType.validate}: accepted definitions, slug rules,
+ * reserved paths, and reserved/duplicate field keys.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { PostType, type PostTypeInput } from "./post-type";

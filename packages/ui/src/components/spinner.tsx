@@ -45,21 +45,18 @@ export namespace Spinner {
 		/** Size variant. Defaults to {@link DEFAULT_SIZE}. */
 		size?: Size;
 		/**
-		 * Accessible label announced by assistive technology for as long as the
-		 * spinner is on screen (e.g. `"Loading"`, `"Saving changes"`). Required —
-		 * the component ships no built-in copy, so a consumer's own localized
-		 * string always drives what's announced.
+		 * Accessible label announced by assistive technology for as long as
+		 * the spinner is on screen. Required — the component ships no
+		 * built-in copy, so a consumer's own localized string drives it.
 		 */
 		"aria-label": string;
 	}
 }
 
 /**
- * Renders a busy indicator: a `role="progressbar"` host, with no
- * `aria-valuenow` so assistive technology reads it as indeterminate, wrapping
- * a rotating-icon glyph colored and sized through the `data-color` and
- * `data-size` attribute contract. The icon holds still on its own; pair it
- * with the `spin()` mixin from the animation layer for the rotating loop.
+ * Renders a busy indicator: a `role="progressbar"` host with no
+ * `aria-valuenow`, so assistive technology reads it as indeterminate. Pair
+ * it with the `spin()` mixin from the animation layer for the rotating loop.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the indicator's markup.

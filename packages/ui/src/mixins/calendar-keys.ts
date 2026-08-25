@@ -1,15 +1,7 @@
 /**
- * Keyboard navigation for a Calendar grid: reads Arrow, Page, Home, and End
- * key presses and turns them into day/week/month focus movement on a
- * `CalendarModel` instance, then mirrors the model's focused day back onto
- * the grid as roving `tabindex` and native DOM focus.
- *
- * Why JS: the WAI-ARIA grid keyboard pattern moves a single logical focus
- * position across a two-dimensional grid of days using arrow, page, home,
- * and end keys, which HTML has no declarative mechanism for.
- * No-JS baseline: every day cell still renders as its own reachable cell, so
- * the grid stays fully usable one `Tab` stop at a time — only the day/week/
- * month shortcuts are unavailable.
+ * Keyboard navigation for a Calendar grid: moves day/week/month focus on a
+ * `CalendarModel` from Arrow/Page/Home/End keys, then mirrors the model's
+ * focused day back onto the grid as roving `tabindex` and DOM focus.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,17 +13,15 @@ import type { CalendarModel } from "../behaviors/calendar-model";
 
 /**
  * Attribute every calendar day cell exposes its date on, in local
- * `YYYY-MM-DD` form. `calendarKeys()` reads it to find the cell that matches
- * a `CalendarModel`'s focused day so it can move roving `tabindex` and DOM
- * focus onto it.
+ * `YYYY-MM-DD` form, that `calendarKeys()` matches against a
+ * `CalendarModel`'s focused day to move roving `tabindex` and DOM focus.
  */
 export const CALENDAR_DAY_DATE_ATTRIBUTE = "data-date";
 
 /**
  * Formats a date as the local calendar-day key every day cell's
- * `data-date` attribute carries, so the focused day can be found in the DOM
- * by a plain string comparison instead of re-deriving `Date` equality per
- * cell.
+ * `data-date` attribute carries, so the focused day can be matched by a
+ * plain string comparison instead of re-deriving `Date` equality per cell.
  *
  * @param date Date to format.
  * @returns The date's local year, month, and day as `YYYY-MM-DD`.
@@ -44,20 +34,9 @@ function toDateKey(date: Date): string {
 }
 
 /**
- * Adds keyboard navigation to a Calendar grid. `ArrowUp`/`ArrowDown` move
- * focus by week, `ArrowLeft`/`ArrowRight` move it by day, `PageUp`/`PageDown`
- * move it by month, and `Home`/`End` jump to the first/last day of the
- * focused month — each key delegates to the matching `CalendarModel` method
- * rather than tracking any position itself.
- *
- * Every time the model's `focusedDate` changes — from one of these keys, or
- * from anything else that calls a `focus*` method on the same model, such as
- * a pointer click handled elsewhere — the mixin re-scans the grid's day
- * cells (identified by {@link CALENDAR_DAY_DATE_ATTRIBUTE}), sets `tabindex`
- * to `0` on the cell matching the focused day and `-1` on every other cell,
- * and moves native DOM focus onto it. This keeps roving focus consistent
- * across every element that shares the model, using the same `data-date`
- * contract the grid's own styling keys off.
+ * Adds keyboard navigation to a Calendar grid: each key delegates to the
+ * matching `CalendarModel` method, and any `focusedDate` change — from a key
+ * or another caller of the model — re-syncs roving `tabindex` and DOM focus.
  *
  * @param model Behavior class instance owning the grid's focused day, visible
  * month, and range selection state.

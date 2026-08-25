@@ -1,21 +1,14 @@
 /**
- * `/unsubscribe/:token` — the only credential a trial lead will ever hold, and the only
- * way they have to make the emails stop. They never made an account, so there is nothing
- * to sign in with; the unguessable token in the URL is the whole proof.
+ * `/unsubscribe/:token` — the only credential a trial lead ever holds, since they never
+ * made an account to sign in with.
  *
- * **The GET renders a page and deletes nothing.** Corporate link scanners and inbox
- * fetchers — Outlook Safe Links, Gmail's own prefetch — follow every URL in a message
- * before a human has seen it, so a GET that unsubscribed would silently delete the leads
- * of people who never clicked anything. Only the POST deletes. That split is also what
- * makes the RFC 8058 one-click button work: Gmail and Apple Mail POST to this same URL,
- * so those readers still get their single click.
+ * The GET only renders; only the POST deletes, since corporate link scanners and inbox
+ * prefetchers follow every URL before a human sees it, and a GET that unsubscribed would
+ * silently drop people who never clicked. The split also lets Gmail and Apple Mail's RFC
+ * 8058 one-click button POST straight to this URL.
  *
- * **Neither method ever reports whether a token exists.** The GET renders its confirmation
- * without looking the token up at all, and the POST renders the same "you're unsubscribed"
- * page whether it deleted a lead, found nothing, or was handed a token that was already
- * used. A 404 here would turn the URL into an oracle for guessing which tokens are live,
- * and there is nothing an honest reader gains from the distinction: a second click on a
- * link that lives in an inbox forever should say what the first one said.
+ * Neither method reports whether a token exists — the GET never looks it up, and the POST
+ * answers any token, used or not, with the same page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,9 +66,8 @@ function renderPage(title: string, body: string, locale: string, footer: RemixNo
 export default createController(routes.trial.unsubscribe, {
 	actions: {
 		/**
-		 * GET /unsubscribe/:token — asks, and does nothing else. The token is not looked up:
-		 * there is nothing to render differently for an unknown one, and not reading it is
-		 * the simplest way to be sure this method can never be the one that deletes.
+		 * GET /unsubscribe/:token — renders the same confirmation page regardless of the token,
+		 * so skipping the lookup keeps this method structurally incapable of the delete.
 		 */
 		index(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);
@@ -95,8 +87,8 @@ export default createController(routes.trial.unsubscribe, {
 
 		/**
 		 * POST /unsubscribe/:token — deletes the lead and everything attached to it, then
-		 * says so. A hard delete rather than a suppression list, so the answer to "do you
-		 * still have my address?" is no; see `Lead.forget` for why that is the right trade.
+		 * reports it plainly: the answer to "do you still have my address?" becomes genuinely
+		 * no. See `Lead.forget` for the reasoning behind the hard delete.
 		 */
 		async action(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);

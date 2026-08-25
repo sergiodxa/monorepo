@@ -14,10 +14,8 @@ import * as checks from "remix/data-schema/checks";
 /**
  * A token request, discriminated on `grant_type`.
  *
- * Each discriminator passes its type argument explicitly, because `literal`'s
- * parameter is not declared `const`: an inferred `"refresh_token"` widens to `string`
- * and the parsed union stops being discriminated, leaving every branch holding every
- * field.
+ * Each discriminator passes its type argument explicitly, since `literal`'s inferred
+ * type would otherwise widen to `string` and leave every branch holding every field.
  */
 export const TokenRequestSchema = s.variant("grant_type", {
 	authorization_code: s.object({

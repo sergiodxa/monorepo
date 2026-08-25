@@ -19,21 +19,16 @@ import { fontSize, leading, weight } from "@pkg/u/typography";
 export namespace Label {
 	/**
 	 * Every native `<label>` attribute, unchanged, plus the `mix` passthrough.
-	 * A label carries no color, variant, or size prop of its own — it always
-	 * renders at the library's default caption size, medium weight, and
-	 * emphasized neutral foreground color. Set `htmlFor` to associate the
-	 * label with a field by `id`, or nest the field as a child instead.
+	 * Renders at the library's default caption size, medium weight, and
+	 * emphasized neutral foreground; set `htmlFor` or nest the field as a child.
 	 */
 	export interface Props extends TagProps<"label"> {}
 }
 
 /**
  * Renders its children inside a native `<label>` element, sized and colored
- * as a form field caption: the library's default caption size at medium
- * weight, its line height collapsed to one, in the emphasized neutral
- * foreground color. Pair it with a field by setting `htmlFor` to the
- * field's `id`, or wrap the field directly so the platform associates them
- * without an `id` at all.
+ * as a form field caption. Pair it with a field by setting `htmlFor` to the
+ * field's `id`, or wrap the field directly so the platform associates them.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the label's markup.

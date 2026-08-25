@@ -1,25 +1,9 @@
 /**
- * Scheduled maintenance job that applies a retention window to every table that grows
- * with monitor activity (ADR-020). One job rather than one per table: they all run on the
- * same daily schedule and the work is a handful of bounded `DELETE`s, so a shared job
- * keeps the schedule, the log line, and the batching in one place.
- *
- * The windows differ by what the table is for. `monitor_results` holds the record of the
- * last day or two of checks that `Monitor.countConsumedPingsByTeam` counts before the
- * daily rollup reaches them — long-term HTTP analytics and history live in Analytics
- * Engine — so a week is already far longer than anything reads. Scheduling no longer
- * reads this table at all: ADR-003 moved that onto `monitors.next_due_at`, which is what
- * makes the table's retention a question of counting alone. The DNS, TCP, and alert
- * tables *are* the history a monitor detail page and an incident post-mortem read, so they
- * keep a quarter: long enough to be useful, short enough that their steady-state size is a
- * function of write rate rather than of account age.
- *
- * A row whose date column is still `NULL` (an in-flight or pending check) is never matched
- * by a cutoff and is left alone.
- *
- * The free-watch tables are swept too, and they are the one part of this job that is not a
- * plain per-table window: their three sweeps are ordered and the order is load-bearing. See
- * {@link CleanJob.sweepTrial}.
+ * Scheduled maintenance job that applies a per-table retention window to everything that
+ * grows with monitor activity (ADR-020), batched in one job so the schedule and log line
+ * stay shared. A row whose date column is still `NULL` is never matched by a cutoff. The
+ * free-watch tables are the exception: their three sweeps run in a load-bearing order —
+ * see {@link CleanJob.sweepTrial}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,10 +24,9 @@ import { apportionCost } from "~/app/services/cost";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Retention windows, in days, one named constant per table so each is tunable on its own
- * without reading any SQL. Widening one of these is safe; narrowing one deletes history
- * that cannot be recovered, so the numbers are deliberately generous relative to what the
- * app actually reads back.
+ * Retention windows, in days, one named constant per table so each is tunable without
+ * touching SQL. Widening one is safe; narrowing one deletes history that cannot be
+ * recovered, so each number stays generous relative to what the app reads back.
  */
 const MONITOR_RESULT_RETENTION_DAYS = 7;
 const DNS_RESULT_RETENTION_DAYS = 90;
@@ -57,16 +40,13 @@ const FLOW_RESULT_RETENTION_DAYS = 90;
 const ALERT_EVENT_RETENTION_DAYS = 90;
 
 interface RetainedTable {
-	/** Table to sweep. */
 	table: string;
 	/**
-	 * The epoch-ms column the window applies to. Each table dates its rows from a
-	 * different column — HTTP results from when the check finished, DNS and TCP results
-	 * from when the check ran, alert events from when the notification went out — and each
-	 * one below is the column that table declares in `database/schema.ts`, not a guess.
+	 * The epoch-ms column the window applies to. Each table dates its rows differently —
+	 * HTTP results by when the check finished, DNS/TCP by when it ran, alerts by when the
+	 * notification went out — matching the column it declares in `database/schema.ts`.
 	 */
 	dateColumn: string;
-	/** Days of rows to keep. */
 	retentionDays: number;
 }
 
@@ -111,12 +91,9 @@ export class CleanJob extends Job {
 		let now = Date.now();
 
 		/**
-		 * Retention is charged when it happens, split by monitors per team (ADR-007 §5).
-		 * Prepaying it at insert instead — charging each result row for the delete it will
-		 * later cause — would double-count against these `DELETE`s, which the statement
-		 * observer measures for real; and a single bulk `DELETE` cannot say whose rows it
-		 * removed, so monitor count is the closest available proxy for the volume each team
-		 * put in.
+		 * Charged when the delete happens, split by monitors per team (ADR-007 §5): a bulk
+		 * `DELETE` cannot say whose rows it removed, so monitor count is the closest proxy
+		 * for the volume each team contributed.
 		 */
 		apportionCost(await Team.countMonitorsByTeam(db));
 
@@ -146,24 +123,9 @@ export class CleanJob extends Job {
 	}
 
 	/**
-	 * Sweeps the three free-watch tables, in the only order that is correct.
-	 *
-	 * Each sweep's own condition is only sound once the one before it has run, so this is a
-	 * sequence and not a list of independent windows:
-	 *
-	 * 1. **Results** go with the watch they belong to, found by joining to it, so they must be
-	 *    swept while it still exists — the watch row is the only thing that identifies them,
-	 *    and taking it first would strand every one of them permanently. They carry no age of
-	 *    their own: a shorter one would leave a watch that is still being reported on with
-	 *    nothing to report, and one as long as the watch's would delete them days after it.
-	 * 2. **Watches** go on `converts_until`, thirty days, and never on `expires_at`: a watch
-	 *    whose week of checking ended is still claimable as a real monitor for another three,
-	 *    and sweeping the wrong column would withdraw the offer without anyone noticing. Step
-	 *    1 has already taken everything that pointed at it, so nothing is orphaned.
-	 * 3. **Leads** go only when no watch is left to protect, which is the right condition
-	 *    *because* step 2 has already reduced their watches to the ones still worth keeping.
-	 *    Run before it, and someone who tried three URLs on three days would be deleted while
-	 *    two of their attempts were still convertible.
+	 * Sweeps free-watch tables in the only correct order: results before the watch that
+	 * identifies them, then watches past their `converts_until`, then leads with no watch
+	 * left — each step's own condition only holds once the step before it has already run.
 	 */
 	private async sweepTrial(db: Database, now: number): Promise<SweptTable[]> {
 		let results = await TrialWatch.deleteExpiredResults(db, now);

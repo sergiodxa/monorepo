@@ -1,3 +1,10 @@
+/**
+ * Server-only markdown parsing: Markdoc transformation plus frontmatter
+ * validation against a Standard Schema.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Config, RenderableTreeNodes } from "@markdoc/markdoc";
 import type { Result } from "@pkg/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";

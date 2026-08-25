@@ -5,21 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Sets how far the viewer is from the z=0 plane, giving 3D-transformed
- * children a vanishing point. A smaller value puts the viewer closer and so
- * exaggerates the perspective; a larger value flattens it. Without it a 3D
- * rotation has no vanishing point at all and reads as a flat scale rather
- * than as depth.
- *
- * It belongs on the **parent** of the 3D-transformed children, alongside
- * `u.transformStyle()`.
- *
- * A bare number is treated as pixels; a string passes through unchanged,
- * including the `"none"` keyword, which removes the perspective entirely.
- *
- * `perspective` is its own CSS property rather than a transform function, so
- * it's set outright and never joins the additive `transform` composition the
- * `transform/` function utilities share.
+ * Sets how far the viewer is from the z=0 plane; without it, 3D rotation
+ * reads as a flat scale, not depth. Goes on the **parent**, alongside
+ * `u.transformStyle()`, as its own CSS property outside the composed `transform`.
  *
  * @example u.perspective()
  * @example css({ perspective: "800px" })

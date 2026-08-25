@@ -1,4 +1,3 @@
-import { Database } from "remix/data-table";
 /**
  * Verifies admin-role assignment in {@link User.findOrCreateFromAuthProfile}: the
  * allowlist always grants admin, the first-admin bootstrap is opt-in, and disabling
@@ -7,6 +6,7 @@ import { Database } from "remix/data-table";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { Role } from "../../roles/models/role";
@@ -41,7 +41,6 @@ describe("User.findOrCreateFromAuthProfile admin assignment", () => {
 	});
 
 	test("with bootstrapFirstAdmin=false a non-allowlisted first user is a reader, not admin", async () => {
-		// The multi-tenant hole: a stray SSO user reaching a fresh (adminless) tenant.
 		let user = await User.findOrCreateFromAuthProfile(db, profile(), {
 			admins: ["owner@example.test"],
 			bootstrapFirstAdmin: false,

@@ -3,9 +3,8 @@
  * call: an {@link AlertDialog} panel prefilled with a heading, an optional
  * supporting passage, and a cancel/confirm control pair, so a single
  * consequential decision needs no compound assembly of its own. The
- * confirming control defaults to the semantic danger tone, pairing that tone
- * with an explicit confirmation step rather than a bare button for an
- * irreversible action.
+ * confirming control defaults to the semantic danger tone, keeping an
+ * irreversible action behind an explicit confirmation step in that tone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,9 +26,8 @@ const DEFAULT_METHOD: NonNullable<Confirm.FormProps["method"]> = "post";
 
 /**
  * Column gap the wrapping `<form>` re-declares in submit mode, matching the
- * gap the panel itself lays its own children out with — the form becomes the
- * panel's single child, so without this the header and footer would lose the
- * spacing the panel's own layout gives them.
+ * panel's own child gap — the form becomes the panel's single child, so
+ * without this the header and footer would lose their spacing.
  */
 const PANEL_GAP = 6;
 
@@ -60,11 +58,8 @@ export namespace Confirm {
 
 	/**
 	 * The submission a confirming control performs instead of merely closing
-	 * the panel. Passing this at all switches {@link Confirm} into submit
-	 * mode: the panel's content is wrapped in a real `<form>` and the
-	 * confirming control becomes that form's submit button, which is the shape
-	 * a server-rendered destructive action needs — the response to the
-	 * submission is what ends the interruption, not a `close` command.
+	 * the panel. Passing this switches {@link Confirm} into submit mode, where
+	 * the form's response is what ends the interruption.
 	 */
 	export interface FormProps {
 		/** URL the confirmation submits to. Omit to submit to the current URL, as a native `<form>` with no `action` does. */
@@ -86,10 +81,9 @@ export namespace Confirm {
 	 */
 	export interface Props extends Omit<AlertDialog.Props, "id" | "children" | "title"> {
 		/**
-		 * Stable identifier the panel renders as its own `id`. A trigger
-		 * elsewhere on the page points `commandfor` at this same value with
-		 * `command="show-modal"`; the cancel control and {@link AlertDialog.Action}
-		 * this wrapper composes internally point back at it automatically.
+		 * Stable identifier the panel renders as its own `id`; a trigger
+		 * elsewhere on the page targets it via `commandfor`/`command="show-modal"`,
+		 * and the cancel and confirm controls point back at it automatically.
 		 */
 		id: string;
 		/** The panel's heading, rendered through {@link AlertDialog.Title}. */
@@ -106,10 +100,9 @@ export namespace Confirm {
 		/** Semantic color for the confirming control. Defaults to {@link DEFAULT_COLOR}. */
 		color?: Button.Color;
 		/**
-		 * Submission the confirming control performs. Omit for a client-side
-		 * confirmation, where confirming only closes the panel and whatever
-		 * else should happen is left to the page. Set it for a server-side
-		 * action, where confirming submits a real form.
+		 * Submission the confirming control performs. Omitting it leaves
+		 * confirming as a close-only action for the page to react to; setting it
+		 * submits a real form instead.
 		 */
 		form?: FormProps;
 		/** Per-part styling for this wrapper's internally composed elements. */
@@ -118,36 +111,9 @@ export namespace Confirm {
 }
 
 /**
- * Renders a complete confirmation prompt in one call: an {@link AlertDialog}
- * panel whose header holds {@link Confirm.Props.title} and, when supplied,
- * {@link Confirm.Props.description}, and whose footer holds a cancel control
- * before the confirming {@link AlertDialog.Action}, colored with the semantic
- * danger tone unless {@link Confirm.Props.color} says otherwise. The title's
- * and description's own ids are computed from this instance's stable
- * identifier and wired to the panel's `aria-labelledby`/`aria-describedby`
- * automatically, unless a consumer overrides either explicitly, so no id
- * bookkeeping is left to the caller.
- *
- * Every detail {@link AlertDialog} already carries — the fixed `alertdialog`
- * role, sealing the panel against backdrop light-dismiss, the native
- * `<dialog>` host and its `::backdrop` treatment — rides along unchanged,
- * since this component composes it directly instead of duplicating its
- * markup or styling. Opening the panel still rides Invoker Commands exactly
- * as {@link AlertDialog} does: a trigger elsewhere on the page points
- * `commandfor` at this instance's `id` with `command="show-modal"`. Composing
- * {@link AlertDialog} and its compound parts directly instead remains
- * available for a confirmation prompt whose layout or wiring this wrapper
- * doesn't cover.
- *
- * Without {@link Confirm.Props.form}, confirming only closes the panel — the
- * client-side shape, where the page decides what a confirmed decision means.
- * Passing `form` switches to the server-side shape instead: the panel's
- * content is wrapped in a real `<form>` carrying that `action`/`method` plus
- * any hidden `fields`, and the confirming control becomes its submit button,
- * so the action runs as an ordinary form submission with no client JavaScript
- * involved. Since that mode renders a `<form>`, a submitting panel must not
- * sit inside another form's markup, the same nesting rule the platform
- * already imposes.
+ * Composes {@link AlertDialog} into a confirmation prompt, wiring title and
+ * description ids to `aria-labelledby`/`aria-describedby`. Omit
+ * {@link Confirm.Props.form} to close on confirm, or pass it to submit a real `<form>` instead.
  *
  * @param handle Runtime handle carrying the panel's props and this instance's stable identifier.
  * @returns The render function producing the confirmation prompt's markup.

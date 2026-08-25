@@ -1,7 +1,7 @@
 /**
- * Tests the exact bytes the IETF draft fields carry, and the rule that a field a
- * backend cannot report truthfully is left out rather than filled with a guess —
- * the reason `remaining` disappears for a binding-backed limit.
+ * Tests the exact bytes the IETF draft fields carry, keeping output limited
+ * to what the backend can truthfully report — the reason `remaining`
+ * disappears for a binding-backed limit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

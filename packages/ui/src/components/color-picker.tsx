@@ -1,23 +1,7 @@
 /**
- * A labeled color field building on {@link ColorField} for its plain
- * fallback, extended with a {@link ColorPicker.Group} trigger row and a
- * {@link ColorPicker.Trigger} swatch button for composing a
- * {@link ColorPicker.Dialog} — a Popover-hosted picking surface — alongside
- * it. Composing {@link ColorPicker.Group} and {@link ColorPicker.Dialog} as
- * children swaps in that richer trigger-and-panel layout in place of the
- * plain fallback field; leaving `children` unset keeps the fallback on its
- * own, a complete, keyboard-operable control with no composed surface at
- * all.
- *
- * A picking surface typically composes a two-dimensional saturation/
- * brightness area, a hue wheel, an alpha slider, and a color field for direct
- * entry — optionally alongside a preset swatch row — every part reading and
- * reporting the same live color. None of those parts share state with one
- * another on their own: each renders from whatever value its own props
- * describe, and each reports a settled gesture through its own dispatched
- * event or native form submission. Wiring those reports back into every
- * other part's next render is the consuming island's own job, the same way
- * {@link ColorPicker.Dialog}'s doc comment walks through in full.
+ * A labeled color field composing {@link ColorField}'s plain fallback with
+ * an optional {@link ColorPicker.Group} trigger row and
+ * {@link ColorPicker.Dialog} picking surface swapped in via `children`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,10 +25,9 @@ import { ColorSwatch } from "./color-swatch";
 import { Popover } from "./popover";
 
 /**
- * Native `<button>` `type` {@link ColorPicker.Trigger} falls back to when a
- * consumer doesn't supply one, keeping a click on the trigger from
- * submitting a surrounding `<form>` the way a bare `<button>`'s default type
- * otherwise would.
+ * Native `<button>` `type` {@link ColorPicker.Trigger} falls back to,
+ * keeping an omitted `type` from implicitly submitting an enclosing
+ * `<form>` the way a bare `<button>` would.
  */
 const DEFAULT_BUTTON_TYPE: NonNullable<ColorPicker.TriggerProps["type"]> = "button";
 
@@ -75,28 +58,22 @@ const DEFAULT_DIALOG_PLACEMENT: Popover.Placement = "bottom-start";
 export namespace ColorPicker {
 	/**
 	 * Semantic color role for the fallback field's keyboard focus ring,
-	 * mirroring {@link ColorField.Color}. Read only by the fallback field —
-	 * {@link ColorPicker.Group}'s composed control carries no `color` prop of
-	 * its own, since it's rendered directly by the consumer.
+	 * mirroring {@link ColorField.Color}. The composed layout carries no
+	 * `color` prop of its own, since a consumer renders it directly.
 	 */
 	export type Color = ColorField.Color;
 
 	/**
-	 * Every prop {@link ColorField.PartsProps} accepts, unchanged. Applies only
-	 * to the fallback field's internally composed label, control, preview,
-	 * description, and error — the composed layout styles its own parts
-	 * individually through {@link ColorPicker.Group}, {@link ColorPicker.Trigger},
-	 * and {@link ColorPicker.Dialog} instead.
+	 * Every prop {@link ColorField.PartsProps} accepts, unchanged, applied
+	 * only to the fallback field's internally composed parts — the composed
+	 * layout styles its own parts individually instead.
 	 */
 	export interface PartsProps extends ColorField.PartsProps {}
 
 	/**
 	 * Props accepted by {@link ColorPicker}. Leaving `children` unset renders
-	 * {@link ColorField}'s own plain fallback field, using every field below;
-	 * composing {@link ColorPicker.Group} and {@link ColorPicker.Dialog} instead
-	 * renders the richer trigger-and-panel layout, and every field below goes
-	 * unread — build the fallback's caption, supporting copy, and validation
-	 * message directly into that composed layout instead.
+	 * {@link ColorField}'s plain fallback using every field below; composing
+	 * {@link ColorPicker.Group} and {@link ColorPicker.Dialog} instead skips them.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
 		/** Semantic color role for the fallback field's focus ring. Read only when `children` is unset. */
@@ -129,36 +106,29 @@ export namespace ColorPicker {
 		parts?: PartsProps;
 		/**
 		 * The trigger-and-panel layout — typically a `Label`,
-		 * {@link ColorPicker.Group} (housing the field's own control and
-		 * {@link ColorPicker.Trigger}), and {@link ColorPicker.Dialog} (housing a
-		 * picking surface) — rendered in place of {@link ColorField}'s plain
-		 * fallback. Leaving this unset renders that fallback instead, every field
-		 * above passed straight through to it unchanged.
+		 * {@link ColorPicker.Group}, and {@link ColorPicker.Dialog} — rendered in
+		 * place of {@link ColorField}'s plain fallback. Unset renders that fallback.
 		 */
 		children?: RemixNode;
 	}
 
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * `children` composes the field's own control — an `Input`, styled the
-	 * same way {@link ColorField}'s own control is — and
+	 * `children` composes the field's own control and
 	 * {@link ColorPicker.Trigger} into one visual row.
 	 */
 	export interface GroupProps extends TagProps<"div"> {}
 
 	/**
-	 * Every native `<button>` attribute except `children`, which stays fixed to
-	 * this button's own {@link ColorSwatch}, plus the `mix` passthrough. `type`
-	 * defaults to {@link DEFAULT_BUTTON_TYPE}. Point `commandfor` at
-	 * {@link ColorPicker.Dialog}'s `id` with `command="toggle-popover"` to wire
-	 * this control up as the surface's invoker.
+	 * Every native `<button>` attribute except `children`, fixed to this
+	 * button's own {@link ColorSwatch}. Point `commandfor` at
+	 * {@link ColorPicker.Dialog}'s `id` with `command="toggle-popover"` to wire it up.
 	 */
 	export interface TriggerProps extends Omit<TagProps<"button">, "children"> {
 		/**
 		 * The color this trigger previews, already resolved to a literal CSS
 		 * color value — the same value its inner {@link ColorSwatch} paints.
-		 * Required, since a trigger with nothing to preview has no reason to
-		 * render.
+		 * Required, since a trigger with nothing to preview has no reason to render.
 		 */
 		value: string;
 		/** Shape variant for the inner {@link ColorSwatch}, mirrored onto the button host so its own corners match. Defaults to {@link DEFAULT_TRIGGER_SHAPE}. */
@@ -168,28 +138,15 @@ export namespace ColorPicker {
 	/**
 	 * Every prop {@link Popover.Props} accepts, since {@link ColorPicker.Dialog}
 	 * renders one directly as its host. `placement` defaults to
-	 * {@link DEFAULT_DIALOG_PLACEMENT} rather than {@link Popover}'s own
-	 * default.
+	 * {@link DEFAULT_DIALOG_PLACEMENT}.
 	 */
 	export interface DialogProps extends Popover.Props {}
 }
 
 /**
- * Renders {@link ColorPicker}'s root. Leaving `children` unset renders
- * {@link ColorField}'s own plain fallback field — a complete, labeled,
- * keyboard-operable color-notation control with a live swatch preview —
- * passing `color`, `label`, `description`, `errorMessage`, `format`, `name`,
- * `value`/`defaultValue`, `placeholder`, `required`, `disabled`, `readOnly`,
- * `autoComplete`, and `parts` straight through to it unchanged. Composing
- * {@link ColorPicker.Group} and {@link ColorPicker.Dialog} as `children`
- * instead — typically alongside a `Label` and the field's own supporting copy
- * or validation message, built directly into that composition — renders the
- * richer trigger-and-panel layout in a single column with a small gap between
- * its parts, and every field above goes unread.
- *
- * In dev mode, falling back to {@link ColorField}'s plain field with no
- * `label` set logs a `console.warn`, mirroring {@link ColorField}'s own
- * accessible-name requirement.
+ * Renders {@link ColorPicker}'s root: {@link ColorField}'s plain fallback
+ * when `children` is unset, or the trigger-and-panel layout composed from
+ * {@link ColorPicker.Group} and {@link ColorPicker.Dialog} otherwise.
  *
  * @param handle Runtime handle carrying the root element's props.
  * @returns The render function producing the color picker's markup.
@@ -273,11 +230,8 @@ export function ColorPicker(handle: Handle<ColorPicker.Props>) {
 
 /**
  * Renders {@link ColorPicker}'s control row: a plain flex host laying the
- * field's own control and {@link ColorPicker.Trigger} out side by side. The
- * whole row gains a keyboard focus ring the moment focus lands anywhere
- * inside it — on the control itself, since the trigger button sits outside
- * the tab stop a plain `:focus` would catch — rather than waiting for the
- * button specifically.
+ * field's own control and {@link ColorPicker.Trigger} side by side, with a
+ * keyboard focus ring on the whole row the moment focus lands anywhere inside.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -311,23 +265,9 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 };
 
 /**
- * Renders {@link ColorPicker}'s trailing trigger: a native `<button>` housing
- * a {@link ColorSwatch} sized to fill it completely, so the whole button reads
- * as a live preview of the color it opens a picking surface for rather than a
- * separate preview-plus-icon pairing. The button's own corners follow `shape`
- * (defaulting to {@link DEFAULT_TRIGGER_SHAPE}), mirrored onto the swatch
- * inside it, so both stay the same outline. Hover reads this host's own
- * native `:hover` pseudo-class, and a keyboard focus-visible ring reads in the
- * semantic primary tone. This control carries no click behavior of its own —
- * point `commandfor` at {@link ColorPicker.Dialog}'s `id` with
- * `command="toggle-popover"` to wire it up as that surface's invoker, which
- * both opens the surface and becomes its implicit CSS anchor with no script
- * of this module's own.
- *
- * In dev mode, a button with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name to announce for it — the inner {@link ColorSwatch} paints a color with
- * no text alternative of its own.
+ * Renders {@link ColorPicker}'s trailing trigger: a `<button>` housing a
+ * {@link ColorSwatch} that fills it as a live preview, wired via
+ * `commandfor`/`command="toggle-popover"` to {@link ColorPicker.Dialog}'s `id`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the trigger's markup.
@@ -382,30 +322,9 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 };
 
 /**
- * Renders {@link ColorPicker}'s picking surface: a Popover whose `placement`
- * defaults to reading down and start-ward from its invoker, padded around
- * whatever picking controls a consumer composes as `children`, laid out in a
- * single column with a gap between them. `role` defaults to `"dialog"`.
- *
- * Opening and closing ride the Popover API exactly as `Popover` documents —
- * {@link ColorPicker.Trigger}'s `commandfor`/`command="toggle-popover"` both
- * shows this surface and, by that same invoker relationship, becomes its
- * implicit CSS anchor, with no positioning logic running in script.
- *
- * A typical composition inside this surface stacks a two-dimensional
- * saturation/brightness area (paired with its own drag mixin so a pointer
- * moves both axes as one gesture), a hue wheel (paired with its own drag
- * mixin so a pointer's angle around its center drives the hue value), an
- * alpha slider, a color field for direct notated entry, and, optionally, a
- * preset swatch row. Every one of those parts renders from its own value
- * props and reports a settled gesture through its own dispatched event or
- * native form submission — none of them read one another directly. Sharing
- * one live color across all of them, so dragging the area updates the wheel's
- * ring marker's own hue-tinted border, the field's typed notation, and the
- * trigger's own preview together, is the consuming island's job: it listens
- * for each part's change event, and re-renders every other part with the
- * settled value, the same way any hydrated island owns state a purely
- * server-rendered composition never tracks on its own.
+ * Renders {@link ColorPicker}'s picking surface: a Popover, defaulting
+ * `placement` to bottom-start and `role` to `"dialog"`, padding whatever
+ * picking controls a consumer composes as `children` in a single column.
  *
  * @param handle Runtime handle carrying the host's `Popover` props.
  * @returns The render function producing the surface's markup.

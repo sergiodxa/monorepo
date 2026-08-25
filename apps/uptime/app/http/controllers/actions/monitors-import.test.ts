@@ -38,7 +38,7 @@ import routes from "~/routes/web";
 
 /**
  * The queue an on-demand check would land on. Module scope because `~/app/data/monitor`
- * captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ * captures `env` on import; `beforeEach` empties it to reset state between tests.
  */
 let queue: QueueMock = createQueue();
 
@@ -187,6 +187,11 @@ describe("importMonitors", () => {
 		expect(flashed.toast?.intent).toBe("success");
 	});
 
+	/**
+	 * Checks parity with the single-create form: the same author, team, enabled stamp, and
+	 * immediate first-check schedule a hand-made monitor gets, plus the table defaults for
+	 * every field neither form collects.
+	 */
 	test("creates a monitor indistinguishable from one the single create form makes", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -194,8 +199,6 @@ describe("importMonitors", () => {
 
 		let monitor = await db.findOne(monitors, { where: { team_id: team.id } });
 		expect(monitor).not.toBeNull();
-		// The same author, team, enabled stamp and immediate first-check schedule a
-		// hand-made monitor gets, and the table defaults for every field neither form collects.
 		expect(monitor?.author_id).toBe(membership.subject_id);
 		expect(monitor?.enabled_at).not.toBeNull();
 		expect(monitor?.next_due_at).not.toBeNull();
@@ -207,6 +210,7 @@ describe("importMonitors", () => {
 		expect(monitor?.interval_seconds).toBe(600);
 	});
 
+	/** A partial success still flashes a success toast, whatever the number of rejected lines. */
 	test("creates the good lines and reports the bad ones back on the form", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -240,7 +244,6 @@ describe("importMonitors", () => {
 				{ line: 5, input: "not a url", reason: "invalidUrl" },
 			],
 		});
-		// Some of it landed, so this is not an error however many lines were rejected.
 		expect(flashed.toast?.intent).toBe("success");
 	});
 

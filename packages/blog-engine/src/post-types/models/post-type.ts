@@ -12,7 +12,7 @@ import type { SelectPostType } from "../../database/schema";
 
 import { postTypes } from "../../database/schema";
 
-/** The seven supported field input kinds (no nesting, repeaters, or relations). */
+/** The field input kinds available for a custom field, each holding a single flat value. */
 export type FieldKind = "text" | "textarea" | "markdown" | "date" | "url" | "boolean" | "tags";
 
 /** A single custom field on a post type. */
@@ -295,9 +295,7 @@ export class PostType {
 		try {
 			let parsed: unknown = JSON.parse(row.fields);
 			if (Array.isArray(parsed)) fields = parsed as FieldDefinition[];
-		} catch {
-			// Malformed definitions render as a type with no custom fields.
-		}
+		} catch {}
 		return {
 			id: row.id,
 			name: row.name,

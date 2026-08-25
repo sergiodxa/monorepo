@@ -1,3 +1,10 @@
+/**
+ * Parses XML into plain document data using DOMParser-compatible APIs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { failure, success } from "@pkg/result";

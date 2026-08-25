@@ -32,11 +32,9 @@ async function makeEmail(overrides: Partial<TrialConfirmationEmail.Data> = {}) {
 }
 
 /**
- * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
- * The runner's ICU differs between a developer machine and CI, so the separator is
- * normalised here rather than asserted. What these tests are about is the email's
- * content — the host's Unicode data is not the subject, and production renders on
- * the Workers runtime's own ICU regardless of what built it.
+ * ICU 72 (CLDR 42) joins a date and time with " at "; older builds use ", ".
+ * The available ICU build varies across the developer machine, CI, and the
+ * Workers runtime, so the separator is normalised here before asserting on content.
  */
 function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
@@ -91,7 +89,6 @@ describe("TrialConfirmationEmail", () => {
 
 		let { html } = await render(email.body());
 
-		// The URL row and the unsubscribe link, and nothing else — no call to action.
 		expect(html.split("<a ").length - 1).toBe(2);
 		expect(html).toContain("https://uptime.sergiodxa.com/unsubscribe/tok-abc123");
 	});

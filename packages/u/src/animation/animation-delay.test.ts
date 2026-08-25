@@ -26,8 +26,6 @@ describe("animationDelay", () => {
 	});
 
 	test("emits only animationDelay, never animationName or animationDuration", async () => {
-		// The string-only signature is what keeps the unit: a bare `120` would
-		// serialize to `120px`, not `120ms`, and the delay would be dropped.
 		expect(await declarations(animationDelay("150ms"))).toEqual(["animation-delay: 150ms"]);
 	});
 });

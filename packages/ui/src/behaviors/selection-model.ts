@@ -1,10 +1,8 @@
 /**
- * Selection state for list-shaped widgets: owns a set of selected keys and
- * the toggle, contiguous-range, and select-all semantics that back row
- * selection in GridList, Tree, and Table. A mixin or island component
- * constructs one instance, subscribes to its `"change"` event, and renders
- * from `selectedKeys` — the model itself owns state independent of any
- * rendering.
+ * Selection state for list-shaped widgets: a set of selected keys plus the
+ * toggle, contiguous-range, and select-all semantics behind row selection.
+ * Consumers subscribe to the `"change"` event and render from
+ * `selectedKeys`, so selection lives on independently of the rendering.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,10 +34,9 @@ export namespace SelectionModel {
 		/** Selection cardinality; defaults to `"multiple"`. */
 		mode?: Mode;
 		/**
-		 * Ordered universe of selectable keys, used to compute
+		 * Ordered universe of selectable keys, backing
 		 * {@link SelectionModel.selectRange} spans and the full set for
-		 * {@link SelectionModel.selectAll}. Omit it when the consumer only
-		 * needs point selection through {@link SelectionModel.toggle}.
+		 * {@link SelectionModel.selectAll}. Point selection works without it.
 		 */
 		keys?: Iterable<Key>;
 		/** Keys excluded from selection; any of them present in `selectedKeys` are dropped. */
@@ -52,15 +49,9 @@ export namespace SelectionModel {
 const DEFAULT_MODE: SelectionModel.Mode = "multiple";
 
 /**
- * State model for list, grid, tree, and table row selection. It owns the
- * selected-key set and the interaction semantics a selectable row exposes to
- * the mixin or island that wires it to pointer and keyboard input: point
- * selection ({@link SelectionModel.toggle}), a contiguous range anchored to
- * the last interacted key ({@link SelectionModel.selectRange}), and
- * select/clear-all ({@link SelectionModel.selectAll}/{@link SelectionModel.clear}).
- * Every mutating method dispatches a plain `"change"` event exactly once
- * when it actually changes the selected-key set, so a subscriber can call
- * `handle.update()` without diffing state itself.
+ * State model for list, grid, tree, and table row selection. Every mutating
+ * method dispatches a plain `"change"` event exactly once, and only when the
+ * selected-key set really changes, so a subscriber can re-render blindly.
  */
 export class SelectionModel extends TypedEventTarget<{ change: Event }> {
 	#mode: SelectionModel.Mode;
@@ -133,10 +124,9 @@ export class SelectionModel extends TypedEventTarget<{ change: Event }> {
 	}
 
 	/**
-	 * Replaces the selection mode. The current selection clamps to the new
-	 * mode (`"none"` empties it, `"single"` keeps at most the first of the
-	 * previously selected keys) and dispatches `"change"` when that clamp
-	 * actually shrinks the selected-key set.
+	 * Replaces the selection mode. The current selection clamps to it
+	 * (`"none"` empties it, `"single"` keeps at most the first selected key),
+	 * dispatching `"change"` when that clamp shrinks the selected-key set.
 	 */
 	setMode(mode: SelectionModel.Mode): void {
 		if (mode === this.#mode) return;
@@ -226,11 +216,9 @@ export class SelectionModel extends TypedEventTarget<{ change: Event }> {
 	}
 
 	/**
-	 * Flips whether `key` is selected: adds it (replacing the selection in
-	 * `"single"` mode) when absent, removes it when present. No-op for a
-	 * disabled key or in `"none"` mode. Sets {@link anchorKey} to `key` on
-	 * success — this is the operation a plain click or a checkbox toggle
-	 * maps to.
+	 * Flips whether `key` is selected, replacing the selection in `"single"`
+	 * mode and staying a no-op for a disabled key or in `"none"` mode. Sets
+	 * {@link anchorKey} on success; a plain click maps to this operation.
 	 */
 	toggle(key: SelectionModel.Key): void {
 		if (this.#mode === "none" || this.#disabled.has(key)) return;
@@ -255,16 +243,9 @@ export class SelectionModel extends TypedEventTarget<{ change: Event }> {
 	}
 
 	/**
-	 * Selects the contiguous span between {@link anchorKey} and `key`,
-	 * ordered by their position in {@link keys}, replacing the current
-	 * selection with that span (disabled keys within it are skipped). This
-	 * is the operation a shift-click maps to. `anchorKey` itself is left
-	 * unchanged, so repeated calls keep extending or shrinking the span
-	 * from the same starting point.
-	 *
-	 * Falls back to {@link toggle} outside `"multiple"` mode, when there is
-	 * no anchor yet, or when `anchorKey`/`key` isn't present in {@link keys}
-	 * (for example, when the consumer never called {@link setKeys}).
+	 * Selects the contiguous span between {@link anchorKey} and `key` in
+	 * {@link keys} order, skipping disabled keys; the anchor stays put so
+	 * repeated shift-clicks re-span. Anchorless calls run {@link toggle}.
 	 */
 	selectRange(key: SelectionModel.Key): void {
 		if (this.#disabled.has(key)) return;
@@ -314,10 +295,9 @@ export class SelectionModel extends TypedEventTarget<{ change: Event }> {
 	}
 
 	/**
-	 * Swaps in `next` as the selected-key set and dispatches `"change"`
-	 * only when it differs from the current selection, so every public
-	 * method can call this unconditionally without guarding against no-op
-	 * updates itself.
+	 * Swaps in `next` and dispatches `"change"` only when it differs from
+	 * the current selection, so every public method can call this
+	 * unconditionally and stay free of no-op guards.
 	 */
 	#replaceSelection(next: Set<SelectionModel.Key>): void {
 		if (setsAreEqual(this.#selected, next)) return;
@@ -346,9 +326,6 @@ function normalizeForMode(
 	return keys;
 }
 
-/**
- * Reports whether two key sets contain exactly the same members.
- */
 function setsAreEqual(a: Set<SelectionModel.Key>, b: Set<SelectionModel.Key>): boolean {
 	if (a.size !== b.size) return false;
 

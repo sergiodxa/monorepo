@@ -1,8 +1,8 @@
-import { rounded } from "../effects/rounded";
 /**
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { rounded } from "../effects/rounded";
 import { compose } from "../internal/descriptor";
 
 import { aspect } from "./aspect";

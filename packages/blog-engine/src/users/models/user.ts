@@ -22,7 +22,11 @@ export interface AuthProfile {
 	displayName: string;
 }
 
-/** Input for creating a user. */
+/**
+ * Fields for creating a user. Unset optional fields fall back to generated
+ * defaults: a random id, the email's local part as username, and empty
+ * display name and avatar.
+ */
 export interface CreateUserInput {
 	id?: string;
 	subjectId?: string;
@@ -119,8 +123,10 @@ export class User {
 	 * @param profile - OIDC profile of the user logging in.
 	 * @param options.admins - Emails/subject ids always mapped to the admin role.
 	 * @param options.bootstrapFirstAdmin - When `true` (default), the first user to
-	 * sign in while no admin exists is made admin (self-hosted convenience). Set
-	 * `false` on multi-tenant hosts so only allow-listed users can become admin.
+	 * sign in while no admin exists is made admin (self-hosted convenience). A
+	 * multi-tenant host risks a stray SSO user reaching a freshly provisioned
+	 * tenant before its owner and claiming admin, so pass `false` there and rely
+	 * on the `admins` allow-list instead.
 	 * @returns The linked or created user row.
 	 * @throws {User.InvalidError} If a create/update read-back fails.
 	 */
@@ -154,11 +160,6 @@ export class User {
 		let admins = new Set((options.admins ?? []).map((value) => value.toLowerCase()));
 		let isAllowlisted =
 			admins.has(profile.email.toLowerCase()) || admins.has(profile.subjectId.toLowerCase());
-		// The empty-admins bootstrap (first user becomes admin) is convenient for
-		// self-hosted single-operator installs, but unsafe for multi-tenant hosts:
-		// a stray SSO user could reach a freshly provisioned tenant before the owner
-		// and claim admin. Hosts that pass an `admins` allow-list disable it with
-		// `bootstrapFirstAdmin: false`, so only allow-listed users can be admin.
 		let bootstrapFirstAdmin = options.bootstrapFirstAdmin ?? true;
 		let isFirstAdmin = bootstrapFirstAdmin && (await this.countAdmins(db)) === 0;
 		let roleId =

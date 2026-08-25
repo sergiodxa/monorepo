@@ -28,8 +28,7 @@ export namespace Form {
 	/**
 	 * A single validation failure as reported by a Standard Schema compliant
 	 * validator. `path` locates the field the issue belongs to — a plain key,
-	 * an index, or a `{ key }` segment — and is omitted for an issue that
-	 * describes the form as a whole rather than one field.
+	 * an index, or a `{ key }` segment — or is omitted for a form-level issue.
 	 */
 	export interface Issue {
 		/** Human-readable failure message, rendered verbatim by a field's `FieldError`. */
@@ -56,8 +55,7 @@ export namespace Form {
 		/**
 		 * `true` for the single field name that comes first among
 		 * {@link Form.Props.issues}, so exactly one invalid field renders
-		 * `autofocus` and the browser lands keyboard focus on it after a
-		 * server round-trip re-render.
+		 * `autofocus`, landing keyboard focus on it after a server re-render.
 		 *
 		 * @param name Field name to check, matching its `name` attribute.
 		 * @returns Whether `name` is the first invalid field this render.
@@ -72,8 +70,7 @@ export namespace Form {
 		/**
 		 * Validation issues from a `parseSafe` (or equivalent Standard Schema)
 		 * result, provided to every descendant field through component
-		 * context. Defaults to no issues, matching a first,
-		 * not-yet-submitted render.
+		 * context. Defaults to no issues, matching a first render.
 		 *
 		 * @example
 		 * let result = parseSafe(ContactSchema, await request.formData());
@@ -121,16 +118,9 @@ function groupIssuesByField(issues: ReadonlyArray<Form.Issue>): Map<string, Form
 }
 
 /**
- * Renders a native `<form>` that lays its children out in a single column
- * with a consistent gap, and provides {@link Form.Context} so every
- * descendant field can pick out its own validation issues by name instead of
- * receiving them as a prop of its own.
- *
- * A field reads the context with `handle.context.get(Form)`, calls
- * `getIssues(name)` for its `FieldError` message and `aria-invalid` state,
- * and `isFirstInvalid(name)` to decide whether it renders `autofocus` — the
- * canonical parse-then-re-render pattern lands keyboard focus on the first
- * problem with no client JavaScript involved.
+ * Renders a native `<form>` laying children out in a single column, and
+ * provides {@link Form.Context} so descendant fields resolve their own
+ * issues by name and focus the first invalid field with no client JS.
  *
  * @param handle Runtime handle carrying the host `<form>`'s props and providing {@link Form.Context}.
  * @returns The render function producing the form's markup.
@@ -175,9 +165,8 @@ export interface FieldIssueState {
 
 /**
  * Reads the {@link Form.Context} provided by the nearest ancestor
- * {@link Form}, guarded so a field rendered outside any Form at all resolves
- * to `undefined` rather than surfacing the failed lookup as a thrown error,
- * whichever way that absence happens to surface.
+ * {@link Form}, resolving to `undefined` when no Form wraps the caller so
+ * every field renders safely inside or outside a Form.
  *
  * @param handle Runtime handle of the field performing the lookup.
  * @returns The enclosing form's context, or `undefined` where no Form wraps the caller.
@@ -192,11 +181,8 @@ export function readFormContext(handle: Handle<unknown, any>): Form.Context | un
 
 /**
  * Resolves the validation state a field renders: an explicit `errorMessage`
- * always wins, so a consumer holding its own message keeps full control;
- * otherwise the first issue the enclosing {@link Form} holds for `name`
- * supplies one, which is what makes `Form`'s `issues` reach a field with no
- * per-field prop threaded down by hand. A field with no `name`, or one
- * outside any Form, resolves to its own props alone.
+ * always wins over a matching {@link Form} issue for `name`, which is how
+ * `Form`'s `issues` reach a field with no per-field prop threaded by hand.
  *
  * @param handle Runtime handle of the field resolving its state.
  * @param name The field's `name` attribute, used to look its issues up.

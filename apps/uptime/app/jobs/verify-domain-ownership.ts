@@ -3,9 +3,8 @@
  * token and marks it verified on a match. A DNS-over-HTTPS lookup of
  * `_ping-verification.<hostname>` must return a TXT record whose value is
  * the literal string `ping_<teamDomainId>` (the DNS-JSON API returns TXT record
- * content JSON-quoted, hence comparing against `JSON.stringify(...)`). A miss isn't
- * an error — `EnqueuePendingDomainsJob` retries every unverified domain again on the
- * next sweep.
+ * content JSON-quoted, hence comparing against `JSON.stringify(...)`). A miss leaves
+ * the domain pending for `EnqueuePendingDomainsJob` to retry on its next sweep.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,6 +38,10 @@ const VerifyDomainOwnershipJobSchema = s.object({ teamDomainId: s.string() });
 export class VerifyDomainOwnershipJob extends Job {
 	static schema = VerifyDomainOwnershipJobSchema;
 
+	/**
+	 * Costs are apportioned to the domain's own team, since verifying it is work
+	 * that team asked for by adding the domain.
+	 */
 	async perform(): Promise<void> {
 		let result = await validate(this.input, VerifyDomainOwnershipJob.schema);
 		if (isFailure(result)) {
@@ -50,7 +53,6 @@ export class VerifyDomainOwnershipJob extends Job {
 		let domain = await TeamDomain.findById(db, result.data.teamDomainId);
 		if (!domain || domain.verified_at !== null) return;
 
-		// Verifying a domain is work one team asked for by adding it.
 		apportionCostByTeam([domain.team_id]);
 
 		let url = new URL("https://cloudflare-dns.com/dns-query");

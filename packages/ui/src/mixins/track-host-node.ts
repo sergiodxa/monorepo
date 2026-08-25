@@ -13,11 +13,8 @@ import type { MixinHandle } from "remix/ui";
 
 /**
  * Caches the DOM node behind a mixin's own host element for as long as it
- * stays mounted. `handle`'s `insert` event records the freshly mounted node,
- * and its `remove` event clears the cache again, so a listener or callback a
- * mixin sets up once during its setup function — before any host node
- * exists — can still read whichever node is currently mounted through the
- * returned getter, or `undefined` while the host is unmounted.
+ * stays mounted, since no host node exists while setup runs; `insert`/`remove`
+ * keep the returned getter's node current, or `undefined` while unmounted.
  *
  * @param handle Mixin handle to track the host node of.
  * @returns A getter returning the currently mounted host node, or `undefined` while unmounted.

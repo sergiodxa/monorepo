@@ -1,3 +1,11 @@
+/**
+ * Unit tests for `partition`, covering ordering, empty input, and
+ * all-success or all-failure arrays.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";

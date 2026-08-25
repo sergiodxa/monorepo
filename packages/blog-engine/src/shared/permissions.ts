@@ -8,12 +8,9 @@
  */
 
 /**
- * The engine's fixed catalog of permission keys (capabilities). Roles are just
- * named bundles of these keys stored in the database; code checks permissions,
- * never role names — this is what makes owner-defined custom roles possible.
- *
- * The catalog is append-only: unknown keys stored on a role are ignored at check
- * time, so it can grow in future engine versions without breaking custom roles.
+ * The engine's fixed catalog of permission keys (capabilities), stored on roles in
+ * the database. The catalog is append-only: keys unknown to a role are ignored at
+ * check time, so existing custom roles keep working as new keys are added.
  */
 export const PERMISSIONS = {
 	"posts.create": "Create drafts of any visible post type",
@@ -77,8 +74,6 @@ export function parsePermissions(json: string): Set<Permission> {
 		for (let key of parsed) {
 			if (typeof key === "string" && key in PERMISSIONS) out.add(key as Permission);
 		}
-	} catch {
-		// Malformed JSON grants nothing.
-	}
+	} catch {}
 	return out;
 }

@@ -2,14 +2,8 @@ import { unwrap } from "@pkg/result";
 /**
  * Tests for the creature summary and species-detail selectors.
  *
- * Verifies that `selectCreatureSummaryView` exposes a creature's current
- * computed stat values (derived through the shared stat formula), carries its
- * individual values, effort values, and nature through from its progress
- * component without altering them, and that the exposed stat sets are copies
- * rather than references into the world stores. Also verifies that
- * `selectSpeciesDetailView` exposes a species' number, types, and base stats,
- * reports the player's seen/caught flags, carries the injected habitat through,
- * and copies the base stats so the view never aliases content.
+ * Verifies computed stats, IV/EV/nature passthrough, and species metadata
+ * are copied so views never mutate world state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -69,7 +63,6 @@ function gameData() {
 	);
 }
 
-/** Builds a world holding one party creature with the given progress fields. */
 function worldWithCreature(ivs: StatSet, evs: StatSet, natureId: string) {
 	let playerId = createPlayerId("hero");
 	let creatureId = createCreatureId("ally-1");
@@ -106,8 +99,6 @@ test("selectCreatureSummaryView exposes current computed stat values via the sta
 
 	let view = selectCreatureSummaryView(data, world, creatureId);
 
-	// The summary's stats must match the shared battle stat path exactly, stat
-	// for stat, so the screen reflects the creature's real current values.
 	let creature = createCreatureFromWorld(world, creatureId);
 	let expected: StatSet = {
 		hp: getCreatureStat(data, creature, Stat.HP),
@@ -119,9 +110,7 @@ test("selectCreatureSummaryView exposes current computed stat values via the sta
 	};
 
 	expect(view.stats).toEqual(expected);
-	// The HP stat and the exposed max HP come from the same computation.
 	expect(view.stats.hp).toBe(view.maxHP);
-	// Current stats are distinct from the effort-value spread they are not.
 	expect(view.stats).not.toEqual(KNOWN_EVS);
 });
 
@@ -140,7 +129,6 @@ test("selectCreatureSummaryView copies the stat sets instead of sharing world st
 
 	let view = selectCreatureSummaryView(gameData(), world, creatureId);
 
-	// Mutating the view must not reach back into the world's progress component.
 	view.ivs.hp = 0;
 	view.evs.speed = 0;
 
@@ -148,7 +136,6 @@ test("selectCreatureSummaryView copies the stat sets instead of sharing world st
 	expect(world.creatureProgress[creatureId]!.ev.speed).toBe(KNOWN_EVS.speed);
 });
 
-/** Builds a world whose player has the given species recorded as seen and caught. */
 function worldWithBestiary(seen: string[], caught: string[]) {
 	let playerId = createPlayerId("hero");
 	return migrateWorld({
@@ -204,7 +191,6 @@ test("selectSpeciesDetailView carries the injected habitat and copies the base s
 	let view = selectSpeciesDetailView(data, world, SPECIES_ID, ["route-1", "cave-2"]);
 	expect(view.habitat).toEqual(["route-1", "cave-2"]);
 
-	// The exposed base stats must be a copy: mutating them cannot reach content.
 	view.baseStats.hp = 0;
 	expect(SPECIES[SPECIES_ID]!.stats.hp).not.toBe(0);
 });

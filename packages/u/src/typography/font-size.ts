@@ -9,13 +9,8 @@ import { text as textToken } from "../internal/tokens";
 
 /**
  * Applies `font-size` from the named text scale (`xs` through `9xl`, or an
- * app-extended name), resolving through the same `var(--ui-text-{name},
- * fallback)` token as `u.text()`'s own font-size half — but without also
- * setting a paired `line-height`. Reach for this at a call site that
- * intentionally sets a font-size with no paired line-height at all, or one
- * that sets a different, non-scale line-height separately; `u.text()` there
- * would silently add a line-height declaration that wasn't in the original,
- * a real behavior change. `fontSize()` only ever touches one property.
+ * app-extended name), resolving the same token as `u.text()`'s font-size
+ * half but touching only `font-size`, leaving line-height fully caller-set.
  *
  * @example u.fontSize("lg")
  * @example css({ fontSize: "var(--ui-text-lg, 1.125rem)" })

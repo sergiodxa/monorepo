@@ -2,8 +2,8 @@
  * Behavioural tests for the hostname → tenant KV cache helpers: the key format, the
  * short TTL that lets a missed invalidation self-heal, and `invalidateHostnameCache`
  * which must delete exactly the cached key. `cloudflare:workers` is mocked with an
- * in-memory `HOSTNAMES_KV` namespace before the module under test is imported, since that
- * module captures `env` at load time; no real Cloudflare KV is touched.
+ * in-memory `HOSTNAMES_KV` namespace before the module under test is imported, because
+ * that module captures `env` at load time, so the suite runs entirely in memory.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +58,6 @@ describe("invalidateHostnameCache", () => {
 		await invalidateHostnameCache("app.example.com");
 
 		expect(await hostnamesKv.get("host:app.example.com")).toBeNull();
-		// Every other tenant's mapping is left to keep serving from cache.
 		expect((await hostnamesKv.list()).keys.map((key) => key.name)).toEqual([
 			"host:one.example.com",
 			"host:two.example.com",

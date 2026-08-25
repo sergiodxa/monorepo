@@ -5,15 +5,12 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies opacity from a 0-100 integer, matching Tailwind's convention,
- * rather than the CSS `opacity` property's own 0-1 range.
+ * Applies opacity from a 0-100 integer. Sets the `opacity` property, which
+ * flattens the element and all of its descendants into one group and fades
+ * that group as a whole.
  *
- * This sets the `opacity` *property*, which flattens the element and all of
- * its descendants into one group and fades that group as a whole. For the
- * `filter: opacity(...)` function — which composes with the other filter
- * functions on the element and takes the native 0-1 range — use
- * `u.filterOpacity()` instead.
- *
+ * @see `u.filterOpacity()` for the composable `filter: opacity(...)` function,
+ * which takes the native 0-1 range.
  * @example u.opacity(50)
  * @example css({ opacity: 0.5 })
  */

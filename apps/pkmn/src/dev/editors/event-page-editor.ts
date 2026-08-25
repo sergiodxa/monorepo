@@ -1,23 +1,9 @@
 /**
- * Pure, DOM-free editing logic for an event's page/command model, factored out of
- * the map editor so the recursive command-tree operations are unit-testable on
- * their own. Two families of helpers live here:
- *
- * - Factories ({@link defaultPage}, {@link defaultCommand}) that mint a schema-valid
- *   {@link EventPage} or {@link EventCommand} with sensible blank fields, so a new
- *   event always starts on one default page and the command list can append any of
- *   the core commands without the caller assembling the shape by hand.
- * - A recursive command-tree editor keyed on a {@link CommandPath}: an ordered list
- *   of {@link CommandStep}s that names one command by walking into the nested lists
- *   `show-choices` (a chosen choice's commands) and `conditional-branch` (its `then`
- *   / `else`) expose. {@link insertCommand}, {@link updateCommand},
- *   {@link removeCommand}, and {@link readCommand} operate at a path immutably —
- *   they clone the affected spine and return a new command list — so the editor can
- *   swap the whole list in without ever mutating the caller's.
- *
- * Every operation is pure and copy-in/copy-out: nothing here reads or writes the DOM
- * or shared state, and the produced pages/commands validate against the
- * `map-schema` contract the game loader trusts.
+ * Pure editing logic for an event's page/command model: factories that mint
+ * schema-valid pages and commands, and a recursive command-tree editor keyed on a
+ * path of steps into nested `show-choices` and `conditional-branch` lists. Every
+ * operation is copy-in/copy-out and clones only the affected spine, so the caller's
+ * list survives intact and the produced shapes validate against `map-schema`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,23 +25,19 @@ export type CommandKind = EventCommand["kind"];
 /**
  * One hop into a nested command list. A `show-choices` command branches per chosen
  * choice (`branch: "choice"`, `choice` = the choice index); a `conditional-branch`
- * branches into its `then` (`branch: "then"`) or `else` (`branch: "else"`). The
- * `index` names which command in that nested list to descend into.
+ * branches into its `then` or `else`, and `index` names the command to descend into.
  */
 export interface CommandStep {
-	/** The command index (within its list) this step descends into. */
 	index: number;
-	/** Which nested list of that command to enter. */
 	branch: "choice" | "then" | "else";
 	/** For a `choice` branch, which choice's command list to enter. */
 	choice?: number;
 }
 
 /**
- * A path locating one command in a (possibly nested) command list. The final
- * element's `index` is unused when the path names a nested list to insert into; for
- * targeting an existing command, the last element's `index` names it directly. Kept
- * as a plain array so callers can build, slice, and compare paths freely.
+ * A path locating one command in a (possibly nested) command list: the last step's
+ * `index` names the command directly, and is unused when the path names a nested
+ * list to insert into. A plain array, so callers can build, slice, and compare it.
  */
 export type CommandPath = CommandStep[];
 
@@ -71,7 +53,6 @@ export const TRIGGERS: ReadonlyArray<{ id: EventPage["trigger"]; label: string }
 	{ id: "parallel", label: "Parallel Process" },
 ] as const;
 
-/** Serialized key for conditional-branch commands' successful command list. */
 const THEN_BRANCH_KEY = ("th" + "en") as "then";
 
 /** The autonomous-movement types, each paired with a human label. */
@@ -102,9 +83,9 @@ export const COMMAND_KINDS: ReadonlyArray<{ id: CommandKind; label: string }> = 
 ] as const;
 
 /**
- * Builds a fresh, schema-valid {@link EventPage} with default fields: no conditions,
- * no graphic, fixed movement, all options off, an action trigger, and an empty
- * command list. A new event starts with exactly one of these.
+ * Builds a fresh, schema-valid {@link EventPage}: empty conditions, a null graphic,
+ * fixed movement, default options, an action trigger, and an empty command list. A
+ * new event starts with exactly one of these.
  */
 export function defaultPage(): EventPage {
 	return {
@@ -118,10 +99,9 @@ export function defaultPage(): EventPage {
 }
 
 /**
- * Builds a fresh {@link EventCommand} of the given kind with blank/default fields —
- * the shape the command list appends and the fields editor then fills in. Nesting
- * commands (`show-choices`, `conditional-branch`) start with one empty branch so the
- * author has somewhere to add nested commands.
+ * Builds a fresh {@link EventCommand} of the given kind with blank fields, the shape
+ * the command list appends and the fields editor then fills in. Nesting commands
+ * start with one empty branch so the author has somewhere to add nested commands.
  *
  * @param kind The command kind to mint.
  * @param defaults Optional real content ids to seed pickers with (species/item).
@@ -167,8 +147,7 @@ export function defaultCommand(
 
 /**
  * Returns the nested command list a step descends into, or `null` when the step's
- * command does not have that nested list (a mismatched branch). Pure: it reads the
- * list without cloning.
+ * branch mismatches its command's kind. Reads a live reference out of the tree.
  *
  * @param commands The command list the step's `index` addresses.
  * @param step The step naming the command and which nested list to enter.
@@ -184,15 +163,14 @@ function childList(commands: EventCommand[], step: CommandStep): EventCommand[] 
 	if (step.branch === "then") {
 		return command.kind === "conditional-branch" ? command.then : null;
 	}
-	// "else"
 	if (command.kind !== "conditional-branch") return null;
 	return command.else ?? null;
 }
 
 /**
- * Returns a copy of `commands` with the given step's nested list replaced by
- * `next`, rebuilding only the touched command. A no-op copy when the step does not
- * name a valid nested list.
+ * Returns a copy of `commands` with the given step's nested list replaced by `next`,
+ * rebuilding only the touched command. A step whose branch mismatches its command's
+ * kind yields an unchanged copy.
  *
  * @param commands The command list to copy.
  * @param step The step naming the command and nested list to replace.
@@ -224,11 +202,9 @@ function withChildList(
 }
 
 /**
- * Walks a path down to the innermost command list it addresses (following every step
- * but the last, since the last step's `index` names a command within the returned
- * list). Returns `null` when any intermediate step does not resolve to a nested
- * list. The returned list is a live reference into the tree — callers rebuild
- * immutably through the exported operations rather than mutating it.
+ * Walks a path down to the innermost command list it addresses, following every step
+ * but the last, whose `index` names a command within the returned list. The result
+ * is a live reference into the tree, or `null` when a step fails to resolve.
  *
  * @param commands The root command list.
  * @param path The path to resolve (its last step names a command in the result).
@@ -244,10 +220,9 @@ function resolveParentList(commands: EventCommand[], path: CommandPath): EventCo
 }
 
 /**
- * Rebuilds the root command list after transforming the innermost list a path
- * addresses. Recurses down the spine, cloning only the commands on the path, and
- * applies `transform` to the deepest list (the one the last step names a command
- * within). A no-op copy when the path cannot be resolved.
+ * Rebuilds the root command list after `transform` replaces the innermost list a
+ * path addresses, cloning only the commands along the spine. An unresolvable path
+ * yields an unchanged copy.
  *
  * @param commands The root command list.
  * @param path The path whose innermost list is transformed.
@@ -303,9 +278,9 @@ export function insertCommand(
 }
 
 /**
- * Appends a command to the end of the innermost list a path addresses (following the
- * whole path as list steps). Use with a path whose steps all name nested lists to
- * add into a branch; pass an empty path to append to the root list.
+ * Appends a command to the end of the innermost list a path addresses. Every step
+ * names a nested list, so a sentinel step extends the path to make the last real
+ * step resolve as a descent; an empty path appends to the root list.
  *
  * @param commands The root command list.
  * @param path The path to the list to append into (every step names a nested list).
@@ -317,7 +292,6 @@ export function appendCommand(
 	command: EventCommand,
 ): EventCommand[] {
 	if (path.length === 0) return [...commands, command];
-	// Reuse rebuild by treating the path as list-steps: append to the resolved list.
 	let augmented: CommandPath = [...path, { index: 0, branch: "then" }];
 	return rebuild(commands, augmented, (list) => [...list, command]);
 }
@@ -412,10 +386,9 @@ export function toggleElse(commands: EventCommand[], path: CommandPath): EventCo
 }
 
 /**
- * Returns a deep copy of a page so callers cannot mutate the source. The schema
- * widens a page's `conditions`/`options` to `{}` (they default to an empty object),
- * so the fields are read through the richer exported types — a runtime-empty object
- * simply reads every field as `undefined`.
+ * Returns a deep copy of a page, leaving the source intact. The schema widens
+ * `conditions`/`options` to `{}`, so the fields are read through the richer exported
+ * types; a runtime-empty object reads every field as `undefined`.
  */
 export function clonePage(page: EventPage): EventPage {
 	let conditions = page.conditions as PageConditions;

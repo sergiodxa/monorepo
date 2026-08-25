@@ -2,8 +2,8 @@
  * Error values returned by every failing operation in this package.
  *
  * All of them extend `PaginationError`, so one `instanceof` check covers paging
- * while the subclasses let a route tell a client's bad cursor (answer `400`) apart
- * from a database that refused the query (answer `500`). Nothing here is thrown.
+ * while the subclasses let a route tell a client's bad cursor (answer `400`)
+ * apart from a database that refused the query (answer `500`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,9 +25,8 @@ export class PaginationError extends Error {
 /**
  * A cursor could not be decoded, or does not describe the current ordering.
  *
- * Cursors are client-supplied, so this is a validation failure and belongs on the
- * `400` path; the offending string is left out of the message because it is
- * untrusted input that would otherwise reach logs verbatim.
+ * Cursors are client-supplied, so this is a `400`-path validation failure whose
+ * message is fixed text, keeping untrusted client bytes out of the logs.
  *
  * @example
  * // failure(new InvalidCursorError("not base64url"))
@@ -47,8 +46,8 @@ export class InvalidCursorError extends PaginationError {
 /**
  * A keyset ordering cannot page deterministically.
  *
- * Raised before any query runs, because an ordering without a unique tiebreaker
- * silently skips or repeats rows that share a sort value rather than failing.
+ * Raised before any query runs, catching an ordering without a unique tiebreaker
+ * before rows sharing a sort value are silently skipped or repeated.
  *
  * @example
  * // failure(new InvalidOrderingError(...)): one non-unique sort key
@@ -68,8 +67,8 @@ export class InvalidOrderingError extends PaginationError {
 /**
  * The underlying query rejected or failed to execute.
  *
- * The original throw is kept in `cause` for logging; the message stays generic so
- * a database error string is never rendered into a response by accident.
+ * The original throw is kept in `cause` for logging, while the response-facing
+ * message stays generic, keeping database error strings out of client output.
  */
 export class QueryFailedError extends PaginationError {
 	override name = "QueryFailedError";
@@ -83,11 +82,9 @@ export class QueryFailedError extends PaginationError {
 }
 
 /**
- * A row's ordering value cannot be represented in a cursor.
- *
  * Keyset cursors travel as text, so only strings, finite numbers, and booleans
- * round-trip; a `null` sort value additionally breaks the seek predicate, because
- * no SQL comparison against `NULL` is ever true.
+ * round-trip; a `null` sort value breaks the seek predicate, since no SQL
+ * comparison against `NULL` is ever true.
  */
 export class UnencodableCursorValueError extends PaginationError {
 	override name = "UnencodableCursorValueError";

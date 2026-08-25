@@ -14,8 +14,8 @@ import { renderToString } from "remix/ui/server";
 
 /**
  * Request-scoped HTML renderer installed by {@link renderWith}: turns a `remix/ui`
- * node into a full HTML-document `Response` (with a leading `<!doctype html>`,
- * which `renderToString` does not emit). Controllers call it as `ctx.render(jsx)`.
+ * node into a full HTML-document `Response` by prepending `<!doctype html>` to the
+ * markup `renderToString` returns. Controllers call it as `ctx.render(jsx)`.
  */
 function createHtmlRenderer(_context: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {

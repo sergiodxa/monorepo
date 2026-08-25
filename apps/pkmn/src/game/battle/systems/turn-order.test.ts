@@ -180,14 +180,14 @@ test("Battle uses its RNG tie-breaker for equal-speed actions under Trick Room",
 	});
 });
 
-// Regression: the fallback move used to be typed `normal`, so a Ghost target
-// (immune to Normal) zeroed it out. It must be typeless, resolving to neutral
-// (×1) effectiveness so it always deals damage.
+/**
+ * Regression: the fallback move used to be typed `normal`, so a Ghost target
+ * (immune to Normal) zeroed it out. It must be typeless, resolving to neutral
+ * (×1) effectiveness so it always deals damage.
+ */
 test("Fallback move is not zeroed by a type immune to Normal", () => {
 	let fallback = resolveFallbackMove();
 
-	// The engine resolves effectiveness via `typeChart[move.type] ?? {}`, so a
-	// move type with no chart entry stays neutral for any target types.
 	let normalVsGhost = resolveEffectiveness(Type.NORMAL, [Type.GHOST, Type.POISON]);
 	let fallbackVsGhost = resolveEffectiveness(fallback.type, [Type.GHOST, Type.POISON]);
 
@@ -195,14 +195,16 @@ test("Fallback move is not zeroed by a type immune to Normal", () => {
 	expect(fallbackVsGhost).toBe(Effectiveness.NORMAL);
 });
 
-// Regression: the fallback move had no recoil; it must deal 1/4 of the damage
-// dealt back to the user via the existing `recoil` effect.
+/**
+ * Regression: the fallback move had no recoil; it must deal 1/4 of the damage
+ * dealt back to the user via the existing `recoil` effect, whose helper applies
+ * `max(1, floor(damageDealt * ratio))`.
+ */
 test("Fallback move applies quarter-damage recoil to the user", () => {
 	let fallback = resolveFallbackMove();
 
 	expect(fallback.effect).toEqual({ kind: "recoil", ratio: 0.25 });
 
-	// The recoil helper applies `max(1, floor(damageDealt * ratio))`.
 	let recoil = fallback.effect;
 	if (recoil.kind !== "recoil") throw new TypeError("Expected the fallback move to have recoil.");
 	expect(Math.max(1, Math.floor(100 * recoil.ratio))).toBe(25);
@@ -235,9 +237,12 @@ function resolveFallbackMove(): Move {
 	return fallback;
 }
 
-/** Mirrors the engine's attacking-type effectiveness lookup against target types. */
+/**
+ * Mirrors the engine's attacking-type effectiveness lookup against target types:
+ * a move type missing from the chart (`typeChart[move.type] ?? {}`) resolves to
+ * neutral, so typeless moves are never zeroed by a target's immunity.
+ */
 function resolveEffectiveness(moveType: string, targetTypes: Type[]): Effectiveness {
-	// A typeless move has no chart entry, so the lookup yields neutral effectiveness.
 	let moveMatch = GAME_DATA.typeChart[moveType as Type] ?? {};
 	return targetTypes.reduce<Effectiveness>((factor, type) => {
 		let matchup = moveMatch[type];
@@ -322,7 +327,6 @@ function getPositionKey(position: BattlePosition): string {
 	return `${position.side}:${position.slot}`;
 }
 
-/** Returns a fixture that can activate Trick Room and then use Tackle. */
 function createPrimaryFixtureWithTrickRoomAndTackle() {
 	return new Creature({
 		nickname: "Reserve Alpha",

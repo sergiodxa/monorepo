@@ -1,12 +1,9 @@
 /**
  * The in-battle command menu.
  *
- * Presents the classic root choice (Fight, Bag, Creatures, Run) and a Fight
- * submenu listing the active creature's four moves with PP, disabling those out
- * of PP. It owns only selection state and input handling, returning a decision to
- * the battle scene when the player confirms; the scene decides what each decision
- * dispatches. Drawing uses the shared window and cursor so it matches every other
- * menu.
+ * Presents the root choice (Fight, Bag, Creatures, Run) and a Fight submenu
+ * of the active creature's four moves, disabling those out of PP. It returns
+ * a decision to the battle scene, which decides what to dispatch.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -62,11 +59,8 @@ export interface RootMenuLayout {
 /**
  * Sizes the root action menu's columns so labels never collide.
  *
- * The column stride is the widest label ("Creatures") plus room for the next
- * column's cursor and a gap, and the box is wide enough to hold both columns: the
- * label inset, one stride, the widest second-column label, and right padding. This
- * is the pure width math behind `renderRoot`, kept testable so the "CreaturesRun"
- * overrun cannot regress.
+ * The stride is the widest label ("Creatures") plus cursor room, kept as
+ * pure math so the "CreaturesRun" overrun regression stays testable.
  */
 export function rootMenuLayout(): RootMenuLayout {
 	let stride = columnWidthFor(ROOT_LABELS, ROOT_CURSOR_GAP + ROOT_COLUMN_GAP);
@@ -132,13 +126,16 @@ export class BattleCommandMenu {
 		return null;
 	}
 
-	/** Handles the move list. */
+	/**
+	 * Handles the move list.
+	 *
+	 * Moves render as a 2-column grid, so navigation follows Left/Right for
+	 * columns and Up/Down for rows, matching what the player sees.
+	 */
 	private updateMoves(input: InputManager, moves: MoveOption[]): BattleMenuResult | null {
 		let usable = moves.filter((move) => move.id !== null);
 		if (usable.length === 0) return null;
 
-		// Moves render as a 2-column grid, so navigation follows the grid the player
-		// sees: Left/Right step columns, Up/Down step rows.
 		if (input.isRepeating(Button.Right))
 			this.moveIndex = gridNavigate(this.moveIndex, "right", MOVE_COLUMNS, usable.length);
 		if (input.isRepeating(Button.Left))
@@ -161,10 +158,8 @@ export class BattleCommandMenu {
 	/**
 	 * Draws the 2x2 root grid.
 	 *
-	 * Column stride is sized from the widest label ("Creatures") plus room for the
-	 * cursor and a gap, so no label ever overruns the next column ("CreaturesRun").
-	 * The box is anchored to the screen's right edge and widened left to hold both
-	 * columns.
+	 * The box is anchored to the screen's right edge and sized by
+	 * `rootMenuLayout` so no label overruns into the next column.
 	 */
 	private renderRoot(ctx: CanvasRenderingContext2D) {
 		let layout = rootMenuLayout();

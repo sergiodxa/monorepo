@@ -1,3 +1,10 @@
+/**
+ * Updates docs/vendor and .agents/skills/remix from the Remix main branch.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { mkdir, readdir, readFile, rm, stat, writeFile, cp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -19,9 +26,6 @@ interface PackageManifest {
 	name: string;
 }
 
-/**
- * Downloads Remix main and mirrors package docs into docs/vendor.
- */
 async function main() {
 	await resetTempDir();
 	await downloadTarball();
@@ -40,17 +44,11 @@ async function main() {
 	await copyRemixSkill(repoRoot);
 }
 
-/**
- * Recreates the temporary workspace used for the download and extraction.
- */
 async function resetTempDir() {
 	await rm(TEMP_DIR, { recursive: true, force: true });
 	await mkdir(EXTRACT_DIR, { recursive: true });
 }
 
-/**
- * Downloads the GitHub tarball for the Remix main branch.
- */
 async function downloadTarball() {
 	let response = await fetch(REMIX_TARBALL_URL, {
 		headers: {
@@ -67,9 +65,6 @@ async function downloadTarball() {
 	await writeFile(TAR_PATH, bytes);
 }
 
-/**
- * Extracts the downloaded tarball into the temporary workspace.
- */
 async function extractTarball() {
 	await $`tar -xzf ${TAR_PATH} -C ${EXTRACT_DIR}`;
 }
@@ -87,9 +82,6 @@ async function getExtractedRepoRoot() {
 	return join(EXTRACT_DIR, entries[0]!);
 }
 
-/**
- * Lists package directories from the extracted Remix repository.
- */
 async function getPackageDirs(packagesDir: string) {
 	let entries = await readdir(packagesDir, { withFileTypes: true });
 	let packageDirs: Array<string> = [];
@@ -102,9 +94,6 @@ async function getPackageDirs(packagesDir: string) {
 	return packageDirs.sort();
 }
 
-/**
- * Clears the Remix-owned directories before repopulating them from main.
- */
 async function resetVendorDirs() {
 	await rm(REMIX_SCOPE_DIR, { recursive: true, force: true });
 	await rm(REMIX_PACKAGE_DIR, { recursive: true, force: true });
@@ -113,9 +102,6 @@ async function resetVendorDirs() {
 	await mkdir(REMIX_SCOPE_DIR, { recursive: true });
 }
 
-/**
- * Copies the Remix template skill into the local .agents/skills directory.
- */
 async function copyRemixSkill(repoRoot: string) {
 	let sourceDir = join(repoRoot, "template", ".agents", "skills", "remix");
 	let hasSkill = await isDirectory(sourceDir);
@@ -129,9 +115,6 @@ async function copyRemixSkill(repoRoot: string) {
 	process.stdout.write(`Updated ${relativeSkillPath(REMIX_SKILL_DIR)}\n`);
 }
 
-/**
- * Copies README.md and docs/ for a Remix package when present.
- */
 async function copyPackageDocs(packageDir: string) {
 	let manifestPath = join(packageDir, "package.json");
 	let readmePath = join(packageDir, "README.md");
@@ -169,17 +152,11 @@ async function removeLegacyRemixPackageDirs() {
 	}
 }
 
-/**
- * Reads the package name from the extracted package manifest.
- */
 async function readManifest(filePath: string) {
 	let content = await readFile(filePath, "utf8");
 	return JSON.parse(content) as PackageManifest;
 }
 
-/**
- * Reports whether a path exists.
- */
 async function pathExists(filePath: string) {
 	try {
 		await stat(filePath);
@@ -189,9 +166,6 @@ async function pathExists(filePath: string) {
 	}
 }
 
-/**
- * Reports whether a path exists and is a directory.
- */
 async function isDirectory(filePath: string) {
 	try {
 		let info = await stat(filePath);
@@ -201,17 +175,11 @@ async function isDirectory(filePath: string) {
 	}
 }
 
-/**
- * Formats a vendor path for script output.
- */
 function relativeVendorPath(filePath: string) {
 	let relativePath = filePath.slice(dirname(VENDOR_DIR).length + 1);
 	return relativePath || basename(filePath);
 }
 
-/**
- * Formats a skill path for script output.
- */
 function relativeSkillPath(filePath: string) {
 	let relativePath = filePath.slice(dirname(SKILLS_DIR).length + 1);
 	return relativePath || basename(filePath);

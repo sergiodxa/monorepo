@@ -131,8 +131,8 @@ describe("UpdateDnsMonitorSchema", () => {
 	});
 
 	/**
-	 * The opposite default from create, and deliberately so: an unchecked checkbox is absent
-	 * from the body, so defaulting to `true` here would make disabling a monitor impossible.
+	 * An unchecked checkbox is absent from the body, so defaulting to `false`
+	 * here keeps that absence meaning "disable the monitor."
 	 */
 	test("defaults is_enabled to false so unchecking the edit form's toggle disables the monitor", () => {
 		let result = s.parseSafe(UpdateDnsMonitorSchema, baseFormData({ monitor_id: "mon_1" }));
@@ -167,7 +167,7 @@ describe("ReviewDnsMonitorSchema", () => {
 		if (result.success) expect(result.value.record_ids).toEqual(["rec_1", "rec_2"]);
 	});
 
-	/** Unchecking everything is a decision — "watch none of this" — not a malformed body. */
+	/** Unchecking everything is a valid submission meaning "watch none of this." */
 	test("accepts a submission with no checked records at all", () => {
 		let formData = new FormData();
 		formData.set("monitor_id", "mon_1");

@@ -230,10 +230,9 @@ export const MACROS: readonly { readonly macro: string; readonly expands: string
 export const CORPUS_SEED = 0x5eed_1;
 
 /**
- * How many expressions the generated corpus holds. Kept where the whole package's suite
- * stays a few seconds; `CRON_FUZZ_ITERATIONS` raises it for a deeper local sweep, and
- * continuous integration does not set it. Past roughly ten thousand a run also needs
- * `--timeout` raised, since a single sweep then takes longer than a test is given.
+ * How many expressions the generated corpus holds. Kept small enough that the whole
+ * package's suite stays a few seconds; `CRON_FUZZ_ITERATIONS` raises it for a deeper
+ * local sweep, though past roughly ten thousand a run also needs `--timeout` raised.
  */
 export const CORPUS_SIZE = Number(process.env.CRON_FUZZ_ITERATIONS ?? 2_000);
 
@@ -300,15 +299,9 @@ function randomItem(random: () => number, spec: FieldSpec, low: number, high: nu
 }
 
 /**
- * One field: open, a star with a step, or a list of items carved from slices of the
- * range so no two items name the same value. Overlapping items are a schedule any
- * parser reads the same way, but not one every parser accepts, and keeping the corpus
- * free of them is what lets the same corpus drive a differential comparison.
- *
- * Values run to the field's set bound rather than its parsing bound, so day of week is
- * written `0` to `6`. Its `7` alias for Sunday is enumerated exhaustively per field
- * instead, and it is the one place another library reads a step differently, which is
- * pinned by name rather than left to a generated case to stumble on.
+ * One field: open, a star with a step, or a list of non-overlapping items, since parsers
+ * disagree on overlapping items and only a non-overlapping list compares the same way
+ * across them. Day-of-week's `7` alias for Sunday is pinned by name, since a step reads it differently elsewhere.
  *
  * @param random - The seeded source.
  * @param spec - The field being written.
@@ -356,9 +349,8 @@ function namesARealDate(dayOfMonth: string, month: string): boolean {
 
 /**
  * One whole expression, its day of month redrawn until the date it names occurs on some
- * calendar. A pair no year contains is a schedule the package rejects on purpose, and
- * every one of the 372 possible pairs is enumerated in the rejection sweep, so the
- * generated corpus is the one that stays valid and can be compared run for run.
+ * calendar, since a pair no year contains is enumerated separately in the rejection
+ * sweep. Keeping this corpus valid is what lets it be compared run for run.
  *
  * @param random - The seeded source.
  * @returns The five fields separated by single spaces.
@@ -438,10 +430,9 @@ export interface ZoneCase {
 }
 
 /**
- * The zones every occurrence property is checked in. The set spans positive,
- * negative, half-hour, three-quarter-hour and fixed offsets, both hemispheres, a
- * transition at midnight, one of thirty minutes, one of two hours, and one zone that
- * transitions four times a year.
+ * The zones every occurrence property is checked in. The set spans positive, negative,
+ * half-hour, three-quarter-hour, and fixed offsets across both hemispheres, plus
+ * transitions at midnight, of thirty minutes, of two hours, and four times a year.
  */
 export const ZONE_CASES: readonly ZoneCase[] = [
 	{ timeZone: "UTC", note: "no offset and no transitions", anchor: "2026-03-08T00:00:00Z" },
@@ -523,10 +514,9 @@ export const ZONE_CASES: readonly ZoneCase[] = [
 ];
 
 /**
- * Expressions the zone sweep walks, one per shape the search treats differently: an
- * interval on absolute time, an appointment on the wall clock, one pinned to each hour
- * a transition can land in, and one of each restricted to dates. Every one of them
- * fires at least once in any three consecutive days, so a window is never vacuous.
+ * Expressions the zone sweep walks, one per shape the search treats differently — an
+ * interval, a wall-clock appointment, each transition hour, and a date-only case — each
+ * firing at least once in any three consecutive days, so no window is vacuous.
  */
 export const ZONE_SWEEP_EXPRESSIONS: readonly string[] = [
 	"0 * * * *",

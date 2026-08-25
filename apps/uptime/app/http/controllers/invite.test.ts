@@ -1,10 +1,9 @@
 /**
- * Tests the `/invite/:inviteId` controller: visiting the link accepts the invite as a
- * side effect of the GET (a valid pending invite matching the signed-in viewer's email
- * creates the membership and redirects to the team dashboard), while an unknown invite
- * id, an already-accepted one, or an email mismatch each render the invite-unavailable
- * page instead. Also covers the baked-in `requireUser` guard bouncing an anonymous
- * visitor home.
+ * Tests `/invite/:inviteId`: visiting the link accepts the invite as a side
+ * effect of the GET, creating the membership and redirecting to the dashboard
+ * for a valid pending invite matching the viewer's email. An unknown,
+ * already-accepted, or mismatched invite renders the invite-unavailable page,
+ * and `requireUser` bounces anonymous visitors home.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,7 +51,6 @@ function seedAuth(viewer: Viewer | null): Middleware {
 	};
 }
 
-/** Dispatches a real GET request to `/invite/:inviteId` for the given signed-in state. */
 async function getInvite(db: TestDb, viewer: Viewer | null, inviteId: string) {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
@@ -71,7 +69,6 @@ async function getInvite(db: TestDb, viewer: Viewer | null, inviteId: string) {
 	return container.scope(() => router.fetch(request));
 }
 
-/** Seeds a team plus a pending (or already-accepted) invite for it. */
 async function createFixture(db: TestDb, options?: { acceptedAt?: number | null; email?: string }) {
 	let team = await db.create(
 		teams,

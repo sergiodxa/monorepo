@@ -50,8 +50,6 @@ describe("describeFields", () => {
 	});
 
 	test("prefers the interval shape when the minutes happen to be evenly spaced", () => {
-		// Minutes 0 and 30 of every hour is every 30 minutes, and hours 0 and 12 of
-		// every day is every 12 hours, whichever way the field was typed.
 		expect(descriptorOf("0,30 * * * *")).toEqual({ kind: "interval", unit: "minute", every: 30 });
 		expect(descriptorOf("0 0,12 * * *")).toEqual({ kind: "interval", unit: "hour", every: 12 });
 	});
@@ -131,8 +129,8 @@ describe("describeFields", () => {
 		});
 	});
 
+	/** The either-or rule cannot be phrased as one shape, so the app shows the text. */
 	test("falls back to the expression when both day fields are restricted", () => {
-		// The either-or rule cannot be phrased as one shape, so the app shows the text.
 		expect(descriptorOf("0 0 13 * 5")).toEqual({ kind: "expression" });
 		expect(descriptorOf("0 0 1 * 0")).toEqual({ kind: "expression" });
 	});
@@ -154,10 +152,9 @@ describe("describeFields", () => {
 
 describe("descriptor coverage", () => {
 	/**
-	 * Every distinction a hand-written schedule description draws, and the descriptor
-	 * that carries it. A consumer replacing such a function needs each row to come back
-	 * as structured data, because anything falling to `kind: "expression"` here would be
-	 * a sentence the user stops being shown.
+	 * Every distinction a hand-written schedule description draws, paired with the
+	 * descriptor that carries it. A row falling to `kind: "expression"` here costs
+	 * the user the sentence they would otherwise see.
 	 */
 	const CASES = [
 		{ sentence: "every year on January 1st at midnight", expression: "@yearly" },
@@ -191,8 +188,6 @@ describe("descriptor coverage", () => {
 	});
 
 	test("carries the numbers each sentence interpolates", () => {
-		// Spot-checking the rows whose wording needs a value: the spacing, the minute past
-		// the hour, the time of day, the weekday, and the day of the month.
 		expect(descriptorOf("*/15 * * * *")).toEqual({ kind: "interval", unit: "minute", every: 15 });
 		expect(descriptorOf("5 * * * *")).toEqual({ kind: "hourly", minutes: [5] });
 		expect(descriptorOf("30 9 * * *")).toEqual({ kind: "daily", at: [{ hour: 9, minute: 30 }] });
@@ -208,29 +203,28 @@ describe("descriptor coverage", () => {
 		});
 	});
 
+	/** Both are `hourly`, and the minutes are what a translation keys the wording on. */
 	test("tells an on-the-hour schedule apart from one at a minute past it", () => {
-		// Both are `hourly`, and the minutes are what a translation keys the wording on.
 		expect(descriptorOf("0 * * * *")).toEqual({ kind: "hourly", minutes: [0] });
 		expect(descriptorOf("5 * * * *")).toEqual({ kind: "hourly", minutes: [5] });
 	});
 
+	/** A description that says "at midnight" reads it off `at`. */
 	test("tells midnight apart from another time of day without wording it", () => {
-		// A description that says "at midnight" reads it off `at`, rather than needing a
-		// separate kind for it.
 		expect(descriptorOf("0 0 * * *")).toEqual({ kind: "daily", at: [{ hour: 0, minute: 0 }] });
 		expect(descriptorOf("0 9 * * *")).toEqual({ kind: "daily", at: [{ hour: 9, minute: 0 }] });
 	});
 
 	test("falls back to the expression exactly where such a function gives up too", () => {
-		// These are the cases a hand-written description cannot phrase either, and shows
-		// the raw expression for.
 		expect(descriptorOf("0 0 1 1 1")).toEqual({ kind: "expression" });
 		expect(descriptorOf("0 0 13 * 5")).toEqual({ kind: "expression" });
 	});
 
+	/**
+	 * The rule that keeps user-facing copy out of this package: every other field
+	 * is a number, so there is nothing here to translate.
+	 */
 	test("never returns a string anywhere inside a descriptor except the kind", () => {
-		// The rule that keeps user-facing copy out of this package: every other field is a
-		// number, so there is nothing here to translate.
 		for (let { expression } of CASES) {
 			let descriptor = descriptorOf(expression);
 			for (let [key, value] of Object.entries(descriptor)) {

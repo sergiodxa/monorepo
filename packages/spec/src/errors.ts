@@ -39,10 +39,9 @@ export class SpecError extends Error {
 	/** An actionable suggestion, e.g. the exact `--allow-*` flag to add. */
 	remedy?: string;
 	/**
-	 * An extra, situational line appended after the remedy — set by the CLI when
-	 * it has context the failing code lacked, such as that the project's
-	 * `spec/config.jsonc` would have granted a denied permission under
-	 * `--allow-config`. Never weakens the primary {@link remedy}.
+	 * An extra, situational line appended after the remedy — set by the CLI
+	 * when it has extra context, e.g. that `spec/config.jsonc` would grant
+	 * the permission. Never weakens the primary {@link remedy}.
 	 */
 	hint?: string;
 
@@ -139,12 +138,9 @@ export class PermissionDeniedError extends SpecError {
 	/** What the spec attempted to reach: an executable, host, variable, path. */
 	resource: string;
 	/**
-	 * Whether the coarse family gate raised this denial — the whole family was
-	 * refused before the specific resource was known, so {@link resource} holds
-	 * the qualified tool name, not a real executable/host/variable/path. The
-	 * `--allow-config` hint reads this: a family-gate denial is admitted by the
-	 * config declaring that family at all, a scope-level one only when the
-	 * config's declared scope itself covers the resource.
+	 * Whether the coarse family gate raised this denial before the resource
+	 * was known, in which case {@link resource} holds the qualified tool name.
+	 * Governs whether `--allow-config` needs family- or scope-level coverage.
 	 */
 	familyGate: boolean;
 

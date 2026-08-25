@@ -3,27 +3,18 @@
  * match test its consumers run against a stored row, and the encoding that lets a single
  * `<select>` express all three scopes without two fields that can disagree.
  *
- * Shared by every table that carries a `(monitor_type, monitor_id)` pair — `alerts` and
- * `maintenance_windows` today. Both had the same gap for the same reason and closed it
- * the same way, so they resolve the pair through one module rather than through two that
- * would drift apart the first time a fifth monitor type is added.
- *
- * Deliberately import-free, like `~/app/lib/alert-policy`: the forms render scope options
- * from it, and anything it imported would follow the views into the page.
+ * Shared by every table carrying a `(monitor_type, monitor_id)` pair, so they resolve the
+ * pair through one module rather than drifting apart independently. Kept import-free so
+ * the forms rendering scope options do not pull additional imports into the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /**
- * Every monitor type a scope can name, and the value set of both `alerts.monitor_type`
- * and `maintenance_windows.monitor_type`.
- *
- * `"ssl"` is absent on purpose, unlike in `alert_events.monitor_type`. An SSL check runs
- * against an HTTP monitor's own row rather than a table of its own, so a certificate
- * event is dispatched with that monitor's id and is matched by whatever watches it —
- * a separate scope would silently split one monitor's notifications, and its maintenance
- * windows, in two.
+ * Every monitor type a scope can name, matching `alerts.monitor_type` and
+ * `maintenance_windows.monitor_type`. An SSL check reports through its HTTP monitor's own
+ * id, so a certificate event stays scoped and matched by whatever watches that monitor.
  */
 export const MONITOR_SCOPE_TYPES = ["http", "dns", "tcp", "cron"] as const;
 
@@ -31,14 +22,9 @@ export const MONITOR_SCOPE_TYPES = ["http", "dns", "tcp", "cron"] as const;
 export type MonitorScopeType = (typeof MONITOR_SCOPE_TYPES)[number];
 
 /**
- * What a rule covers, as the three cases the product offers:
- *
- * - `{ monitorType: null, monitorId: null }` — every monitor of every type (team-wide).
- * - `{ monitorType: "dns", monitorId: null }` — every monitor of that type.
- * - `{ monitorType: "dns", monitorId: "…" }` — that one monitor.
- *
- * A `monitorId` without a `monitorType` is not representable: an id alone cannot say
- * which monitor table it points into, which is the gap this type exists to close.
+ * What a rule covers: everything (both fields null), every monitor of one type
+ * (`monitorType` set, `monitorId` null), or one specific monitor (both set) — a
+ * `monitorId` always carries the `monitorType` that names which table it points into.
  */
 export interface MonitorScope {
 	monitorType: MonitorScopeType | null;
@@ -55,13 +41,9 @@ export interface StoredMonitorScopeColumns {
 }
 
 /**
- * The effective scope of a stored row.
- *
- * A row carrying a `monitor_id` but no `monitor_type` predates the type column, back when
- * `monitor_id` could only ever name an HTTP monitor — so it is read as HTTP rather than as
- * team-wide. Reading it as anything else would either widen a rule somebody narrowed or
- * point it at a different monitor table entirely. The migrations backfill those rows for
- * the same reason; this keeps the invariant true even for a row that escaped one.
+ * The effective scope of a stored row. A `monitor_id` without a `monitor_type` predates
+ * the type column, when an id could only name an HTTP monitor, so it reads as HTTP rather
+ * than team-wide — reading it any other way would widen a rule beyond what was set.
  */
 export function storedMonitorScope(row: StoredMonitorScopeColumns): MonitorScope {
 	if (row.monitor_id === null) return { monitorType: row.monitor_type, monitorId: null };
@@ -85,10 +67,9 @@ export function monitorScopeMatches(
 }
 
 /**
- * The scope as one form-control value, so the create and edit forms can offer team-wide,
+ * The scope as one form-control value, so the create and edit forms offer team-wide,
  * per-type and per-monitor scoping from a single `<select>` with exactly one selected
- * option. Two coupled controls could be submitted in states that contradict each other
- * (a type of `dns` beside an HTTP monitor's id), and no markup-only form can stop that.
+ * option, keeping a submitted type and monitor id from ever contradicting each other.
  */
 export function encodeMonitorScope(scope: MonitorScope): string {
 	if (scope.monitorType === null) return "";
@@ -97,10 +78,9 @@ export function encodeMonitorScope(scope: MonitorScope): string {
 }
 
 /**
- * Reads a value produced by {@link encodeMonitorScope} back into a scope, or `null` when
- * it is not one — an unknown monitor type, a missing id, an unrecognised prefix. Callers
- * treat `null` as a validation failure rather than as team-wide, so a value nobody's form
- * produced can never quietly widen a rule to everything.
+ * Reads a value produced by {@link encodeMonitorScope} back into a scope, or `null` for
+ * an unknown type, missing id, or bad prefix, so an invalid value never widens a rule to
+ * team-wide; the id segment is rejoined on `:` so one containing a colon survives whole.
  */
 export function parseMonitorScope(value: string): MonitorScope | null {
 	if (value === "") return TEAM_WIDE_MONITOR_SCOPE;
@@ -111,8 +91,6 @@ export function parseMonitorScope(value: string): MonitorScope | null {
 	if (prefix === "type") return rest.length === 0 ? { monitorType: type, monitorId: null } : null;
 
 	if (prefix === "monitor") {
-		// Rejoined rather than taken as one segment: an id is a UUID today, and a future one
-		// holding a colon should read back as itself instead of being silently truncated.
 		let monitorId = rest.join(":");
 		return monitorId === "" ? null : { monitorType: type, monitorId };
 	}

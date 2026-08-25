@@ -27,12 +27,6 @@ import Resource from "../models/resource";
 
 type ResourceRow = Awaited<ReturnType<typeof Resource.list>>[number];
 
-/**
- * Normalizes a resource row for API responses, parsing scopes and converting
- * timestamps to ISO strings.
- * @param resource - The raw resource record.
- * @returns The resource with parsed `scopes` and ISO `created_at`/`updated_at`.
- */
 function normalizeResource(resource: ResourceRow) {
 	return {
 		...resource,
@@ -42,20 +36,15 @@ function normalizeResource(resource: ResourceRow) {
 	};
 }
 
-/** Reusable check for the resource `name` field. */
 let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
-/** Reusable check for description fields (resource and scope). */
 let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
-/** Reusable check for the resource `identifier` (audience) field. */
 let identifierSchema = s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max));
 
-/** Validation schema for a single scope entry on a resource. */
 let ScopeSchema = s.object({
 	name: s.string().pipe(minLength(LIMITS.scope.min), maxLength(LIMITS.scope.max)),
 	description: s.optional(descriptionSchema),
 });
 
-/** Validation schema for the create-resource request body. */
 let CreateResourceSchema = s.object({
 	identifier: identifierSchema,
 	name: nameSchema,
@@ -63,7 +52,6 @@ let CreateResourceSchema = s.object({
 	scopes: s.array(ScopeSchema),
 });
 
-/** Validation schema for the update-resource request body (all fields optional). */
 let UpdateResourceSchema = s.object({
 	identifier: s.optional(identifierSchema),
 	name: s.optional(nameSchema),

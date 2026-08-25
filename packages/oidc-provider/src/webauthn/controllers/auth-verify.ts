@@ -29,7 +29,6 @@ import Subject from "../../subjects/models/subject";
 import Passkey from "../models/passkey";
 import WebAuthnChallenge from "../models/webauthn-challenge";
 
-/** Validation schema for the WebAuthn authentication (assertion) response body. */
 let RequestSchema = s.object({
 	challengeId: s.string(),
 	response: s.object({
@@ -48,10 +47,9 @@ let RequestSchema = s.object({
 });
 
 /**
- * WebAuthn authentication verification endpoint.
- * Verifies a passkey authentication response and creates a session.
- * Rate-limited per email to prevent brute force attacks.
- * Updates passkey counter after successful authentication to prevent replay attacks.
+ * Verifies a passkey authentication response, rate-limited per email, and
+ * updates the passkey's signature counter to guard against replay before
+ * establishing a session.
  * @returns A JSON `Response` with a redirect (OAuth flow) or subject info, or an error `Response`.
  */
 export default createAction(
@@ -115,7 +113,11 @@ export default createAction(
 			});
 		}
 
-		// response.id is the credential ID from the authenticator (base64url encoded)
+		/**
+		 * response.id is the base64url credential ID reported by the authenticator;
+		 * matching it here guarantees the returned passkey's credential_id is set,
+		 * which the verification call below asserts non-null.
+		 */
 		let passkey = await Passkey.findByCredentialId(db, response.id);
 		if (!passkey || passkey.subject_id !== subject.id) {
 			log.info("Passkey not found or mismatch", { subjectId: subject.id, challengeId });
@@ -136,8 +138,6 @@ export default createAction(
 				expectedOrigin: origin,
 				expectedRPID: rpId,
 				credential: {
-					// Non-null: this passkey was just located by matching credential_id
-					// against response.id above.
 					id: passkey.credential_id!,
 					publicKey: publicKeyBytes,
 					counter: passkey.counter,

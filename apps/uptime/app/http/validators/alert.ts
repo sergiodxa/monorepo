@@ -25,21 +25,16 @@ const alertFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
 	/**
-	 * The `(monitor_type, monitor_id)` pair encoded as one control value — see
-	 * `~/app/lib/monitor-scope`. Validated for shape here and resolved against the team's
-	 * monitors in the action, which is the only place that can tell whether the monitor
-	 * named still exists and still belongs to the team.
+	 * The `(monitor_type, monitor_id)` pair encoded as one control value (see
+	 * `~/app/lib/monitor-scope`). Resolved in the action, the only place that can
+	 * confirm the monitor still exists and belongs to the team.
 	 */
 	scope: f.field(s.defaulted(s.string(), "")),
 	notify_on_recovery: f.field(s.defaulted(coerce.boolean(), false)),
 	/**
-	 * Minutes an ongoing outage stays quiet between notifications; 60 by default, so an
-	 * alert nobody configures repeats once an hour for as long as the outage lasts.
-	 *
-	 * The minimum stays 0 rather than being raised to the dispatch-time floor: the edit form
-	 * is populated from the stored row, so a validator that rejected the values already in
-	 * the database would make those alerts unsaveable. What a value below the floor buys is
-	 * "as often as allowed", and the floor in `app/services/alerts.ts` is what decides that.
+	 * Minutes an outage stays quiet between notifications; 60 by default repeats
+	 * hourly. The 0 minimum keeps stored values editable — `app/services/alerts.ts`
+	 * enforces the real floor at dispatch.
 	 */
 	cooldown_minutes: f.field(
 		s.defaulted(coerce.number().pipe(checks.min(0), checks.max(1440)), DEFAULT_COOLDOWN_MINUTES),

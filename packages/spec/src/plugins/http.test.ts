@@ -1,7 +1,7 @@
 /**
  * Tests for the built-in `http` plugin: request/response shaping per verb,
  * the net permission gate with port derivation, and the absolute-URL rule —
- * all against an MSW server, never a stubbed fetch.
+ * all against a real MSW server.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,7 +87,7 @@ function allowOnlyPort(granted: number): PermissionSet {
 	};
 }
 
-/** A workspace stub; http tools never touch the filesystem. */
+/** A workspace stub; http tools operate entirely over the network. */
 function stubWorkspace(): Workspace {
 	return {
 		root: "/tmp/spec-http-tests",
@@ -352,7 +352,6 @@ describe(createHttpPlugin.name, () => {
 		expect(error).toBeInstanceOf(PermissionDeniedError);
 		expect(error.code).toBe("permission-denied");
 		expect(error.message).toContain("evil.test");
-		// The denial must land before any request reaches the redirect target.
 		expect(leaked).toBe(0);
 	});
 
@@ -400,10 +399,8 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		expect(isSuccess(result)).toBe(true);
-		// The credential headers must not reach the different-origin target.
 		expect(seen?.auth).toBeNull();
 		expect(seen?.cookie).toBeNull();
-		// A non-credential header still rides along.
 		expect(seen?.trace).toBe("keep");
 	});
 
@@ -425,7 +422,6 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		expect(isSuccess(result)).toBe(true);
-		// Same origin is not a leak, so the credential is preserved.
 		expect(auth).toBe("Bearer secret");
 	});
 

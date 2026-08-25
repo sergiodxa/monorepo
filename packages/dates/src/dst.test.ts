@@ -49,7 +49,6 @@ describe("spring forward", () => {
 		let sunday = new Date("2026-03-09T04:00:00Z");
 		expect(sunday.getTime() - saturday.getTime()).toBe(23 * HOUR_MS);
 		expect(diffInDays(sunday, saturday, NEW_YORK)).toBe(1);
-		// Dividing the millisecond difference by a day would have answered zero.
 		expect(Math.floor((sunday.getTime() - saturday.getTime()) / 86_400_000)).toBe(0);
 	});
 
@@ -160,7 +159,7 @@ describe("a year across both transitions", () => {
 
 describe("transitions that are not the two-in-the-morning kind", () => {
 	test("opens a day whose midnight never happened at the first instant that did", () => {
-		// Cuba switches to daylight time at 00:00, so 2026-03-08 has no midnight there.
+		/** Cuba switches to daylight time at 00:00, so 2026-03-08 has no midnight there. */
 		let midday = new Date("2026-03-08T18:00:00Z");
 		let start = startOfDay(midday, "America/Havana");
 		expect(toDayKey(start, "America/Havana")).toBe("2026-03-08");
@@ -169,7 +168,6 @@ describe("transitions that are not the two-in-the-morning kind", () => {
 	});
 
 	test("handles a half-hour transition", () => {
-		// Lord Howe Island shifts by 30 minutes rather than an hour.
 		expect(hoursInDay(new Date("2026-10-04T05:00:00Z"), "Australia/Lord_Howe")).toBe(23.5);
 		expect(hoursInDay(new Date("2026-04-05T05:00:00Z"), "Australia/Lord_Howe")).toBe(24.5);
 	});

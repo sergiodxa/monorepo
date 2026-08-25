@@ -1,15 +1,14 @@
-import { isSuccess } from "@pkg/result";
 /**
- * Verifies the pure event page/command editing logic without a DOM: the page and
- * command factories mint schema-valid defaults, the recursive command-tree operations
- * (insert / append / update / remove / read) address commands by {@link CommandPath}
- * and rebuild immutably, `show-choices` and `conditional-branch` nesting is edited in
- * place, choice/else management is honored, and the produced pages round-trip through
- * the `map-schema` validator via a full map.
+ * Verifies the pure event page/command editing logic: the page and command
+ * factories mint schema-valid defaults, the recursive command-tree operations
+ * address commands by {@link CommandPath} and rebuild immutably, nested
+ * `show-choices`/`conditional-branch` branches are edited in place, and the
+ * produced pages round-trip through the `map-schema` validator via a full map.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isSuccess } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import type { EventCommand } from "~/presentation/render/map-schema";
@@ -78,7 +77,7 @@ describe("root command operations", () => {
 		let base: EventCommand[] = [];
 		let next = appendCommand(base, [], defaultCommand("text"));
 		expect(next.length).toBe(1);
-		expect(base.length).toBe(0); // input untouched
+		expect(base.length).toBe(0);
 	});
 
 	test("insertCommand inserts at the last step's index (clamped)", () => {
@@ -125,7 +124,6 @@ describe("nested show-choices editing", () => {
 				],
 			},
 		];
-		// Append into choice 1's ("No") command list.
 		let choicePath: CommandPath = [{ index: 0, branch: "choice", choice: 1 }];
 		let next = appendCommand(list, choicePath, { kind: "text", text: "nope" });
 		let command = next[0]!;
@@ -146,7 +144,6 @@ describe("nested show-choices editing", () => {
 		let only = back[0]!;
 		expect(only.kind === "show-choices" && only.choices.length).toBe(1);
 
-		// Cannot drop the last remaining choice.
 		let stillOne = removeChoice(back, at(0), 0);
 		let last = stillOne[0]!;
 		expect(last.kind === "show-choices" && last.choices.length).toBe(1);
@@ -177,7 +174,6 @@ describe("nested conditional-branch editing", () => {
 	});
 
 	test("edits a command nested two levels deep (else → then)", () => {
-		// A conditional-branch whose else holds another conditional-branch.
 		let inner: EventCommand = defaultCommand("conditional-branch");
 		let outer: EventCommand = {
 			kind: "conditional-branch",
@@ -186,7 +182,6 @@ describe("nested conditional-branch editing", () => {
 			else: [inner],
 		};
 		let list: EventCommand[] = [outer];
-		// Path: outer[0].else[0].then — append a text into the inner then.
 		let deep: CommandPath = [
 			{ index: 0, branch: "else" },
 			{ index: 0, branch: "then" },
@@ -220,7 +215,6 @@ describe("a dialog-shaped event round-trips through loadMap", () => {
 		editor.createMap(4, 4);
 		let placed = editor.addEvent(1, 1)!;
 
-		// Build a page's command list the way the dialog would, through the helpers.
 		let commands: EventCommand[] = [];
 		commands = appendCommand(commands, [], defaultCommand("text"));
 		commands = appendCommand(commands, [], defaultCommand("show-choices"));

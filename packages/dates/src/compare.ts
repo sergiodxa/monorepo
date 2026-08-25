@@ -12,10 +12,9 @@ import type { Interval, TimeZone } from "./types";
 import { calendarDayAt, calendarDayFromEpochDay, epochDayOf, startOfDayInstant } from "./zone";
 
 /**
- * Calendar days from `b` to `a` in a zone: how many day boundaries separate them,
- * not how many 24-hour spans fit between them. Two instants an hour apart return
- * `1` when a midnight sits between them, and instants 23 or 25 hours apart across
- * a DST transition still return `1`.
+ * Calendar days from `b` to `a` in a zone: the count of day boundaries crossed
+ * between them. An hour that crosses one midnight counts as `1`, and a DST
+ * transition that makes a day 23 or 25 hours long still counts as exactly `1`.
  *
  * @param a - The instant measured from the later end.
  * @param b - The instant measured from the earlier end.
@@ -35,7 +34,7 @@ export function diffInDays(a: Date, b: Date, timeZone: TimeZone): number {
 /**
  * Whether two instants fall on the same calendar day in a zone. The same pair of
  * instants can be the same day in one zone and different days in another, which is
- * exactly why the zone cannot be defaulted.
+ * exactly why callers must name the zone explicitly.
  *
  * @param a - First instant.
  * @param b - Second instant.
@@ -60,7 +59,7 @@ export function isSameDay(a: Date, b: Date, timeZone: TimeZone): boolean {
  * @param interval - Inclusive range of instants to cover.
  * @param timeZone - IANA zone whose calendar days to enumerate.
  * @returns Day starts in chronological order, or an empty array when `end` falls on
- * a day before `start` rather than an error for a range that covers nothing.
+ * a day before `start`, treating a range that covers nothing as a normal, empty result.
  *
  * @example
  * eachDayOfInterval({ start, end }, "America/New_York").length; // 5

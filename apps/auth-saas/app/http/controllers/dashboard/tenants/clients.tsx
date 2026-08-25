@@ -1,7 +1,6 @@
 /**
  * Tenant OAuth clients controller: lists clients, shows a client (with its secrets,
  * redirect URIs, and logout URIs), and renders/handles the create and edit forms.
- * Rendering uses `remix/ui` JSX via `ctx.render`; behavior is preserved.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

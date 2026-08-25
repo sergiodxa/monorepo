@@ -20,9 +20,8 @@ export interface FetcherMock extends Fetcher {
 	/**
 	 * Discards every recorded request, as if nothing had been fetched.
 	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` starts from an empty log without re-creating the `env` the code
-	 * under test already captured.
+	 * A binding installed once at module scope outlives the tests that use it, so
+	 * `beforeEach` can reset the log while keeping the same `env`.
 	 */
 	reset(): void;
 }
@@ -30,9 +29,8 @@ export interface FetcherMock extends Fetcher {
 /**
  * Creates a fetcher binding from a handler.
  *
- * The handler receives a real `Request` whatever the caller passed — a URL, a string, or
- * a `Request` — so assertions on method, path, and headers read the same as they would
- * against the deployed Worker.
+ * The handler always receives a real `Request`, however the caller passed it, so
+ * assertions on method, path, and headers match those against the deployed Worker.
  * @param handler Produces the response for each request.
  * @returns A `Fetcher` binding that records requests.
  * @example let assets = createFetcher(() => new Response(null, { status: 404 }));
@@ -51,21 +49,17 @@ export function createFetcher(handler: FetcherHandler): FetcherMock {
 		},
 
 		/**
-		 * Answers a request through the handler, recording it first.
+		 * Answers a request through the handler.
+		 *
+		 * Recording happens first so a handler that throws still leaves evidence of
+		 * what was asked for; every input passes through the `Request` constructor.
 		 * @param input Request, URL, or URL string, as the platform accepts.
 		 * @param init Request options applied when `input` is not already a `Request`.
 		 * @returns Whatever the handler returned.
 		 */
 		async fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-			// Normalized unconditionally: the constructor copies method, headers, and body from
-			// a `Request` input, so one path covers every shape the platform accepts. Annotated
-			// because the constructor's `cf` type parameters are otherwise left uninstantiated.
 			let request: Request = new Request(input as RequestInfo, init);
 
-			// Recorded before the handler runs so a handler that throws still leaves evidence
-			// of what was asked for. The cast is forced by the workspace seeing both the DOM
-			// and Workers `Request` declarations: they merge, and the merged `clone()` reports
-			// its type parameters uninstantiated. Runtime behaviour is unaffected.
 			requests.push(request.clone() as Request);
 
 			return handler(request);

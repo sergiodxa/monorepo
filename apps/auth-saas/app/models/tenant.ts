@@ -82,8 +82,9 @@ export default class Tenant {
 	}
 
 	/**
-	 * Lists all tenants accessible to a subject (as owner or member).
-	 * Returns tenants with the user's role attached.
+	 * Lists all tenants accessible to a subject as owner or member, including tenants
+	 * pending first-login ownership resolution, each with its resolved role. Imports
+	 * `TenantMember` lazily to avoid a circular dependency between the two models.
 	 * @param db - Database connection.
 	 * @param subjectId - The subject ID.
 	 * @param email - The subject's email (for pending owner resolution).
@@ -94,23 +95,18 @@ export default class Tenant {
 		subjectId: string,
 		email: string,
 	): Promise<TenantWithRole[]> {
-		// Import here to avoid circular dependency
 		let TenantMember = (await import("./tenant-member")).default;
 
-		// Get tenants owned by this subject
 		let ownedTenants = await db.findMany(Tenant.table, {
 			where: { owner_subject_id: subjectId },
 		});
 
-		// Also check for pending ownership (platform tenant before first login)
 		let pendingOwnedTenants = await db.findMany(Tenant.table, {
 			where: { owner_subject_id: `pending:${email}` },
 		});
 
-		// Get memberships for this subject
 		let memberships = await TenantMember.listBySubject(db, subjectId);
 
-		// Fetch member tenants
 		let memberTenantIds = memberships.map((m) => m.tenant_id);
 		let memberTenants: Array<Awaited<ReturnType<typeof Tenant.show>>> = [];
 		for (let tenantId of memberTenantIds) {
@@ -118,7 +114,6 @@ export default class Tenant {
 			if (tenant) memberTenants.push(tenant);
 		}
 
-		// Combine results with roles
 		let results: TenantWithRole[] = [];
 
 		for (let tenant of ownedTenants) {
@@ -131,7 +126,6 @@ export default class Tenant {
 
 		for (let tenant of memberTenants) {
 			if (!tenant) continue;
-			// Skip if already included as owner
 			if (results.some((t) => t.id === tenant.id)) continue;
 			let membership = memberships.find((m) => m.tenant_id === tenant.id);
 			if (!membership) continue;
@@ -153,8 +147,7 @@ export default class Tenant {
 	}
 
 	/**
-	 * Gets a tenant with the user's role if they have access.
-	 * Returns null if tenant doesn't exist or user doesn't have access.
+	 * Gets a tenant with the user's role if the subject has access.
 	 * @param db - Database connection.
 	 * @param id - The tenant ID.
 	 * @param subjectId - The subject ID.
@@ -171,17 +164,14 @@ export default class Tenant {
 		let tenant = await db.findOne(Tenant.table, { where: { id } });
 		if (!tenant) return null;
 
-		// Check if owner
 		if (tenant.owner_subject_id === subjectId) {
 			return { ...tenant, role: "owner" } as TenantWithRole;
 		}
 
-		// Check if pending owner
 		if (tenant.owner_subject_id === `pending:${email}`) {
 			return { ...tenant, role: "owner" } as TenantWithRole;
 		}
 
-		// Check if member
 		let TenantMember = (await import("./tenant-member")).default;
 		let membership = await TenantMember.findByTenantAndSubject(db, id, subjectId);
 		if (membership) {
@@ -239,12 +229,9 @@ export default class Tenant {
 	}
 
 	/**
-	 * Updates a tenant's name and/or status. A status change also propagates the
-	 * tenant-runtime entitlement gate: suspending or deleting pushes the suspension flag
-	 * into the tenant Durable Object and invalidates its hostname resolution cache so its
-	 * domains stop routing to it and its provider surface stops serving; reactivating
-	 * clears the flag. Cache/DO propagation failures are swallowed so a control-plane
-	 * status write is never lost — the DO's short cache TTL and re-checks bound staleness.
+	 * Updates a tenant's name and/or status, propagating status transitions to the
+	 * runtime entitlement gate: suspending or deleting invalidates the hostname cache
+	 * and suspends the tenant Durable Object; reactivating lifts the suspension.
 	 *
 	 * @param db - Database connection.
 	 * @param id - The tenant ID to update.
@@ -273,13 +260,10 @@ export default class Tenant {
 			},
 		);
 
-		// Suspending or deleting a tenant must stop its hostnames from routing to it and
-		// stop the tenant DO from serving its provider surface.
 		if (data.status === "suspended" || data.status === "deleted") {
 			await Hostname.invalidateTenantCache(db, id);
 			await Tenant.pushSuspension(id, true);
 		} else if (data.status === "active" && tenant.status !== "active") {
-			// Reactivating a previously non-active tenant lifts the runtime gate.
 			await Tenant.pushSuspension(id, false);
 		}
 
@@ -287,8 +271,9 @@ export default class Tenant {
 	}
 
 	/**
-	 * Pushes the tenant-runtime suspension flag into the tenant Durable Object, tolerating
-	 * failures so a control-plane status change is never lost when the DO is unreachable.
+	 * Pushes the tenant-runtime suspension flag into the tenant Durable Object. Failures
+	 * are tolerated so a control-plane status write is never lost; hostname cache
+	 * invalidation and the subscription gate independently continue to guard dashboard access.
 	 *
 	 * @param id - The tenant ID whose Durable Object to update.
 	 * @param suspended - `true` to suspend the tenant's provider surface, `false` to restore it.
@@ -297,10 +282,7 @@ export default class Tenant {
 	private static async pushSuspension(id: string, suspended: boolean): Promise<void> {
 		try {
 			await new TenantApiService(id).setSuspended(suspended);
-		} catch {
-			// Best-effort: the control-plane status is the source of truth and other paths
-			// (hostname cache invalidation, subscription gate) still block dashboard access.
-		}
+		} catch {}
 	}
 
 	/**

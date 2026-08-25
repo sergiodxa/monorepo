@@ -1,12 +1,10 @@
 /**
  * The built-in `url` capability: pure, permissionless parsing of an absolute
- * URL string. Its tools read a query-string parameter, a fragment parameter,
- * the path, or the host out of a URL a spec already holds — most often the
- * redirect URL a `browser.url` observation returned after an OAuth authorize
- * step, so a spec can read the authorization `code` out of it with `url.query`
- * instead of reaching for the string surgery the `.spec` language deliberately
- * lacks. Nothing here touches the network, the filesystem, or the environment,
- * so every tool is `observable` and needs no permission grant.
+ * URL string into a query-string parameter, a fragment parameter, the path, or
+ * the host. It lets a spec read a value out of a URL it already holds — most
+ * often the authorization `code` in the redirect URL a `browser.url`
+ * observation returned after an OAuth authorize step. Every tool is a pure
+ * computation, so all are `observable` and need no permission grant.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,13 +20,10 @@ import type { ToolArg, Value } from "../values";
 
 import { ToolError } from "../errors";
 
-/** The parsing tools the plugin exposes; each reads one piece out of a URL. */
 const URL_TOOLS = ["query", "fragment", "path", "host"] as const;
 
-/** One of the plugin's tool names. */
 type UrlTool = (typeof URL_TOOLS)[number];
 
-/** Descriptors of every tool the `url` namespace exposes. */
 const DESCRIPTORS: ToolDescriptor[] = [
 	{
 		name: "query",
@@ -64,9 +59,8 @@ const DESCRIPTORS: ToolDescriptor[] = [
 
 /**
  * Create the built-in `url` plugin (namespace `"url"`). Every tool parses its
- * first argument as an absolute URL and reads one piece out of it; a non-string
- * argument, an unparseable URL, or (for `query`/`fragment`) a missing parameter
- * is a {@link ToolError}. No tool performs I/O, so none declares a permission.
+ * first argument as an absolute URL; a non-string argument, an unparseable
+ * URL, or a missing `query`/`fragment` parameter is a {@link ToolError}.
  */
 export function createUrlPlugin(): Plugin {
 	return {
@@ -86,18 +80,14 @@ export function createUrlPlugin(): Plugin {
 	};
 }
 
-/** Narrow a tool name to one of the plugin's tools. */
 function isUrlTool(tool: string): tool is UrlTool {
 	return (URL_TOOLS as readonly string[]).includes(tool);
 }
 
 /**
- * Read a named parameter out of a URL's query string or fragment. `query` reads
- * `url.searchParams`; `fragment` parses the text after `#` as a query string
- * (`new URLSearchParams(url.hash.slice(1))`), the shape an implicit/hybrid OAuth
- * flow returns its tokens in. A parameter that is absent is a tool error naming
- * the parameter and the URL, so a spec fails loud rather than binding a silent
- * null.
+ * A fragment parses as a query string, the shape an implicit/hybrid OAuth flow
+ * returns its tokens in. An absent parameter is a tool error naming both the
+ * parameter and the URL, so a spec fails loud at the point of the lookup.
  */
 function param(tool: "query" | "fragment", args: ToolArg[]): Result<Value, SpecError> {
 	let url = readUrl(tool, args);
@@ -118,7 +108,6 @@ function param(tool: "query" | "fragment", args: ToolArg[]): Result<Value, SpecE
 	return success(found);
 }
 
-/** Read the path or host out of a URL. */
 function part(tool: "path" | "host", args: ToolArg[]): Result<Value, SpecError> {
 	let url = readUrl(tool, args);
 	if (isFailure(url)) return url;
@@ -126,9 +115,8 @@ function part(tool: "path" | "host", args: ToolArg[]): Result<Value, SpecError> 
 }
 
 /**
- * Validate and parse the first argument as an absolute URL. A missing argument,
- * a non-string argument (including a bare word, which is never a lookup here),
- * or an unparseable URL is a tool error.
+ * Validate and parse the first argument as an absolute URL. A missing
+ * argument, a non-string argument, or an unparseable URL is a tool error.
  */
 function readUrl(tool: UrlTool, args: ToolArg[]): Result<URL, SpecError> {
 	let first = args[0];
@@ -142,7 +130,6 @@ function readUrl(tool: UrlTool, args: ToolArg[]): Result<URL, SpecError> {
 	}
 }
 
-/** Validate the second argument as the parameter name string. */
 function readName(tool: "query" | "fragment", args: ToolArg[]): Result<string, SpecError> {
 	let second = args[1];
 	if (second === undefined || second.kind !== "value" || typeof second.value !== "string") {
@@ -153,7 +140,6 @@ function readName(tool: "query" | "fragment", args: ToolArg[]): Result<string, S
 	return success(second.value);
 }
 
-/** Render the raw first argument for an error message, quoted when a string. */
 function args0Raw(args: ToolArg[]): string {
 	let first = args[0];
 	if (first !== undefined && first.kind === "value" && typeof first.value === "string") {

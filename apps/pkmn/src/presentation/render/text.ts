@@ -1,18 +1,9 @@
 /**
  * Low-resolution text drawing and layout helpers.
  *
- * The presentation targets a crisp pixel look, so text is rendered with the
- * original bitmap font in `./font` rather than the browser's anti-aliased
- * `fillText`, which is blurry at the integer-scaled retro resolution. Each
- * character is blitted as lit 1×1 pixels in the requested color, advancing by a
- * fixed glyph width so measuring and word-wrapping are exact integer math. This
- * module centralises measuring, alignment, baseline handling, and word-wrapping to
- * a pixel width so dialogue and menus page consistently. A `Typewriter` reveals
- * text one character at a time for message windows.
- *
- * The public API (`LINE_HEIGHT`, `TextOptions`, `drawText`, `measureText`,
- * `wrapText`, `Typewriter`) is unchanged from the earlier canvas-font version; only
- * the rendering internals switched to the bitmap font.
+ * Text renders through the bitmap font in `./font`, blitting lit pixels for a
+ * crisp look at the integer-scaled retro resolution. Measuring, wrapping, and
+ * alignment share one fixed glyph width; `Typewriter` reveals text over time.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,9 +27,8 @@ export interface TextOptions {
 /**
  * The rendered pixel width of `count` glyphs at the fixed bitmap metrics.
  *
- * Each glyph occupies a full `GLYPH_ADVANCE` cell (glyph width plus one pixel of
- * letter spacing), including after the last glyph; this keeps measuring, drawing,
- * and alignment consistent and matches how `drawText` places characters.
+ * Each glyph occupies a full `GLYPH_ADVANCE` cell, including after the last
+ * glyph, so measuring, drawing, and alignment stay consistent.
  */
 function widthOf(count: number): number {
 	return count * GLYPH_ADVANCE;
@@ -54,7 +44,7 @@ function baselineOffset(baseline: CanvasTextBaseline): number {
 		case "ideographic":
 			return -GLYPH_HEIGHT;
 		default:
-			return 0; // "top" and "hanging".
+			return 0;
 	}
 }
 

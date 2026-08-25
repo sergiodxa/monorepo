@@ -1,13 +1,9 @@
 import { unwrap } from "@pkg/result";
 /**
- * Exercises the battle test module that validates end-to-end turn resolution,
- * action ordering, and combat state transitions against the public battle API.
- * It serves as the high-signal verification layer for the battle system's
- * observable behavior under representative scenarios.
- *
- * The assertions in this module protect the contract between battle setup,
- * command submission, event streaming, and derived mechanics so regressions can
- * be detected without coupling tests to private implementation details.
+ * Exercises end-to-end turn resolution, action ordering, and combat-state
+ * transitions through the public battle API. Assertions protect the
+ * contract between setup, command submission, and event streaming so
+ * regressions surface without coupling tests to private implementation details.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -271,8 +267,10 @@ test("a fainted slot requests a replacement before the next turn", () => {
 			{ teams: [[createLowHpPrimaryFixture(), createBackupPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		// 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll at its
-		// maximum, so the fainting-blow event stream stays deterministic.
+		/**
+		 * 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll
+		 * at its maximum, so the fainting-blow event stream stays deterministic.
+		 */
 		random: () => 0.94,
 	});
 	let session = battle.start();
@@ -360,7 +358,7 @@ test("a side loses when its only team has no replacement left", () => {
 			{ teams: [[createLowHpPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		// 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal.
+		/** 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal. */
 		random: () => 0.94,
 	});
 	let session = battle.start();
@@ -399,7 +397,7 @@ test("a side can leave the battle instead of sending a replacement", () => {
 			},
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		// 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal.
+		/** 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal. */
 		random: () => 0.94,
 	});
 	let session = battle.start();
@@ -438,8 +436,10 @@ test("a side can leave the battle instead of sending a replacement", () => {
 });
 
 test("a side can leave the battle during turn input when escape is allowed", () => {
-	// A faster escapee always gets away, so the leave path resolves as a forfeit
-	// regardless of the random roll.
+	/**
+	 * A faster escapee always gets away, so the leave path resolves as a
+	 * forfeit regardless of the random roll.
+	 */
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -476,8 +476,10 @@ test("a side can leave the battle during turn input when escape is allowed", () 
 });
 
 test("escaping always succeeds when the escapee is at least as fast as the opponent", () => {
-	// Fast player (Speed 189) vs slow enemy (Speed 136): pSpd >= eSpd, so the
-	// escape never rolls — it succeeds even with a random that would otherwise fail.
+	/**
+	 * Fast player (Speed 189) vs slow enemy (Speed 136) makes pSpd >= eSpd, so
+	 * escaping succeeds outright without consuming a random roll.
+	 */
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -512,10 +514,11 @@ test("escaping always succeeds when the escapee is at least as fast as the oppon
 });
 
 test("a slower escapee always succeeds once accumulated attempts push the threshold to 256", () => {
-	// Slow player (113) vs fast enemy (214) gives a base F = 67. When the escapee is
-	// slower the base term is always < 128, so only accumulated failures can carry F
-	// past 256: 67 + 30 * 7 = 277 >= 256. Seeding seven prior failures makes this
-	// escape succeed even with a random roll that would otherwise fail.
+	/**
+	 * Slow player (113) vs fast enemy (214) gives base F = 67; the escapee's
+	 * lower speed keeps the base term under 128, so only the seven seeded
+	 * failures push F to 277, clearing the 256 threshold regardless of roll.
+	 */
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -547,14 +550,16 @@ test("a slower escapee always succeeds once accumulated attempts push the thresh
 	}
 
 	expect(lastEvent).toEqual({ type: "battle-finished", winnerSide: 1 });
-	// The attempt count is not touched on a success.
+	/** The attempt count keeps its seeded value across a successful escape. */
 	expect(battle.state.escapeAttempts).toBe(7);
 });
 
 test("a slower escapee escapes when the random roll lands under the threshold", () => {
-	// Slow player (Speed 113) vs fast enemy (Speed 214): F = floor(113*128/214) = 67.
-	// The escape roll is the third random value drawn (two turn-order rolls precede
-	// it); 0 → floor(0*256)=0 < 67 → success.
+	/**
+	 * Slow player (Speed 113) vs fast enemy (Speed 214): F = floor(113*128/214)
+	 * = 67. The escape roll is the third random value drawn (two turn-order
+	 * rolls precede it); 0 → floor(0*256)=0 < 67 → success.
+	 */
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -589,9 +594,11 @@ test("a slower escapee escapes when the random roll lands under the threshold", 
 });
 
 test("a failed escape emits escape-failed, lets the enemy act, and increments attempts", () => {
-	// Same slow-vs-fast pairing (F = 67). The escape roll (third random value) is
-	// 0.5 → floor(0.5*256)=128 >= 67 → failure: the escape is consumed, the enemy's
-	// move still resolves, the battle continues, and the attempt count rises to 1.
+	/**
+	 * Same slow-vs-fast pairing (F = 67). The escape roll (third random
+	 * value) is 0.5 → floor(0.5*256)=128 >= 67 → failure: the escape is
+	 * consumed, the enemy's move still resolves, and the attempt count rises to 1.
+	 */
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -616,13 +623,13 @@ test("a failed escape emits escape-failed, lets the enemy act, and increments at
 	let escapeFailed = events.find((event) => event.type === "escape-failed");
 	expect(escapeFailed).toEqual({ type: "escape-failed", user: { side: 0, slot: 0 } });
 
-	// The enemy still acted: its move resolved against the player this turn.
+	/** The enemy's move still resolves against the player this turn. */
 	let enemyMove = events.find(
 		(event) => event.type === "move-used" && event.user.side === 1 && event.target.side === 0,
 	);
 	expect(enemyMove).toBeDefined();
 
-	// The battle did not end on a failed escape.
+	/** The battle continues past a failed escape, leaving `winnerSide` null. */
 	expect(battle.state.winnerSide).toBe(null);
 	expect(battle.state.escapeAttempts).toBe(1);
 });
@@ -1571,7 +1578,7 @@ test("Toxic applies escalating poison and increases residual damage each turn", 
 			{ teams: [[createPrimaryFixtureWithToxic()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(HEAVY_SPECIES_ID)]] },
 		],
-		// 0.89 passes Toxic's 90% accuracy so the poison lands.
+		/** 0.89 passes Toxic's 90% accuracy so the poison lands. */
 		random: () => 0.89,
 	});
 	let session = battle.start();
@@ -1686,7 +1693,7 @@ test("Escalating poison resets to its opening stage after the combatant switches
 				],
 			},
 		],
-		// 0.89 passes Toxic's 90% accuracy so the poison lands.
+		/** 0.89 passes Toxic's 90% accuracy so the poison lands. */
 		random: () => 0.89,
 	});
 	let session = battle.start();
@@ -2543,8 +2550,11 @@ test("Fly spends one turn charging, avoids later attacks, then hits on the next 
 			{ teams: [[createPrimaryFixtureWithFly()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.94 passes Fly's 95% accuracy on the strike turn while keeping damage maximal;
-		// the opponent's Tackle still misses the airborne user via semi-invulnerability.
+		/**
+		 * 0.94 passes Fly's 95% accuracy on the strike turn while keeping
+		 * damage maximal; the opponent's Tackle still misses the airborne
+		 * user via semi-invulnerability.
+		 */
 		random: () => 0.94,
 	});
 	let session = battle.start();
@@ -3124,7 +3134,7 @@ test("Future Sight deals damage at the end of a later turn", () => {
 });
 
 test("Charge doubles the user's next Electric attack once", () => {
-	// 0.89 passes Charge Beam's 90% accuracy so both the baseline and charged shots land.
+	/** 0.89 passes Charge Beam's 90% accuracy so both the baseline and charged shots land. */
 	let normalDamage = getFirstDamageDealt(
 		[
 			{ teams: [[createPrimaryFixtureWithChargeBeam()]] },
@@ -3714,7 +3724,7 @@ test("Hyper Beam forces the user to recharge on the next turn", () => {
 			{ teams: [[createPrimaryFixtureWithHyperBeam()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.89 passes Hyper Beam's 90% accuracy so it connects and forces the recharge.
+		/** 0.89 passes Hyper Beam's 90% accuracy so it connects and forces the recharge. */
 		random: () => 0.89,
 	});
 	let session = battle.start();
@@ -4021,7 +4031,7 @@ test("Wrap traps and deals residual damage on later turns", () => {
 			{ teams: [[createPrimaryFixtureWithWrap()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.89 passes Wrap's 90% accuracy so the trap and residual damage occur.
+		/** 0.89 passes Wrap's 90% accuracy so the trap and residual damage occur. */
 		random: () => 0.89,
 	});
 	let session = battle.start();
@@ -4060,7 +4070,7 @@ test("Double Slap can hit multiple times in one move", () => {
 			{ teams: [[createPrimaryFixtureWithDoubleSlap()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.84 passes Double Slap's 85% accuracy and yields the maximum hit count.
+		/** 0.84 passes Double Slap's 85% accuracy and yields the maximum hit count. */
 		random: () => 0.84,
 	});
 	let session = battle.start();
@@ -4085,7 +4095,7 @@ test("Sleep Powder applies sleep and sleeping combatants cannot act", () => {
 			{ teams: [[createPrimaryFixtureWithSleepPowder()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.74 passes Sleep Powder's 75% accuracy so the sleep lands.
+		/** 0.74 passes Sleep Powder's 75% accuracy so the sleep lands. */
 		random: () => 0.74,
 	});
 	let session = battle.start();
@@ -4126,7 +4136,7 @@ test("Hypnosis applies sleep and sleeping combatants cannot act", () => {
 			{ teams: [[createPrimaryFixtureWithHypnosis()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.59 passes Hypnosis's 60% accuracy so the sleep lands.
+		/** 0.59 passes Hypnosis's 60% accuracy so the sleep lands. */
 		random: () => 0.59,
 	});
 	let session = battle.start();
@@ -4376,9 +4386,11 @@ test("accuracy drops can cause a move to miss", () => {
 	});
 });
 
-// Regression: the neutral-stage accuracy shortcut in `moveCanConnect` made moves
-// with accuracy < 100 always hit at neutral stat stages, so the base-accuracy roll
-// never ran. A 70%-accuracy move must be able to miss when the accuracy roll fails.
+/**
+ * Regression: the neutral-stage shortcut in `moveCanConnect` let sub-100
+ * accuracy moves hit automatically at neutral stat stages, skipping the
+ * base-accuracy roll. The roll must run and can fail at neutral stages.
+ */
 test("a sub-100 accuracy move can miss at neutral stages when the accuracy roll fails", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -4386,7 +4398,7 @@ test("a sub-100 accuracy move can miss at neutral stages when the accuracy roll 
 			{ teams: [[createPrimaryFixtureWithBlizzard()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		// A high roll fails the 70% base-accuracy check (0.99 < 0.7 is false).
+		/** A high roll fails the 70% base-accuracy check (0.99 < 0.7 is false). */
 		random: () => 0.99,
 	});
 	let session = battle.start();
@@ -4413,8 +4425,10 @@ test("a sub-100 accuracy move can miss at neutral stages when the accuracy roll 
 	).toBe(false);
 });
 
-// Companion to the accuracy regression: a low roll passes the base-accuracy check so
-// the same move connects and deals damage instead of missing.
+/**
+ * Companion to the regression above: a low roll clears the base-accuracy
+ * check, so the same move connects and deals damage.
+ */
 test("a sub-100 accuracy move connects at neutral stages when the accuracy roll succeeds", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -4422,7 +4436,7 @@ test("a sub-100 accuracy move connects at neutral stages when the accuracy roll 
 			{ teams: [[createPrimaryFixtureWithBlizzard()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		// A low roll passes the 70% base-accuracy check (0 < 0.7 is true).
+		/** A low roll passes the 70% base-accuracy check (0 < 0.7 is true). */
 		random: () => 0,
 	});
 	let session = battle.start();
@@ -4449,8 +4463,11 @@ test("a sub-100 accuracy move connects at neutral stages when the accuracy roll 
 	).toBe(true);
 });
 
-// Regression: `getCombatantSpeed` applied a non-spec +10% speed boost under electric
-// terrain (`Math.floor(speed * 1.1)`). Electric terrain must not change effective speed.
+/**
+ * Regression: `getCombatantSpeed` applied a non-spec +10% boost under
+ * electric terrain (`Math.floor(speed * 1.1)`). Terrain leaves effective
+ * speed unchanged.
+ */
 test("electric terrain does not boost a combatant's effective speed", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -4479,7 +4496,7 @@ test("electric terrain does not boost a combatant's effective speed", () => {
 	expect(battle.state.field.terrain).toBe(null);
 	let speedWithoutTerrain = readSpeed(position, combatant);
 
-	// Slot 0 casts Electric Terrain (move 0), setting the shared terrain to electric.
+	/** Slot 0 casts Electric Terrain (move 0), setting the shared terrain to electric. */
 	collectTurnEvents(session, battle, [
 		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
 		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
@@ -4581,7 +4598,7 @@ test("Metal Sound sharply lowers the target special defense", () => {
 			{ teams: [[createPrimaryFixtureWithMetalSound()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.84 passes Metal Sound's 85% accuracy so the special-defense drop applies.
+		/** 0.84 passes Metal Sound's 85% accuracy so the special-defense drop applies. */
 		random: () => 0.84,
 	});
 	let session = battle.start();
@@ -4643,7 +4660,7 @@ test("Icy Wind deals damage and lowers the target speed", () => {
 			{ teams: [[createPrimaryFixtureWithIcyWind()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.94 passes Icy Wind's 95% accuracy while keeping damage maximal.
+		/** 0.94 passes Icy Wind's 95% accuracy while keeping damage maximal. */
 		random: () => 0.94,
 	});
 	let session = battle.start();
@@ -4677,7 +4694,7 @@ test("Leaf Storm lowers the user's special attack after hitting", () => {
 			{ teams: [[createPrimaryFixtureWithLeafStorm()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		// 0.89 passes Leaf Storm's 90% accuracy while keeping damage maximal.
+		/** 0.89 passes Leaf Storm's 90% accuracy while keeping damage maximal. */
 		random: () => 0.89,
 	});
 	let session = battle.start();
@@ -4890,11 +4907,11 @@ test("an invalid team count for the battle format throws", () => {
 
 test("using a heal item restores HP, emits an item-used event, and spends the turn", () => {
 	let ally = createPrimaryFixture();
-	// Take damage so a heal has room to work.
+	/** Take damage so a heal has room to work. */
 	let maxHP = getCreatureStat(GAME_DATA, ally, Stat.HP);
 	ally.status.damage = maxHP - 1;
 
-	// A non-damaging enemy move so the heal is observable at the end of the turn.
+	/** A non-damaging enemy move so the heal is observable at the end of the turn. */
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[ally]] }, { teams: [[createModestSecondaryFixtureWithGrowl()]] }],
@@ -4917,7 +4934,7 @@ test("using a heal item restores HP, emits an item-used event, and spends the tu
 	expect(used.healed).toBe(20);
 	expect(used.remainingHP).toBe(21);
 	expect(getCreatureCurrentHP(GAME_DATA, ally)).toBe(21);
-	// The item resolves before the enemy's move, and the enemy still acts this turn.
+	/** The item resolves before the enemy's move, and the enemy still acts this turn. */
 	let usedIndex = events.findIndex((event) => event.type === "item-used");
 	let enemyMoveIndex = events.findIndex(
 		(event) => event.type === "move-used" && event.user.side === 1,
@@ -4961,7 +4978,7 @@ test("using a revive item on a fainted bench creature restores it to half HP", (
 	let active = createPrimaryFixture();
 	let benched = createBackupPrimaryFixture();
 	let benchedMaxHP = getCreatureStat(GAME_DATA, benched, Stat.HP);
-	benched.status.damage = benchedMaxHP; // fainted
+	benched.status.damage = benchedMaxHP;
 
 	let battle = new Battle({
 		gameData: GAME_DATA,

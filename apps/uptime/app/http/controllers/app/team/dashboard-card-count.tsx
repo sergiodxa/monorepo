@@ -1,20 +1,8 @@
 /**
- * Dashboard per-monitor-type count stat-card fragment controller. GET
- * /app/:team/dashboard/cards/count/:resource — loads only the one monitor table
- * named by `:resource` (http, dns, tcp, flow, or cron-jobs) and renders its `StatCard`
- * directly, with no document shell, so each of the dashboard's count `Frame`s
- * (one per resource, all pointed at this same parameterized route) can swap in
- * independently over its own skeleton fallback. Requires `requireUser` + `requireTeam`.
- *
- * Every one of them counts something a visitor can create, so every card carries the
- * link to that type's own form — which is the dashboard's only route to one now that the
- * header holds the quick check where a single "create monitor" button used to be.
- *
- * Each card's status breakdown is a row of badges, one per state that has something to
- * report, and every badge is its own translation key rather than one interpolated
- * sentence: a single string would have to be cut apart on a separator to be split into
- * pills, and which separator a language uses — or whether it uses one at all — is exactly
- * the sort of thing a translation is free to change.
+ * Dashboard per-monitor-type count stat-card fragment controller. Loads only
+ * the one monitor table named by `:resource` and renders its `StatCard`
+ * directly, with no document shell, so each of the dashboard's count
+ * `Frame`s can swap in independently over its own skeleton fallback.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,20 +47,9 @@ namespace Breakdown {
 }
 
 /**
- * A count card's per-state breakdown: one badge per state, on one line, reading
- * "<count> <state>".
- *
- * Only a state with something in it gets a pill. A stack of one line per state — with
- * room held open for the most any card has, so the row stayed level — meant every card
- * was three lines tall to say things like "0 changed" and "0 error", which is a fact
- * about nothing. Dropping the empty ones costs no alignment now: the cards share a flex
- * row, so they stretch to whichever of them has the most to say.
- *
- * A `<span>` rather than a `<div>`, because this renders inside `StatCard`'s value span,
- * which only admits phrasing content; the flex display makes it a block box regardless.
- * The leading margin is the one the stacked `Subtitle` carried, so the gap under the
- * figure is unchanged. It wraps, because three badges do not fit the narrowest a card
- * gets and a clipped or overflowing pill is worse than a second line.
+ * A count card's per-state breakdown: one badge per state, reading "<count>
+ * <state>", shown only for states with a nonzero count so a card never states a fact
+ * about nothing like "0 error". A `<span>`, since it renders inside `StatCard`'s value span, which admits only phrasing content.
  */
 function Breakdown(handle: Handle<Breakdown.Props>) {
 	return () => (
@@ -88,7 +65,11 @@ function Breakdown(handle: Handle<Breakdown.Props>) {
 	);
 }
 
-/** GET /app/:team/dashboard/cards/count/:resource — one monitor-type count stat card, fragment-only. */
+/**
+ * GET /app/:team/dashboard/cards/count/:resource — one monitor-type count stat card,
+ * fragment-only. HTTP's up/down state lives per-check in Analytics Engine, so its
+ * breakdown pairs a summaries query with `Monitor.listByTeam` for the total.
+ */
 export default createAction(routes.app.team.dashboard.cards.count, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -196,10 +177,9 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 				up: flowMonitors.filter((monitor) => monitor.last_status === "up").length,
 				down: flowMonitors.filter((monitor) => monitor.last_status === "down").length,
 				/**
-				 * Its own pill rather than folded into `down`, and `degraded`-toned rather than
-				 * `down`-toned: a flow that could not run is this app failing to find out, not the
-				 * customer's flow being broken (ADR-027 §8). Counting it as down would put our own
-				 * misconfiguration in the number somebody reads as their outage count.
+				 * Tracked as its own degraded-toned pill, since a flow that could not run
+				 * signals this app's own visibility gap (ADR-027 §8); keeping it separate
+				 * keeps the outage count faithful to the customer's actual flow failures.
 				 */
 				error: flowMonitors.filter((monitor) => monitor.last_status === "error").length,
 			};
@@ -295,10 +275,6 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 			);
 		}
 
-		// HTTP up/down state is only recorded per-check in Analytics Engine, not as a
-		// column on the `monitors` row (unlike DNS/TCP/cron jobs' `last_status`/`status`),
-		// so this card's breakdown comes from a summaries query rather than
-		// `Monitor.listByTeam` alone.
 		let [monitors, summaries] = await Promise.all([
 			Monitor.listByTeam(db, ctx.team.id),
 			getTeamHttpSummaries(ctx.team.id),

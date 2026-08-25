@@ -1,13 +1,9 @@
 /**
  * Central world-state module for the game's ECS domain layer.
  *
- * This module defines the serializable world shape, the player-facing and
- * creature-facing component contracts stored in that world, and the accessors
- * that read those stores through a consistent API.
- *
- * It acts as the canonical boundary for world data composition, keeping entity
- * ids, component stores, and higher-level world queries aligned so other parts
- * of the engine can depend on a stable representation of runtime state.
+ * Defines the serializable world shape, the player- and creature-facing
+ * component contracts stored in it, and the accessors that read those
+ * stores through a consistent API.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,19 +59,20 @@ export interface InventoryComponent {
 
 /** Spendable currency balance owned by the player root. */
 export interface MoneyComponent {
-	/** Current balance; never negative. */
+	/** Current balance; stays at zero or above. */
 	amount: number;
 }
 
-/** Bestiary progress tracked by species rather than creature instance. */
+/**
+ * Bestiary progress recorded once per species, covering every instance
+ * encountered or caught.
+ */
 export interface BestiaryComponent {
-	/** Species the player has encountered. */
 	seen: SpeciesId[];
-	/** Species the player has captured. */
 	caught: SpeciesId[];
 }
 
-/** Box storage that holds creatures not currently in the party. */
+/** Box storage that holds creatures outside the active party. */
 export interface StorageBoxesComponent {
 	/** Named boxes with ordered creature membership. */
 	boxes: Array<{ id: string; name: string; creatureIds: CreatureId[] }>;
@@ -88,13 +85,9 @@ export interface ActiveBattleComponent {
 }
 
 /**
- * Named boolean story flags persisted with the world.
- *
- * A flag is a small, engine-generic switch (`false`/absent means unset) that
- * survives across turns and save/load, so authored content can gate a one-time
- * event or record that something happened. The engine stays vocabulary-free: it
- * neither reads nor assigns any meaning to a flag's name, it only stores and
- * reports the boolean the caller sets.
+ * Named boolean story flags persisted with the world: an opaque switch
+ * (absent means unset) that survives save/load, so authored content can
+ * gate a one-time event using a name the engine only stores and reports.
  */
 export interface FlagsComponent {
 	/** Flag values keyed by name; a missing or false entry means the flag is unset. */
@@ -190,9 +183,8 @@ export function getPlayerStorageBoxes(world: World): StorageBoxesComponent {
 /**
  * Returns the player's story-flag component, materializing an empty one when absent.
  *
- * Flags are optional on older saves, so this never throws: a world without a
- * flags entry is treated as having no flags set, and the empty component is
- * written back so later reads and writes share one record.
+ * Older saves may lack a flags entry; reads then treat it as empty and write
+ * that empty component back so later reads and writes share one record.
  */
 export function getFlags(world: World): FlagsComponent {
 	let flags = world.flags[world.playerId];
@@ -216,11 +208,8 @@ export function setFlag(world: World, flag: string, value = true): boolean {
 /**
  * Builds the flag name a per-entity self-switch is stored under.
  *
- * A self-switch is a switch scoped to one authored entity on one map, so its
- * flag name namespaces the entity's map and id alongside the switch's own name.
- * The engine still treats the result as an opaque boolean flag — it assigns no
- * meaning to the parts — but the stable, collision-free naming lets many entities
- * carry a switch of the same short name without clashing across the shared store.
+ * Namespacing by map and entity id keeps two entities' same-named switch
+ * from colliding in the shared flag store.
  *
  * @param mapId - The map the entity belongs to.
  * @param entityId - The entity's id, unique within that map.
@@ -230,7 +219,12 @@ export function selfSwitchFlag(mapId: string, entityId: string, name: string): s
 	return `event:${mapId}:${entityId}:${name}`;
 }
 
-/** Returns the split components required to rebuild one creature aggregate. */
+/**
+ * Returns the split components required to rebuild one creature aggregate.
+ *
+ * Falls back to a default instance component for creatures saved before the
+ * per-instance store existed, so old worlds still assemble a full aggregate.
+ */
 export function getCreatureComponentSet(
 	world: World,
 	creatureId: CreatureId,
@@ -241,7 +235,6 @@ export function getCreatureComponentSet(
 		moves: requireComponent(world.creatureMoves, creatureId, "creature moves"),
 		health: requireComponent(world.creatureHealth, creatureId, "creature health"),
 		status: requireComponent(world.creatureStatus, creatureId, "creature status"),
-		// Absent on worlds that predate the instance store: fall back to the default.
 		instance: world.creatureInstance[creatureId] ?? createCreatureInstance(),
 		ownership: world.ownership[creatureId],
 		location: world.creatureLocation[creatureId],
@@ -251,8 +244,8 @@ export function getCreatureComponentSet(
 /**
  * Rebuilds one creature aggregate from split ECS component stores.
  *
- * The runtime still has a few mechanics that expect the aggregate view, so this function is the narrow
- * adapter that keeps those callers working while the rest of the world stays component-first.
+ * A few runtime mechanics still expect the merged aggregate view; this is the
+ * narrow adapter keeping them working while the world stays component-first.
  */
 export function createCreatureFromWorld(world: World, creatureId: CreatureId): Creature {
 	return new Creature(mergeCreatureComponents(getCreatureComponentSet(world, creatureId)));

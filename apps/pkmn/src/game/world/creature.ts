@@ -1,13 +1,6 @@
 /**
- * Defines the world-level creature model used by this part of the game domain.
- * It centralizes the shape of creature data, exposes the public value object used
- * by the rest of the world layer, and keeps the supported fields for identity,
- * progression, combat state, and size in one place.
- *
- * This module also provides the narrow serialization boundary for creature
- * instances. It preserves a stable contract for constructing creatures, reading
- * their state through accessors, and converting them to and from plain data
- * without coupling callers to internal storage details.
+ * World-level creature model: a stable value object and serialization
+ * boundary for identity, progression, combat state, and size.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

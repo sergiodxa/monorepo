@@ -27,7 +27,7 @@ export interface PreconditionOptions {
  * The client's `If-Match` did not name the version the resource is currently at,
  * which means the write would overwrite a change the client never saw.
  *
- * Returned inside a `Failure` and never thrown; answer it with a `412`.
+ * Delivered inside a `Failure` for the caller to inspect and answer with a `412`.
  *
  * @example
  * if (isFailure(result)) return preconditionFailed({ error: result.error.message });
@@ -49,9 +49,8 @@ export class PreconditionFailedError extends Error {
 /**
  * Checks a write request's `If-Match` against the resource's current validator.
  *
- * A request with no `If-Match` passes, since it states no expectation about the
- * version; `*` passes because the resource exists. Everything else is compared
- * strongly, so a weak tag on either side fails rather than allowing a lost update.
+ * An absent `If-Match` or a `*` always matches; every other value is compared
+ * strongly, so a weak tag never satisfies it, binding writes to a version read.
  *
  * @param request - The incoming write request.
  * @param options - The resource's current entity tag.

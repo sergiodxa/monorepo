@@ -1,75 +1,8 @@
 /**
- * `/try` — the public offer of a free multi-day health report on one site, and the only page
- * in this feature that sells.
- *
- * What the visitor is asking for is a week of evidence about a real site, not a temporary
- * account: the check that runs on submit is the first of the run, and the copy says so
- * everywhere, with the length interpolated from `~/app/lib/pricing` so the page and the
- * emails cannot disagree about how long the offer lasts.
- *
- * One URL, two methods. The `GET` renders the URL box and nothing else; the `POST` guards
- * the submission, runs the check, and renders that same page with the answer in it. There
- * is no round trip between the two, which is the whole point: nothing about a check has to
- * survive between requests, so a reload of the `GET` cannot show a stale result and every
- * link back here lands on a fresh, empty form. Both methods go through
- * {@link renderTrialPage}, so neither can grow a version of the page the other does not
- * have.
- *
- * Arriving with `?url=` only pre-fills the field. Running a probe is always the `POST`, so
- * a link preview, a crawler, or a pasted URL can never spend one.
- *
- * The cost of rendering on the `POST` is that a browser reload re-submits. That is the
- * ordinary bargain and it lands somewhere the page already handles: the per-IP limit is one
- * check a minute, so a reload inside the minute comes back as a `rate-limited` refusal that
- * says so and leaves the URL in the box, ready to run again.
- *
- * ## What the page withholds, and when
- *
- * Before a check has run the page is a heading, one line, and a field — given the screen and
- * centred in it. The three selling sections below it (what the week gives you, what it
- * cannot show, and the offer) are all withheld until there is a result, because every one of
- * them argues about something the visitor has not seen yet: four cards about a week of
- * watching and a closing pitch badged "After the week" are answers to a question nobody has
- * asked on a page where nothing has been typed, and they push the one field further down.
- *
- * The intro paragraph and the URL box go the other way and disappear once a check has run.
- * The intro explains what the page is about to do, and by then it has done it. The box is
- * replaced by the answer it produced, rather than sitting above it: the result is what the
- * visitor came back for and it belongs where their eye already is. Checking a second URL is
- * a plain link under the card to `GET /try`, which is genuinely an empty form now that the
- * page carries no state between requests. A link and not a button, and outside the card
- * rather than in it, because it is a way back rather than a peer of the primary action —
- * two buttons of competing weight stacked in the card's footer is what made the old one
- * read as unplaced.
- *
- * ## What the result card leads with
- *
- * The URL is the card's title and the status badge is the largest thing under it, in that
- * order, because those are the two things being scanned for — the more so once more than
- * one URL has been checked. Neither the timings nor the timestamp is why anybody is here, so
- * they support the badge rather than share its weight.
- *
- * ## Who is looking at it
- *
- * The page is written for a stranger, and for a stranger nothing about it changes. A
- * signed-in viewer gets two things differently: their check is billed to their team when
- * that team is paying for one (see the `POST` handler), and the email capture under the
- * result is replaced by an offer to monitor the URL properly. Asking somebody with an
- * account for an email address we already hold, in exchange for a weaker version of what
- * they can already have, is the one thing this card must not do.
- *
- * A `3xx` gets its own branch. Trial probes do not follow redirects — that refusal is what
- * stops a `302` walking past the address checks `trial-guard.ts` just made — so a site that
- * sends `http://` to `https://` comes back as a `301` and grades `down` against the expected
- * `200`. The page must not repeat that grade at somebody whose site is perfectly healthy, so
- * it names the redirect for what it is and offers the destination as a fresh check rather
- * than following it. The email form is withheld in that branch too: a week of hourly checks
- * on a URL we already know we will grade `down` every time would produce a digest reporting
- * 0% uptime for a healthy site.
- *
- * The view is inlined rather than split into `resources/views`: it is one page, and nothing
- * on it is hydrated. {@link renderTrialPage} is exported all the same, because
- * `POST /try/lead` re-renders this page when the address it was given cannot be used.
+ * `/try` — the public offer of a free multi-day health report on one site, and the
+ * only page in this feature that sells. `GET` renders the empty URL box; `POST` runs
+ * the check and re-renders the same page with the result, so no state has to survive
+ * between requests and a reload never shows a stale answer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -185,11 +118,9 @@ const MAX_PREFILL_LENGTH = 2048;
 const CONSENT_NOTE_ID = "trial-consent-note";
 
 /**
- * How many lines of URL the result card's heading shows before clamping.
- *
- * A tracking-stuffed URL is six lines of bold type on a phone, which buries the answer
- * under the question all over again. The clamp is visual only — the whole URL is still the
- * heading's text, so it is still announced, still selectable, and still copied whole.
+ * How many lines of URL the result card's heading shows before clamping. The clamp
+ * is visual only: the full URL stays the heading's text, announced, selectable, and
+ * copied whole.
  */
 const TITLE_MAX_LINES = 3;
 
@@ -200,10 +131,9 @@ const TITLE_MAX_LINES = 3;
 const CHECKBOX_LABEL_OFFSET = "1.75rem";
 
 /**
- * Height of `MarketingLayout`'s sticky header, measured from the rendered page. The layout
- * exposes no custom property for it, so this is the only place the number lives, and it is
- * only ever subtracted from the viewport — a stale value costs a few pixels of the peek
- * below, never a broken or clipped page.
+ * Height of `MarketingLayout`'s sticky header, measured from the rendered page. The
+ * layout exposes no custom property for it, so this is the only place the number
+ * lives; a stale value only costs a few pixels of screen, never a broken layout.
  */
 const HEADER_BLOCK_SIZE = "65px";
 
@@ -214,21 +144,16 @@ const HEADER_BLOCK_SIZE = "65px";
 const FIRST_SCREEN_PEEK = "72px";
 
 /**
- * `dvh` rather than `vh`: on a phone `100vh` is the viewport with the browser chrome
- * retracted, so a `100vh` block overflows the screen it was supposed to fit and the page
- * scrolls when it should not. And a minimum rather than a height, so a small screen whose
- * content does not fit simply grows past it instead of clipping the form.
+ * `dvh` tracks the viewport with the browser chrome retracted, so the block always
+ * fits the visible screen on a phone. The minimum lets a small screen's overflowing
+ * content grow the section past it, keeping the form fully visible.
  */
 const FIRST_SCREEN_MIN_BLOCK_SIZE = `calc(100dvh - ${HEADER_BLOCK_SIZE} - ${FIRST_SCREEN_PEEK})`;
 
 /**
- * A refused submission, as the page needs to explain it.
- *
- * The guard produces every code but one. `unavailable` also arrives from this controller,
- * for the case the guard cannot see: it said yes and the Durable Object that performs the
- * probe could not be reached, so nothing at all was learned about the target. Both faults
- * are the same sentence to a visitor — ours, not yours — which is why they share a code and
- * are told apart only in the logs.
+ * A refused submission, as the page needs to explain it. The guard produces every
+ * code but one: `unavailable` covers the Durable Object being unreachable, which
+ * reads to a visitor as the same "ours, not yours" sentence as every other code.
  */
 export interface TrialRefusalState {
 	code: TrialRefusalReason;
@@ -240,11 +165,9 @@ export interface TrialRefusalState {
 }
 
 /**
- * What a signed-in visitor is offered under their result, in place of the email capture.
- *
- * They already have an account, so a week of free watching in exchange for an address we
- * hold is a worse version of what they can have now. The offer is the real product instead:
- * a monitor on the URL they just checked.
+ * What a signed-in visitor is offered under their result, in place of the email
+ * capture: a monitor on the URL they just checked, since an address they already
+ * gave us in exchange for a weaker version of what they can have now buys nothing.
  */
 export interface TrialMonitorOffer {
 	/** The new-monitor form, with the checked URL already in its field. */
@@ -279,10 +202,9 @@ export interface TrialPageView {
 }
 
 /**
- * Vertical rhythm for the selling sections, every one of which follows a section that
- * already ends with its own bottom padding. Two neighbours each contributing a full gap
- * across one boundary stacks the two into a dead band, so each section here owns only the
- * space below it and starts flush against the one above.
+ * Vertical rhythm for the selling sections, each of which follows a section that
+ * already ends with its own bottom padding. Each section here owns only the space
+ * below it, so two neighbours never stack a full gap into a dead band.
  */
 function sectionPadding() {
 	return [
@@ -329,13 +251,9 @@ namespace SellingGrid {
 }
 
 /**
- * The card grid both selling sections are built from, so the four benefits of the week and
- * the three things the week cannot show read as one design rather than two.
- *
- * `auto-fit` rather than a column count per breakpoint because the two callers do not have
- * the same number of cards: one track sizing serves four across and three across at the
- * same container width, and collapses to two and then one on its own as the viewport
- * narrows.
+ * The card grid both selling sections are built from, so the four benefits of the
+ * week and the three things it cannot show read as one design. `auto-fit` serves
+ * both card counts at the same container width and collapses on its own as it narrows.
  *
  * @param handle - Runtime handle carrying the grid's props.
  * @returns The render function producing the grid.
@@ -383,11 +301,9 @@ function SellingGrid(handle: Handle<SellingGrid.Props>) {
 }
 
 /**
- * The result badge, scaled up from `Badge`'s caption-sized default.
- *
- * This badge is the payload of the whole page — the one thing the visitor came to be told.
- * At the default `xs` it read as a label on the numbers beside it rather than as the answer,
- * which put the least important thing on the card at the same weight as the most.
+ * The result badge, scaled up from `Badge`'s caption-sized default: it is the
+ * payload of the whole page, the one thing the visitor came to be told, and the
+ * default `xs` size read as a label rather than as the answer.
  */
 function resultBadge() {
 	return [fontSize("base"), pi(3), pb(1)];
@@ -420,18 +336,9 @@ function resultDetail(probe: TrialProbeState, t: TFunction): string {
 }
 
 /**
- * The sentence a refusal is explained with.
- *
- * Every reason gets its own, because collapsing them would make the page lie about the one
- * thing it exists to report: "we have stopped for today" and "your site did not answer"
- * are different facts, and a visitor who cannot tell them apart learns nothing from
- * either. The rate limit is the only refusal that knows when a retry could work, so it is
- * the only one whose copy mentions waiting, and it falls back to a wordless version when
- * the limiter reported no window.
- *
- * One function for every reason including {@link isIncompleteForm}'s, even though that one
- * renders somewhere else entirely, so that no reason can acquire a second sentence by
- * being handled in a second place.
+ * The sentence a refusal is explained with. Every reason gets its own sentence,
+ * because collapsing them would blur facts a visitor needs told apart, and only
+ * the rate limit's copy mentions waiting, since it is the one that knows when.
  *
  * @param refusal - What the guard, or the prober, refused with.
  * @param t - The request's translator.
@@ -450,13 +357,9 @@ function refusalMessage(refusal: TrialRefusalState, t: TFunction): string {
 }
 
 /**
- * Whether a refusal is the form not being finished rather than the request being turned
- * down.
- *
- * The one refusal the visitor clears by doing something on the page they are already
- * looking at, so it renders where its control is — a field error under the challenge —
- * instead of in the Alert. An Alert titled "The check did not run" over "tick the box" is a
- * misdiagnosis dressed as a failure, and it is also the wrong shape: nothing went wrong.
+ * Whether a refusal means the form needs finishing, not the request being turned
+ * down: the visitor clears it by ticking the box already on the page, so it renders
+ * as a field error under the challenge instead of a page-level Alert.
  *
  * @param refusal - The refusal to place, when there is one.
  * @returns Whether it belongs on the field rather than in the Alert.
@@ -466,11 +369,9 @@ function isIncompleteForm(refusal: TrialRefusalState | undefined): boolean {
 }
 
 /**
- * Renders `/try`, in whichever of its states the caller reached.
- *
- * The single code path both methods answer through, and the reason the empty page and the
- * answered one cannot drift apart: the `GET` passes no result, the `POST` passes what it
- * got, and `POST /try/lead` passes the probe back with the error its form produced.
+ * Renders `/try`, in whichever of its states the caller reached. The single code
+ * path both methods answer through: the `GET` passes no result, the `POST` passes
+ * what it got, and `POST /try/lead` passes the probe back with its form's error.
  *
  * @param view - What this particular request has to show.
  * @returns The rendered document.
@@ -545,10 +446,9 @@ export function renderTrialPage(view: TrialPageView = {}) {
 	];
 
 	/**
-	 * What handing over an address actually buys, spelled out before it is asked for: the
-	 * address we will keep checking, how often, for how long, which emails arrive, and what is
-	 * not required. Every line describes what the run *will* do — none of them counts checks
-	 * that have not happened or implies anything about what was found.
+	 * What handing over an address actually buys, spelled out before it is asked for:
+	 * the address checked, how often, for how long, which emails arrive, and that no
+	 * account is needed — each line states only what the run will do.
 	 */
 	let expectations =
 		probe === undefined
@@ -573,11 +473,9 @@ export function renderTrialPage(view: TrialPageView = {}) {
 	});
 
 	/**
-	 * With nothing to report, the page is one field and a button, so it is given the screen
-	 * and its content is centred in it — with a sliver of the footer left showing so it
-	 * reads as a page that continues rather than one that ends. The moment a check has run
-	 * the floor is dropped: the answer is what the visitor came back for, and a
-	 * viewport-tall first section would push it down behind empty space.
+	 * With nothing to report, the page is one field and a button, given the full
+	 * screen and centred in it. Once a check has run the floor drops, so the answer
+	 * sits where the visitor came back for it instead of behind empty space.
 	 */
 	let firstScreen =
 		probe === undefined ? [minBs(FIRST_SCREEN_MIN_BLOCK_SIZE), vstack({ justify: "center" })] : [];
@@ -649,21 +547,11 @@ export function renderTrialPage(view: TrialPageView = {}) {
 
 										<div mix={[vstack({ gap: 2 })]}>
 											<Turnstile siteKey={trialTurnstileSiteKey()} />
-											{/*
-											 * The unfinished-form refusal renders here rather than in the
-											 * Alert below, against the control it is about, in the same
-											 * `FieldError` the URL box's own validation message uses.
-											 */}
 											{refusal !== undefined && incomplete ? (
 												<FieldError>{refusalMessage(refusal, t)}</FieldError>
 											) : null}
 										</div>
 
-										{/*
-										 * Inside the card and against the button that produced it. Below the
-										 * card, which is where this used to sit, it read as a notice about the
-										 * page rather than as the answer to the submit that just failed.
-										 */}
 										{refusal === undefined || incomplete ? null : (
 											<Alert color="warning" live="polite">
 												<Alert.Content>
@@ -692,12 +580,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 							</Alert>
 						)}
 
-						{/*
-						 * Not `success`, because nothing was started, and not `warning`, because
-						 * nothing went wrong either: the URL is already being reported on and the
-						 * report is on its way. `brand` is the tone the page uses for the thing it
-						 * is telling you rather than the thing you did.
-						 */}
 						{repeated === undefined ? null : (
 							<Alert color="brand" live="polite" mix={[mbs(6)]}>
 								<Alert.Content>
@@ -789,9 +671,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 													</Text>
 												</div>
 
-												{/* Stacked and full-width rather than a wrapping row: side by side, the
-												    two read as equal choices, when subscribing is the one that makes the
-												    monitor keep running. */}
 												<div mix={[vstack({ gap: 3 })]}>
 													<LinkButton
 														href={monitorOffer.createHref}
@@ -820,14 +699,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 													</Heading>
 													<Text>{t("page.trial.lead.description", { days })}</Text>
 
-													{/*
-													 * The terms of the offer, above the field that accepts them rather
-													 * than under the button that submits it: what we will check, how
-													 * often, for how long, what arrives by email, and what is not being
-													 * asked for. A list and not a paragraph because it is scanned, and
-													 * `listStyle("none")` with a check per row because the marker is
-													 * carrying no meaning the icon does not.
-													 */}
 													<ul
 														mix={[
 															m(0),
@@ -910,10 +781,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 					</div>
 				</section>
 
-				{/* The free week is what an anonymous visitor is being offered, so it is sold
-				    only to one. A signed-in reader was offered a monitor instead, and pitching
-				    them a trial that ends on "no account, no card" describes neither what they
-				    were just offered nor what they already have. */}
 				{probe === undefined || monitorOffer !== undefined ? null : (
 					<section mix={[...sectionPadding()]}>
 						<div mix={[...marketingContainer()]}>
@@ -985,11 +852,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 									<ActivityIcon size={14} strokeWidth={2} />
 									{t("page.trial.cta.badge")}
 								</span>
-								{/*
-								 * The offer's continuity is the whole argument, so it is the heading and not a
-								 * line inside the paragraph: what is on sale is the same watching carrying on
-								 * at a shorter interval, not a second thing that starts from nothing.
-								 */}
 								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
 									{t("page.trial.cta.title", { price })}
 								</Heading>
@@ -1049,22 +911,18 @@ async function resolveTrialAccount(): Promise<TrialAccount | null> {
 	if (team === undefined) return { team: null, billedTeam: null };
 
 	/**
-	 * `stateFor`, not `isActive`: only a subscription *known* to be inactive drops the
-	 * viewer onto the free path. An owner whose state cannot be determined keeps being
-	 * billed, the same reading every other gate in this app takes, because the alternative
-	 * is a lookup blip quietly spending the public daily budget on a paying customer.
+	 * `stateFor`, not `isActive`: only a subscription *known* to be inactive drops
+	 * the viewer onto the free path. An owner whose state cannot be determined
+	 * keeps being billed, because a lookup blip must not quietly spend the public daily budget on a paying customer.
 	 */
 	let state = await Subscription.stateFor(db, team.owner_id);
 	return { team, billedTeam: state === "inactive" ? null : team };
 }
 
 /**
- * The offer that replaces the email capture for a signed-in viewer.
- *
- * A link to the existing new-monitor form with the URL already in it, rather than a
- * one-click create: a viewer can belong to several teams, and that form is where the
- * interval, the region and the expected status get decided. Building a second way to
- * create a monitor to save one page load would be the expensive kind of shortcut.
+ * The offer that replaces the email capture for a signed-in viewer: a link to the
+ * existing new-monitor form with the URL already filled in, since that form is
+ * where the interval, region, and expected status get decided per team.
  *
  * @param account - The viewer's standing, or `null` when nobody is signed in.
  * @param url - The URL that was just checked, as the guard normalized it.
@@ -1075,7 +933,6 @@ function buildMonitorOffer(
 	url: string,
 ): TrialMonitorOffer | undefined {
 	if (account === null) return undefined;
-	// No team means no team-scoped URL to link to; `/app` resolves one, or explains why not.
 	if (account.team === null) return { createHref: routes.app.index.href(), subscribeHref: null };
 
 	let team = account.team.slug;
@@ -1084,10 +941,9 @@ function buildMonitorOffer(
 	return {
 		createHref: `${routes.app.team.monitors.new.href({ team })}?${query}`,
 		/**
-		 * Billing is offered alongside, not instead: the monitor can be created either way,
-		 * and it simply will not be scheduled until the subscription is. `checkout` is the
-		 * app's one entry point to that — it decides between a Polar checkout and the
-		 * customer portal itself, so this page does not have to know which one applies.
+		 * The monitor can be created regardless; it simply waits to be scheduled until the
+		 * subscription exists. `checkout` is the app's one entry point for that decision —
+		 * it picks between a Polar checkout and the customer portal on its own.
 		 */
 		subscribeHref: account.billedTeam === null ? routes.app.team.checkout.href({ team }) : null,
 	};
@@ -1096,13 +952,9 @@ function buildMonitorOffer(
 export default createController(routes.trial.check, {
 	actions: {
 		/**
-		 * GET /try — the empty box, plus the receipt for whichever of the two things the last
-		 * submission did: opened a watch, or found the URL already had one. Reaches nothing
-		 * that could cost a probe, which is what makes it safe for a crawler, a link preview,
-		 * or a reload to land on.
-		 *
-		 * Both receipts are taken even though at most one is ever set, so a value left behind
-		 * by an abandoned submission cannot surface on top of the next one's answer.
+		 * GET /try — the empty box, plus the receipt for whichever of the last submission's
+		 * two outcomes applies: a watch opened, or the URL already had one. Reaches nothing
+		 * that could cost a probe, so a crawler, a link preview, or a reload can safely land here.
 		 */
 		index(ctx) {
 			let session = ctx.get(Session);
@@ -1117,47 +969,9 @@ export default createController(routes.trial.check, {
 		},
 
 		/**
-		 * POST /try — the check, and the page that reports it.
-		 *
-		 * Two halves, in this order and never the other way round. `guardTrialProbe` decides
-		 * whether this request may cause an outbound fetch at all — target rules, Turnstile,
-		 * the caller's per-minute budget and the site's daily one — and only a grant reaches
-		 * `HttpCheck`, which is the same class a paid monitor's scheduled check runs through.
-		 *
-		 * ## Who pays
-		 *
-		 * An anonymous check is free and stays free: no Polar customer, no meter event, no
-		 * data point, and the guard's two budgets are what bound what it costs *us*.
-		 *
-		 * A check asked for by a signed-in viewer whose team holds a subscription is the same
-		 * work the ad-hoc ping endpoint sells, so it is recorded and billed the same way,
-		 * through {@link recordAdhocPing} and `apportionCostByTeam`. Because it is paid for,
-		 * it also spends neither free budget and skips the challenge — see `trial-guard.ts` on
-		 * why those three and not the SSRF controls.
-		 *
-		 * A signed-in viewer whose team's subscription is *known* to be inactive gets the free
-		 * anonymous treatment for the check itself, budgets and challenge included: there is
-		 * nobody to bill, and this page's whole purpose is to be usable by somebody who has
-		 * not paid yet. `stateFor` rather than `isActive` is what makes that hinge on a known
-		 * "inactive" instead of on a lookup that merely came back empty — a transient failure
-		 * must not quietly move a paying customer onto the free budget.
-		 *
-		 * What no signed-in viewer gets is the email capture; see {@link TrialMonitorOffer}.
-		 *
-		 * ## Redirects
-		 *
-		 * `trial-guard.ts` validates the addresses the target's hostname resolves to and
-		 * states plainly that redirects are the one thing it cannot cover: a public URL
-		 * answering `302 Location: http://169.254.169.254/` sends whoever follows it straight
-		 * at cloud instance metadata, long after the guard has finished deciding. So this
-		 * probe passes `followRedirects: false`, which is the whole reason that option exists
-		 * — every other caller of `HttpCheck` probes a URL its own team configured, where a
-		 * redirect leads somewhere that team chose. A 3xx therefore comes back as a 3xx and is
-		 * classified as one, which is also the honest thing to show a visitor: their URL
-		 * answered, and it answered with a redirect.
-		 *
-		 * Nothing this handler could do instead would work. Re-checking the final URL
-		 * afterwards is too late, because the fetch that mattered has already gone out.
+		 * POST /try — runs `guardTrialProbe` before any outbound fetch, then `HttpCheck` in
+		 * `followRedirects: false` mode, since a redirect can only be safely evaluated by
+		 * the caller that requested it and never automatically followed past the guard.
 		 */
 		async action(ctx) {
 			let session = ctx.get(Session);
@@ -1206,10 +1020,9 @@ export default createController(routes.trial.check, {
 			let url = grant.data.url.toString();
 
 			/**
-			 * Recorded here rather than before the guard, so a blocked target, a failed challenge
-			 * or an exhausted budget is a refusal and not a started check — the pair of counts is
-			 * meant to measure probes that ran against probes that answered, and folding refusals
-			 * into the first would make every guard tightening look like a drop in completion.
+			 * Recorded here rather than before the guard, so a refusal — blocked target, failed
+			 * challenge, or exhausted budget — never counts as a started check: the two counts
+			 * measure probes that ran against probes that answered.
 			 */
 			trackUrlCheckStarted(ctx.logger, {
 				hostname: hostnameOf(url),
@@ -1217,10 +1030,9 @@ export default createController(routes.trial.check, {
 				signedIn: account !== null,
 			});
 			/**
-			 * The options come from `trialProbeOptions` rather than from here, because the hourly
-			 * sweep builds its checks the same way: the number this page shows and the numbers a
-			 * digest reports a week later are presented as one measurement, and they stop being
-			 * one the moment the two callers drift on a timeout or an expected status.
+			 * Options come from `trialProbeOptions`, the same builder the hourly sweep uses, so
+			 * the number this page shows and the number a digest reports later are one
+			 * measurement instead of two that can drift on a timeout or an expected status.
 			 */
 			let check = new HttpCheck(trialProbeOptions(url));
 
@@ -1229,10 +1041,9 @@ export default createController(routes.trial.check, {
 				outcome = await check.probe();
 			} catch (error) {
 				/**
-				 * Only an unreachable Durable Object gets here — a target that refuses, fails DNS
-				 * or times out comes back as an outcome, not as a throw. So this is our fault and
-				 * is reported as ours; telling the visitor their site is down because our prober
-				 * was unavailable would be the page lying about the one thing it exists to say.
+				 * Only an unreachable Durable Object reaches this catch — a target that refuses,
+				 * fails DNS, or times out comes back as an outcome. This fault is ours, so it is
+				 * reported as ours rather than telling the visitor their site is down.
 				 */
 				logger.error("trial.probe_unavailable", {
 					message: error instanceof Error ? error.message : String(error),
@@ -1273,12 +1084,8 @@ export default createController(routes.trial.check, {
 
 			/**
 			 * Stored even though this response already renders it: the email form under the
-			 * result is a second request, and the watch it opens has to be for a URL we resolved
-			 * and checked ourselves rather than one posted back up from the browser.
-			 *
-			 * A signed-in viewer never sees that form, so there is nothing for them to claim
-			 * and nothing to store — the probe would sit in the session until it was overwritten
-			 * or the session expired, claimable only by a request that cannot reach it.
+			 * result is a second request, and the watch it opens must target the URL this
+			 * request resolved and checked, not one posted back up from the browser.
 			 */
 			if (account === null) session?.set(TRIAL_PROBE, probe);
 

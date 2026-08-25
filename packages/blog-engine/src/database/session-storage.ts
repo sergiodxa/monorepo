@@ -1,7 +1,7 @@
 /**
  * SQL-backed {@link SessionStorage} implementation ({@link SqlSessionStorage}) so the
- * engine's only hard dependency stays a single database — no KV store needed. Handles
- * server-side expiry and defensive JSON parsing of the stored payload.
+ * engine's only hard dependency stays a single database. Handles server-side
+ * expiry and defensive JSON parsing of the stored payload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,8 +20,8 @@ type Data = Record<string, unknown>;
 
 /**
  * A {@link SessionStorage} backed by the engine's own `sessions` table, so the
- * engine's only hard dependency stays a single SQL database (no KV needed). Hosts
- * may inject a different storage via `config.session.storage`.
+ * engine's only hard dependency stays a single SQL database. Hosts may inject a
+ * different storage via `config.session.storage`.
  */
 export class SqlSessionStorage<
 	valueData extends Data = Data,
@@ -52,8 +52,6 @@ export class SqlSessionStorage<
 		let row = await this.#db.findOne(sessions, { where: { id: cookie } });
 		if (!row) return createSession<valueData, flashData>(cookie);
 
-		// Enforce server-side expiry: a presented id at/after its stored expiry (or with
-		// an unparseable expiry) is invalid — delete the row and start a fresh session.
 		let expiresAt = Date.parse(row.expires_at);
 		if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
 			await this.remove(cookie);

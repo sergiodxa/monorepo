@@ -42,10 +42,9 @@ namespace AdminLayout {
 }
 
 /**
- * One admin navigation link, marked current through `aria-current` when its section is
- * the one being rendered. The pill background is the only thing added on top of the
- * component's own treatment, because a toolbar tab needs a hit area a bare text link
- * does not.
+ * One admin navigation link, marked current through `aria-current` when its
+ * section is the one being rendered. The filled pill and brand foreground keep
+ * the current tab legible against the toolbar's tinted panel in a dark scheme.
  */
 function SectionLink(
 	handle: Handle<{ href: string; label: string; current: boolean }>,
@@ -62,10 +61,6 @@ function SectionLink(
 					p(1.5, 3),
 					rounded("md"),
 					text("sm"),
-					// The library's own `aria-current` treatment is a foreground change alone,
-					// which over the toolbar's tinted panel in a dark scheme reads as muted
-					// rather than as selected. The filled pill plus the brand foreground is what
-					// makes the current tab read as current in both schemes.
 					when('&[aria-current="page"]', [bg("brand.tint"), fg("brand.emphasis")]),
 				]}
 			>
@@ -75,7 +70,11 @@ function SectionLink(
 	};
 }
 
-/** Wraps an admin page in the document shell, the section toolbar and the page header. */
+/**
+ * Wraps an admin page in the document shell, the section toolbar and the page
+ * header. Breadcrumb items skip `aria-current` since the heading below is
+ * already current, and the heading's own type styles win by stylesheet order.
+ */
 export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 	return () => {
 		let { chrome, actions, children } = handle.props;
@@ -129,7 +128,6 @@ export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 						</Form>
 					</Toolbar>
 
-					{/* Sticky so the trail and heading stay readable while a long table scrolls. */}
 					<header
 						mix={[
 							sticky(),
@@ -148,9 +146,6 @@ export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 							{breadcrumbs.length > 0 && (
 								<Breadcrumbs aria-label={chrome.breadcrumbsLabel}>
 									<Breadcrumbs.List>
-										{/* No segment carries `aria-current`: the trail holds the page's
-										ancestors only, and the heading beneath it is the current page. A
-										segment for the page itself would print its name twice. */}
 										{breadcrumbs.map((crumb) => (
 											<Breadcrumbs.Item key={crumb.label}>
 												<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
@@ -160,9 +155,6 @@ export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 								</Breadcrumbs>
 							)}
 
-							{/* The heading keeps the component's own size and weight: overriding a
-							component's type mixin through `mix` resolves by stylesheet order, not
-							by which array came last. */}
 							<Heading level={1} mix={[m(0)]}>
 								{chrome.heading}
 							</Heading>

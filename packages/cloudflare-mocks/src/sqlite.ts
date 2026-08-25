@@ -15,8 +15,8 @@ export interface SqliteStatement {
 	/**
 	 * Columns the statement returns, empty for a statement that returns none.
 	 *
-	 * The mocks branch on this to decide between reading rows and running for effect, so a
-	 * statement that yields no columns has to report an empty list rather than throw.
+	 * The mocks branch on this to decide between reading rows and running for
+	 * effect, so a statement with no columns reports an empty list.
 	 */
 	readonly columnNames: string[];
 
@@ -61,18 +61,16 @@ export interface SqliteDatabase {
 	/**
 	 * Releases the database and everything prepared against it.
 	 *
-	 * Tests that open one database per case call this so an in-memory database is not kept
-	 * alive by the statement cache for the rest of the run.
+	 * Tests that open one database per case call this so each in-memory
+	 * database is freed once that case ends.
 	 */
 	close(): void;
 }
 
 /**
- * Normalizes bindings passed as a single array into a positional list.
- *
- * `bun:sqlite` treats `run([a, b])` as two positional bindings; `node:sqlite` reads the array
- * as a named-parameter object and fails with `Unknown named parameter '0'`. Callers in this
- * repo use both spellings, so both implementations flatten here and behave the same.
+ * Normalizes bindings passed as a single array into a positional list, since
+ * `bun:sqlite` accepts `run([a, b])` as positional while `node:sqlite` reads it
+ * as named parameters; both flatten it here so callers can use either spelling.
  * @param values Bindings as passed by the caller.
  * @returns The bindings as a positional list.
  */

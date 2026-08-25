@@ -1,11 +1,9 @@
 /**
- * Normalizes persisted world state into the runtime entity-component shape used by the engine. This module
- * defines the accepted legacy payload contract and provides the migration entry points that turn older save
- * data into the current component store layout.
+ * Normalizes persisted world state into the runtime entity-component shape
+ * used by the engine, and defines the accepted legacy payload contract.
  *
- * It exists to keep world loading tolerant while persistence formats evolve. By concentrating upgrade logic in
- * one place, the rest of the engine can rely on a stable world structure without carrying compatibility rules
- * throughout unrelated systems.
+ * Keeps world loading tolerant while persistence formats evolve by
+ * concentrating upgrade logic in one place.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,49 +31,32 @@ import { ensureEntityRegistered } from "./entity";
 
 /** Legacy bootstrap shape accepted while world persistence is being migrated. */
 export interface LegacyWorld {
-	/** Every known entity id in the bootstrap payload. */
 	entities: string[];
-	/** Player entity currently controlled by the save. */
 	playerId: string;
-	/** Profile components keyed by entity id. */
 	playerProfile: Partial<Record<string, PlayerProfileComponent>>;
-	/** Party components keyed by entity id. */
 	party: Partial<Record<string, PartyComponent>>;
-	/** Inventory components keyed by entity id. */
 	inventory: Partial<Record<string, InventoryComponent>>;
-	/** Money components keyed by entity id. */
 	money?: Partial<Record<string, MoneyComponent>>;
-	/** Bestiary components keyed by entity id. */
 	bestiary: Partial<Record<string, BestiaryComponent>>;
-	/** Storage components keyed by entity id. */
 	storageBoxes: Partial<Record<string, StorageBoxesComponent>>;
-	/** Story-flag components keyed by entity id (absent on saves that predate flags). */
+	/** Story-flag components keyed by entity id, present only on saves written after flags shipped. */
 	flags?: Partial<Record<string, FlagsComponent>>;
-	/** Legacy aggregate creature blobs keyed by entity id. */
 	creature?: Partial<Record<string, LegacyCreatureComponent>>;
-	/** Split creature identity components keyed by entity id. */
 	creatureIdentity?: World["creatureIdentity"];
-	/** Split creature progress components keyed by entity id. */
 	creatureProgress?: World["creatureProgress"];
-	/** Split creature moves components keyed by entity id. */
 	creatureMoves?: World["creatureMoves"];
-	/** Split creature health components keyed by entity id. */
 	creatureHealth?: World["creatureHealth"];
-	/** Split creature status components keyed by entity id. */
 	creatureStatus?: World["creatureStatus"];
-	/** Per-instance creature state components keyed by entity id. */
 	creatureInstance?: World["creatureInstance"];
-	/** Creature ownership components keyed by entity id. */
 	ownership?: World["ownership"];
-	/** Creature placement components keyed by entity id. */
 	creatureLocation?: World["creatureLocation"];
 }
 
 /**
  * Upgrades bootstrap or save data into the current ECS world shape.
  *
- * Migration keeps engine boot permissive while the runtime data model evolves. Older aggregate creature
- * blobs are split into explicit component stores so the rest of the engine can assume the final shape.
+ * Backfills flags and creature-instance stores for saves predating them, and
+ * splits legacy aggregate creature blobs into their explicit component stores.
  */
 export function migrateWorld(input: LegacyWorld | World): World {
 	let world: World = {
@@ -87,7 +68,6 @@ export function migrateWorld(input: LegacyWorld | World): World {
 		money: structuredClone(input.money ?? {}),
 		bestiary: structuredClone(input.bestiary),
 		storageBoxes: structuredClone(input.storageBoxes),
-		// Older saves predate the flags store; default to an empty flag set.
 		flags: structuredClone(input.flags ?? {}),
 		creatureIdentity: structuredClone(input.creatureIdentity ?? {}),
 		creatureProgress: structuredClone(input.creatureProgress ?? {}),
@@ -124,7 +104,6 @@ export function migrateWorld(input: LegacyWorld | World): World {
 
 	for (let entityId of Object.keys(world.creatureIdentity)) {
 		ensureEntityRegistered(world.entities, entityId);
-		// Backfill per-instance state for split-format saves written before the store existed.
 		if (!world.creatureInstance[entityId]) {
 			world.creatureInstance[entityId] = createCreatureInstance();
 		}

@@ -1,11 +1,9 @@
 /**
  * Pure derivation of a shop's buy and sell listings.
  *
- * The shop scene shows two lists: everything the merchant will sell (content
- * items with a finite buy price) and everything the player can offload (their
- * inventory entries whose item has a positive sell price). Both derivations are
- * pure functions of content and inventory so the "which items are buyable /
- * sellable" rules can be unit-tested without a canvas or a live engine.
+ * The shop sells items with a finite buy price and buys back stock with a
+ * positive sell price. Both derivations are pure functions of content and
+ * inventory, so the rules are unit-testable without a live engine.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,11 +35,9 @@ interface InventoryEntry {
 }
 
 /**
- * Returns the items a shop will sell, sorted by id for a stable listing.
- *
- * Only items with a finite, positive buy price qualify — a price of `Infinity`
- * (the priceless capture ball) or a missing `price.buy` marks an item as not
- * for sale.
+ * Returns the items a shop will sell, sorted by id. Only a finite, positive
+ * `price.buy` qualifies; `Infinity` (the priceless capture ball) or a missing
+ * price marks an item as not for sale.
  */
 export function buyableItems(items: Record<string, Item>): BuyEntry[] {
 	let entries: BuyEntry[] = [];
@@ -54,11 +50,9 @@ export function buyableItems(items: Record<string, Item>): BuyEntry[] {
 }
 
 /**
- * Returns the player's stock the shop will buy back, sorted by id.
- *
- * An inventory entry is sellable only when the player holds at least one and the
- * item's content record carries a positive sell price; unknown items and
- * zero-value items are skipped.
+ * Returns the player's stock the shop buys back, sorted by id. An entry
+ * qualifies only when the player holds at least one and the item carries a
+ * positive sell price; unknown and zero-value items are skipped.
  */
 export function sellableItems(
 	inventory: readonly InventoryEntry[],

@@ -1,3 +1,10 @@
+/**
+ * Tests for the Subject model.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
@@ -44,7 +51,6 @@ describe("Subject", () => {
 				username: "user1",
 			});
 
-			// Should throw on duplicate email
 			await expect(
 				Subject.register(db, {
 					email: "test@example.com",

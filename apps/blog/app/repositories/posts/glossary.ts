@@ -1,9 +1,7 @@
 /**
- * Repository for glossary posts, scoping the shared `Post` model to the
- * `glossary` post type. It defines the glossary metadata shape, a codec that maps
- * typed metadata to and from `post_meta` rows (resolving the latest value per
- * key), and static CRUD/count helpers. Exists to give callers type-safe glossary
- * persistence without touching the generic post layer directly.
+ * Glossary posts: the shared `Post` model scoped to the `glossary` type, with a
+ * codec mapping typed metadata to and from `post_meta` rows and resolving the
+ * latest value per key.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,15 +12,12 @@ import type { Database } from "remix/data-table";
 import { Post } from "~/app/repositories/post";
 
 /**
- * Type contracts for glossary post metadata and write payloads.
- *
- * Keeps repository call sites aligned with the required glossary fields.
+ * Type contracts keeping call sites aligned with the required glossary fields.
  */
 export namespace GlossaryPost {
 	/**
-	 * Normalized metadata shape returned by glossary post reads.
-	 *
-	 * `slug`, `term`, and `definition` are always materialized by the codec.
+	 * Metadata persisted for glossary posts. The codec always materializes `slug`,
+	 * `term`, and `definition`.
 	 */
 	export interface Meta {
 		slug: string;
@@ -32,23 +27,20 @@ export namespace GlossaryPost {
 	}
 
 	/**
-	 * Input contract for creating a glossary post with required metadata.
+	 * Base post fields plus the required glossary metadata, accepted by `create`.
 	 */
 	export interface CreateInput extends Post.TypedCreateInput<Meta> {}
 
 	/**
-	 * Input contract for partial glossary post updates.
-	 *
-	 * Metadata fields are optional so callers can patch only changed keys.
+	 * Update payload whose metadata fields are optional, so callers patch only the
+	 * changed keys.
 	 */
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 }
 
 /**
- * Resolves the most recent value for a given metadata key.
- *
- * Rows are sorted by key, then newest `updated_at`, then newest `created_at`
- * so repeated keys deterministically pick the latest write.
+ * Resolves repeated rows for a metadata key to the latest write, ordering by
+ * `updated_at` then `created_at`.
  *
  * @param rows Post-meta rows attached to a post.
  * @param key Metadata key to extract.
@@ -76,10 +68,8 @@ function glossaryMetaValue(
 }
 
 /**
- * Bidirectional mapper between typed glossary metadata and `post_meta` rows.
- *
- * Serialization omits `undefined` properties; deserialization provides empty
- * strings for required fields to keep `GlossaryPost.Meta` total.
+ * Serialization omits `undefined` properties; deserialization defaults required
+ * fields to empty strings so `GlossaryPost.Meta` stays total.
  */
 let glossaryMetaCodec: Post.MetaCodec<GlossaryPost.Meta> = {
 	serialize(meta) {
@@ -102,16 +92,12 @@ let glossaryMetaCodec: Post.MetaCodec<GlossaryPost.Meta> = {
 };
 
 /**
- * Repository facade for glossary posts backed by the shared `Post` model.
- *
- * It scopes every operation to the `glossary` post type and applies the
- * glossary metadata codec for type-safe reads and writes.
+ * Posts of type `glossary`: every operation is scoped to that post type and
+ * runs through the glossary metadata codec.
  */
 export class GlossaryPost {
 	/**
-	 * Post-type discriminator persisted in `posts.type`.
-	 *
-	 * Used to narrow all delegated `Post` queries to glossary rows.
+	 * Discriminator that must match the persisted `posts.type` value.
 	 */
 	static postType = "glossary" as const;
 

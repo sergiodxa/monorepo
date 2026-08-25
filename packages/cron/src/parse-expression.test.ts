@@ -150,7 +150,6 @@ describe("parseExpression", () => {
 	});
 
 	test("accepts an impossible day of month when a weekday can still match", () => {
-		// The either-or rule means the weekday alone can put this on the calendar.
 		expect(fields("0 0 30 2 1")).toMatchObject({ daysOfMonth: [30], daysOfWeek: [1] });
 	});
 

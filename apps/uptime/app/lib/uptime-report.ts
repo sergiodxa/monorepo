@@ -1,16 +1,9 @@
 /**
- * The two pieces of arithmetic every uptime report shares, whichever window it covers and
- * whoever reads it: how a set of checks collapses into the one status a summary can print,
- * and how a success ratio becomes the percentage next to it.
- *
- * They live together because they are the same decision seen twice. A bar segment, a
- * monitor's day and a monitor's week are all "many checks, one verdict", and the verdict is
- * always the worst of them — a summary that averaged an outage away would hide the only
- * thing in it a reader could act on. Keeping the rule in one place is what stops two reports
- * of the same data disagreeing.
- *
- * Deliberately not in `~/app/emails/`: nothing here renders, and its callers are assembling
- * data before an email class ever exists.
+ * The arithmetic every uptime report shares: folding many checks into one
+ * status a summary prints, and turning a success ratio into the percentage
+ * next to it. The verdict is always the worst of the checks, since averaging
+ * an outage away would hide the one thing a reader could act on, and keeping
+ * the rule here stops two reports of the same data from disagreeing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,11 +16,9 @@ import type { MonitorStatus } from "~/database/schema";
 const SEVERITY: Record<MonitorStatus, number> = { up: 0, degraded: 1, down: 2 };
 
 /**
- * The worse of two statuses, where `null` means no check covered the period.
- *
- * No-data loses to anything measured rather than winning as the least known state: a period
- * with one check that passed was up, and reporting it as unknown because most of it was
- * unobserved would understate a record the reader can verify.
+ * The worse of two statuses, where `null` means no check covered the
+ * period. Any measured status outweighs no data: a period with even one
+ * passing check counts as up, anchoring the report to what a reader can verify.
  *
  * @param current - What the period is reported as so far.
  * @param next - Another check's status to fold in.

@@ -1,13 +1,7 @@
 /**
  * A native checkbox styled and wired as an on/off switch: a pill-shaped
- * track whose thumb rests at the inline-start edge unchecked and slides to
- * the inline-end edge once checked, tinting the track with the semantic
- * primary color along the way. Passing `children` wraps the track in a
- * native `<label>` alongside that visible label text, the same
- * self-labeling composition {@link Checkbox} and {@link RadioGroup.Radio}
- * already render; leave `children` unset to render the bare track alone,
- * for pairing with an external {@link Label} or an explicit
- * `aria-label`/`aria-labelledby` instead.
+ * track whose thumb slides from the inline-start edge to the inline-end
+ * edge when checked, tinting with the semantic primary color along the way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,11 +43,8 @@ import { durations, easings } from "../animations/tokens";
 
 /**
  * Applied through {@link attrs} so the host always carries the platform's
- * boolean `switch` content attribute. Where a browser recognizes it, the
- * checkbox picks up native switch rendering and its implicit switch
- * accessibility semantics for free; where it doesn't, the attribute sits
- * inert and the host's own CSS plus its explicit `role="switch"` already
- * carry the same appearance and semantics as a baseline.
+ * boolean `switch` attribute, letting recognizing browsers render native
+ * switch semantics while others fall back to the host's own CSS and `role="switch"`.
  */
 const DEFAULT_SWITCH_ATTRIBUTE = true;
 
@@ -62,61 +53,24 @@ const DEFAULT_SWITCH_ATTRIBUTE = true;
  */
 export namespace Switch {
 	/**
-	 * Every native `<input>` attribute except `type` and `role`, which the
-	 * host fixes to `"checkbox"` and `"switch"` and never exposes for
-	 * override, plus the `mix` passthrough. Use `checked`/`defaultChecked`
-	 * for the on/off state, `disabled` to disable it, `name`/`value` for form
-	 * submission, and `aria-label`/`aria-labelledby` for its accessible name
-	 * whenever it isn't nested inside a {@link Label} or given `children`.
-	 *
-	 * `aria-checked` is also withheld, and for a different reason: the host
-	 * deliberately renders none, so nothing may pin one. See the render
-	 * function's own note on why an authored value is the wrong way to state
-	 * a switch's state.
+	 * Every native `<input>` attribute except `type`, `role`, and
+	 * `aria-checked` — the host fixes the first two and withholds the third
+	 * so the control's own live checkedness stays the switch's only state.
 	 */
 	export interface Props extends Omit<TagProps<"input">, "type" | "role" | "aria-checked"> {
 		/**
-		 * Visible label text rendered after the track, inside the same
-		 * native `<label>` wrapping both — clicking or tapping the track or
-		 * the label text alike toggles the switch natively, with no
-		 * separate `htmlFor`/`id` pair required. Omit to render the bare
-		 * track alone, for pairing with an external {@link Label} or an
-		 * explicit `aria-label`/`aria-labelledby` instead.
+		 * Visible label text rendered after the track, inside the same native
+		 * `<label>` wrapping both, so clicking either half toggles the switch
+		 * with no separate `htmlFor`/`id` pairing required.
 		 */
 		children?: RemixNode;
 	}
 }
 
 /**
- * Renders a single `<input type="checkbox" role="switch">` whose own CSS
- * draws the pill track and circular thumb directly on the control, entirely
- * through native pseudo-classes — no tracked state, no `data-*` attributes.
- * Unchecked, the track reads in the subtle neutral border color and the
- * thumb sits inset from the track's inline-start edge; checked, the track
- * fills with the semantic primary color and the thumb slides to the
- * opposite edge. Pressing shrinks the thumb slightly for tactile feedback,
- * a focus-visible ring reads in the primary color, and the disabled state
- * dims the whole control and swaps the cursor to "not-allowed".
- *
- * The host also carries the platform's `switch` content attribute
- * unconditionally, so browsers that implement it render and announce
- * native switch behavior directly, while the `role="switch"` fallback keeps
- * the same accessibility semantics everywhere else.
- *
- * A hydrated island that needs the switch to carry an explicit
- * `aria-checked` anyway composes the `ariaChecked()` mixin through `mix`,
- * which renders the token from this render's own state and then keeps
- * rewriting it from the live control.
- *
- * Passing `children` wraps the track in a native `<label>` laid out as a
- * row with a small gap, the label text following the track and toggling it
- * when clicked or tapped the same way the track itself does, with the
- * pointer cursor swapping to "not-allowed" once the track is disabled — the
- * same self-labeling composition {@link Checkbox} and
- * {@link RadioGroup.Radio} already render for their own controls. Leaving
- * `children` unset renders the bare track with no wrapping `<label>` at
- * all, unchanged from before, for a consumer pairing it with an external
- * {@link Label} or an explicit `aria-label`/`aria-labelledby` instead.
+ * Renders a single `<input type="checkbox" role="switch">`. It carries no
+ * `aria-checked` because an authored value would go stale the instant the
+ * switch is flipped; the live control's own checkedness is what persists.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the switch's markup.
@@ -129,25 +83,13 @@ export namespace Switch {
  * </Label>
  * @example
  * <Switch aria-label={t("settings.darkMode")} checked={isDark} disabled={isLocked} />
+ * @example
+ * <Switch aria-label={t("settings.notifications")} mix={[ariaChecked()]} />
  */
 export function Switch(handle: Handle<Switch.Props>) {
 	return () => {
 		let { mix, children, ...rest } = handle.props;
 
-		/*
-		 * No `aria-checked`, on purpose. It is the checkedness of the native
-		 * control that assistive technology reports for `role="switch"` — the
-		 * same live `checked` state this component's own `&:checked` rules
-		 * draw the thumb from — and that state follows the user's clicks.
-		 * An authored `aria-checked` could only hold the value this render
-		 * produced, so it would take precedence over the live state and go
-		 * wrong the moment somebody flipped the switch, which is the one
-		 * thing a switch exists to let them do. Withholding it keeps the
-		 * announced state and the drawn state the same fact. A hydrated
-		 * island that needs the attribute anyway composes the
-		 * `ariaChecked()` mixin through `mix`, which keeps rewriting the
-		 * token from the live control instead of pinning this render's.
-		 */
 		let track = (
 			<input
 				{...rest}

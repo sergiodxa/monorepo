@@ -17,10 +17,8 @@ import { when } from "../state/when";
 
 /**
  * Overrides the browser's autofill background and text color under
- * `&:-webkit-autofill`, so an autofilled input keeps looking like every
- * other input instead of getting the browser's own highlight color.
- * Defaults to the system background/foreground tokens, matching a
- * plain input's own default appearance.
+ * `&:-webkit-autofill`, so an autofilled input keeps the appearance every
+ * other input has. Defaults to the system background/foreground tokens.
  *
  * @example u.autofill()
  * @example css({ "&:-webkit-autofill": { boxShadow: "0 0 0 1000px var(--ui-bg, Canvas) inset !important", WebkitBoxShadow: "0 0 0 1000px var(--ui-bg, Canvas) inset !important", WebkitTextFillColor: "var(--ui-fg, CanvasText) !important" } })

@@ -57,9 +57,8 @@ export function encode(bytes: Uint8Array): string {
 /**
  * Decodes base32 text, ignoring case, padding, and separating whitespace.
  *
- * Users retype secrets by hand and apps present them in spaced groups, so the
- * decoder normalizes those forms instead of rejecting them; any other character
- * is a failure so a typo can never silently decode to different bytes.
+ * Users retype secrets by hand and apps present them in spaced groups; any other
+ * character fails, so a typo never silently decodes differently.
  *
  * @param text Base32 string to decode.
  * @returns Decoded bytes, or `InvalidEncodingError` when a character is invalid.

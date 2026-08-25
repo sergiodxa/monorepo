@@ -5,23 +5,9 @@
 import { backdropFilterFunction } from "../internal/backdrop-filter";
 
 /**
- * Applies a `backdrop-filter: brightness(...)` behind the element, scaling the
- * lightness of whatever shows through — darkening a busy backdrop so overlaid
- * text stays readable, or lifting a dark one. Values below `1` darken, above
- * `1` brighten.
- *
- * Two things to keep in mind, both shared by every backdrop utility here:
- *
- * - It has no visible effect unless the element's own background is at least
- *   partly transparent. With an opaque background there is nothing to see
- *   through, so the filtered backdrop is painted over.
- * - It is a bare primitive with no accessibility gating: it applies even when
- *   the user has asked for reduced transparency. A call site that cares should
- *   wrap it in `u.transparencySafe()` and supply a solid fallback.
- *
- * Composes through the shared composite `backdropFilter` declaration (mirrored
- * onto `WebkitBackdropFilter`), so it combines with every other backdrop
- * utility instead of overwriting them.
+ * Scales the backdrop's lightness — below `1` darkens, above `1` brightens —
+ * keeping overlaid text legible. Needs a partly transparent host background;
+ * combines with sibling backdrop utilities; `u.transparencySafe()` gates it.
  *
  * @example u.backdropBrightness()
  * @example css({ "--ui-backdrop-brightness": "1.1", backdropFilter: "... brightness(var(--ui-backdrop-brightness, 1)) ...", WebkitBackdropFilter: "... brightness(var(--ui-backdrop-brightness, 1)) ..." })

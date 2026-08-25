@@ -28,9 +28,8 @@ let permissionsKey = createContextKey<Set<Permission>>();
 
 /**
  * Auth middleware: resolves the signed-in user from the session via
- * `createSessionAuthScheme`. The session id is read from the session (populated by
- * the session middleware) and verified by loading the `User`; the result is exposed
- * as `ctx.get(Auth)` / `ctx.auth`. Anonymous requests skip the DB read.
+ * `createSessionAuthScheme`, verifying the session id by loading the `User` and
+ * exposing it as `ctx.get(Auth)` / `ctx.auth`; anonymous requests skip the DB read.
  */
 export const authMiddleware = auth({
 	schemes: [

@@ -1,14 +1,9 @@
 /**
- * Verifies spawning live entities from a map's authored events and picking the
- * active page under the current flags.
+ * Verifies event spawning and active-page selection under authored flags.
  *
- * Spawning is the pure enter-a-map step: every event becomes an entity at its
- * authored tile with its active page pre-selected. Page selection follows the
- * RPG-Maker-XP model — the *last* page whose `conditions` (global switches and an
- * optional self-switch) currently hold is the active one, and an event with no
- * qualifying page spawns inert (`page` null) so a later flag change can flip it on
- * without a respawn. `refreshActivePages` re-runs that selection in place, and
- * `eventAt` finds the entity occupying a tile.
+ * The last page whose `conditions` (switches or a self-switch) currently
+ * hold is active; an event with no qualifying page spawns inert so a later
+ * flag change can activate it without a respawn.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,7 +59,6 @@ test("selectActivePage picks the last page whose switch conditions all hold", ()
 		],
 	});
 
-	// The gated page qualifies only once its switch is on; then it overrides the base.
 	expect(selectActivePage(MAP_ID, e, () => false)).toBe(e.pages[0]!);
 	expect(selectActivePage(MAP_ID, e, (flag) => flag === "got-badge")).toBe(e.pages[1]!);
 });
@@ -75,7 +69,6 @@ test("selectActivePage requires every switch in a page's list to hold", () => {
 		pages: [page(), page({ conditions: { switches: ["a", "b"] } })],
 	});
 
-	// Only one of the two switches on: the gated page fails, the base page wins.
 	expect(selectActivePage(MAP_ID, e, (flag) => flag === "a")).toBe(e.pages[0]!);
 	expect(selectActivePage(MAP_ID, e, (flag) => flag === "a" || flag === "b")).toBe(e.pages[1]!);
 });
@@ -113,7 +106,6 @@ test("spawnEvents pre-selects each entity's active page from the current flags",
 		}),
 	];
 
-	// Flag off: the base page is active. Flag on: the gated page wins.
 	expect(spawnEvents(MAP_ID, events, () => false)[0]!.page).toBe(events[0]!.pages[0]!);
 	expect(spawnEvents(MAP_ID, events, (flag) => flag === "on")[0]!.page).toBe(events[0]!.pages[1]!);
 });

@@ -61,13 +61,9 @@ export interface QueueConsumeOptions {
 	maxBatchSize?: number;
 
 	/**
-	 * Deferred work to drain after the handler returns, before dispositions are applied.
-	 *
-	 * A handler that hands its real work to `waitUntil` has not decided anything by the time
-	 * it returns, so without this the pass would ack on the handler's behalf and hide
-	 * whether it ever acked at all. Pass the execution context the handler defers into —
-	 * or, when the Worker calls the module-level `waitUntil`, whatever collects those
-	 * promises.
+	 * Deferred work to drain after the handler returns, before dispositions
+	 * are applied — a handler's real `ack`/`retry` calls inside `waitUntil`
+	 * land only once this settles, so the pass must wait for it to read them.
 	 */
 	context?: DeferredWork;
 }
@@ -95,23 +91,16 @@ export interface QueueMock<Body = unknown> extends Queue<Body> {
 	readonly deadLetter: QueueMessageRecord<Body>[];
 
 	/**
-	 * Discards every recorded message, pending or delivered, as if the queue were new.
-	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets a queue with no history without re-creating the `env` the
-	 * code under test already captured.
+	 * Discards every recorded message, pending or delivered, as if the queue
+	 * were new, so `beforeEach` resets a module-scoped binding without
+	 * recreating the captured `env`.
 	 */
 	reset(): void;
 
 	/**
-	 * Delivers one batch to a consumer handler and applies its `ack`/`retry` decisions.
-	 *
-	 * Messages the handler neither acks nor retries are acked, and every unacked message
-	 * is retried when the handler throws — the same rules the platform applies. A handler
-	 * error is rethrown after the retries are applied, so a test sees the failure.
-	 *
-	 * A handler that acks from inside deferred work needs `options.context`, without which
-	 * the pass reads dispositions before that work has run.
+	 * Delivers one batch to a consumer handler and applies its `ack`/`retry`
+	 * decisions, defaulting undecided messages to acked and retrying everything
+	 * when the handler throws; a thrown error is rethrown after retries apply.
 	 * @param handler Consumer handler to invoke with the batch.
 	 * @param options Per-pass batch size override, and deferred work to drain.
 	 * @returns What happened to each delivered message.
@@ -123,11 +112,9 @@ export interface QueueMock<Body = unknown> extends Queue<Body> {
 }
 
 /**
- * Creates a recording queue binding.
- *
- * Sends are validated the way the platform validates them (batch size, body size, delay
- * bounds) and then queued in memory, so a producer test asserts on captured messages and
- * a consumer test drives real delivery through {@link QueueMock.consume}.
+ * Creates a recording queue binding. Validates sends the way the platform
+ * does, then queues them in memory, so send and consume behavior are both
+ * testable without a live queue.
  * @param options Queue name, batch size, and retry budget.
  * @returns A `Queue` binding that records sends and drives consumers.
  * @example let queue = createQueue<{ id: string }>(); await queue.send({ id: "1" });
@@ -276,12 +263,9 @@ export function createQueue<Body = unknown>(options?: QueueMockOptions): QueueMo
 
 			try {
 				await handler(batch);
-				// Work the handler deferred may be what acks, so dispositions are not final
-				// until it has run.
 				await consumeOptions?.context?.settled();
 			} catch (error) {
 				failure = error;
-				// A handler that throws retries everything it did not explicitly ack.
 				for (let record of delivered) {
 					if (!acked.has(record)) retried.add(record);
 				}

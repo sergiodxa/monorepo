@@ -1,12 +1,9 @@
 /**
- * Drives the published client library against this app's router, so the response payload
- * is parsed by the software that actually depends on it rather than by an imitation of
- * it. The library is pinned to the production origin and reads no configuration, so its
- * requests are intercepted and handed to the router unchanged.
- *
- * Only the subject lookup runs through the library here. Its token call sends a multipart
- * body, and multipart parsing does not survive the request interception this file needs —
- * that wire format is covered by `subject.test.ts`, which builds the same bytes directly.
+ * Drives the published client library against this app's router, so the response
+ * payload is parsed by the code that actually depends on it. The library is pinned
+ * to the production origin and reads no configuration, so requests are intercepted
+ * and handed to the router unchanged. Only the subject lookup runs through the
+ * library here; `subject.test.ts` covers the token call's multipart body directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,11 +28,11 @@ let fixtures: Fixtures;
 /**
  * Forwards every request aimed at the production origin into this app's router, which is
  * the only way to point the library at the app under test without changing the library.
+ * The request is copied into this realm's `Request` since that's what the router expects.
  */
 let server = setupServer(
 	http.all("https://auth.sergiodxa.com/*", async ({ request }) => {
 		if (!app) return passthrough();
-		// Copied into this realm's `Request`, which is what the router is typed against.
 		return await app.fetch(new Request(request.url, request));
 	}),
 );
@@ -74,8 +71,10 @@ describe("the published client library", () => {
 
 		let subject = await sdk.fetchSubjectById(fixtures.subjectId, token);
 
-		// The library validates the payload itself, so reaching past this line already
-		// proves its shape; the assertions pin the values it carried through.
+		/**
+		 * The library validates the payload itself, so reaching past this line already
+		 * proves its shape; the assertions below just pin the values it carried through.
+		 */
 		if (isFailure(subject)) throw subject.error;
 
 		expect(subject.data.id).toBe(fixtures.subjectId);
@@ -94,7 +93,7 @@ describe("the published client library", () => {
 		let token = await clientCredentialsToken();
 
 		await sdk.fetchSubjectById(fixtures.subjectId, token);
-		// Let the cache write settle, so the second call is answered from it.
+		/** Lets the cache write settle, so the second call is answered from it. */
 		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		let subject = await sdk.fetchSubjectById(fixtures.subjectId, token);

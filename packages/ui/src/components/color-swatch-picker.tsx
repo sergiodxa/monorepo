@@ -1,14 +1,8 @@
 /**
  * A set of mutually exclusive color options built from native `<input
  * type="radio">` controls sharing one grouping name, rendered as a
- * `role="radiogroup"` host wrapping a run of {@link ColorSwatchPicker.Swatch}
- * instances. Each option pairs a visually hidden native input — carrying
- * every focus, keyboard, and form-submission semantic the platform already
- * provides — with a {@link ColorSwatch} indicator reading the input's own
- * `:checked` and `:focus-visible` states through sibling selectors, the same
- * technique a plain radio option uses for its own dot-and-ring indicator.
- * Selecting an option works purely from this markup and its styling, with no
- * script involved at any point.
+ * `role="radiogroup"` host wrapping {@link ColorSwatchPicker.Swatch}
+ * instances styled from each input's own `:checked` state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,10 +48,8 @@ export namespace ColorSwatchPicker {
 	export interface Props extends TagProps<"div"> {
 		/**
 		 * Native grouping name shared by every {@link ColorSwatchPicker.Swatch}
-		 * nested inside, provided through component context. Defaults to the
-		 * group's own {@link Handle.id | stable instance id} when omitted, so
-		 * options always group correctly even when a consumer never sets a
-		 * name.
+		 * nested inside. Defaults to the group's own
+		 * {@link Handle.id | stable instance id} when omitted.
 		 */
 		name?: string;
 	}
@@ -68,18 +60,14 @@ export namespace ColorSwatchPicker {
 	export interface SwatchProps extends Omit<TagProps<"label">, "children" | "aria-label"> {
 		/**
 		 * The color this option submits and previews, already resolved to a
-		 * literal CSS color value (a hex string, `rgb()`/`hsl()`/`oklch()`
-		 * function, or named color) — the same value {@link ColorSwatch} paints
-		 * its indicator with, and the value submitted with the enclosing form
-		 * when this option is selected.
+		 * literal CSS color value — the same value {@link ColorSwatch} paints
+		 * its indicator with and submits with the enclosing form.
 		 */
 		value: string;
 		/**
-		 * Accessible name announced for this option in place of visible text.
-		 * The indicator paints only a color and carries no text alternative of
-		 * its own, so this is what identifies the option to assistive
-		 * technology — a color's name, for instance — and is required since
-		 * there is no visible label to fall back on.
+		 * Accessible name announced for this option in place of visible text —
+		 * a color's name, for instance. Required, since the indicator identifies
+		 * the option to assistive technology through this text alone.
 		 */
 		"aria-label": string;
 		/**
@@ -103,8 +91,7 @@ export namespace ColorSwatchPicker {
 		/**
 		 * Per-part styling for the option's hidden `input` and its
 		 * {@link ColorSwatch} indicator, layered after each part's own built-in
-		 * styling. Use the `mix` prop instead to style the option's outer
-		 * `<label>` host.
+		 * styling. The `mix` prop styles the option's outer `<label>` host.
 		 */
 		parts?: {
 			/** Additional mixin(s) applied to the hidden native `<input type="radio">`. */
@@ -117,12 +104,8 @@ export namespace ColorSwatchPicker {
 
 /**
  * Renders the group host: a `role="radiogroup"` `<div>` laying its
- * {@link ColorSwatchPicker.Swatch} options out in a wrapping row, so a long
- * run of colors flows onto as many rows as the host's width needs rather than
- * overflowing a single line. Every option nested inside reads its shared
- * native `name` from component context, defaulting to the group's own stable
- * identifier so grouping always works correctly even when a consumer never
- * sets `name` explicitly.
+ * {@link ColorSwatchPicker.Swatch} options out in a wrapping row, sharing its
+ * `name` through context so each option defaults to the group's own identifier.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link ColorSwatchPicker.Context}.
  * @returns The render function producing the group's markup.
@@ -154,21 +137,9 @@ export function ColorSwatchPicker(
 }
 
 /**
- * Renders a single option: a native `<label>` pairing a visually hidden
- * `<input type="radio">` with a {@link ColorSwatch} indicator painted from
- * `value`. The hidden input carries every accessibility and form semantic
- * natively — focus, keyboard selection, native validation, form submission —
- * while the indicator reads the input's own `:checked` and `:focus-visible`
- * states through sibling selectors to render its selection ring and focus
- * ring, and the label reads the input's `:disabled` state through `:has()`
- * to dim itself, with no tracked state of its own. The ring pairs a border
- * color change with an actual boundary the ring itself draws, so selection
- * still reads clearly no matter which color the indicator happens to paint.
- *
- * The indicator stays a purely decorative preview — its own accessible name
- * comes from `aria-label` on the input, exactly the pairing
- * {@link ColorSwatch}'s own documentation anticipates — so every option
- * announces its color correctly regardless of what's painted underneath.
+ * Renders a single option: a hidden `<input type="radio">` paired with a
+ * {@link ColorSwatch} indicator, styled through `precededBy()` since a bare
+ * element-first selector here would serialize as a declaration, not a match.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the option's markup.
@@ -228,13 +199,6 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 					size={size}
 					mix={[
 						transition("border-color, box-shadow"),
-						// `precededBy()` rather than a bare `when("input:checked ~ &", …)`:
-						// the style serializer only recognizes a key as a nested selector
-						// when it starts with `&`, `@`, `:`, `[` or `.`, so an element-first
-						// selector is emitted as a *declaration* and the selected state
-						// silently never reaches the browser. `precededBy()` leads with
-						// `:is(...)`, which is recognized, and `:is()` carries its
-						// argument's specificity so matching is unchanged.
 						precededBy("input:checked", border("brand.solid")),
 						precededBy("input:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 						precededBy("input:checked", ringShadow("brand")),

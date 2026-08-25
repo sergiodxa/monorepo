@@ -1,13 +1,9 @@
 /**
- * Unit tests for the `TrialConversion` data-access model: the once-only snapshot written
- * when a lead becomes an account, and the once-only stamp written when that account starts
- * paying.
- *
- * Both of those writes are called repeatedly with the same subject in production — conversion
- * runs on every sign-in, entitlement is re-asserted on every renewal — so what is pinned here
- * is not that they work but that the second call changes nothing. A test that only asserted
- * the first write would pass against a row that silently moves its own conversion date
- * forward every month.
+ * Unit tests for the `TrialConversion` data-access model: the once-only snapshot
+ * written when a lead becomes an account, and the once-only stamp written when that
+ * account starts paying. Both run repeatedly with the same subject in production —
+ * conversion on every sign-in, entitlement on every renewal — so what is pinned here
+ * is that a second call leaves the row exactly as the first one wrote it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,9 +71,9 @@ describe("TrialConversion.recordSignup", () => {
 	});
 
 	/**
-	 * The rule the whole table depends on. Conversion runs on every sign-in, and every column
-	 * here is a measurement taken at the first one — a converted lead keeps receiving digests,
-	 * so a second call carrying a higher email count must not be allowed to rewrite it.
+	 * The rule the whole table depends on. Conversion runs on every sign-in, and every
+	 * column here is a measurement taken at the first one, so the row keeps those values
+	 * even once a converted lead's digests push the email count higher.
 	 */
 	test("a second sign-in changes nothing about the row the first one wrote", async () => {
 		let firstSignUp = Date.now() - 3 * MS_PER_DAY;
@@ -122,9 +118,9 @@ describe("TrialConversion.markPaid", () => {
 	});
 
 	/**
-	 * Entitlement is re-asserted on every renewal and by the daily reconciliation sweep. A
-	 * stamp that moved with them would report a conversion time that grew for as long as the
-	 * customer stayed subscribed.
+	 * Entitlement is re-asserted on every renewal and by the daily reconciliation sweep,
+	 * so the stamp holds the first payment's instant — one that moved with them would
+	 * report a conversion time that grew for as long as the customer stayed subscribed.
 	 */
 	test("a second entitlement event does not move the stamp", async () => {
 		await record();

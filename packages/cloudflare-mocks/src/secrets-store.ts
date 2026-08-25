@@ -1,7 +1,7 @@
 /**
  * `SecretsStoreSecret` binding whose answer is switchable. The platform reads a secret
  * asynchronously and throws when it is missing, so code that reads one has two paths worth
- * testing; this lets a single binding serve both without re-registering `env`.
+ * testing; this lets a single binding serve both while reusing one `env` registration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,8 +19,8 @@ export interface SecretsStoreSecretMock extends SecretsStoreSecret {
 	/**
 	 * Times `get()` has been called.
 	 *
-	 * A secret is expected to be read lazily, at the point of use rather than when the
-	 * binding is wired up, and this is what lets a test assert that.
+	 * A secret is read lazily, at its point of use, and this count is what lets a test
+	 * confirm that.
 	 */
 	readonly reads: number;
 
@@ -39,9 +39,8 @@ export interface SecretsStoreSecretMock extends SecretsStoreSecret {
 	/**
 	 * Restores the value the secret was created with and zeroes the read count.
 	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets back to the starting state without re-creating the `env` the
-	 * code under test already captured.
+	 * A binding installed once at module scope outlives its test, so a `beforeEach` can
+	 * reset it while keeping the `env` already captured.
 	 */
 	reset(): void;
 }
@@ -50,7 +49,7 @@ export interface SecretsStoreSecretMock extends SecretsStoreSecret {
  * Creates a Secrets Store secret binding.
  *
  * The value is read through `get()` exactly as the platform requires, so code that awaits
- * the binding rather than treating it as a string is what passes.
+ * the binding is what passes.
  * @param options Secret name and initial value.
  * @returns A `SecretsStoreSecret` binding whose answer can be switched.
  * @example let token = createSecretsStoreSecret({ value: "polar_at_1" }); await token.get();
@@ -67,7 +66,7 @@ export function createSecretsStoreSecret(
 	let failing = false;
 	let reads = 0;
 
-	/** The error the platform raises for a secret that is not in the store. */
+	/** The error the platform raises for a secret missing from the store. */
 	function notFound(): Error {
 		return new Error(`Secret "${name}" not found`);
 	}

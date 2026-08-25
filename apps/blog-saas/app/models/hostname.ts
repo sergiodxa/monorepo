@@ -53,16 +53,12 @@ export default class Hostname {
 	}
 
 	/**
-	 * Lists hostnames that are not yet fully active, for the polling cron to refresh.
-	 *
-	 * A hostname is "incomplete" while either its validation status or its SSL status is
-	 * not `active` (SSL being `null` also counts as incomplete). Selecting on that — not
-	 * just the initial `pending_validation` — keeps polling a hostname across every
-	 * intermediate Cloudflare status (e.g. `pending`, `pending_issuance`,
-	 * `pending_deployment`) so it is never dropped before it goes live.
+	 * Lists hostnames still progressing toward active, for the polling cron to
+	 * refresh. Any status or SSL status other than `active` (including a null
+	 * SSL) counts as incomplete, keeping every intermediate status polled to live.
 	 *
 	 * @param db The control-plane database.
-	 * @returns The hostname rows that are not both status- and SSL-active.
+	 * @returns The incomplete hostname rows (status or SSL still short of active).
 	 */
 	static findIncomplete(db: Database) {
 		return db.findMany(this.table, {
@@ -126,8 +122,8 @@ export default class Hostname {
 	}
 
 	/**
-	 * Deletes a hostname record. Used to roll back after a failed registration so no
-	 * orphaned Cloudflare hostname is left behind.
+	 * Deletes a hostname record. Rolls back a failed registration, keeping
+	 * Cloudflare free of orphaned hostnames.
 	 *
 	 * @param db The control-plane database.
 	 * @param id The hostname id.

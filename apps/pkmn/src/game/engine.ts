@@ -1,7 +1,7 @@
 /**
  * Runtime boundary for one game session, wiring authored data, mutable world state, command dispatch, and view selection into a single module.
  *
- * It defines the engine contract used to apply gameplay intents, manage transient battle runtime state, and produce persistent snapshots without exposing internal storage details to callers.
+ * It defines the engine contract used to apply gameplay intents, manage transient battle runtime state, and produce persistent snapshots that expose only derived state to callers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -103,8 +103,8 @@ export class Engine {
 	/**
 	 * Applies one engine command and returns the UI-facing events produced by that transition.
 	 *
-	 * The engine is the only mutable runtime boundary on purpose: callers submit intents here, then read the
-	 * resulting state back through selectors instead of holding references to internal stores or sessions.
+	 * The engine is the only mutable runtime boundary on purpose: callers submit
+	 * intents here, then read state back only through selectors.
 	 */
 	dispatch(command: Command): GameEvent[] {
 		switch (command.type) {
@@ -328,8 +328,8 @@ export class Engine {
 	/**
 	 * Selects one UI-oriented read model through the engine boundary.
 	 *
-	 * Selectors intentionally return derived views instead of raw components so the UI stays insulated from
-	 * ECS layout details and future storage refactors.
+	 * Selectors return derived views so the UI stays insulated from ECS layout
+	 * details and future storage refactors.
 	 */
 	select(selector: Selector): Selection {
 		return selectView(this.gameData, this.world, selector);
@@ -390,9 +390,13 @@ export class Engine {
 		return pickPersistentWorld(this.world);
 	}
 
-	/** Creates a transient battle entity backed by the current battle resolver. */
+	/**
+	 * Creates a transient battle entity backed by the current battle resolver.
+	 *
+	 * Marks every distinct opposing species seen before any capture resolves,
+	 * so a species counts as seen even when the player flees the battle.
+	 */
 	private startBattle(command: Extract<Command, { type: "start-battle" }>): GameEvent[] {
-		// Reclaim mirrors from any battle whose session has already ended.
 		for (let battleId of Object.keys(this.world.battlePhase)) {
 			if (!this.battleRuntime.has(battleId)) cleanupBattle(this.world, battleId);
 		}
@@ -404,9 +408,6 @@ export class Engine {
 			createCreatureFromWorld(this.world, creatureId),
 		);
 
-		// Every distinct opposing species is recorded as seen the moment the battle
-		// begins — this covers both wild encounters and trainer parties, and fires
-		// before any capture so a creature counts as seen even if the player flees.
 		let seenSpecies = new Set<string>();
 		let seenEvents: GameEvent[] = [];
 		for (let creature of enemyCreatures) {
@@ -443,13 +444,9 @@ export class Engine {
 	}
 
 	/**
-	 * Throws a capture item at a wild target and, on success, catches it and ends the battle.
-	 *
-	 * Reads the target's live HP and status from the running battle, runs the Gen 3
-	 * capture formula with the ball's multiplier, and consumes the ball. A success
-	 * converts the (encounter-located) target into an owned creature, marks the
-	 * bestiary, and finalizes the battle with no experience; a failure just reports
-	 * the shakes and leaves the battle awaiting the next action.
+	 * Throws a capture item at a wild target, resolving the Gen 3 formula
+	 * against its live battle HP and status. Only encounter-located creatures
+	 * can be captured; trainer creatures are refused here.
 	 */
 	private attemptCapture(command: Extract<Command, { type: "attempt-capture" }>): GameEvent[] {
 		let runtime = this.battleRuntime.get(command.battleId);
@@ -460,10 +457,6 @@ export class Engine {
 		let side = runtime.battle.state.sides[target.side];
 		let active = side?.active[target.slot];
 		let participants = this.world.battleParticipants[command.battleId];
-		// The party id list is flat across every team on the side, so the active
-		// creature's id lives at a running offset (creatures of earlier teams plus
-		// the team-local index), not at the bare per-team `creatureIndex`. With a
-		// single team the two are equal, so single-team sides are unchanged.
 		let creatureId =
 			side && active
 				? participants?.enemyParty[
@@ -471,8 +464,6 @@ export class Engine {
 					]
 				: undefined;
 		if (!active || !creatureId) return [];
-		// Only wild (encounter-located) creatures can be captured; trainer creatures
-		// sit at a `trainer` location and are refused here.
 		if (this.world.creatureLocation[creatureId]?.kind !== "encounter") return [];
 
 		let creature = active.combatant.creature;
@@ -522,11 +513,8 @@ export class Engine {
 	/**
 	 * Uses one overworld item on a creature, currently resolving evolution-stone use.
 	 *
-	 * The item must exist, be owned in the bag, and match the target creature's
-	 * use-item evolution; only then is the creature evolved and one copy of the item
-	 * consumed. A missing item, an empty bag stack, or a non-matching item/species is
-	 * a no-op that returns no events and never touches the bag or the creature, so the
-	 * caller can safely offer any item and let this decide whether it does anything.
+	 * Evolves the creature and consumes one item only when it exists, is held,
+	 * and matches the target's use-item evolution; any other case is a safe no-op.
 	 */
 	private useItemOnCreature(
 		command: Extract<Command, { type: "use-item-on-creature" }>,
@@ -552,13 +540,8 @@ export class Engine {
 	/**
 	 * Uses one overworld medicine item on a creature, resolving HP and status recovery.
 	 *
-	 * The item must exist, carry a recovery medicine effect (heal, cure, revive), and
-	 * be owned in the bag. The effect is resolved against the creature's stored HP and
-	 * status through the shared `applyMedicine` rules; only when it would actually change
-	 * something is the creature's health/status written back and one copy consumed. A
-	 * missing item, a non-recovery item, an empty stack, or an effect that changes nothing
-	 * (a heal at full HP, a revive on a healthy creature) is a no-op that returns no events
-	 * and touches neither the creature nor the bag, mirroring `useItemOnCreature`.
+	 * Consumes one copy only when the effect changes HP or status; a no-op
+	 * effect leaves the bag and creature untouched.
 	 */
 	private useMedicine(command: Extract<Command, { type: "use-medicine" }>): GameEvent[] {
 		let item = this.gameData.items.get(command.itemId);
@@ -586,13 +569,8 @@ export class Engine {
 	/**
 	 * Advances the current battle session with one set of turn commands.
 	 *
-	 * Player-side `use-item` commands are resolved here because the inventory lives in
-	 * the world, not the battle runtime: each one looks the item up, checks the bag has
-	 * a copy, decrements it, and injects the authored medicine effect the battle layer
-	 * needs. An item with no remaining stock (or one that is not a medicine) is forwarded
-	 * with a null effect so the turn stays well-formed but nothing is applied and the bag
-	 * is untouched; a genuine use reports its removal through the same `inventory-updated`
-	 * event the rest of the engine emits.
+	 * Each `use-item` command decrements the bag and forwards its
+	 * effect; a missing item forwards null so the turn stays well-formed.
 	 */
 	private submitBattleTurn(battleId: string, commands: TurnCommand[]): GameEvent[] {
 		let runtime = this.getBattleRuntime(battleId);
@@ -608,7 +586,6 @@ export class Engine {
 
 			let item = this.gameData.items.get(command.itemId);
 			let effect = item && "effect" in item && isMedicineEffect(item.effect) ? item.effect : null;
-			// Only decrement and apply when the item exists and can actually be spent.
 			if (!playerId || !effect || !removeInventoryItem(this.world, playerId, command.itemId, 1)) {
 				prepared.push({ ...command, effect: null });
 				continue;
@@ -673,9 +650,8 @@ export class Engine {
 	/**
 	 * Writes back results, awards experience, clears mirrors, and returns the closing events.
 	 *
-	 * Shared by natural battle endings and by capture/escape, which end a battle from
-	 * outside the turn resolver. Experience is awarded only on a genuine win
-	 * (`awardExperience` and `winnerSide === 0`), not for a capture or flee.
+	 * Experience is granted only on a genuine win; wild creatures despawn later,
+	 * since the presentation still reads them through selectBattle while it animates.
 	 */
 	private finalizeBattle(
 		battleId: string,
@@ -713,9 +689,6 @@ export class Engine {
 					}
 				}
 			}
-			// Uncaptured wild creatures are despawned later by cleanupBattle, not here:
-			// the presentation still reads the enemy summary through selectBattle while it
-			// animates the finish, so deleting its components now would crash that read.
 		}
 
 		this.battleRuntime.delete(battleId);
@@ -726,12 +699,8 @@ export class Engine {
 	/**
 	 * Resolves the moves a creature can learn for the levels it just crossed.
 	 *
-	 * For each move pinned to a newly reached level, a creature with a free slot
-	 * auto-learns it (updating the stored moveset and emitting `learned-move`),
-	 * while a creature whose four slots are full instead surfaces a `can-learn-move`
-	 * event so the presentation can prompt the player to replace a move or skip.
-	 * Auto-learning one move can free the next decision, so the moveset is re-read
-	 * from the world for every candidate rather than snapshotted once.
+	 * Re-reads the moveset from the world for every candidate move, because
+	 * auto-learning one can free the slot the next candidate needs.
 	 */
 	private emitLearnableMoves(
 		creatureId: CreatureId,
@@ -776,13 +745,8 @@ export class Engine {
 /**
  * Maps one active slot's team and team-local creature index to its flat party-id index.
  *
- * A side's persistent id list is flat across every team, ordered by team, so the id
- * for an active combatant sits at the running offset of all earlier teams' creatures
- * plus its own team-local index. Single-team sides collapse the offset to zero, so the
- * flat index equals the team-local index and their mapping is unchanged.
- *
- * Exported for regression coverage: the equivalent per-team-index-vs-flat-list mismatch
- * was already fixed in `syncBattleState`.
+ * A side's id list is flat across every team, ordered by team, so the flat
+ * index is the creature-local index offset by every earlier team's size.
  */
 export function getFlatCreatureIndex(
 	side: BattleSideState,

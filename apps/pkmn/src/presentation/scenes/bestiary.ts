@@ -1,11 +1,9 @@
 /**
  * The bestiary screen: seen and caught progress.
  *
- * Reads the bestiary view and lists every recorded species with its seen/caught
- * state, scrolling through the roster. Confirming a species the player has seen
- * opens its detail dossier; confirming an entry that is only recorded but not yet
- * seen does nothing, matching the seen/caught gating the list already shows.
- * Cancel returns to the pause menu. It only reads selectors.
+ * Confirming a species the player has seen opens its detail dossier; an entry
+ * that is only recorded stays closed, matching the list's seen/caught gating.
+ * Cancel returns to the pause menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +38,6 @@ export class BestiaryScene implements Scene {
 			return;
 		}
 
-		// Confirming opens the detail dossier, but only for a species the player has
-		// actually seen; an unseen (bare record) entry stays non-openable.
 		if (this.list.confirmed(game.input)) {
 			let entry = bestiary.entries[this.list.selected];
 			if (entry?.seen) game.scenes.push(new SpeciesDetailScene(entry.speciesId));

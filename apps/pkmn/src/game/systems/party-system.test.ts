@@ -1,11 +1,9 @@
 import { unwrap } from "@pkg/result";
 /**
- * Verifies the party system's full-restoration behavior (the "creature center").
- *
- * The tests confirm `healParty` clears every party member's damage and major status and refills each
- * known move's PP from its authored maximum, returns the number of party members restored, treats an
- * empty or missing party as a zero-count no-op, and refills only the occupied move slots (empty slots
- * stay at zero PP). A tiny inline content source pins the move PP maxima so the assertions are exact.
+ * Verifies the party system's full-restoration behavior: `healParty` clears
+ * damage and status, refills PP from authored move maxima, treats an empty
+ * or missing party as a zero-count no-op, and leaves empty move slots at
+ * zero PP.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -190,7 +188,6 @@ test("healParty returns zero when the player has no party component", () => {
 
 test("healParty falls back to zero PP for a move missing from game data", () => {
 	let id = createCreatureId("one");
-	// MOVE_B is authored, but this creature also holds an unknown move id in slot two.
 	let { world, playerId } = createWorld({
 		[id]: createCreature({
 			moveset: [MOVE_A, "MISSING_MOVE", null, null],
@@ -200,6 +197,5 @@ test("healParty falls back to zero PP for a move missing from game data", () => 
 
 	healParty(createGameData(), world, playerId);
 
-	// The known move refills to its maximum; the unknown one falls back to zero.
 	expect(world.creatureMoves[id]?.pp).toEqual([35, 0, 0, 0]);
 });

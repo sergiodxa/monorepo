@@ -34,25 +34,23 @@ import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import routes from "~/routes/web";
 
 /**
- * Builds the books HTTP router with its global middleware, route mappings, and the
- * HTML 404 fallback handler.
+ * Builds the books HTTP router. `headRequests()` leads the middleware chain
+ * so a `HEAD` probe reads like its `GET` to later steps, and each route is
+ * mapped individually since `router.map` throws on a nested route group.
  *
  * @returns The configured router the worker forwards requests to.
  */
 export default function application() {
 	let globalMiddleware: Middleware[] = [
-		// First, so everything after it — cross-origin protection included — sees a plain
-		// `GET` and treats a `HEAD` probe exactly as it would the page request behind it.
 		headRequests(),
 		asyncContext(),
 		logger,
 		formData() as Middleware,
 
 		/**
-		 * The Polar webhook is a cross-origin POST authenticated by its Standard-Webhooks
-		 * signature, not by an origin header, so it has to bypass cross-origin protection.
-		 * A `cop()` rejection here would read as an ordinary 403 in the logs while
-		 * silently dropping paid-order events, which is why the bypass has its own test.
+		 * The Polar webhook is a cross-origin POST authenticated by its
+		 * Standard-Webhooks signature, so it bypasses cross-origin protection: a
+		 * `cop()` rejection here would silently drop every paid-order event.
 		 */
 		cop({ insecureBypassPatterns: ["/webhooks/polar"] }),
 
@@ -64,8 +62,6 @@ export default function application() {
 		defaultHandler,
 	});
 
-	/* Mapped one leaf at a time: handing `router.map` a nested route map throws, so a
-	route group is spread rather than passed whole. */
 	router.map(routes.home, home);
 	router.map(routes.release, release);
 	router.map(routes.healthcheck, healthcheck);
@@ -81,18 +77,14 @@ export default function application() {
 }
 
 /**
- * Creates the request-scoped renderer controllers reach through `ctx.render`. The site
- * renders no frames — it ships no client JavaScript — so the renderer streams the node
- * and sets the content type, with no frame resolver to install.
+ * Creates the request-scoped renderer reached through `ctx.render` for a
+ * fully server-rendered site. `createHtmlResponse` prepends `<!DOCTYPE html>`
+ * to the stream's first chunk, the only point JSX rendering leaves to add it.
  */
 function createHtmlRenderer(_ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
-		// `createHtmlResponse` rather than `new Response`, because it prepends
-		// `<!DOCTYPE html>` to the stream's first chunk — the only place the doctype
-		// can go, since JSX escapes text and the renderer exposes no option for it.
-		// Without it every page parses in quirks mode.
 		return createHtmlResponse(renderToStream(node), { ...init, headers });
 	};
 }

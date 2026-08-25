@@ -1,13 +1,10 @@
 /**
- * Unit tests for `MonitorDailyStats`: the delete-then-insert idempotency of
- * `upsertDay` (the table has no unique constraint on `(monitor_id, monitor_type,
- * date)`, so a re-run must replace rather than duplicate), the rolling-window filter
- * on `listRecentDays`, and the pure helpers `calculateDailyStatus`,
- * `getYesterdayDateUtc`, and `utcDayBounds`.
- *
- * `listRecentDays` cuts off relative to today, so its fixtures are built as offsets
- * from the current UTC date: a hardcoded date would silently drift out of the window
- * and turn these into tests that pass for the wrong reason.
+ * Unit tests for `MonitorDailyStats`: the delete-then-insert idempotency of `upsertDay`
+ * (a re-run must leave one row per `(monitor_id, monitor_type, date)`), the
+ * rolling-window filter on `listRecentDays`, and the pure helpers
+ * `calculateDailyStatus`, `getYesterdayDateUtc`, and `utcDayBounds`. `listRecentDays`
+ * cuts off relative to today, so its fixtures are offsets from the current UTC date and
+ * stay inside the window as time passes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +21,10 @@ import MonitorDailyStats, {
 import { createTestDatabase } from "~/app/lib/test/db";
 import { monitorDailyStats } from "~/database/schema";
 
-/** The `"YYYY-MM-DD"` UTC date `daysAgo` days before today, for fixtures that must land inside (or outside) the rolling window. */
+/**
+ * The `"YYYY-MM-DD"` UTC date `daysAgo` days before today, so a fixture's position
+ * relative to the rolling window holds whenever the suite runs.
+ */
 function dateDaysAgo(daysAgo: number): string {
 	let today = new Date();
 	let end = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());

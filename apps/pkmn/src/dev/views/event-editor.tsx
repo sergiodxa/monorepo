@@ -1,26 +1,7 @@
 /**
- * The RPG-Maker-XP-style event editor dialog for the map tool, built on the
- * canonical framework-free view pattern (`function C(handle) { return () => <jsx/> }`,
- * `css()` styling, `on()` for events, no React hooks). Opening the dialog on a placed
- * or clicked event hands it a working copy of that {@link MapEvent}; every control
- * mutates the copy in setup scope and re-renders through `handle.update()`, and only
- * **OK** commits the copy back to the map editor (**Cancel** discards it), matching
- * RPG Maker's modal edit-then-apply flow.
- *
- * The dialog mirrors RPG Maker's structure. A header holds the event **Name** and its
- * id. A page **tab strip** (New / Copy / Delete / Clear Page) selects the
- * {@link EventPage} the panels below edit. Per active page the panels are:
- * **Conditions** (required global `switches` and a `selfSwitch`; variables are shown
- * disabled with a note since the schema has none), **Graphic** (a None / atlas-region
- * / raw-image sprite picker with a small preview), **Autonomous Movement** (type,
- * speed, frequency, and a route step-list for `route`), **Options** (the five
- * behaviour toggles), **Trigger** (the five trigger radios), and the **List of Event
- * Commands** — an editable, indented tree over the recursive command union, with
- * species/move/item pickers drawn from the real `SPECIES`/`MOVES`/`ITEMS` content so
- * authors can only pick valid ids.
- *
- * The command tree's pure add/edit/delete/nest logic lives in `event-page-editor.ts`;
- * this file is the imperative shell that renders it and wires the controls.
+ * The RPG-Maker-XP-style event editor dialog for the map tool. Opening it on an event
+ * hands the dialog a working copy of that {@link MapEvent}; every control mutates the
+ * copy, and only OK commits it back, so Cancel leaves the map exactly as it was.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,45 +44,34 @@ import {
 	updateCommand,
 } from "../editors/event-page-editor";
 
-/** The raw parameter type of the `css()` mixin, narrowed by {@link Styles}. */
 type CssMixinStyles = Parameters<typeof css>[0];
 
 /**
- * The style-object shape the `css()` mixin accepts, used for shared base styles.
- *
- * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
- * carries that interface's `Symbol.iterator` member and reads as an iterable.
- * Dropping the symbol keys leaves the same plain property bag the base styles
- * actually are, so they can be spread into an override object.
+ * The style-object shape `css()` accepts, minus symbol keys: the mixin's parameter
+ * type derives from `CSSStyleDeclaration`, and dropping its `Symbol.iterator` leaves
+ * a plain property bag that spreads into per-use override objects.
  */
 type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
 /** Sentinel `<option>` value meaning "no sprite" in the graphic picker. */
 const NO_SPRITE = "";
 
-/** Sorted list of real species ids the wild/trainer pickers offer. */
 const SPECIES_IDS = Object.keys(SPECIES).sort();
 
-/** Sorted list of real item ids the give-item picker offers. */
 const ITEM_IDS = Object.keys(ITEMS).sort();
 
-/** Sorted list of manifest atlas ids the graphic picker offers. */
 const ATLAS_IDS = Object.keys(
 	(manifest as { atlases?: Record<string, unknown> }).atlases ?? {},
 ).sort();
 
-/** Sorted list of manifest image ids the graphic picker offers. */
 const IMAGE_IDS = Object.keys(
 	(manifest as { images?: Record<string, string> }).images ?? {},
 ).sort();
 
-/** The indigo accent marking the active tab / control. */
 const ACCENT = "#6366f1";
 
-/** The idle border color shared by the small controls. */
 const IDLE_BORDER = "#3f3f46";
 
-/** Shared base style for text/number inputs and selectors. */
 const FIELD: Styles = {
 	padding: "0.3rem 0.45rem",
 	fontFamily: "inherit",
@@ -112,7 +82,6 @@ const FIELD: Styles = {
 	borderRadius: "0.3rem",
 };
 
-/** Shared base style for the small control buttons. */
 const CONTROL_BUTTON: Styles = {
 	padding: "0.3rem 0.6rem",
 	fontFamily: "inherit",
@@ -124,7 +93,6 @@ const CONTROL_BUTTON: Styles = {
 	cursor: "pointer",
 };
 
-/** Raw style object for the small labels above each control group. */
 const LABEL_STYLE: Styles = {
 	display: "grid",
 	gap: "0.25rem",
@@ -132,10 +100,8 @@ const LABEL_STYLE: Styles = {
 	color: "#9ca3af",
 };
 
-/** Shared mixin for the small labels above each control group. */
 const LABEL = css(LABEL_STYLE);
 
-/** Shared style for one bordered panel (Conditions / Graphic / …). */
 const PANEL: Styles = {
 	display: "grid",
 	gap: "0.5rem",
@@ -145,7 +111,6 @@ const PANEL: Styles = {
 	borderRadius: "0.4rem",
 };
 
-/** The heading style shared by each panel. */
 const PANEL_TITLE = css({
 	margin: 0,
 	fontSize: "0.8rem",
@@ -174,36 +139,30 @@ export interface EventEditorProps {
  * @returns The render function for the dialog.
  */
 export function EventEditor(handle: Handle<EventEditorProps>) {
-	// Working copy of the event's editable state (committed only on OK).
 	let name = handle.props.event.name ?? "";
 	let pages: EventPage[] =
 		handle.props.event.pages.length > 0 ? handle.props.event.pages.map(clonePage) : [defaultPage()];
 	let activePage = 0;
 
-	/** Re-renders the dialog after a working-copy mutation. */
 	function refresh() {
 		void handle.update();
 	}
 
-	/** The page currently being edited. */
 	function page(): EventPage {
 		return pages[activePage]!;
 	}
 
-	/** Replaces the active page with `next` and re-renders. */
 	function setPage(next: EventPage) {
 		pages = pages.map((entry, index) => (index === activePage ? next : entry));
 		refresh();
 	}
 
-	/** Appends a fresh default page and selects it. */
 	function newPage() {
 		pages = [...pages, defaultPage()];
 		activePage = pages.length - 1;
 		refresh();
 	}
 
-	/** Duplicates the active page (deep copy) and selects the copy. */
 	function copyPage() {
 		let copy = clonePage(page());
 		pages = [...pages.slice(0, activePage + 1), copy, ...pages.slice(activePage + 1)];
@@ -219,12 +178,10 @@ export function EventEditor(handle: Handle<EventEditorProps>) {
 		refresh();
 	}
 
-	/** Resets the active page's contents to a fresh default page. */
 	function clearPage() {
 		setPage(defaultPage());
 	}
 
-	/** Replaces the active page's command list and re-renders. */
 	function setCommands(commands: EventCommand[]) {
 		setPage({ ...page(), commands });
 	}
@@ -257,7 +214,6 @@ export function EventEditor(handle: Handle<EventEditorProps>) {
 						boxShadow: "0 24px 60px rgba(0, 0, 0, 0.55)",
 					})}
 				>
-					{/* Header: name + id. */}
 					<div
 						mix={css({
 							display: "flex",
@@ -287,7 +243,6 @@ export function EventEditor(handle: Handle<EventEditorProps>) {
 						</span>
 					</div>
 
-					{/* Page tab strip + page controls. */}
 					<div mix={css({ display: "grid", gap: "0.5rem" })}>
 						<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.35rem" })}>
 							{pages.map((_, index) => (
@@ -351,7 +306,6 @@ export function EventEditor(handle: Handle<EventEditorProps>) {
 						</div>
 					</div>
 
-					{/* Two-column panel grid: conditions/graphic/movement/options/trigger + commands. */}
 					<div
 						mix={css({
 							display: "grid",
@@ -386,7 +340,6 @@ export function EventEditor(handle: Handle<EventEditorProps>) {
 						<CommandsPanel commands={current.commands} onChange={setCommands} />
 					</div>
 
-					{/* OK / Cancel. */}
 					<div mix={css({ display: "flex", justifyContent: "flex-end", gap: "0.6rem" })}>
 						<button
 							type="button"
@@ -428,18 +381,15 @@ export function EventEditor(handle: Handle<EventEditorProps>) {
 	};
 }
 
-/** Props for the page conditions panel. */
 interface ConditionsPanelProps {
-	/** The active page's conditions. */
 	conditions: PageConditions;
-	/** Called with the updated conditions. */
 	onChange: (conditions: PageConditions) => void;
 }
 
 /**
  * The Conditions panel: an editable list of required global `switches` (all must be
- * ON) and an optional `selfSwitch` name. Variables are shown disabled with a note
- * because the event schema has none.
+ * ON) and an optional `selfSwitch` name. The variables row renders disabled, since
+ * the schema models page conditions as switches only.
  *
  * @param handle Component handle exposing the conditions props.
  * @returns The render function for the conditions panel.
@@ -554,11 +504,8 @@ function ConditionsPanel(handle: Handle<ConditionsPanelProps>) {
 	};
 }
 
-/** Props for the page graphic (sprite) panel. */
 interface GraphicPanelProps {
-	/** The active page's graphic (atlas region, raw image rect, or null). */
 	graphic: SpriteRef;
-	/** Called with the updated graphic. */
 	onChange: (graphic: SpriteRef) => void;
 }
 
@@ -701,11 +648,8 @@ function GraphicPanel(handle: Handle<GraphicPanelProps>) {
 	};
 }
 
-/** Props for the autonomous-movement panel. */
 interface MovementPanelProps {
-	/** The active page's autonomous movement. */
 	movement: AutonomousMovement;
-	/** Called with the updated movement. */
 	onChange: (movement: AutonomousMovement) => void;
 }
 
@@ -836,15 +780,11 @@ function MovementPanel(handle: Handle<MovementPanelProps>) {
 	};
 }
 
-/** Props for the page options panel. */
 interface OptionsPanelProps {
-	/** The active page's options. */
 	options: PageOptions;
-	/** Called with the updated options. */
 	onChange: (options: PageOptions) => void;
 }
 
-/** The five page option toggles, keyed by schema field with a human label. */
 const OPTION_FIELDS: ReadonlyArray<{ id: keyof PageOptions; label: string }> = [
 	{ id: "moveAnimation", label: "Move Animation" },
 	{ id: "stopAnimation", label: "Stop Animation" },
@@ -896,11 +836,8 @@ function OptionsPanel(handle: Handle<OptionsPanelProps>) {
 	};
 }
 
-/** Props for the trigger panel. */
 interface TriggerPanelProps {
-	/** The active page's trigger. */
 	trigger: EventPage["trigger"];
-	/** Called with the updated trigger. */
 	onChange: (trigger: EventPage["trigger"]) => void;
 }
 
@@ -944,31 +881,27 @@ function TriggerPanel(handle: Handle<TriggerPanelProps>) {
 	};
 }
 
-/** Props for the event-command list panel. */
 interface CommandsPanelProps {
-	/** The active page's command list. */
 	commands: EventCommand[];
-	/** Called with the updated command list. */
 	onChange: (commands: EventCommand[]) => void;
 }
 
-/** One flattened command row: its command, its path, and its nesting depth. */
+/**
+ * One row of the flattened command tree. A row carrying `prefix` is a branch header
+ * (`When "x"` / `Else`) that acts as an insert target; every other row is a real
+ * command that can be selected and deleted.
+ */
 interface CommandRow {
-	/** The command at this row. */
 	command: EventCommand;
-	/** The path locating it in the (possibly nested) command tree. */
 	path: CommandPath;
-	/** How deeply nested it is (for indentation). */
 	depth: number;
-	/** A short prefix label ("When "x"", "Else", …) for a branch header row, if any. */
 	prefix?: string;
 }
 
 /**
- * Flattens a (possibly nested) command tree into indented rows for display, walking
- * `show-choices` choices and `conditional-branch` then/else lists depth-first so the
- * nesting reads top-to-bottom like RPG Maker's event script. Each row carries the
- * {@link CommandPath} needed to edit or delete it.
+ * Flattens a nested command tree into indented rows, walking `show-choices` choices
+ * and `conditional-branch` then/else depth-first so the nesting reads top-to-bottom
+ * like RPG Maker's event script. Each row carries its {@link CommandPath}.
  *
  * @param commands The command list to flatten.
  * @param base The path prefix leading to this list (empty at the root).
@@ -1051,21 +984,16 @@ function summarize(command: EventCommand): string {
 
 /**
  * The List of Event Commands panel: an indented, editable tree over the recursive
- * command union. Selecting a row opens its fields editor below; the insert menu
- * appends a fresh command (into a chosen branch when a nesting row is selected), and
- * each row can be deleted. Nesting from `show-choices` branches and
- * `conditional-branch` then/else is shown by indentation.
+ * command union. Command rows open the fields editor and can be deleted; branch
+ * header rows act as the insert target for their own nested list.
  *
  * @param handle Component handle exposing the commands props and scheduling re-renders.
  * @returns The render function for the commands panel.
  */
 function CommandsPanel(handle: Handle<CommandsPanelProps>) {
-	// The path of the currently selected row (for the fields editor), or null.
 	let selectedPath: CommandPath | null = null;
-	// The command kind the insert menu will add.
 	let insertKind: CommandKind = "text";
 
-	/** Compares two paths for equality (same steps in the same order). */
 	function samePath(a: CommandPath, b: CommandPath): boolean {
 		if (a.length !== b.length) return false;
 		return a.every(
@@ -1081,7 +1009,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 		let rows: CommandRow[] = [];
 		flattenCommands(commands, [], 0, rows);
 
-		// Rows that are real commands (not branch-header markers) are selectable/deletable.
 		let selected =
 			selectedPath && !selectedPath[selectedPath.length - 1]
 				? null
@@ -1089,7 +1016,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 					? readCommand(commands, selectedPath)
 					: null;
 
-		/** Appends a fresh command of `insertKind` into the target list. */
 		function insertAt(target: CommandPath) {
 			let command = defaultCommand(insertKind, {
 				speciesId: SPECIES_IDS[0],
@@ -1105,7 +1031,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 					<span mix={css({ fontSize: "0.72rem", color: "#6b7280" })}>{rows.length} lines</span>
 				</div>
 
-				{/* The command list. */}
 				<div
 					mix={css({
 						display: "grid",
@@ -1125,7 +1050,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 					) : null}
 					{rows.map((row, rowIndex) => {
 						if (row.prefix !== undefined) {
-							// A branch header row (When "x" / Else): a label + an insert-into-branch target.
 							let isSelected = selectedPath !== null && samePath(selectedPath, row.path);
 							return (
 								<div
@@ -1213,7 +1137,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 					})}
 				</div>
 
-				{/* Insert menu: choose a kind and add it (to the root, or a selected branch). */}
 				<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" })}>
 					<select
 						value={insertKind}
@@ -1236,7 +1159,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 						mix={[
 							css(CONTROL_BUTTON),
 							on<HTMLButtonElement, "click">("click", () => {
-								// Insert into the selected branch when a branch header is selected, else root.
 								let target =
 									selectedPath !== null &&
 									(selectedPath[selectedPath.length - 1]!.branch === "choice" ||
@@ -1266,7 +1188,6 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 					) : null}
 				</div>
 
-				{/* The fields editor for the selected command. */}
 				{selected !== null && selectedPath !== null ? (
 					<CommandFields
 						command={selected}
@@ -1285,11 +1206,8 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 	};
 }
 
-/** Props for one command's fields editor. */
 interface CommandFieldsProps {
-	/** The command whose fields are edited. */
 	command: EventCommand;
-	/** Called with the updated command. */
 	onChange: (command: EventCommand) => void;
 	/** Adds an empty choice to a `show-choices` command. */
 	onAddChoice: () => void;
@@ -1300,11 +1218,9 @@ interface CommandFieldsProps {
 }
 
 /**
- * Renders the editable fields for the selected command, per its `kind`. Species,
- * move, and item pickers are drawn from the real content roster so only valid ids can
- * be authored; nesting commands (`show-choices`, `conditional-branch`) expose
- * choice/else management here while their nested command lists are edited inline in
- * the tree above.
+ * Renders the editable fields for the selected command, per its `kind`. Species and
+ * item pickers draw from the real content roster so only valid ids can be authored;
+ * nesting commands expose their choice and else management here.
  *
  * @param handle Component handle exposing the command props.
  * @returns The render function for one command's fields.
@@ -1332,7 +1248,6 @@ function CommandFields(handle: Handle<CommandFieldsProps>) {
 	};
 }
 
-/** The mutation callbacks a command's fields editor needs. */
 interface CommandFieldCallbacks {
 	onChange: (command: EventCommand) => void;
 	onAddChoice: () => void;
@@ -1340,7 +1255,6 @@ interface CommandFieldCallbacks {
 	onToggleElse: () => void;
 }
 
-/** A labeled text input row for a command field. */
 function textRow(
 	label: string,
 	value: string,
@@ -1365,7 +1279,6 @@ function textRow(
 	);
 }
 
-/** A labeled number input row for a command field. */
 function numberRow(label: string, value: number, min: number, onInput: (value: number) => void) {
 	return (
 		<label mix={LABEL}>
@@ -1385,7 +1298,6 @@ function numberRow(label: string, value: number, min: number, onInput: (value: n
 	);
 }
 
-/** A labeled select row backed by a list of ids for a command field. */
 function selectRow(
 	label: string,
 	value: string,

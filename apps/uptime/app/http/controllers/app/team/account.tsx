@@ -1,27 +1,8 @@
 /**
- * Account page controller. Requires `requireUser` + `requireTeam` — the `:team` in
- * its URL only picks which team's shell wraps the page; the content itself lists
- * every team the viewer belongs to.
- *
- * Renders the account page body as a series of card-boxed sections (Profile,
- * Language, Emails, Your Teams), matching the same section-header-plus-bordered-card
- * layout used across this app's other settings pages. The "Leave" action per team
- * only shows for members who aren't the owner, and is gated behind a confirmation
- * dialog like every other destructive action in this app.
- *
- * The Emails section carries the id every digest's footer link and unsubscribe header
- * ends in (`EMAIL_PREFERENCES_ANCHOR`), so a reader who followed one of those links
- * lands on the switches rather than at the top of the page. It is on this page and not
- * in team settings because the choice belongs to the person: somebody in three teams
- * turns a digest off once, and it stops for all three.
- *
- * The last two sections are the account's own lifecycle. Your Data downloads everything the
- * app holds about the viewer; Delete Account queues the account for erasure and, for a viewer
- * whose request is already queued, replaces the whole form with that state plus the button that
- * calls it off. Both of those are honest by construction: the delete card names every team that
- * will be destroyed and counts the people who lose access with it, says plainly that nothing is
- * deleted on submit, and lists the things that genuinely cannot be deleted rather than implying
- * a clean wipe.
+ * Account page controller. Requires `requireUser` + `requireTeam`. The URL's `:team`
+ * selects which shell wraps the page; the settings inside apply to the viewer across
+ * every team they belong to. The Emails section carries `EMAIL_PREFERENCES_ANCHOR` so
+ * digest unsubscribe links land directly on its switches.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,23 +44,16 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
- * Viewport from which a section's card is allowed to bleed past its column.
- *
- * `AppShell` pads its content area by 20px below this width and 48px from it up, so a
- * card reaching 24px further out each side has room only above the threshold — below it
- * the card would overflow the viewport and the page would scroll sideways. It is the
- * shell's own breakpoint for the same reason: this is the width at which the shell stops
- * being a phone-width column.
+ * Viewport from which a section's card is allowed to bleed past its column: below it, the
+ * same 24px bleed the shell pads by would overflow and scroll sideways, so the card stays
+ * flush until the shell's own breakpoint gives it room.
  */
 const CARD_BLEED_FROM = "(min-width: 768px)";
 
 /**
- * The bordered card each section on this page is built around.
- *
- * Pulled out by exactly the 24px of inline padding its own rows carry, so the copy inside
- * the card lines up with the section heading above it instead of sitting 24px to its
- * right. The heading and the card edge no longer share an edge, which is the point: the
- * text does.
+ * The bordered card each section on this page is built around, pulled out by the 24px of
+ * inline padding its own rows carry so the copy inside lines up with the section heading
+ * above it rather than sitting 24px to the right.
  */
 function settingsCard() {
 	return [
@@ -97,8 +71,8 @@ function emailDescriptionId(email: OptionalEmail) {
 
 /**
  * The bordered card the delete section is built around: the same geometry as
- * {@link settingsCard}, in the danger colour, so the section reads as belonging to the page
- * while never being mistaken for one of the forms above it.
+ * {@link settingsCard}, in the danger colour that marks it as the page's destructive
+ * section.
  */
 function dangerCard() {
 	return [
@@ -110,10 +84,9 @@ function dangerCard() {
 }
 
 /**
- * The typed-confirmation field. `pattern="DELETE"` does the gating natively, so the submit
- * button is disabled-in-effect until the text matches exactly with no client JS involved —
- * and the action validates the same word again, since a constraint in the page is a
- * convenience and not a check.
+ * The typed-confirmation field. `pattern="DELETE"` gates the submit button natively with
+ * no client JS involved; the action enforces the same word again since the authoritative
+ * check happens server-side.
  */
 function confirmationInput() {
 	return [
@@ -158,7 +131,6 @@ export default createAction(routes.app.team.account, {
 					heading={ctx.i18next.t("page.account.header.title")}
 				>
 					<div mix={[vstack({ gap: "48px" })]}>
-						{/* Profile */}
 						<section
 							id="profile"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
@@ -204,7 +176,6 @@ export default createAction(routes.app.team.account, {
 							</div>
 						</section>
 
-						{/* Language */}
 						<section
 							id="language"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
@@ -241,14 +212,14 @@ export default createAction(routes.app.team.account, {
 												"page.account.language.form.fields.language.description",
 											)}
 										>
-											{/*
-											 * The saved preference is marked `selected` on its own `<option>`:
-											 * `<select>` has no `defaultValue` attribute, so spelling it on the host
-											 * renders as inert markup and leaves "Automatic" — the first option —
-											 * showing, which a save would then write back over whichever language
-											 * the viewer had actually chosen.
-											 */}
-											<Select name="language">
+											<Select
+												name="language"
+												/**
+												 * `<select>` has no `defaultValue` attribute, so the saved preference is marked
+												 * `selected` on its own `<option>` instead — spelling it on the host would
+												 * render as inert markup and leave "Automatic" showing.
+												 */
+											>
 												<Select.Option value="auto" selected={preferredLanguage === null}>
 													{ctx.i18next.t("page.account.language.form.fields.language.options.auto")}
 												</Select.Option>
@@ -283,7 +254,6 @@ export default createAction(routes.app.team.account, {
 							</div>
 						</section>
 
-						{/* Emails */}
 						<section
 							id={EMAIL_PREFERENCES_ANCHOR}
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
@@ -316,28 +286,27 @@ export default createAction(routes.app.team.account, {
 									<div mix={[p("24px"), vstack({ gap: "20px" })]}>
 										{optionalEmails.map((email) => (
 											<div key={email} mix={[vstack({ gap: "4px" })]}>
-												{/*
-												 * Checked means subscribed, and every switch starts checked for a
-												 * member who has never been here: the stored preference is the list
-												 * of emails they turned off, so the absence of one is consent.
-												 */}
 												<Switch
 													name="emails"
 													value={email}
+													/**
+													 * Checked means subscribed; every switch defaults to checked because the
+													 * stored preference lists only the emails a member turned off, so an absent
+													 * email means they still want it.
+													 */
 													defaultChecked={UserPreferences.wants(preferences, email)}
 													aria-describedby={emailDescriptionId(email)}
 												>
 													{ctx.i18next.t(`page.account.emails.list.${email}.name`)}
 												</Switch>
-												{/*
-												 * Flush with the switch, not indented under its label. A
-												 * checkbox is a small square and hanging its description
-												 * under the label reads as one block, but a switch's track
-												 * is 2.75rem wide — an indent sized for a checkbox lands
-												 * under neither the track nor the label text, so the
-												 * description looks nudged rather than aligned.
-												 */}
-												<Description id={emailDescriptionId(email)}>
+												<Description
+													/**
+													 * Sits flush with the switch rather than indented under its label: a
+													 * switch's track is 2.75rem wide, so an indent sized for a checkbox's label
+													 * lands under neither the track nor the text.
+													 */
+													id={emailDescriptionId(email)}
+												>
 													{ctx.i18next.t(`page.account.emails.list.${email}.description`)}
 												</Description>
 											</div>
@@ -360,7 +329,6 @@ export default createAction(routes.app.team.account, {
 							</div>
 						</section>
 
-						{/* Your Teams */}
 						<section
 							id="teams"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
@@ -564,7 +532,6 @@ export default createAction(routes.app.team.account, {
 							</div>
 						</section>
 
-						{/* Your Data */}
 						<section
 							id="data"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
@@ -579,12 +546,14 @@ export default createAction(routes.app.team.account, {
 							</div>
 
 							<div mix={settingsCard()}>
-								{/*
-								 * A POST rather than a link, even though it changes nothing: a GET that
-								 * returns a whole account is a URL another site could point an iframe at,
-								 * and only the unsafe methods are covered by cross-origin protection.
-								 */}
-								<form method="post" action={routes.accountActions.exportData.href()}>
+								<form
+									method="post"
+									/**
+									 * Uses POST so cross-origin protections apply: safe methods like GET carry
+									 * none, and this action returns the viewer's entire account export.
+									 */
+									action={routes.accountActions.exportData.href()}
+								>
 									<div
 										mix={[
 											p("20px", "24px"),
@@ -624,7 +593,6 @@ export default createAction(routes.app.team.account, {
 							</div>
 						</section>
 
-						{/* Delete Account */}
 						<section
 							id="delete-account"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
@@ -639,11 +607,10 @@ export default createAction(routes.app.team.account, {
 							</div>
 
 							{queuedDeletion ? (
-								/*
-								 * The queued state replaces the form rather than sitting above it. Offering
-								 * the confirmation again to somebody already in the queue would suggest the
-								 * first request did not take, and the only thing left to do about it is the
-								 * one button here.
+								/**
+								 * Replaces the form rather than sitting above it: offering the confirmation
+								 * again to somebody already queued would suggest the first request failed,
+								 * when the only remaining action is the button below.
 								 */
 								<div mix={dangerCard()}>
 									<div
@@ -732,14 +699,15 @@ export default createAction(routes.app.team.account, {
 												</div>
 											)}
 
-											{/*
-											 * The total, stated separately and in the danger colour, because it is
-											 * the fact a person is most likely to have not considered: their own
-											 * data going is their decision, and somebody else's access going is
-											 * not.
-											 */}
 											{plan.othersLosingAccess > 0 && (
-												<p mix={[m(0), fontSize("0.875rem"), weight(600), fg("danger")]}>
+												<p
+													/**
+													 * Called out separately in the danger colour: it names a consequence for
+													 * other people, while the rest of this section covers the account
+													 * holder's own data.
+													 */
+													mix={[m(0), fontSize("0.875rem"), weight(600), fg("danger")]}
+												>
 													{ctx.i18next.t("page.account.deleteAccount.card.othersWarning", {
 														count: plan.othersLosingAccess,
 													})}

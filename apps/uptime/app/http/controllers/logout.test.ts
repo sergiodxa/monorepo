@@ -47,7 +47,11 @@ function seedSession(session: Session): Middleware {
 	};
 }
 
-/** Builds a minimal router mapping the whole `/logout` controller, anonymous by default. */
+/**
+ * Builds a minimal router mapping the whole `/logout` controller, anonymous by
+ * default. `Auth` is seeded regardless, since `i18n`'s locale detection calls
+ * `getViewer()`, which throws if `Auth` was never set at all.
+ */
 function createTestRouter(session: Session) {
 	let { db } = createTestDatabase();
 	let container = new ServiceContainer();
@@ -56,8 +60,6 @@ function createTestRouter(session: Session) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			// `i18n`'s locale detection calls `getViewer()`, which throws if `Auth` was
-			// never set at all — this page doesn't otherwise depend on the viewer.
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

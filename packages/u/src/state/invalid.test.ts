@@ -13,8 +13,6 @@ import { invalid } from "./invalid";
 
 describe("invalid", () => {
 	test("emits ':user-invalid' — not ':invalid' — alongside the ARIA selector", async () => {
-		// `:invalid` fires before the user has typed anything; `:user-invalid`
-		// waits for interaction, so the distinction is user-visible.
 		expect(await serialize(invalid(border("danger")))).toContain(
 			'&:user-invalid, &[aria-invalid="true"] {',
 		);

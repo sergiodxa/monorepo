@@ -1,27 +1,14 @@
 /**
- * Pure pixel-grid model for the sprite editor. Holds a fixed width×height buffer
- * of RGBA pixels (one `Uint8ClampedArray`, four bytes per pixel) with no DOM or
- * canvas dependency so it can be unit-tested in isolation. The {@link SpriteEditor}
- * wraps an instance of this class for its actual drawing surface: the editor
- * translates pointer input into `set`/`clear` calls and reads the buffer back out
- * to paint the canvas, while this model owns the source of truth for the sprite.
- *
- * Every pixel defaults to fully transparent (all four channels zero). Coordinates
- * are integer column/row pairs; out-of-bounds access is ignored on write and
- * treated as transparent on read so callers never have to bounds-check.
- *
- * Beyond the per-pixel primitives it exposes a few whole-grid operations the
- * editor's higher-level tools build on: {@link PixelGrid.floodFill} recolors a
- * 4-connected same-color region (the fill bucket), {@link PixelGrid.snapshot} /
- * {@link PixelGrid.restore} capture and re-apply the full state for undo/redo,
- * and {@link PixelGrid.loadPixels} adopts a decoded RGBA buffer wholesale (PNG
- * import). All stay pure and canvas-free.
+ * Pure pixel-grid model backing the sprite editor: a fixed width×height RGBA
+ * buffer, four bytes per pixel, that owns the sprite's source of truth and stays
+ * testable on its own. Pixels start fully transparent, and out-of-bounds
+ * coordinates are ignored on write and read as transparent, so any coordinate is
+ * safe to pass.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/** Number of bytes per pixel in the RGBA buffer (red, green, blue, alpha). */
 const BYTES_PER_PIXEL = 4;
 
 /** Largest grid dimension the model accepts, matching the editor's custom cap. */
@@ -40,17 +27,12 @@ export interface Rgba extends Rgb {
 }
 
 /**
- * An immutable snapshot of a grid's full state: its dimensions plus a copy of the
- * flat RGBA buffer. Produced by {@link PixelGrid.snapshot} and consumed by
- * {@link PixelGrid.restore}; the undo/redo history is a bounded stack of these so
- * a step can restore both the size and the pixels regardless of intervening
- * resizes. Kept a plain data record (no methods) so it is trivially copyable and
- * testable.
+ * A grid's dimensions plus a copy of its RGBA buffer, stacked by the undo/redo
+ * history so a step restores both the size and the pixels regardless of
+ * intervening resizes.
  */
 export interface GridSnapshot {
-	/** Grid width the snapshot was taken at. */
 	width: number;
-	/** Grid height the snapshot was taken at. */
 	height: number;
 	/** A copy of the flat RGBA buffer, row-major, four bytes per pixel. */
 	data: Uint8ClampedArray;
@@ -72,9 +54,8 @@ function toByte(value: number): number {
 
 /**
  * Validates that a dimension is a positive integer no larger than
- * {@link MAX_DIMENSION}, throwing otherwise. Used by the constructor and
- * {@link PixelGrid.resize} so an invalid size fails loudly instead of allocating
- * a nonsensical buffer.
+ * {@link MAX_DIMENSION}, so an invalid size fails loudly instead of allocating a
+ * nonsensical buffer.
  *
  * @param label Which dimension is being checked, for the error message.
  * @param value The candidate dimension.
@@ -90,15 +71,13 @@ function assertDimension(label: string, value: number): number {
 }
 
 /**
- * A pure, canvas-free grid of RGBA pixels. Owns a single flat byte buffer and
- * exposes get/set/clear/resize/serialize operations; the sprite editor wraps it
- * and mirrors its contents onto a canvas.
+ * A pure grid of RGBA pixels over a single flat byte buffer, exposing
+ * get/set/clear/resize/serialize operations; the sprite editor wraps it and
+ * mirrors its contents onto a canvas.
  */
 export class PixelGrid {
-	/** Grid width in pixels (columns). */
 	#width: number;
 
-	/** Grid height in pixels (rows). */
 	#height: number;
 
 	/** Flat RGBA buffer, row-major, four bytes per pixel. */
@@ -125,8 +104,6 @@ export class PixelGrid {
 	}
 
 	/**
-	 * Returns whether a column/row pair falls inside the grid bounds.
-	 *
 	 * @param x Column index.
 	 * @param y Row index.
 	 * @returns `true` when the coordinate is a paintable pixel.
@@ -144,7 +121,7 @@ export class PixelGrid {
 
 	/**
 	 * Reads the RGBA value of a pixel. Out-of-bounds coordinates read as fully
-	 * transparent so callers never need to bounds-check before reading.
+	 * transparent, so any coordinate is safe to read.
 	 *
 	 * @param x Column index.
 	 * @param y Row index.
@@ -229,10 +206,9 @@ export class PixelGrid {
 	}
 
 	/**
-	 * Returns a copy of the flat RGBA buffer, row-major, four bytes per pixel. A
-	 * copy (not the live buffer) is returned so callers cannot mutate the grid
-	 * through the result — this is the native-resolution pixel data an offscreen
-	 * canvas is painted from before PNG encoding.
+	 * Returns a copy of the flat RGBA buffer, row-major, four bytes per pixel. The
+	 * copy keeps the grid safe from callers mutating the result, and carries the
+	 * native-resolution pixels an offscreen canvas is painted from for PNG export.
 	 *
 	 * @returns A fresh `Uint8ClampedArray` of length `width * height * 4`.
 	 */
@@ -256,10 +232,9 @@ export class PixelGrid {
 	}
 
 	/**
-	 * Replaces the entire grid with a previously captured {@link GridSnapshot},
-	 * adopting its dimensions and a fresh copy of its buffer. Lets an undo/redo
-	 * step restore both the size and the pixels in one operation. A snapshot whose
-	 * buffer length does not match its declared dimensions is rejected.
+	 * Adopts a previously captured {@link GridSnapshot}'s dimensions and a fresh
+	 * copy of its buffer, so an undo/redo step restores size and pixels in one
+	 * operation. A buffer length matching the declared dimensions is required.
 	 *
 	 * @param snapshot The snapshot to restore into this grid.
 	 */
@@ -278,10 +253,9 @@ export class PixelGrid {
 	}
 
 	/**
-	 * Replaces the grid contents with a decoded RGBA buffer, resizing the grid to
-	 * the given dimensions to match. Used when importing an existing PNG so the
-	 * editor adopts the file's size and pixels wholesale. The buffer is copied in,
-	 * so the caller's array is not aliased.
+	 * Replaces the grid contents with a decoded RGBA buffer, resizing to the given
+	 * dimensions, so importing a PNG adopts the file's size and pixels wholesale.
+	 * The buffer is copied in, leaving the caller's array independent.
 	 *
 	 * @param width New width in pixels (1..={@link MAX_DIMENSION}).
 	 * @param height New height in pixels (1..={@link MAX_DIMENSION}).
@@ -302,13 +276,9 @@ export class PixelGrid {
 	}
 
 	/**
-	 * Flood-fills the contiguous region of pixels matching the color under
-	 * `(x, y)` with `color`, using 4-connected neighbours (up/down/left/right).
-	 * The seed pixel's RGBA is the target: only pixels sharing all four channels
-	 * with it are recolored, so filling a transparent region paints the hole and
-	 * filling a solid region repaints just that shape. A no-op when the seed is
-	 * out of bounds or the target already equals the fill color (same RGB with an
-	 * opaque seed), which also prevents an infinite revisit.
+	 * Recolors the 4-connected region whose RGBA matches the seed at `(x, y)`, so a
+	 * transparent area fills as a hole and a solid shape repaints alone. A seed out
+	 * of bounds or already the fill color returns 0, keeping the search finite.
 	 *
 	 * @param x Seed column index.
 	 * @param y Seed row index.
@@ -320,8 +290,6 @@ export class PixelGrid {
 
 		let target = this.get(x, y);
 		let fill: Rgba = { r: toByte(color.r), g: toByte(color.g), b: toByte(color.b), a: 255 };
-		// Nothing to do when the seed already holds the exact fill color; also
-		// guards the search from never terminating on an already-filled region.
 		if (target.r === fill.r && target.g === fill.g && target.b === fill.b && target.a === fill.a) {
 			return 0;
 		}

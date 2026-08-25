@@ -39,8 +39,8 @@ import { ScrollArea } from "./scroll-area";
 
 /**
  * Named container {@link MessageScroller} declares on its own host, so
- * {@link MessageScroller.Button} can adapt its own placement to the frame's
- * width instead of the page's.
+ * {@link MessageScroller.Button} can size its own placement to the
+ * frame's own width.
  */
 const CONTAINER_NAME = "ui-message-scroller";
 
@@ -53,17 +53,15 @@ const BUTTON_NARROW_QUERY = `@container ${CONTAINER_NAME} (max-width: 28rem)`;
 
 /**
  * `role="log"` applied to {@link MessageScroller.Content} through
- * {@link attrs} unless a consumer supplies its own `role` — the ARIA log
- * role's own implicit `aria-live="polite"` behavior is what announces each
- * newly appended row.
+ * {@link attrs} unless a consumer supplies its own `role`, whose implicit
+ * `aria-live="polite"` behavior announces each newly appended row.
  */
 const DEFAULT_CONTENT_ROLE = "log";
 
 /**
  * `aria-relevant="additions"` applied to {@link MessageScroller.Content}
- * through {@link attrs} unless a consumer overrides it, so assistive
- * technology announces newly appended rows without restating rows that
- * merely scroll out of view.
+ * through {@link attrs} unless overridden, scoping assistive-technology
+ * announcements to newly appended rows.
  */
 const DEFAULT_CONTENT_ARIA_RELEVANT = "additions";
 
@@ -89,9 +87,8 @@ const DEFAULT_BUTTON_HIDDEN = true;
 export namespace MessageScroller {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * Size the frame through `mix` — a fixed block size, or a flexed one
-	 * inside a taller layout — since {@link MessageScroller.Viewport} fills
-	 * whatever block size this host resolves to.
+	 * Size the frame through `mix` since {@link MessageScroller.Viewport}
+	 * fills whatever block size this host resolves to.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/** The frame's compound parts: {@link MessageScroller.Viewport} and, optionally, {@link MessageScroller.Button}. */
@@ -112,9 +109,8 @@ export namespace MessageScroller {
 	export interface ContentProps extends TagProps<"div"> {
 		/**
 		 * Marks the log as busy while a row inside it is still being written
-		 * to — a reply still streaming in, for instance — forwarded to the
-		 * host's native `aria-busy` attribute unchanged. Clear it once the row
-		 * settles.
+		 * to — a reply still streaming in, for instance — forwarded to the host's
+		 * native `aria-busy` attribute. Clear it once the row settles.
 		 */
 		"aria-busy"?: TagProps<"div">["aria-busy"];
 		/** The {@link MessageScroller.Item} rows to render in document order. */
@@ -128,15 +124,15 @@ export namespace MessageScroller {
 		/**
 		 * Stable id of the message this row renders, mirrored onto the host's
 		 * `data-message-id` attribute so a scroll-follow behavior can find,
-		 * measure, and scroll to this exact row without parsing `children`.
+		 * measure, and scroll to this exact row directly.
 		 */
 		messageId: string;
 		/**
 		 * Marks this row as a candidate anchor point — typically the first row
-		 * of a new turn — mirrored onto the host's `data-scroll-anchor`
-		 * attribute so a scroll-follow behavior can tell which rows are worth
-		 * anchoring the viewport to while older history prepends above them.
-		 * Defaults to `false`: most rows carry no anchor.
+		 * of a new turn — mirrored onto `data-scroll-anchor` so a scroll-follow
+		 * behavior can tell which rows are worth anchoring the viewport to.
+		 *
+		 * @default false
 		 */
 		scrollAnchor?: boolean;
 		/** The row's own content, typically a conversational row composed inside it. */
@@ -144,35 +140,25 @@ export namespace MessageScroller {
 	}
 
 	/**
-	 * Every {@link Button.Props} field, unchanged, except `hidden` gains its
-	 * own default instead of the platform's implicit `false`.
+	 * Every {@link Button.Props} field, unchanged, except `hidden`, which
+	 * defaults to `true`.
 	 */
 	export interface ButtonProps extends Button.Props {
 		/**
-		 * Whether the control is absent from rendering and the accessibility
-		 * tree. Defaults to `true`. A paired scroll-follow behavior clears this
-		 * attribute directly as the reader scrolls away from the live edge and
-		 * sets it again once they return to it or press the control; without
-		 * that behavior attached, the control simply stays absent.
+		 * Whether the control is absent from rendering and the accessibility tree.
+		 * A paired scroll-follow behavior clears this attribute as the reader
+		 * scrolls away from the live edge and sets it again on return or press.
+		 *
+		 * @default true
 		 */
 		hidden?: boolean;
 	}
 }
 
 /**
- * Renders the frame's root host: a bordered, rounded, relatively positioned
- * `<div>` that declares the `ui-message-scroller` named container so
- * {@link MessageScroller.Button} can adapt its own placement to the frame's
- * width rather than the page's. Holds still on its own: every row already
- * renders in document order inside {@link MessageScroller.Content}, so the
- * conversation reads correctly and scrolls through the browser's own native
- * behavior before any behavior is attached.
- *
- * This compound has no separate provider part. A consumer's hydrated island
- * constructs the paired scroll-follow model and shares it through
- * `handle.context` instead, the same mechanism this catalog's other
- * multi-part compounds use to hand shared state down to their own nested
- * parts.
+ * Renders the frame's root host: a bordered, rounded `<div>` that
+ * declares the `ui-message-scroller` container queried by
+ * {@link MessageScroller.Button} for its own placement.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the frame's markup.
@@ -211,12 +197,9 @@ export function MessageScroller(handle: Handle<MessageScroller.Props>) {
 }
 
 /**
- * Renders the frame's scrolling surface as {@link ScrollArea.Viewport}
- * itself, fixed to the block axis: the same thin, inset native scrollbar
- * treatment every scrolling surface in this catalog shares. Holds still on
- * its own — compose the `scrollFade()` animation factory from the animation
- * layer through `mix` to fade this viewport's own edges, hinting at history
- * above and replies still below whenever either edge has more to reveal.
+ * Renders the frame's scrolling surface as {@link ScrollArea.Viewport},
+ * fixed to the block axis. Compose `scrollFade()` through `mix` to fade
+ * this viewport's edges when more content is off-screen.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the viewport's markup.
@@ -237,11 +220,8 @@ MessageScroller.Viewport = function MessageScrollerViewport(
 
 /**
  * Renders the frame's live region: a `<div>` carrying the ARIA log role,
- * stacking its {@link MessageScroller.Item} rows in a column with a
- * consistent gap between them. The log role's own implicit live-region
- * behavior is what announces each row {@link MessageScroller.Item} adds, and
- * `aria-relevant="additions"` keeps that announcement scoped to newly
- * appended rows rather than restating rows that merely scroll out of view.
+ * stacking its {@link MessageScroller.Item} rows in a column and
+ * announcing each added row via `aria-relevant="additions"`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the log region's markup.
@@ -277,17 +257,9 @@ MessageScroller.Content = function MessageScrollerContent(
 };
 
 /**
- * Renders a single message row: a `<div>` mirroring `messageId` onto its own
- * `data-message-id` attribute and, when `scrollAnchor` is set, an empty
- * `data-scroll-anchor` attribute — the two hooks a scroll-follow behavior
- * reads to find, measure, and anchor rows without parsing `children`. Carries
- * a `scroll-margin-block-start` custom property so a native `scrollIntoView`
- * call lands the row a comfortable distance below the viewport's own
- * block-start edge instead of flush against it.
- *
- * In dev mode, a row rendered without a `messageId` logs a `console.warn`,
- * since a scroll-follow behavior matching against it would otherwise have
- * nothing to compare it to.
+ * Renders a single message row: a `<div>` mirroring `messageId` onto
+ * `data-message-id` and, when `scrollAnchor` is set, an empty
+ * `data-scroll-anchor` attribute for a scroll-follow behavior to read.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -326,15 +298,9 @@ MessageScroller.Item = function MessageScrollerItem(handle: Handle<MessageScroll
 };
 
 /**
- * Renders a static jump-to-latest control as {@link Button}: absolutely
- * positioned over the frame's block-end edge, centered as a floating pill
- * while the frame's own named container stays wide, and stretched
- * edge-to-edge once that container narrows past `28rem`. Starts `hidden` —
- * absent from rendering and the accessibility tree — until a paired
- * scroll-follow behavior clears the attribute as the reader scrolls away
- * from the live edge. Compose `fade()` or `zoom()` from the animation layer
- * through `mix`, with `when: ":not([hidden])"`, for its own reveal and
- * dismiss motion; this component holds still on its own.
+ * Renders a static jump-to-latest control as {@link Button}, floating
+ * over the frame's block-end edge and starting `hidden` until a paired
+ * scroll-follow behavior clears the attribute.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the control's markup.

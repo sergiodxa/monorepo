@@ -1,5 +1,3 @@
-import type { CSSMixinDescriptor } from "remix/ui";
-
 /**
  * Covers {@link chartPalette} as pure `css()` output: the exact rule block
  * painting one property from whichever categorical slot an element's own
@@ -9,11 +7,12 @@ import type { CSSMixinDescriptor } from "remix/ui";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { CSSMixinDescriptor } from "remix/ui";
+
 import { describe, expect, test } from "vitest";
 
 import { CHART_COLOR_SLOT_COUNT, chartPalette } from "./chart-palette";
 
-/** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;
 }

@@ -1,28 +1,8 @@
 /**
  * @module @pkg/polar
  *
- * Instance-based Polar billing client shared across the SaaS apps. Wraps the
- * official [`@polar-sh/sdk`](https://docs.polar.sh/api) so every app talks to
- * Polar through one type-safe, dependency-injectable surface: customers,
- * subscriptions, products, discounts, orders, hosted checkout/portal sessions,
- * usage-event ingestion, and Standard-Webhooks signature verification/parsing.
- *
- * Webhook authentication is `@pkg/webhooks`, not the vendor SDK: the signature over
- * the raw body is the only thing proving a request came from Polar, so that check
- * belongs to reviewed code here rather than to a billing library's release cycle.
- * The SDK stays on as the parser that turns an already-verified body into a typed
- * event, which is the one thing it does that this package cannot.
- *
- * The client is constructed from configuration (`{ accessToken }`) rather than
- * reading environment variables itself, so it stays compatible with
- * `@pkg/service-container` (ADR-008) and is trivial to test.
- *
- * Nothing in this module imports the vendor SDK eagerly: it builds ~700 zod schemas
- * at module scope, which is over a megabyte of bundle and tens of milliseconds of
- * Worker startup CPU paid by every isolate, including the ones that never bill
- * anything. {@link PolarClient} is therefore SDK-free until a method is called — the
- * class stays cheap to import as a dependency-injection token — and the SDK is loaded
- * once per instance through {@link PolarClient.sdk}.
+ * Instance-based Polar billing client wrapping `@polar-sh/sdk`: customers,
+ * subscriptions, products, discounts, checkout/portal sessions, and webhooks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,20 +23,18 @@ import { failure, isFailure, success } from "@pkg/result";
 import * as Webhooks from "@pkg/webhooks";
 import { PolarError } from "@polar-sh/sdk/models/errors/polarerror.js";
 
-// PolarError is the one SDK value worth importing eagerly: its module is a bare
-// Error subclass with no schema imports, so callers can keep catching it by class.
+/**
+ * The SDK's error class, re-exported so callers can catch billing failures by
+ * type. Its module is a bare `Error` subclass with no schema imports, so
+ * importing it eagerly costs nothing.
+ */
 export { PolarError };
 export type { Checkout, Customer, CustomerSession, Discount, Order, Product, Subscription };
 
 /**
- * The error the SDK's verifier throws for a bad or missing signature. Kept exported,
- * and still type-only, so an existing type-level importer keeps compiling — but
- * nothing here produces one any more: signatures are now checked by `@pkg/webhooks`,
- * and {@link PolarClient.verifyWebhook} and {@link PolarClient.parseWebhook} report a
- * rejection as `false` and as a `"Invalid Polar webhook signature"` failure, which is
- * what callers branch on. It stays type-only because the module that defines it is the
- * schema-heavy webhook parser, so a value re-export would pull the whole vendor model
- * layer back into every importer's startup path.
+ * The error the SDK's verifier throws for a bad or missing signature. Kept exported and
+ * type-only so existing imports keep compiling; verification now runs through
+ * `@pkg/webhooks`, and re-exporting the value would pull the SDK's webhook parser in.
  */
 export type { WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 
@@ -77,24 +55,17 @@ interface PolarSdk {
 	/** The configured SDK client every API method delegates to. */
 	client: Polar;
 	/**
-	 * Turns a webhook body into a typed event, or throws when it cannot model it. It
-	 * verifies the signature too, but {@link PolarClient.parseWebhook} only ever calls
-	 * it on a body `@pkg/webhooks` has already authenticated, so its verdict is read as
-	 * a typing result and never as an authentication one.
+	 * Turns a webhook body into a typed event, or throws when it cannot model it. It also
+	 * verifies the signature, but {@link PolarClient.parseWebhook} only calls it on a body
+	 * `@pkg/webhooks` has already authenticated, so its verdict is read purely as typing.
 	 */
 	validateEvent: typeof import("@polar-sh/sdk/webhooks.js").validateEvent;
 }
 
 /**
- * The subscription statuses Polar itself counts as active, i.e. the ones its
- * `subscriptions.list({ active: true })` filter returns. Exported because an app that
- * stores subscription state of its own has to answer "is this active?" against its own
- * copy, and the answer has to be the same one Polar would give — otherwise the local
- * projection and the API disagree and a reconciliation pass repairs rows forever.
- *
- * `canceled` is deliberately absent: Polar keeps a cancelled-at-period-end subscription
- * at `active` until the period actually ends, so entitlement follows the status and not
- * the `subscription.canceled` event.
+ * The subscription statuses Polar's `list({ active: true })` filter treats as active:
+ * `active` and `trialing` only. A cancelled-at-period-end subscription stays `active`
+ * until the period ends, so entitlement follows status, not the cancellation event.
  */
 export const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing"] as const;
 
@@ -112,12 +83,8 @@ export function isActiveSubscriptionStatus(status: string): boolean {
 
 /**
  * The subscription carried by a webhook event, or `null` for every event that carries
- * something else (an order, a checkout, a benefit grant…).
- *
- * This is the narrowing half of {@link PolarClient.parseWebhook}: the parsed event is a
- * union of ~35 payload types discriminated on `type`, and a caller that only cares about
- * subscription state would otherwise repeat the list of subscription event types itself.
- * Which event types carry a `Subscription` is a fact about Polar, so it lives here.
+ * something else. Narrows the parsed event — a union of ~35 payload types on `type` —
+ * so a caller that only cares about subscription state need not repeat that list itself.
  *
  * @param event - A verified webhook event from {@link PolarClient.parseWebhook}.
  * @returns The event's subscription, or `null` when it isn't a subscription event.
@@ -146,12 +113,9 @@ export function subscriptionFromEvent(event: PolarWebhookEvent): Subscription | 
 }
 
 /**
- * Supplies the access token the first time the client actually talks to Polar.
- *
- * Exists for deployments whose token is not a plain string at construction time — one
- * held in a secret store read through an async `get()`, for instance. Reading it eagerly
- * would mean awaiting at module scope, which a Worker rejects at upload; handing over a
- * function defers the read to the first API call and keeps construction free of work.
+ * Supplies the access token the first time the client actually talks to Polar, for a
+ * token that only becomes available asynchronously — one read from a secret store, say.
+ * Reading it eagerly would mean awaiting at module scope, which a Worker rejects.
  */
 export interface AccessTokenProvider {
 	/**
@@ -176,52 +140,37 @@ export interface PolarClientOptions {
 }
 
 /**
- * Most events Polar accepts in one ingestion request.
- *
- * Polar documents no batch limit, so this is a conservative self-imposed one:
- * {@link PolarClient.ingestEvents} splits a larger array across requests rather than
- * discovering the real ceiling as a rejected body. Safe to resend a whole chunk after a
- * partial failure as long as every event carries an `externalId`, which Polar
- * deduplicates on.
+ * Most events Polar accepts in one ingestion request. Polar documents no batch limit,
+ * so this is a conservative self-imposed ceiling: {@link PolarClient.ingestEvents}
+ * splits larger arrays across requests ahead of ever hitting Polar's real one.
  */
 const INGEST_CHUNK_SIZE = 100;
 
 /**
- * Accepted clock skew on an inbound delivery, applied in both directions.
- *
- * Pinned here rather than left to the verifier's default because five minutes is the
- * window Polar's own deliveries are built for, and this value is the replay window: a
- * captured request stays replayable for exactly this long.
+ * Accepted clock skew on an inbound delivery, applied in both directions: five minutes,
+ * the window Polar's own deliveries are built for — and the window a captured request
+ * stays replayable for.
  */
 const WEBHOOK_TOLERANCE = "5 minutes";
 
 /**
- * Re-encodes a Polar webhook secret as the base64 key material a Standard Webhooks
- * verifier expects.
- *
- * Polar's secret is arbitrary text, not base64 key material: both its senders and its
- * SDK base64-encode the secret before handing it to a specification implementation, so
- * the HMAC key is the secret's UTF-8 bytes. A verifier decodes whatever it is given, so
- * the same encoding has to happen here — passing the secret through unchanged would
- * key on the wrong bytes and reject every authentic delivery.
+ * Re-encodes a Polar webhook secret as base64 key material: senders and the SDK both
+ * base64-encode the secret's UTF-8 bytes before signing, so the same encoding must
+ * happen here — built byte by byte so secrets containing non-Latin-1 text encode too.
  *
  * @param secret - The webhook secret exactly as Polar issued it.
  * @returns The secret's UTF-8 bytes, base64 encoded.
  */
 function toSigningSecret(secret: string): string {
-	// Built a byte at a time rather than through `btoa(secret)` so a secret containing
-	// non-Latin-1 text encodes instead of throwing.
 	let binary = "";
 	for (let byte of new TextEncoder().encode(secret)) binary += String.fromCharCode(byte);
 	return btoa(binary);
 }
 
 /**
- * Rebuilds a delivery as a request whose body is still unread.
- *
- * Verification covers the exact bytes received and a stream can be read only once, so
- * callers hand over the raw text they already consumed; putting that text back behind
- * the same headers is what lets it be verified as received rather than re-serialized.
+ * Rebuilds a delivery as a request whose body is still unread. Verification covers the
+ * exact bytes received and a stream can be read only once, so callers hand the raw text
+ * back behind the same headers, letting it be verified exactly as it arrived.
  *
  * @param request - The incoming webhook request, used for its URL and headers.
  * @param rawBody - The exact raw request body the signature was computed over.
@@ -236,13 +185,9 @@ function toVerifiableRequest(request: Request, rawBody: string): Request {
 }
 
 /**
- * Whether a delivery is authentic, which is the whole of the security boundary.
- *
- * A `PayloadValidationError` counts as authentic: the signature matched and only the
- * body's shape was unexpected, so an event this endpoint cannot model is not treated
- * as an attack. Every other failure — missing headers, a malformed or unmatched
- * signature, a stale timestamp, an unusable secret — means the request is not
- * authentic and the caller must reject it.
+ * Whether a delivery is authentic — the whole of the security boundary. A
+ * `PayloadValidationError` still counts as authentic: the signature matched and only
+ * the body's shape was unexpected. Every other failure means the request is inauthentic.
  *
  * @param request - The incoming webhook request, used for its headers.
  * @param rawBody - The exact raw request body the signature was computed over.
@@ -261,13 +206,9 @@ async function isAuthentic(request: Request, rawBody: string, secret: string): P
 }
 
 /**
- * A cost to attach to an ingested event, read by Polar's Cost Insights and Metrics API
- * and combined with the customer's revenue into cost, gross profit and LTV per customer.
- *
- * `amount` is **cents** — `100` is one dollar — and a **string** rather than a number on
- * purpose: JS renders any float below 1e-6 in exponential notation
- * (`(1e-7).toString() === "1e-7"`), which is not a number Polar's parser accepts, and a
- * per-unit infrastructure cost is routinely that small. Format it with `toFixed`.
+ * A cost to attach to an ingested event, read by Polar's Cost Insights and combined
+ * with revenue into gross profit and LTV. `amount` is **cents** as a **string**, since
+ * JS renders floats below 1e-6 in exponential notation, which Polar's parser rejects.
  */
 export interface EventCost {
 	/** The amount in **cents**, as a plain decimal string (e.g. `"0.003476700"`). */
@@ -277,11 +218,9 @@ export interface EventCost {
 }
 
 /**
- * A single usage event to ingest into Polar's events API.
- *
- * Exactly one of `customerId` and `externalCustomerId` identifies the customer. Both are
- * optional here because either satisfies Polar, and an app that keys customers by its own
- * id (an OIDC subject, a tenant id) never has to resolve the Polar-internal one first.
+ * A single usage event to ingest into Polar's events API. Exactly one of `customerId`
+ * and `externalCustomerId` identifies the customer, so an app that keys customers by
+ * its own id (an OIDC subject, a tenant id) never has to resolve the Polar one first.
  *
  * @see https://docs.polar.sh/api-reference/events/ingest
  */
@@ -296,8 +235,8 @@ export interface IngestEvent {
 	metadata?: Record<string, string | number | boolean>;
 	/**
 	 * Cost to attach to this event for Polar Cost Insights, sent as `metadata._cost`.
-	 * Kept out of `metadata` in this interface because the nesting is Polar's wire
-	 * convention rather than something a caller should have to know.
+	 * Kept out of `metadata` in this interface because the nesting is Polar's own wire
+	 * convention, hidden behind this typed field.
 	 */
 	cost?: EventCost;
 	/** When the event happened. Defaults to Polar's ingestion time when omitted. */
@@ -305,9 +244,7 @@ export interface IngestEvent {
 	/**
 	 * A caller-supplied unique id for this event, forwarded to Polar as `external_id`.
 	 * Polar deduplicates on it, so re-sending an event with the same `externalId` is a
-	 * no-op — the safe way to make an at-most-once reporting cron idempotent across a
-	 * partial failure (the event was accepted but the local "reported" flag did not
-	 * persist). Omit for events that need no deduplication.
+	 * no-op — the safe way to make an at-most-once reporting cron idempotent.
 	 */
 	externalId?: string;
 }
@@ -343,10 +280,9 @@ export interface CheckoutSessionResult extends SessionResult {
 }
 
 /**
- * Options accepted by {@link PolarClient.createCheckout}, covering the checkout
- * fields {@link PolarClient.createCheckoutSession} cannot express (`customerEmail`,
- * `discountId`, `allowDiscountCodes`) and making `successUrl` optional for products
- * that should land on Polar's own confirmation page.
+ * Options accepted by {@link PolarClient.createCheckout}: adds `customerEmail`,
+ * `discountId`, and `allowDiscountCodes` to what {@link PolarClient.createCheckoutSession}
+ * expresses, and makes `successUrl` optional for Polar's own confirmation page.
  */
 export interface CheckoutSessionOptions {
 	/** The Polar product ID to sell; sent as a single-product checkout. */
@@ -396,12 +332,9 @@ function toIngestPayload(event: IngestEvent): EventCreateCustomer | EventCreateE
 }
 
 /**
- * Type-safe Polar billing client.
- *
- * Wraps `@polar-sh/sdk` behind a small, stable API covering customer,
- * subscription, checkout/portal, event-ingestion, and webhook operations —
- * enough for both seat/MAU and metered usage billing. Instantiate once
- * (typically as a service-container singleton) and inject wherever needed.
+ * Type-safe Polar billing client. Wraps `@polar-sh/sdk` behind a small, stable API
+ * covering customer, subscription, checkout/portal, event-ingestion, and webhook
+ * operations — enough for both seat/MAU and metered usage billing.
  *
  * @example
  * ```ts
@@ -416,16 +349,9 @@ export class PolarClient {
 	private readonly accessToken: string | AccessTokenProvider;
 
 	/**
-	 * The in-flight or settled SDK load, so concurrent first calls share one import
-	 * and one client rather than racing to build the schemas twice.
-	 *
-	 * Only a fulfilled load is kept. A rejection is discarded so the next call starts
-	 * over, because the step that can fail transiently is resolving a lazily supplied
-	 * access token — reading one from a secret store is a network call, and memoizing
-	 * its failure would leave a long-lived client permanently unable to bill from a
-	 * blip that has since passed. The import itself does not fail transiently: in a
-	 * bundled Worker the module is already there, so it either resolves or the
-	 * deployment is broken, and retrying that costs nothing.
+	 * The in-flight or settled SDK load, so concurrent first calls share one import and
+	 * client, building the schemas only once. A rejection is discarded, so a transient
+	 * failure resolving the access token clears on the client's very next call.
 	 */
 	private loading: Promise<PolarSdk> | undefined;
 
@@ -449,13 +375,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * The vendor SDK, imported and configured on first use and memoized after.
-	 *
-	 * Every method that talks to Polar goes through here, which is what keeps the
-	 * import out of module scope: the bundler splits it into a chunk that an isolate
-	 * only ever evaluates if it actually reaches a billing code path. A lazily supplied
-	 * access token is resolved here for the same reason, and alongside the import rather
-	 * than before it, so a store read and the chunk load overlap instead of queueing.
+	 * The vendor SDK, imported and configured on first use and memoized after. Every
+	 * method that talks to Polar goes through here, keeping the import out of module
+	 * scope so the bundler-split chunk loads only on a code path that actually bills.
 	 *
 	 * @returns The configured client and the webhook event parser.
 	 */
@@ -603,7 +525,7 @@ export class PolarClient {
 	 * @param externalCustomerId - The app-owned external id linked to the customer.
 	 * @param productId - The Polar product id the subscription must be for.
 	 * @returns `true` when an active subscription to `productId` exists; `false` on
-	 * any error (fails closed for feature gating, matching the OLD APP's behavior).
+	 * any error (fails closed for feature gating).
 	 */
 	async hasActiveSubscription(externalCustomerId: string, productId: string): Promise<boolean> {
 		try {
@@ -624,12 +546,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * Lists a customer's active subscriptions to a given product, filtering by
-	 * external id and `active: true` server-side (the same query shape as
-	 * {@link hasActiveSubscription}) rather than resolving the Polar-internal
-	 * customer id first and listing unfiltered — that alternate path has been
-	 * observed to return a response shape the SDK's own validation rejects for
-	 * some accounts. Used to revoke subscriptions on team deletion.
+	 * Lists a customer's active subscriptions to a given product, filtering by external
+	 * id and `active: true` server-side — the same shape as {@link hasActiveSubscription}.
+	 * Unfiltered listing has triggered an SDK validation rejection for some accounts.
 	 *
 	 * @param externalCustomerId - The app-owned external id linked to the customer.
 	 * @param productId - The Polar product id to filter to.
@@ -654,10 +573,8 @@ export class PolarClient {
 
 	/**
 	 * Lists every active subscription to a product across the whole organization,
-	 * following pagination to completion. The organization-wide counterpart to
-	 * {@link listActiveSubscriptions}, for a reconciliation pass that repairs a local
-	 * projection of subscription state: it answers "who is paying right now?" in one
-	 * paginated walk instead of one point read per customer.
+	 * following pagination to completion — for a reconciliation pass that repairs a
+	 * local projection of subscription state in one paginated walk.
 	 *
 	 * @param productId - The Polar product id to filter to.
 	 * @returns Every active subscription to that product.
@@ -678,8 +595,7 @@ export class PolarClient {
 	}
 
 	/**
-	 * Revoke a subscription immediately, ending entitlement now rather than at
-	 * period end.
+	 * Revoke a subscription immediately, ending entitlement at the moment of the call.
 	 *
 	 * @param subscriptionId - The Polar subscription ID.
 	 * @returns The revoked subscription object.
@@ -691,8 +607,8 @@ export class PolarClient {
 	}
 
 	/**
-	 * Get a product by ID, including its prices and benefits. Used to render a
-	 * price from Polar rather than hardcoding it in the app.
+	 * Get a product by ID, including its prices and benefits, for rendering a
+	 * live price sourced from Polar.
 	 *
 	 * @param productId - The Polar product ID.
 	 * @returns The product object.
@@ -710,9 +626,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * List the organization's discounts, following pagination to completion. The
-	 * caller decides which one applies (date window, redemption limits, product
-	 * scope) — the client stays app-agnostic and does not filter.
+	 * List the organization's discounts, following pagination to completion, leaving
+	 * the caller to decide which one applies (date window, redemption limits,
+	 * product scope).
 	 *
 	 * @param limit - Polar page size (1-100), defaulting to 12.
 	 * @returns Every discount, in the order Polar returns them.
@@ -800,15 +716,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * Create a hosted checkout session from an options object, for the checkout
-	 * fields {@link createCheckoutSession} cannot express: a pre-filled
-	 * `customerEmail`, an automatically applied `discountId`, `allowDiscountCodes`,
-	 * and an optional `successUrl`. Also returns the checkout `id`, so a caller can
-	 * log it and correlate it with the webhook events the checkout produces.
-	 *
-	 * Kept as a sibling method rather than an overload of {@link createCheckoutSession}
-	 * so the positional signature stays exactly as callers (and their test doubles)
-	 * already see it.
+	 * Create a hosted checkout session from an options object, covering fields
+	 * {@link createCheckoutSession} cannot express. Kept as a sibling method so that
+	 * method's positional signature stays exactly as existing callers and tests see it.
 	 *
 	 * @param options - The checkout configuration.
 	 * @returns The hosted checkout `url` and the checkout `id`.
@@ -861,13 +771,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * Ingest one or more usage events for metered billing, or for Cost Insights when the
-	 * events carry a `cost`.
-	 *
-	 * Sent in chunks of {@link INGEST_CHUNK_SIZE}, so a caller reporting a day's worth of
-	 * events per customer hands over one array and never has to know Polar's request
-	 * shape. A chunk that fails throws with the earlier chunks already accepted; give
-	 * every event an `externalId` and re-sending the whole array is a no-op for those.
+	 * Ingest one or more usage events for metered billing, or for Cost Insights
+	 * when events carry a `cost`, sent in chunks of {@link INGEST_CHUNK_SIZE}. A
+	 * failed chunk leaves earlier ones accepted, so give events an `externalId`.
 	 *
 	 * @param events - The events to ingest.
 	 * @throws {PolarError} When the request fails.
@@ -889,10 +795,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * {@link ingestEvents}, best-effort: returns `false` instead of throwing so a reporting
-	 * cron can log the failure and let its next run resend the same events rather than
-	 * failing the job that produced them. Idempotent when every event carries an
-	 * `externalId`, since Polar deduplicates on it.
+	 * {@link ingestEvents}, best-effort: returns `false` on failure so a reporting cron
+	 * can log it and recover by resending the same events on its next run. Idempotent
+	 * when every event carries an `externalId`, since Polar deduplicates on it.
 	 *
 	 * @param events - The events to ingest.
 	 * @returns `true` when every chunk was accepted, `false` when any request failed.
@@ -938,15 +843,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * Ingest a page-view meter event for a customer. Best-effort: returns `false`
-	 * instead of throwing on API failure so the caller's reporting cron can retry
-	 * on the next run.
-	 *
-	 * Pass `externalId` to make retries idempotent: Polar deduplicates on it, so if a
-	 * previous run's event was accepted but the caller failed to record it locally, the
-	 * next run re-sending the same `externalId` will not double-bill. A deterministic key
-	 * derived from the reported entity and day (e.g. `page_views:{blog_id}:{day}`) is the
-	 * natural choice.
+	 * Ingest a page-view meter event for a customer. Best-effort: returns `false` on API
+	 * failure so the caller's reporting cron can retry on the next run. Pass `externalId`
+	 * — e.g. `page_views:{blog_id}:{day}` — so Polar dedupes a retried event safely.
 	 *
 	 * @param customerId - The Polar customer ID to bill.
 	 * @param views - The number of page views to report.
@@ -977,17 +876,9 @@ export class PolarClient {
 	}
 
 	/**
-	 * Verify a Polar webhook signature using the Standard Webhooks scheme
-	 * (`webhook-id` / `webhook-timestamp` / `webhook-signature` headers), through
-	 * `@pkg/webhooks` rather than the vendor SDK — so the request authentication path
-	 * is reviewed code here, and this method loads no vendor code at all.
-	 *
-	 * Fails **closed**: a missing/empty secret, a missing or unmatched signature, or a
-	 * timestamp outside {@link WEBHOOK_TOLERANCE} returns `false`. When the signature
-	 * is valid but the body is not something this endpoint can model (a
-	 * {@link https://docs.polar.sh Polar} event type nothing here knows), the security
-	 * boundary has still passed, so the webhook is accepted and `true` is returned —
-	 * the caller is expected to validate the payload shape itself.
+	 * Verify a Polar webhook signature through `@pkg/webhooks`, loading no vendor SDK.
+	 * Fails **closed** on a missing secret or bad signature; an authentic body this
+	 * endpoint cannot model still returns `true`, for the caller to validate itself.
 	 *
 	 * @param request - The incoming webhook request, used for its headers.
 	 * @param rawBody - The exact raw request body used to compute the signature.
@@ -1007,27 +898,15 @@ export class PolarClient {
 		rawBody: string,
 		secret: string | undefined,
 	): Promise<boolean> {
-		// A misconfigured deployment rejects every delivery rather than accepting
-		// whatever arrives, and says so before any signature work is attempted.
 		if (!secret) return false;
 
 		return await isAuthentic(request, rawBody, secret);
 	}
 
 	/**
-	 * Verify a Polar webhook signature and return the parsed event, so callers can
-	 * branch on `event.type` with full types instead of re-parsing the raw body
-	 * themselves. Complements {@link verifyWebhook}, which only proves authenticity.
-	 *
-	 * Authentication is `@pkg/webhooks`; the SDK is reached only afterwards, and only
-	 * to turn the verified body into a typed event (the parse is what maps Polar's
-	 * snake-case wire fields onto the camel-case models callers read). Anything the
-	 * SDK objects to at that point is therefore reported as a payload failure, never
-	 * as an authentication one — the boundary already passed.
-	 *
-	 * Fails **closed**: a missing/empty secret is a failure without any signature work.
-	 * The failure message distinguishes a rejected signature from an authentic body the
-	 * SDK could not model, so the caller can log and answer them apart.
+	 * Verify a Polar webhook signature and return the parsed event, complementing
+	 * {@link verifyWebhook}. Authentication runs through `@pkg/webhooks`; anything the
+	 * SDK objects to afterward is a payload failure, since the boundary already passed.
 	 *
 	 * @param request - The incoming webhook request, used for its headers.
 	 * @param rawBody - The exact raw request body used to compute the signature.
@@ -1046,8 +925,6 @@ export class PolarClient {
 		rawBody: string,
 		secret: string | undefined,
 	): Promise<Result<PolarWebhookEvent, Error>> {
-		// A misconfigured deployment rejects every delivery rather than accepting
-		// whatever arrives, and says so before any signature work is attempted.
 		if (!secret) return failure(new Error("Missing Polar webhook secret"));
 
 		if (!(await isAuthentic(request, rawBody, secret))) {
@@ -1064,9 +941,6 @@ export class PolarClient {
 		try {
 			return success(validateEvent(rawBody, headers, secret));
 		} catch (error) {
-			// The delivery is already authenticated, so every objection from here is
-			// about the payload's shape — including the SDK's own verification, which
-			// keys on the same secret over the same bytes and so agrees by construction.
 			let message = error instanceof Error ? error.message : String(error);
 			return failure(new Error(`Invalid Polar webhook payload: ${message}`));
 		}

@@ -1,10 +1,7 @@
 /**
- * Verifies the inventory system's add and remove rules in isolation from the engine boundary.
- *
- * The tests exercise adding items (new stacks, existing stacks, and the non-positive count no-op),
- * removing items (partial removals, deleting a stack that reaches zero, and rejecting removals larger
- * than the held count), and confirm each mutation replaces the inventory component immutably. They build
- * a one-player world so the assertions describe the system's rules directly.
+ * Verifies the inventory system's add and remove rules: new and existing
+ * stacks, non-positive-count no-ops, partial and stack-emptying removals,
+ * and rejecting a removal larger than the held count.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

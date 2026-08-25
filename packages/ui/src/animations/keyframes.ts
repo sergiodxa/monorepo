@@ -1,21 +1,9 @@
 /**
- * Looping `@keyframes`-backed mixin factories for indicators that keep
- * moving for as long as a busy state lasts: a rotating spinner, a breathing
- * skeleton placeholder, a sweeping indeterminate progress fill, and a
- * highlight sweeping through a run of text's own glyphs. Every factory
- * composes `@pkg/u` utilities — `keyframes()`/`animationHost()` for the
- * looping animation itself, `when()`/`media()`/`supports()`/`startingStyle()`
- * for the gating and mount transition — rather than a single hand-written
- * style object.
- *
- * `keyframes()` (and any `@keyframes` block) may only ever sit at a mixin's
- * own top level, or nested inside `media()`/`supports()` — never inside
- * `when()`. `remix/ui`'s serializer only hoists `@keyframes` to the
- * stylesheet root from those two positions; nesting one under a selector
- * produces broken CSS. `animationHost()` exists precisely so the *host*
- * `animation-*` declarations can be gated behind `when()` while the
- * `keyframes()` utility they reference stays an ungated sibling in the same
- * `mix` array.
+ * Looping `@keyframes`-backed mixin factories for busy indicators: spinner,
+ * skeleton breathe, indeterminate sweep, text glyph highlight. `keyframes()`
+ * hoists to the stylesheet root only from a mixin's top level or from inside
+ * `media()`/`supports()`, so `animationHost()` carries the `animation-*`
+ * declarations `when()` gates while the keyframes stay an ungated sibling.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,7 +34,10 @@ const DEFAULT_FADE_DURATION = "150ms";
 /** Full rotation length {@link spin} falls back to when `duration` is omitted. */
 const DEFAULT_SPIN_DURATION = "1s";
 
-/** Easing {@link spin} falls back to when `easing` is omitted; constant speed reads as a loop, not a motion with an end. */
+/**
+ * Easing {@link spin} falls back to when `easing` is omitted; a constant
+ * speed reads as a continuous loop.
+ */
 const DEFAULT_SPIN_EASING = easings.linear;
 
 /** One breathe cycle length {@link pulse} falls back to when `duration` is omitted. */
@@ -61,7 +52,10 @@ const DEFAULT_PULSE_MIN_OPACITY = 0.5;
 /** Brightest opacity {@link pulse} falls back to when `maxOpacity` is omitted. */
 const DEFAULT_PULSE_MAX_OPACITY = 1;
 
-/** Fraction of {@link pulse}'s configured opacity range a reduced-motion viewer still sees, keeping the breathe visible without the full swing. */
+/**
+ * Fraction of {@link pulse}'s configured opacity range a reduced-motion
+ * viewer still sees, keeping the breathe perceptible at a gentler swing.
+ */
 const REDUCED_PULSE_AMPLITUDE_SCALE = 0.4;
 
 /** Sweep length {@link shimmer} falls back to when `duration` is omitted. */
@@ -73,47 +67,63 @@ const DEFAULT_SHIMMER_EASING = "ease-in-out";
 /** Width of the moving highlight band {@link shimmer} falls back to when `bandSize` is omitted. */
 const DEFAULT_SHIMMER_BAND_SIZE = "50%";
 
-/** Gate {@link shimmer} falls back to when `when` is omitted: the platform state a `<progress>` carries while it has no `value`. */
+/**
+ * Gate {@link shimmer} falls back to when `when` is omitted: the platform
+ * state a value-less `<progress>` carries.
+ */
 const DEFAULT_SHIMMER_WHEN = ":indeterminate";
 
-/** Sweep length {@link textShimmer} falls back to when `duration` is omitted; a caption reads glyph by glyph rather than being glanced at as a whole, so its sweep runs slower than {@link shimmer}'s indicator band. */
+/**
+ * Sweep length {@link textShimmer} falls back to when `duration` is omitted;
+ * a caption is read glyph by glyph, so its sweep runs slower than an
+ * indicator band's.
+ */
 const DEFAULT_TEXT_SHIMMER_DURATION = "2s";
 
-/** Easing {@link textShimmer} falls back to when `easing` is omitted. A constant speed keeps the point where the sweep wraps from reading as a stutter — the same reasoning {@link spin} uses for its own infinite rotation. */
+/**
+ * Easing {@link textShimmer} falls back to when `easing` is omitted; a
+ * constant speed keeps the point where the sweep wraps reading as smooth.
+ */
 const DEFAULT_TEXT_SHIMMER_EASING = easings.linear;
 
-/** Width of the moving highlight band {@link textShimmer} falls back to when `bandSize` is omitted, narrower than {@link shimmer}'s default band to suit a run of glyphs rather than a whole indicator's fill. */
+/**
+ * Width of the moving highlight band {@link textShimmer} falls back to when
+ * `bandSize` is omitted; a narrow band suits a run of glyphs.
+ */
 const DEFAULT_TEXT_SHIMMER_BAND_SIZE = "30%";
 
-/** Gradient angle the highlight band travels along, {@link textShimmer} falls back to when `angle` is omitted; `90deg` sweeps along the inline axis of a horizontal line of text. */
+/**
+ * Gradient angle the highlight band travels along, {@link textShimmer} falls
+ * back to when `angle` is omitted; `90deg` sweeps along the inline axis of a
+ * horizontal line of text.
+ */
 const DEFAULT_TEXT_SHIMMER_ANGLE = "90deg";
 
-/** Highlight color {@link textShimmer} falls back to when `color` is omitted, tying the sweep to whatever color the caption's own styling already sets. */
+/**
+ * Highlight color {@link textShimmer} falls back to when `color` is omitted,
+ * tying the sweep to the color the caption's own styling already sets.
+ */
 const DEFAULT_TEXT_SHIMMER_COLOR = "currentColor";
 
-/** Fraction of {@link textShimmer}'s configured `color` mixed against transparency for the resting tone the band sweeps away from and back into, so the caption stays legible between passes of the brighter band. */
+/**
+ * Fraction of {@link textShimmer}'s configured `color` mixed against
+ * transparency for the resting tone, keeping the caption legible between
+ * passes of the brighter band.
+ */
 const TEXT_SHIMMER_REST_TONE_MIX = 45;
 
 /**
- * Turns an optional gate fragment into a selector relative to the host: the
- * host itself when no gate is given, or the host qualified by the gate
- * (`&${when}`) when one is given.
+ * Turns an optional gate fragment into a host-relative selector: the bare
+ * host, or the host qualified by the gate (`&${when}`).
  */
 function resolveTarget(when: string | undefined): string {
 	return when === undefined ? "&" : `&${when}`;
 }
 
 /**
- * The mount/gate shell every loop factory wraps its keyframe animation in.
- * Fades the host in from {@link HIDDEN_OPACITY} on first render through
- * `@starting-style`, carries a `display`/`opacity` transition marked
- * `allow-discrete` so a discrete show/hide still animates smoothly, and,
- * when `when` is given, drops back to {@link HIDDEN_OPACITY} while the gate
- * does not match so the loop only shows while its state actually holds. The
- * mixed-duration transition shorthand (opacity and display each reading
- * their own custom-property fallback) has no `@pkg/u` equivalent and stays
- * a small `raw()`; the gating and mount-fade opacity values compose real
- * utilities.
+ * Mount/gate shell every loop factory wraps its animation in: an
+ * `@starting-style` fade from {@link HIDDEN_OPACITY}, an `allow-discrete`
+ * transition, and a return to hidden outside the `when` gate.
  */
 function loopShell<Node extends Element = Element>(
 	target: string,
@@ -162,11 +172,9 @@ export namespace Spin {
 }
 
 /**
- * Continuous 360° rotation for a busy indicator's spinning glyph, resolved
- * entirely to `@keyframes` output so the rotation keeps going through
- * server-rendered markup. Under `prefers-reduced-motion: reduce`, the
- * rotation is replaced by a gentle opacity breathe so the indicator still
- * reads as active without the spin itself.
+ * Continuous 360° rotation for a busy indicator's glyph, resolved entirely to
+ * `@keyframes` so it runs from server-rendered markup. Under
+ * `prefers-reduced-motion: reduce`, a gentle opacity breathe carries it.
  *
  * @param options Timing and gating for the loop.
  * @returns A `@pkg/u` mixin ready for a spinner's host element.
@@ -230,9 +238,8 @@ export namespace Pulse {
 		maxOpacity?: number;
 		/**
 		 * Selector fragment, relative to the host (e.g. `[aria-busy="true"]`),
-		 * that gates the loop. Left unset, the loop runs as soon as it is
-		 * mixed in, matching a skeleton placeholder that is mounted only
-		 * while its content loads.
+		 * that gates the loop. Left unset, the loop runs as soon as it is mixed
+		 * in, matching a skeleton mounted only while its content loads.
 		 */
 		when?: string;
 	}
@@ -240,10 +247,8 @@ export namespace Pulse {
 
 /**
  * Gentle opacity breathe for a skeleton placeholder, resolved entirely to
- * `@keyframes` output so the loop keeps going through server-rendered
- * markup. The animation is opacity-only already, so under
- * `prefers-reduced-motion: reduce` it keeps running with its swing narrowed
- * toward {@link Pulse.Options.maxOpacity} rather than stopping outright.
+ * `@keyframes` so it runs from server-rendered markup. Reduced motion narrows
+ * the swing by overriding duration and the min-opacity token alone.
  *
  * @param options Timing, opacity range, and gating for the loop.
  * @returns A `@pkg/u` mixin ready for a skeleton placeholder's host element.
@@ -273,10 +278,6 @@ export function pulse<Node extends Element = Element>(options: Pulse.Options = {
 				iterationCount: "infinite",
 			}),
 		),
-		// Only overrides the loop's duration and the keyframes' own min-opacity
-		// custom property under reduced motion — the animation name/timing
-		// function stay whatever the base gate() above already set, so this
-		// can't route through animationHost() (which always re-asserts a name).
 		media<Node>(
 			"(prefers-reduced-motion: reduce)",
 			gate<Node>(
@@ -306,26 +307,18 @@ export namespace Shimmer {
 		/** Width of the moving highlight band, as a CSS length or percentage. Defaults to {@link DEFAULT_SHIMMER_BAND_SIZE}. */
 		bandSize?: string;
 		/**
-		 * Selector fragment, relative to the host, that gates the loop.
-		 * Defaults to {@link DEFAULT_SHIMMER_WHEN}, the native indeterminate
-		 * state a value-less `<progress>` already carries; pass a custom
-		 * fragment (e.g. `[data-indeterminate="true"]`) for a hand-built
-		 * progress indicator that tracks the same state through an attribute.
+		 * Selector fragment, relative to the host, that gates the loop. Defaults
+		 * to {@link DEFAULT_SHIMMER_WHEN}; pass a custom fragment (e.g.
+		 * `[data-indeterminate="true"]`) for a hand-built progress indicator.
 		 */
 		when?: string;
 	}
 }
 
 /**
- * Sweeping highlight band for an indeterminate progress indicator's fill,
- * resolved entirely to `@keyframes` output so the sweep keeps going through
- * server-rendered markup and stops on its own the moment the gated state no
- * longer matches (a `<progress>` gaining a `value`, by default). The
- * highlight color mixes `currentColor` into transparency, so it follows
- * whatever color the indicator's own styling already sets. Under
- * `prefers-reduced-motion: reduce`, the sweep is replaced by a gentle
- * opacity breathe so the indicator still reads as active without the
- * moving band.
+ * Sweeping highlight band for an indeterminate progress fill, resolved
+ * entirely to `@keyframes` so it runs from server-rendered markup and settles
+ * once the gate clears; reduced motion breathes the fill's opacity instead.
  *
  * @param options Timing, band width, and gating for the loop.
  * @returns A `@pkg/u` mixin ready for a progress indicator's fill element.
@@ -410,28 +403,17 @@ export namespace TextShimmer {
 		color?: string;
 		/**
 		 * Selector fragment, relative to the host (e.g. `[data-streaming="true"]`),
-		 * that gates the loop. Left unset, the loop runs as soon as it is
-		 * mixed in, matching a caption that is mounted only while a response
-		 * is streaming in.
+		 * that gates the loop. Left unset, the loop runs as soon as it is mixed
+		 * in, matching a caption mounted only while a response streams in.
 		 */
 		when?: string;
 	}
 }
 
 /**
- * Sweeping highlight through a run of text's own glyphs, resolved entirely
- * to `@keyframes` output so the sweep keeps going through server-rendered
- * markup — a streaming AI response's "Generating response…" caption, or any
- * other line of text standing in for a busy state instead of a separate
- * indicator glyph. The band is painted through `background-clip: text` with
- * the glyphs' own fill made transparent, so the highlight travels across the
- * letters themselves; the same technique renders the resting tone between
- * passes, so the caption stays fully readable throughout, and a browser
- * lacking `background-clip: text` support renders the caption in its plain
- * inherited color the whole time, which stays perfectly readable on its own.
- * Under `prefers-reduced-motion: reduce`, the sweep is replaced by a gentle
- * opacity breathe over the whole caption so it still reads as active without
- * the highlight travelling across individual glyphs.
+ * Sweeping highlight through a run of text's own glyphs for a caption that
+ * stands in for a busy state. The `background-clip: text` paint sits behind
+ * an `@supports` guard; reduced motion breathes the caption's opacity.
  *
  * @param options Timing, band width, angle, color, and gating for the loop.
  * @returns A `@pkg/u` mixin ready for a caption's host text element.

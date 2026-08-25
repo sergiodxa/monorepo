@@ -1,12 +1,10 @@
 /**
  * Grid-locked player movement for the overworld.
  *
- * Movement is RPG Maker style: the player occupies a tile and tweens smoothly to
- * the next over a fixed duration, and input is only sampled once a tile is
- * reached, so motion always lands on the grid. Holding B runs (a shorter tween).
- * The controller exposes interpolated pixel coordinates and a walk-cycle frame
- * for rendering, and reports each tile arrival so the scene can roll encounters
- * or fire triggers.
+ * The player occupies a tile and tweens to the next over a fixed duration;
+ * input is sampled only once a tile is reached, so motion always lands on
+ * the grid. Reports each arrival so the scene can roll encounters or fire
+ * triggers, and holding B runs with a shorter tween.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,10 +26,8 @@ export class PlayerController {
 	/** Current facing, updated even when a move is blocked. */
 	facing: Direction;
 
-	/** Logical tile column. */
 	private tileX: number;
 
-	/** Logical tile row. */
 	private tileY: number;
 
 	/** Direction of the in-progress step, or null while idle. */
@@ -126,7 +122,6 @@ export class PlayerController {
 		return Math.floor(this.walkedPx / (TILE_SIZE / 2)) % 4;
 	}
 
-	/** Reads the first held movement direction from input. */
 	private readDirection(input: InputManager): Direction | null {
 		if (input.isHeld(Button.Up)) return "up";
 		if (input.isHeld(Button.Down)) return "down";

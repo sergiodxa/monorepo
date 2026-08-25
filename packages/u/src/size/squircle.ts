@@ -10,10 +10,9 @@ import { compose } from "../internal/descriptor";
 import { corner } from "./corner";
 
 /**
- * A shape pattern for continuous rounded corners: sets a radius and uses
- * `corner-shape` as progressive enhancement where supported, falling back
- * to the plain radius shape everywhere else. Composes `u.rounded()` and
- * `u.corner("squircle")`.
+ * A shape pattern for continuous rounded corners: sets a radius, then
+ * refines it with `corner-shape` where supported, so every browser renders
+ * at least the plain rounded shape. Composes `u.rounded()` and `u.corner()`.
  *
  * @example u.squircle("lg")
  * @example css({ borderRadius: "var(--ui-radius-lg, 0.5rem)", "@supports (corner-shape: squircle)": { cornerShape: "squircle" } })

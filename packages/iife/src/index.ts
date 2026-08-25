@@ -1,4 +1,9 @@
 /**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Evaluates inline logic and returns its result where an expression is needed.
  *
  * @example iife(() => 2 + 2)

@@ -128,14 +128,9 @@ export function offsetAt(instant: number, timeZone: string): number | null {
 }
 
 /**
- * The instant a wall-clock time names in a zone, at zero seconds.
- *
- * Daylight saving makes this a choice twice a year, and both are resolved with the
- * offset in effect before the transition: an ambiguous wall time (the hour a clock
- * repeats) yields its first occurrence, so a schedule fires once instead of twice,
- * and a wall time that never happens (the hour a clock skips) yields the instant
- * that same offset points at, which lands just after the jump rather than being
- * dropped.
+ * The instant a wall-clock time names in a zone, at zero seconds, resolved with the offset
+ * in effect before a daylight-saving transition. An ambiguous time (the hour a clock
+ * repeats) resolves to its first occurrence; a skipped time resolves just after the jump.
  *
  * @param wall - Wall-clock fields, seconds assumed zero.
  * @param timeZone - IANA time zone name.

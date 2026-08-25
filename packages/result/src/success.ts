@@ -1,3 +1,10 @@
+/**
+ * Constructor for the Success half of a Result.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Success } from "./types.js";
 
 /**

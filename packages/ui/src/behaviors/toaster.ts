@@ -1,8 +1,8 @@
 /**
- * Headless queue of toast notifications, decoupled from any rendering so a
- * Toast.Region island can subscribe to its state and re-render on change.
- * Owns each toast's auto-dismiss timer, restarting it with whatever time
- * was left whenever a paused toast (or the whole queue) resumes.
+ * Headless queue of toast notifications a Toast.Region island subscribes to,
+ * re-rendering on change. Owns each toast's auto-dismiss timer, restarting it
+ * with whatever time was left whenever a paused toast (or the whole queue)
+ * resumes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,8 +53,8 @@ export namespace Toaster {
 	export interface UpdateOptions {
 		/**
 		 * Replacement duration. When provided, restarts the toast's
-		 * auto-dismiss timer from full — preserving whether it is currently
-		 * paused — instead of leaving its existing duration untouched.
+		 * auto-dismiss timer from full, preserving whether the toast is
+		 * currently paused.
 		 */
 		duration?: number | null;
 	}
@@ -69,7 +69,7 @@ export namespace Toaster {
 	export interface Events {
 		/** Dispatched after a toast is added, updated, dismissed (by timeout or by id), paused, resumed, or the queue is cleared. */
 		change: Event;
-		/** Dispatched after a new toast is added, ahead of `"change"`, so a listener can react to just the arrival without diffing the full queue. */
+		/** Dispatched after a new toast is added, ahead of `"change"`, so a listener can react to the arrival alone. */
 		toast: Event;
 	}
 }
@@ -83,14 +83,13 @@ interface Entry<Data> {
 	data: Data;
 	duration: number | null;
 	createdAt: number;
-	/** Milliseconds left before dismissal. Meaningless when `duration` is `null`. */
+	/** Milliseconds left before dismissal; meaningful while `duration` is a number. */
 	remaining: number;
 	/** Timestamp the current countdown segment started at; `null` while paused or when `duration` is `null`. */
 	startedAt: number | null;
 	timer: ReturnType<typeof setTimeout> | null;
 }
 
-/** Projects an internal entry to the public, read-only {@link Toaster.Toast} shape. */
 function toPublicToast<Data>(entry: Entry<Data>): Toaster.Toast<Data> {
 	return {
 		id: entry.id,
@@ -102,11 +101,9 @@ function toPublicToast<Data>(entry: Entry<Data>): Toaster.Toast<Data> {
 }
 
 /**
- * Owns a queue of toast notifications and the auto-dismiss timer for each
- * one. A `Toast.Region` island subscribes to `"change"`, renders
- * {@link Toaster.toasts} into the DOM, and calls {@link Toaster.pause} and
- * {@link Toaster.resume} as the pointer enters and leaves a toast (or the
- * whole region) so a toast under the cursor never disappears mid-read.
+ * Owns a queue of toast notifications and each one's auto-dismiss timer. An
+ * island subscribes to `"change"` and calls {@link Toaster.pause} and
+ * {@link Toaster.resume} so a toast under the cursor stays readable.
  *
  * @example
  * toaster.addEventListener("change", () => handle.update(), { signal: handle.signal });
@@ -146,10 +143,9 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
-	 * Queues a toast and starts its auto-dismiss timer. Reusing an id
-	 * already queued replaces that toast in place — clearing its previous
-	 * timer — rather than adding a second entry. Dispatches `"toast"` and
-	 * then `"change"`.
+	 * Queues a toast and starts its auto-dismiss timer. Reusing an id already
+	 * queued replaces that toast in place, clearing its previous timer.
+	 * Dispatches `"toast"` and then `"change"`.
 	 *
 	 * @param data Consumer-supplied payload the island renders.
 	 * @param options Id and duration overrides; see {@link Toaster.AddOptions}.
@@ -185,15 +181,14 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
-	 * Patches a queued toast's data in place. Passing `duration` also
-	 * restarts its timer from full, preserving whether the toast is
-	 * currently paused. Does nothing, returning `false`, when no toast with
-	 * that id is queued.
+	 * Patches a queued toast's data in place. Passing `duration` also restarts
+	 * its timer from full, preserving whether the toast is currently paused.
 	 *
 	 * @param id Id returned by {@link Toaster.add}.
 	 * @param data Replacement payload the island renders.
 	 * @param options Duration override; see {@link Toaster.UpdateOptions}.
-	 * @returns `true` when a toast with that id was found and updated.
+	 * @returns `true` when a toast with that id was found and updated, `false`
+	 * otherwise.
 	 */
 	update(id: string, data: Data, options: Toaster.UpdateOptions = {}): boolean {
 		let entry = this.#toasts.get(id);
@@ -220,11 +215,11 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
-	 * Removes one queued toast by id and clears its timer. Does nothing,
-	 * returning `false`, when no toast with that id is queued.
+	 * Removes one queued toast by id and clears its timer.
 	 *
 	 * @param id Id returned by {@link Toaster.add}.
-	 * @returns `true` when a toast with that id was found and removed.
+	 * @returns `true` when a toast with that id was found and removed, `false`
+	 * otherwise.
 	 */
 	dismiss(id: string): boolean {
 		let entry = this.#toasts.get(id);
@@ -236,7 +231,7 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 		return true;
 	}
 
-	/** Empties the queue and clears every timer. Does nothing when the queue is already empty. */
+	/** Empties the queue and clears every timer, dispatching `"change"` when it held at least one toast. */
 	dismissAll(): void {
 		if (this.#toasts.size === 0) return;
 
@@ -246,10 +241,9 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
-	 * Pauses the auto-dismiss timer for one toast, or every toast when `id`
-	 * is omitted, recording how much time was left on each. A toast with no
-	 * duration, or already paused, is left alone. Dispatches `"change"` only
-	 * when at least one timer actually paused.
+	 * Pauses the auto-dismiss timer for one toast, or every toast when `id` is
+	 * omitted, recording how much time was left on each. Dispatches `"change"`
+	 * only when at least one running timer paused.
 	 *
 	 * @param id Toast to pause, or every toast when omitted.
 	 */
@@ -267,10 +261,9 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
-	 * Resumes the auto-dismiss timer for one toast, or every toast when `id`
-	 * is omitted, continuing from the time left when it was paused. A toast
-	 * with no duration, or not currently paused, is left alone. Dispatches
-	 * `"change"` only when at least one timer actually resumed.
+	 * Resumes the auto-dismiss timer for one toast, or every toast when `id` is
+	 * omitted, continuing from the time left when it paused. Dispatches
+	 * `"change"` only when at least one paused timer resumed.
 	 *
 	 * @param id Toast to resume, or every toast when omitted.
 	 */
@@ -288,8 +281,8 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
-	 * Clears every pending timer without dispatching events, for an island
-	 * to call as it unmounts so no timer outlives it.
+	 * Empties the queue and clears every pending timer silently, for an island
+	 * to call as it unmounts so each countdown ends with it.
 	 */
 	dispose(): void {
 		for (let entry of this.#toasts.values()) this.#clearTimer(entry);
@@ -323,7 +316,6 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 		}, delay);
 	}
 
-	/** Clears an entry's pending timer, if any. */
 	#clearTimer(entry: Entry<Data>): void {
 		if (entry.timer === null) return;
 

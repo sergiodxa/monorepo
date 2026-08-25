@@ -1,8 +1,8 @@
 /**
  * Headless filtering model for search-as-you-type option lists such as a
- * command palette. Owns the query string, the matched subset of options,
- * and which match is active, dispatching a plain `"change"` event whenever
- * any of the three moves so a DOM adapter can re-render without owning state.
+ * command palette. Owns the query string, the matched subset of options, and
+ * which match is active, dispatching a plain `"change"` event whenever any of
+ * the three moves so a DOM adapter re-renders from this single source.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,6 @@ import { TypedEventTarget } from "remix/ui";
 
 import { dispatchChange } from "../utils/dispatch-change";
 
-/** Query string a model starts with when {@link FilterModel.Init.query} is omitted. */
 const DEFAULT_QUERY = "";
 
 /**
@@ -81,12 +80,8 @@ export namespace FilterModel {
 
 /**
  * Owns the query, the matched option set, and the active match for a
- * filterable list, and dispatches a `"change"` event whenever any of the
- * three moves. A DOM adapter mixin is the thin layer around an instance: it
- * forwards input events into {@link FilterModel.setQuery}, arrow keys into
- * the movement methods, and reads {@link FilterModel.matches} and
- * {@link FilterModel.activeId} back into `hidden` and
- * `aria-activedescendant` on the rendered items.
+ * filterable list, dispatching `"change"` whenever any of the three moves, so
+ * a DOM adapter stays a thin layer forwarding input and reading state back.
  */
 export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 	#options: FilterModel.Option[];
@@ -139,10 +134,9 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 	}
 
 	/**
-	 * Replaces the option set the model filters over and recomputes matches
-	 * against the current query. Keeps the active option when it is still
-	 * among the new matches, otherwise falls back to the first match (or
-	 * `null` when there are none). Always dispatches `"change"`.
+	 * Replaces the option set and recomputes matches against the current
+	 * query, keeping the active option while it still matches and falling back
+	 * to the first match otherwise. Always dispatches `"change"`.
 	 *
 	 * @param options The full replacement option set.
 	 */
@@ -154,10 +148,9 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 	}
 
 	/**
-	 * Updates the query and recomputes matches. Keeps the active option
-	 * when it is still among the new matches, otherwise falls back to the
-	 * first match (or `null` when there are none). A no-op, dispatching
-	 * nothing, when `query` equals the current query.
+	 * Updates the query and recomputes matches, keeping the active option
+	 * while it still matches and falling back to the first match otherwise. A
+	 * no-op when `query` equals the current query.
 	 *
 	 * @param query The new query string.
 	 */
@@ -181,10 +174,9 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 	}
 
 	/**
-	 * Sets the active option explicitly. Ignored when `id` is not `null`
-	 * and not part of the current matches, so the active option always
-	 * stays a visible match. Dispatches `"change"` only when the active id
-	 * actually changes.
+	 * Sets the active option explicitly. An `id` outside the current matches
+	 * is ignored, so the active option always stays a visible match.
+	 * Dispatches `"change"` only when the active id actually changes.
 	 *
 	 * @param id Id of the option to activate, or `null` to clear activation.
 	 */
@@ -222,23 +214,16 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 		this.#setActiveId(this.#matches.at(-1)?.id ?? null);
 	}
 
-	/** Recomputes `matches` from the current options, query, and matcher. */
 	#recomputeMatches(): void {
 		this.#matches = this.#options.filter((option) => this.#match(option, this.#query));
 	}
 
-	/**
-	 * Resolves the active id after `matches` changes: keeps the previous
-	 * active id when it is still among the matches, otherwise falls back to
-	 * the first match, or `null` when there are none.
-	 */
 	#resolveActiveId(): string | null {
 		if (this.#activeId !== null && this.isMatch(this.#activeId)) return this.#activeId;
 
 		return this.#matches[0]?.id ?? null;
 	}
 
-	/** Moves activation by `delta` positions across `matches`, wrapping around both ends. */
 	#moveBy(delta: number): void {
 		if (this.#matches.length === 0) {
 			this.#setActiveId(null);
@@ -261,7 +246,6 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 		this.#setActiveId(nextOption.id);
 	}
 
-	/** Sets the active id and dispatches `"change"` only when it actually changes. */
 	#setActiveId(id: string | null): void {
 		if (id === this.#activeId) return;
 

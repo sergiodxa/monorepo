@@ -120,9 +120,6 @@ describe("Hostname.findIncomplete", () => {
 	});
 
 	test("still selects a hostname after an intermediate status replaces pending_validation", async () => {
-		// This is the regression the review flagged: once Cloudflare moves the hostname
-		// off `pending_validation` (to `pending`, `pending_issuance`, etc.) a query keyed
-		// on `pending_validation` would drop it before it ever goes active.
 		let blogId = await seedBlog("intermediate");
 		await Hostname.create(harness.db, {
 			id: "hn_mid",
@@ -141,7 +138,6 @@ describe("Hostname.findIncomplete", () => {
 			expect(incomplete.map((row) => row.id)).toContain("hn_mid");
 		}
 
-		// Only once both statuses are active does it drop out of the polling set.
 		await Hostname.setStatus(harness.db, "hn_mid", "active", "active");
 		let incomplete = await Hostname.findIncomplete(harness.db);
 		expect(incomplete.map((row) => row.id)).not.toContain("hn_mid");
@@ -154,7 +150,6 @@ describe("Hostname.findIncomplete", () => {
 			blogId,
 			hostname: "nullssl.example.com",
 		});
-		// A freshly created hostname has status pending_validation and ssl_status null.
 		await Hostname.setStatus(harness.db, "hn_null", "active", null);
 
 		let incomplete = await Hostname.findIncomplete(harness.db);

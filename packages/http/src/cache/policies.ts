@@ -55,9 +55,8 @@ export class Policies {
 	/**
 	 * Only the client that made the request may store the response.
 	 *
-	 * The age is required rather than optional: without one, a browser is free to
-	 * apply its own heuristic freshness, so how long user-specific content stays
-	 * reusable is a decision the call site has to make.
+	 * The age is required so a browser can't fall back to its own heuristic
+	 * freshness for user-specific content.
 	 *
 	 * @param options - The client-side freshness lifetime.
 	 * @returns `private, max-age=N`.
@@ -71,9 +70,8 @@ export class Policies {
 	/**
 	 * Any cache may keep the response for a year without ever revalidating it.
 	 *
-	 * Correct only for URLs whose content cannot change, meaning assets whose file
-	 * name carries a fingerprint of their bytes; on any other URL a stale copy has
-	 * no way back.
+	 * Correct only for URLs whose content never changes — meaning fingerprinted
+	 * asset names — since any other URL risks caches serving a stale copy forever.
 	 *
 	 * @returns `public, max-age=31536000, immutable`.
 	 * @example
@@ -84,12 +82,9 @@ export class Policies {
 	}
 
 	/**
-	 * The response may be stored by its own client, but is checked with the origin
+	 * The response may be stored only by its own client, checked with the origin
 	 * before every reuse, which is what makes validators worth generating.
-	 *
-	 * `private` is part of the policy, not an extra: this is the policy for
-	 * authenticated HTML, and a shared cache is bypassed neither by a session
-	 * cookie nor by `no-cache` alone, which permits storing the variant it saw.
+	 * Pairing `private` with `no-cache` keeps a shared cache from storing it too.
 	 *
 	 * @returns `private, no-cache`.
 	 * @example

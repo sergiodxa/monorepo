@@ -1,6 +1,7 @@
 /**
- * Tests for `GET /healthcheck` — answers plain-text `OK` without reaching Buttondown or
- * Polar, so an external monitor measures this worker rather than a third-party API.
+ * Tests for `GET /healthcheck` — answers plain-text `OK` without reaching
+ * Buttondown or Polar, so an external monitor measures this worker on its
+ * own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

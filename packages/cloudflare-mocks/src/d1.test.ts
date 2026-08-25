@@ -61,7 +61,6 @@ describe("createD1Database", () => {
 
 		let selected = await db.prepare("SELECT * FROM users").all();
 
-		// A read must not inherit the previous write's change count.
 		expect(selected.meta.changes).toBe(0);
 		expect(selected.meta.rows_read).toBe(1);
 	});
@@ -143,9 +142,6 @@ describe("createD1Database", () => {
 			.prepare("INSERT INTO users (id, email) VALUES (?, ?)")
 			.bind(1, { nested: true });
 
-		// This is the bug class the mock exists to catch: a `json` column that was never
-		// encoded reaches the binder as an object. The message has to name the value, since
-		// `[object Object]` would leave the caller guessing which argument was wrong.
 		await expect(statement.run()).rejects.toThrow(/D1_TYPE_ERROR/);
 		await expect(statement.run()).rejects.toThrow(/\{"nested":true\}/);
 	});
@@ -227,7 +223,6 @@ describe("createD1Database", () => {
 
 		db.reset();
 
-		// The table is gone, not merely emptied, so a migration can be applied again.
 		await expect(db.prepare("SELECT * FROM users").all()).rejects.toThrow(/no such table/);
 		await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
 		expect((await db.prepare("SELECT * FROM users").all()).results).toHaveLength(0);

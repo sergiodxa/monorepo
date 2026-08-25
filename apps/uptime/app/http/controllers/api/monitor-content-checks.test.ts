@@ -24,10 +24,9 @@ import { monitorContentChecks, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` (imported by `./monitor-content-checks`) reads `env` from
- * `cloudflare:workers` at module load time, so it has to resolve under the test runner. These
- * endpoints touch no binding, and the empty strict env proves it: any read would throw by
- * the binding's name instead of quietly answering `undefined`.
+ * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
+ * must resolve under the test runner. An empty strict env proves these endpoints touch no
+ * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 

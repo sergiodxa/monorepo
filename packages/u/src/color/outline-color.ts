@@ -11,11 +11,9 @@ import { utility } from "../internal/descriptor";
 import { color } from "../internal/tokens";
 
 /**
- * Sets only `outline-color`, leaving `outline-width`/`outline-style`
- * untouched. Same color resolution as `u.outline()`'s `color` option —
- * called with no argument it resolves the system default ring color. Use
- * this over `u.outline()` when a state (e.g. `[aria-invalid]`) needs to tint
- * the outline color without forcing a width/style that wasn't already set.
+ * Sets `outline-color` alone, so a state such as `[aria-invalid]` can tint an
+ * outline while the width and style already in effect stay in force. With no
+ * argument it resolves the system default ring color.
  *
  * @example u.outlineColor()
  * @example css({ outlineColor: "var(--ui-ring, Highlight)" })

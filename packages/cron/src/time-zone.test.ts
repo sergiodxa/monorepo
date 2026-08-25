@@ -35,8 +35,6 @@ describe("offsetAt", () => {
 	});
 
 	test("changes exactly at the instant a clock moves", () => {
-		// New York moves at 07:00Z on 2026-03-08, and Troll moves two hours at 01:00Z on
-		// 2026-03-29, which is the largest single change any zone makes.
 		expect(offsetAt(Date.parse("2026-03-08T06:59:59Z"), "America/New_York")).toBe(-5 * HOUR_MS);
 		expect(offsetAt(Date.parse("2026-03-08T07:00:00Z"), "America/New_York")).toBe(-4 * HOUR_MS);
 		expect(offsetAt(Date.parse("2026-03-29T00:59:59Z"), "Antarctica/Troll")).toBe(0);
@@ -128,7 +126,6 @@ describe("instantFromWallClock", () => {
 	});
 
 	test("gives an ambiguous wall time its first pass, so a schedule fires once", () => {
-		// 2026-11-01 01:30 happens twice in New York: 05:30Z as EDT, 06:30Z as EST.
 		expect(
 			new Date(
 				instantFromWallClock(
@@ -138,7 +135,6 @@ describe("instantFromWallClock", () => {
 			).toISOString(),
 		).toBe("2026-11-01T05:30:00.000Z");
 
-		// 2026-10-25 02:30 happens twice in Madrid: 00:30Z as CEST, 01:30Z as CET.
 		expect(
 			new Date(
 				instantFromWallClock(
@@ -150,8 +146,6 @@ describe("instantFromWallClock", () => {
 	});
 
 	test("carries a missing wall time forward past the jump", () => {
-		// 2026-03-08 02:30 never happens in New York; the offset before the jump puts
-		// it at 07:30Z, which reads as 03:30 EDT.
 		expect(
 			new Date(
 				instantFromWallClock(
@@ -161,7 +155,6 @@ describe("instantFromWallClock", () => {
 			).toISOString(),
 		).toBe("2026-03-08T07:30:00.000Z");
 
-		// 2026-03-29 02:30 never happens in Madrid; it lands at 01:30Z, or 03:30 CEST.
 		expect(
 			new Date(
 				instantFromWallClock(

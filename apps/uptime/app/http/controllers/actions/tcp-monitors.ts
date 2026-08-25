@@ -1,14 +1,8 @@
 /**
- * Form actions for TCP monitor create/update/delete/manual-check. Each follows the
- * validate → mutate → flash → redirect pattern: on validation failure the visitor is
- * sent back to the form with an error toast; on success, to the monitor (or list).
- *
- * The manual check is the one action here that performs billable work: it opens the
- * connection inline, so unlike the HTTP monitors' "run check" — which only enqueues, and is
- * billed by the job that later carries it out — nothing downstream of this request would
- * ever meter it. All of that lives in {@link checkTcpMonitor}: the entitlement gate that
- * decides whether the connection is attempted at all, the Analytics Engine data point
- * recording it, and the meter event for the one that was.
+ * Form actions for TCP monitor create/update/delete/manual-check, each following the
+ * validate → mutate → flash → redirect pattern. The manual check opens the connection
+ * inline as billable work, so {@link checkTcpMonitor} carries the entitlement gate, the
+ * Analytics Engine point, and the meter event for it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -123,13 +117,9 @@ export const deleteTcpMonitor = createAction(routes.actions.monitor.tcp.delete, 
 });
 
 /**
- * POST /actions/:team/check-tcp-monitor — triggers an immediate on-demand check.
- *
- * A connection this attempts is one ping, the same as one the scheduled sweep attempts, so
- * it is gated the same way and metered the same way. Everything that returns before
- * {@link checkTcpConnection} — a rejected form, a monitor this team does not own, an owner
- * without entitlement — performed no check and bills nothing; only work actually done
- * reaches the meter.
+ * POST /actions/:team/check-tcp-monitor — triggers an immediate on-demand check, gated and
+ * metered exactly like the scheduled sweep. Everything that returns before
+ * {@link checkTcpConnection} performs no check and bills nothing.
  */
 export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, async (ctx) => {
 	let result = await validate(ctx.formData, TcpMonitorIdSchema);
@@ -146,9 +136,9 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	if (!monitor) return notFound("Not Found");
 
 	/**
-	 * `stateFor`, not `isActive`: an owner whose entitlement cannot be determined still gets
-	 * their check, because refusing a paying customer over an inconclusive lookup is the
-	 * worse of the two mistakes. The same reading every other manual check takes.
+	 * Reads entitlement via `stateFor`, so an owner whose state cannot be determined still
+	 * gets their check — refusing a paying customer over an inconclusive lookup is the worse
+	 * mistake. The same reading every other manual check takes.
 	 */
 	if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
@@ -165,15 +155,9 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	let resultId = await TcpMonitor.recordCheckResult(db, monitor.id, checkResult);
 
 	/**
-	 * Written here, between the history row and the meter, exactly where the scheduled sweep
-	 * writes it — a check the visitor asked for is the same event as one the cron asked for,
-	 * so nothing reading the dataset should be able to tell which produced a row. Without
-	 * this the check was billed and stored in D1 but absent from every chart and aggregate
-	 * built on Analytics Engine.
-	 *
-	 * A refused or timed-out connection has no latency to report and the column is nullable
-	 * for exactly that, but the dataset's doubles are not — zero is how the rest of the
-	 * dataset already spells "no measurement", so it is what goes in.
+	 * Written here, at the same point the scheduled sweep writes it, so a manual and a
+	 * cron check produce indistinguishable rows. Doubles aren't nullable, so a refused or
+	 * timed-out check reports zero latency, the dataset's existing spelling for "no measurement".
 	 */
 	writePingResult({
 		monitorId: monitor.id,
@@ -184,12 +168,9 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	});
 
 	/**
-	 * Keyed on the history row this check just wrote, which is the same key the scheduled
-	 * sweep bills a TCP check under: it is unique, already persisted, and belongs to exactly
-	 * one connection attempt, so a manual check and a scheduled one can never be handed the
-	 * same id and neither can be billed twice. Deferred rather than awaited, like every
-	 * meter event on a response path — the visitor is waiting on a result this request
-	 * already has, and ingestion is best-effort and logs its own failures.
+	 * Keyed on the history row this check just wrote, which is unique and already persisted,
+	 * so a manual check and a scheduled one can never be billed twice. Deferred like every
+	 * meter event on a response path: ingestion is best-effort and logs its own failures.
 	 */
 	waitUntil(
 		ingestPings(getServiceContainer().get(PolarClient), [

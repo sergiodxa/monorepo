@@ -1,9 +1,6 @@
 /**
- * Verifies the world helper test module that exercises persistence-oriented world transformations.
- * It checks that world snapshots and migration outputs preserve the expected structural contracts for long-lived state.
- *
- * This module focuses on the observable behavior of helper boundaries rather than any particular content set.
- * Its assertions protect the shape and intent of world data as it moves between legacy inputs, runtime state, and persistent representations.
+ * Verifies world helper behavior across persistence-oriented transformations:
+ * snapshots and migration keep the structural contract of long-lived state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -106,7 +103,6 @@ test("pickPersistentWorld excludes encounter and trainer creatures from the save
 	world.creatureLocation[trainerId] = { kind: "trainer", trainerId: "rival-0" };
 
 	let snapshot = pickPersistentWorld(world);
-	// Owned party creatures survive; transient encounter and trainer creatures do not.
 	expect(snapshot.entities.includes(ownedId)).toBe(true);
 	expect(snapshot.entities.includes(wildId)).toBe(false);
 	expect(snapshot.entities.includes(trainerId)).toBe(false);

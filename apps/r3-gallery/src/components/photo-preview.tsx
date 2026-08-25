@@ -1,10 +1,9 @@
 /**
- * PhotoPreview component for the gallery, rendering a photo card with its album label,
- * title-cased heading, and an optional actions slot that defaults to an "Open album"
- * link. It is shared between the standalone photo page and the modal overlay so a
- * photo looks consistent in both contexts. Once its own container is wide enough it
- * splits into an image column beside a content column; narrower than that it stacks
- * the two, so the same card fits a phone-width standalone page or a wide modal alike.
+ * PhotoPreview component for the gallery, rendering a photo card with its album
+ * label, title-cased heading, and an optional actions slot that defaults to an
+ * "Open album" link. Shared by the standalone photo page and the modal overlay
+ * so a photo looks consistent in both contexts. It splits into an image column
+ * beside a content column once wide enough, otherwise stacking the two.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

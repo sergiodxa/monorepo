@@ -1,7 +1,6 @@
 /**
- * `/docs` controller. Has no page of its own: it redirects every visitor straight to
- * the overview doc, so the docs landing URL always resolves to a concrete starting
- * page instead of an index to pick from.
+ * `/docs` controller: redirects every visitor straight to the overview doc, so
+ * the docs landing URL always resolves to a concrete starting page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

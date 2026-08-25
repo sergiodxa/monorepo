@@ -1,3 +1,10 @@
+/**
+ * Tests for the `ContentType` MIME type constants.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import * as ContentType from "./content-type";

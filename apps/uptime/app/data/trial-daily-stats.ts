@@ -1,13 +1,9 @@
 /**
- * Data-access model for `trial_daily_stats`: one row per reported UTC day of the trial
- * funnel, written by the report job the morning after and never recomputed.
+ * Data-access model for `trial_daily_stats`: one row per reported UTC day of the trial funnel,
+ * written by the report job the morning after and never recomputed.
  *
- * The counters it stores are all derivable from `leads`, `trial_watches` and
- * `trial_conversions` — for about a month. After that the first two have been swept, and an
- * unsubscribe removes a lead's whole history retroactively at any point before that, so the
- * same query over the same past day returns a smaller number every time it is run. History
- * that quietly rewrites itself is worse than no history, and this table is the fix: the day
- * is counted once, while the rows still exist, and the answer is kept.
+ * The source rows are swept after about a month and an unsubscribe erases a lead's history
+ * retroactively, so a day counted once while those rows exist is its only stable answer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +18,7 @@ import type { SelectTrialDailyStats } from "~/database/schema";
 
 import { trialDailyStats } from "~/database/schema";
 
-/** The five counters a reported day is made of, without the row's own bookkeeping. */
+/** The five counters a reported day is made of, separate from the row that stores them. */
 export interface TrialDailyCounters {
 	/** Addresses handed over for the first time. */
 	newLeads: number;
@@ -57,11 +53,8 @@ export default class TrialDailyStats {
 	/**
 	 * Writes one day's counters, replacing the day if it has already been reported.
 	 *
-	 * Idempotent on `date`, which is the unique column: a redelivered queue message or a manual
-	 * replay recomputes the same day and overwrites it, where a plain insert would leave two
-	 * rows that every later total would silently double. `ON CONFLICT DO UPDATE` rather than a
-	 * delete followed by an insert, so the replacement is one statement and cannot leave the
-	 * day missing if it fails halfway.
+	 * Idempotent on `date`, the unique column, in the one atomic statement `ON CONFLICT DO
+	 * UPDATE` gives: a second row would double every later total drawn from this table.
 	 *
 	 * @param db - Database handle.
 	 * @param input - The day and its five counters.
@@ -98,11 +91,8 @@ export default class TrialDailyStats {
 
 	/**
 	 * Sums every reported day from `from` up to and including `to`, for the context block the
-	 * report closes with.
-	 *
-	 * Summed in SQL over an indexed range on `date`, and over reported days rather than over
-	 * calendar days: a day the job never ran for contributes nothing instead of contributing a
-	 * guess. Days are `YYYY-MM-DD` strings, which sort as dates, so the range needs no parsing.
+	 * report closes with. Summed in SQL over an indexed range, where a day the job never ran for
+	 * contributes nothing; `YYYY-MM-DD` strings sort as dates, so the range needs no parsing.
 	 *
 	 * @param db - Database handle.
 	 * @param from - First day of the range, inclusive, as `YYYY-MM-DD`.
@@ -121,7 +111,6 @@ export default class TrialDailyStats {
 			[from, to],
 		);
 
-		// `SUM` over no rows is `NULL`, which is a range with no reported day rather than an error.
 		let [row] = (result.rows ?? []) as unknown as Record<keyof TrialDailyCounters, number | null>[];
 
 		return {

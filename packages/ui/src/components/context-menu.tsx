@@ -1,12 +1,11 @@
 /**
- * A menu surface meant to open at a right-click's pointer position rather
- * than below a triggering button, composing {@link Menu}'s popover styling
- * and `role="menu"` wiring directly so its rows read and behave exactly like
- * a standard menu's. Adds the {@link ContextMenu.Trigger} wrapper a pointer
- * gesture opens the surface against, plus the grouped-row parts —
- * {@link ContextMenu.Group}, {@link ContextMenu.Label}, and
- * {@link ContextMenu.Shortcut} — a context menu's denser row layout tends to
- * need.
+ * A menu surface that opens at a right-click's pointer position, composing
+ * {@link Menu}'s popover styling and `role="menu"` wiring directly so its
+ * rows read and behave exactly like a standard menu's. Adds the
+ * {@link ContextMenu.Trigger} wrapper a pointer gesture opens the surface
+ * against, plus the grouped-row parts — {@link ContextMenu.Group},
+ * {@link ContextMenu.Label}, and {@link ContextMenu.Shortcut} — a context
+ * menu's denser row layout tends to need.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,9 +24,7 @@ import { Section } from "./section";
 /**
  * Side {@link ContextMenu.SubContent} renders against relative to its
  * {@link ContextMenu.SubTrigger} row when a consumer leaves `placement`
- * unset — reading outward to the side, the direction a nested row
- * conventionally flies out toward, rather than {@link Menu}'s own downward
- * default.
+ * unset — the direction a nested row conventionally flies outward toward.
  */
 const DEFAULT_SUB_PLACEMENT: NonNullable<Menu.Props["placement"]> = "right-start";
 
@@ -43,9 +40,8 @@ export namespace ContextMenu {
 
 	/**
 	 * Every native `<div>` attribute, plus the `mix` passthrough. The area a
-	 * consumer wraps around whatever content should open
-	 * {@link ContextMenu} at the pointer's position — a table row, a card, a
-	 * canvas region.
+	 * consumer wraps around content that should open {@link ContextMenu} at the
+	 * pointer's position — a table row, a card, a canvas region.
 	 */
 	export interface TriggerProps extends TagProps<"div"> {
 		/** The content the pointer gesture opens {@link ContextMenu} against. */
@@ -98,14 +94,9 @@ export namespace ContextMenu {
 }
 
 /**
- * Renders the surface itself: {@link Menu} unchanged, carrying the same
- * rounded, bordered, shadowed panel look, `role="menu"`, and compact inset
- * padding. Opening it against a pointer's position instead of a triggering
- * button's is entirely a positioning concern — the `contextMenu()` mixin a
- * consuming island applies to {@link ContextMenu.Trigger} is what shows this
- * surface and places it, while every row nested inside stays a real `<a>` or
- * `<button>`, reachable in the page's native Tab order the same way {@link
- * Menu.Item} always is.
+ * Renders {@link Menu} unchanged; positioning against the pointer is handled
+ * entirely by the `contextMenu()` mixin a consuming island applies to
+ * {@link ContextMenu.Trigger}, while every nested row stays a real, tab-reachable `<a>` or `<button>`.
  *
  * @param handle Runtime handle carrying the host's {@link Menu} props.
  * @returns The render function producing the surface's markup.
@@ -127,11 +118,7 @@ export function ContextMenu(handle: Handle<ContextMenu.Props>) {
 /**
  * Renders {@link ContextMenu.TriggerProps.children} inside a plain `<div>`,
  * the area a pointer gesture opens the paired {@link ContextMenu} against.
- * Carries no gesture handling of its own — this module ships markup and
- * styling only — so pair it with the `contextMenu()` mixin through its `mix`
- * prop from a consuming island to open the surface at the pointer's
- * position; outline is suppressed here since the mixin's own focus handling
- * takes over once the surface is open.
+ * Pair it with the `contextMenu()` mixin via `mix`; outline is suppressed since that mixin's own focus handling takes over once the surface opens.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the trigger area's markup.
@@ -165,12 +152,9 @@ ContextMenu.Trigger = function ContextMenuTrigger(handle: Handle<ContextMenu.Tri
 ContextMenu.Item = Menu.Item;
 
 /**
- * Renders {@link ContextMenu.GroupProps.children} as one labeled run of
- * rows: {@link Section} restyled with a hairline divider above every group
- * but the first, setting one run of related rows apart from the rows around
- * it. Pair it with a {@link ContextMenu.Label} as its first child to give the
- * group a visible heading, and `aria-labelledby` pointing at that label's
- * `id` to expose it to assistive technology.
+ * Renders {@link ContextMenu.GroupProps.children} as one labeled run of rows:
+ * {@link Section} restyled with a divider above every group but the first.
+ * Pair a {@link ContextMenu.Label} first child with `aria-labelledby` pointing at its `id` for assistive technology.
  *
  * @param handle Runtime handle carrying the host `<section>`'s props.
  * @returns The render function producing the group's markup.
@@ -195,10 +179,9 @@ ContextMenu.Group = function ContextMenuGroup(handle: Handle<ContextMenu.GroupPr
 };
 
 /**
- * Renders {@link ContextMenu.LabelProps.children} as a {@link
- * ContextMenu.Group}'s small, muted heading, sized and spaced to sit
- * directly above the group's first row with a light vertical rhythm suited
- * to a dense row of actions.
+ * Renders {@link ContextMenu.LabelProps.children} as a
+ * {@link ContextMenu.Group}'s small, muted heading, sized and spaced to sit
+ * directly above the group's first row for a dense row of actions.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the label's markup.
@@ -233,12 +216,8 @@ ContextMenu.Separator = Menu.Separator;
 
 /**
  * Renders a row that opens a nested {@link ContextMenu.SubContent} surface:
- * {@link Menu.Item} restyled with extra inline-end padding, leaving room for
- * a trailing chevron icon signaling that activating the row reveals a
- * further surface rather than acting immediately. Point its `commandfor` at
- * the nested {@link ContextMenu.SubContent}'s `id` with
- * `command="toggle-popover"`, the same invoker relationship {@link Menu}'s
- * own nested-menu rows use.
+ * {@link Menu.Item} restyled with inline-end padding for a trailing chevron
+ * icon; point `commandfor` at the nested surface's `id` with `command="toggle-popover"`.
  *
  * @param handle Runtime handle carrying the host row's props.
  * @returns The render function producing the row's markup.
@@ -262,10 +241,8 @@ ContextMenu.SubTrigger = function ContextMenuSubTrigger(handle: Handle<ContextMe
 
 /**
  * Renders a nested surface opened by a {@link ContextMenu.SubTrigger} row:
- * {@link ContextMenu} itself, defaulting `placement` to reading outward to
- * the side — {@link DEFAULT_SUB_PLACEMENT} — instead of {@link Menu}'s own
- * downward default, since a nested row conventionally opens its surface
- * beside itself rather than beneath it.
+ * {@link ContextMenu} itself, defaulting `placement` to
+ * {@link DEFAULT_SUB_PLACEMENT} since a nested row conventionally opens beside itself.
  *
  * @param handle Runtime handle carrying the host's {@link Menu} props.
  * @returns The render function producing the nested surface's markup.
@@ -321,7 +298,7 @@ ContextMenu.RadioGroup = ContextMenu.Group;
 /**
  * Renders {@link ContextMenu.ShortcutProps.children} as a row's trailing
  * keyboard-shortcut hint: pushed to the row's inline end and muted, reading
- * as supplementary detail rather than the row's primary label.
+ * as supplementary detail alongside the row's primary label.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the shortcut hint's markup.

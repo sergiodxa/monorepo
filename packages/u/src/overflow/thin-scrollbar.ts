@@ -5,8 +5,8 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Requests a thin scrollbar that reserves its gutter up front, so its
- * appearance and disappearance never shifts layout. Pair with
+ * Requests a thin scrollbar that reserves its gutter up front, so layout
+ * stays put whether or not the scrollbar is showing. Pair with
  * `u.scroll()`/`u.overflow()` on the same scroll container.
  *
  * @example u.thinScrollbar()

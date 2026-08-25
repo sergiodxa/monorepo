@@ -10,8 +10,6 @@
 
 /** A single 2D position. */
 export interface Point {
-	/** Horizontal position. */
 	x: number;
-	/** Vertical position. */
 	y: number;
 }

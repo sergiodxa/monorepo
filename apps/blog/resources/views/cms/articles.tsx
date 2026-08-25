@@ -124,10 +124,6 @@ export function CMSArticlesIndexView() {
 													<Table.Cell>
 														<Link href={item.publicHref}>{item.title}</Link>
 													</Table.Cell>
-													{/* A future `published_at` reads as a draft still being worked
-													on, so it takes the warning tone, while anything already public
-													takes success — the same publish-state contract the public pages
-													use, spelled out in words instead of an emoji. */}
 													<Table.Cell mix={[textAlign("center")]}>
 														<Badge color={item.preview ? "warning" : "success"} variant="secondary">
 															{item.preview ? "Preview" : "Published"}
@@ -197,7 +193,8 @@ export function CMSArticlesIndexView() {
 }
 
 /**
- * Renders the CMS form used to create or edit an article.
+ * Renders the CMS form used to create or edit an article. The content field
+ * carries Markdown source, so it renders monospaced with room for many lines.
  */
 export function CMSArticlesActionView() {
 	return ({ model }: { model: CMSArticlesActionView.Props }) => {
@@ -260,9 +257,6 @@ export function CMSArticlesActionView() {
 
 							<Label mix={[grid(), gap(1)]}>
 								<span>Content</span>
-								{/* The Markdown body is the one field worth many lines of room, so it
-								keeps a monospaced face and a tall floor on top of the control's own
-								content-driven sizing. */}
 								<TextArea
 									name="content"
 									rows={16}

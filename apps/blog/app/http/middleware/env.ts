@@ -1,8 +1,7 @@
 /**
- * HTTP middleware and accessor for environment bindings. `createEnvMiddleware`
- * stores `App.Env` in the request context, and the overloaded `getEnv` reads a
- * key back out with optional fallback, throwing `MissingEnvError` when a required
- * value is absent. Exists to expose typed env access to downstream handlers.
+ * Typed access to the environment bindings: middleware puts `App.Env` in the
+ * request context and `getEnv` reads a key back out, throwing when a required
+ * value is absent so misconfiguration surfaces at the call site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

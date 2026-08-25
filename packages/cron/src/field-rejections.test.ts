@@ -70,8 +70,6 @@ describe.each(FIELD_SPECS.map((spec) => [spec.field, spec] as const))(
 		});
 
 		test("rejects every value below the field minimum", () => {
-			// Below zero there is no value at all, only a character the grammar has no rule
-			// for, which is why a negative reads as a syntax error rather than out of range.
 			for (let value = spec.min - 1; value >= 0; value--) {
 				expectRejects(spec, `${value}`, { reason: "out-of-range" });
 			}
@@ -124,9 +122,6 @@ describe.each(FIELD_SPECS.map((spec) => [spec.field, spec] as const))(
 		});
 
 		test("rejects text that is not a value, a range, or a step", () => {
-			// An empty field cannot be written positionally, since the whitespace around it
-			// closes up and the expression becomes four fields; that is a count failure and
-			// is covered with the other counts. An empty list item can, and is here.
 			for (let form of ["1.5", "+1", "0x1", "1e2", "1,,2", ",", "-", "1-", "-5", ",5", "5,"]) {
 				let error = rejectionOf(expressionWith(spec, form));
 				expect({ form, reason: error.reason, field: error.field }).toEqual({
@@ -138,8 +133,6 @@ describe.each(FIELD_SPECS.map((spec) => [spec.field, spec] as const))(
 		});
 
 		test("rejects the non-standard extensions other parsers accept", () => {
-			// Accepting the syntax without honoring the semantics is the failure mode worth
-			// avoiding, so each of these stays rejected however it is written.
 			for (let form of ["L", "l", "W", "1W", "15W", "LW", "1#2", "?", "1L", "*/L"]) {
 				let error = rejectionOf(expressionWith(spec, form));
 				expect({ form, rejected: true, field: error.field }).toEqual({
@@ -167,8 +160,6 @@ describe("names belong to the field that knows them", () => {
 			["dayOfWeek", "JAN"],
 			["dayOfWeek", "DEC"],
 		] as const) {
-			// "MAR" and "MAY" are month names and "SAT" is a weekday, and no abbreviation is
-			// shared between the two tables, so a name always belongs to exactly one field.
 			let spec = specFor(field);
 			expectRejects(spec, form, { reason: "unknown-name" });
 		}
@@ -189,9 +180,6 @@ describe("how many fields an expression has", () => {
 			2: { reason: "field-count", position: 3 },
 			3: { reason: "field-count", position: 5 },
 			4: { reason: "field-count", position: 7 },
-			// Too few fields point just past the last one, where the missing one would go;
-			// too many point at the sixth, where the extra ones begin. Six on its own is a
-			// seconds-first schedule and is named as one, pointing at the whole expression.
 			6: { reason: "seconds-not-supported", position: 0 },
 			7: { reason: "field-count", position: 10 },
 			8: { reason: "field-count", position: 10 },
@@ -268,8 +256,6 @@ describe("macros the package does not implement", () => {
 
 describe("dates no calendar contains", () => {
 	test("rejects every day-of-month and month pair that cannot occur", () => {
-		// Only when the day of week is open: a restricted weekday can put a schedule on the
-		// calendar even when its day of month never lands in the month it names.
 		for (let month = 1; month <= 12; month++) {
 			for (let day = 1; day <= 31; day++) {
 				let expression = `0 0 ${day} ${month} *`;
@@ -328,7 +314,6 @@ describe("where a failure says the problem is", () => {
 	});
 
 	test("keeps the index aligned when the fields before it are wider than one character", () => {
-		// "0,15,30 9-17 1,15,31 JAN-JUN 99": the day-of-week field starts at index 30.
 		let expression = "0,15,30 9-17 1,15,31 JAN-JUN 99";
 		let error = rejectionOf(expression);
 		expect({ field: error.field, position: error.position }).toEqual({
@@ -338,8 +323,6 @@ describe("where a failure says the problem is", () => {
 	});
 
 	test("stops at the first problem, reading the fields left to right", () => {
-		// Every field here is wrong; the minute is the one reported, so a form highlights
-		// one mistake at a time rather than the last one the parser happened to reach.
 		let error = rejectionOf("60 25 32 13 8");
 		expect({ field: error.field, position: error.position }).toEqual({
 			field: "minute",

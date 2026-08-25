@@ -1,10 +1,8 @@
 /**
  * `/account/sessions` — the device list and the two revocations it offers. Every session
- * row's id is a live refresh token, so the list is scoped to the subject the guard
- * resolved, every revocation is scoped the same way, and the page is never cached.
- *
- * Revoking the session the request itself arrived on ends it here too: the tokens go, the
- * session record is destroyed, and the browser is asked to drop this origin's cookies.
+ * row's id is a live refresh token, so the list and every revocation are scoped to the
+ * subject the guard resolved, and the page is served no-store. Revoking the session this
+ * request arrived on ends it here too, dropping this origin's cookies.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,18 +31,17 @@ import routes from "~/routes/web";
 /**
  * Headers that end the session in the browser as well as in the database.
  *
- * `"cookies"` rather than `"*"`: the person is being sent to sign in again, and clearing
- * their storage and caches for this origin would achieve nothing beyond that.
+ * Clearing cookies alone is enough: the person is being sent to sign in again, and this
+ * origin's storage and caches hold nothing that outlives that.
  */
 const CLEAR_COOKIES: HeadersInit = { "Clear-Site-Data": '"cookies"' };
 
 /**
- * The rendered page must not be stored by anything: it carries one live refresh token per
- * row, as the value each revoke form posts back.
+ * Each rendered row carries a live refresh token, as the value its revoke form posts
+ * back, so this response stays private to the browser that asked for it.
  */
 const NO_STORE: HeadersInit = { "Cache-Control": "no-store, private" };
 
-/** Renders the device list for the subject the guard resolved. */
 async function sessionsPage(ctx: RequestContext, db: Database): Promise<Response> {
 	let subject = ctx.subject;
 	let sessions = await Session.findBySubjectId(db, subject.id);
@@ -113,7 +110,7 @@ async function sessionsPage(ctx: RequestContext, db: Database): Promise<Response
 	);
 }
 
-/** Sends the browser back to the list, so a refresh never re-posts the revocation. */
+/** Sends the browser back to the list, so a refresh re-runs the GET. */
 function backToList(): Response {
 	return redirect(routes.account.sessions.index.href(), { status: redirect.Status.SeeOther });
 }
@@ -121,8 +118,7 @@ function backToList(): Response {
 /**
  * Signs the browser out and sends it to the authorization endpoint.
  *
- * `destroySession()` runs last, and nothing may touch the session after it: a destroyed
- * session throws on any further access.
+ * `destroySession()` runs last, since a destroyed session throws on any further access.
  */
 function signOut(): Response {
 	unsetTokens();
@@ -143,10 +139,9 @@ export default createController(routes.account.sessions, {
 		}),
 
 		/**
-		 * POST /account/sessions — revokes one session, or every session but this one.
-		 *
-		 * Both branches delete only rows belonging to the subject the guard resolved, so a
-		 * forged `sessionId` naming somebody else's session deletes nothing.
+		 * POST /account/sessions — revokes one session, or every session but this one. Both
+		 * branches touch only the guard's subject's rows; any other id gets the same answer
+		 * a stale one does. The browser signs out once no row is left that can refresh.
 		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
@@ -164,9 +159,6 @@ export default createController(routes.account.sessions, {
 			let owned = await Session.findBySubjectId(db, subject.id);
 
 			if (submitted.intent === "revoke-all") {
-				// Every session but this one, which is what the control promises: booting every
-				// other device is most useful precisely when the person wants to stay signed in
-				// here and keep reading the list.
 				let others = owned.filter((session) => session.id !== currentSessionId);
 				for (let session of others) await Session.deleteById(db, session.id);
 
@@ -175,8 +167,6 @@ export default createController(routes.account.sessions, {
 					count: others.length,
 				});
 
-				// Nothing was kept, which means the current session's own row was already gone,
-				// so the tokens in the cookie no longer refresh anything.
 				if (others.length === owned.length) return signOut();
 
 				return backToList();
@@ -185,8 +175,6 @@ export default createController(routes.account.sessions, {
 			let target = owned.find((session) => session.id === submitted.sessionId);
 
 			if (!target) {
-				// Either already revoked, or never this subject's. Same answer either way, and
-				// the submitted id is neither echoed back nor logged.
 				ctx.logger.info("session_revoke_not_found", { subjectId: subject.id });
 				return backToList();
 			}
@@ -196,8 +184,6 @@ export default createController(routes.account.sessions, {
 
 			if (target.id === currentSessionId) return signOut();
 
-			// A subject whose last session was just revoked has nothing left to refresh with,
-			// even though the row removed was not the one this request arrived on.
 			let remaining = await Session.findBySubjectId(db, subject.id);
 			if (remaining.length === 0) return signOut();
 

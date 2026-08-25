@@ -52,10 +52,9 @@ const journal = table({
 });
 
 /**
- * Applies pending migrations against the adapter, tracked in an `oidc_migrations`
- * journal table. Idempotent: already-applied ids are skipped, so it is safe to
- * run on every cold start. Multi-statement SQL is executed via `executeScript`,
- * which each adapter (D1, SqlStorage, plain SQLite) handles.
+ * Applies pending migrations against the adapter, tracked in an
+ * `oidc_migrations` journal so already-applied ids are skipped, keeping cold
+ * starts safe; multi-statement SQL runs via each adapter's `executeScript`.
  * @param adapter - The database adapter to migrate.
  * @returns The ids applied in this run.
  * @example

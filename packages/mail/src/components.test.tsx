@@ -62,7 +62,6 @@ describe("Email.Layout", () => {
 		expect(html).toContain("@media (prefers-color-scheme:dark)");
 		expect(html).toContain(".mail-surface{background-color:#18181b !important;}");
 		expect(html).toContain('class="mail-text"');
-		// The stylesheet is document furniture, not copy, so it stays out of the text part.
 		expect(text).toBe("Body copy");
 	});
 
@@ -83,7 +82,6 @@ describe("Email.Layout", () => {
 			</Email.Layout>,
 		);
 
-		// The rule stays in the stylesheet; nothing wears the class that would answer it.
 		expect(html).not.toContain('class="mail-surface"');
 		expect(html).toContain("background-color:#111111");
 		expect(html).toContain("<h1 style=");
@@ -178,7 +176,6 @@ describe("Email.Section", () => {
 
 		expect(html).toContain("background-color:#fafafa");
 		expect(html).toContain("padding:16px 0;");
-		// Outlook drops padding declared on a table, so it must not be the one carrying it.
 		expect(html).not.toContain("width:100%;background-color:#fafafa;padding");
 	});
 });
@@ -224,7 +221,6 @@ describe("Email.Img", () => {
 		expect(html).toContain("display:block");
 		expect(html).toContain("border:0");
 		expect(html).toContain("outline:none");
-		// Alt text is what most readers get: clients block remote images until asked.
 		expect(text).toBe("Acme");
 	});
 });
@@ -268,7 +264,6 @@ describe("web fonts", () => {
 		expect(html).toContain("@font-face{font-family:'Inter'");
 		expect(html).toContain("mso-font-alt:'Helvetica'");
 		expect(html).toContain("format('woff2')");
-		// Unquoted, or the renderer escapes the quotes and the declaration names nothing.
 		expect(html).toContain("font-family:Inter, Helvetica, Arial, sans-serif;");
 		expect(html).not.toContain("&#39;Inter&#39;");
 	});

@@ -1,3 +1,10 @@
+/**
+ * Validation for TypeID prefixes per the specification.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 /** Maximum TypeID prefix length defined by the specification. */
 const MAX_PREFIX_LENGTH = 63;
 
@@ -33,7 +40,6 @@ export function isValidPrefix(string: string): boolean {
 		let isFirst = index === 0;
 		let isLast = index === lastPosition;
 
-		// first and last char of prefix can only be [a-z]
 		if ((isFirst || isLast) && !isLowerAtoZ) return false;
 		if (!(isLowerAtoZ || isUnderscore)) return false;
 	}

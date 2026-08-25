@@ -24,7 +24,11 @@ import requireUser from "~/app/http/middleware/require-user";
 import UptimeBar from "~/resources/views/shared/uptime-bar";
 import routes from "~/routes/web";
 
-/** GET /app/:team/tcp/:monitorId/cards/uptime-history — the monitor's 90-day uptime bar, fragment-only. */
+/**
+ * GET /app/:team/tcp/:monitorId/cards/uptime-history — the monitor's 90-day
+ * uptime bar, fragment-only, inside a horizontally scrolling box since 90
+ * bars need roughly 358px, wider than a typical phone column.
+ */
 export default createAction(routes.app.team.tcpMonitors.cards.uptimeHistory, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -36,8 +40,6 @@ export default createAction(routes.app.team.tcpMonitors.cards.uptimeHistory, {
 
 		let dailyStats = await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp");
 
-		// The bar's copy is the same copy a viewer reads on a public status page, so it
-		// reuses those keys rather than growing a second set that could drift from them.
 		let labels = {
 			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
 			today: ctx.i18next.t("statusPage.uptimeBar.today"),
@@ -52,9 +54,6 @@ export default createAction(routes.app.team.tcpMonitors.cards.uptimeHistory, {
 		return ctx.render(
 			<section>
 				<h2>{ctx.i18next.t("page.tcpMonitorDetail.history.title")}</h2>
-				{/* 90 bars at a 2px floor plus their gaps need ~358px, more than this column
-				offers on a phone, so the bar gets its own scroll box rather than pushing the
-				whole content area sideways. */}
 				<div mix={[overflowX("auto")]}>
 					<UptimeBar
 						days={dailyStats}

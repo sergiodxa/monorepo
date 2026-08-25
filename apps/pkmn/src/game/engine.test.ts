@@ -1,7 +1,7 @@
 /**
- * Verifies the `Engine` integration points exercised by this test module, focusing on command dispatch, migrated world bootstrap data, and selector results exposed to higher-level consumers.
- *
- * Keeps the test coverage centered on file-local fixtures and assertions so this module documents the expected behavior contract for battle startup, inventory updates, and bestiary reads without depending on presentation details.
+ * Exercises the `Engine`'s command dispatch, migrated bootstrap world, and
+ * selectors through file-local fixtures, documenting the behavior contract
+ * for battle startup, inventory updates, and bestiary reads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -97,7 +97,6 @@ test("change-money adjusts the balance and reports the new total", () => {
 	expect(reward).toEqual([{ type: "money-changed", playerId, amount: 500 }]);
 	expect(engine.selectPlayer(playerId).money).toBe(500);
 
-	// A penalty larger than the balance clamps at zero rather than going negative.
 	let penalty = engine.dispatch({ type: "change-money", playerId, amount: -900 });
 	expect(penalty).toEqual([{ type: "money-changed", playerId, amount: 0 }]);
 	expect(engine.selectPlayer(playerId).money).toBe(0);
@@ -131,7 +130,6 @@ test("buy-item spends money and adds stock, reporting both events", () => {
 		before + 2,
 	);
 
-	// Cannot afford another copy, so nothing changes and no events are emitted.
 	expect(engine.dispatch({ type: "buy-item", playerId, itemId: pricedItemId!, count: 1 })).toEqual(
 		[],
 	);
@@ -278,7 +276,7 @@ test("Engine writes battle results back and keeps the battle out of snapshots", 
 				})),
 			});
 			finished = events.some((event) => event.type === "battle-finished");
-		} else break; // single-creature teams never request replacements
+		} else break;
 	}
 
 	expect(finished).toBe(true);
@@ -286,6 +284,11 @@ test("Engine writes battle results back and keeps the battle out of snapshots", 
 	expect(engine.snapshot().entities.some((id) => id.startsWith("battle"))).toBe(false);
 });
 
+/**
+ * Battle start records the enemy species as seen immediately, before any
+ * capture attempt or the first turn, covering wild encounters, trainer
+ * parties, and battles the player flees.
+ */
 test("starting a battle marks every enemy species as seen (wild or trainer)", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
@@ -293,7 +296,6 @@ test("starting a battle marks every enemy species as seen (wild or trainer)", ()
 	let enemyCreatureId = createCreatureId("enemy-1");
 	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5);
 
-	// The enemy species is neither seen nor caught before the battle begins.
 	expect(engine.selectPlayer(playerId).bestiary.entries).toEqual([]);
 
 	let events = engine.dispatch({
@@ -306,9 +308,6 @@ test("starting a battle marks every enemy species as seen (wild or trainer)", ()
 		slots: 1,
 	});
 
-	// Seen is recorded at battle start — before any capture or even the first turn —
-	// so it applies whether the encounter is wild or a trainer's party, and even if
-	// the player flees. It is reported as a seen (not caught) discovery.
 	expect(events).toContainEqual({
 		type: "bestiary-updated",
 		speciesId: SECONDARY_SPECIES_ID,
@@ -319,12 +318,15 @@ test("starting a battle marks every enemy species as seen (wild or trainer)", ()
 	]);
 });
 
+/**
+ * The enemy starts fainted so the player wins on the first dispatch,
+ * keeping the awarded experience deterministic.
+ */
 test("winning a battle awards experience to the party", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	// Start the enemy already fainted so the player wins immediately and deterministically.
 	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 0, 9999);
 
 	let events = engine.dispatch({
@@ -346,6 +348,10 @@ test("winning a battle awards experience to the party", () => {
 	}
 });
 
+/**
+ * A zero-returning random source passes every capture shake check, making
+ * the catch outcome deterministic.
+ */
 test("attempt-capture catches a wild creature and ends the battle", () => {
 	let ballId = Object.entries(ITEMS).find(
 		([, item]) => "effect" in item && "multiplier" in item.effect,
@@ -356,7 +362,6 @@ test("attempt-capture catches a wild creature and ends the battle", () => {
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	// random() === 0 makes every shake check pass, so the catch is deterministic.
 	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0);
 	let battleId = createBattleId("b1");
 
@@ -395,11 +400,12 @@ test("attempt-capture catches a wild creature and ends the battle", () => {
 	expect(owned || stored).toBe(true);
 });
 
+/**
+ * getFlatCreatureIndex must resolve a team-local slot to its flat index
+ * across every earlier team's creature count, matching the fix already
+ * applied in syncBattleState for the active enemy's world id lookup.
+ */
 test("regression: attempt-capture resolves the active enemy by flat party index", () => {
-	// The active enemy's world id must be read from `enemyParty` by its FLAT index
-	// across teams (creatures of earlier teams + the team-local index), the same
-	// mismatch already fixed in syncBattleState. A team-1 slot with team-local index 0
-	// must map to the flat index that follows team 0, not to flat index 0.
 	let side: BattleSideState = {
 		canLeaveBattle: false,
 		pendingHealingWishCount: 0,
@@ -413,17 +419,17 @@ test("regression: attempt-capture resolves the active enemy by flat party index"
 		effects: {} as BattleSideState["effects"],
 	};
 
-	// Team 0 holds two creatures (flat 0 and 1); team 1's first creature is flat 2.
 	expect(getFlatCreatureIndex(side, 0, 0)).toBe(0);
 	expect(getFlatCreatureIndex(side, 0, 1)).toBe(1);
 	expect(getFlatCreatureIndex(side, 1, 0)).toBe(2);
-	// A single-team side keeps flat index equal to the team-local index.
 	expect(getFlatCreatureIndex(side, 0, 0)).toBe(0);
 });
 
+/**
+ * A single-team enemy side keeps its sole active enemy at flat index 0,
+ * so the flat-index fix leaves this catch path working as before.
+ */
 test("regression: attempt-capture catches the active single-team enemy at flat index 0", () => {
-	// Single-team enemy sides must be unchanged: the sole active enemy sits at flat
-	// index 0 and remains catchable exactly as before the flat-index fix.
 	let ballId = Object.entries(ITEMS).find(
 		([, item]) => "effect" in item && "multiplier" in item.effect,
 	)?.[0];
@@ -461,10 +467,12 @@ test("regression: attempt-capture catches the active single-team enemy at flat i
 	expect(captured?.type === "creature-captured" ? captured.creatureId : null).toBe(wild.creatureId);
 });
 
+/**
+ * Finishing a battle used to despawn the encounter creature immediately, so
+ * the next selectBattle threw "Missing creature identity". The wild
+ * creature now survives until the next battle's cleanup.
+ */
 test("regression: reading the battle view after a wild battle ends does not crash", () => {
-	// Bug: finishing a battle despawned the encounter creature immediately, so the
-	// presentation's next selectBattle threw "Missing creature identity". The wild
-	// must survive until the next battle's cleanup.
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
@@ -491,7 +499,6 @@ test("regression: reading the battle view after a wild battle ends does not cras
 		slots: 1,
 	});
 
-	// Forfeit to end the battle deterministically (the enemy still acts).
 	let finished = false;
 	for (let turn = 0; turn < 200 && !finished; turn += 1) {
 		let battle = engine.selectActiveBattle(playerId);
@@ -511,9 +518,7 @@ test("regression: reading the battle view after a wild battle ends does not cras
 	}
 	expect(finished).toBe(true);
 
-	// The crash reproduction: this threw before the fix.
 	expect(() => engine.selectBattle(battleId)).not.toThrow();
-	// The wild is transient: never saved.
 	expect(engine.snapshot().entities.includes(wild.creatureId)).toBe(false);
 });
 
@@ -539,13 +544,15 @@ let HEAL_ITEM_ID = Object.entries(ITEMS).find(
 	([, item]) => "effect" in item && "kind" in item.effect && item.effect.kind === "heal-hp",
 )![0];
 
+/**
+ * The ally starts hurt so the heal has visible effect, and the enemy stays
+ * alive to confirm using an item still lets the opponent act that turn.
+ */
 test("using a medicine in battle decrements the bag, spends the turn, and heals", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	// The ally starts hurt so the heal has room to work; the enemy is alive and still
-	// acts this turn, proving the item does not skip the opponent's action.
 	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 10);
 	let battleId = createBattleId("b1");
 
@@ -579,20 +586,17 @@ test("using a medicine in battle decrements the bag, spends the turn, and heals"
 		),
 	});
 
-	// The bag drops by one and reports the new count.
 	let inventoryEvent = events.find((event) => event.type === "inventory-updated");
 	expect(inventoryEvent?.type === "inventory-updated" ? inventoryEvent.count : null).toBe(1);
 	expect(
 		engine.selectInventory(playerId).entries.find((entry) => entry.id === OW_HEAL_ITEM_ID)?.count,
 	).toBe(1);
 
-	// The item resolved through the battle log and actually restored HP.
 	let appended = events.find((event) => event.type === "battle-events-appended");
 	let logged = appended?.type === "battle-events-appended" ? appended.events : [];
 	let used = logged.find((event) => event.type === "item-used");
 	expect(used?.type === "item-used" ? used.healed : 0).toBeGreaterThan(0);
 
-	// The enemy slot still resolved its own action this turn.
 	expect(logged.some((event) => event.type === "move-used" && event.user.side === 1)).toBe(true);
 });
 
@@ -604,7 +608,6 @@ test("using a medicine that is not in the bag consumes nothing and heals nothing
 	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 10);
 	let battleId = createBattleId("b1");
 
-	// Note: no add-inventory-item, so the bag has no heal item at all.
 	engine.dispatch({
 		type: "start-battle",
 		battleId,
@@ -634,7 +637,6 @@ test("using a medicine that is not in the bag consumes nothing and heals nothing
 		),
 	});
 
-	// No inventory change and no item-used event: the absent item cannot be used.
 	expect(events.some((event) => event.type === "inventory-updated")).toBe(false);
 	expect(
 		engine.selectInventory(playerId).entries.find((entry) => entry.id === OW_HEAL_ITEM_ID)?.count,
@@ -654,11 +656,11 @@ let BULBASAUR_LEVEL_12_EXP = 12 ** 3;
 let RAZOR_LEAF = "RAZOR_LEAF";
 
 /**
- * Creates an engine whose Bulbasaur ally is one experience short of level 12 and
- * whose enemy starts fainted, so a single `start-battle` wins immediately and the
- * awarded experience crosses the level-12 boundary (learning RAZOR_LEAF). The
- * ally's moveset is supplied so tests can exercise both the auto-learn (free slot)
- * and full-moveset (prompt) paths.
+ * Creates an engine whose Bulbasaur ally is one experience point short of
+ * level 12, with a fainted enemy so a single `start-battle` immediately
+ * crosses the boundary and offers RAZOR_LEAF.
+ * @param allyMoveset - Exercises the auto-learn or full-moveset prompt path
+ * depending on whether it has a free slot.
  */
 function createLevelUpEngine(
 	playerId: string,
@@ -689,9 +691,9 @@ function createLevelUpEngine(
 			storageBoxes: { [playerId]: { boxes: [] }, [enemyId]: { boxes: [] } },
 			creature: {
 				[allyId]: {
-					species: PRIMARY_SPECIES_ID, // Bulbasaur
+					species: PRIMARY_SPECIES_ID,
 					nature: DEFAULT_NATURE_ID,
-					experience: BULBASAUR_LEVEL_12_EXP - 1, // level 11, one point below level 12
+					experience: BULBASAUR_LEVEL_12_EXP - 1,
 					moveset: allyMoveset,
 					status: {
 						state: null,
@@ -713,7 +715,6 @@ function createLevelUpEngine(
 					nature: DEFAULT_NATURE_ID,
 					experience: 0,
 					moveset: [DAMAGING_MOVE_ID, null, null, null] as [string, null, null, null],
-					// Pre-fainted so the player wins the moment the battle starts.
 					status: {
 						state: null,
 						damage: 9999,
@@ -758,11 +759,9 @@ test("a level-up auto-learns a move when the moveset has a free slot", () => {
 
 	let learned = events.find((event) => event.type === "learned-move");
 	expect(learned?.type === "learned-move" ? learned.moveId : null).toBe(RAZOR_LEAF);
-	// The move landed in the first free slot and the moveset now holds it.
 	expect(learned?.type === "learned-move" ? learned.slotIndex : null).toBe(2);
 	let summary = engine.selectCreatureSummary(allyId);
 	expect(summary.moves.map((slot) => slot.id)).toEqual(["TACKLE", "GROWL", RAZOR_LEAF, null]);
-	// No prompt event is emitted when the move auto-learns.
 	expect(events.some((event) => event.type === "can-learn-move")).toBe(false);
 });
 
@@ -790,7 +789,6 @@ test("a level-up on a full moveset emits can-learn-move without changing the mov
 		expect(offer.moveId).toBe(RAZOR_LEAF);
 		expect(offer.currentMoveset).toEqual(fullMoveset);
 	}
-	// The moveset is untouched until the player resolves the prompt.
 	expect(engine.selectCreatureSummary(allyId).moves.map((slot) => slot.id)).toEqual(fullMoveset);
 	expect(events.some((event) => event.type === "learned-move")).toBe(false);
 });
@@ -834,6 +832,10 @@ test("learn-move replace overwrites the chosen slot and reports the replaced mov
 	]);
 });
 
+/**
+ * A replaceSlotIndex of -1 signals a decline, leaving the moveset
+ * untouched while still emitting a decline event.
+ */
 test("learn-move decline keeps the moveset and reports the declined move", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
@@ -851,7 +853,6 @@ test("learn-move decline keeps the moveset and reports the declined move", () =>
 		slots: 1,
 	});
 
-	// A negative slot means "declined": nothing changes and a decline event is emitted.
 	let events = engine.dispatch({
 		type: "learn-move",
 		creatureId: allyId,
@@ -867,7 +868,10 @@ test("learn-move decline keeps the moveset and reports the declined move", () =>
 let STONE_SPECIES_ID = "PIKACHU";
 let STONE_EVOLVED_ID = "RAICHU";
 let STONE_ITEM_ID = "THUNDERSTONE";
-/** A different stone that must NOT evolve the stone species. */
+/**
+ * A stone belonging to a different evolution, confirming that mismatched
+ * stones leave the species unchanged.
+ */
 let WRONG_STONE_ITEM_ID = "WATERSTONE";
 
 /** Creates an engine whose single party creature is the stone-evolution species. */
@@ -906,7 +910,6 @@ test("using the matching evolution stone evolves the creature and consumes the s
 		itemId: STONE_ITEM_ID,
 	});
 
-	// The creature evolved and the stone was consumed from the bag.
 	expect(events).toEqual([
 		{ type: "inventory-updated", itemId: STONE_ITEM_ID, count: 0 },
 		{ type: "creature-evolved", creatureId, speciesId: STONE_EVOLVED_ID },
@@ -929,7 +932,6 @@ test("using a non-matching stone does nothing and keeps the stone", () => {
 		itemId: WRONG_STONE_ITEM_ID,
 	});
 
-	// No match: no events, no species change, and the stone stays in the bag.
 	expect(events).toEqual([]);
 	expect(engine.selectCreatureSummary(creatureId).speciesId).toBe(STONE_SPECIES_ID);
 	expect(
@@ -942,7 +944,6 @@ test("the matching stone evolution is a no-op when the stone is not in the bag",
 	let playerId = createPlayerId("hero");
 	let creatureId = createCreatureId("buddy-1");
 	let engine = createStoneEngine(playerId, creatureId);
-	// Spend the only stone first so the second use finds an empty stack.
 	engine.dispatch({ type: "remove-inventory-item", playerId, itemId: STONE_ITEM_ID, count: 1 });
 
 	let events = engine.dispatch({
@@ -1001,6 +1002,10 @@ function createMedicineEngine(
 	});
 }
 
+/**
+ * POTION restores 20 HP, more than enough to cover the fixture's 5 missing
+ * HP, so healing tops the creature off at its max.
+ */
 test("use-medicine heals a damaged party creature and decrements the bag", () => {
 	let playerId = createPlayerId("hero");
 	let creatureId = createCreatureId("buddy-1");
@@ -1016,7 +1021,6 @@ test("use-medicine heals a damaged party creature and decrements the bag", () =>
 
 	expect(events).toEqual([{ type: "inventory-updated", itemId: OW_HEAL_ITEM_ID, count: 0 }]);
 	let after = engine.selectCreatureSummary(creatureId);
-	// POTION restores 20, far more than the 5 missing HP, so it tops off at the max.
 	expect(after.currentHP).toBe(after.maxHP);
 	expect(after.currentHP).toBeGreaterThan(before);
 	expect(
@@ -1048,7 +1052,6 @@ test("use-medicine revive works on a fainted creature", () => {
 		creatureId,
 	).maxHP;
 	let engine = createMedicineEngine(playerId, creatureId, maxHP, null);
-	// The creature is fainted at zero HP before the revive.
 	expect(engine.selectCreatureSummary(creatureId).currentHP).toBe(0);
 
 	let events = engine.dispatch({
@@ -1080,10 +1083,13 @@ test("use-medicine revive on a healthy creature is a no-op that keeps the item",
 	).toBe(1);
 });
 
+/**
+ * ANTIDOTE's cure effect targets the "poison" status string used by the
+ * content data.
+ */
 test("use-medicine cures a matching status and consumes the cure", () => {
 	let playerId = createPlayerId("hero");
 	let creatureId = createCreatureId("buddy-1");
-	// ANTIDOTE clears poison; the content status string for poison is "poison".
 	let engine = createMedicineEngine(playerId, creatureId, 0, "poison");
 	expect(engine.selectCreatureSummary(creatureId).status).toBe("poison");
 
@@ -1120,9 +1126,7 @@ test("spawn-trainer-creature builds a non-persisted trainer creature that cannot
 	});
 	let creature = spawn.find((event) => event.type === "trainer-creature-spawned");
 	if (creature?.type !== "trainer-creature-spawned") throw new Error("expected a trainer creature");
-	// The trainer creature is a real creature the selectors can read at a trainer location.
 	expect(engine.selectCreatureSummary(creature.creatureId).location).toBe("trainer:rival-0");
-	// It is transient: never part of a save snapshot.
 	expect(engine.snapshot().entities.includes(creature.creatureId)).toBe(false);
 
 	engine.dispatch({
@@ -1136,13 +1140,17 @@ test("spawn-trainer-creature builds a non-persisted trainer creature that cannot
 		canLeaveBattle: false,
 	});
 
-	// A ball thrown in a trainer battle is refused: no capture, and the battle continues.
 	let events = engine.dispatch({ type: "attempt-capture", battleId, playerId, itemId: ballId! });
 	expect(events).toEqual([]);
 	expect(events.some((event) => event.type === "creature-captured")).toBe(false);
 	expect(engine.selectActiveBattle(playerId)).not.toBeNull();
 });
 
+/**
+ * Guards the same read-after-finish path as the wild-battle regression, and
+ * confirms a fresh battle fully reclaims the previous trainer creature so no
+ * leftover world entity remains.
+ */
 test("trainer creatures are despawned after their battle and stay out of snapshots", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
@@ -1175,13 +1183,9 @@ test("trainer creatures are despawned after their battle and stay out of snapsho
 	expect(result.finished).toBe(true);
 	expect(result.winner).toBe(0);
 
-	// The reading-after-finish path must not throw (mirrors the wild regression).
 	expect(() => engine.selectBattle(battleId)).not.toThrow();
-	// The trainer creature is transient: never saved.
 	expect(engine.snapshot().entities.includes(creature.creatureId)).toBe(false);
 
-	// Starting a fresh battle reclaims the finished battle's mirrors and despawns the
-	// trainer creature entirely, leaving no leftover world entity.
 	let spawn2 = engine.dispatch({
 		type: "spawn-trainer-creature",
 		trainerId: "rival-b",
@@ -1204,6 +1208,11 @@ test("trainer creatures are despawned after their battle and stay out of snapsho
 	expect(() => engine.selectCreatureSummary(creature.creatureId)).toThrow();
 });
 
+/**
+ * Both trainer creatures share one enemy team, so the first faint forces
+ * the bench member out through the standard side-1 replacement flow before
+ * the battle can end.
+ */
 test("defeating a trainer's first creature sends out the next until the whole party is down", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
@@ -1232,27 +1241,22 @@ test("defeating a trainer's first creature sends out the next until the whole pa
 		playerId,
 		enemyId,
 		playerParty: [allyId],
-		// Both creatures ride on one enemy team so a faint forces the bench member out.
 		enemyParty,
 		slots: 1,
 		canLeaveBattle: false,
 	});
 
 	let result = driveTrainerBattle(engine, playerId, battleId);
-	// The battle only ends once both trainer creatures are defeated, and the enemy's
-	// second creature was sent out through the standard side-1 replacement flow.
 	expect(result.finished).toBe(true);
 	expect(result.winner).toBe(0);
 	expect(result.sawEnemyReplacement).toBe(true);
 });
 
 /**
- * Drives a trainer battle to completion by having the player attack every turn and
- * filling any forced replacement with each slot's first available bench creature.
- *
- * Reports whether the battle finished, which side won, and whether the enemy (side 1)
- * was ever asked to send out a replacement — the signal that its next creature was
- * fielded after the active one fainted.
+ * Drives a trainer battle to completion, attacking every turn and filling
+ * forced replacements with each slot's first bench creature.
+ * @returns Whether the battle finished, which side won, and whether the
+ * enemy (side 1) was ever asked to send out a replacement.
  */
 function driveTrainerBattle(
 	engine: Engine,
@@ -1306,9 +1310,9 @@ function driveTrainerBattle(
 }
 
 /**
- * Creates an engine whose lone party creature vastly outlevels its opponents, so the
- * player reliably wins trainer battles in a bounded number of turns without relying on
- * damage rolls. The seed enemy exists only to satisfy the bootstrap enemy party.
+ * Creates an engine whose lone party creature vastly outlevels its
+ * opponents, guaranteeing a win in a bounded number of turns regardless of
+ * damage rolls. The seed enemy only satisfies the bootstrap enemy party.
  */
 function createTrainerBattleEngine(
 	playerId: string,

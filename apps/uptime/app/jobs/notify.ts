@@ -1,17 +1,9 @@
 /**
  * Background job that dispatches the alerts for one monitor status transition, off the
- * sweep that detected it (ADR-008). The sweeps enqueue a `notify` message per transition
- * and move on; this job reloads the monitor, rebuilds the alert's snapshot from what the
- * sweep persisted — cached columns for most types, the tracked records themselves for a
- * domain monitor — and hands the transition to the same `notify*` policy every inline
- * caller uses.
- *
- * The queue delivers at least once and there is no commit point to short-circuit on, so
- * this job is deliberately re-runnable rather than exactly-once: the `notify*` policy
- * re-checks whether the transition is alert-worthy at all, `alert_events` records every
- * outcome, and per-alert cooldown bounds what a redelivery can send. A duplicate
- * delivery therefore costs at most one repeated notification inside the cooldown window,
- * never a wrong one.
+ * sweep that detected it (ADR-008), reloading the monitor and rebuilding the alert
+ * snapshot from what the sweep persisted before handing it to the same `notify*` policy
+ * every inline caller uses. The queue delivers at least once, so this job is
+ * deliberately re-runnable: per-alert cooldown bounds a redelivery to one repeat.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -112,9 +104,8 @@ export class NotifyJob extends Job {
 			if (error instanceof Job.NonRetriableError) throw error;
 			/**
 			 * Per-alert delivery failures are already recorded to `alert_events` by the alert
-			 * pipeline itself, so anything reaching here is a lookup that failed before any
-			 * decision was made — D1 being unavailable, in practice. Nothing was sent, so a
-			 * redelivery is the right answer.
+			 * pipeline, so anything reaching here — D1 being unavailable, in practice — is a
+			 * lookup that failed before any decision was made, so a redelivery is the right answer.
 			 */
 			this.logger.error("job.notify.failed", {
 				monitorId: job.monitorId,
@@ -135,13 +126,9 @@ export class NotifyJob extends Job {
 	}
 
 	/**
-	 * Runs the transition through the matching `notify*` helper, returning false when the
-	 * monitor no longer exists — a monitor deleted between the sweep and this job is an
-	 * expected outcome, not a failure to retry.
-	 *
-	 * The row is reloaded rather than carried in the message so the alert's snapshot uses
-	 * the monitor's current name and settings. Only the transition's statuses come from the
-	 * message, because the row's cached status has already been overwritten by the sweep.
+	 * Runs the transition through the matching `notify*` helper. Returning false when the
+	 * monitor no longer exists is an expected outcome, not a failure to retry, and the row
+	 * is reloaded because its cached status is already overwritten by the sweep.
 	 */
 	private async dispatch(db: Database, mailer: Mailer, job: NotifyJob.Input): Promise<boolean> {
 		switch (job.monitorType) {
@@ -164,12 +151,9 @@ export class NotifyJob extends Job {
 				let { previous, current } = parseStatuses(job, DNS_STATUSES);
 
 				/**
-				 * The findings are reloaded from the record table, which is where the sweep
-				 * persisted them, rather than carried in the message. A status alone would leave
-				 * a redelivered email with a headline and no body, and a findings list copied
-				 * onto the queue would be replayed as fact however long the message sat there.
-				 * What the rows say is what is outstanding now, which is also what the repeat
-				 * notifications of an ongoing incident report.
+				 * The findings are reloaded from the record table rather than carried in the
+				 * message, since a status alone would leave a redelivered email with a headline and
+				 * no body, and a copy on the queue would be replayed as fact however long it sat.
 				 */
 				let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
 				await notifyDnsResult(

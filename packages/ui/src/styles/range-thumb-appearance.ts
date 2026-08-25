@@ -21,7 +21,11 @@ import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
-/** The declarations shared by both engines' thumb pseudo-elements, minus the webkit-only appearance reset. */
+/**
+ * The declarations shared by both engines' thumb pseudo-elements; the
+ * webkit-only appearance reset is composed separately by the caller. Its
+ * box-shadow stays raw; no shared shadow-scale entry matches this value.
+ */
 function thumbBase<Node extends Element = Element>(size: string, borderWidth: string) {
 	return combine<Node>([
 		is<Node>(size),
@@ -29,7 +33,6 @@ function thumbBase<Node extends Element = Element>(size: string, borderWidth: st
 		rounded<Node>("full"),
 		border<Node>({ color: "brand.solid", width: borderWidth }),
 		bg<Node>("neutral.tint"),
-		// No `@pkg/u` shadow scale entry matches this exact value, so it stays raw.
 		raw<Node>({
 			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 			cursor: "pointer",
@@ -42,21 +45,9 @@ function thumbBase<Node extends Element = Element>(size: string, borderWidth: st
 }
 
 /**
- * Composes the circular range-thumb painting recipe every single-channel
- * range control in the catalog composes directly in its own `mix` array: the
- * thumb's appearance reset, `radius-full` shape, primary border over a
- * neutral fill, elevation shadow, a pressed scale of `1.1`, a primary
- * focus-visible ring, and disabled dimming, plus the reduced-motion override
- * collapsing its transition to an instant change. `sizeVariable` and
- * `borderWidthVariable` are the only two declarations that vary between
- * controls — which custom properties the thumb reads its own diameter and
- * border thickness from — every other declaration stays identical regardless
- * of which control composes this factory.
- *
- * Composed at the top level of a host's `mix` array alongside a separate
- * `css()` call carrying that host's own reset, track, and orientation
- * declarations, so the shared thumb recipe and the host's local styling stay
- * as two distinct mixins instead of one merged object.
+ * Composes the range thumb's shared appearance recipe — reset, shape, border,
+ * fill, shadow, pressed scale, focus ring, and disabled dimming — identical
+ * across every control except the size and border-width properties given here.
  *
  * @param sizeVariable Custom property (with its leading `--`) the thumb reads its own inline and block size from, falling back to `1.25rem`.
  * @param borderWidthVariable Custom property (with its leading `--`) the thumb reads its own border width from, falling back to `2px`.

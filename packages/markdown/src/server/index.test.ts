@@ -1,3 +1,9 @@
+/**
+ * Tests for markdown parsing and frontmatter validation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { isFailure, isSuccess } from "@pkg/result";
 import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
@@ -19,10 +25,11 @@ describe("Markdown", () => {
 			expect(isSuccess(result)).toBe(true);
 			if (isFailure(result)) return;
 
-			// `s.optional()` types each key as present-but-`undefined` rather than as
-			// an optional property, so an empty object is not assignable to the
-			// inferred type even though parsing does drop the absent keys. Comparing
-			// the keys asserts the same emptiness without fighting the type.
+			/**
+			 * `s.optional()` types each key as present-but-`undefined` rather than an
+			 * optional property, so comparing keys asserts the same emptiness without
+			 * fighting a type that an empty object literal would not satisfy.
+			 */
 			expect(Object.keys(result.data.frontmatter)).toEqual([]);
 			expect(result.data.content).toBeDefined();
 		});

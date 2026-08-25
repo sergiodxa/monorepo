@@ -28,12 +28,9 @@ const STATUS_BY_HEADER_VALUE: Record<string, CacheStatus> = {
 };
 
 /**
- * Reads how the platform treated a response.
- *
- * Anything the header does not carry — a missing header, a value this package
- * does not know, a response that never went through the cache — reads as
- * `unknown` rather than being guessed at, so a log line never claims a miss that
- * was really an absent header.
+ * Reads how the platform treated a response. A missing or unrecognized
+ * header reads as `unknown` rather than being guessed at, so a log line
+ * never mistakes an absent header for a miss.
  *
  * @param response - A response received from the platform edge.
  * @returns The normalized cache status.

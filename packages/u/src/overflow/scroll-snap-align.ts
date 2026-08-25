@@ -8,11 +8,9 @@ import { utility } from "../internal/descriptor";
 export type ScrollSnapAlignValue = "none" | "start" | "center" | "end";
 
 /**
- * Applies `scroll-snap-align`, defaulting to `"start"`. This one goes on the
- * snap *items* — the children of the scroll container — while
- * `u.scrollSnapType()` goes on the *container*. Splitting them the other way
- * round is the single most common reason snapping silently does nothing, since
- * neither property warns when its counterpart is missing.
+ * Applies `scroll-snap-align`, defaulting to `"start"`, on the snap *items* —
+ * the children of the scroll container — while `u.scrollSnapType()` goes on the
+ * *container*; swapping the two silently disables snapping either way.
  *
  * @example u.scrollSnapAlign()
  * @example css({ scrollSnapAlign: "start" })

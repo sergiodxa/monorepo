@@ -15,9 +15,8 @@ const MAX_TAG_LENGTH = 32;
 /**
  * Reduces a value to a short `[A-Za-z0-9-]` tag safe to place in a message.
  *
- * Algorithm identifiers are read back from stored values, so they are treated as
- * untrusted input: anything outside the allowed characters is dropped and the
- * result is truncated, which keeps stored material out of error messages.
+ * Algorithm identifiers come from stored values, so this treats them as
+ * untrusted, dropping disallowed characters and truncating the result.
  */
 function sanitizeTag(value: string): string {
 	let tag = value.replaceAll(/[^A-Za-z0-9-]/g, "").slice(0, MAX_TAG_LENGTH);
@@ -27,8 +26,8 @@ function sanitizeTag(value: string): string {
 /**
  * Base class for every error this package returns inside a `Result`.
  *
- * Use it as the error type in signatures and as the `instanceof` check when the
- * specific cause does not change the caller's behavior.
+ * Use it as the error type in signatures and as the `instanceof` check when
+ * callers handle every cause the same way.
  *
  * @example
  * if (isFailure(result) && result.error instanceof CryptoError) reportFailure();
@@ -58,7 +57,7 @@ export class InvalidEncodingError extends CryptoError {
 }
 
 /**
- * A stored password hash does not follow the encoded format this package writes.
+ * A stored password hash's format diverges from the one this package writes.
  *
  * Callers see this for values produced by a different hashing scheme, which is
  * the signal to fall back to a compatibility path or to force a reset.
@@ -75,7 +74,7 @@ export class MalformedHashError extends CryptoError {
 }
 
 /**
- * An algorithm identifier is syntactically valid but not supported here.
+ * An algorithm identifier is syntactically valid yet unsupported here.
  *
  * The identifier is sanitized before it reaches the message, so a hostile stored
  * value cannot smuggle content into logs.
@@ -109,10 +108,10 @@ export class InvalidKeyError extends CryptoError {
 }
 
 /**
- * A sealed value does not match the versioned envelope format.
+ * A sealed value's structure diverges from the versioned envelope format.
  *
- * Distinct from `DecryptionError`: the envelope never reached the cipher, so this
- * says nothing about whether the key or the authentication tag was correct.
+ * Raised before decryption begins, so it flags a structural problem independent
+ * of whether the key or the authentication tag would have matched.
  */
 export class InvalidEnvelopeError extends CryptoError {
 	override name = "InvalidEnvelopeError";

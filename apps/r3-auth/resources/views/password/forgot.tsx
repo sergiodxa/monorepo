@@ -1,11 +1,9 @@
 /**
- * The form that asks for the address a recovery link should go to. One field, posted back
- * to the URL that rendered it, and re-rendered server-side when the address is malformed —
- * so the page needs no JavaScript.
- *
- * It says up front that a link is only sent to a registered address without saying whether
- * the one typed is registered, which is the same promise the endpoint keeps: the page after
- * submitting reads identically either way.
+ * The form that asks for the address a recovery link should go to. One field,
+ * posted back to the URL that rendered it and re-rendered server-side on a
+ * malformed address, so a plain form submit is enough. It promises only that a
+ * link goes to a registered address, and the page after submitting reads
+ * identically whether or not the typed address is registered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

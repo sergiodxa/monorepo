@@ -28,9 +28,8 @@ import { Input } from "./input";
 
 /**
  * Native `<button>` `type` {@link ComboBox.Button} falls back to when a
- * consumer doesn't supply one, keeping a click on the button from submitting
- * a surrounding `<form>` the way a bare `<button>`'s default type otherwise
- * would.
+ * consumer omits one, keeping a click from submitting a surrounding
+ * `<form>` the way a bare `<button>`'s own default type otherwise would.
  */
 const DEFAULT_BUTTON_TYPE: NonNullable<ComboBox.ButtonProps["type"]> = "button";
 
@@ -41,8 +40,7 @@ export namespace ComboBox {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
 	 * `children` composes this control's parts — typically a caption, the
-	 * {@link ComboBox.Group} row, a paired `<datalist>`, and any supporting or
-	 * validation copy — in a single column with a small gap between them.
+	 * {@link ComboBox.Group} row, a `<datalist>`, and supporting copy.
 	 */
 	export interface Props extends TagProps<"div"> {}
 
@@ -54,12 +52,9 @@ export namespace ComboBox {
 	export interface GroupProps extends TagProps<"div"> {}
 
 	/**
-	 * Every prop {@link Input.Props} accepts, unchanged. A type alias rather
-	 * than an interface, since {@link Input.Props} itself resolves through a
-	 * conditional type that an `interface extends` clause can't statically
-	 * extend. Pass `list` with the id of the paired `<datalist>` to associate
-	 * this control with its suggested values, the same way it would on a bare
-	 * `<input>`.
+	 * Every prop {@link Input.Props} accepts, unchanged — a type alias, since
+	 * {@link Input.Props} resolves through a conditional type only a type
+	 * alias can express. Pass `list` with a `<datalist>` id to wire suggestions.
 	 */
 	export type InputProps = Input.Props;
 
@@ -72,13 +67,9 @@ export namespace ComboBox {
 }
 
 /**
- * Renders a plain host stacking this control's compound parts in a single
- * column with a small gap between them: typically a caption, the
- * {@link ComboBox.Group} row, a paired `<datalist>` of suggested values, and
- * any supporting or validation copy. The `<datalist>` and its `<option>`s
- * compose directly as ordinary markup — the browser owns their rendering and
- * filtering entirely, wired to {@link ComboBox.Input} through that control's
- * own `list` attribute.
+ * Renders a plain host stacking this control's compound parts — a caption,
+ * the {@link ComboBox.Group} row, a `<datalist>` of suggested values, and
+ * supporting copy — in a single column with a small gap between them.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the control's markup.
@@ -105,9 +96,8 @@ export function ComboBox(handle: Handle<ComboBox.Props>) {
 
 /**
  * Renders {@link ComboBox}'s control row: a plain flex host laying
- * {@link ComboBox.Input} and {@link ComboBox.Button} out side by side, with
- * the button pulled back over the input's reserved trailing padding so the
- * two read as one seamless field.
+ * {@link ComboBox.Input} and {@link ComboBox.Button} side by side, the
+ * button pulled back over the input's padding so they read as one field.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -127,13 +117,8 @@ ComboBox.Group = function ComboBoxGroup(handle: Handle<ComboBox.GroupProps>) {
 
 /**
  * Renders {@link ComboBox}'s text control: an {@link Input} that grows to
- * fill its row and reserves inline-end padding for {@link ComboBox.Button}'s
- * overlapping glyph. Every {@link Input} state — hover, focus, focus-visible,
- * invalid, disabled — carries over unchanged, since this control renders an
- * {@link Input} underneath rather than a bare `<input>`. Pass `list` with the
- * id of a paired `<datalist>` to wire this control to its suggested values,
- * and a companion behavior can read the typed value to narrow which
- * `<option>`s that `<datalist>` shows as the reader types.
+ * fill its row, reserves inline-end padding for {@link ComboBox.Button}'s
+ * glyph, and carries every {@link Input} interaction state unchanged.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the control's markup.
@@ -152,15 +137,8 @@ ComboBox.Input = function ComboBoxInput(handle: Handle<ComboBox.InputProps>) {
 
 /**
  * Renders {@link ComboBox}'s trailing disclosure glyph: a native `<button>`
- * pulled back over {@link ComboBox.Input}'s reserved trailing padding so it
- * reads as part of the same field. Its content is fixed to a chevron glyph
- * marked `aria-hidden`, since this button carries no visible text of its own.
- * Hover reads this host's own native `:hover` pseudo-class, and a keyboard
- * focus-visible ring reads in the semantic primary tone.
- *
- * In dev mode, a button with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible name
- * to announce for it.
+ * pulled back over {@link ComboBox.Input}'s padding so it reads as part of
+ * the same field, its chevron marked `aria-hidden` since it carries no text.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the button's markup.

@@ -5,9 +5,8 @@
  *
  * The bypass tests are the important ones. `/oauth/*`, `/api/*` and `/oidc/logout`
  * receive cross-origin `POST`s from relying parties by design, and cross-origin
- * protection blocking one of them does not fail loudly — it fails as every client's
- * login breaking at once. One test per bypassed path, plus one proving the protection
- * is still on everywhere else.
+ * protection blocking one of them silently breaks every client's login at once. One
+ * test per bypassed path, plus one proving the protection is still on everywhere else.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -106,17 +105,15 @@ describe("cross-origin protection", () => {
 		expect(await response.json()).toEqual({ active: false });
 	});
 
+	/** No controller answers /api/*, so its 404 shows cross-origin protection let the request through. */
 	test("lets a cross-origin POST through to /api/*", async () => {
-		// No controller is mapped there yet, so reaching the router's 404 is exactly the
-		// proof wanted: the request was not refused at the protection boundary.
 		let response = await app.fetch(crossOriginPost("/api/subjects/whoever"));
 
 		expect(response.status).toBe(404);
 	});
 
+	/** The end-session endpoint's redirect response shows cross-origin protection let the request through. */
 	test("lets a cross-origin POST through to /oidc/logout", async () => {
-		// The end-session endpoint answers with its redirect rather than a refusal, which
-		// is what proves the request reached it instead of stopping at the boundary.
 		let response = await app.fetch(crossOriginPost(routes.oidc.logout.action.href()));
 
 		expect(response.status).toBe(303);
@@ -130,12 +127,11 @@ describe("cross-origin protection", () => {
 });
 
 describe("rate limiting", () => {
+	/** The authorize limiter's budget is spent only by a real authorize request, so this sends one to trip it. */
 	test("the authorize limiter refuses with the published body and Retry-After", async () => {
 		app = await createTestApp({ limits: { authorize: 1 } });
 		fixtures = await seed(app);
 
-		// A real authorization request, because that is what the budget is spent by: a probe
-		// carrying no request at all never reaches the lookup this limiter protects.
 		await app.fetch(new Request(authorizeUrl(fixtures)));
 		let response = await app.fetch(new Request(authorizeUrl(fixtures)));
 
@@ -255,12 +251,11 @@ describe("the remaining routes", () => {
 		expect(body).toContain("The page you are looking for does not exist.");
 	});
 
+	/** The renderer prepends the doctype to the response body, so reading the full text is how this test observes it. */
 	test("an HTML document starts with the doctype, so the page parses in standards mode", async () => {
 		let response = await app.fetch(new Request(`${ORIGIN}/nowhere-at-all`));
 		let body = await response.text();
 
-		// The doctype is not part of the JSX tree — the renderer prepends it to the
-		// response body — so only a test that reads the whole response can see it.
 		expect(body.startsWith("<!DOCTYPE html>")).toBe(true);
 		expect(body.indexOf("<html")).toBe("<!DOCTYPE html>".length);
 	});

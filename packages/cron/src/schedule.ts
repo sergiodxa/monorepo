@@ -30,12 +30,9 @@ import { matchesInstant, nextOccurrence, previousOccurrence } from "./occurrence
 import { parseExpression } from "./parse-expression";
 
 /**
- * A cron schedule: immutable, cheap to hold, and safe to parse once per expression
- * and reuse for the life of a request or a worker.
- *
- * Every query names its time zone. A schedule is stored with the zone the user
- * configured it in, and evaluating it in that zone is what keeps a daily 09:00 job
- * at 09:00 local through a daylight saving shift.
+ * A cron schedule: immutable, cheap to hold, and safe to parse once and reuse.
+ * Every query names its time zone, and evaluating in the zone a schedule was
+ * configured in keeps a daily 09:00 job at 09:00 local through a DST shift.
  *
  * @example
  * let result = Schedule.parse("0 9 * * 1-5");
@@ -44,13 +41,9 @@ import { parseExpression } from "./parse-expression";
  */
 export class Schedule {
 	/**
-	 * Parse a cron expression: five fields (minute, hour, day of month, month, day
-	 * of week) with values, ranges, lists, steps, month and weekday names, or one of
-	 * the `@hourly`, `@daily`, `@weekly`, `@monthly`, and `@yearly` macros.
-	 *
-	 * A six-field expression is a seconds-first schedule and is rejected: sub-minute
-	 * schedules are outside what this package promises. Non-standard extensions
-	 * (`L`, `W`, `#`, `?`) are rejected for the same reason.
+	 * Parse a cron expression: five standard fields, or an `@hourly`–`@yearly`
+	 * macro. Six fields, and non-standard extensions (`L`, `W`, `#`, `?`), are
+	 * rejected as outside what this package promises.
 	 *
 	 * @param expression - The expression as written, whitespace and case as typed.
 	 * @returns The schedule, or an `InvalidCronExpression` naming the field and the

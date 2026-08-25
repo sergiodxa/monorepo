@@ -45,9 +45,8 @@ const NEWLINE = /\r\n|\r|\n/g;
 
 /**
  * Share of bytes that may need escaping before base64 becomes the cheaper
- * encoding. Quoted-printable spends 3 characters per escaped byte and 1 per
- * literal one, base64 spends 4 for every 3 bytes, so the two break even at one
- * escaped byte in six.
+ * encoding: quoted-printable spends 3 characters per escaped byte against
+ * base64's 4 per 3 bytes, so the two break even at one escaped byte in six.
  */
 const QUOTED_PRINTABLE_ESCAPE_BUDGET = 1 / 6;
 
@@ -129,9 +128,9 @@ function pad(value: number): string {
 }
 
 /**
- * Formats a date as an RFC 5322 `date-time`, always in UTC. The numeric `+0000`
- * zone is used rather than the obsolete `GMT` spelling, which some filters treat
- * as a sign of a hand-rolled sender.
+ * Formats a date as an RFC 5322 `date-time`, always in UTC, using the numeric
+ * `+0000` zone, since some filters treat the obsolete `GMT` spelling as a sign of
+ * a hand-rolled sender.
  */
 function formatDate(date: Date): string {
 	let day = DAY_NAMES[date.getUTCDay()] ?? DAY_NAMES[0];
@@ -140,7 +139,7 @@ function formatDate(date: Date): string {
 	return `${day}, ${pad(date.getUTCDate())} ${month} ${date.getUTCFullYear()} ${time} +0000`;
 }
 
-/** Base64-encodes bytes without wrapping, which the callers below apply themselves. */
+/** Base64-encodes bytes as one continuous string; callers below wrap it into lines. */
 function toBase64(bytes: Uint8Array): string {
 	let binary = "";
 	for (let byte of bytes) binary += String.fromCharCode(byte);
@@ -153,10 +152,9 @@ function toEncodedWord(bytes: number[]): string {
 }
 
 /**
- * Bytes one encoded word may carry on a line that already holds `reserved`
- * characters. An encoded word cannot be folded, so its size — not the folder — is
- * what keeps a header line short: base64 turns 3 bytes into 4 characters, and the
- * result is the largest multiple of 3 that fits under whichever limit is tighter.
+ * Bytes one encoded word may carry without pushing a line already holding
+ * `reserved` characters past the limit; encoded words cannot be folded. Base64
+ * turns 3 bytes into 4 characters, so this is the largest multiple of 3 that fits.
  */
 function encodedWordBytes(reserved: number): number {
 	let available = Math.min(MAX_ENCODED_WORD_LENGTH, MAX_HEADER_LINE_LENGTH - reserved);
@@ -164,12 +162,9 @@ function encodedWordBytes(reserved: number): number {
 }
 
 /**
- * Encodes a header value as one or more RFC 2047 encoded words.
- *
- * Chunking happens on character boundaries, never inside a multi-byte sequence,
- * because each word is decoded on its own and a split character would decode to
- * replacement bytes. Whitespace between adjacent words is dropped by decoders, so
- * the original spaces travel inside the base64 rather than between the words.
+ * Encodes a header value as one or more RFC 2047 encoded words. Multi-byte
+ * characters are never split across words, since each decodes independently, and
+ * spaces travel inside the base64 because decoders drop whitespace between words.
  *
  * @param value - The text to encode.
  * @param reserved - Characters the words must share their line with, such as `Subject: `.
@@ -194,9 +189,9 @@ function encodeWords(value: string, reserved: number): string {
 }
 
 /**
- * Reports whether a header value can travel as written. A value that already looks
- * like an encoded word is encoded anyway, so text a person typed as `=?x?=` is not
- * decoded into something else by the receiving client.
+ * Reports whether a header value can travel as written. A value that already
+ * looks like an encoded word is encoded anyway, so text a person typed as `=?x?=`
+ * reaches the receiving client exactly as typed.
  */
 function isHeaderSafe(value: string): boolean {
 	return PRINTABLE_ASCII.test(value) && !value.includes("=?");
@@ -215,10 +210,9 @@ function encodeHeaderText(name: string, value: string): string {
 }
 
 /**
- * Formats a mailbox for a header, encoding a non-ASCII display name. The encoded
- * word replaces quoting rather than sitting inside it, because a quoted encoded
- * word is delivered to the reader literally. The address itself, a fold indent, and
- * a list separator are all reserved, since the last word shares its line with them.
+ * Formats a mailbox for a header, encoding a non-ASCII display name. Encoding
+ * replaces quoting, since a quoted encoded word reaches the reader literally, and
+ * reserves space for the address, fold indent, and list separator on that line.
  */
 function encodeAddressHeader(address: Address): string {
 	let name = address.name?.trim();
@@ -227,16 +221,13 @@ function encodeAddressHeader(address: Address): string {
 }
 
 /**
- * Folds one header onto as many lines as it needs. The break replaces an existing
- * space and the continuation line begins with it, so unfolding restores the value
- * character for character. A run longer than the limit with no space in it is left
- * long, since folding inside a token would corrupt it.
+ * Folds one header onto as many lines as it needs. The first line skips the colon's
+ * space, avoiding a bare `Name:` line, and a run with no space within the limit
+ * stays long, protecting the token it would otherwise split.
  */
 function foldHeader(name: string, value: string): string {
 	let lines: string[] = [];
 	let rest = `${name}: ${value}`;
-	// The space after the colon is a legal fold point but leaves a bare `Name:`
-	// line, so the first line looks past it; later lines only skip their indent.
 	let earliest = name.length + 1;
 
 	while (rest.length > MAX_HEADER_LINE_LENGTH) {
@@ -275,12 +266,9 @@ function escapeByte(byte: number): string {
 }
 
 /**
- * Encodes one byte for quoted-printable output.
- *
- * A leading `-` is escaped even though it is printable: that is what guarantees no
- * encoded line can begin with the `--` a boundary delimiter starts with. Trailing
- * whitespace is escaped because a relaying server is allowed to strip it, which
- * would otherwise change the body.
+ * Encodes one byte for quoted-printable output. A leading `-` is escaped even
+ * though printable, so no encoded line can begin with a boundary's `--`; trailing
+ * whitespace is escaped too, since a relaying server may strip it and alter the body.
  */
 function quotedPrintableToken(byte: number, atLineStart: boolean, atLineEnd: boolean): string {
 	if (byte === HYPHEN && atLineStart) return escapeByte(byte);
@@ -348,11 +336,9 @@ function encodePart(contentType: string, content: string): EncodedPart {
 }
 
 /**
- * Picks a boundary no part can be confused with. Two things make that hold: the
- * token carries a random UUID, and neither transfer encoding can emit a line
- * starting with `--` (base64's alphabet has no `-`, and quoted-printable escapes a
- * leading one). The token is still checked against the encoded bodies, so the
- * guarantee does not rest on the encoders alone.
+ * Picks a boundary no part can be confused with: the token carries a random UUID,
+ * and neither encoding can emit a line starting with `--` (base64 excludes `-`;
+ * quoted-printable escapes a leading one), checked directly against the bodies too.
  */
 function selectBoundary(parts: EncodedPart[]): string {
 	let boundary = `${BOUNDARY_PREFIX}${crypto.randomUUID()}`;
@@ -371,8 +357,8 @@ function toMessageIdHeader(messageId: string): string {
 
 /**
  * Builds the headers every message carries, in the order a reader of a raw message
- * expects them. `Bcc` is deliberately absent: those recipients are addressed by the
- * envelope, and writing them into the message would expose them to everyone else.
+ * expects them. `Bcc` recipients are addressed through the envelope alone, since
+ * writing them into the message would expose them to everyone else.
  */
 function buildHeaders(message: NormalizedMessage): string[] {
 	let headers = [
@@ -412,17 +398,9 @@ function buildContentHeaders(part: EncodedPart): string[] {
 }
 
 /**
- * Assembles a normalized message into a raw RFC 5322 message.
- *
- * Both body parts produce a `multipart/alternative` message with the plain-text
- * part first, which is the order RFC 2046 reads as least to most preferred; a
- * single body produces a single-part message with no boundary at all. Headers are
- * folded, non-ASCII display names and subjects become encoded words, and every
- * line ends with CRLF, including the last one.
- *
- * A message with neither body part yields an empty text part rather than failing,
- * because the mailer's validation already rejects that message before a transport
- * ever sees it.
+ * Assembles a normalized message into a raw RFC 5322 message, ordering plain text
+ * before HTML per RFC 2046 when both parts exist; with neither part, it yields an
+ * empty text part, since validation guarantees that case never reaches a transport.
  *
  * @param message - The normalized message a transport received.
  * @returns The complete message, ready to hand to a provider that takes raw MIME.

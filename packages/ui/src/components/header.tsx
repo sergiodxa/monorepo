@@ -20,10 +20,8 @@ import { text, textTransform, tracking, weight } from "@pkg/u/typography";
  */
 export namespace Header {
 	/**
-	 * Every native `<header>` attribute, unchanged, plus the `mix`
-	 * passthrough. A section label carries no color, variant, or size
-	 * contract of its own — its content is whatever `children` the consumer
-	 * supplies (a section's name, most often plain text).
+	 * Native `<header>` attributes plus `mix`. Renders whatever `children`
+	 * the consumer supplies — a section's name, most often plain text.
 	 */
 	export interface Props extends TagProps<"header"> {}
 }

@@ -43,13 +43,7 @@ export namespace CMSDashboardView {
 	}
 }
 
-/**
- * Inputs for one dashboard stat card.
- */
 namespace StatCard {
-	/**
-	 * Caption, total, and the management section the card's link points at.
-	 */
 	export interface Props {
 		label: string;
 		value: number;
@@ -58,10 +52,8 @@ namespace StatCard {
 }
 
 /**
- * Builds one stat card: a tinted, bordered panel stacking the metric's caption,
- * its total, and a link into the section that manages those records. Exists so
- * the four dashboard metrics share one markup and styling shape instead of
- * repeating it per metric.
+ * Builds one stat card so every dashboard metric shares a single markup and
+ * styling shape.
  *
  * @param handle Runtime handle carrying the card's caption, total, and link target.
  * @returns A renderer producing the card's markup.
@@ -92,7 +84,9 @@ function StatCard(handle: Handle<StatCard.Props>) {
 }
 
 /**
- * Builds the CMS dashboard renderer with stat summary cards.
+ * Builds the CMS dashboard renderer with stat summary cards. The section
+ * heading stays visually hidden, carrying the outline assistive technology
+ * reads.
  */
 export function CMSDashboardView() {
 	return ({ model }: { model: CMSDashboardView.Props }) => {
@@ -101,8 +95,6 @@ export function CMSDashboardView() {
 		return (
 			<CMSLayout title="Dashboard" activePath={routes.cms.dashboard.href()}>
 				<main mix={[grid(), gap(4)]}>
-					{/* The cards already read as totals on their own, so the section's
-					heading exists only for assistive technology's outline. */}
 					<Heading level={2} mix={[visuallyHidden()]}>
 						Post Stats
 					</Heading>

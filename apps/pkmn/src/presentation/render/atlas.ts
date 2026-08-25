@@ -1,19 +1,9 @@
 /**
  * An asset-agnostic multi-sprite atlas: one image sliced into named regions.
  *
- * An `Atlas` wraps a single blittable source — a loaded `HTMLImageElement` or a
- * generated `HTMLCanvasElement` — together with a map of `regionName -> Rect` and
- * an optional map of animated regions (`regionName -> { frames; frameMs }`). This
- * lets the renderer address art by meaningful names ("tile.grass", "hero.down.0",
- * "creature.body") instead of raw grid indices, so any pack — hand-authored,
- * generated, or an openly-licensed drop-in — plugs in the same way.
- *
- * The region math (`regionRect`) and the animation frame selection (`frameIndex`,
- * `animationRect`) are pure functions of their inputs so they can be unit-tested
- * without a canvas. `drawSprite` blits a region with nearest-neighbor scaling and
- * an integer scale factor to keep the pixel look crisp; it is a safe no-op when
- * the requested region is missing, so an incomplete atlas never crashes a frame.
- * All coordinates are in internal pixels; the client owns final upscaling.
+ * Lets the renderer address art by name ("tile.grass", "hero.down.0") instead
+ * of raw grid indices, with optional per-region animations. Region and frame
+ * math are pure so `drawSprite` no-ops safely for a missing region.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -80,9 +70,8 @@ export function regionRect(regions: Readonly<Record<string, Rect>>, name: string
 /**
  * Selects which frame of an animation is showing after `elapsedMs`.
  *
- * Pure integer math. A single-frame (or empty) animation always yields index 0.
- * A looping animation wraps with a modulo over its length; a one-shot animation
- * clamps to and holds the last frame once the sequence has fully played.
+ * A single-frame animation stays at index 0; a looping animation wraps by
+ * modulo, and a one-shot animation clamps and holds its last frame once done.
  */
 export function frameIndex(animation: AtlasAnimation, elapsedMs: number): number {
 	let count = animation.frames.length;
@@ -154,10 +143,8 @@ export class Atlas {
 /**
  * Draws region `name` from `atlas` at `(dx, dy)`, or does nothing when absent.
  *
- * A free-function convenience over `Atlas#draw` so call sites read as
- * `drawSprite(ctx, atlas, "tile.grass", x, y)`; tolerates a `null` atlas so a
- * renderer can attempt an atlas blit and fall through to procedural drawing with
- * a single guardless call.
+ * A free function over `Atlas#draw` that tolerates a `null` atlas, so a
+ * renderer can attempt an atlas blit and fall through to procedural drawing.
  */
 export function drawSprite(
 	ctx: DrawContext,

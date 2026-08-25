@@ -53,8 +53,6 @@ test.skipIf(!SQLITE_AVAILABLE)(
 				[join(PACKAGE_DIR, "src", "cli.ts"), "run", "examples/db", "--allow-env=DATABASE_URL"],
 				{
 					cwd: PACKAGE_DIR,
-					// The per-call form: the connection string lives in the child's
-					// environment, and the run is granted exactly that one variable.
 					env: { ...process.env, DATABASE_URL: `sqlite://${dbPath}` },
 					stdio: ["ignore", "pipe", "pipe"],
 				},
@@ -78,7 +76,6 @@ test.skipIf(!SQLITE_AVAILABLE)(
 			expect(Number(summary?.[1]), report).toBeGreaterThan(0);
 			expect(Number(summary?.[2]), report).toBe(0);
 		} finally {
-			// SQLite may leave a WAL/SHM sidecar; remove all three, ignore misses.
 			for (let suffix of ["", "-wal", "-shm"]) rmSync(`${dbPath}${suffix}`, { force: true });
 		}
 	},

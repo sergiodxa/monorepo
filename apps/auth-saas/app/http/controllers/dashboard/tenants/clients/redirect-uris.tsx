@@ -1,7 +1,7 @@
 /**
- * Tenant client redirect-URIs controller: renders the add form and creates a redirect
- * URI, then redirects back to the client. Edit/update are unsupported (redirect
- * no-ops) and destroy removes a URI. Rendering uses `remix/ui` JSX via `ctx.render`.
+ * Tenant client redirect-URIs controller: renders the add form, creates a
+ * redirect URI, and removes one via destroy. Edit and update redirect back to
+ * the client, leaving the existing redirect URI unchanged.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -137,7 +137,6 @@ export default {
 			);
 			log.info("Redirect URI edit not supported - delete and recreate");
 
-			// Redirect URIs cannot be edited, only deleted and recreated
 			return new Response(null, {
 				status: 302,
 				headers: {

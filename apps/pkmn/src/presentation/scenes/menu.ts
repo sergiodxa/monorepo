@@ -1,11 +1,9 @@
 /**
  * The pause-menu root, opened with Start from the overworld.
  *
- * It lists the sub-screens (Party, Bag, Bestiary, Storage, Trainer, Save) and
- * pushes the chosen one, or closes back to the map. It is translucent so the overworld stays
- * visible behind its side panel, and it carries the presentation-save snapshot
- * captured when it opened so the Save screen can persist the exact position the
- * player paused at.
+ * It routes to each sub-screen and stays translucent so the overworld stays
+ * visible behind its side panel. It carries the presentation-save snapshot
+ * captured at open time so the Save screen can persist the exact pause position.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

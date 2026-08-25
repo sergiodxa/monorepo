@@ -1,8 +1,8 @@
 /**
  * `/account/profile/edit` — the form that changes a subject's display name, username and
- * avatar, and the update it posts. The email address is deliberately not editable: it is
- * the claim every relying party keys on, and changing it here would silently re-point
- * accounts in other apps.
+ * avatar, and the update it posts. The email address stays fixed: it is the claim every
+ * relying party keys on, so changing it here would silently re-point accounts in other
+ * apps.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,7 +36,6 @@ interface ProfileValues {
 	avatar: string;
 }
 
-/** The values a subject's stored row starts the form with. */
 function storedValues(subject: SelectSubject): ProfileValues {
 	return {
 		displayName: subject.display_name,
@@ -65,7 +64,7 @@ function fieldError(issues: ValidationError["issues"], field: string): string | 
  * Renders the edit form.
  *
  * @param values - What the fields start with: the stored row, or what was just submitted
- *   and refused, so a rejected save never discards typing.
+ *   and refused, so a rejected save keeps the typing.
  * @param issues - Per-field validator messages, empty on a first render.
  * @param error - A failure no single field owns, such as a username already taken.
  */
@@ -130,10 +129,9 @@ export default createController(routes.account.profileEdit, {
 		},
 
 		/**
-		 * POST /account/profile/edit — validates and saves, then redirects to the profile.
-		 *
-		 * Scoped to the subject the guard resolved, never to an id from the form: this
-		 * endpoint has no way to be pointed at somebody else's row.
+		 * POST /account/profile/edit — validates and saves the subject the guard resolved,
+		 * so the update always lands on that person's own row. `username` is unique, so a
+		 * failed save comes back on the form as a taken username, correctable in place.
 		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
@@ -163,9 +161,6 @@ export default createController(routes.account.profileEdit, {
 					avatar: result.data.avatar,
 				});
 			} catch (error) {
-				// `username` is unique, so the only expected failure here is somebody else
-				// already holding it. Anything else is reported the same way rather than
-				// becoming a 500 on a form the person can simply correct.
 				ctx.logger.info("profile_update_rejected", {
 					subjectId: subject.id,
 					error: error instanceof Error ? error.message : "Unknown error",

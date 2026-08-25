@@ -45,15 +45,9 @@ export interface LoadedSuite {
 }
 
 /**
- * Load a suite from sources: parse each one (the first parse failure aborts the
- * load, its message prefixed with the source's path), then register every
- * definition suite-globally. Two definitions sharing a name — regardless of
- * kind — are a `duplicate-definition` load error naming both sources.
- *
- * Order is the caller's: sources are parsed and reported in the order given, so
- * a host that wants the on-disk loader's lexicographic order sorts before
- * calling. Synchronous, because parsing is the only work left once the text is
- * in hand.
+ * Load a suite from sources: parse each one, then register every definition
+ * suite-globally, failing on the first parse error or on any duplicate name
+ * across files. Sources are parsed and reported in the caller's order.
  *
  * @param sources - Every `.spec` source in the suite, in the intended order.
  * @returns The loaded suite, or the load/parse error that prevented it.

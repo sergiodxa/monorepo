@@ -1,25 +1,8 @@
 /**
- * The on-disk map JSON format and its `remix/data-schema` validator.
- *
- * This module is the single contract the map EDITOR targets and the game LOADER
- * trusts. It defines `MapData` — the JSON-clean shape one authored map serializes
- * to — and `MapDataSchema`, which validates an untrusted parsed JSON value into a
- * typed `MapData` (or a list of clear issues). Keeping the format and its
- * validation together, free of any renderer or DOM dependency, lets both the
- * editor and the loader import it and lets the whole contract be unit-tested.
- *
- * A map carries its grid size (`width`/`height` in tiles, `tileWidth`/`tileHeight`
- * in pixels), one or more `tilesets` (each an image reference sliced by
- * `columns`), three tile `layers` (`ground`, `decor`, `overhead`), a `collision`
- * grid, wild-`encounters`, `warps`, background music, and an `events` list. Layer
- * cells are packed tile references (see {@link packTileRef}); `-1` means empty.
- * The `events` schema follows the RPG-Maker-XP model: each {@link MapEvent} is a
- * tile position holding one or more {@link EventPage}s, and the first page whose
- * `conditions` (switches / self-switch) currently hold is the page that runs. A
- * page pairs its graphic, autonomous movement, and options with a `trigger` (how
- * it fires) and a recursive list of {@link EventCommand}s (its "event script").
- * The command union is recursive — `show-choices` and `conditional-branch` nest
- * further commands — so the editor and a later event runtime share one definition.
+ * The on-disk map JSON format and its `remix/data-schema` validator — the one
+ * contract the map editor and the game loader both trust. Layer cells are
+ * packed tile references (see {@link packTileRef}); events follow a
+ * page/condition/command model validated recursively through {@link lazy}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,11 +25,9 @@ import { min } from "remix/data-schema/checks";
 import { lazy } from "remix/data-schema/lazy";
 
 /**
- * Base each tileset index is multiplied by when packing a layer cell. A cell's
- * packed value is `tilesetIndex * TILESET_STRIDE + tileIndex`, so one number both
- * names the tileset (which image) and the tile within it (its grid position).
- * 4096 comfortably exceeds any single tileset's tile count (a 64x64-tile sheet is
- * 4096 tiles) while keeping packed values small and readable in the JSON.
+ * Base each tileset index is multiplied by when packing a layer cell into
+ * `tilesetIndex * TILESET_STRIDE + tileIndex`, encoding both the tileset and
+ * tile in one number; 4096 exceeds any tileset's tile count while staying small.
  */
 export const TILESET_STRIDE = 4096;
 
@@ -80,9 +61,8 @@ export interface TileRef {
 /**
  * Unpacks a non-empty layer-cell number into its tileset and tile indices.
  *
- * The inverse of {@link packTileRef}. Callers must guard against {@link EMPTY_CELL}
- * (`-1`) themselves; unpacking `-1` is meaningless and never happens because empty
- * cells are skipped before this is reached.
+ * The inverse of {@link packTileRef}. Callers must guard against
+ * {@link EMPTY_CELL} themselves; unpacking `-1` is meaningless.
  *
  * @param packed - A non-negative packed layer-cell value.
  */
@@ -96,7 +76,7 @@ export function unpackTileRef(packed: number): TileRef {
 /** A whole (>= 0) number, e.g. a tile count, coordinate, or index. */
 const wholeNumber = () => number().pipe(min(0));
 
-/** A whole (>= 1) number, e.g. a dimension that cannot be zero. */
+/** A whole (>= 1) number, e.g. a dimension that must be at least 1. */
 const positiveNumber = () => number().pipe(min(1));
 
 /** A single cardinal-direction value, preserved as a literal union in the output. */
@@ -134,18 +114,15 @@ export type SpriteRef = InferOutput<typeof SpriteRefSchema>;
 
 /** A fixed trainer party an event can battle the player with. */
 export interface TrainerParty {
-	/** The trainer's display name, if any. */
 	name?: string;
 	/** The species and levels the trainer fields, in order. */
 	party: { speciesId: string; level: number }[];
-	/** The money reward for beating the trainer, if any. */
 	reward?: number;
 }
 
 /**
- * One declarative command in a page's event script — a recursive discriminated
- * union keyed on `kind`. `show-choices` and `conditional-branch` nest further
- * commands, which is why this type is defined by hand (rather than inferred) so
+ * One declarative command in a page's event script — a recursive
+ * discriminated union keyed on `kind`, hand-written so
  * {@link EventCommandSchema} can reference it through {@link lazy}.
  */
 export type EventCommand =
@@ -180,14 +157,9 @@ const TrainerPartySchema = object({
 });
 
 /**
- * One declarative command in a page's event script — the recursive discriminated
- * union at the heart of the event model, keyed on `kind`.
- *
- * Most commands are flat effects (`text`, `warp`, `heal-party`, ...), but
- * `show-choices` and `conditional-branch` nest further command lists, so the union
- * is defined through {@link lazy} and typed against the {@link EventCommand}
- * recursive type: `EventCommandSchema` references itself for those nested lists
- * without a circular initialization crash.
+ * The recursive discriminated union of event-script commands, keyed on `kind`.
+ * `show-choices` and `conditional-branch` nest further commands, so the union
+ * runs through {@link lazy} to reference {@link EventCommand} during init.
  */
 const EventCommandSchema: Schema<unknown, EventCommand> = union([
 	/** Shows a message box with the given text. */
@@ -270,7 +242,7 @@ const PageOptionsSchema = object({
 	moveAnimation: optional(boolean()),
 	/** Keep animating the walk cycle while stopped. */
 	stopAnimation: optional(boolean()),
-	/** Lock the graphic's facing so movement never turns it. */
+	/** Lock the graphic's facing, holding one direction through movement. */
 	directionFix: optional(boolean()),
 	/** Ignore collision, passing through everything. */
 	through: optional(boolean()),
@@ -309,7 +281,7 @@ const MapEventSchema = object({
 	id: string(),
 	x: wholeNumber(),
 	y: wholeNumber(),
-	/** A human-readable label for the editor; not required at runtime. */
+	/** A human-readable label the map editor shows for authors. */
 	name: optional(string()),
 	pages: array(EventPageSchema),
 });
@@ -337,10 +309,9 @@ const EncounterEntrySchema = object({
 const layerCells = () => array(number().pipe(min(EMPTY_CELL)));
 
 /**
- * The full map schema. Validates a parsed JSON value into a typed {@link MapData}.
- * Cross-field invariants that a shape schema cannot express (layer lengths equal
- * `width*height`, tile refs name a real tileset) are enforced by the loader after
- * this passes, so the messages there can name the exact layer and cell.
+ * The full map schema, validating parsed JSON into a typed {@link MapData}.
+ * The loader enforces cross-field invariants afterward — matching layer
+ * lengths, tile refs naming a real tileset — so its errors can name the cell.
  */
 export const MapDataSchema = object({
 	id: string(),

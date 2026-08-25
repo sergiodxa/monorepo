@@ -1,19 +1,11 @@
 /**
- * Unit tests for the `TeamDigest` read model: who is owed a digest, what a team's monitors did
- * over a window, and the stamp that says one went out.
+ * Unit tests for the `TeamDigest` read model: who is owed a digest, what a team's monitors
+ * did over a window, and the stamp that says one went out. Three things carry the weight —
+ * the due-list's two independent guards, the separate daily and weekly stamps, and the outer
+ * join that keeps a monitor with no stats rows in the report.
  *
- * Three decisions carry all the weight here, and each is a place where a plausible query would
- * pass a careless test. The due-list is guarded by two independent conditions — a stamp that
- * predates the run's cutoff, and a team with something worth reporting — so a query that dropped
- * either would still return the obvious membership. The two periods keep separate stamps, which
- * is what makes a team that got its daily digest this morning still due its weekly one. And the
- * report is an *outer* join over four monitor tables, so a monitor with no rows at all has to
- * come back with no days rather than not come back.
- *
- * Rows are seeded directly instead of through the four monitor models: what is under test is one
- * SQL union over `enabled_at IS NOT NULL` and `is_enabled = 1`, and going through the models
- * would leave the disabled halves of that union unreachable. No `teams` row is created either,
- * because neither query joins that table — a team is only a `team_id` to the SQL being tested.
+ * Rows are seeded directly so the disabled halves of the SQL union stay reachable, and a
+ * team is only a `team_id` to the queries under test.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -204,8 +196,8 @@ describe("TeamDigest.listDue", () => {
 	});
 
 	/**
-	 * The reason the stamps are two columns and not one. The weekly trigger fires on a morning
-	 * the daily one has already run, so a shared stamp would suppress every weekly digest.
+	 * Why the stamps are two separate columns: the weekly trigger fires on a morning the daily
+	 * one has already run, so a shared stamp would suppress every weekly digest.
 	 */
 	test("leaves the weekly digest due to a membership already sent today's daily one", async () => {
 		await seedMonitor("http", "team-a");
@@ -253,10 +245,7 @@ describe("TeamDigest.listDue", () => {
 		]);
 	});
 
-	/**
-	 * A digest of nothing is not worth an email, and skipping the team here is also what keeps
-	 * the job from resolving an address it will not use.
-	 */
+	/** An empty digest is worth skipping, and dropping the team here spares an address lookup. */
 	test("excludes a membership of a team with no monitors at all", async () => {
 		await seedMembership("team-a");
 
@@ -298,7 +287,7 @@ describe("TeamDigest.listDue", () => {
 		]);
 	});
 
-	/** Why the monitor condition is an `EXISTS` and not a join: a join would mail one copy each. */
+	/** Why the monitor condition is an `EXISTS`: a join would mail one copy per monitor. */
 	test("returns a membership once, however many monitors the team runs", async () => {
 		for (let type of MONITOR_TYPES) {
 			await seedMonitor(type, "team-a");
@@ -320,9 +309,9 @@ describe("TeamDigest.listMonitors", () => {
 	let since = "2026-07-27";
 	let until = "2026-08-02";
 
+	/** The days are seeded out of order, so the ordering can only come from the query. */
 	test("groups a monitor's days into one entry, oldest first", async () => {
 		let monitor = await seedMonitor("http", "team-a", { name: "Homepage" });
-		// Seeded out of order, so the ordering can only come from the query.
 		await seedDay(monitor, "2026-08-01", { total: 20, successful: 19, status: "degraded" });
 		await seedDay(monitor, "2026-07-27", { total: 10, successful: 10 });
 		await seedDay(monitor, "2026-07-30", { total: 15, successful: 0, status: "down" });
@@ -341,7 +330,7 @@ describe("TeamDigest.listMonitors", () => {
 
 	/**
 	 * The outer join's whole reason: a monitor enabled yesterday is part of what the team runs,
-	 * and an email that says how many monitors it covers must not quietly cover fewer.
+	 * and an email that counts the monitors it covers has to count that one too.
 	 */
 	test("returns an enabled monitor with no stats rows at all, with no days", async () => {
 		let monitor = await seedMonitor("http", "team-a", { name: "Fresh" });
@@ -363,7 +352,7 @@ describe("TeamDigest.listMonitors", () => {
 		expect(report?.days.map((day) => day.date)).toEqual([since, until]);
 	});
 
-	/** Days outside the window drop out of the join, not the monitor along with them. */
+	/** Days outside the window drop out of the join while the monitor stays. */
 	test("still returns a monitor whose only days fall outside the window", async () => {
 		let monitor = await seedMonitor("http", "team-a", { name: "Old" });
 		await seedDay(monitor, "2026-07-01");
@@ -474,7 +463,6 @@ describe("TeamDigest.markSent", () => {
 			await TeamDigest.markSent(db, membership.id, period, sentAt);
 
 			expect(await TeamDigest.listDue(db, period, today)).toHaveLength(0);
-			// And due again once the bound has moved, which is what the next trigger passes.
 			expect((await TeamDigest.listDue(db, period, tomorrow)).map((each) => each.id)).toEqual([
 				membership.id,
 			]);

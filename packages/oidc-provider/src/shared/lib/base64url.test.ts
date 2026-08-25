@@ -1,3 +1,10 @@
+/**
+ * Tests for the base64url encode/decode helpers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { base64UrlDecode, base64UrlEncode } from "./base64url";
@@ -5,26 +12,24 @@ import { base64UrlDecode, base64UrlEncode } from "./base64url";
 describe("base64url", () => {
 	describe("base64UrlEncode", () => {
 		test("encodes bytes to base64url", () => {
-			let bytes = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+			let bytes = new Uint8Array([72, 101, 108, 108, 111]);
 			expect(base64UrlEncode(bytes)).toBe("SGVsbG8");
 		});
 
 		test("replaces + with -", () => {
-			// Bytes that produce + in standard base64
 			let bytes = new Uint8Array([251, 239]);
 			let result = base64UrlEncode(bytes);
 			expect(result).not.toContain("+");
 		});
 
 		test("replaces / with _", () => {
-			// Bytes that produce / in standard base64
 			let bytes = new Uint8Array([255, 255]);
 			let result = base64UrlEncode(bytes);
 			expect(result).not.toContain("/");
 		});
 
 		test("removes padding", () => {
-			let bytes = new Uint8Array([72]); // Would be "SA==" in base64
+			let bytes = new Uint8Array([72]);
 			let result = base64UrlEncode(bytes);
 			expect(result).not.toContain("=");
 		});
@@ -33,7 +38,7 @@ describe("base64url", () => {
 	describe("base64UrlDecode", () => {
 		test("decodes base64url to bytes", () => {
 			let result = base64UrlDecode("SGVsbG8");
-			expect(Array.from(result)).toEqual([72, 101, 108, 108, 111]); // "Hello"
+			expect(Array.from(result)).toEqual([72, 101, 108, 108, 111]);
 		});
 
 		test("handles - character", () => {
@@ -49,7 +54,6 @@ describe("base64url", () => {
 		});
 
 		test("handles missing padding", () => {
-			// "SA" without padding should decode to [72]
 			let result = base64UrlDecode("SA");
 			expect(Array.from(result)).toEqual([72]);
 		});

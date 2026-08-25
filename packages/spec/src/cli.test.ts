@@ -109,8 +109,6 @@ test "running a program needs a grant" {
 		expect(code).toBe(1);
 		expect(output()).toContain("Permission denied: run");
 		expect(output()).toContain("--allow-run");
-		// A spawn attempt at this nonexistent binary would report a startup
-		// tool error instead; the denial must come first.
 		expect(output()).not.toContain("failed to start");
 	});
 
@@ -159,8 +157,6 @@ command broken {
 		let code = await main(["run", root], sink);
 
 		expect(code).toBe(1);
-		// The failing statement is line 3 of the helper file; main.spec does
-		// not even have a statement at that line.
 		expect(output()).toContain("commands/helper.spec:3");
 	});
 

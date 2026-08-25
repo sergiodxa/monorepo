@@ -36,20 +36,16 @@ import LogoutFrontchannelView from "~/resources/views/logout-frontchannel";
 import routes from "~/routes/web";
 
 /**
- * Headers that end the browser's relationship with this origin: the session cookie is
- * replaced with an empty one, and the browser is asked to drop everything else it kept.
- *
- * Sent only on the branch that navigates away. The front-channel page cannot use them:
- * clearing site data while its iframes are still loading would cut them off.
+ * Headers that end the browser's relationship with this origin. Reserved for the branch
+ * that navigates away: clearing site data while the front-channel iframes are still
+ * loading would cut them off.
  */
 const CLEAR_SITE_DATA: HeadersInit = { "Clear-Site-Data": '"*"' };
 
 /**
- * Renders the interactive sign-out confirmation.
- *
- * It is what a browser gets whenever the request is not a usable RP-initiated logout —
- * malformed parameters, or no way to tell who is signing out — because the person in
- * front of it can still answer the question the page asks.
+ * Renders the interactive sign-out confirmation, the answer to every request that
+ * leaves the parameters or the subject undetermined: the person in front of the browser
+ * can still answer the question the page asks.
  */
 function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
@@ -63,12 +59,8 @@ function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
 
 /**
  * The address the browser continues to once logout has happened, with `state` echoed
- * back when the relying party sent one so it can correlate the round trip.
- *
- * Falls back to this server's own authorization endpoint: `target` is only ever set to
- * an address a registered client nominated, so an absent one means the browser has
- * nowhere verified to go and is kept here — which is also what an address that could
- * not be verified lands on, since the sign-out itself still went through.
+ * back so a relying party can correlate the round trip. Falls back to this server's own
+ * authorization endpoint, since `target` holds only addresses a client registered.
  */
 function postLogoutUrl(ctx: RequestContext, target: string | undefined, state?: string): string {
 	let url = new URL(target ?? new URL(routes.authorize.index.href(), ctx.url.origin).toString());
@@ -79,8 +71,9 @@ function postLogoutUrl(ctx: RequestContext, target: string | undefined, state?: 
 export default createController(routes.oidc.logout, {
 	actions: {
 		/**
-		 * GET /oidc/logout — performs an RP-initiated logout, or asks the person to
-		 * confirm one when the request does not carry enough to perform it.
+		 * GET /oidc/logout — an RP-initiated logout, or the confirmation page when the
+		 * request leaves the subject undetermined. Back-channel delivery uses recipient
+		 * lists captured before the sessions were deleted; a refused request answers 400.
 		 */
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
@@ -96,8 +89,6 @@ export default createController(routes.oidc.logout, {
 			let refreshToken = getRefreshToken();
 			let sessionSubject = accessToken ? getSubjectFromAccessToken(accessToken) : null;
 
-			// Without either, there is nobody to log out: an anonymous browser asking for
-			// somebody's session to end is not a request this server can answer.
 			if (!params.id_token_hint && !sessionSubject) {
 				ctx.logger.info("logout_missing_id_token_hint");
 				return confirmationPage(ctx);
@@ -115,11 +106,6 @@ export default createController(routes.oidc.logout, {
 					state: params.state,
 				});
 			} catch (error) {
-				// A refused logout request is the client's mistake — a hint this server did
-				// not sign, a client_id contradicting one it did — and it is answered as one
-				// rather than as a page that pretends the sign-out happened. An address the
-				// server cannot verify is not among these: that logout goes ahead and simply
-				// ends up back here.
 				if (error instanceof OIDC.InvalidRequestError) {
 					ctx.logger.info("logout_rejected", { reason: error.message });
 					return badRequest({ error: "invalid_request", error_description: error.message });
@@ -128,13 +114,8 @@ export default createController(routes.oidc.logout, {
 				throw error;
 			}
 
-			// The recipient lists were read before the sessions were deleted; delivering
-			// them now is the last thing that needs those rows to have existed.
 			await provider.deliverBackchannelLogoutTokens(logout.subjectId, logout.backchannelSessions);
 
-			// The subject's sessions are already gone, but this browser's row is deleted by
-			// its refresh token too: a logout driven by an `id_token_hint` may name a
-			// different subject than the one holding this cookie.
 			if (refreshToken) await Session.deleteById(db, refreshToken);
 
 			ctx.logger.info("logout_success", {
@@ -147,8 +128,6 @@ export default createController(routes.oidc.logout, {
 
 			let redirectUri = postLogoutUrl(ctx, logout.redirectUri, params.state);
 
-			// The iframes have to run somewhere, and a redirect would never give them the
-			// chance, so the page itself becomes the delay before the browser moves on.
 			if (logout.frontchannelUrls.length > 0) {
 				return ctx.render(
 					<LogoutFrontchannelView
@@ -173,7 +152,8 @@ export default createController(routes.oidc.logout, {
 
 		/**
 		 * POST /oidc/logout — signs the person out of this server itself and sends them
-		 * back to the authorization endpoint.
+		 * back to the authorization endpoint. Back-channel tokens reach every relying
+		 * party, sent while the session rows they are derived from still exist.
 		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
@@ -185,9 +165,6 @@ export default createController(routes.oidc.logout, {
 				let subjectId = getSubjectFromAccessToken(accessToken);
 
 				if (subjectId) {
-					// Sent while the session rows still exist, since the recipient list is
-					// derived from them. No client is excluded: this logout was started here,
-					// so every relying party is hearing about it for the first time.
 					await createOidcProvider(db).sendBackchannelLogoutTokens(subjectId);
 				}
 

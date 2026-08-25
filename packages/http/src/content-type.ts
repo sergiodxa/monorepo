@@ -1,4 +1,11 @@
 /**
+ * MIME type constants for HTTP `Content-Type` header values.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Plain text content type with UTF-8 charset.
  * Used for simple text responses without any formatting.
  * @example

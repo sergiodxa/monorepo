@@ -1,15 +1,9 @@
 import { unwrap } from "@pkg/result";
 /**
- * Verifies the learn system's move-window math and moveset mutation rules.
- *
- * The pure tests confirm `movesLearnedBetween` returns only moves pinned to the
- * levels a creature just crossed (exclusive lower bound, inclusive upper bound),
- * in ascending level order, de-duplicated, and ignoring non level-up entries; and
- * that `applyLearnedMove` auto-appends into a free slot, overwrites a named slot
- * when full, treats an out-of-range or negative slot as declined, and never
- * relearns a known move. The world tests confirm `learnMove` writes the new
- * moveset back and sets the affected slot to the move's full PP, reporting the
- * slot used and any move it replaced.
+ * Verifies the learn system's move-window math and moveset mutation rules:
+ * `movesLearnedBetween`'s exclusive-lower/inclusive-upper window with
+ * de-duplication, `applyLearnedMove`'s slot rules, and `learnMove`'s PP
+ * refresh and replaced-move reporting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -132,9 +126,7 @@ test("movesLearnedBetween returns only moves in the exclusive-inclusive window",
 		{ level: 6, moveId: MOVE_B },
 		{ level: 9, moveId: MOVE_C },
 	];
-	// Crossing 5 -> 6 excludes the level-3 move (already known) but includes level 6.
 	expect(movesLearnedBetween(learnset, 5, 6)).toEqual([MOVE_B]);
-	// Crossing 3 -> 9 spans levels 6 and 9 but not the level-3 boundary itself.
 	expect(movesLearnedBetween(learnset, 3, 9)).toEqual([MOVE_B, MOVE_C]);
 });
 
@@ -174,7 +166,6 @@ test("applyLearnedMove treats an out-of-range or negative slot as declined", () 
 
 test("applyLearnedMove never relearns a move already known", () => {
 	let moveset: MoveSet = [MOVE_A, MOVE_B, null, null];
-	// Auto-append path and explicit-slot path both refuse the duplicate.
 	expect(applyLearnedMove(moveset, MOVE_A)).toBe(moveset);
 	expect(applyLearnedMove([MOVE_A, MOVE_B, MOVE_C, MOVE_D], MOVE_A, 2)).toEqual([
 		MOVE_A,
@@ -199,7 +190,6 @@ test("learnMove auto-appends into a free slot and gives the new move full PP", (
 	expect(result).toEqual({ learned: true, slotIndex: 1 });
 	let moves = getCreatureComponentSet(world, id).moves;
 	expect(moves.moveset).toEqual([MOVE_A, MOVE_NEW, null, null]);
-	// The new move enters with its authored full PP (25); the existing slot is untouched.
 	expect(moves.pp).toEqual([30, 25, 0, 0]);
 });
 
@@ -213,7 +203,6 @@ test("learnMove overwrites the chosen slot and reports the replaced move", () =>
 	expect(result).toEqual({ learned: true, slotIndex: 2, replacedMoveId: MOVE_C });
 	let moves = getCreatureComponentSet(world, id).moves;
 	expect(moves.moveset).toEqual([MOVE_A, MOVE_B, MOVE_NEW, MOVE_D]);
-	// The overwritten slot resets to MOVE_NEW's authored full PP (25).
 	expect(moves.pp).toEqual([1, 2, 25, 4]);
 });
 

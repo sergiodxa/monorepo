@@ -1,11 +1,9 @@
 /**
- * The form that sets a new password for an already-validated recovery link. The token
- * travels as a hidden field rather than in the action's query string, so the request that
- * spends it does not put it in a `Referer` header or an access log, and the page it posts
- * to is the one that rendered it.
- *
- * The address the account belongs to is never shown: the link is enough to reach this page
- * and repeating the mailbox on it would tell an interceptor whose account they are holding.
+ * The form that sets a new password for an already-validated recovery link.
+ * The token rides as a hidden POST field, keeping it off the query string,
+ * `Referer` headers, and access logs, and posts back to the page that rendered
+ * it. The account's address stays off the page too, since the link alone reaches
+ * it, and showing the mailbox would name the account to whoever holds the link.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

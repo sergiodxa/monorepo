@@ -1,20 +1,14 @@
-import type { BattleStatStage, MoveId } from "./move";
 /**
  * Canonical item data contracts for the game data layer.
  *
- * This module defines the shared identifiers, enums, and structured effect shapes
- * used to describe items in a content-agnostic way. It gives the rest of the game
- * a stable vocabulary for item categories, attributes, pricing, and behavior data
- * without coupling engine logic to any specific content source.
- *
- * The declarations in this file act as the boundary between authored item records
- * and the systems that consume them. By centralizing these data shapes here, the
- * module helps keep item loading, validation, and gameplay rules aligned around a
- * single representation of what an item is allowed to express.
+ * Defines identifiers, enums, and effect shapes for items in a
+ * content-agnostic way, keeping loading, validation, and gameplay rules
+ * aligned around one representation of what an item can express.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { BattleStatStage, MoveId } from "./move";
 import type { State } from "./status";
 import type { Type } from "./type";
 
@@ -121,36 +115,29 @@ export type BattleItemEffect =
 	| BattleItemEffect.Mist;
 
 /**
- * Passive battle behavior a held item grants to its wielder.
- *
- * These effects apply automatically while a creature carries the item during a
- * battle, without spending an action. Every field is optional so one item can
- * express a single behavior or several at once, and an item that holds nothing
- * relevant simply omits the field. The shape stays content-agnostic: it names
- * generic mechanics (residual healing, a type-matched damage multiplier) rather
- * than any specific item, so engine systems can read it without knowing content.
+ * Passive battle behavior a held item grants to its wielder. Every field is
+ * optional, so an item expresses any combination of generic mechanics
+ * (residual healing, a type-matched damage multiplier) through content alone.
  */
 export interface HeldItemBattleEffect {
 	/**
 	 * Fraction of the wielder's maximum HP restored at the end of each turn.
-	 * A value of `1 / 16` restores `floor(maxHP / 16)` while the wielder is not
-	 * fainted and not already at full HP.
+	 * A value of `1 / 16` restores `floor(maxHP / 16)` each turn the wielder is
+	 * alive and below full HP.
 	 */
 	endOfTurnHealFraction?: number;
 	/**
-	 * Multiplier applied to the wielder's outgoing damage when the move being used
-	 * matches `type`. Moves of any other type are unaffected.
+	 * Multiplier applied to the wielder's outgoing damage when the move being
+	 * used matches `type`.
 	 */
 	damageTypeBoost?: {
 		type: Type;
 		multiplier: number;
 	};
 	/**
-	 * Base power an item-thrown attack uses when this item is hurled at the target.
-	 * A move whose power is sourced from the wielder's held item reads this value as
-	 * its effective power for that hit; an item that omits it cannot be thrown, so
-	 * such a move has no power source and fails. Heavier or harder items carry more
-	 * power than soft consumables.
+	 * Base power an item-thrown attack uses when this item is hurled at the
+	 * target. A throwing move succeeds only when the item defines this value,
+	 * and heavier or harder items carry more power than soft consumables.
 	 */
 	flingPower?: number;
 }
@@ -161,7 +148,6 @@ export namespace Item {
 		category: string;
 		attributes: [ItemAttribute, ...ItemAttribute[]];
 		price?: Price;
-		/** Passive behavior applied while this item is held during a battle. */
 		battleEffect?: HeldItemBattleEffect;
 	}
 
@@ -185,7 +171,7 @@ export namespace Item {
 }
 
 /**
- * Item behaviors are derived from attributes.
- * Extra fields only provide the payload needed once an engine knows the item is usable.
+ * Item behaviors are derived from attributes; extra fields only add the
+ * payload needed once an engine knows the item is usable.
  */
 export type Item = Item.Capture | Item.Medicine | Item.BattleItem | Item.TeachesMove | Item.Misc;

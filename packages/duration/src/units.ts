@@ -10,22 +10,19 @@
 /** Milliseconds in one second, the divisor every seconds-based API needs. */
 export const SECOND_MS = 1000;
 
-/** Milliseconds in one minute. */
 const MINUTE_MS = 60 * SECOND_MS;
 
-/** Milliseconds in one hour. */
 const HOUR_MS = 60 * MINUTE_MS;
 
-/** Milliseconds in one day, an exact 24 hours with no calendar involved. */
+/** Milliseconds in one day, kept as a fixed 24-hour span. */
 const DAY_MS = 24 * HOUR_MS;
 
-/** Milliseconds in one week. */
 const WEEK_MS = 7 * DAY_MS;
 
 /**
- * Long unit spellings, singular and plural, in milliseconds. Months and years
- * are absent on purpose: they have no fixed length, so anything calendar-based
- * belongs to a date-aware API instead of this table.
+ * Long unit spellings, singular and plural, in milliseconds, covering every
+ * fixed-length span from a millisecond through a week. Calendar-based units
+ * such as months and years belong in a date-aware API instead.
  */
 export const LONG_UNIT_MS = {
 	millisecond: 1,
@@ -69,8 +66,8 @@ const LONG_UNIT_LOOKUP: Record<string, number | undefined> = LONG_UNIT_MS;
 const SHORT_UNIT_LOOKUP: Record<string, number | undefined> = SHORT_UNIT_MS;
 
 /**
- * Milliseconds covered by one of a long unit spelling. Only the table's own keys
- * resolve, so text like `"toString"` cannot reach an inherited property.
+ * Milliseconds covered by one of a long unit spelling, resolving only the
+ * table's own keys so a lookup like `"toString"` stays scoped to the table.
  *
  * @param unit - Candidate spelling, e.g. `"minutes"`.
  * @returns The span in milliseconds, or `undefined` when the text is not a unit

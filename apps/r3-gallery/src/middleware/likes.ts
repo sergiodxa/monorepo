@@ -12,7 +12,6 @@ import type { Context, Middleware } from "@pkg/ui-router";
 
 import { createContextKey } from "@pkg/ui-router";
 
-/** Storage key used to persist liked photos by album. */
 const LIKES_STORAGE_KEY = "r3-gallery:liked-photos";
 
 /** Stores and retrieves liked photo ids for the gallery. */

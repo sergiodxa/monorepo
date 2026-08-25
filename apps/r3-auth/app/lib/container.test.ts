@@ -1,19 +1,9 @@
 /**
- * Tests of the app container's registrations: the mail ones — that a send path with no
- * request behind it can resolve a mailer at all, and that the one it resolves carries the
- * same sender identity the request-scoped mailer applies — and the billing one, whose
- * access token is a Secrets Store binding and therefore only readable asynchronously.
- *
- * The transport is overridden before the mailer is first resolved, which is what makes
- * this assertable without a Workers environment: the registration builds the mailer from
- * whatever `MailTransport` resolves to, so replacing that key replaces delivery and
- * nothing else.
- *
- * The binding is a Secrets Store secret, read asynchronously the way the platform requires,
- * and its answer is switched per test so the store's answer, the local fallback, and the
- * failure with neither can be told apart. Polar itself is intercepted with MSW, so the token
- * is asserted where it actually matters — on the wire, as the bearer credential of a real
- * request the client made.
+ * Tests of the app container's registrations: that a send path with no request behind it
+ * resolves a mailer carrying the app's sender identity, and that the billing client puts
+ * the Secrets Store token on the wire, with the local fallback told apart from a failure.
+ * The Workers bindings are mocked before the container is imported so the registrations
+ * read them, and Polar is intercepted with MSW so the token is asserted on a real request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,8 +28,8 @@ const STORE_TOKEN = "polar_at_from_store";
 
 /**
  * A created customer as Polar returns one. Every field is present because the client's
- * SDK validates the response body and rejects a partial one, which would fail the test
- * for a reason that has nothing to do with the token being asserted.
+ * SDK validates the response body, and a partial one would fail the test for a reason
+ * unrelated to the token being asserted.
  */
 const POLAR_CUSTOMER = {
 	id: "cus_1",
@@ -67,13 +57,13 @@ let accessToken = createSecretsStoreSecret({
 /** The plain local-development variable, absent unless a test sets it. */
 let localToken: string | undefined;
 
-// Registered before the container is imported below, so the registration reads these
-// bindings rather than the runner's default stub.
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		POLAR_ACCESS_TOKEN: accessToken,
-		// A getter, because a test sets the fallback after `env` is already captured; the
-		// bindings are carried over as descriptors, so this is re-read on every access.
+		/**
+		 * A getter because a test sets the fallback after `env` is already captured; the
+		 * bindings are carried over as descriptors, so this is re-read on every access.
+		 */
 		get POLAR_ACCESS_TOKEN_LOCAL(): string | undefined {
 			return localToken;
 		},

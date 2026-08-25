@@ -40,7 +40,6 @@ function normalizeLogoutUri(logoutUri: LogoutUriRow) {
 	};
 }
 
-/** Validation schema for the create-logout-URI request body. */
 let CreateLogoutUriSchema = s.object({
 	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), httpsUrl()),
 	type: s.enum_(["post_logout", "backchannel", "frontchannel"]),
@@ -59,7 +58,6 @@ export const index = createAction(
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.loader("/api/clients/:clientId/logout-uris");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -83,7 +81,6 @@ export const create = createAction(
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/logout-uris");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -118,7 +115,6 @@ export const destroy = createAction(
 		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/logout-uris/:id");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });

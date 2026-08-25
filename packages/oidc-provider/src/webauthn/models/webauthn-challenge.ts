@@ -63,7 +63,8 @@ export default class WebAuthnChallenge {
 	 * Creates a challenge for WebAuthn registration.
 	 * @param db - Database instance
 	 * @param data - Registration data including email and optional OAuth parameters
-	 * @returns Object containing the challenge ID, challenge value, and userId for credential creation
+	 * @returns Challenge ID, challenge value, and `userId` — used as the WebAuthn
+	 * user handle now and reused as the subject ID once registration completes.
 	 */
 	static async createForRegistration(
 		db: Database,
@@ -79,8 +80,6 @@ export default class WebAuthnChallenge {
 	) {
 		let id = crypto.randomUUID();
 		let challenge = WebAuthnChallenge.generateChallenge();
-		// Generate a stable user ID for WebAuthn credential creation
-		// This will be the subject ID when the registration completes
 		let userId = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
 		let now = Date.now();
 
@@ -88,7 +87,7 @@ export default class WebAuthnChallenge {
 			id,
 			challenge,
 			type: "registration",
-			subject_id: userId, // Store userId as subject_id for later retrieval
+			subject_id: userId,
 			email: data.email,
 			client_id: data.clientId ?? null,
 			redirect_uri: data.redirectUri ?? null,

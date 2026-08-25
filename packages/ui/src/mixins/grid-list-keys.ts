@@ -1,21 +1,8 @@
 /**
- * Adapts the WAI-ARIA grid keyboard pattern onto a GridList's rows and their
- * action cells: a single roving focus position moves between rows with
- * `ArrowUp`/`ArrowDown`, into and out of a row's action cells with
- * `ArrowRight`/`ArrowLeft`, and to the first/last row with `Home`/`End`.
- * `Space` toggles the focused row's selection, `Shift`+`ArrowUp`/`ArrowDown`
- * extends a contiguous selection range, and `Ctrl`/`Cmd`+`A` selects every
- * row — each of these calls straight into a `SelectionModel` instance
- * rather than tracking selected keys itself.
- *
- * Why JS: the WAI-ARIA grid pattern moves one roving focus position across
- * rows and their action cells with the arrow keys, and layers point, range,
- * and select-all selection on top of it with Space, Shift, and Ctrl/Cmd — a
- * keyboard model no combination of HTML and CSS expresses on its own.
- * No-JS baseline: every row, and any native control inside it (a link, a
- * button), still renders as its own reachable element, individually
- * focusable in ordinary `Tab` order; only the unified roving focus and
- * keyboard-driven selection are unavailable.
+ * Adapts the WAI-ARIA grid keyboard pattern onto a GridList's rows and
+ * action cells: one roving focus position moves with the arrow and
+ * Home/End keys, and Space/Shift/Ctrl drive selection through a
+ * `SelectionModel` instance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,12 +15,9 @@ import type { SelectionModel } from "../behaviors/selection-model";
 import { DISABLED_SELECTOR } from "../utils/disabled-selector";
 
 /**
- * Attribute every GridList row exposes its {@link SelectionModel.Key} on, as
- * a string — the same attribute a `dragReorder()` mixin applied to the same
- * rows identifies them by. `gridListKeys()` reads it to correlate a row
- * element with the key `SelectionModel` tracks its selection under, and
- * writes `aria-selected` back onto the same element as the model's
- * selection changes.
+ * Attribute every GridList row exposes its {@link SelectionModel.Key} on;
+ * `gridListKeys()` correlates a row with the key `SelectionModel` tracks its
+ * selection under, and writes `aria-selected` back as the model changes.
  */
 export const GRIDLIST_ROW_KEY_ATTRIBUTE = "data-key";
 
@@ -83,11 +67,11 @@ function rowKeyOf(row: HTMLElement): string {
 
 /**
  * Resolves a row's raw {@link GRIDLIST_ROW_KEY_ATTRIBUTE} string back to the
- * `SelectionModel.Key` it names, matching by string equality against
- * `model.keys` so a model tracking numeric keys still correlates correctly
- * with the string-only DOM attribute. Falls back to the raw string itself
- * when it matches no known key — for example, before the consumer has
- * called `SelectionModel.setKeys`.
+ * `SelectionModel.Key` it names, matching by string equality so a model
+ * tracking numeric keys still correlates with the string-only DOM attribute.
+ *
+ * @returns The matching key, or the raw string itself when it matches no
+ * known key — for example, before the consumer has called `SelectionModel.setKeys`.
  */
 function resolveKey(model: SelectionModel, raw: string): SelectionModel.Key {
 	for (let key of model.keys) {
@@ -100,8 +84,9 @@ function resolveKey(model: SelectionModel, raw: string): SelectionModel.Key {
 /**
  * Locates where a keydown or focus event originated within the grid: which
  * row, and — when it came from one of that row's action cells rather than
- * the row itself — which cell. Returns `null` when `target` isn't inside any
- * of `rows`.
+ * the row itself — which cell.
+ *
+ * @returns The origin position, or `null` when `target` isn't inside any of `rows`.
  */
 function locate(rows: readonly HTMLElement[], target: EventTarget | null): Position | null {
 	if (!(target instanceof Element)) return null;
@@ -124,8 +109,7 @@ function locate(rows: readonly HTMLElement[], target: EventTarget | null): Posit
 /**
  * Resolves a {@link Position} back to the actual row or cell element it
  * names, so a raw event target several levels deep (an icon inside an
- * action button, say) still maps onto one of the grid's real roving-focus
- * stops.
+ * action button) still maps onto one of the grid's real roving-focus stops.
  */
 function stopAt(rows: readonly HTMLElement[], position: Position): HTMLElement {
 	let row = rows[position.rowIndex]!;
@@ -177,27 +161,9 @@ function syncSelection(host: HTMLElement, model: SelectionModel): void {
 }
 
 /**
- * Adds ARIA grid keyboard navigation and selection to a GridList. Apply it
- * to the GridList's root (`role="grid"`) through its `mix` prop, alongside
- * rows carrying {@link GRIDLIST_ROW_KEY_ATTRIBUTE} and any per-row action
- * controls carrying `role="gridcell"`.
- *
- * `ArrowDown`/`ArrowUp` move roving focus to the next/previous row.
- * `ArrowRight` moves focus from a row onto its first action cell, or to the
- * next cell from there; `ArrowLeft` reverses that, returning focus to the
- * row once its first cell is passed. `Home`/`End` jump to the first/last
- * row. `Space` toggles the focused row's selection on `model` — only when
- * the row itself, not one of its action cells, holds focus, so a focused
- * action keeps its own native Space activation. Holding `Shift` with
- * `ArrowDown`/`ArrowUp` calls `model.selectRange` toward the newly focused
- * row instead of just moving focus, extending a contiguous selection the
- * same way a shift-click would. `Ctrl`/`Cmd`+`A` calls `model.selectAll`.
- *
- * Every `"change"` `model` dispatches — from one of these keys, or from
- * anything else that calls a mutating method on the same instance, such as
- * a pointer click handled elsewhere — re-scans the grid's rows and mirrors
- * the current selection onto them as `aria-selected`, using the same
- * {@link GRIDLIST_ROW_KEY_ATTRIBUTE} contract the rows are found by.
+ * Adds ARIA grid keyboard navigation and selection to a GridList's rows and
+ * action cells, driving a `SelectionModel` and mirroring its `"change"`
+ * events back onto the rows as `aria-selected`.
  *
  * @param model Behavior class instance owning the grid's selected keys.
  * @example

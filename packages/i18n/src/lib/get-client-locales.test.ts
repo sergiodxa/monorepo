@@ -10,7 +10,6 @@ import { describe, expect, test } from "vitest";
 
 import { getClientLocales } from "./get-client-locales";
 
-/** Builds a request with the given Accept-Language header. */
 function makeRequest(acceptLanguage?: string): Request {
 	return new Request("https://example.com/", {
 		headers: acceptLanguage ? { "Accept-Language": acceptLanguage } : undefined,

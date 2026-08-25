@@ -17,8 +17,10 @@ export default {
 		},
 	},
 
-	// Copy for the messages this server sends. `footer` is outside the per-message
-	// sections because the shared email layout appends it to every one of them.
+	/**
+	 * `footer` sits outside the per-message sections because the shared email
+	 * layout appends it to every message.
+	 */
 	emails: {
 		footer:
 			"This is an automated message about your Auth account. Nobody reads replies to the sender address.",
@@ -52,8 +54,10 @@ export default {
 			heading: "Confirm your email address",
 			body: "Confirm that this address belongs to you, so the apps you sign in to are told your email is yours.",
 			action: "Confirm email address",
-			// The number comes from the one constant that also sets the resend window, so
-			// the copy cannot promise a lifetime the token does not have.
+			/**
+			 * Reads the number from the single constant that also sets the resend
+			 * window, so the promised lifetime always matches the token's actual one.
+			 */
 			expiry:
 				"This link works for {{minutes}} minutes and can be used once. If it has expired, ask for a new one from your profile.",
 			ignore:
@@ -66,8 +70,10 @@ export default {
 			heading: "Reset your password",
 			body: "Somebody asked to reset the password on your Auth account. Choose a new one here.",
 			action: "Choose a new password",
-			// The number comes from the constant that sets the token's own lifetime, so the
-			// copy cannot promise a window the link does not have.
+			/**
+			 * Reads the number from the constant that sets the token's own lifetime,
+			 * so the promised window always matches the link's actual one.
+			 */
 			expiry: "This link works for {{minutes}} minutes and can be used once.",
 			unexpected:
 				"If you did not ask for this, you can ignore this message. Your password stays as it is until this link is used.",
@@ -86,15 +92,19 @@ export default {
 		},
 	},
 
-	// Copy for the password-recovery pages. Every outcome of the request form reads the
-	// same, because whether an address is registered is not something the page may reveal.
+	/**
+	 * Every outcome of the request form reads the same, keeping whether an
+	 * address is registered private.
+	 */
 	password: {
 		forgot: {
 			documentTitle: "Reset your password",
 			title: "Reset your password",
 			description: "We will email you a link to choose a new password.",
-			// Label of the link on the sign-in card. Phrased as the reader's problem rather than
-			// as the page's title, because that is the sentence they are scanning the card for.
+			/**
+			 * Phrased as the reader's problem, the sentence they are scanning the
+			 * sign-in card for.
+			 */
 			link: "Forgot your password?",
 			email: { label: "Email", placeholder: "Email" },
 			submit: "Send reset link",
@@ -156,8 +166,10 @@ export default {
 			description: "Sign in to continue",
 		},
 
-		// One line per OAuth error code a refused sign-in can carry, since the sign-in
-		// page shows the reason as a single sentence above the form.
+		/**
+		 * One line per OAuth error code a refused sign-in can carry, since the
+		 * sign-in page shows the reason as a single sentence above the form.
+		 */
 		errors: {
 			missingValidation: "Verify your email address to continue.",
 			accessDenied: "Invalid email or password.",
@@ -250,12 +262,16 @@ export default {
 		continue: "Click here to continue",
 	},
 
-	// The page a verification link lands on. Every outcome a token can have gets its own
-	// heading and sentence, so nobody is left guessing whether their address is confirmed.
+	/**
+	 * Every outcome a token can have gets its own heading and sentence, so
+	 * nobody is left guessing whether their address is confirmed.
+	 */
 	verifyEmail: {
 		documentTitle: "Email verification",
-		// The page the link itself opens. It asks rather than announces, because opening the
-		// link is not the confirmation: pressing the button is.
+		/**
+		 * Asks the reader to press the button, since pressing it is the actual
+		 * confirmation — opening the link only brings them here.
+		 */
 		confirm: {
 			title: "Confirm your email address",
 			description:
@@ -267,8 +283,10 @@ export default {
 			description: "Thank you. This address is confirmed, and nothing else is needed here.",
 			action: "Go to your account",
 		},
-		// One message for expired, already used, and malformed alike: distinguishing them
-		// tells whoever is holding the link something they should not learn from it.
+		/**
+		 * One message covers expired, already used, and malformed link states,
+		 * keeping which one applies private from whoever is holding the link.
+		 */
 		invalid: {
 			title: "This link no longer works",
 			description:
@@ -536,8 +554,10 @@ export default {
 				edit: "Edit Profile",
 				sessions: "Manage Sessions",
 			},
-			// The signal an unverified subject needs: the badge beside their address says what
-			// the state is, and the panel says what it costs them and how to fix it.
+			/**
+			 * The badge beside the address states the verification state; the
+			 * panel states what it costs and how to fix it.
+			 */
 			emailVerification: {
 				verified: "Verified",
 				unverified: "Unverified",
@@ -546,8 +566,10 @@ export default {
 					"This address has not been confirmed yet, so every app you sign in to is told it is unverified.",
 				action: "Send a verification email",
 				sent: "Verification email sent. The link in it works for {{minutes}} minutes.",
-				// Said as "already sent" rather than as a refusal: the outstanding link is still
-				// valid for exactly as long as this window lasts, so there is nothing to wait for.
+				/**
+				 * Framed as confirmation a link is already on its way, since the
+				 * earlier one stays valid for the rest of this window.
+				 */
 				cooldown:
 					"A verification email was sent to you in the last few minutes. The link in it still works — check your inbox.",
 				failed: "The verification email could not be sent. Please try again in a moment.",

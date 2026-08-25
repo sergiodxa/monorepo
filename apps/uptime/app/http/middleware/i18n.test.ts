@@ -1,13 +1,9 @@
 /**
- * Integration tests for the language-resolution middleware. `@pkg/i18n/middleware`'s
- * generic cookie/header detection is covered by that package's own tests; these focus on
- * this file's app-specific configuration — the `language` cookie first, then a signed-in
- * viewer's stored preference, then the `Accept-Language` header, falling back to English —
- * using the real session + auth chain to resolve the viewer.
- *
- * Every case also pins the cost: the database is counted, because "the cookie resolves the
- * language without a query" is the property the design exists for, and a test that only
- * checked the resolved locale would pass just as happily with a query on every request.
+ * Integration tests for the language-resolution middleware: the `language`
+ * cookie first, then a signed-in viewer's stored preference, then
+ * `Accept-Language`, falling back to English, resolved through the real
+ * session + auth chain. Every case also pins the database call count, since
+ * a cookie hit resolving the language without a query is the property under test.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,9 +29,9 @@ type Db = ReturnType<typeof createTestDatabase>["db"];
 let viewer: Viewer = { id: "user_1", name: "Ada", email: "ada@example.com", avatar: "" };
 
 /**
- * Wraps a database so every call through it is counted, which is how the zero-query claims
- * below are checked. Counting at the handle rather than at one model means a query added
- * anywhere on the request path shows up here.
+ * Wraps a database so every call through it is counted, which is how the
+ * zero-query claims below are checked. Counting happens at the handle, so a
+ * query added anywhere on the request path is caught here.
  */
 function counting(db: Db) {
 	let calls = { count: 0 };
@@ -156,7 +152,6 @@ describe("i18n middleware", () => {
 			{
 				id: crypto.randomUUID(),
 				subject_id: viewer.id,
-				// A language this app once served and no longer lists; the row outlives the support.
 				preferred_language: "pt" as never,
 			},
 			{ touch: true, returnRow: true },

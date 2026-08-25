@@ -1,17 +1,9 @@
 /**
- * Original, procedurally-synthesized sound effects for the game.
- *
- * Every effect is defined as plain data: an oscillator type, a short pitch
- * envelope (time-stamped frequency points the oscillator sweeps through), a
- * duration, and a peak gain. `playSfx` reads a definition and schedules the
- * oscillator(s) on a Web Audio context, applying a tiny attack/release so the
- * blips do not click. Nothing here is sampled or copyrighted; the sounds are
- * simple synth shapes (blips, sweeps, arpeggios) built from oscillators alone.
- *
- * The module is safe in a headless or test environment: it never constructs an
- * `AudioContext` itself, and `playSfx` no-ops (without throwing) when no context
- * is supplied and Web Audio is unavailable. Callers that already own a context
- * (the `AudioManager`) pass it in, so effects route through their mixer.
+ * Original sound effects synthesized from oscillators alone, each defined as
+ * plain data: a waveform, a time-stamped pitch envelope, a duration, and a peak
+ * gain. `playSfx` schedules a definition on a caller-supplied Web Audio context,
+ * so effects route through that caller's mixer, with a tiny attack and release
+ * so the blips stay clean. It stays silent in headless and test environments.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,11 +21,9 @@ export type SfxName =
 	| "encounter";
 
 /**
- * Any effect name a caller may ask for.
- *
- * The `string & {}` branch keeps arbitrary names assignable — callers driven by
- * authored data can pass a name that has no definition, which is a documented
- * no-op — while still offering the {@link SfxName} literals as completions.
+ * Any effect name a caller may ask for. The `string & {}` branch keeps
+ * data-driven names assignable — an undefined name resolves to silence — while
+ * still offering the {@link SfxName} literals as completions.
  */
 export type SfxNameInput = SfxName | (string & {});
 
@@ -60,17 +50,13 @@ export type SfxDefinition = SfxLayer[];
 /** How long the linear attack ramp lasts before a layer reaches its peak gain. */
 const ATTACK_SECONDS = 0.005;
 
-/** The smallest audible gain a release ramp targets (never truly zero, to allow exponential ramps). */
+/** Floor gain a release ramp targets; exponential ramps require a positive target. */
 const SILENCE_GAIN = 0.0001;
 
 /**
- * The original effect designs, each a small hand-tuned synth patch.
- *
- * Menu blips are single short square/triangle notes; confirm rises two notes,
- * cancel falls two notes. Combat effects lean on sweeps and noise-like square
- * tones: `hit` is a fast downward sawtooth thud, `faint` a long downward sweep,
- * `heal` a gentle upward sine shimmer, `level-up` a three-note major arpeggio,
- * and `encounter` an alternating alarm.
+ * Hand-tuned synth patches. Menu blips are single short notes with confirm
+ * rising and cancel falling; combat effects lean on sweeps and arpeggios so
+ * hits, faints, heals, and level-ups stay distinguishable by ear alone.
  */
 export const SFX_DEFINITIONS: Record<SfxName, SfxDefinition> = {
 	"menu-move": [{ type: "square", envelope: [[0, 660]], duration: 0.06, gain: 0.2 }],
@@ -139,10 +125,7 @@ export const SFX_DEFINITIONS: Record<SfxName, SfxDefinition> = {
 
 /** Options controlling where and how loud an effect plays. */
 export interface PlaySfxOptions {
-	/**
-	 * The audio context to schedule on. When omitted, a global `AudioContext` is
-	 * required to play; without one the call is a safe no-op.
-	 */
+	/** The audio context to schedule on; the call stays silent when omitted. */
 	context?: AudioContext;
 	/**
 	 * The node the effect connects to (e.g. a channel gain). Defaults to the
@@ -153,17 +136,15 @@ export interface PlaySfxOptions {
 	gain?: number;
 }
 
-/** Returns true when Web Audio can be used in the current environment. */
+/** True when the environment exposes a global `AudioContext` constructor. */
 export function isAudioSupported(): boolean {
 	return typeof globalThis !== "undefined" && typeof globalThis.AudioContext !== "undefined";
 }
 
 /**
- * Synthesizes and plays one sound effect, scheduling its oscillator layers.
- *
- * Unknown names, a missing context (with no global `AudioContext`), and a
- * non-zero-effective-gain of zero are all safe no-ops. Never throws: any Web
- * Audio failure is swallowed so audio can never crash the game.
+ * Synthesizes one effect by scheduling its oscillator layers. An unknown name, a
+ * missing context, and a zero effective gain each resolve to silence, and a
+ * closed or suspended context fails inside this call so the game keeps running.
  *
  * @param name - The effect to play.
  * @param options - Where to route it and how loud, see {@link PlaySfxOptions}.
@@ -172,8 +153,6 @@ export function playSfx(name: SfxNameInput, options: PlaySfxOptions = {}): void 
 	let definition = (SFX_DEFINITIONS as Record<string, SfxDefinition | undefined>)[name];
 	if (!definition) return;
 
-	// A context is required to schedule anything. In a headless/test environment
-	// there is no global AudioContext and no caller-supplied one, so we no-op.
 	let context = options.context;
 	if (!context) return;
 
@@ -185,12 +164,9 @@ export function playSfx(name: SfxNameInput, options: PlaySfxOptions = {}): void 
 	try {
 		let now = context.currentTime;
 		for (let layer of definition) playLayer(context, destination, layer, masterGain, now);
-	} catch {
-		// Web Audio can throw on a closed/suspended context; audio must never crash the game.
-	}
+	} catch {}
 }
 
-/** Schedules a single oscillator layer of an effect. */
 function playLayer(
 	context: AudioContext,
 	destination: AudioNode,

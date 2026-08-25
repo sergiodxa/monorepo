@@ -1,13 +1,9 @@
 /**
- * Unit tests for the `Lead` data-access model: the create-or-update the trial form runs,
- * the per-lead daily digest schedule, and the cleanup sweep that removes a lead once it has
- * no watches left.
- *
- * Most of these are about {@link Lead.upsertByEmail}, because every field it touches on a
- * repeat submission follows a different rule — a name is kept, a locale is replaced, a
- * consent is never revoked, a digest stamp is left alone — and "take the newest value" would
- * pass a careless test for all four. The rest are about ordering: the orphan sweep is only
- * correct because the watch sweep has already run.
+ * Unit tests for the `Lead` data-access model: the create-or-update the trial form runs, the
+ * per-lead daily digest schedule, and the cleanup sweep that removes a lead once its watches
+ * are gone. Most cover {@link Lead.upsertByEmail}, where every field a repeat submission
+ * touches follows its own rule; the rest cover ordering, since the orphan sweep is correct
+ * only because the watch sweep has already run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -230,7 +226,7 @@ describe("Lead.forget", () => {
 		expect(await TrialWatch.listConvertibleByLead(db, lead.id, Date.now())).toHaveLength(0);
 	});
 
-	/** The distinction the two names carry: one path is conditional, the other is not. */
+	/** The distinction the two names carry: the sweep honours windows, `forget` removes. */
 	test("removes a lead the scheduled sweep would have refused to touch", async () => {
 		let lead = await upsert();
 		await TrialWatch.create(db, lead.id, { url: "https://a.example" });
@@ -401,9 +397,9 @@ describe("Lead.recordEmailSent", () => {
 	});
 
 	/**
-	 * The reason the increment is one SQL statement and not a read, an add and a write. Two of
-	 * the four sends run concurrently over a batch of leads, so a lost update is not a
-	 * hypothetical — and it would lose exactly the counts of the busiest lead.
+	 * The reason the increment is one SQL statement. Two of the four sends run concurrently
+	 * over a batch of leads, where a read-modify-write would drop increments for exactly the
+	 * busiest lead.
 	 */
 	test("loses no count when several sends land at once", async () => {
 		let lead = await upsert();
@@ -488,8 +484,8 @@ describe("Lead.deleteOrphaned", () => {
 
 	/**
 	 * The ordering the whole cleanup rests on: at day 32 the first attempt is past its own
-	 * conversion window and the two later ones are not, so the watch sweep takes one row and
-	 * the lead survives with the two offers that are still open.
+	 * conversion window while the two later ones are still open, so the watch sweep takes one
+	 * row and the lead survives with the offers that remain.
 	 */
 	test("keeps a lead whose later attempts are still claimable after the watch sweep", async () => {
 		let lead = await agedLead("partial@example.com");
@@ -499,7 +495,6 @@ describe("Lead.deleteOrphaned", () => {
 		let second = await TrialWatch.create(db, lead.id, { url: "https://b.example" });
 		let third = await TrialWatch.create(db, lead.id, { url: "https://c.example" });
 
-		// Attempts made on days 0, 3 and 6, as seen from day 32.
 		await db.update(trialWatches, first.id, { converts_until: now - 2 * MS_PER_DAY });
 		await db.update(trialWatches, second.id, { converts_until: now + 1 * MS_PER_DAY });
 		await db.update(trialWatches, third.id, { converts_until: now + 4 * MS_PER_DAY });
@@ -526,9 +521,9 @@ describe("Lead.deleteOrphaned", () => {
 	});
 
 	/**
-	 * Consent is not an exemption. Every email this feature sends is driven by a watch, so a
-	 * lead with none left has nothing for the consent to authorise, and keeping the row would
-	 * make the sweep a no-op for exactly the people most likely to have consented.
+	 * The sweep applies to consented leads too. Every email this feature sends is driven by a
+	 * watch, so once the last one is gone the consent has nothing left to authorise, and an
+	 * exemption would make the sweep a no-op for the people most likely to have consented.
 	 */
 	test("deletes a lead who gave marketing consent, once no watch is left to email about", async () => {
 		let lead = await agedLead("consented@example.com", { consented: true });
@@ -553,7 +548,6 @@ describe("Lead.deleteOrphaned", () => {
 		await Lead.deleteOrphaned(db, Date.now());
 
 		expect(await Lead.findById(db, lead.id)).not.toBeNull();
-		// And it does go once the grace period has passed with still no watch.
 		await Lead.deleteOrphaned(db, Date.now() + ORPHANED_LEAD_GRACE_MS + 1);
 		expect(await Lead.findById(db, lead.id)).toBeNull();
 	});

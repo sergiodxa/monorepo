@@ -1,7 +1,7 @@
 /**
  * GET/POST /admin/clients/new — registers a relying party and reveals its generated
- * secret exactly once. The success state is rendered rather than redirected to on
- * purpose: a redirect would drop the secret, and it exists nowhere a later page reads.
+ * secret exactly once. The success state renders that secret inline, because it exists
+ * nowhere a later page can read it back.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -93,8 +93,8 @@ export default createController(routes.admin.clientNew, {
 		/**
 		 * POST /admin/clients/new — registers the client and renders its secret once.
 		 *
-		 * A validation failure re-renders the form with the issues addressed per field
-		 * rather than redirecting, so nothing the administrator typed is lost.
+		 * A validation failure re-renders the form with the issues addressed per field, so
+		 * nothing the administrator typed is lost.
 		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();

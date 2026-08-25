@@ -20,12 +20,8 @@ const LEADING_FALLBACKS: Record<NamedLeadingValue, number> = {
 
 /**
  * Applies `line-height`. Named values resolve through
- * `var(--ui-leading-{name}, fallback)` so an app can override the scale
- * without losing the sensible default; a raw number passes through
- * unchanged as a unitless line-height multiplier; any other string (a raw
- * CSS length like `"16px"` or `"2rem"`) passes through unchanged as a
- * literal `line-height` value instead of being mistaken for a named scale
- * step.
+ * `var(--ui-leading-{name}, fallback)`, so an app can override the scale
+ * without losing the default; numbers and other strings pass through unchanged.
  *
  * @example u.leading("relaxed")
  * @example css({ lineHeight: "var(--ui-leading-relaxed, 1.625)" })

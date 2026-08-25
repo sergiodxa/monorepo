@@ -35,10 +35,8 @@ export interface DurableObjectStateMock<Props = unknown> extends DurableObjectSt
 
 /**
  * Creates a Durable Object state backed by in-memory storage and a real SQLite database.
- *
- * Values are structured-cloned on write and read, so a stored object cannot be mutated
- * through the reference the caller kept — the same isolation the platform's serialization
- * gives, and a common source of tests that pass for the wrong reason.
+ * Values are structured-cloned on write and read, matching the platform's serialization,
+ * so each caller holds an independent copy of anything stored or retrieved.
  * @param options Identity and props for the object.
  * @returns A `DurableObjectState` usable as a Durable Object constructor argument.
  * @example let state = createDurableObjectState(); let object = new Counter(state, env);
@@ -130,7 +128,6 @@ export function createDurableObjectState<Props = unknown>(
 		let found = new Map<string, unknown>();
 
 		for (let name of key) {
-			// A bulk read omits missing keys rather than mapping them to `undefined`.
 			if (entries.has(name)) found.set(name, read(name));
 		}
 
@@ -213,7 +210,7 @@ export function createDurableObjectState<Props = unknown>(
 
 		list,
 
-		/** Removes every stored key, leaving SQL tables untouched. */
+		/** Removes every stored key; SQL-backed tables keep their own lifecycle. */
 		deleteAll(): Promise<void> {
 			entries.clear();
 			return Promise.resolve();
@@ -278,8 +275,8 @@ export function createDurableObjectState<Props = unknown>(
 		},
 
 		/**
-		 * Schedules the alarm. Nothing fires it automatically: a test calls the object's
-		 * `alarm()` handler itself, which is what makes the timing assertable.
+		 * Schedules the alarm. A test calls the object's `alarm()` handler directly to
+		 * fire it, which is what makes the timing assertable.
 		 * @param scheduledTime When the alarm should fire.
 		 */
 		setAlarm(scheduledTime: number | Date): Promise<void> {
@@ -353,7 +350,7 @@ export function createDurableObjectState<Props = unknown>(
 
 		/**
 		 * Records a restore request. There is no session to restore in memory, so the
-		 * bookmark is echoed back rather than pretending a rollback happened.
+		 * bookmark is simply echoed back.
 		 * @param requested Bookmark to restore to.
 		 */
 		onNextSessionRestoreBookmark(requested: string): Promise<string> {
@@ -392,8 +389,9 @@ export function createDurableObjectState<Props = unknown>(
 		},
 
 		/**
-		 * Runs a callback with input serialized behind it, so overlapping calls queue
-		 * instead of interleaving — the guarantee constructors rely on for initialization.
+		 * Runs a callback with input serialized behind it — the guarantee constructors
+		 * rely on for initialization. The gate is claimed before awaiting the previous
+		 * one, so callers arriving mid-queue take their turn in arrival order.
 		 * @param callback Work to run exclusively.
 		 * @returns Whatever the callback returned.
 		 */
@@ -401,8 +399,6 @@ export function createDurableObjectState<Props = unknown>(
 			let previous = gate;
 			let release = () => undefined as void;
 
-			// Claim the gate before awaiting, so a caller that arrives while this one is
-			// still queued lines up behind it instead of racing it.
 			gate = new Promise<void>((resolve) => {
 				release = resolve;
 			});
@@ -486,8 +482,10 @@ export function createDurableObjectState<Props = unknown>(
 			return hibernationTimeout;
 		},
 
-		// `props` is untyped at the platform boundary and has no meaningful default, so an
-		// omitted value stands in as-is rather than being invented.
+		/**
+		 * `props` is untyped at the platform boundary and has no meaningful default, so
+		 * an omitted value passes through unchanged.
+		 */
 		props: options?.props as Props,
 
 		/** Rejects access to the RPC entrypoints, which have no in-memory equivalent. */

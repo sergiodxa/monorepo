@@ -1,16 +1,12 @@
 /**
- * Tests the `/healthcheck/analytics-engine` controller's "binding not configured"
- * branch: with no `PING_RESULTS` on `cloudflare:workers`' `env`, the controller must
- * respond 503 without ever attempting the read-API probe. This is the one case where
- * the env is deliberately non-strict, since a missing binding is the subject rather
- * than a mistake: the controller reads `env.PING_RESULTS?.writeDataPoint`, and a
- * strict env would throw on that read instead of letting the guard answer. The
- * "degraded" (writes work, reads fail) branch is covered separately in
- * `healthcheck-analytics-engine-degraded.test.ts`, since `cloudflare:workers` is
- * mocked once per file via `vi.doMock` before the controller's dynamic import, and a
- * second dynamic import of the same specifier resolves to the instance already in
- * Vitest's module registry rather than re-running its top-level code — so a second
- * `vi.doMock` in this file would never reach the controller.
+ * Tests the `/healthcheck/analytics-engine` controller's "binding not
+ * configured" branch: with no `PING_RESULTS` on `env`, the controller's
+ * binding guard alone produces a 503, ahead of the read-API probe. The env
+ * is deliberately non-strict here since the missing binding is the
+ * scenario under test — the controller reads
+ * `env.PING_RESULTS?.writeDataPoint`, and a strict env would throw on that
+ * read before the guard could answer. The "degraded" branch is covered in
+ * `healthcheck-analytics-engine-degraded.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

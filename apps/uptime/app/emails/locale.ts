@@ -26,13 +26,9 @@ import { supportedLanguages } from "~/database/schema";
 export const DEFAULT_EMAIL_LOCALE = "en";
 
 /**
- * Resolves the translator an email class is constructed with, outside a request.
- *
- * A language the app does not ship falls back to {@link DEFAULT_EMAIL_LOCALE} rather
- * than being passed through, so the returned `locale` is always the language the copy
- * was actually produced in and can be recorded as such. One instance is kept per
- * language, because an outage fans one transition out to every alert on the team at
- * once.
+ * A language the app does not ship falls back to {@link DEFAULT_EMAIL_LOCALE}, and one
+ * instance is kept per language so an alert fanning out to a team does not rebuild
+ * i18next per email; escaping stays off since JSX already escapes the text it renders.
  *
  * @example let { locale, t } = await emailTranslator();
  */
@@ -47,7 +43,5 @@ export const emailTranslator = createTranslator({
 	},
 	supportedLanguages,
 	fallbackLanguage: DEFAULT_EMAIL_LOCALE,
-	// Subjects are header values and bodies are rendered through JSX, which escapes
-	// text nodes itself, so i18next's own escaping would only double-encode.
 	i18next: { interpolation: { escapeValue: false } },
 });

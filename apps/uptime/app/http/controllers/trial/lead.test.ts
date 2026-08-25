@@ -1,28 +1,8 @@
 /**
- * Tests `POST /try/lead`: the three writes it makes, and the two things it refuses to
- * take on trust.
- *
- * The URL is the first. A watch is a week of hourly outbound fetches, so the target has to
- * be the one the guard already approved and the probe already ran — never a value posted
- * back up from the browser. The tests submit a URL in the form and assert the watch
- * ignores it, and that a submission with no probe in the session creates nothing at all.
- *
- * Consent is the second. The opt-in is an unticked checkbox, which a browser does not
- * submit, so its absence has to mean "no consent" and not "validation error" and not
- * "default true". `consented_at` staying null while the watch is created anyway is the
- * whole distinction the column exists for: an address given so we can report on one URL is
- * not an address that agreed to be marketed to.
- *
- * The two answers differ in kind and both are asserted: a success redirects, because it
- * has written rows and queued mail and must not be repeatable by a reload, while a rejected
- * address changed nothing and comes back as the page itself with the result still on it.
- *
- * The third suite is the free-watch cap, which is the only condition on the middle write.
- * One person gets one free week per URL per thirty days, and the cases worth testing are the
- * spellings that used to walk past that: a trailing slash, a fragment, a reordered query
- * string, and a `+tag` on the address. Each one has to land on the watch that already exists
- * — while `http://` and `https://` deliberately do not, and mail still goes to whichever
- * spelling of the address was actually typed.
+ * Tests `POST /try/lead`: the URL and status come from the session's probe rather than the
+ * posted form, consent is tracked apart from the address so an unticked box reads as no
+ * consent, and the free-watch cap holds across URL and address spellings that vary only in
+ * formatting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,12 +44,9 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
 /**
- * Re-rendering the page on a rejected address pulls the try-it controller in, and through
- * it `HttpCheck` and `~/app/do/geo-fetch`, whose `DurableObject` base class only exists
- * inside the Workers runtime. Nothing here probes anything, so a bare base class and an
- * environment with no bindings at all are enough to let the module graph load — and the
- * environment being strict is what keeps that claim honest, since a binding this route
- * quietly started reading would fail by name rather than read as `undefined`.
+ * Re-rendering on a rejected address pulls in `HttpCheck` and `~/app/do/geo-fetch`, whose
+ * `DurableObject` base class only exists inside the Workers runtime, so a bare class and a
+ * strict, binding-free environment are enough to load the module graph without probing anything.
  */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({}),
@@ -112,11 +89,9 @@ function probeState(overrides: Partial<TrialProbeState> = {}): TrialProbeState {
 let transport = new MemoryTransport();
 
 /**
- * Submits the capture form and returns everything it touched.
- *
- * `existing` reuses a database from an earlier submission, which is the only way to reach
- * the cap: it needs a watch this address already opened, and that has to have been opened by
- * a real submission rather than seeded past the code under test.
+ * Submits the capture form and returns everything it touched. `existing` reuses a
+ * database from an earlier submission, the only way to reach the cap: it needs a watch
+ * this address already opened by a real submission, not one seeded past the code under test.
  */
 async function submit(
 	body: Record<string, string>,
@@ -395,7 +370,7 @@ describe("POST /try/lead free-watch cap", () => {
 		},
 	);
 
-	/** Tagging is a privacy practice, not a bypass: the report goes to the spelling they used. */
+	/** The report always reaches the exact address as typed, whichever spelling opened the cap. */
 	test("mails the report to the address as typed, not to the key it was capped under", async () => {
 		let one = new Session();
 		one.set(TRIAL_PROBE, probeState({ url: "https://probed.example/" }));
@@ -442,7 +417,6 @@ describe("POST /try/lead free-watch cap", () => {
 			{},
 		);
 
-		// One confirmation for the watch that opened, one report for the one that was capped.
 		expect((await Lead.findByEmail(db, "reader@example.com"))?.emails_sent).toBe(2);
 	});
 });
@@ -475,10 +449,9 @@ describe("POST /try/lead validation", () => {
 });
 
 /**
- * The `funnel.trial_monitor_started` event: the funnel's first commitment, emitted only for a
- * submission that actually started a week of checks. A capped submission is answered with a
- * report and starts nothing, so it is not one of these — and the event names the host and
- * never the URL or the address the visitor typed.
+ * The `funnel.trial_monitor_started` event: the funnel's first commitment, emitted only
+ * when a submission starts a week of checks — a capped submission earns a report instead.
+ * The event names the host alone, keeping the URL and the address out of the log.
  */
 describe("POST /try/lead funnel event", () => {
 	/** Every trial-monitor-started event the request emitted. */

@@ -1,11 +1,9 @@
 /**
  * The evolution scene: confirm or cancel a creature's evolution.
  *
- * Shown after the engine reports a creature can evolve (a planned
- * `creature-can-evolve` event); it presents the choice and, on confirm,
- * dispatches `evolve-creature` to swap the species, or cancels back. The scene is
- * self-contained — it takes the creature and target species — so whatever surface
- * offers the evolution only has to push it.
+ * Confirming dispatches `evolve-creature` to swap the species; cancelling
+ * leaves it unchanged. It carries the creature and target species itself, so
+ * any surface offering an evolution only has to push it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

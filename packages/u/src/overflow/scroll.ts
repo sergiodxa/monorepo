@@ -11,10 +11,9 @@ import { overflowY } from "./overflow-y";
 export type ScrollAxis = "x" | "y" | "both";
 
 /**
- * Turns the element into a scroll container that only scrolls where content
- * overflows, along the given axis, rather than always showing scrollbars.
- * Defaults to `"both"`. Composes `u.overflowX("auto")`/`u.overflowY("auto")`
- * for whichever axis is selected.
+ * Turns the element into a scroll container that reveals a scrollbar only
+ * where content actually overflows the given axis, defaulting to `"both"`.
+ * Composes `u.overflowX("auto")`/`u.overflowY("auto")` for the selected axis.
  *
  * @example u.scroll()
  * @example css({ overflowX: "auto", overflowY: "auto" })

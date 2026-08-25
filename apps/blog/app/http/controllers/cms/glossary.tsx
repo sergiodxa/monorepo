@@ -24,21 +24,18 @@ import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/resources/views/c
 import routes from "~/routes/web";
 
 /**
- * Coordinates CMS glossary CRUD flows and maps route actions to view or redirect responses.
- *
- * Contract: actions use `GlossaryPost` as the data boundary and return HTML views or 303 redirects.
+ * CMS glossary CRUD. `GlossaryPost` is the data boundary, and every action answers with an
+ * HTML view or a 303 redirect.
  */
 export default createController(routes.cms.glossary, {
 	/**
-	 * Controller-level middleware chain.
-	 *
-	 * Kept empty here so each action can enforce its own auth/redirect contract where needed.
+	 * Each action enforces its own auth and redirect contract.
 	 */
 	middleware: [],
 
 	actions: {
 		/**
-		 * Loads all glossary terms and adapts repository records into index-table row props.
+		 * Every stored term is listed, each row carrying its own edit and delete endpoint.
 		 *
 		 * @param ctx Request context with dependency container access.
 		 * @returns CMS glossary index view response.
@@ -58,9 +55,8 @@ export default createController(routes.cms.glossary, {
 		}),
 
 		/**
-		 * Validates form input, creates a glossary term, then sends a 303 redirect.
-		 *
-		 * Non-obvious behavior: when `slug` is omitted, it is derived from `term` via `slugify`.
+		 * An omitted `slug` is derived from `term` via `slugify`, so every term keeps a stable
+		 * anchor on the public glossary page.
 		 * @param ctx Request context containing `FormData` and database bindings.
 		 * @returns Redirect to login, index fallback, or the created term edit route.
 		 */
@@ -92,8 +88,6 @@ export default createController(routes.cms.glossary, {
 		}),
 
 		/**
-		 * Deletes a glossary term by route `id` and always returns to the index route.
-		 *
 		 * @param ctx Request context with route params and database bindings.
 		 * @returns 303 redirect to glossary index, even when `id` is missing.
 		 */
@@ -108,9 +102,8 @@ export default createController(routes.cms.glossary, {
 		}),
 
 		/**
-		 * Loads a glossary term for editing and hydrates the CMS form state.
-		 *
-		 * Contract: when `id` is absent or unknown, returns a 404 form view in "new" mode.
+		 * An absent or unknown `id` answers with a 404 form view in "new" mode so editors stay
+		 * inside the CMS shell.
 		 * @param ctx Request context with route params and database bindings.
 		 * @returns Edit form view for an existing term, or a 404 fallback form response.
 		 */
@@ -151,7 +144,8 @@ export default createController(routes.cms.glossary, {
 		}),
 
 		/**
-		 * Renders the new-term form and includes current glossary size for CMS operator context.
+		 * The description carries the current glossary size to give operators context while they
+		 * add a term.
 		 *
 		 * @param ctx Request context with database bindings.
 		 * @returns CMS glossary creation form view.
@@ -172,9 +166,8 @@ export default createController(routes.cms.glossary, {
 		}),
 
 		/**
-		 * Validates form payload and updates an existing glossary term by route `id`.
-		 *
-		 * Non-obvious behavior: missing auth or `id` short-circuits to index redirect instead of 404.
+		 * Missing auth or `id` sends the editor back to the index, while an update against an
+		 * unknown record answers with the 404 form view.
 		 * @param ctx Request context containing auth state, params, form data, and database.
 		 * @returns Redirect back to edit page, index fallback, or 404 form view when update target is missing.
 		 */

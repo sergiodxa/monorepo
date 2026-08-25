@@ -36,19 +36,17 @@ export namespace MenuKeys {
 	export interface Options {
 		/**
 		 * Selector, evaluated against the Menu surface's descendants, that
-		 * identifies its menu items. Defaults to `[role^="menuitem"]`, which
-		 * matches the `menuitem`, `menuitemcheckbox`, and `menuitemradio`
-		 * roles a menu item carries.
+		 * identifies its menu items. Defaults to `[role^="menuitem"]`, matching
+		 * the `menuitem`, `menuitemcheckbox`, and `menuitemradio` roles.
 		 */
 		itemSelector?: string;
 	}
 }
 
 /**
- * Reports whether `event` originated inside `host`'s own menu, as opposed to
- * a nested submenu surface reusing this same mixin — the closest ancestor
- * carrying `role="menu"` decides ownership, so an event bubbling out of a
- * nested surface is left for that surface's own listener to handle.
+ * Reports whether `event`'s closest `role="menu"` ancestor is `host`, so
+ * each menu surface — including a nested submenu reusing this same mixin —
+ * handles only the events that originate within its own boundary.
  */
 function belongsToSurface(event: Event, host: HTMLElement): boolean {
 	let target = event.target;
@@ -67,12 +65,7 @@ function activeIndexOf(host: HTMLElement, items: readonly HTMLElement[]): number
 /**
  * Adapts the WAI-ARIA menu keyboard pattern — roving tabindex, arrow-key
  * navigation, Home/End, and typeahead — onto a Menu surface's
- * `[role^="menuitem"]` descendants. Apply it through the surface's `mix`
- * prop; it locates its items through the DOM on every interaction, moves
- * real focus between them, and never owns state the consumer would need to
- * read back. Item activation is left to native semantics (a focused,
- * natively interactive item already responds to Enter/Space), so this
- * mixin only ever manages focus.
+ * `[role^="menuitem"]` descendants; only manages focus, leaving activation to native semantics.
  *
  * @param options Item-selector override for non-standard markup.
  * @returns A mixin descriptor for the Menu surface's `mix` prop.

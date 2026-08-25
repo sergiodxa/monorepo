@@ -1,16 +1,8 @@
 /**
- * State-holding editor for a trainer-in-progress, built on the canonical editor
- * class pattern. A plain class (no framework coupling) that owns ALL editor
- * state: the trainer's id, name, sprite, three quotes, and its ordered party of
- * members. The view constructs it once in component setup and drives every
- * control through it; each mutation method returns the current
- * {@link TrainerDefinition} snapshot so the view can re-render from one value.
- *
- * The class stays pure and DOM-free — it never validates against a live roster
- * or writes to disk. It only enforces the structural bounds the content format
- * cares about (party size and moves-per-member caps) so the in-progress state can
- * never drift past what {@link TrainerSchema} accepts; the view supplies the real
- * species/move ids, and the export path re-validates the final definition.
+ * State-holding editor for a trainer-in-progress: every mutation returns the
+ * current {@link TrainerDefinition}, so the view re-renders from one snapshot.
+ * It enforces the party-size and moves-per-member caps, keeping the in-progress
+ * state within what {@link TrainerSchema} accepts; export re-validates the rest.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,28 +12,23 @@ import type { TrainerDefinition, TrainerPartyMember, TrainerQuotes } from "~/con
 
 import { MAX_MOVES_PER_MEMBER, MAX_PARTY_SIZE, MIN_LEVEL } from "~/content/trainers";
 
-/** The level a freshly added party member starts at before the author edits it. */
 const DEFAULT_MEMBER_LEVEL = 5;
 
 /**
- * Editor for a single trainer definition. Wraps mutable fields and a party list,
- * exposing pure setters/mutators that each return the current
- * {@link TrainerDefinition} so the view renders from a single snapshot.
+ * Owns the whole trainer-in-progress; each setter and mutator returns the
+ * current {@link TrainerDefinition} so the view renders from a single snapshot.
  */
 export class TrainerEditor {
 	/** Stable identifier the export path derives the write filename from. */
 	#id: string;
 
-	/** Display name shown in battle intro/defeat lines. */
 	#name: string;
 
-	/** Manifest image id for the trainer's sprite, or `null` for none. */
 	#spriteId: string | null;
 
-	/** The three battle quotes (intro/win/lose). */
 	#quotes: TrainerQuotes;
 
-	/** The ordered party members the trainer sends out. */
+	/** Array order is the order the trainer sends the members out. */
 	#party: TrainerPartyMember[];
 
 	/**
@@ -60,44 +47,34 @@ export class TrainerEditor {
 		this.#party = (initial?.party ?? []).map((member) => this.#cloneMember(member));
 	}
 
-	/** Current number of party members. */
 	get partySize(): number {
 		return this.#party.length;
 	}
 
-	/** Whether another party member may still be added (below the cap). */
+	/** True while the party is below {@link MAX_PARTY_SIZE}. */
 	get canAddMember(): boolean {
 		return this.#party.length < MAX_PARTY_SIZE;
 	}
 
-	/** Sets the trainer id and returns the current snapshot. */
 	setId(id: string): TrainerDefinition {
 		this.#id = id;
 		return this.toDefinition();
 	}
 
-	/** Sets the display name and returns the current snapshot. */
 	setName(name: string): TrainerDefinition {
 		this.#name = name;
 		return this.toDefinition();
 	}
 
-	/**
-	 * Sets the sprite to a manifest image id, or clears it with `null`, and returns
-	 * the current snapshot.
-	 *
-	 * @param spriteId A manifest image id, or `null` for a trainer with no sprite.
-	 */
+	/** @param spriteId A manifest image id; `null` clears the sprite. */
 	setSpriteId(spriteId: string | null): TrainerDefinition {
 		this.#spriteId = spriteId;
 		return this.toDefinition();
 	}
 
 	/**
-	 * Sets one of the three battle quotes and returns the current snapshot.
-	 *
-	 * @param kind Which quote to set.
-	 * @param text The quote text (may be empty).
+	 * @param kind Which of the three battle quotes to set.
+	 * @param text The quote text; empty text is accepted.
 	 */
 	setQuote(kind: keyof TrainerQuotes, text: string): TrainerDefinition {
 		this.#quotes = { ...this.#quotes, [kind]: text };
@@ -105,11 +82,11 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Appends a new party member seeded with `speciesId` (and no moves), unless the
-	 * party is already at {@link MAX_PARTY_SIZE}. Returns the current snapshot.
+	 * At {@link MAX_PARTY_SIZE} the party is left as it stands, so the cap holds
+	 * whether or not the caller checks {@link TrainerEditor.canAddMember} first.
 	 *
 	 * @param speciesId The species the new member is spawned from.
-	 * @param level Optional starting level; defaults to {@link DEFAULT_MEMBER_LEVEL}.
+	 * @param level Starting level; defaults to {@link DEFAULT_MEMBER_LEVEL}.
 	 */
 	addMember(speciesId: string, level: number = DEFAULT_MEMBER_LEVEL): TrainerDefinition {
 		if (this.canAddMember) {
@@ -119,8 +96,7 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Removes the party member at `index` (a no-op for an out-of-range index) and
-	 * returns the current snapshot.
+	 * An out-of-range index leaves the party as it stands.
 	 *
 	 * @param index Zero-based position of the member to remove.
 	 */
@@ -132,9 +108,8 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Moves the party member at `index` one slot toward the front, swapping it with
-	 * its predecessor. A no-op for the first member or an out-of-range index.
-	 * Returns the current snapshot.
+	 * Swaps the member with its predecessor; the first member and out-of-range
+	 * indexes keep the current order.
 	 *
 	 * @param index Zero-based position of the member to move up.
 	 */
@@ -146,9 +121,8 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Moves the party member at `index` one slot toward the back, swapping it with
-	 * its successor. A no-op for the last member or an out-of-range index. Returns
-	 * the current snapshot.
+	 * Swaps the member with its successor; the last member and out-of-range
+	 * indexes keep the current order.
 	 *
 	 * @param index Zero-based position of the member to move down.
 	 */
@@ -160,8 +134,7 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Sets the species of the member at `index` and returns the current snapshot.
-	 * A no-op for an out-of-range index.
+	 * An out-of-range index leaves the party as it stands.
 	 *
 	 * @param index Zero-based position of the member.
 	 * @param speciesId The species to assign.
@@ -173,12 +146,11 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Sets the level of the member at `index`, clamped to at least {@link MIN_LEVEL}
-	 * and coerced to a whole number, and returns the current snapshot. A no-op for
-	 * an out-of-range index.
+	 * Clamps to at least {@link MIN_LEVEL} and truncates to a whole number, so the
+	 * stored level is always one the content format accepts.
 	 *
 	 * @param index Zero-based position of the member.
-	 * @param level The desired level (clamped/truncated to a valid whole number).
+	 * @param level The desired level.
 	 */
 	setMemberLevel(index: number, level: number): TrainerDefinition {
 		let member = this.#party[index];
@@ -190,13 +162,11 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Replaces the move list of the member at `index`, keeping only non-empty ids
-	 * and capping the count at {@link MAX_MOVES_PER_MEMBER}. An empty resulting list
-	 * drops the `moves` field entirely so the JSON stays clean. A no-op for an
-	 * out-of-range index. Returns the current snapshot.
+	 * Keeps the non-empty ids up to {@link MAX_MOVES_PER_MEMBER}; when every entry
+	 * is blank the `moves` field is dropped so the exported JSON stays clean.
 	 *
 	 * @param index Zero-based position of the member.
-	 * @param moves The desired move ids (blank entries are dropped).
+	 * @param moves The desired move ids; blank entries are dropped.
 	 */
 	setMemberMoves(index: number, moves: string[]): TrainerDefinition {
 		let member = this.#party[index];
@@ -209,11 +179,8 @@ export class TrainerEditor {
 	}
 
 	/**
-	 * Serializes the current editor state to a JSON-clean {@link TrainerDefinition}.
-	 * Trims the id/name and returns fresh copies of every nested value so callers
-	 * cannot mutate the editor's internal state through the snapshot.
-	 *
-	 * @returns The current trainer definition.
+	 * Trims the id and name and copies every nested value, so the snapshot stays
+	 * independent of the editor once handed out.
 	 */
 	toDefinition(): TrainerDefinition {
 		return {
@@ -225,14 +192,13 @@ export class TrainerEditor {
 		};
 	}
 
-	/** Swaps two party members in place. */
 	#swap(a: number, b: number): void {
 		let temp = this.#party[a]!;
 		this.#party[a] = this.#party[b]!;
 		this.#party[b] = temp;
 	}
 
-	/** Returns a deep-enough copy of a party member (moves array copied). */
+	/** Copies the moves array too, so snapshots share nothing with the editor. */
 	#cloneMember(member: TrainerPartyMember): TrainerPartyMember {
 		let copy: TrainerPartyMember = { speciesId: member.speciesId, level: member.level };
 		if (member.moves) copy.moves = [...member.moves];

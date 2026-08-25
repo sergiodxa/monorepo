@@ -1,10 +1,8 @@
 /**
  * Headless drag-and-drop session: owns the item being dragged, the drop
- * candidate currently under the pointer, and the position of the pending
- * drop computed against it, independent of pointer input and independent of
- * rendering. Backs list reordering, a file drop zone, and a drop indicator
- * alike, each reading the same instance instead of tracking drag state on
- * their own.
+ * candidate under the pointer, and the position of the pending drop computed
+ * against it. List reordering, drop zones, and drop indicators read one
+ * shared instance, independent of pointer input and of rendering.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,10 +18,9 @@ import { dispatchChange } from "../utils/dispatch-change";
  */
 export namespace DragSession {
 	/**
-	 * Position of a pending drop relative to its current target. `"before"`
-	 * and `"after"` insert the dragged item next to the target, for
-	 * reordering a list; `"on"` drops onto the target itself, for nesting an
-	 * item inside it or accepting a drop onto a drop zone.
+	 * Position of a pending drop relative to its current target. `"before"` and
+	 * `"after"` insert the dragged item next to the target for reordering;
+	 * `"on"` drops onto the target itself, nesting into it or filling a drop zone.
 	 */
 	export type Position = "before" | "after" | "on";
 
@@ -41,10 +38,7 @@ export namespace DragSession {
 		data?: TData;
 	}
 
-	/**
-	 * Drop candidate currently under the pointer: the target's key and the
-	 * position computed against it.
-	 */
+	/** Drop candidate currently under the pointer. */
 	export interface Target {
 		/** Stable identifier for the candidate drop target. */
 		key: string;
@@ -72,12 +66,9 @@ export namespace DragSession {
 }
 
 /**
- * Owns one drag-and-drop interaction: the item being dragged, the drop
- * candidate currently under the pointer, and the position computed against
- * it. Every mutating method dispatches a plain `"change"` event, so a
- * pointer- or keyboard-driven mixin can subscribe once and keep the reorder
- * list, drop zone, or drop indicator it drives in sync, without any of them
- * tracking drag state independently.
+ * Owns one drag-and-drop interaction and dispatches a plain `"change"` event
+ * from every mutating method, so a pointer- or keyboard-driven mixin
+ * subscribes once and keeps every view it drives in sync from this state.
  *
  * @template TData Shape of the optional payload carried by the drag source.
  * @example
@@ -97,8 +88,8 @@ export class DragSession<TData = unknown> extends TypedEventTarget<DragSession.E
 	}
 
 	/**
-	 * Drop candidate currently under the pointer, or `null` when the session
-	 * isn't active or the pointer isn't over a valid target.
+	 * Drop candidate currently under the pointer; `null` while the session is
+	 * idle or the pointer sits away from every valid target.
 	 */
 	get target(): DragSession.Target | null {
 		return this.#target;
@@ -122,10 +113,9 @@ export class DragSession<TData = unknown> extends TypedEventTarget<DragSession.E
 	}
 
 	/**
-	 * Records the drop candidate currently under the pointer. A no-op
-	 * outside an active session and when the candidate's key and position
-	 * are unchanged from the last call, so a drop indicator only repositions
-	 * on actual movement.
+	 * Records the drop candidate currently under the pointer. A no-op outside
+	 * an active session and when key and position match the last call, so a
+	 * drop indicator repositions only on actual movement.
 	 *
 	 * @param target Drop candidate under the pointer.
 	 */
@@ -138,9 +128,9 @@ export class DragSession<TData = unknown> extends TypedEventTarget<DragSession.E
 	}
 
 	/**
-	 * Clears the current drop candidate without ending the session, e.g.
-	 * when the pointer moves off every valid target while still dragging. A
-	 * no-op when there is no target currently set.
+	 * Clears the current drop candidate and keeps the session running, e.g.
+	 * when the pointer moves past every valid target mid-drag. A no-op while
+	 * the target is already clear.
 	 */
 	clearTarget(): void {
 		if (this.#target === null) return;
@@ -151,10 +141,11 @@ export class DragSession<TData = unknown> extends TypedEventTarget<DragSession.E
 
 	/**
 	 * Commits a drop at the current target and ends the session. Returns
-	 * `null` without dispatching anything when there is no active session or
-	 * no current target to drop onto.
+	 * `null` and leaves the state untouched while the session is idle or the
+	 * target is unset.
 	 *
-	 * @returns The dragged item and the target it was dropped on, or `null` when there was nothing to drop.
+	 * @returns The dragged item and the target it was dropped on, or `null`
+	 * when there was nothing to drop.
 	 */
 	drop(): DragSession.DropDetail<TData> | null {
 		if (!this.#source || !this.#target) return null;
@@ -165,16 +156,15 @@ export class DragSession<TData = unknown> extends TypedEventTarget<DragSession.E
 	}
 
 	/**
-	 * Ends the current session without committing a drop, e.g. on Escape or
-	 * a pointer release outside every valid target. A no-op when no session
-	 * is active.
+	 * Ends the current session and discards the pending drop, e.g. on Escape
+	 * or a pointer release away from every valid target. A no-op while the
+	 * session is idle.
 	 */
 	cancel(): void {
 		if (!this.active) return;
 		this.#reset();
 	}
 
-	/** Clears the source and target and dispatches the plain `"change"` event. */
 	#reset(): void {
 		this.#source = null;
 		this.#target = null;

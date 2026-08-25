@@ -33,7 +33,6 @@ export default class EmailService {
 	static SendError = class extends Error {
 		override name = "EmailSendError";
 		/**
-		 * Creates an email send error.
 		 * @param message - Error message describing the failure.
 		 * @param statusCode - Optional HTTP status code from the email provider.
 		 */

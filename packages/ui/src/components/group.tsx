@@ -18,11 +18,9 @@ import { when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
 
 /**
- * ARIA role applied through {@link attrs} unless a consumer supplies its own
- * `role`, announcing the cluster as a generic group of controls. Pass
- * `role="region"` when the group's contents are important enough to belong
- * in the page's landmark structure, or `role="presentation"` when the
- * grouping is purely visual and carries no semantic meaning of its own.
+ * Default ARIA role applied through {@link attrs} unless a consumer
+ * overrides `role`; pass `"region"` for landmark-worthy content or
+ * `"presentation"` for purely visual grouping.
  */
 const DEFAULT_ROLE = "group";
 
@@ -31,26 +29,17 @@ const DEFAULT_ROLE = "group";
  */
 export namespace Group {
 	/**
-	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * `role` defaults to {@link DEFAULT_ROLE} but stays overridable to
-	 * `"region"` or `"presentation"`. Set `aria-invalid="true"` to color the
-	 * group's focus ring with the semantic danger tone instead of the default
-	 * primary tone, and `aria-disabled` to mark the cluster as disabled to
-	 * assistive technology.
+	 * Native `<div>` attributes plus `mix`. `role` defaults to
+	 * {@link DEFAULT_ROLE} (or `"region"`/`"presentation"`); `aria-invalid`
+	 * gives the focus ring the danger tone, `aria-disabled` marks it disabled.
 	 */
 	export interface Props extends TagProps<"div"> {}
 }
 
 /**
- * Renders a single-row host binding its children into one visual and
- * semantic unit: a `role="group"` `<div>` laying its children out in a
- * horizontally centered flex row. The host carries no border, background, or
- * gap of its own — a consumer's controls compose their own edges into one
- * shape (rounding only the outer corners of the first and last child, for
- * instance) — and gains a keyboard focus ring around the whole row whenever
- * a control inside it becomes focus-visible. That ring reads in the semantic
- * primary color by default, or the semantic danger color when the group
- * itself carries `aria-invalid="true"`.
+ * Lays children out in a centered flex row with no border, background, or
+ * gap, so controls can compose their own edges into one shape, and shows a
+ * keyboard focus ring (primary, or danger under `aria-invalid="true"`).
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.

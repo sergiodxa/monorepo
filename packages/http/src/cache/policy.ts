@@ -16,9 +16,8 @@ import { CacheControl } from "remix/headers";
 /**
  * Who is allowed to store the response.
  *
- * There is deliberately no default: where an edge cache sits in front of the
- * origin, `public` is what lets one client's body be served to another, so the
- * word is spelled out at the call site instead of being inferred.
+ * An edge cache sitting in front of the origin can serve one client's body to
+ * another once `public` is set, so the call site always states it explicitly.
  */
 export type CacheVisibility = "public" | "private";
 
@@ -26,8 +25,7 @@ export type CacheVisibility = "public" | "private";
  * The policy description a response declares.
  *
  * Every age is a duration, so `"1 hour"` reads as an hour at the call site and
- * is converted to whole seconds once, here. An omitted option emits no
- * directive at all, which is different from emitting it with a zero value.
+ * converts once; a zero value emits its directive, omission emits none.
  */
 export interface PolicyOptions {
 	/** Who may store the response; omitted means neither directive is emitted. */
@@ -46,7 +44,7 @@ export interface PolicyOptions {
 	noStore?: boolean;
 	/** Forbid intermediaries from transforming the payload (recompressing images, for example). */
 	noTransform?: boolean;
-	/** Once stale, the response must be revalidated rather than served. */
+	/** Once stale, the response must be revalidated before it can be reused again. */
 	mustRevalidate?: boolean;
 	/** Same as `mustRevalidate`, but binding on shared caches only. */
 	proxyRevalidate?: boolean;
@@ -57,9 +55,8 @@ export interface PolicyOptions {
 /**
  * Turns a policy description into a `Cache-Control` header value.
  *
- * The return value is the framework's own `CacheControl`, so it can be handed to
- * anything that already accepts that type, read back field by field, or set on
- * a `Headers` object directly through its `toString()`.
+ * The result is the framework's own type, so it can be handed to anything
+ * that accepts it, read back field by field, or serialized via `toString()`.
  *
  * @param options - Visibility, ages, and directives to emit; all optional.
  * @returns A `CacheControl` carrying only the directives that were asked for.

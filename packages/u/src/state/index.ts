@@ -1,3 +1,9 @@
+/**
+ * Re-exports every state-based selector utility.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { active } from "./active";
 export { after } from "./after";
 export { aria } from "./aria";

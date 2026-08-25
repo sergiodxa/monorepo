@@ -1,7 +1,7 @@
 /**
- * Tests for `/sample` — the gated chapter. The gate is the point: a valid address unlocks the
- * chapter, an address already on the list unlocks it too, and a malformed one never reaches
- * the newsletter.
+ * Tests for `/sample` — the gated chapter. The gate is the point: a valid
+ * address unlocks the chapter, an address already on the list unlocks it
+ * too, and a malformed address is caught before it reaches the newsletter.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +16,6 @@ import { Buttondown } from "~/app/services/buttondown";
 /** The chapter's first heading, which only the unlocked page renders. */
 const CHAPTER_HEADING = "OAuth2 in Simple Terms";
 
-/** Submits the sample form against a scripted newsletter client. */
 function submit(buttondown: FakeButtondown, email: string) {
 	return fetchApp("/sample", {
 		method: "POST",
@@ -56,7 +55,6 @@ describe("POST /sample", () => {
 		let response = await submit(buttondown, "reader@example.com");
 		let body = await response.text();
 
-		// Already subscribed is a success here, not an error: the reader asked for a chapter.
 		expect(response.status).toBe(200);
 		expect(body).toContain(CHAPTER_HEADING);
 		expect(buttondown.subscribed).toEqual([]);
@@ -77,12 +75,9 @@ describe("POST /sample", () => {
 			response.text(),
 		);
 
-		// The parser normalizes each fence's language alias, so the chapter's `js` and `ts`
-		// fences render as the Prism identifiers the syntax theme is written against.
 		expect(body).toContain('class="language-javascript');
 		expect(body).toContain('class="language-typescript');
 		expect(body).toContain('class="language-txt');
-		// Six fences: three plain text, two TypeScript, one JavaScript.
 		expect(body.match(/<pre class="language-/g)).toHaveLength(6);
 	});
 
@@ -104,7 +99,6 @@ describe("POST /sample", () => {
 		expect(body).toContain("Invalid email address");
 		expect(body).toContain("Get a Free Sample");
 		expect(body).not.toContain(CHAPTER_HEADING);
-		// Validation happens before the newsletter is touched at all.
 		expect(buttondown.subscribed).toEqual([]);
 	});
 

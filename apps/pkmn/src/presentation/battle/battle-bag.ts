@@ -1,14 +1,9 @@
 /**
  * The in-battle Bag menu.
  *
- * Selecting "Bag" from the action menu no longer auto-throws a ball or auto-uses a
- * medicine; it opens this menu so the player chooses what to use. The menu lists
- * the player's battle-usable items — capture balls and recovery medicines — each
- * with its remaining count, and classifies the chosen one: a ball routes to the
- * capture flow, a medicine routes to the in-battle `use-item` turn (opening a small
- * target picker over the active party members first). Cancel returns to the action
- * menu. It owns only selection state and input handling and reuses the shared list
- * widget and window; the battle scene decides what each returned intent dispatches.
+ * Selecting "Bag" opens this menu so the player chooses what to use: a ball
+ * routes to the capture flow, a medicine opens a target picker over the
+ * party then routes to the `use-item` turn. Cancel returns to the action menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,11 +26,8 @@ export type BattleItemUse = "ball" | "medicine" | null;
 /**
  * Classifies how one item is used from the in-battle bag.
  *
- * Capture balls (a capture-multiplier effect, the classic "…ball" family) route to
- * the capture attempt; recovery medicines (an HP/status-healing effect) route to
- * the `use-item` turn. Everything else — held items, battle stat boosters, PP or EV
- * items, misc records, or an unknown id — returns null so the bag leaves it out.
- * This is the pure decision the "Bag no longer auto-captures" regression asserts.
+ * Capture balls route to the capture attempt; recovery medicines route to
+ * the `use-item` turn. Every other item, or an unknown id, returns null.
  */
 export function battleItemUse(item: Item | undefined): BattleItemUse {
 	if (!item) return null;
@@ -58,9 +50,7 @@ function isCaptureEffect(effect: unknown): boolean {
 export interface BattleBagItem {
 	/** The item's content id, used to dispatch the chosen action. */
 	id: string;
-	/** The display name shown in the list. */
 	name: string;
-	/** How many the player holds. */
 	count: number;
 	/** How selecting it is routed. */
 	use: Exclude<BattleItemUse, null>;
@@ -110,13 +100,13 @@ export class BattleBag {
 	}
 
 	/**
-	 * Advances the bag from input, returning a decision when one is confirmed.
+	 * Advances the bag from input, returning a decision once one is confirmed.
 	 *
-	 * `items` are the usable battle items and `targetNames` name the medicine
-	 * targets (the active party members). Confirming a ball returns it immediately;
-	 * confirming a medicine opens the target picker, and confirming a target returns
-	 * the medicine plus its target index. Cancelling the item list returns to the
-	 * action menu; cancelling the picker steps back to the item list.
+	 * Confirming a medicine opens the target picker before resolving; cancelling
+	 * steps back exactly one level: picker to list, or list to action menu.
+	 *
+	 * @param items - The usable battle items backing the list.
+	 * @param targetNames - The medicine targets, one per active party member.
 	 */
 	update(
 		input: InputManager,
@@ -133,14 +123,12 @@ export class BattleBag {
 		if (!entry) return null;
 		if (entry.use === "ball") return { kind: "ball", itemId: entry.id };
 
-		// A medicine needs a target: open the picker over the active party members.
 		this.pendingMedicine = entry.id;
 		this.mode = "target";
 		this.picker.reset();
 		return null;
 	}
 
-	/** Handles the medicine target picker. */
 	private updateTarget(input: InputManager, targetNames: string[]): BattleBagResult | null {
 		this.picker.update(input, targetNames.length);
 		if (this.picker.cancelled(input)) {

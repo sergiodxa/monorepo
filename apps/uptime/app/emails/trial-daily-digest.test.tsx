@@ -1,7 +1,7 @@
 /**
- * Tests the daily digest as a value, with the two shapes that matter: one URL, where it
- * must read as a plain report and not as a list of one, and several, where it must say
- * up front how many are fine and then name each one.
+ * Tests the daily digest as a value, with the two shapes that matter: one URL, which
+ * reads as a single plain report, and several, which open with a count of how many
+ * are fine before naming each one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -11,7 +11,6 @@
 /** Combining marks, removed after NFKD so `"ó"` decomposes down to `"o"`. */
 const COMBINING_MARKS = /\p{M}+/gu;
 
-/** Any run of characters that is neither a letter nor a number. */
 const NON_ALPHANUMERIC = /[^\p{L}\p{N}]+/gu;
 
 /** Options for {@link slugify}. */
@@ -29,10 +28,9 @@ function escapePattern(value: string): string {
 }
 
 /**
- * Builds a URL-safe slug: NFKD normalization, combining marks removed,
- * lowercased, every non-alphanumeric run collapsed into the separator, and the
- * separator trimmed from both ends. Letters outside Latin are kept as letters
- * rather than dropped, so a non-Latin title still yields a usable slug.
+ * Builds a URL-safe slug: lowercases, folds diacritics via NFKD, and collapses
+ * non-alphanumeric runs into the separator. Letters outside Latin stay as
+ * letters, so a non-Latin title still yields a usable slug.
  *
  * @param value - Text to slugify
  * @param options - Separator to join the words with

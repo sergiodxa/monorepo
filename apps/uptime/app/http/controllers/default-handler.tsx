@@ -16,13 +16,9 @@ import DocumentLayout from "~/resources/layouts/document";
 import NotFoundView from "~/resources/views/not-found";
 
 /**
- * Narrowed shape of `remix/router`'s `RequestContext` this handler
- * actually reads. `i18next` is declared here (rather than imported from
- * `remix/router` directly) only to keep this file's dependency surface
- * explicit; the global `i18n` middleware (see `bootstrap/app.tsx`) wraps the
- * whole router, `defaultHandler` included, so `ctx.i18next` is populated at
- * runtime the same way it is for every `createAction`/`createController`
- * handler.
+ * Narrows `remix/router`'s `RequestContext` to the fields this handler reads,
+ * keeping the dependency surface explicit. The global `i18n` middleware wraps
+ * the whole router, so `ctx.i18next` is already populated at runtime.
  */
 interface RenderContext {
 	render: Renderer<RemixNode>;

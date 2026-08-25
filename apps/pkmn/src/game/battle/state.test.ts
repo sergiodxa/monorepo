@@ -1,12 +1,7 @@
 /**
- * Verifies the battle state test module that exercises the factory functions
- * responsible for producing fresh state objects used by the battle domain.
- * The assertions in this file lock down the default shape and neutral values
- * expected when those state containers are initialized.
- *
- * This module focuses on the contract of state creation rather than any
- * specific data set, ensuring the battle layer can rely on predictable initial
- * conditions for combatant, side, and field state across future changes.
+ * Locks the exact default shape and neutral values the state factories produce,
+ * so the battle layer keeps predictable initial conditions for combatant, side,
+ * and field state as those containers grow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

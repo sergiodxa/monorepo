@@ -93,9 +93,9 @@ export default createController(maintenanceWindowRoutes, {
 				if (result.data.name !== undefined) changes.name = result.data.name;
 
 				/**
-				 * The scope moves as a unit or not at all: sending either field rewrites both, so
-				 * a request narrowing a window to a whole type cannot leave the previous monitor's
-				 * id behind it, and one that mentions neither leaves the window exactly where it is.
+				 * The scope moves as a unit: sending either field rewrites both, clearing the
+				 * previous monitor id when a window narrows to a whole type, and keeping the
+				 * window's existing scope when neither field is sent.
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);

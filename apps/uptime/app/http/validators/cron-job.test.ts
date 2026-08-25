@@ -73,9 +73,11 @@ describe("CreateCronJobSchema", () => {
 		}
 	});
 
+	/**
+	 * `Intl.supportedValuesOf("timeZone")` doesn't enumerate "UTC"; the accepted
+	 * set names it explicitly, so this stays valid (see `app/lib/timezones.ts`).
+	 */
 	test("keeps accepting UTC, the default every stored job holds", () => {
-		// `Intl.supportedValuesOf("timeZone")` doesn't return "UTC", so this only passes
-		// because the accepted set names it explicitly — see `app/lib/timezones.ts`.
 		let result = s.parseSafe(CreateCronJobSchema, baseFormData({ timezone: "UTC" }));
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -87,16 +89,19 @@ describe("CreateCronJobSchema", () => {
 		let result = s.parseSafe(CreateCronJobSchema, baseFormData({ timezone: "Mars/Olympus_Mons" }));
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			// The rejection is a field-level issue naming `timezone`, not a thrown error.
+			/** The failed parse surfaces as a field-level issue naming `timezone`. */
 			expect(result.issues).toEqual([
 				{ message: "Expected a valid IANA time zone", path: ["timezone"] },
 			]);
 		}
 	});
 
+	/**
+	 * No runtime this app runs on enumerates `Etc/UTC`, and the accepted set
+	 * adds only "UTC", so the alias never becomes a second way to store the
+	 * same zone.
+	 */
 	test("rejects a second spelling of UTC, so one zone has one stored value", () => {
-		// No runtime this app runs on enumerates `Etc/UTC`, and the accepted set adds only
-		// "UTC", so the alias never becomes a second way to store the same zone.
 		expect(s.parseSafe(CreateCronJobSchema, baseFormData({ timezone: "Etc/UTC" })).success).toBe(
 			false,
 		);

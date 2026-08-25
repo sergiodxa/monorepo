@@ -18,8 +18,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { TestDatabase } from "~/app/test/db";
 import type { PlatformMeta } from "~/bootstrap/tenant";
 
-// --- Controllable Cloudflare bindings -------------------------------------------------
-
 /** The slug cache the provisioner writes to, read back to assert what it left there. */
 let slugCache = createKVNamespace();
 /** Per-blog record of the DO RPC calls the provisioner fans out. */
@@ -36,12 +34,9 @@ function makeStub() {
 }
 
 /**
- * Publishes the bindings as the provisioner's environment. The mock only reaches imports that
- * run after it, and the provisioner reads `env` at import time, so it is installed once here,
- * above the dynamic imports below; each test empties the slug cache in place rather than
- * swapping in a fresh one the published environment would never see. The namespace hands back
- * a stub recording the RPCs the provisioner fans out, and a blog resolves to the same stub
- * every time, as on the platform.
+ * Publishes the bindings before the dynamic imports below since the provisioner
+ * reads `env` at import time. Each test empties the slug cache in place instead of
+ * swapping in a fresh instance the published environment would never see.
  */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({
@@ -119,7 +114,6 @@ afterEach(() => {
 	server.resetHandlers();
 });
 
-/** Seeds an account and returns its id. */
 async function seedAccount(subject = "sub-1"): Promise<string> {
 	let account = await Account.findOrCreateFromProfile(harness.db, {
 		subject,
@@ -246,7 +240,6 @@ describe("BlogProvisioner.create — slug generation", () => {
 describe("BlogProvisioner.create — provisioning failures", () => {
 	test("leaves the blog row in provisioning when OIDC provisioning fails", async () => {
 		let accountId = await seedAccount();
-		// Fail the management-token request so provisioning throws mid-flight.
 		stubFetch((url) => {
 			if (url.endsWith("/oauth/token")) return new Response("nope", { status: 500 });
 			return defaultOidcFetch(url);
@@ -257,7 +250,6 @@ describe("BlogProvisioner.create — provisioning failures", () => {
 			provisioner.create({ accountId, name: "My Blog", region: "wnam" }),
 		).rejects.toThrow();
 
-		// The row was created before the failure and remains retryable.
 		let blog = await Blog.findBySlug(harness.db, "my-blog");
 		expect(blog?.status).toBe("provisioning");
 	});
@@ -279,7 +271,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 
 	test("restore re-activates an entitled blog, re-adds the KV entry and reactivates the DO", async () => {
 		let accountId = await seedAccount();
-		// An entitling subscription is required for restore to bring the blog back active.
 		await Subscription.upsert(harness.db, accountId, { status: "active" });
 		let provisioner = new BlogProvisioner(harness.db);
 		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
@@ -299,7 +290,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 	});
 
 	test("restore brings a blog back suspended when the account is not entitled", async () => {
-		// No active/trialing subscription: restoring must not silently re-serve the blog.
 		let accountId = await seedAccount();
 		let provisioner = new BlogProvisioner(harness.db);
 		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
@@ -309,7 +299,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 		await provisioner.restore(blog.id);
 
 		expect((await Blog.findById(harness.db, blog.id))?.status).toBe("suspended");
-		// The slug cache is still re-seeded; the DO's own gate 402s public traffic.
 		expect(
 			await slugCache.get<{ blogId: string; region: string }>(`slug:${blog.slug}`, "json"),
 		).toEqual({
@@ -325,7 +314,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 		let provisioner = new BlogProvisioner(harness.db);
 		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
 		await provisioner.softDelete(blog.id);
-		// Billing lapsed while the blog was soft-deleted.
 		await Subscription.upsert(harness.db, accountId, { status: "past_due" });
 		stubCalls = [];
 
@@ -349,8 +337,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 
 	test("purge deletes the Cloudflare custom hostname before destroying the DO/row", async () => {
 		let accountId = await seedAccount();
-		// Record the order of side effects so we can assert CF deletion happens first,
-		// before the D1 row cascade would remove the hostname id we need.
 		let events: string[] = [];
 		let hostnames = {
 			delete: async (id: string) => void events.push(`cf-delete:${id}`),
@@ -366,8 +352,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 
 		await provisioner.purge(blog.id);
 
-		// Cloudflare deletion ran (with the stored id) and the blog row is gone. In
-		// production the D1 FK cascade then removes the local hostname row.
 		expect(events).toEqual(["cf-delete:hn_cf_1"]);
 		expect(stubCalls).toContainEqual({ method: "destroy", arg: undefined });
 		expect(await Blog.findById(harness.db, blog.id)).toBeNull();
@@ -391,7 +375,6 @@ describe("BlogProvisioner lifecycle side effects", () => {
 
 		await expect(provisioner.purge(blog.id)).rejects.toThrow();
 
-		// Neither the DO nor the row were touched, so the next purge run retries cleanly.
 		expect(await Blog.findById(harness.db, blog.id)).not.toBeNull();
 		expect(await Hostname.findByBlog(harness.db, blog.id)).not.toBeNull();
 		expect(stubCalls).not.toContainEqual({ method: "destroy", arg: undefined });

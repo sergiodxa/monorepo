@@ -1,6 +1,4 @@
 /**
- * Unit tests for `grid()`'s fixed `display: grid` declaration.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

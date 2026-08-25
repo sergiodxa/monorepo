@@ -1,3 +1,9 @@
+/**
+ * Tests the AuthorizationCode model's create, consume, and cleanup behavior.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
@@ -42,9 +48,8 @@ describe("AuthorizationCode", () => {
 			});
 
 			expect(code).toBeTypeOf("string");
-			expect(code).toHaveLength(36); // UUID length
+			expect(code).toHaveLength(36);
 
-			// Consume to verify the data was stored correctly
 			let data = await AuthorizationCode.consume(db, code);
 			expect(data.clientId).toBe(client.id);
 			expect(data.subjectId).toBe(subject.id);
@@ -138,10 +143,8 @@ describe("AuthorizationCode", () => {
 				redirectUri: "https://example.com/callback",
 			});
 
-			// First consume should succeed
 			await AuthorizationCode.consume(db, code);
 
-			// Second consume should throw AlreadyConsumedError
 			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
@@ -159,7 +162,6 @@ describe("AuthorizationCode", () => {
 				redirectUri: "https://example.com/callback",
 			});
 
-			// Manually update the code to be expired
 			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
 				Date.now() - 1000,
 				code,
@@ -182,18 +184,15 @@ describe("AuthorizationCode", () => {
 				redirectUri: "https://example.com/callback",
 			});
 
-			// Manually update the code to be expired
 			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
 				Date.now() - 1000,
 				code,
 			]);
 
-			// First consume throws ExpiredCodeError but deletes the code
 			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.ExpiredCodeError,
 			);
 
-			// Second consume throws AlreadyConsumedError because code was deleted
 			await expect(AuthorizationCode.consume(db, code)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
@@ -220,18 +219,15 @@ describe("AuthorizationCode", () => {
 				redirectUri: "https://example.com/callback",
 			});
 
-			// Set both codes to be expired
 			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code IN (?, ?)", [
 				Date.now() - 1000,
 				code1,
 				code2,
 			]);
 
-			// Cleanup should remove both expired codes
 			let deletedCount = await AuthorizationCode.cleanupExpired(db, Date.now());
 			expect(deletedCount).toBe(2);
 
-			// Verify codes are deleted
 			await expect(AuthorizationCode.consume(db, code1)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
@@ -252,11 +248,9 @@ describe("AuthorizationCode", () => {
 				redirectUri: "https://example.com/callback",
 			});
 
-			// Cleanup with current time should not remove non-expired codes
 			let deletedCount = await AuthorizationCode.cleanupExpired(db, Date.now());
 			expect(deletedCount).toBe(0);
 
-			// Verify code is still valid
 			let data = await AuthorizationCode.consume(db, code);
 			expect(data.clientId).toBe(client.id);
 		});
@@ -280,22 +274,18 @@ describe("AuthorizationCode", () => {
 				redirectUri: "https://example.com/callback",
 			});
 
-			// Set only one code to be expired
 			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
 				Date.now() - 1000,
 				expiredCode,
 			]);
 
-			// Cleanup should only remove the expired code
 			let deletedCount = await AuthorizationCode.cleanupExpired(db, Date.now());
 			expect(deletedCount).toBe(1);
 
-			// Expired code should be gone
 			await expect(AuthorizationCode.consume(db, expiredCode)).rejects.toThrow(
 				AuthorizationCode.AlreadyConsumedError,
 			);
 
-			// Valid code should still work
 			let data = await AuthorizationCode.consume(db, validCode);
 			expect(data.clientId).toBe(client.id);
 		});

@@ -1,3 +1,10 @@
+/**
+ * Request-scoped logger that buckets events by HTTP lifecycle phase and
+ * filters headers before they reach log output.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types";
 
 import { Logger as BatchedLogger } from "./batched-logger";
@@ -79,7 +86,6 @@ export namespace Logger {
 	}
 }
 
-// Request headers to include
 const ALLOWED_REQUEST_HEADERS = new Set([
 	"content-type",
 	"accept",
@@ -96,7 +102,6 @@ const ALLOWED_REQUEST_HEADERS = new Set([
 	"x-correlation-id",
 ]);
 
-// Request headers to exclude (sensitive)
 const EXCLUDED_REQUEST_HEADER_PATTERNS = [
 	"authorization",
 	"cookie",
@@ -109,7 +114,6 @@ const EXCLUDED_REQUEST_HEADER_PATTERNS = [
 	"credential",
 ];
 
-// Response headers to include
 const ALLOWED_RESPONSE_HEADERS = new Set([
 	"content-type",
 	"content-length",
@@ -123,7 +127,6 @@ const ALLOWED_RESPONSE_HEADERS = new Set([
 	"server-timing",
 ]);
 
-// Response headers to exclude
 const EXCLUDED_RESPONSE_HEADERS = new Set(["set-cookie"]);
 
 function isHeaderExcluded(headerName: string): boolean {
@@ -142,6 +145,10 @@ function filterRequestHeaders(headers: Headers): Record<string, string> {
 	return filtered;
 }
 
+/**
+ * Excludes the `set-cookie` value since it carries session data, but keeps
+ * the cookie names so session and auth issues stay debuggable.
+ */
 function filterResponseHeaders(headers: Headers): Record<string, string> {
 	let filtered: Record<string, string> = {};
 	for (let [name, value] of headers) {
@@ -151,9 +158,6 @@ function filterResponseHeaders(headers: Headers): Record<string, string> {
 		}
 	}
 
-	// `set-cookie` is excluded above since its value carries session data, but whether a
-	// cookie was set at all (and which one) is exactly what's needed to debug session/auth
-	// issues, so surface just the cookie names.
 	let cookieNames = headers.getSetCookie?.().map((raw) => raw.split("=")[0]);
 	if (cookieNames && cookieNames.length > 0) filtered["set-cookie-names"] = cookieNames.join(", ");
 
@@ -275,7 +279,6 @@ export class Logger {
 	 */
 	action(routeId: string): BatchedLogger {
 		if (this.#scopes.action) {
-			// Return existing action logger if same route, or create new one
 			if (this.#scopes.action.routeId === routeId) {
 				return this.#scopes.action.logger;
 			}

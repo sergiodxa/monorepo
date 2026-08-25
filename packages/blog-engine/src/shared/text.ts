@@ -2,7 +2,8 @@
  * Text coercion for the two places this engine handles dynamically typed values:
  * form entries (which may arrive as a `File`) and post metadata (whose native type
  * is decided at runtime by the field kind). Plain `String(value)` collapses both to
- * `"[object Object]"`, silently storing and rendering garbage; these helpers do not.
+ * `"[object Object]"`, silently storing and rendering garbage; these helpers keep
+ * the real value legible instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

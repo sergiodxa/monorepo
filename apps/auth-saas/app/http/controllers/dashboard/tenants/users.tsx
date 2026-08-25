@@ -110,7 +110,6 @@ export default {
 
 			log.info("User retrieved", { tenantId: tenant.id, userId: params.id });
 
-			// Check if we're viewing the platform tenant and the current user
 			let currentSessionId = tenant.id === "platform" ? platformSession.sessionId : undefined;
 
 			return ctx.render(
@@ -328,7 +327,6 @@ export default {
 				return new Response("User not found", { status: 404 });
 			}
 
-			// Check for error message from redirect
 			let url = new URL(request.url);
 			let errorMessage = url.searchParams.get("error");
 
@@ -452,7 +450,6 @@ export default {
 						userId: params.id,
 						error: error.message,
 					});
-					// Redirect back to edit page with error message
 					let errorMessage = encodeURIComponent(error.message);
 					return new Response(null, {
 						status: 302,

@@ -34,10 +34,8 @@ declare global {
 
 /**
  * Dispatched on a ToggleButton by {@link pressToggle} right after a click
- * flips its `aria-pressed` attribute, carrying the value the attribute now
- * holds so a consumer can persist it (a debounced request, a beacon call)
- * or mirror it onto another element without reading the attribute back off
- * the DOM itself.
+ * flips its `aria-pressed` attribute, carrying the value so a consumer can
+ * persist it or mirror it onto another element without reading it back.
  */
 export class PressToggleChangeEvent extends Event {
 	/** The host's `aria-pressed` value immediately after this click. */
@@ -53,18 +51,9 @@ export class PressToggleChangeEvent extends Event {
 }
 
 /**
- * Flips a ToggleButton's `aria-pressed` attribute on every click, entirely
- * on the client, instead of waiting on the form submission its no-JS
- * baseline relies on. Reads the host's current `aria-pressed` value at
- * click time, writes back its opposite, and dispatches
- * {@link PressToggleChangeEvent} so a consumer can react — persist the new
- * value, sync a sibling control — without this mixin keeping a copy of the
- * pressed state itself: the `aria-pressed` attribute already rendered onto
- * the host is the single source of truth, both before and after the flip.
- *
- * A disabled host (`disabled`, or `aria-disabled="true"`) ignores the
- * click and leaves its pressed state untouched, matching a native disabled
- * control.
+ * Flips a ToggleButton's `aria-pressed` attribute on every click and
+ * dispatches {@link PressToggleChangeEvent}, keeping the attribute already
+ * rendered onto the host as the single source of truth for pressed state.
  *
  * @returns A mixin descriptor for a ToggleButton's `mix` prop.
  * @example

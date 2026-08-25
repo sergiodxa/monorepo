@@ -53,7 +53,6 @@ export namespace GameEvent {
 	export interface MoneyChanged {
 		type: "money-changed";
 		playerId: PlayerId;
-		/** The new balance after the change. */
 		amount: number;
 	}
 
@@ -147,9 +146,7 @@ export namespace GameEvent {
 		type: "learned-move";
 		creatureId: CreatureId;
 		moveId: MoveId;
-		/** The slot the move was written into. */
 		slotIndex: number;
-		/** The move that occupied the slot before this one, if any. */
 		replacedMoveId?: MoveId;
 	}
 

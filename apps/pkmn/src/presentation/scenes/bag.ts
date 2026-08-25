@@ -1,15 +1,9 @@
 /**
  * The bag screen: browse the inventory and use a creature-targeting item.
  *
- * Reads the inventory view and lists each item with its category and count.
- * Confirming an item that acts on a single creature — an evolution stone, a
- * recovery medicine, or a move-teaching machine — opens the party picker; choosing
- * a member resolves the item against that creature. Stones dispatch
- * `use-item-on-creature` and medicines `use-medicine`, each reporting whether it
- * took effect. A machine teaches its move: a creature that already knows it is a
- * no-op, a creature with a free slot learns it directly, and a full moveset opens
- * the replace-or-skip prompt. Any other item, or backing out of the picker,
- * changes nothing. Cancel returns to the pause menu.
+ * Confirming an evolution stone, recovery medicine, or move-teaching machine
+ * opens the party picker and dispatches the matching action on the chosen
+ * member; other items stay browse-only. Cancel returns to the pause menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,12 +34,9 @@ import { LearnMoveScene } from "./learn-move";
 export type BagItemAction = "evolution" | "medicine" | "teach" | null;
 
 /**
- * Classifies how one item is used on a creature from the bag.
- *
- * Evolution items open the stone flow, medicine items whose effect recovers HP or
- * status open the medicine flow, machines that teach a move open the teach flow,
- * and everything else (held items, capture balls, PP/EV items, unknown records)
- * returns null so the bag leaves them browse-only.
+ * Classifies how one item is used on a creature from the bag: evolution items
+ * open the stone flow, recovering medicine opens the medicine flow, and
+ * teaching machines open the teach flow; everything else stays browse-only.
  */
 export function bagItemAction(item: Item | undefined): BagItemAction {
 	if (!item) return null;
@@ -56,12 +47,9 @@ export function bagItemAction(item: Item | undefined): BagItemAction {
 }
 
 /**
- * Rebuilds the fixed four-slot moveset from a creature summary view.
- *
- * The summary exposes moves as an ordered list of `{ id, pp }` rows; the learn
- * flow needs the raw `MoveSet` tuple (slot 0 always holds a move, slots 1-3 may be
- * null). Missing trailing rows are padded with null so a partially filled party
- * member still yields four slots.
+ * Rebuilds the fixed four-slot moveset from a creature summary view, padding
+ * missing trailing slots with null so the learn flow's `MoveSet` tuple always
+ * has four entries even for a partially filled member.
  */
 export function movesetFromSummary(creature: CreatureSummaryView): MoveSet {
 	return [
@@ -73,13 +61,9 @@ export function movesetFromSummary(creature: CreatureSummaryView): MoveSet {
 }
 
 /**
- * Decides whether teaching a machine's move should consume one copy of it.
- *
- * A single-use machine (marked `Consumable`, like a TM) is spent after a
- * successful teach; a reusable machine (an HM, which omits the flag) is not. No
- * machine in the current content carries `Consumable`, so today nothing is
- * consumed — the check is data-driven so authoring a consumable machine later
- * spends it without any code change.
+ * Decides whether teaching a machine's move consumes one copy: a single-use
+ * machine (marked `Consumable`) is spent, a reusable one stays in the bag. The
+ * data-driven check spends any future consumable machine with no code change.
  */
 export function machineConsumedOnTeach(item: Item): boolean {
 	return item.attributes.includes(ItemAttribute.Consumable);
@@ -140,12 +124,9 @@ export class BagScene implements Scene {
 	}
 
 	/**
-	 * Dispatches the chosen item onto one creature and reports the outcome.
-	 *
-	 * Both the evolution-stone and medicine handlers are no-ops that emit nothing
-	 * when the item cannot take effect (a mismatched stone, a heal at full HP), so an
-	 * empty event list means "it won't have any effect" and nothing was consumed. The
-	 * picker is popped back to the bag first, then a message window is shown over it.
+	 * Dispatches the chosen item onto one creature and reports the outcome. An
+	 * empty event list means the item had no effect (a mismatched stone, a heal
+	 * at full HP), and the bag message names that outcome directly.
 	 */
 	private useOn(
 		game: GameClient,
@@ -177,16 +158,9 @@ export class BagScene implements Scene {
 	}
 
 	/**
-	 * Teaches a machine's move to one creature, choosing the append/replace path.
-	 *
-	 * A creature that already knows the move is a no-op with a message; one with a
-	 * free slot learns the move directly (a `learn-move` dispatch with no replace
-	 * index appends it); a full moveset instead opens {@link LearnMoveScene} so the
-	 * player picks a slot to overwrite or skips. A single-use machine is consumed
-	 * only once a move is actually learned — the free-slot path checks the dispatch
-	 * emitted a `learned-move`, and the replace path consumes from the prompt's
-	 * `onResolve` when it reports a chosen (non-negative) slot. The picker is popped
-	 * back to the bag before any message window or replace prompt is shown.
+	 * Teaches a machine's move to one creature, picking the append, replace, or
+	 * already-known path. A single-use machine is consumed only once a move is
+	 * actually learned, so a replace prompt the player skips spends nothing.
 	 */
 	private teachTo(
 		game: GameClient,
@@ -224,7 +198,7 @@ export class BagScene implements Scene {
 		);
 	}
 
-	/** Spends one copy of a single-use machine; reusable machines are left alone. */
+	/** Spends one copy of a single-use machine, leaving a reusable machine's count unchanged. */
 	private consumeMachine(game: GameClient, item: Item, itemId: string) {
 		if (!machineConsumedOnTeach(item)) return;
 		game.dispatch({ type: "remove-inventory-item", playerId: HERO_ID, itemId, count: 1 });

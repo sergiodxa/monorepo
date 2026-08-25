@@ -8,13 +8,9 @@ import type { UtilityMixin } from "../internal/descriptor";
 import { utility } from "../internal/descriptor";
 
 /**
- * Sets `stroke-width`, the SVG paint property controlling how thick a
- * `<path>`/`<circle>`/`<line>` shape's stroke renders. Unlike
- * `u.outlineWidth()`, a bare number is treated as a unitless SVG user-unit
- * value rather than pixels — SVG's `stroke-width` is unitless by default,
- * and stamping a `px` suffix on it would make the value scale with the
- * viewport instead of the SVG's own coordinate system; a string passes
- * through unchanged for a value that does need an explicit unit.
+ * Sets `stroke-width` on an SVG shape. A bare number stays a unitless SVG
+ * user-unit value, so the stroke scales with the SVG's own coordinate
+ * system; a string passes through for a value that needs an explicit unit.
  *
  * @example u.strokeWidth(2)
  * @example css({ strokeWidth: "2" })

@@ -64,11 +64,9 @@ let LoginFormSchema = s.object({
 });
 
 /**
- * OAuth 2.0 Authorization Endpoint (RFC 6749 Section 3.1).
- * Handles the authorization code flow with PKCE support.
- *
- * `index` (GET) validates the request and renders the email form; `action` (POST)
- * processes the email and renders the passkey authentication or registration form.
+ * OAuth 2.0 Authorization Endpoint (RFC 6749 Section 3.1) with PKCE support.
+ * `index` (GET) renders the email form; `action` (POST) verifies the email
+ * and renders the passkey sign-in or registration form.
  */
 export default createController(routes.oauth.authorize, {
 	middleware: [],
@@ -80,7 +78,6 @@ export default createController(routes.oauth.authorize, {
 			let url = new URL(request.url);
 			let params = Object.fromEntries(url.searchParams);
 
-			// If no params provided, redirect to onboarding to start the OAuth flow
 			if (url.searchParams.size === 0) {
 				log.info("No params provided, redirecting to onboarding");
 				return new Response(null, {
@@ -174,7 +171,6 @@ export default createController(routes.oauth.authorize, {
 
 			if (action === "check_email") {
 				let subject = await Subject.findByEmail(db, email);
-				// Only consider passkeys with credential_id (legacy passkeys without it are unusable)
 				let allPasskeys = subject ? await Passkey.listBySubject(db, subject.id) : [];
 				let validPasskeys = allPasskeys.filter((p) => p.credential_id);
 
@@ -204,12 +200,11 @@ export default createController(routes.oauth.authorize, {
 						let transports = p.transports
 							? (p.transports.split(",") as AuthenticatorTransport[])
 							: (["internal"] as AuthenticatorTransport[]);
-						// If "internal" is present, only use that to avoid Safari showing QR code
 						if (transports.includes("internal")) {
 							transports = ["internal"];
 						}
 						return {
-							id: p.credential_id!, // Already filtered for non-null credential_id
+							id: p.credential_id!,
 							type: "public-key" as const,
 							transports,
 						};
@@ -557,6 +552,7 @@ interface RegisterFormProps {
 
 /**
  * Passkey enrollment view that mounts the {@link WebAuthnRegister} client component.
+ * Requests ES256 (-7) and RS256 (-257) public-key algorithms, per COSE.
  * @param handle - Component handle exposing the registration form props.
  * @returns A render function producing the form markup.
  */
@@ -596,8 +592,8 @@ function RegisterForm(handle: Handle<RegisterFormProps>) {
 							displayName: props.email,
 						},
 						pubKeyCredParams: [
-							{ alg: -7, type: "public-key" }, // ES256
-							{ alg: -257, type: "public-key" }, // RS256
+							{ alg: -7, type: "public-key" },
+							{ alg: -257, type: "public-key" },
 						],
 						timeout: 60000,
 						attestation: "none",

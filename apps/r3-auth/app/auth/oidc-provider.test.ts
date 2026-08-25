@@ -16,11 +16,9 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { OIDC } from "~/app/auth/oidc-provider";
 import { ISSUER } from "~/app/config";
 
-// Use the token classes the engine itself signs with
 let AccessToken = OIDC.AccessToken;
 let IdToken = OIDC.IdToken;
 
-// Type helpers for test assertions
 interface OIDCTokenResponse {
 	access_token: string;
 	token_type: "Bearer";
@@ -29,7 +27,6 @@ interface OIDCTokenResponse {
 	id_token: string;
 }
 
-// Test fixtures
 let testKeyPair: JWK.KeyPair[];
 let testSubject = {
 	id: "subject-123",
@@ -52,8 +49,8 @@ let testSession = {
 	id: "session-123",
 	clientId: "client-123",
 	subjectId: "subject-123",
-	expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day from now
-	createdAt: new Date(Date.now() - 60 * 1000), // 1 minute ago
+	expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+	createdAt: new Date(Date.now() - 60 * 1000),
 };
 
 let testAuthzCode = {
@@ -67,13 +64,11 @@ let testAuthzCode = {
 };
 
 /**
- * The engine's repository with every member restated as a function property. A test holds
- * the mock itself (`repo.touchSession`) to assert on it, which detaching a method from its
- * object would not allow.
+ * The engine's repository with every member restated as a function property, so a
+ * test can hold the mock itself (`repo.touchSession`) and assert on it.
  */
 type MockRepository = { [Key in keyof OIDC.Repository]: OIDC.Repository[Key] };
 
-// Mock repository
 function createMockRepository(): MockRepository {
 	return {
 		getSigningKey: vi.fn(async () => testKeyPair),
@@ -98,7 +93,6 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-	// Reset test fixtures to default state
 	testAuthzCode.pkce = null;
 	testAuthzCode.nonce = null;
 	testAuthzCode.scope = ["openid"];
@@ -160,7 +154,6 @@ describe("OAuth2Provider", () => {
 
 		test("validates PKCE S256 challenge", async () => {
 			let codeVerifier = "test-code-verifier-that-is-long-enough";
-			// Generate the challenge
 			let encoder = new TextEncoder();
 			let data = encoder.encode(codeVerifier);
 			let hash = await crypto.subtle.digest("SHA-256", data);
@@ -204,7 +197,7 @@ describe("OAuth2Provider", () => {
 		});
 
 		test("rejects expired session", async () => {
-			testSession.expiresAt = new Date(Date.now() - 1000); // Expired
+			testSession.expiresAt = new Date(Date.now() - 1000);
 
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
@@ -360,7 +353,6 @@ describe("OAuth2Provider", () => {
 			repo.findSessionById = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo);
 
-			// Should not throw
 			await provider.revoke({
 				clientId: testClient.id,
 				clientSecret: testClient.secret,
@@ -422,7 +414,6 @@ describe("OAuth2Provider", () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// First get a valid access token
 			let tokenResult = await provider.token({
 				type: "authorization_code",
 				code: "valid-code",
@@ -431,7 +422,6 @@ describe("OAuth2Provider", () => {
 				clientSecret: testClient.secret,
 			});
 
-			// Now introspect it
 			let result = await provider.introspect({
 				clientId: testClient.id,
 				clientSecret: testClient.secret,
@@ -481,7 +471,6 @@ describe("OIDC", () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// Get a valid access token
 			let tokenResult = await provider.token({
 				type: "authorization_code",
 				code: "valid-code",
@@ -504,7 +493,6 @@ describe("OIDC", () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// Generate a valid ID token
 			let idToken = IdToken.generate(
 				{
 					id: testSubject.id,
@@ -529,13 +517,14 @@ describe("OIDC", () => {
 			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
 		});
 
+		/**
+		 * The hint identifies the session, which is the only question asked of it, so a
+		 * token that has aged out still answers it.
+		 */
 		test("accepts an expired id_token_hint", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// The ordinary case: somebody comes back after their ID token aged out and asks
-			// to be signed out. The hint identifies the session, so an expired one still
-			// answers the only question being asked of it.
 			let expiredAt = Math.floor(Date.now() / 1000) - 60 * 60;
 			let idToken = new IdToken({
 				sub: testSubject.id,
@@ -651,6 +640,10 @@ describe("OIDC", () => {
 			).rejects.toThrow(OIDC.InvalidRequestError);
 		});
 
+		/**
+		 * Only a registered address becomes a destination, which is what keeps the
+		 * endpoint from being an open redirect; the sign-out asked for still happens.
+		 */
 		test("drops an unregistered post_logout_redirect_uri but still logs out", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
@@ -673,8 +666,6 @@ describe("OIDC", () => {
 				postLogoutRedirectUri: "https://malicious.com/logout",
 			});
 
-			// The address never becomes a destination, which is what keeps the endpoint
-			// from being an open redirect; the sign-out that was asked for still happens.
 			expect(result.redirectUri).toBeUndefined();
 			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
 		});
@@ -686,13 +677,14 @@ describe("OIDC", () => {
 			await expect(provider.logout({})).rejects.toThrow(OIDC.InvalidRequestError);
 		});
 
+		/**
+		 * With nothing to identify a client, the address is checked against the registered
+		 * logout URIs directly; a match means this server nominated the destination.
+		 */
 		test("honors a registered post_logout_redirect_uri with no hint and no client_id", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// Nothing identifies a client, so the address is checked against the registered
-			// logout URIs directly. Exactly one client registered it, so it is a destination
-			// this server nominated and the redirect is legitimate.
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
 				postLogoutRedirectUri: testClient.logoutUri,
@@ -703,13 +695,14 @@ describe("OIDC", () => {
 			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
 		});
 
+		/**
+		 * An address no client registered would make the endpoint an open redirect, so it
+		 * is dropped while the session still ends.
+		 */
 		test("drops an unregistered post_logout_redirect_uri when no client is identified", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// Neither an id_token_hint nor a client_id, and no client registered this
-			// address: honoring it would make the endpoint an open redirect, so it is
-			// dropped — but the session still ends.
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
 				postLogoutRedirectUri: "https://malicious.com/logout",
@@ -719,12 +712,14 @@ describe("OIDC", () => {
 			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
 		});
 
+		/**
+		 * Matching the address against a registration says nothing about who started the
+		 * logout, so every relying party stays in the notification.
+		 */
 		test("does not exclude the client that merely registered the redirect from the fan-out", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// The address was matched against a registration, which says nothing about who
-			// started the logout — so no relying party is dropped from the notification.
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
 				postLogoutRedirectUri: testClient.logoutUri,
@@ -738,6 +733,10 @@ describe("OIDC", () => {
 			);
 		});
 
+		/**
+		 * The recipient list is derived from the very rows logout deletes, so a repository
+		 * that stops answering once they are gone matches production.
+		 */
 		test("collects the logout fan-out before the sessions are deleted", async () => {
 			let repo = createMockRepository();
 			let target: OIDC.SessionWithClient = {
@@ -749,9 +748,6 @@ describe("OIDC", () => {
 				frontchannelLogoutSessionRequired: "true",
 			};
 
-			// The recipient list is derived from the very rows logout deletes, so a
-			// repository that stops answering once they are gone is exactly what
-			// production looks like.
 			let deleted = false;
 			repo.deleteSessionBySubjectId = vi.fn(async () => {
 				deleted = true;
@@ -772,6 +768,10 @@ describe("OIDC", () => {
 			expect(deleted).toBe(true);
 		});
 
+		/**
+		 * The sign-out has already happened by the time delivery is attempted, so a key
+		 * store that cannot sign the tokens leaves the sign-out complete regardless.
+		 */
 		test("does not fail the logout when the back channel cannot be delivered", async () => {
 			let repo = createMockRepository();
 			let target: OIDC.SessionWithClient = {
@@ -783,9 +783,6 @@ describe("OIDC", () => {
 				frontchannelLogoutSessionRequired: "false",
 			};
 
-			// The sign-out already happened by the time delivery is attempted, so nothing
-			// that goes wrong here — down to not being able to sign the tokens at all — may
-			// turn it into a failure the person sees.
 			repo.getSigningKey = vi.fn(async () => {
 				throw new Error("key store unavailable");
 			});
@@ -875,10 +872,6 @@ describe("OIDC", () => {
 	});
 });
 
-// =============================================================================
-// Password login and hash migration
-// =============================================================================
-
 /** Password every credential login case signs in with. */
 const LOGIN_PASSWORD = "correct horse battery staple";
 
@@ -888,13 +881,10 @@ const PBKDF2_PREFIX = "$pbkdf2-sha256$";
 /** Iteration count standing in for a hash written before the current cost policy. */
 const OUTDATED_ITERATIONS = 1_000;
 
-/** Salt length, in bytes, the encoded format is built with. */
 const SALT_BYTES = 16;
 
-/** Derived key length, in bytes, the encoded format is built with. */
 const KEY_BYTES = 32;
 
-/** Bits per byte, to turn the key length into a `deriveBits` length. */
 const BITS_PER_BYTE = 8;
 
 /**
@@ -964,7 +954,7 @@ function loginState(overrides: Partial<LoginRepositoryState> = {}): LoginReposit
 
 /**
  * Repository double for the password login flow, reading and recording through the
- * given state so a test can assert what was persisted rather than how it was called.
+ * given state so a test can assert on what was persisted.
  */
 function createLoginRepository(state: LoginRepositoryState): OIDC.Repository {
 	return {
@@ -1168,6 +1158,10 @@ describe("loginWithCredential()", () => {
 		if (result.status === "success") expect(result.data.params.code).toBeTruthy();
 	});
 
+	/**
+	 * The verified stamp is what lets the account sign in again with the same password
+	 * right after registration.
+	 */
 	test("registers the credential verified, so the account it just created can sign in", async () => {
 		let state = loginState({ subjectMissing: true });
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
@@ -1177,8 +1171,6 @@ describe("loginWithCredential()", () => {
 		expect(state.createdVerifiedAt).toHaveLength(1);
 		expect(state.createdVerifiedAt[0]).toBeInstanceOf(Date);
 
-		// The registration's own hash is now what is stored, and signing in again with
-		// the same password has to succeed: this is the loop the null column broke.
 		state.storedHash = state.created[0] ?? null;
 		state.verifiedAt = state.createdVerifiedAt[0] ?? null;
 		state.subjectMissing = false;

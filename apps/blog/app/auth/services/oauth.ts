@@ -17,9 +17,7 @@ import { createOIDCAuthProvider } from "remix/auth";
  * Result returned after a successful OAuth authorization code exchange.
  */
 export interface FinishedAuth {
-	/** ID token issued by the auth server. */
 	idToken: string;
-	/** Optional URL to redirect the user after auth finishes. */
 	returnTo?: string;
 }
 
@@ -31,9 +29,7 @@ export namespace OAuthService {
 	 * Client credentials used to authenticate OAuth requests.
 	 */
 	export interface AuthConfig {
-		/** OAuth client identifier. */
 		clientId: string;
-		/** OAuth client secret. */
 		clientSecret: string;
 	}
 
@@ -41,9 +37,7 @@ export namespace OAuthService {
 	 * Input required to create the OIDC provider instance.
 	 */
 	export interface ProviderInput {
-		/** OAuth client credentials. */
 		auth: AuthConfig;
-		/** Callback URL registered for this provider. */
 		redirectUri: string;
 	}
 
@@ -51,13 +45,10 @@ export namespace OAuthService {
 	 * Input required to exchange an authorization code for an ID token.
 	 */
 	export interface TokenExchangeInput {
-		/** OAuth client credentials. */
 		auth: AuthConfig;
-		/** Authorization code received from the authorize step. */
 		code: string;
 		/** PKCE verifier that matches the original code challenge. */
 		codeVerifier: string;
-		/** Callback URL used during the authorize step. */
 		redirectUri: string;
 	}
 }

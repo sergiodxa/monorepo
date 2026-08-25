@@ -11,32 +11,27 @@
 /** HTML comments, which never carry reader-visible content. */
 const COMMENT = /<!--[\s\S]*?-->/g;
 
-/** A document type declaration, which is markup rather than content. */
+/** A document type declaration, which describes the document format. */
 const DOCTYPE = /<!doctype[^>]*>/gi;
 
 /**
  * Blocks hidden from sighted readers with `display:none`, such as a preheader.
- * Matching is non-greedy and same-tag nesting is not supported, which is enough
+ * Non-greedy matching closes at the first same-tag closing tag, which is correct
  * for the hidden single-element blocks email layouts use.
  */
 const HIDDEN_BLOCK = /<(div|span|p)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi;
 
 /**
- * Blocks marked `data-skip-in-text`, which is how an element says it belongs to the
- * HTML part alone.
- *
- * It exists beside {@link HIDDEN_BLOCK} rather than instead of it because the two answer
- * different questions. That one infers the intent from `display:none`, which is right
- * often enough but is a guess about a style; this one is the author saying so, and it
- * covers content that is visible and still has no business in the text part — a
- * decorative rule, a spacer, a logo's alt text.
+ * Blocks marked `data-skip-in-text`, the explicit signal an author gives that an
+ * element belongs to the HTML part alone, covering visible content such as a
+ * decorative rule, a spacer, or a logo's alt text.
  */
 const SKIPPED_BLOCK = /<(\w+)\b[^>]*\bdata-skip-in-text\b[^>]*>[\s\S]*?<\/\1>/gi;
 
 /** The same marker on an element that closes itself, which has nothing to drop between tags. */
 const SKIPPED_VOID = /<\w+\b[^>]*\bdata-skip-in-text\b[^>]*\/?>/gi;
 
-/** Elements whose content belongs to the document, not to the message body. */
+/** Elements whose content belongs to the document structure. */
 const DROPPED_BLOCK = /<(head|script|style|title)\b[^>]*>[\s\S]*?<\/\1>/gi;
 
 /** Explicit line breaks, the one inline element that carries layout meaning. */
@@ -52,8 +47,9 @@ const LIST_ITEM_END = /<\/li\s*>/gi;
 const LIST_ITEM_START = /<li\b[^>]*>/gi;
 
 /**
- * An ordered list, whose items carry their number instead of a bullet. Same-tag nesting
- * is not supported, so an ordered list inside an ordered list numbers as one sequence.
+ * An ordered list, whose items are numbered in the order they appear. Matching
+ * closes at the first same-tag closing tag, so a nested ordered list numbers
+ * as part of its parent's sequence.
  */
 const ORDERED_LIST = /<ol\b[^>]*>[\s\S]*?<\/ol\s*>/gi;
 
@@ -70,7 +66,7 @@ const PARAGRAPH_BOUNDARY =
 /** End of a table cell, which separates cells on the same line with a space. */
 const CELL_END = /<\/(td|th)\s*>/gi;
 
-/** End of a table row or definition entry, which ends the line without opening a paragraph. */
+/** End of a table row or definition entry, which ends the line so the next row starts immediately below it. */
 const ROW_END = /<\/(tr|dt|dd|caption)\s*>/gi;
 
 /** Any remaining tag, dropped once its structural meaning has been applied. */
@@ -133,14 +129,9 @@ function formatLink(href: string, label: string): string {
 }
 
 /**
- * Converts rendered email HTML into its plain-text alternative.
- *
- * Link targets survive as `label (href)`, an image becomes its alt text, an ordered
- * list numbers its items while an unordered one bullets them, block
- * elements become blank lines while table rows become single lines with their cells
- * spaced apart, and hidden preheader blocks are dropped so the text part does not
- * repeat them. An element marked `data-skip-in-text` is dropped whether it is hidden
- * or not.
+ * Converts rendered email HTML into its plain-text alternative, preserving link
+ * targets as `label (href)`, image alt text, and block structure as blank lines
+ * so the text part carries the same content the HTML conveys visually.
  *
  * @param html - Rendered HTML of an email body.
  * @returns The plain-text alternative, trimmed and with runs of blank lines collapsed.

@@ -8,18 +8,13 @@ import { when } from "./when";
 
 /**
  * Sugar over `when('&:read-only, &[aria-readonly="true"]', input)`, matching
- * both native read-only controls and ARIA read-only custom widgets.
- *
- * Read-only is not disabled, and should not look like it. A read-only control
- * is still focusable, still reachable by keyboard, still submits its value with
- * the form, and is still announced with its label and contents — the user just
- * cannot edit it. `u.disabled()` covers the other case, where the control is
- * inert and its value is dropped from the submission entirely. Style read-only
- * as normal-but-static (flat background, no editable affordance), not as
- * greyed-out.
+ * native and ARIA read-only controls. They stay focusable and keep submitting
+ * their value with the form, so give them a flat, normal-but-static style.
  *
  * @example u.readOnly(u.bg("neutral.tint"))
  * @example css({ '&:read-only, &[aria-readonly="true"]': { backgroundColor: "..." } })
+ * @see u.disabled() removes the control from focus and drops its value from
+ * the submission entirely.
  */
 export function readOnly<Node extends Element = Element>(
 	input: UtilityInput<Node>,

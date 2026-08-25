@@ -1,19 +1,9 @@
 /**
- * DNS monitor detail page results-summary fragment controller. GET
- * /app/:team/dns/:monitorId/cards/results — reduces the monitor's recent check results
- * into the two figures worth a headline, success rate and total checks, with no document
- * shell, so the detail page's summary `Frame` can swap it in over its skeleton fallback.
- *
- * The stat cards live here rather than on the page because both are a reduction over the
- * same result rows: leaving them behind would mean the page paying for the query it was
- * restructured to avoid. The rows themselves are rendered by the check-history fragment,
- * which re-reads them — the summary belongs above the record table and the log below it,
- * and a `Frame` fills only the region it was declared in. Requires `requireUser` +
- * `requireTeam`.
- *
- * There is deliberately no average-response-time card: that figure measures how fast our
- * resolver answered, a property of our infrastructure rather than of the visitor's DNS, so
- * it stays on the individual check where it can explain an outlier.
+ * DNS monitor detail page results-summary fragment controller: GET
+ * /app/:team/dns/:monitorId/cards/results. Reduces checks into success rate and total
+ * checks; the query runs once here instead of being repeated by the page. Response time
+ * stays on the individual check, since resolver speed, not the monitored DNS record,
+ * drives that figure.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

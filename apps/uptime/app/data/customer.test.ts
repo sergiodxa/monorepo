@@ -1,9 +1,9 @@
 /**
  * Unit tests for the `Customer` billing model: resolving a signed-in subject to a
  * Polar customer (by external id first, then by email, creating one when neither
- * exists), subscription status, and hosted checkout/portal/cancellation flows. Uses a
- * fake object shaped like the subset of `PolarClient` these methods call — no real
- * Polar client is constructed and no network calls are made.
+ * exists), subscription status, and hosted checkout/portal/cancellation flows. Every
+ * call runs against a fake object shaped like the subset of `PolarClient` these
+ * methods use, so the suite stays offline.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +32,10 @@ type FakePolarClient = Pick<
 	| "revokeSubscription"
 >;
 
-/** Builds a fake `PolarClient` that throws for any method not explicitly overridden. */
+/**
+ * Builds a fake `PolarClient`: the overrides answer, and every other method throws,
+ * so a test that reaches an unexpected call fails loudly.
+ */
 function fakePolar(overrides: Partial<FakePolarClient>): PolarClient {
 	let notImplemented = (name: string) => () => {
 		throw new Error(`unexpected call to PolarClient#${name} in this test`);

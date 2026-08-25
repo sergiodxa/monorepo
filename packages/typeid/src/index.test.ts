@@ -1,3 +1,10 @@
+/**
+ * Tests for the TypeID class and the typeid factory helper.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { generateUUID } from "@pkg/uuid";
 import { describe, expect, test } from "vitest";
 

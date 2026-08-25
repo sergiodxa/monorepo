@@ -1,7 +1,7 @@
 /**
- * Launcher view for the dev tools. Lists the four editor tools as client-side
- * navigation buttons (no server round-trip) and hosts a "test export" button
- * that POSTs to the export action to prove the disk-write path works end to end.
+ * Launcher view for the dev tools. Lists the editor tools as buttons that switch
+ * views client-side, and hosts a "test export" button that POSTs to the export
+ * action to prove the disk-write path works end to end.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,7 +20,6 @@ interface ToolLink {
 	description: string;
 }
 
-/** The four editor tools the launcher links to. */
 const TOOLS: ToolLink[] = [
 	{ path: "/sprite", label: "Sprite", description: "Draw and edit sprite sheets." },
 	{ path: "/map", label: "Map", description: "Compose tile maps." },
@@ -43,7 +42,6 @@ export interface LauncherProps {
  * @returns The render function for the launcher view.
  */
 export function Launcher(handle: Handle<LauncherProps>) {
-	// Local state for the export smoke test, surfaced back into the UI on update.
 	let exportStatus = "";
 
 	/** Posts a tiny file to the export action and records the result for display. */

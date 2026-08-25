@@ -1,10 +1,9 @@
 /**
  * Tests for the item-target picker's pure row derivation.
  *
- * Covers `itemTargetRows`, which turns a party view into the ordered display rows
- * the picker lists. The canvas drawing and input handling are not exercised here;
- * only the per-member formatting, the status suffix, and the empty-party case are
- * asserted so the picker's target list stays a pure function of the party view.
+ * Covers `itemTargetRows`, asserting the per-member formatting, the status
+ * suffix, and the empty-party case so the picker's row list stays a pure
+ * function of the party view.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

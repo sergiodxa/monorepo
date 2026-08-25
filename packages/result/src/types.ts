@@ -1,4 +1,12 @@
 /**
+ * Shared types for the Result discriminated union: Success, Failure, and
+ * the Result type itself.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Represents a successful operation containing the result data.
  *
  * @template T - The type of the success value

@@ -22,7 +22,7 @@ import { text } from "@pkg/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
-/** Native `max` value {@link ProgressBar.Indicator} falls back to when `max` is omitted, matching the common percentage-based convention rather than the platform's own default of `1`. */
+/** Native `max` value {@link ProgressBar.Indicator} falls back to when `max` is omitted, so a bare `value` reads as a percentage without passing `max={100}` every time. */
 const DEFAULT_MAX = 100;
 
 /**
@@ -31,20 +31,15 @@ const DEFAULT_MAX = 100;
 export namespace ProgressBar {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * The root only supplies the column layout stacking
-	 * {@link ProgressBar.Indicator} and {@link ProgressBar.ValueLabel}; it
-	 * carries no semantics of its own.
+	 * The root only supplies the column layout stacking {@link
+	 * ProgressBar.Indicator} and {@link ProgressBar.ValueLabel}.
 	 */
 	export interface Props extends TagProps<"div"> {}
 
 	/**
 	 * Every native `<progress>` attribute, unchanged, plus the `mix`
-	 * passthrough. `value` left unset renders the platform's own
-	 * indeterminate state, matched by `:indeterminate` throughout this
-	 * module's styling and by the animation layer's `shimmer()`/`pulse()`
-	 * factories by default. `max` defaults to {@link DEFAULT_MAX} rather than
-	 * the platform's own default of `1`, so a bare `value` reads as a
-	 * percentage without also passing `max={100}` every time.
+	 * passthrough. Leaving `value` unset renders the indeterminate state;
+	 * `max` defaults to {@link DEFAULT_MAX}.
 	 */
 	export interface IndicatorProps extends TagProps<"progress"> {}
 
@@ -56,9 +51,8 @@ export namespace ProgressBar {
 
 /**
  * Renders the root column: a `<div>` stacking {@link ProgressBar.Indicator}
- * and an optional {@link ProgressBar.ValueLabel} with a small gap between
- * them. It carries no ARIA of its own — the native `<progress>` element
- * inside already exposes the platform's own progressbar semantics.
+ * and an optional {@link ProgressBar.ValueLabel}, carrying no ARIA of its
+ * own since the `<progress>` inside already exposes progressbar semantics.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the root column's markup.
@@ -77,21 +71,9 @@ export function ProgressBar(handle: Handle<ProgressBar.Props>) {
 }
 
 /**
- * Renders the busy/progress indicator: a native `<progress>` stripped of its
- * platform chrome via `appearance: none` and redrawn as a pill-shaped track
- * filled in the semantic primary color, sized through `--ui-*` custom
- * properties with sensible fallbacks. The track color and shape are set on
- * the host itself (the element Firefox draws its track from directly) and
- * mirrored onto the `::-webkit-progress-bar` pseudo-element for Chromium and
- * Safari; the fill color and shape are set on both the
- * `::-webkit-progress-value` and `::-moz-progress-bar` pseudo-elements,
- * which is where each engine actually paints it.
- *
- * Leaving `value` unset drops the control into the platform's own
- * indeterminate state, matched here by `:indeterminate` and by the
- * `shimmer()`/`pulse()` factories from the animation layer by default. This
- * indicator's own styling holds still — compose one of those factories
- * through `mix` for the sweeping or breathing busy cue.
+ * Renders the busy/progress indicator: a native `<progress>` restyled as a
+ * pill track. Firefox paints from the host itself, so track and fill colors
+ * mirror onto the `::-webkit-*`/`::-moz-*` pseudo-elements each engine paints.
  *
  * @param handle Runtime handle carrying the host `<progress>`'s props.
  * @returns The render function producing the indicator's markup.

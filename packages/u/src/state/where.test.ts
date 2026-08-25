@@ -15,8 +15,10 @@ import { where } from "./where";
 
 describe("where", () => {
 	test("emits '& :where(selector)', keeping the descendant space", async () => {
-		// Without the space the rule would target the element itself rather
-		// than its descendants — a one-character difference in the output.
+		/**
+		 * The leading space applies CSS's descendant-combinator semantics,
+		 * scoping `:where()` to elements nested inside the selector.
+		 */
 		expect(await serialize(where("pre", p(4)))).toContain("& :where(pre) {");
 		expect(await declarations(where("pre", p(4)))).toEqual([
 			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",

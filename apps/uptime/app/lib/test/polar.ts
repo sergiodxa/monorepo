@@ -2,7 +2,7 @@
  * Test-only Polar fixtures. A `Subscription` as the API returns one is a deep object —
  * the product, its prices, its meters, the customer's state — while everything that reads
  * one in this app touches a handful of fields, so building one needs a cast. This module is
- * where that cast lives, once, instead of once per test file that needs a subscription.
+ * where that cast lives once, shared by every test file that needs a subscription.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,9 +53,8 @@ export function polarSubscription(options: PolarSubscriptionOptions = {}): Polar
 }
 
 /**
- * Records an active monitoring subscription for `ownerId`, the way the Polar webhook would.
- * For tests of anything that gates on entitlement, since the answer comes from this
- * projection and no longer from a Polar lookup.
+ * Records an active monitoring subscription for `ownerId`, the way the Polar webhook
+ * would, so entitlement gates in tests read the answer straight from this projection.
  */
 export async function createActiveSubscription(db: Database, ownerId: string): Promise<void> {
 	await Subscription.upsert(db, ownerId, polarSubscription());

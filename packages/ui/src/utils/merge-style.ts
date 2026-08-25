@@ -16,17 +16,15 @@ export type StyleProp = Props<"div">["style"];
 
 /**
  * Declarations to merge into a host's `style`, keyed by CSS property name.
- * Keys are written exactly as CSS spells them — `--ui-slider-fill`,
- * `view-transition-name` — so the same record serves both prop forms. Entries
- * with no value are dropped rather than emitted as empty declarations.
+ * Keys match CSS spelling exactly — `--ui-slider-fill`, `view-transition-name`
+ * — so one record works for both prop forms; empty entries are dropped.
  */
 export type StyleDeclarations = Record<string, string | number | null | undefined>;
 
 /**
- * Merges declarations into a host's `style` prop, preserving the form the prop
- * arrived in: CSS text gains the declarations appended, an object gains them
- * assigned over it. The result never mutates the caller's object, so a prop
- * shared between renders stays untouched.
+ * Merges declarations into a host's `style` prop and returns a new value, so
+ * shared props stay untouched. Assigned via `Object.assign`, since remix/ui's
+ * style type's `Symbol.iterator` key type-checks under a spread despite carrying no runtime iterator.
  *
  * @param style The host's incoming `style` prop, in either form.
  * @param declarations Per-instance declarations to merge in.
@@ -43,10 +41,5 @@ export function mergeStyle(style: StyleProp, declarations: StyleDeclarations): S
 		return [style, ...present.map(([name, value]) => `${name}:${value}`)].filter(Boolean).join(";");
 	}
 
-	// `Object.assign` rather than a spread: `remix/ui` derives its style type
-	// from `keyof CSSStyleDeclaration`, so the type carries a `Symbol.iterator`
-	// key whose value type is `string | number | null | undefined`. The object is
-	// never iterable at runtime, but a spread of a type holding that key reads as
-	// spreading an iterable to every type-level iterability check.
 	return Object.assign({}, style, Object.fromEntries(present));
 }

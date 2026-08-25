@@ -77,11 +77,9 @@ async function makeEmail(overrides: Partial<AlertEmail.Data> = {}) {
 }
 
 /**
- * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
- * The runner's ICU differs between a developer machine and CI, so the separator is
- * normalised here rather than asserted. What these tests are about is the email's
- * content — the host's Unicode data is not the subject, and production renders on
- * the Workers runtime's own ICU regardless of what built it.
+ * ICU 72 (CLDR 42) joins a date to a time with " at "; older builds use ", ". The
+ * runner's ICU differs between a developer machine and CI, so this normalises the
+ * separator, keeping assertions focused on the email's own content.
  */
 function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
@@ -127,11 +125,9 @@ describe("AlertEmail", () => {
 	});
 
 	/**
-	 * Asserted as the key the email asks for, with its interpolations, rather than as
-	 * rendered copy: the totals moved to a key of their own when the per-incident ceiling
-	 * was removed, because the old key's every translation names that ceiling. Written this
-	 * way the test states the contract the locale files have to satisfy, and keeps stating
-	 * it once they do.
+	 * Asserts the translation key and its interpolations: the totals moved to a key of
+	 * their own when the per-incident ceiling was removed, since the old key's every
+	 * translation names that ceiling. This states the contract the locale files must satisfy.
 	 */
 	test("reports the incident totals on a recovery that held notifications back", async () => {
 		let asked = keyRecorder();
@@ -170,9 +166,9 @@ describe("AlertEmail", () => {
 	});
 
 	/**
-	 * Asserted as the keys the email asks for, with their interpolations, rather than as
-	 * rendered copy: these keys are the contract the locale files have to satisfy, and
-	 * stating it this way keeps stating it once they do.
+	 * Asserts the keys the email asks for, with their interpolations: these keys are the
+	 * contract the locale files have to satisfy, and stating it this way keeps stating it
+	 * once they do.
 	 */
 	test("quotes each of a domain sweep's findings, with the counters behind them", async () => {
 		let asked = keyRecorder();
@@ -206,10 +202,9 @@ describe("AlertEmail", () => {
 	});
 
 	/**
-	 * A value edited inside a record set holding several values is reported as one record
-	 * no longer resolving plus one new record, because DNS gives a record no identity of
-	 * its own. The email says so whenever that shape is present, or the truthful report
-	 * reads as a bug.
+	 * A value edited inside a multi-value record set is reported as one record no longer
+	 * resolving plus one new record, since DNS gives no record its own identity. The email
+	 * notes this whenever that shape appears, since a truthful report alone reads as a bug.
 	 */
 	test("explains an edited record set, and says a new record is not being watched yet", async () => {
 		let asked = keyRecorder();
@@ -292,9 +287,9 @@ describe("AlertEmail", () => {
 
 		expect(html).toContain("<br");
 		/**
-		 * Both findings survive into the text part rather than running together. Located by
-		 * the RDATA each one carries, which is what distinguishes the two halves of an
-		 * edited record set from each other.
+		 * Each finding lands on its own line in the text part, located by the RDATA it
+		 * carries, which is what distinguishes the two halves of an edited record set from
+		 * each other.
 		 */
 		let lines = text.split("\n");
 		let missingLine = lines.findIndex((line) => line.includes("10 mx1.example.com"));

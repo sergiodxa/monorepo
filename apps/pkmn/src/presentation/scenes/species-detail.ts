@@ -1,14 +1,9 @@
 /**
  * The species-detail screen: one recorded species' dossier.
  *
- * Opened from the bestiary when the player confirms a species they have already
- * seen. It shows the species' dex number, name, type(s), seen/caught status, its
- * base stat block, and a "Where to catch" section listing the zones where the
- * species appears. Habitat is resolved from the maps the caller hands in by
- * scanning their encounter tables; when a species appears in none, the section
- * shows "Unknown" (the current build ships no populated encounter tables, so this
- * is the common case). The screen only reads selectors and closes on B/Escape
- * back to the bestiary list.
+ * Opened from the bestiary for an already-seen species. Habitat is resolved
+ * by scanning the caller's maps for encounter tables; a species with no
+ * matching zone shows "Unknown" in the "Where to catch" section.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,11 +45,8 @@ export interface DetailRow {
 /**
  * Builds the detail screen's content rows from a species view.
  *
- * Kept pure so the formatting — the dex number, joined type list, seen/caught
- * status, each base stat, and the "Where to catch" habitat list — is a plain
- * function of the view and can be asserted without the canvas. When the view's
- * habitat is empty the habitat rows collapse to a single {@link UNKNOWN_HABITAT}
- * line rather than being omitted, so the section always reads as answered.
+ * Kept pure so the formatting is asserted without the canvas; an empty
+ * habitat collapses to a single {@link UNKNOWN_HABITAT} row.
  */
 export function speciesDetailRows(species: SpeciesDetailView): DetailRow[] {
 	let status = species.caught ? "Caught" : species.seen ? "Seen" : "-";
@@ -107,7 +99,6 @@ export class SpeciesDetailScene implements Scene {
 	exit() {}
 
 	update(game: GameClient) {
-		// B (and Escape, which maps to B) closes the dossier back to the list.
 		if (game.input.isPressed(Button.B)) game.scenes.pop();
 	}
 

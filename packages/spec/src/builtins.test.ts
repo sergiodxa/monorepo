@@ -72,8 +72,6 @@ describe("runSuite with a chosen built-in set", () => {
 		if (isFailure(run)) throw new Error(`Expected the run to start: ${run.error.message}`);
 		let [result] = run.data.results;
 		expect(result?.status).toBe("failed");
-		// An unknown name, not `permission-denied`: nothing was gated, the tool
-		// simply is not part of this run's vocabulary.
 		expect(result?.error?.code).toBe("unknown-name");
 		expect(result?.error?.message).toContain("fs");
 	});

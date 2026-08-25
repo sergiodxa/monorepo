@@ -3,8 +3,7 @@
  * rangeable gradient track shares with its own `&:dir(rtl)` mirror: the
  * property lands at `"right"` by default and flips to `"left"` once the
  * surrounding writing direction reads right-to-left, so the same gradient
- * string paints correctly in either direction with no second, mirrored
- * gradient of its own.
+ * string paints correctly in either direction from one shared declaration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,10 +24,7 @@ function stripLeadingDashes(propertyName: string): string {
  * Composes the custom property pairing a gradient direction's `"right"`
  * default with its `"left"` mirror under `&:dir(rtl)`, as its own `css()`
  * mixin ready to compose in a host's `mix` array alongside whatever `css()`
- * call carries that host's own remaining, genuinely local declarations. A
- * gradient string built as `linear-gradient(to var(propertyName, right), ...)`
- * reads the same property for its own direction, so the painted gradient
- * always agrees with the flip this mixin declares.
+ * call carries that host's own remaining, genuinely local declarations.
  *
  * @param propertyName The custom property the gradient direction reads from.
  * @returns A `css()` mixin ready for a host element's `mix` prop.

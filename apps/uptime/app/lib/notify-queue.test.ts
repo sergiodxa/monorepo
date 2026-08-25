@@ -59,10 +59,9 @@ describe("enqueueNotifications", () => {
 	});
 
 	/**
-	 * A domain sweep's findings are durable in `dns_monitor_records` and the consumer reads
-	 * them from there, so the message stays two statuses and an id. A copy on the queue
-	 * would be replayed as fact by a redelivery that arrives long after it stopped being
-	 * true.
+	 * A domain sweep's findings live in `dns_monitor_records`, so the message carries just
+	 * the two statuses and an id — a redelivered copy could otherwise be replayed as fact
+	 * long after it stopped being true.
 	 */
 	test("puts nothing but the transition on the wire for a domain monitor", async () => {
 		let message: NotifyMessage = {

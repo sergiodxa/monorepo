@@ -1,3 +1,9 @@
+/**
+ * Tests for the batched logger's accumulation and flush behavior.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Logger } from "./batched-logger";

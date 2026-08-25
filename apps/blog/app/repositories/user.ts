@@ -33,8 +33,8 @@ export namespace User {
 	/**
 	 * Input accepted by `User.create`.
 	 *
-	 * Optional persistence fields allow imports/backfills to preserve upstream identifiers
-	 * and timestamps instead of generating defaults.
+	 * Optional persistence fields let imports and backfills carry upstream identifiers
+	 * and timestamps through unchanged.
 	 *
 	 * @example
 	 * let input: User.CreateInput = {
@@ -86,13 +86,11 @@ export namespace User {
 export class User {
 	/**
 	 * Table descriptor consumed by the `Database` client.
-	 *
-	 * Centralizing this reference keeps query calls consistent across methods.
 	 */
 	static table = schema.users;
 
 	/**
-	 * Fetches all user rows without additional filtering.
+	 * Fetches every user row.
 	 *
 	 * Intended for administrative or internal listing flows.
 	 *
@@ -108,8 +106,6 @@ export class User {
 	/**
 	 * Finds a user by primary key.
 	 *
-	 * Returns `null` when no row exists for the provided id.
-	 *
 	 * @param db Database client used to run operations.
 	 * @param id User id to look up.
 	 * @returns The matching user or null.
@@ -122,8 +118,6 @@ export class User {
 
 	/**
 	 * Finds a user by unique email address.
-	 *
-	 * Returns `null` when the email is not present.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param email Email address to look up.
@@ -150,8 +144,6 @@ export class User {
 
 	/**
 	 * Finds a user by username.
-	 *
-	 * Returns `null` when the username does not exist.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param username Username to look up.
@@ -234,7 +226,7 @@ export class User {
 	/**
 	 * Deletes a user by id.
 	 *
-	 * Returns `true` after `db.delete` resolves; existence is not checked first.
+	 * Returns `true` once `db.delete` resolves, so deleting an absent id is a no-op.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param id User id to delete.

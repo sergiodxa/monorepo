@@ -1,10 +1,8 @@
 /**
- * A compound card presenting one attached file or image — its media
- * preview, name, supporting details, and available actions — plus a
- * horizontally scrolling row for showing several such cards side by side.
- * Every part styles itself off the card's own `state`; the whole-card
- * click-through some consumers want stays a separate, opt-in wrapper rather
- * than something baked into the card's own markup.
+ * A compound card presenting one attached file or image — media preview, name,
+ * supporting details, actions — plus a horizontally scrolling row for several
+ * cards side by side. Every part styles itself off the card's own `state`, and
+ * whole-card click-through stays an opt-in wrapper a consumer mixes in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,46 +40,42 @@ import { scrollFade } from "../animations/scroll";
 
 import { Button } from "./button";
 
-/** State {@link Attachment} falls back to when `state` is omitted. */
 const DEFAULT_STATE: Attachment.State = "idle";
 
 /**
  * Named container {@link Attachment} declares on its own host, so
- * {@link Attachment.Media}, {@link Attachment.Content}, and the card's own
- * inner layout wrapper can adapt to the card's own width instead of the
- * page's.
+ * {@link Attachment.Media}, {@link Attachment.Content}, and the inner layout
+ * wrapper resolve their width queries against the card itself.
  */
 const CONTAINER_NAME = "ui-attachment";
 
 /**
- * `@container` query every width-adapting part below the root shares: past
- * this width the card lays out as a compact row, at or under it the card
- * reflows into a taller tile — the shape {@link Attachment.Group} needs for
- * its narrow, fixed-width cards.
+ * `@container` query every width-adapting part below the root shares: at or
+ * under this width the card reflows into a taller tile, the shape
+ * {@link Attachment.Group}'s narrow, fixed-width cards need.
  */
 const NARROW_CONTAINER_QUERY = `@container ${CONTAINER_NAME} (max-width: 12rem)`;
 
 /**
- * Selector fragment gating {@link Attachment.Title}'s shimmer: matches the
- * title's own `data-state` attribute while it reads `"uploading"` or
- * `"processing"`, and never matches at all when a consumer leaves `state`
- * unset.
+ * Selector fragment gating {@link Attachment.Title}'s shimmer: it matches the
+ * title's own `data-state` attribute while that reads `"uploading"` or
+ * `"processing"`, so a title given no state stays plain.
  */
 const TITLE_SHIMMER_WHEN = ':is([data-state="uploading"], [data-state="processing"])';
 
-/** Visual weight {@link Attachment.Action} falls back to when `variant` is omitted. */
 const DEFAULT_ACTION_VARIANT: Button.Variant = "ghost";
 
-/** Size variant {@link Attachment.Action} falls back to when `size` is omitted. */
 const DEFAULT_ACTION_SIZE: Button.Size = "sm";
 
-/** Semantic color role {@link Attachment.Action} falls back to when `color` is omitted. */
 const DEFAULT_ACTION_COLOR: Button.Color = "neutral";
 
-/** Native tab-stop order applied to {@link Attachment.Group} through {@link attrs} unless a consumer supplies its own `tabIndex`, so the scrollable row is reachable and scrollable with the keyboard even when none of its cards are themselves focusable. */
+/**
+ * Tab-stop order {@link attrs} applies to {@link Attachment.Group} when a
+ * consumer supplies no `tabIndex`, so the row itself stays keyboard-reachable
+ * and scrollable whatever its cards contain.
+ */
 const DEFAULT_GROUP_TAB_INDEX = 0;
 
-/** CSS length each edge of {@link Attachment.Group}'s scroll fade extends inward, passed straight through to {@link scrollFade}. */
 const GROUP_SCROLL_FADE_SIZE = "2rem";
 
 /**
@@ -89,13 +83,9 @@ const GROUP_SCROLL_FADE_SIZE = "2rem";
  */
 export namespace Attachment {
 	/**
-	 * Lifecycle state a card's file or image is in. `"idle"` and `"done"`
-	 * both render as a settled, static card — `"idle"` for one that never
-	 * needed an upload step (already on the server when first rendered),
-	 * `"done"` for one whose transfer finished — while `"uploading"` and
-	 * `"processing"` mark it busy and `"error"` marks it failed. Transitions
-	 * between these are entirely a consumer concern: this component only
-	 * ever reads whatever value it's given.
+	 * Lifecycle state of a card's file or image. `"idle"` and `"done"` both
+	 * render as a settled card — `"idle"` for a file already on the server,
+	 * `"done"` for one whose transfer finished. A consumer owns every transition.
 	 */
 	export type State = "idle" | "uploading" | "processing" | "error" | "done";
 
@@ -103,7 +93,7 @@ export namespace Attachment {
 	 * Props accepted by {@link Attachment}.
 	 */
 	export interface Props extends TagProps<"div"> {
-		/** Lifecycle state of the file or image the card represents. Defaults to {@link DEFAULT_STATE}. */
+		/** Lifecycle state of the file or image the card represents. Defaults to `"idle"`. */
 		state?: State;
 		/** The card's compound parts: {@link Attachment.Media}, {@link Attachment.Content}, and {@link Attachment.Actions}. */
 		children: RemixNode;
@@ -130,12 +120,9 @@ export namespace Attachment {
 	 */
 	export interface TitleProps extends TagProps<"p"> {
 		/**
-		 * Mirrors the ancestor {@link Attachment}'s own `state` so this title
-		 * knows when to shimmer — this component renders once per call and
-		 * has no way to read a sibling's props on its own, so a consumer
-		 * passing the same value to both is what keeps them in sync. Left
-		 * unset, the title never shimmers, which is the correct rendering
-		 * for a settled card that never needed to pass a state here at all.
+		 * The ancestor {@link Attachment}'s own `state`, repeated here because a
+		 * component reads only its own props; passing the same value to both is
+		 * what keeps them in sync. Left unset, the title renders plain.
 		 */
 		state?: Attachment.State;
 		/** The file or image name. */
@@ -160,8 +147,8 @@ export namespace Attachment {
 
 	/**
 	 * Props accepted by {@link Attachment.Action}: every {@link Button.Props}
-	 * field, unchanged, so an action picks up the same semantic color role,
-	 * visual weight, and size contract as every other button in the catalog.
+	 * field, unchanged, so an action keeps the same color, weight, and size
+	 * contract as every other button in the catalog.
 	 */
 	export interface ActionProps extends Button.Props {}
 
@@ -170,11 +157,9 @@ export namespace Attachment {
 	 */
 	export interface TriggerProps extends TagProps<"div"> {
 		/**
-		 * Destination the whole card follows once `attachmentTrigger()` is
-		 * mixed in, opened in place unless the activation itself asks for a
-		 * new tab. Read as a plain attribute rather than through a native
-		 * `<a>`, since the platform disallows nesting another interactive
-		 * control — {@link Attachment.Action} — inside an anchor.
+		 * Destination the whole card follows once `attachmentTrigger()` is mixed
+		 * in, opened in place unless the activation asks for a new tab. It rides on
+		 * a `<div>` so a nested {@link Attachment.Action} stays valid markup.
 		 */
 		href?: string;
 		/**
@@ -200,15 +185,9 @@ export namespace Attachment {
 }
 
 /**
- * Renders the card's outer host: a rounded, bordered `<div>` tinted with the
- * neutral tint background by default and, once `state` reads `"error"`,
- * recolored to the danger tint instead — the one visual distinction this
- * root itself carries, since every other state renders identically until a
- * nested {@link Attachment.Title} shimmers. `aria-busy` mirrors `"uploading"`
- * and `"processing"` automatically, and the root declares the `ui-attachment`
- * named container so {@link Attachment.Media} and {@link Attachment.Content}
- * can reflow the card once it renders inside a narrow context, such as
- * {@link Attachment.Group}'s row.
+ * The card's outer host, recolored to the danger tint at `state="error"` and
+ * declaring the `ui-attachment` named container so nested parts reflow at the
+ * card's width. A busy state sets `aria-busy` to the token ARIA recognizes.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the card's markup.
@@ -243,13 +222,6 @@ export function Attachment(handle: Handle<Attachment.Props>) {
 				{...rest}
 				data-slot="attachment"
 				data-state={resolvedState}
-				/*
-				 * The token, not the boolean: `aria-busy` is an ARIA attribute
-				 * whose value is text, and a `true` here would be serialized as
-				 * the bare attribute name — an empty value it does not recognize,
-				 * which resolves to its default of not-busy and would leave an
-				 * uploading attachment announced as settled.
-				 */
 				aria-busy={isBusy ? "true" : undefined}
 				mix={[
 					relative(),
@@ -284,13 +256,9 @@ export function Attachment(handle: Handle<Attachment.Props>) {
 }
 
 /**
- * Renders the card's media well: a fixed-size, rounded, centered `<div>`
- * clipping whatever preview a consumer nests inside — an `<img>` filling it
- * edge to edge through `object-fit: cover`, or a decorative icon sized and
- * colored through ordinary inheritance. Once the ancestor {@link Attachment}
- * renders inside a narrow container (such as {@link Attachment.Group}'s
- * row), the well grows to fill the card's own inline size at a wider aspect
- * ratio, reading as a thumbnail tile instead of a small icon well.
+ * The card's media well: a fixed-size, rounded box clipping the preview a
+ * consumer nests inside. Inside a narrow container it grows to the card's own
+ * inline size at a wider aspect ratio, reading as a thumbnail tile.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the media well's markup.
@@ -331,14 +299,9 @@ Attachment.Media = function AttachmentMedia(handle: Handle<Attachment.MediaProps
 };
 
 /**
- * Renders the card's text column: a `<div>` stacking {@link Attachment.Title}
- * and an optional {@link Attachment.Description}, growing to fill whatever
- * inline space {@link Attachment.Media} and {@link Attachment.Actions} leave
- * it, with its minimum inline size collapsed to `0` so its children's own
- * text-overflow truncation actually takes effect inside a flex row. Once the
- * ancestor {@link Attachment} renders inside a narrow container, the column
- * centers its text instead, matching {@link Attachment.Media}'s own switch
- * to a taller tile.
+ * The card's text column, growing into whatever inline space
+ * {@link Attachment.Media} and {@link Attachment.Actions} leave it. Its minimum
+ * inline size collapses to `0`, which is what lets its children truncate.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the text column's markup.
@@ -373,13 +336,9 @@ Attachment.Content = function AttachmentContent(handle: Handle<Attachment.Conten
 };
 
 /**
- * Renders the file or image name in a native `<p>`, truncated to a single
- * line with an ellipsis rather than wrapping. Passing the same `state` a
- * consumer gave the ancestor {@link Attachment} makes the title shimmer
- * through the `shimmer()` animation factory while that state reads
- * `"uploading"` or `"processing"`, settling back to plain text the moment it
- * no longer does — leaving `state` unset renders a plain, never-shimmering
- * title, correct for a card that's already settled.
+ * The file or image name in a native `<p>`, truncated to a single line with an
+ * ellipsis. Given the same `state` as the ancestor {@link Attachment}, it
+ * shimmers while that reads `"uploading"` or `"processing"`, then settles.
  *
  * @param handle Runtime handle carrying the host `<p>`'s props.
  * @returns The render function producing the title's markup.
@@ -412,11 +371,9 @@ Attachment.Title = function AttachmentTitle(handle: Handle<Attachment.TitleProps
 };
 
 /**
- * Renders the card's supporting detail line in a native `<p>`, muted to the
- * neutral foreground's quieter tone and truncated to a single line with an
- * ellipsis — a file size, a page count, or, once the ancestor
- * {@link Attachment}'s `state` reads `"error"`, an explanation of what went
- * wrong.
+ * The card's supporting detail line: a muted, single-line `<p>` carrying a file
+ * size, a page count, or the explanation of what went wrong once the ancestor
+ * {@link Attachment}'s `state` reads `"error"`.
  *
  * @param handle Runtime handle carrying the host `<p>`'s props.
  * @returns The render function producing the description's markup.
@@ -440,10 +397,9 @@ Attachment.Description = function AttachmentDescription(
 };
 
 /**
- * Renders the card's action row: a `<div>` laying a run of
- * {@link Attachment.Action} controls out in a line, shrink-proof so
- * {@link Attachment.Content}'s own truncation absorbs a narrow card's width
- * before the actions ever get squeezed.
+ * The card's action row, shrink-proof so a narrow card's width is absorbed by
+ * {@link Attachment.Content}'s own truncation while the actions keep their
+ * size.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action row's markup.
@@ -466,12 +422,9 @@ Attachment.Actions = function AttachmentActions(handle: Handle<Attachment.Action
 };
 
 /**
- * Renders a single card action as a {@link Button}, defaulting to a compact,
- * `"ghost"`, neutral-colored control so a row of actions reads as secondary
- * to {@link Attachment.Title} and {@link Attachment.Media} — every
- * {@link Button} prop stays available to override that, including `type`,
- * left for a consumer to set explicitly (a plain client action, or a real
- * form submission that deletes or retries server-side).
+ * A single card action as a {@link Button}, defaulting to a compact, `"ghost"`,
+ * neutral control so a row of actions reads as secondary to the card's title.
+ * Every {@link Button} prop stays available, `type` included.
  *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the action's markup.
@@ -502,22 +455,9 @@ Attachment.Action = function AttachmentAction(handle: Handle<Attachment.ActionPr
 };
 
 /**
- * Renders a plain wrapper `<div>` around a card — typically an
- * {@link Attachment} — carrying no interactivity of its own: `href` and
- * `commandfor`/`command` sit on the host as inert attributes until a
- * consumer mixes in `attachmentTrigger()`, which reads them to turn a click
- * or `Enter`/`Space` anywhere on the wrapper (outside an
- * {@link Attachment.Action} or other native control) into following the
- * link or opening the named dialog. Rendering `href` or `commandfor` also
- * gives the wrapper `role="link"`/`role="button"` and a `tabIndex` of `0`
- * unless a consumer overrides either, so the whole-card activation stays
- * reachable and announced correctly once the mixin is attached; without it,
- * the wrapper is simply focusable and inert, and the card underneath stays
- * fully readable regardless.
- *
- * In dev mode, a trigger rendered with neither `href` nor `commandfor` logs
- * a `console.warn`, since nothing would happen once the mixin handles an
- * activation.
+ * A wrapper `<div>` whose `href` or `commandfor` stays an inert attribute until
+ * a consumer mixes in `attachmentTrigger()`. Either one also derives a `role`
+ * and `tabIndex`, so whole-card activation is announced and keyboard-reachable.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the wrapper's markup.
@@ -576,12 +516,9 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 };
 
 /**
- * Renders a horizontally scrolling, scroll-snapping row of cards: a `<div>`
- * whose direct children each snap to its inline-start edge as the row
- * scrolls, faded at both inline edges through the `scrollFade()` animation
- * factory to hint at cards beyond the current view. Reachable and scrollable
- * with the keyboard by default, since the row itself is what actually
- * scrolls and none of the cards inside it need to be focusable for that.
+ * A horizontally scroll-snapping row of cards, faded at both inline edges to
+ * hint at cards beyond the current view. The row itself carries the tab stop,
+ * since the row is what scrolls.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.

@@ -25,10 +25,8 @@ const DEFAULT_IS_DROP_TARGET = false;
 
 /**
  * Default `aria-hidden` value applied through {@link attrs} unless a
- * consumer overrides it. The bar restates a drop position that a
- * pointer-driven reorder interaction already announces through a live
- * region, so assistive technology gains nothing from encountering the bar
- * itself.
+ * consumer overrides it. Assistive technology already hears the drop
+ * position through the reorder interaction's own live region.
  */
 const DEFAULT_ARIA_HIDDEN = "true";
 
@@ -51,13 +49,8 @@ export namespace DropIndicator {
 
 /**
  * Renders a full-width, hairline-thick, fully rounded bar shaped for the gap
- * between two items in a reorderable list. Its color rides the host's
- * `data-drop-target` attribute, set from {@link DropIndicator.Props.isDropTarget}:
- * a muted ring tone at rest, switching to the primary solid color once it
- * marks the pointer's current drop target. This component renders the bar
- * only — placing it at the right gap between items and toggling
- * `isDropTarget` as the pointer moves is the surrounding list's own reorder
- * interaction's responsibility, not this module's.
+ * between two items in a reorderable list. Its color follows the host's
+ * `data-drop-target` attribute: muted at rest, solid as the active target.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the bar's markup.

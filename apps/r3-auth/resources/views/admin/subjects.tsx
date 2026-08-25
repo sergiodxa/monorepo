@@ -44,7 +44,11 @@ namespace SubjectsView {
 	}
 }
 
-/** Renders the paginated subject list. */
+/**
+ * Renders the paginated subject list. The name cell stacks `Link` and `Text` in
+ * a flex column so the username lands on its own line, since `Text` renders inline
+ * by default.
+ */
 export default function SubjectsView(handle: Handle<SubjectsView.Props>) {
 	return () => {
 		let { chrome, labels, subjects, pagination } = handle.props;
@@ -81,8 +85,6 @@ export default function SubjectsView(handle: Handle<SubjectsView.Props>) {
 												</Avatar>
 											</Table.Cell>
 											<Table.Cell>
-												{/* `Text` is inline, so the handle needs its own block to sit under
-												the name rather than running on from it. */}
 												<div mix={[flex(), flexCol()]}>
 													<Link href={subject.href} mix={[weight("medium")]}>
 														{subject.displayName}

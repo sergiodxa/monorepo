@@ -15,12 +15,9 @@ import type { DurationInput } from "./types";
 import { parse } from "./parse";
 
 /**
- * Convert a duration to milliseconds. A bare number is already milliseconds and
- * passes through untouched, which keeps existing numeric call sites working.
- *
- * Malformed text is a compile error, so the failure path is only reachable
- * through a cast or an unchecked runtime value; it yields `NaN` rather than
- * throwing, and `parse()` is the entry point that reports why.
+ * Convert a duration to milliseconds. A bare number is already milliseconds
+ * and passes through untouched, keeping existing numeric call sites intact.
+ * Bypassing the type yields `NaN`; `parse()` is the entry point that reports why.
  *
  * @param input - A duration string, or a number of milliseconds.
  * @returns The duration in milliseconds, or `NaN` if the type was bypassed.

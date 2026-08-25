@@ -1,10 +1,9 @@
 /**
- * A bounded container that groups a header, body content, and footer
- * actions into one visually distinct panel — a border, a subtle shadow, and
- * a tinted surface set by a semantic color role. The role colors the panel's
- * border, background, and text together, and {@link Card.Title} and
- * {@link Card.Description} pick up that same text color through ordinary
- * CSS inheritance rather than reading the role themselves.
+ * A bounded container grouping a header, body content, and footer actions
+ * into one bordered, softly shadowed panel tinted by a semantic color role.
+ * The role colors border, background, and text together, so {@link Card.Title}
+ * and {@link Card.Description} inherit their text color from the root through
+ * ordinary CSS inheritance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,48 +37,38 @@ export namespace Card {
 	export type Color = SemanticColor;
 
 	/**
-	 * Props accepted by {@link Card}.
+	 * Every native `<section>` attribute, unchanged, plus the `color` role that
+	 * tints the panel.
 	 */
 	export interface Props extends TagProps<"section"> {
 		/** Semantic color role. Defaults to {@link DEFAULT_COLOR}. */
 		color?: Color;
 	}
 
-	/**
-	 * Props accepted by {@link Card.Header}.
-	 */
+	/** Every native `<header>` attribute, unchanged, plus the `mix` passthrough. */
 	export interface HeaderProps extends TagProps<"header"> {}
 
 	/**
-	 * Props accepted by {@link Card.Title}. Every native heading-element
-	 * attribute still applies, since the rendered tag depends on the nearest
-	 * ambient heading level, falling back to `<h1>` where nothing supplies
-	 * one.
+	 * Every native heading-element attribute, unchanged: the rendered tag
+	 * follows the nearest ambient heading level, falling back to `<h1>` where
+	 * nothing supplies one.
 	 */
 	export interface TitleProps extends TagProps<"h1"> {}
 
-	/**
-	 * Props accepted by {@link Card.Description}.
-	 */
+	/** Every native `<p>` attribute, unchanged, plus the `mix` passthrough. */
 	export interface DescriptionProps extends TagProps<"p"> {}
 
-	/**
-	 * Props accepted by {@link Card.Content}.
-	 */
+	/** Every native `<div>` attribute, unchanged, plus the `mix` passthrough. */
 	export interface ContentProps extends TagProps<"div"> {}
 
-	/**
-	 * Props accepted by {@link Card.Footer}.
-	 */
+	/** Every native `<footer>` attribute, unchanged, plus the `mix` passthrough. */
 	export interface FooterProps extends TagProps<"footer"> {}
 }
 
 /**
- * Renders the card panel: a rounded, bordered, softly shadowed `<section>`
- * tinted through the `data-color` attribute contract. Compose
- * {@link Card.Header}, {@link Card.Content}, and {@link Card.Footer} inside
- * it, with {@link Card.Title} and {@link Card.Description} nested in the
- * header.
+ * The card panel: a rounded, bordered, softly shadowed `<section>` tinted
+ * through the `data-color` attribute contract. Compose {@link Card.Header},
+ * {@link Card.Content}, and {@link Card.Footer} inside it.
  *
  * @param handle Runtime handle carrying the host `<section>`'s props.
  * @returns The render function producing the panel's markup.
@@ -137,11 +126,9 @@ Card.Header = function CardHeader(handle: Handle<Card.HeaderProps>) {
 };
 
 /**
- * Renders the card's heading inside the native heading element matching the
- * nearest ambient heading level — `<h1>` where nothing supplies one — sized
- * as the panel's most prominent line of text with its line height collapsed
- * to one and its letter-spacing tightened slightly. Its text color comes
- * from the card root's `color` value through ordinary CSS inheritance.
+ * The card's heading, in the native heading element matching the nearest
+ * ambient heading level — `<h1>` where nothing supplies one. Its text color
+ * inherits from the card root's `color` value.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the heading's markup.
@@ -184,9 +171,8 @@ Card.Description = function CardDescription(handle: Handle<Card.DescriptionProps
 };
 
 /**
- * Renders the card's main body slot: a `<div>` padded on every side except
- * its block-start edge, which sits flush against {@link Card.Header} above
- * it.
+ * The card's main body slot: a `<div>` padded on its inline and block-end
+ * edges, leaving its block-start edge flush against {@link Card.Header}.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the body slot's markup.
@@ -202,9 +188,9 @@ Card.Content = function CardContent(handle: Handle<Card.ContentProps>) {
 };
 
 /**
- * Renders the card's footer slot: a `<footer>` laying its children out in a
- * vertically centered row, padded on every side except its block-start edge,
- * which sits flush against the content above it.
+ * The card's footer slot: a `<footer>` laying its children out in a
+ * vertically centered row, padded on its inline and block-end edges so it
+ * sits flush against the content above.
  *
  * @param handle Runtime handle carrying the host `<footer>`'s props.
  * @returns The render function producing the footer slot's markup.

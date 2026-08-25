@@ -19,13 +19,9 @@ import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
 /**
- * Shortest interval a domain monitor may be configured with (ADR-026 §2).
- *
- * Deliberately far above the 60 seconds the other monitor types floor at, because a domain
- * monitor is not one query: it sweeps six record types at every tracked name, so a minute's
- * interval on a single monitor is hundreds of thousands of lookups a month against a
- * resolver we do not pay for and must not abuse. It also replaces a floor that disagreed
- * with itself — the form enforced 300 while the API allowed 60 — so both now read this.
+ * Shortest interval a domain monitor may be configured with (ADR-026 §2), set well above
+ * other monitor types' 60-second floor: a DNS monitor sweeps six record types per tracked
+ * name, and this floor also reconciles the form's old 300s with the API's 60s.
  */
 export const MIN_DNS_INTERVAL_SECONDS = 900;
 
@@ -50,19 +46,16 @@ const dnsMonitorFields = {
 };
 
 /**
- * The pasted zone file, which is optional because a monitor without one still covers its
- * apex. Its size is not checked here: the cap is a byte count, this sees characters, and
- * the parser is the one place that can refuse a paste for being too large and say so with
- * the real figure.
+ * The pasted zone file, optional because a monitor without one still covers its apex. Size
+ * isn't checked here — the cap is a byte count while this sees characters — so the parser
+ * is the one place that can reject an oversized paste with the real figure.
  */
 const zoneFileField = f.field(s.optional(s.string()));
 
 /**
- * Validates the `create-dns-monitor` action form body.
- *
- * `is_enabled` defaults to `true`: the visitor reaches the review screen straight after
- * this, and a user who has just chosen which records to watch has plainly enabled the
- * monitor. The old default of `false` made a monitor that was created and then never ran.
+ * Validates the `create-dns-monitor` action form body. `is_enabled` defaults to `true`
+ * because the visitor reaches the review screen right after this, having just chosen which
+ * records to watch — a monitor at that point is plainly meant to run.
  */
 export const CreateDnsMonitorSchema = f.object({
 	...dnsMonitorFields,
@@ -90,10 +83,8 @@ export const DnsMonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
 /**
  * Validates the `review-dns-monitor` action form body: every checkbox the visitor left
- * checked, read with `f.fields()` because an HTML checkbox group submits one entry per box.
- *
- * `record_ids` is defaulted rather than required, since unchecking every record is a real
- * decision — "watch none of this" — and an empty body is exactly how a browser expresses it.
+ * checked, read via `f.fields()` since an HTML checkbox group submits one entry per box.
+ * `record_ids` defaults to empty since unchecking every record is a real, valid choice.
  */
 export const ReviewDnsMonitorSchema = f.object({
 	monitor_id: f.field(s.string()),

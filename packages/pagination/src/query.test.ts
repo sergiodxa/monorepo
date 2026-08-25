@@ -1,10 +1,10 @@
 /**
  * Tests for `Pagination.byOffset()` and `Pagination.byKeyset()`.
  *
- * Both run against an in-memory SQLite database through the real adapter, so the
- * SQL they generate is exercised rather than a stand-in for a query builder. The
- * fixture deliberately gives several rows the same `created_at`, because that is the
- * only way a missing tiebreaker shows up as skipped or repeated rows.
+ * Both run against an in-memory SQLite database through the real adapter, exercising
+ * the SQL it actually generates. The fixture deliberately gives several rows the
+ * same `created_at`, because that is the only way a missing tiebreaker shows up as
+ * skipped or repeated rows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -91,8 +91,8 @@ function teamQuery() {
 /**
  * Reads one keyset page of team 1's events, seeking forward from `cursor`.
  *
- * A named helper rather than an inline call inside the walk loop, because a page
- * whose type is inferred from a cursor the same loop reassigns is circular.
+ * A named helper, since separating it from the walk loop keeps the inferred
+ * return type independent of the `cursor` variable the loop reassigns.
  */
 async function pageAfter(cursor: string | null, limit: number) {
 	return unwrap(
@@ -123,7 +123,6 @@ describe("Pagination.byOffset", () => {
 	test("counts only the rows the composed predicate matches", async () => {
 		let page = unwrap(await Pagination.byOffset(teamQuery(), { page: 1, perPage: 5 }));
 
-		// 15 rows exist; the `team_id` predicate has to reach the count as well as the fetch.
 		expect(page.pagination.total).toBe(12);
 	});
 

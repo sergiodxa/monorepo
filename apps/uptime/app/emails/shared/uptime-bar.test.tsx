@@ -1,7 +1,7 @@
 /**
  * Tests the email-safe bar as markup: one cell per segment, each filled with the
- * colour its status maps to, and every rule an inline style rather than a class, so a
- * client that drops the stylesheet still shows the bar it was sent.
+ * colour its status maps to, and every rule inline, so a client that drops the
+ * stylesheet still shows the bar it was sent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,7 +26,7 @@ let DOWN = "#ba2b2e";
 /** Fill of a period with no check; `--ui-color-neutral-200`. */
 let NO_DATA = "#dde2e6";
 
-/** Labels a caller supplies; the bar owns no copy, so these are literals rather than keys. */
+/** Labels a caller supplies; the bar renders the copy it is handed, so these are literals. */
 let labels: Bar.Labels = {
 	start: "24 hours ago",
 	end: "Now",
@@ -39,7 +39,6 @@ function countOf(html: string, color: string): number {
 	return html.split(color).length - 1;
 }
 
-/** Renders the bar for `segments` with the default labels unless they are overridden. */
 async function renderBar(segments: Bar.Status[], overrides: Partial<Bar.Labels> = {}) {
 	return await render(<UptimeBar segments={segments} labels={{ ...labels, ...overrides }} />);
 }

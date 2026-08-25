@@ -1,8 +1,8 @@
 /**
  * Starting an external sign-in. A `POST` from the sign-in page's provider button parks
  * the OAuth transaction in this server's session and redirects to the provider; an
- * unknown provider goes back to the authorization endpoint rather than erroring, since
- * the only way to reach it is a stale or hand-written form.
+ * unknown provider is sent back to the authorization endpoint, since the only way to
+ * reach it is a stale or hand-written form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,14 +19,16 @@ import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
 import routes from "~/routes/web";
 
-/** POST /auth/:provider — begins the external sign-in flow for the named provider. */
+/**
+ * POST /auth/:provider — begins the external sign-in flow for the named provider.
+ * Attempts spend the login rate-limit budget, the same allowance password sign-ins
+ * use, because every attempt here ends in a session being created.
+ */
 export default createAction(
 	routes.auth.provider,
 	inject([RateLimiters] as const, async (limiters) => {
 		let ctx = getContext();
 
-		// The login budget, not the authorize one: every attempt here ends in a session
-		// being created, so it is spent from the same allowance password attempts use.
 		let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
 		if (limited) return limited;
 

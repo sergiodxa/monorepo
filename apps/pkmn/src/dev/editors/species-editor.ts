@@ -1,24 +1,9 @@
 /**
- * State-holding editor for one species-in-progress, built on the canonical editor
- * class pattern. A plain, DOM-free class that owns ALL editable state for a single
- * {@link Species}: its dex number, size, base stats, types, growth rate, gender
- * ratio, catch rate and base experience, EV yield, level-up learnset, evolutions,
- * and sprite association. The view constructs it once with a loaded species and
- * drives every control through it; each mutation returns the current
- * {@link Species} snapshot so the view re-renders from one value.
- *
- * The class stays pure — it never validates against a live roster or writes to
- * disk. It only enforces the structural bounds the content format cares about
- * (one or two types, valid learnset ordering, coherent evolution payloads per
- * method) so the in-progress state can never drift past what the species schema
- * accepts. The view supplies the real move/species ids, and the export path
- * re-validates the final record before writing.
- *
- * Two static helpers support the create-new flow without touching instance state:
- * {@link SpeciesEditor.createNew} builds a complete, schema-valid default
- * {@link Species} for a fresh entry, and {@link SpeciesEditor.isDuplicateId} flags
- * a chosen id that would collide with an existing roster entry so a new species
- * never silently overwrites one.
+ * State-holding editor for one species-in-progress. Owns every editable field
+ * of a {@link Species} and returns the current snapshot from each mutation, so
+ * the view re-renders from a single value. Enforces the structural bounds the
+ * species schema accepts; roster validation and disk writes stay in the export
+ * path.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,45 +22,35 @@ import { Type } from "~/game/data/type";
 /** The elemental types a species carries: one or two type ids. */
 export type SpeciesTypes = [string] | [string, string];
 
-/** Default base value used for every stat of a newly created species. */
 const DEFAULT_STAT_VALUE = 50;
 
-/** Default type assigned to a newly created species (a single, common type). */
 const DEFAULT_TYPE: Type = Type.NORMAL;
 
-/** Default growth rate assigned to a newly created species. */
 const DEFAULT_GROWTH_RATE: GrowthRate = GrowthRate.MediumFast;
 
-/** Default egg group assigned to a newly created species. */
 const DEFAULT_EGG_GROUP: EggGroup = EggGroup.Monster;
 
-/** Default physical size (weight in kg, height in m) for a newly created species. */
+/** Default size for a newly created species: weight in kg, height in m. */
 const DEFAULT_SIZE = { weight: 1, height: 1 };
 
-/** Default base experience awarded when a newly created species faints. */
 const DEFAULT_BASE_EXPERIENCE = 64;
 
-/** Default catch rate for a newly created species. */
 const DEFAULT_CATCH_RATE = 45;
 
-/** Default 50/50 male/female split for a newly created species. */
 const DEFAULT_GENDER: { [K in Gender.Male | Gender.Female]?: number } = {
 	[Gender.Male]: 50,
 	[Gender.Female]: 50,
 };
 
 /**
- * Editor for a single species record. Wraps every editable field and exposes
- * pure setters/mutators that each return the current {@link Species} so the view
- * renders from a single snapshot. Seeded from an existing species; the id it was
- * loaded under is tracked separately (a species record carries no id of its own)
- * so the export path knows which `species.json` entry to replace.
+ * Editor for a single species record. Every setter returns the current
+ * {@link Species} so the view renders from one snapshot. A species record
+ * carries no id, so the loaded id is tracked separately for the export path.
  */
 export class SpeciesEditor {
-	/** The id this species was loaded under (the `species.json` key to replace). */
 	#id: string;
 
-	/** Deep-editable copy of the species record. */
+	/** Deep copy owned by the editor; mutations stay inside it. */
 	#species: Species;
 
 	/**
@@ -88,14 +63,9 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Builds a complete, schema-valid default {@link Species} for a brand-new entry.
-	 *
-	 * Every field is initialized to a sensible, valid default: the six base stats to
-	 * {@link DEFAULT_STAT_VALUE}, a single {@link DEFAULT_TYPE}, a
-	 * {@link DEFAULT_GROWTH_RATE}, a 50/50 gender split, a zero EV yield (an empty
-	 * partial map), an empty learnset and empty evolutions, and no sprite. The
-	 * returned record has no id of its own — the caller pairs it with a chosen id
-	 * (see {@link isDuplicateId}) when it seeds the editor via the constructor.
+	 * Builds a complete, schema-valid default {@link Species} for a brand-new
+	 * entry. The record carries no id of its own; the caller pairs it with a
+	 * chosen id (see {@link isDuplicateId}) when it seeds the editor.
 	 *
 	 * @param dex The dex number to assign (coerced to a non-negative whole number).
 	 * @returns A fresh, valid default species ready to load into a new editor.
@@ -127,10 +97,9 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Reports whether a candidate id already exists in a roster of species ids, so a
-	 * new-species flow can flag a collision before overwriting an existing entry. The
-	 * comparison is on the trimmed id exactly as stored (ids are case-sensitive
-	 * uppercase keys).
+	 * Reports whether a candidate id already exists in a roster, so a new-species
+	 * flow can flag a collision before overwriting an entry. The comparison is on
+	 * the trimmed id exactly as stored (ids are case-sensitive uppercase keys).
 	 *
 	 * @param id The candidate species id.
 	 * @param existingIds The ids already present in the roster.
@@ -145,54 +114,49 @@ export class SpeciesEditor {
 		return false;
 	}
 
-	/** The id this species is edited under. */
+	/** The `species.json` key this record is written back to. */
 	get id(): string {
 		return this.#id;
 	}
 
-	/** Current number of level-up moves in the learnset. */
+	/** Count of learnset entries that carry a level. */
 	get levelUpMoveCount(): number {
 		return this.#species.learnset.filter((entry) => "level" in entry).length;
 	}
 
-	/** Current number of evolutions. */
 	get evolutionCount(): number {
 		return this.#species.evolutions.length;
 	}
 
-	/** Sets the dex number (coerced to a whole number) and returns the snapshot. */
+	/** Sets the dex number, coerced to a non-negative whole number. */
 	setNumber(value: number): Species {
 		this.#species.number = this.#whole(value, this.#species.number);
 		return this.toSpecies();
 	}
 
-	/** Sets the base experience awarded on defeat and returns the snapshot. */
+	/** Sets the experience awarded on defeat, coerced to a whole number. */
 	setBaseExperience(value: number): Species {
 		this.#species.baseExperience = this.#whole(value, this.#species.baseExperience);
 		return this.toSpecies();
 	}
 
-	/** Sets the catch rate and returns the snapshot. */
 	setCatchRate(value: number): Species {
 		this.#species.catchRate = this.#whole(value, this.#species.catchRate);
 		return this.toSpecies();
 	}
 
-	/** Sets the growth rate and returns the snapshot. */
 	setGrowthRate(growthRate: GrowthRate): Species {
 		this.#species.growthRate = growthRate;
 		return this.toSpecies();
 	}
 
-	/** Sets one physical dimension (weight or height) and returns the snapshot. */
 	setSize(field: keyof Species["size"], value: number): Species {
 		this.#species.size = { ...this.#species.size, [field]: value };
 		return this.toSpecies();
 	}
 
 	/**
-	 * Sets one base stat (clamped to a whole number, floored at zero) and returns
-	 * the snapshot.
+	 * Sets one base stat, coerced to a whole number floored at zero.
 	 *
 	 * @param stat The stat to set.
 	 * @param value The desired value (truncated/floored to a valid whole number).
@@ -204,8 +168,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the species' primary type and returns the snapshot. A blank id is a
-	 * no-op (a species must always keep at least one type).
+	 * Sets the primary type. A blank id is a no-op: a species always keeps at
+	 * least one type.
 	 */
 	setPrimaryType(type: string): Species {
 		if (type.length === 0) return this.toSpecies();
@@ -215,8 +179,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the species' secondary type, or clears it with a blank id (making the
-	 * species single-typed), and returns the snapshot.
+	 * Sets the secondary type. A blank id clears it, leaving the species
+	 * single-typed.
 	 */
 	setSecondaryType(type: string): Species {
 		let primary = this.#species.types[0];
@@ -224,18 +188,15 @@ export class SpeciesEditor {
 		return this.toSpecies();
 	}
 
-	/**
-	 * Replaces the gender distribution with the genderless sentinel and returns the
-	 * snapshot.
-	 */
+	/** Replaces the male/female split with the genderless sentinel. */
 	setGenderless(): Species {
 		this.#species.gender = Gender.Genderless;
 		return this.toSpecies();
 	}
 
 	/**
-	 * Sets the male/female split as percentages and returns the snapshot. Converts
-	 * a genderless species to a gendered one. Percentages are clamped to `0..100`.
+	 * Sets the male/female split as percentages clamped to `0..100`, converting a
+	 * genderless species to a gendered one.
 	 *
 	 * @param male Male percentage (clamped to 0..100).
 	 * @param female Female percentage (clamped to 0..100).
@@ -249,8 +210,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the EV value for one stat, or removes it when the value is zero, and
-	 * returns the snapshot. Values are coerced to non-negative whole numbers.
+	 * Sets the EV value for one stat, coerced to a non-negative whole number. A
+	 * value of zero removes the entry.
 	 *
 	 * @param stat The stat to award EVs for.
 	 * @param value The EV amount (0 removes the entry).
@@ -265,10 +226,9 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Appends a level-up move to the learnset, keeps the level-up rows sorted
-	 * ascending by level (ties preserved in insertion order), and returns the
-	 * snapshot. Non-level-up entries (TM/HM, tutor, egg) keep their relative order
-	 * after the sorted level-up block.
+	 * Appends a level-up move and keeps the level-up rows sorted ascending by
+	 * level, ties in insertion order. Other entry kinds (TM/HM, tutor, egg) keep
+	 * their relative order after the sorted level-up block.
 	 *
 	 * @param level The level the move is learned at (floored at zero).
 	 * @param moveId The move id learned.
@@ -281,8 +241,7 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Removes the learnset entry at `index` (a no-op for an out-of-range index) and
-	 * returns the snapshot.
+	 * Removes the learnset entry at `index`; an out-of-range index is a no-op.
 	 *
 	 * @param index Zero-based position in the learnset array.
 	 */
@@ -294,8 +253,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the level of the level-up entry at `index`, re-sorts the learnset, and
-	 * returns the snapshot. A no-op for an out-of-range index or a non-level entry.
+	 * Sets the level of the level-up entry at `index` and re-sorts the learnset.
+	 * An out-of-range index or a non-level entry is a no-op.
 	 *
 	 * @param index Zero-based position in the learnset array.
 	 * @param level The new level (floored at zero).
@@ -310,8 +269,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the move id of the entry at `index` and returns the snapshot. A no-op for
-	 * an out-of-range index or an entry with no move id (a TM/HM entry).
+	 * Sets the move id of the entry at `index`. An out-of-range index or an entry
+	 * with no move id (a TM/HM entry) is a no-op.
 	 *
 	 * @param index Zero-based position in the learnset array.
 	 * @param moveId The move id to assign.
@@ -322,15 +281,15 @@ export class SpeciesEditor {
 		return this.toSpecies();
 	}
 
-	/** Re-sorts the learnset by ascending level and returns the snapshot. */
+	/** Re-sorts the learnset by ascending level. */
 	sortLearnset(): Species {
 		this.#sortLearnset();
 		return this.toSpecies();
 	}
 
 	/**
-	 * Appends a level-up evolution to `targetId` at `level` and returns the snapshot.
-	 * The view can change the method afterward with {@link setEvolutionMethod}.
+	 * Appends a level-up evolution to `targetId`. The method can be switched
+	 * afterward with {@link setEvolutionMethod}.
 	 *
 	 * @param targetId The species id evolved into.
 	 * @param level The level the evolution triggers at (floored at one).
@@ -345,8 +304,7 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Removes the evolution at `index` (a no-op for an out-of-range index) and
-	 * returns the snapshot.
+	 * Removes the evolution at `index`; an out-of-range index is a no-op.
 	 *
 	 * @param index Zero-based position in the evolutions array.
 	 */
@@ -358,8 +316,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the target species of the evolution at `index` and returns the snapshot.
-	 * A no-op for an out-of-range index.
+	 * Sets the target species of the evolution at `index`. An out-of-range index
+	 * is a no-op.
 	 *
 	 * @param index Zero-based position in the evolutions array.
 	 * @param targetId The species id evolved into.
@@ -371,10 +329,9 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Switches the method of the evolution at `index`, rebuilding it with the fields
-	 * that method requires (dropping fields the previous method carried), and returns
-	 * the snapshot. Level/friendship keep any existing level; item keeps any existing
-	 * item; place keeps any existing place. A no-op for an out-of-range index.
+	 * Switches the method of the evolution at `index`, rebuilding it with the
+	 * fields that method requires: level and friendship keep an existing level,
+	 * item keeps an item, place keeps a place. An out-of-range index is a no-op.
 	 *
 	 * @param index Zero-based position in the evolutions array.
 	 * @param method The evolution method to switch to.
@@ -411,9 +368,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the level of the evolution at `index` (for level/friendship methods) and
-	 * returns the snapshot. A no-op for an out-of-range index or a method without a
-	 * level.
+	 * Sets the trigger level of the evolution at `index`, for the level and
+	 * friendship methods. Any other method or an out-of-range index is a no-op.
 	 *
 	 * @param index Zero-based position in the evolutions array.
 	 * @param level The trigger level (floored at one).
@@ -427,8 +383,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Sets the required item of the evolution at `index` (for the item method) and
-	 * returns the snapshot. A no-op for an out-of-range index or a non-item method.
+	 * Sets the required item of the evolution at `index`, for the item method.
+	 * Any other method or an out-of-range index is a no-op.
 	 *
 	 * @param index Zero-based position in the evolutions array.
 	 * @param itemId The item id required to evolve.
@@ -439,16 +395,13 @@ export class SpeciesEditor {
 		return this.toSpecies();
 	}
 
-	/**
-	 * Clears the sprite association and returns the snapshot.
-	 */
 	clearSprite(): Species {
 		this.#species.sprite = null;
 		return this.toSpecies();
 	}
 
 	/**
-	 * Associates an atlas region sprite and returns the snapshot.
+	 * Associates a sprite stored as a named region of an atlas.
 	 *
 	 * @param atlas The manifest atlas id.
 	 * @param region The named region inside that atlas.
@@ -459,7 +412,7 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Associates a standalone manifest image sprite and returns the snapshot.
+	 * Associates a sprite stored as a standalone manifest image.
 	 *
 	 * @param image The manifest image id.
 	 */
@@ -469,9 +422,8 @@ export class SpeciesEditor {
 	}
 
 	/**
-	 * Serializes the current editor state to a fresh {@link Species}. Returns deep
-	 * copies of every nested value so callers cannot mutate the editor's internal
-	 * state through the snapshot.
+	 * Serializes the current state to a fresh {@link Species}. Every nested value
+	 * is deep-copied, so the editor's state stays isolated from the snapshot.
 	 *
 	 * @returns The current species record.
 	 */
@@ -479,7 +431,6 @@ export class SpeciesEditor {
 		return this.#clone(this.#species);
 	}
 
-	/** Sorts the learnset's level-up entries ascending by level (stable for ties). */
 	#sortLearnset(): void {
 		this.#species.learnset = [...this.#species.learnset].sort((a, b) => {
 			let levelA = "level" in a ? a.level : Number.POSITIVE_INFINITY;
@@ -488,19 +439,17 @@ export class SpeciesEditor {
 		});
 	}
 
-	/** Coerces a value to a non-negative whole number, falling back on invalid input. */
 	#whole(value: number, fallback: number): number {
 		if (!Number.isFinite(value)) return fallback;
 		return Math.max(0, Math.trunc(value));
 	}
 
-	/** Clamps a percentage to `0..100`, coercing invalid input to zero. */
 	#percent(value: number): number {
 		if (!Number.isFinite(value)) return 0;
 		return Math.min(100, Math.max(0, value));
 	}
 
-	/** Returns a deep copy of a species record so snapshots never share references. */
+	/** Deep copy, so snapshots stay independent of the editor's state. */
 	#clone(species: Species): Species {
 		let copy: Species = {
 			number: species.number,
@@ -520,7 +469,6 @@ export class SpeciesEditor {
 		return copy;
 	}
 
-	/** Returns a copy of a sprite reference (or the `null`/value as-is). */
 	#cloneSprite(sprite: SpeciesSprite): SpeciesSprite {
 		if (sprite === null) return null;
 		return { ...sprite } as SpeciesSprite;

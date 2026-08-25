@@ -10,7 +10,6 @@ import type { RemixNode } from "remix/ui";
 
 import * as s from "~/app/views/styles";
 
-/** Parsed browser, OS, and device type derived from a user agent string. */
 interface ParsedUserAgent {
 	browser: string;
 	os: string;
@@ -37,12 +36,13 @@ export function parseUserAgent(userAgent: string | null): ParsedUserAgent {
 }
 
 /**
- * Identifies the browser family from a user agent string.
+ * Identifies the browser family from a user agent string, checking more
+ * specific browsers first since their UA string can also contain a broader
+ * browser's token.
  * @param ua - Raw user agent string.
  * @returns The browser display name, or a fallback when unknown.
  */
 function parseBrowser(ua: string): string {
-	// Order matters - check more specific browsers first
 	if (ua.includes("Edg/")) return "Edge";
 	if (ua.includes("OPR/") || ua.includes("Opera")) return "Opera";
 	if (ua.includes("Chrome/") && !ua.includes("Chromium")) return "Chrome";
@@ -54,16 +54,16 @@ function parseBrowser(ua: string): string {
 }
 
 /**
- * Identifies the operating system from a user agent string.
+ * Identifies the operating system from a user agent string, checking mobile
+ * platforms before desktop ones since an iPhone or iPad's UA string also
+ * carries the "Mac OS X" token.
  * @param ua - Raw user agent string.
  * @returns The OS display name, or a fallback when unknown.
  */
 function parseOS(ua: string): string {
-	// Mobile OS first
 	if (ua.includes("iPhone") || ua.includes("iPad")) return "iOS";
 	if (ua.includes("Android")) return "Android";
 
-	// Desktop OS
 	if (ua.includes("Mac OS X") || ua.includes("macOS")) return "macOS";
 	if (ua.includes("Windows NT 10")) return "Windows 10";
 	if (ua.includes("Windows NT 11") || (ua.includes("Windows NT 10") && ua.includes("Win64")))

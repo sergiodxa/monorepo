@@ -14,9 +14,9 @@
 import type { HttpCheckOptions } from "~/app/services/http-check";
 
 /**
- * How long a trial probe waits, in seconds. The monitors table's own default: a visitor
- * judging the product should see what a real monitor would have measured, not a stricter
- * or more forgiving reading of the same target.
+ * How long a trial probe waits, in seconds: the monitors table's own
+ * default, so a visitor sees the same reading a real monitor would
+ * produce for that target.
  */
 const TIMEOUT_SECONDS = 10;
 
@@ -24,26 +24,15 @@ const TIMEOUT_SECONDS = 10;
 const DEGRADED_AFTER_MS = 5000;
 
 /**
- * Where a trial probe runs from. Fixed rather than offered: the page asks one question and
- * a region picker is a second one, and every region costs the same to answer wrongly.
+ * Where a trial probe runs from, held fixed. The page asks one question,
+ * and any region answers it about as well as another.
  */
 const LOCATION_HINT: DurableObjectLocationHint = "wnam";
 
 /**
- * Builds the check options for one trial probe of `url`.
- *
- * `followRedirects: false` is the load-bearing part and is not a default anyone should
- * override here. `app/services/trial-guard.ts` decides whether a target is safe by
- * resolving its hostname and checking the addresses it points at — and a target answering
- * `302 http://169.254.169.254/` reaches cloud metadata anyway if the hop is followed,
- * because `fetch` follows it long after the guard has finished. Refusing to follow is what
- * makes the guard's decision the one that holds. A redirect therefore comes back as the
- * 3xx it is, which classifies as `down` against the expected 200 — correct, and honest
- * about the fact that we did not go there.
- *
- * `method: "GET"` rather than the monitors' `HEAD`, for the same reason the dashboard's
- * quick check uses GET: a URL a person typed is usually a page or a healthcheck endpoint,
- * and some answer `HEAD` with a 405 that says nothing about whether the service is up.
+ * Builds the check options for one trial probe of `url`. `followRedirects:
+ * false` keeps a redirect from bypassing the hostname guard's decision by
+ * having `fetch` follow it after the guard has already cleared the target.
  *
  * @param url The target the visitor asked about.
  * @returns Options to construct an `HttpCheck` with.

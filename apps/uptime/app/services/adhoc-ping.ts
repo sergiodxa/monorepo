@@ -5,9 +5,9 @@
  * itself differs between them (the API offers HTTP, DNS and TCP; the form offers only
  * HTTP), while everything that makes a check *billable* is identical. This is that part.
  *
- * It deliberately does not run the check, gate on a subscription, or shape a response.
- * A caller decides what to probe and what to say about it; this decides what the ping
- * costs and where it is counted, which is the half that must not drift between the two.
+ * A caller decides what to probe, whether a subscription allows it, and what to say
+ * in response; this module owns only what the ping costs and where it is counted —
+ * the half that must not drift between the two callers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +27,7 @@ import { ingestPings } from "~/app/services/ping-meter";
  * constant rather than the ping's own id: every ad-hoc ping is a one-off, so per-ping
  * blobs would make a high-cardinality dimension nothing can group by, while one shared
  * value lets a team's ad-hoc traffic be counted as the single stream it is. The Polar
- * event carries no monitor id at all — see {@link recordAdhocPing}.
+ * event identifies the ping by its own id instead; see {@link recordAdhocPing}.
  */
 export const ADHOC_MONITOR_ID = "adhoc";
 
@@ -42,16 +42,9 @@ export interface AdhocPing {
 }
 
 /**
- * Writes the ping's data point and bills the team for it.
- *
- * Returns synchronously: the data point is fire-and-forget by nature, and the Polar
- * event goes out under `waitUntil` rather than being awaited, because both callers are
- * holding a connection open for a result they already have and neither should wait on
- * billing to hand it over. Ingestion is best-effort and logs its own failures.
- *
- * The event carries no `monitorId` because there is no monitor. That is what makes an
- * ad-hoc ping count toward its team's monthly total while appearing on no monitor's
- * usage card — the two cards filter the meter by different metadata keys.
+ * Writes the data point synchronously and bills the team under `waitUntil`, since a
+ * caller already holding its result must not wait on billing. The billed event's
+ * metadata is team and type only, so it lands in the team's shared total.
  */
 export function recordAdhocPing(ping: AdhocPing): void {
 	writePingResult({

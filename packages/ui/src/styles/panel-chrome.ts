@@ -17,12 +17,8 @@ import type { CSSStyles } from "../utils/css-styles";
 
 /**
  * A framed panel's shared border and rounding: a solid, 1px neutral border
- * with large rounding, sized and colored through the shared radius and
- * neutral border variables rather than a hardcoded value. Compose the call
- * directly in a host's `mix` array, at the top level alongside whatever
- * padding, outline, container, or `&::details-content` declarations are
- * genuinely local to that host, rather than folding its properties into
- * another `css()` call.
+ * with large rounding, sized through the shared radius and border variables.
+ * Compose it in a host's `mix` array alongside that host's own local styles.
  *
  * @returns A mixin ready for a host element's `mix` prop.
  * @example

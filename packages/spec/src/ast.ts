@@ -79,7 +79,7 @@ export interface BlockNode {
 	span: Span;
 }
 
-/** Every statement the language has; there is deliberately nothing else. */
+/** Every statement the language has, forming a closed, exhaustive set. */
 export type StatementNode = LetNode | ReturnNode | ExpectNode | EventuallyNode | CallNode;
 
 /** `let name = <rhs>` — binds a value in the enclosing test/body scope. */
@@ -110,7 +110,6 @@ export type RhsNode = ExpressionNode | FixtureCallNode | CallExprNode;
 /** `fixture user` in expression position — runs the fixture for its value. */
 export interface FixtureCallNode {
 	kind: "fixture-call";
-	/** The fixture's name. */
 	name: string;
 	span: Span;
 }
@@ -184,7 +183,6 @@ export interface StringNode {
 /** A numeric literal. */
 export interface NumberNode {
 	kind: "number";
-	/** The numeric value. */
 	value: number;
 	span: Span;
 }
@@ -192,7 +190,6 @@ export interface NumberNode {
 /** `true` or `false`. */
 export interface BooleanNode {
 	kind: "boolean";
-	/** The boolean value. */
 	value: boolean;
 	span: Span;
 }
@@ -200,7 +197,6 @@ export interface BooleanNode {
 /** A duration literal like `10s`, normalized to milliseconds at lex time. */
 export interface DurationNode {
 	kind: "duration";
-	/** The duration in milliseconds. */
 	milliseconds: number;
 	span: Span;
 }
@@ -217,7 +213,6 @@ export interface ObjectNode {
 export interface ObjectEntryNode {
 	/** The key, from an identifier or string. */
 	key: string;
-	/** The entry's value expression. */
 	value: ExpressionNode;
 	span: Span;
 }

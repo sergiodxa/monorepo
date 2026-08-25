@@ -1,13 +1,8 @@
 /**
- * The built-in `browser` capability: drive a real web browser through the
- * accessibility tree, not through DOM implementation details. Every tool maps
- * onto the globally-installed `agent-browser` CLI — `open` navigates, element
- * interactions read the accessibility snapshot and act on the node found by
- * role and accessible name, and CSS selectors survive only as a marked escape
- * hatch. Reaching web content is the privileged act, so the whole family is
- * gated by the `net` permission; the fixed `agent-browser` binary is trusted
- * plugin machinery, not spec-requested process execution, so it needs no
- * `run` grant (ADR-007 §4).
+ * The built-in `browser` capability: drive a real browser through the
+ * accessibility tree, not DOM internals, via the globally-installed
+ * `agent-browser` CLI. Reaching web content is privileged, so the whole
+ * family requires `net`; the trusted binary needs no `run` grant (ADR-007 §4).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,10 +40,9 @@ const COOKIE_WORDS = ["for"];
 const LEVEL_WORDS = ["level"];
 
 /**
- * One line of an accessibility snapshot naming a heading, its accessible name,
- * and its level: `- heading "Reports" [level=3, ref=e2]`. The level lives in
- * the snapshot text rather than in the `refs` map, so matching by level reads
- * the text.
+ * One line of an accessibility snapshot naming a heading, its accessible
+ * name, and level: `- heading "Reports" [level=3, ref=e2]`. The level lives
+ * only in this text, not in the `refs` map, so matching by level parses it.
  */
 const HEADING_LINE = /^\s*-\s*heading\s+"((?:[^"\\]|\\.)*)"\s*\[([^\]]*)\]/;
 
@@ -325,22 +319,15 @@ const BROWSER_TOOLS: ToolDescriptor[] = [
 ];
 
 /**
- * Create the built-in `browser` plugin: the `browser` namespace of
- * accessibility-first web-interaction tools backed by `agent-browser`.
- *
- * `describe()` is static — it never launches a browser — so a suite that never
- * touches `browser.*` costs nothing and never needs `agent-browser` installed.
- * Each tool call is a stateless `agent-browser` invocation keyed to a session
- * derived from the test's workspace, which gives every test its own isolated
- * browser (own cookies, storage, tabs) while letting `given`/`when`/`then`
- * share one session. The plugin tracks the sessions it opened and closes them
- * in {@link Plugin.dispose}, called once by the runner after the whole run —
- * so browsers do not leak, and unrelated `agent-browser` sessions are left
- * untouched.
+ * Create the built-in `browser` plugin: accessibility-first web-interaction
+ * tools backed by `agent-browser`. Each call keys a session to the test's
+ * workspace, isolating browser state; {@link Plugin.dispose} closes them all.
  */
 export function createBrowserPlugin(): Plugin {
-	// Sessions this plugin has driven, closed on dispose. A Set because the
-	// same test's workspace yields the same session across its many calls.
+	/**
+	 * Sessions this plugin has driven, closed on dispose. The same test
+	 * workspace yields the same session across its many calls.
+	 */
 	let sessions = new Set<string>();
 	return {
 		namespace: "browser",
@@ -388,10 +375,12 @@ export function createBrowserPlugin(): Plugin {
 				}
 			}
 		},
+		/**
+		 * Best-effort teardown: a failed close must never fail a run, and a
+		 * missing binary at dispose time means there is nothing left to close.
+		 */
 		async dispose() {
 			for (let session of sessions) {
-				// Best-effort teardown: a failed close must never fail a run, and a
-				// missing binary at dispose time is simply nothing left to close.
 				await runBrowser(["close"], session);
 			}
 			sessions.clear();
@@ -402,8 +391,7 @@ export function createBrowserPlugin(): Plugin {
 /**
  * `browser.open`/`browser.navigate url` — require an absolute http(s) URL,
  * pass the scoped `net` check for its host and port, then navigate. Relative
- * URLs are refused with the v1 rationale (no environments mechanism yet),
- * mirroring the `http` plugin.
+ * URLs are refused since v1 has no environments mechanism to resolve them.
  */
 async function navigate(
 	tool: string,
@@ -421,17 +409,9 @@ async function navigate(
 }
 
 /**
- * `browser.cookie name value [for url]` — seed the session's cookie jar, so a
- * spec can arrive already authenticated instead of driving a sign-in form for
- * every test. The value belongs in the environment, not in the document: the
- * intended shape is `let token = env.get "SESSION_COOKIE"` and a boxed
- * reference to it here (ADR-007 §6).
- *
- * The `for` clause names the URL the cookie is scoped to, which is what lets
- * the cookie be set _before_ the first navigation — the whole point of seeding
- * a session. Its host is `net`-checked exactly like `open`'s. Without the
- * clause the cookie lands on the page already open, and an unopened session is
- * a tool error naming the `for` form rather than a cookie set on `about:blank`.
+ * `browser.cookie name value [for url]` — seed the session's cookie jar so a
+ * spec starts already authenticated. Without `for`, the cookie scopes to the
+ * page already open, whose host was already `net`-checked when it was opened.
  */
 async function cookie(
 	args: ToolArg[],
@@ -459,8 +439,6 @@ async function cookie(
 		if (isFailure(allowed)) return allowed;
 		scope = target.data.href;
 	} else {
-		// The page the session is already on authorized itself at `open` time,
-		// so no second net check: this is the same host the spec just reached.
 		let current = await currentUrl(session);
 		if (isFailure(current)) return current;
 		if (!current.data.startsWith("http:") && !current.data.startsWith("https:")) {
@@ -481,14 +459,10 @@ async function cookie(
 }
 
 /**
- * `browser.ua value` — send a custom `User-Agent` on every request the session
- * makes from here on, so an app can tell a spec run apart from a real visitor
- * (skip its rate limiter, tag its analytics). Set it before `open`: the header
- * applies to requests made after it, not to a page already fetched.
- *
- * This sets the request header only; `navigator.userAgent` inside the page
- * still reports the real browser, because the header is applied to the session
- * rather than to the emulated browser identity.
+ * `browser.ua value` — send a custom `User-Agent` header on every request
+ * from here on, so an app can distinguish a spec run from a real visitor.
+ * Only the network header changes; `navigator.userAgent` in page script
+ * still reports the browser's own identity.
  */
 async function userAgent(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	let value = stringArg(args, 0, "ua", "value");
@@ -559,9 +533,8 @@ async function clickSelector(args: ToolArg[], session: string): Promise<Result<V
 
 /**
  * `browser.heading|link|button name` — assert a node of that role and
- * accessible name is present. Present yields `true`; absent yields an
- * `ExpectationError` carrying the demanded role/name, so `expect` renders
- * expected/observed the same way `fs.file` does.
+ * accessible name is present, yielding `true` or an `ExpectationError`
+ * carrying the demanded role and name.
  */
 async function roleObservable(
 	tool: string,
@@ -586,11 +559,8 @@ async function roleObservable(
 
 /**
  * `browser.heading name level N` — assert a heading with that accessible name
- * is present *at that level*, so a spec can say which rung of the document
- * outline it means: level 3 matches an `<h3>` and equally a `role=heading`
- * carrying `aria-level=3`, because both reach the accessibility tree the same
- * way. A heading of the right name at the wrong level fails with the levels it
- * did find, since that is usually the bug being caught.
+ * sits at that level; level 3 matches both an `<h3>` and a `role=heading`
+ * with `aria-level=3`, since both reach the accessibility tree identically.
  */
 async function headingAtLevel(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	if (args.length !== 3) {
@@ -704,9 +674,8 @@ async function checkbox(args: ToolArg[], session: string): Promise<Result<Value,
 
 /**
  * `browser.url [expected]` — with no argument, observe the current URL; with
- * an argument, assert the current URL equals it exactly. v1 compares full
- * absolute URLs: there is no environments mechanism to resolve a path like
- * "/" against a base (ADR-008), consistent with `open` requiring absolute URLs.
+ * one, assert it matches exactly. Comparison is against the full absolute
+ * URL, since v1 has no environments mechanism to resolve a relative path.
  */
 async function url(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	if (args.length > 1) {
@@ -728,10 +697,9 @@ async function url(args: ToolArg[], session: string): Promise<Result<Value, Spec
 }
 
 /**
- * `browser.title [expected]` — with no argument, observe the document's title;
- * with an argument, assert it equals that title exactly. Titles are what the
- * user reads in the tab, so this compares them whole rather than by substring —
- * `browser.text` is the tool for "somewhere on the page".
+ * `browser.title [expected]` — with no argument, observe the document's
+ * title; with one, assert it equals that title exactly, in full — the tab
+ * text a user reads. `browser.text` covers matching a substring on the page.
  */
 async function title(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	if (args.length > 1) {
@@ -793,8 +761,7 @@ function readTarget(
 /**
  * Resolve one element to its snapshot ref by reading the accessibility tree
  * and matching on role and normalized accessible name. Returns the ref key
- * (e.g. `"e4"`) when a node matches, `null` when none does, or a failure when
- * `agent-browser` itself could not produce a snapshot.
+ * (e.g. `"e4"`), `null` when nothing matches, or a failure from the snapshot call.
  */
 async function resolveElement(
 	role: string,
@@ -816,7 +783,6 @@ async function resolveElement(
 	return success(null);
 }
 
-/** An element the accessibility tree does not expose is a tool failure. */
 function notFound(tool: string, target: ElementTarget): ToolError {
 	return new ToolError(
 		`browser.${tool} found no ${target.role} named ${formatValue(target.name)} in the accessibility tree`,
@@ -843,11 +809,9 @@ interface BrowserEnvelope {
 }
 
 /**
- * Run one `agent-browser` command for a session and return its `data` payload.
- * The binary is trusted plugin machinery (ADR-007 §4), so this spawns it
- * directly without a `run` grant; a missing binary is a `ToolError` telling
- * the caller to install it. Because `agent-browser` exits 0 even on failure,
- * success is read from the JSON envelope's `success` field, never the exit code.
+ * Run one `agent-browser` command for a session and return its `data`
+ * payload. A missing binary fails with an install hint (ADR-007 §4); success
+ * is read from the envelope's `success` field, since the CLI exits 0 regardless.
  */
 async function runBrowser(
 	args: string[],
@@ -891,16 +855,13 @@ async function runBrowser(
 }
 
 /**
- * Locate the trusted `agent-browser` CLI by scanning PATH for an executable of
- * that name, the way a shell would. Returning the resolved path rather than a
- * boolean keeps the answer useful for diagnostics, and `null` is the single
- * signal that the capability is unavailable — every browser tool refuses with
- * an install hint, and the end-to-end tests skip on it.
+ * Locate the trusted `agent-browser` CLI by scanning PATH for an executable
+ * of that name, the way a shell would. The resolved path stays useful for
+ * diagnostics; `null` is the single signal every caller treats as "not installed".
  *
  * @returns The absolute path of the binary, or null when it is not installed.
  */
 export function browserBinaryPath(): string | null {
-	// A name containing a separator is already a path, not a PATH lookup.
 	if (BROWSER_BINARY.includes(sep)) return executable(BROWSER_BINARY);
 	for (let directory of (process.env.PATH ?? "").split(delimiter)) {
 		if (directory === "") continue;
@@ -967,9 +928,8 @@ function parseEnvelope(stdout: string): BrowserEnvelope | null {
 
 /**
  * The `agent-browser` session name for a test: the basename of its isolated
- * workspace directory, which is unique per test and stable across the test's
- * phases. This is the v1-provisional answer to ADR-005's browser-isolation
- * open question — session lifetime follows the workspace.
+ * workspace directory, unique per test and stable across its phases — so
+ * session lifetime follows the workspace (ADR-005's browser-isolation answer).
  */
 function sessionFor(workspace: Workspace): string {
 	return basename(workspace.root);

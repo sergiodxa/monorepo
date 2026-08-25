@@ -1,53 +1,9 @@
 /**
- * Background job that works through the account-deletion queue once a day: for every person
- * who asked to be erased, cancel their billing, delete their data, tell them it is done, and
- * only then forget the request itself.
- *
- * ## The queued row is the retry policy, and there is no other one
- *
- * Nothing here counts attempts, backs off, or asks the queue to redeliver. A row that fails at
- * any step is left exactly as it was, and tomorrow's run picks it up again — "it failed" and
- * "it will be retried tomorrow" are the same statement, which is the entire reason the request
- * is a row instead of a message. The row is deleted last, after the confirmation mail has been
- * accepted by the transport, so the only state that means "finished" is the absence of work.
- *
- * ## Why the order is fixed
- *
- * Billing is cancelled before any data is deleted, and a failure to cancel stops that person's
- * erasure with nothing removed. The alternative leaves somebody paying for teams that no longer
- * exist and no way to stop it: checkout and the customer portal are reached from a team's
- * billing page and require being that team's owner, so the surface that could cancel is exactly
- * what the deletion removed. See `app/services/account-erasure.ts` for the full argument.
- *
- * The mail is sent before the row goes because the row holds the address. This app stores no
- * account-holder email anywhere else, so deleting the row first would leave a completed erasure
- * that can never be confirmed to the person who asked for it.
- *
- * ## The other members are told, and that mail is never allowed to matter
- *
- * Deleting an owner deletes their teams, and with them every other member's monitoring. Those
- * people are mailed right after the erasure — the run that performed it is the only one that can,
- * because the membership rows naming them are what it just deleted, which is why the erasure hands
- * their subject ids back rather than the sweep querying for them.
- *
- * That notification is best-effort and deliberately does not gate anything. By the time it is
- * sent the data is already gone, so the usual remedy — keep the row and retry tomorrow — would
- * buy nothing and cost something: a person who asked to be deleted would keep a pending deletion
- * request (with their address in it) because somebody *else*'s mail bounced, and tomorrow's re-run
- * would re-erase an empty account and find no memberships left, so it could not resend the notice
- * anyway. A failed notice is therefore logged and the sweep carries on; whether the row survives
- * stays decided by the account holder's own confirmation mail, exactly as before. The same goes
- * for a member the identity provider cannot resolve: log them, and mail everybody who did resolve.
- *
- * ## Idempotence is load-bearing
- *
- * A failed run has already deleted part of an account, so every step must survive being run
- * again over a half-erased one: only *active* subscriptions are revoked, so a second pass
- * revokes none; teams already deleted no longer appear in the subject's memberships; and every
- * remaining delete matches nothing the second time. A re-run of a fully-erased account that
- * only failed to mail does the mail and nothing else.
- *
- * One row failing must not stop the rest, so each is caught and logged on its own.
+ * Daily sweep over the account-deletion queue: cancels billing, deletes the data, mails
+ * the confirmation, and only then removes the request row, which is itself the retry.
+ * Billing goes first since cancelling it needs team ownership, a right the deletion
+ * removes; the mail goes out before the row does since the row holds the only copy of
+ * the address, and other members are notified best-effort as the row's removal proceeds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,10 +43,9 @@ export class DeleteAccountsJob extends Job {
 		let errorCount = 0;
 
 		/**
-		 * Sequential rather than concurrent, unlike the digest sweeps. Each row runs a long
-		 * cascade of deletes against D1, which has no interactive transactions, and the queue is
-		 * empty on almost every run — so there is nothing to gain from overlapping them and a
-		 * partially-applied cascade racing another one is a real cost.
+		 * Runs each row to completion before starting the next, since D1 has no interactive
+		 * transactions and an overlapping cascade over the same rows would corrupt partial state.
+		 * The queue is typically empty, so there is little concurrency to gain in the first place.
 		 */
 		for (let request of pending) {
 			try {
@@ -141,11 +96,9 @@ export class DeleteAccountsJob extends Job {
 		}
 
 		/**
-		 * Before the account holder's own confirmation, because this is the only run that can send
-		 * it: the erasure above just deleted the rows naming these people, so a run that reached
-		 * the confirmation, failed it, and came back tomorrow would have nobody to notify. Its own
-		 * `try` because nothing it does may change what happens to this request — see the module
-		 * docblock.
+		 * Runs before the account holder's own confirmation, since this is the only run that can
+		 * still reach these people: the erasure above already deleted the rows naming them, so a
+		 * later retry would find nobody to notify. Its own `try` isolates the deletion request.
 		 */
 		try {
 			await this.notifyFormerMembers(db, mailer, sdk, erased.data.deletedTeams);
@@ -158,15 +111,15 @@ export class DeleteAccountsJob extends Job {
 
 		let { locale, t } = await emailTranslator();
 
-		// Counted before the send, because a rejected send is still a billed one.
+		/** Counted before the send, because a rejected send is still a billed one. */
 		recordCost("emailSent");
 		let sent = await mailer.send(new AccountDeletedEmail({ email: request.email, locale, t }));
 
 		if (isFailure(sent)) {
 			/**
 			 * The data is gone but the confirmation is not out, so the row stays and tomorrow's
-			 * run mails it. That re-run finds nothing left to delete and is a no-op up to the
-			 * send, which is exactly what makes leaving the row safe rather than destructive.
+			 * run mails it. That re-run matches nothing left to delete, making a second pass over
+			 * this row safe.
 			 */
 			this.logger.error("job.delete_accounts.email_failed", {
 				subjectId: request.subject_id,
@@ -189,14 +142,9 @@ export class DeleteAccountsJob extends Job {
 	}
 
 	/**
-	 * Mails everybody who lost a team to this erasure, one message per team they were in.
-	 *
-	 * Sequential, like the queue above: a destroyed team's members are few, and the run is already
-	 * inside a long cascade of D1 work. Each recipient's own language is honoured where they set
-	 * one, since the reader is not the person whose account was deleted.
-	 *
-	 * Every failure is contained: an unresolvable subject is skipped, a refused send is logged, and
-	 * neither is reported back to the caller, because the deletion must complete either way.
+	 * Mails everybody who lost a team to this erasure, one message per team they were in,
+	 * in each recipient's own language where they set one. An unresolvable subject is
+	 * skipped and a refused send only logged, since the deletion completes either way.
 	 *
 	 * @param teams - The destroyed teams that had other members, as captured before the delete.
 	 */
@@ -236,7 +184,7 @@ export class DeleteAccountsJob extends Job {
 					preferences.get(subjectId)?.preferred_language ?? undefined,
 				);
 
-				// Counted before the send, because a rejected send is still a billed one.
+				/** Counted before the send, because a rejected send is still a billed one. */
 				recordCost("emailSent");
 				let sent = await mailer.send(
 					new TeamDeletedEmail({ team: team.teamName, email: profile.emailAddress, locale, t }),

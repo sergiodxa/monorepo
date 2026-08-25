@@ -1,10 +1,9 @@
 /**
  * Data-access model for team invites: create/revoke, accepting an invite (marking it
- * accepted and creating the resulting membership as two sequential writes, since D1
- * has no real transactions — see `AGENTS.md`), and the pending-invites list shown on
- * the team settings page. Invite "expiration" is a display-only concept computed by
- * the caller from `created_at` — there's no `expires_at` column, so an old invite can
- * still be accepted.
+ * accepted and creating the resulting membership as two sequential writes, which is as
+ * atomic as D1 gets), and the pending-invites list on the team settings page. Expiration
+ * is a display-only notion the caller computes from `created_at`, so an invite stays
+ * acceptable for as long as its row exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +31,7 @@ export default class Invite {
 		return await db.findOne(invites, { where: { team_id: teamId, email } });
 	}
 
-	/** Finds an invite scoped to a team, or `null` when it doesn't belong to it. */
+	/** Finds an invite within a team, or `null` when the id belongs to another team. */
 	static async findByIdForTeam(db: Database, teamId: string, inviteId: string) {
 		return await db.findOne(invites, { where: { id: inviteId, team_id: teamId } });
 	}
@@ -42,7 +41,7 @@ export default class Invite {
 		return await db.findOne(invites, { where: { id: inviteId } });
 	}
 
-	/** Lists every not-yet-accepted invite for a team, most recently created first. */
+	/** Lists a team's still-pending invites, most recently created first. */
 	static async listPendingByTeam(db: Database, teamId: string) {
 		return await db.findMany(invites, {
 			where: and(eq("team_id", teamId), isNull("accepted_at")),

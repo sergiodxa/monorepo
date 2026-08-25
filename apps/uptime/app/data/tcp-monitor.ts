@@ -25,10 +25,7 @@ const RESULT_HISTORY_LIMIT = 50;
 /**
  * What a claimed monitor's check needs to read. Adding a column the check uses is one edit
  * here: {@link ClaimedTcpMonitor} and {@link TcpMonitor.claimDue}'s return type both follow.
- *
- * `team_id` is not read by the check itself: the sweep apportions its own cost across the
- * teams whose monitors it swept (ADR-007 §5), and the `RETURNING` projection is where that
- * denominator costs nothing.
+ * `team_id` rides along so the sweep can apportion its cost across teams (ADR-007 §5).
  */
 const CLAIM_COLUMNS = ["id", "team_id", "host", "port", "timeout_ms", "last_status"] as const;
 
@@ -37,9 +34,9 @@ export type ClaimedTcpMonitor = Pick<SelectTcpMonitor, (typeof CLAIM_COLUMNS)[nu
 
 export default class TcpMonitor {
 	/**
-	 * Creates a TCP monitor for a team, enabled unless the caller says otherwise (matching
-	 * the column's own default) and scheduled for its first check on the next cron tick, so
-	 * a new monitor reports a status straight away instead of after one silent interval.
+	 * Creates a TCP monitor for a team, enabled unless the caller says otherwise (matching the
+	 * column's own default) and due immediately, so a new monitor reports its first status on
+	 * the next cron tick.
 	 */
 	static async create(db: Database, teamId: string, input: InsertTcpMonitor) {
 		return await db.create(
@@ -63,13 +60,9 @@ export default class TcpMonitor {
 	}
 
 	/**
-	 * Claims every TCP monitor whose next check is due as of `scheduledAt`, across every
-	 * team, advancing each one's next due time as it does — see `claimDue` for the semantics
-	 * all three monitor types share.
-	 *
-	 * This replaced a `listEnabled` that returned every enabled monitor on a fixed 5-minute
-	 * sweep, which ignored `interval_seconds` entirely even though the column is editable,
-	 * shown in the UI, and billed against.
+	 * Claims every TCP monitor whose next check is due as of `scheduledAt`, across every team,
+	 * advancing each one's next due time as it does — see `claimDue` for the semantics all
+	 * three monitor types share.
 	 */
 	static async claimDue(db: Database, scheduledAt: number) {
 		return await claimDue(db, tcpMonitors, CLAIM_COLUMNS, scheduledAt);

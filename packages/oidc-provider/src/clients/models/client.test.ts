@@ -1,3 +1,11 @@
+/**
+ * Tests for the Client model: creation across client types, lookup, updates,
+ * deletion, and logo URL scheme validation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";

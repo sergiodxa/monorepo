@@ -1,8 +1,8 @@
 /**
  * The lexer for `.spec` source text: turns a file into the flat token stream
  * GRAMMAR.md's token table defines — literals, dotted identifiers, keywords,
- * punctuation, and significant newlines — with every failure reported as a
- * `ParseError` value, never a throw.
+ * punctuation, and significant newlines — with every failure returned as a
+ * `ParseError` value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,11 +46,9 @@ const BLANK_LINE = /^[ \t\r]*$/;
 const LEADING_WHITESPACE = /^[ \t]*/;
 
 /**
- * Tokenize a `.spec` file per GRAMMAR.md's lexical rules: `#` comments are
- * discarded, runs of newlines collapse into a single `newline` token, dotted
- * identifiers with adjacent dots lex as one token, and durations are
- * validated (and converted to milliseconds) at lex time. The stream always
- * ends with an `eof` token.
+ * Tokenize a `.spec` file per GRAMMAR.md's lexical rules: comments are
+ * discarded, newlines collapse into single tokens, dotted identifiers merge,
+ * and durations are validated and converted to milliseconds at lex time.
  *
  * @param source - The file to tokenize.
  * @returns The token stream, or a `ParseError` pointing at the offending text.
@@ -262,9 +260,8 @@ function asKeyword(text: string): Keyword | undefined {
 
 /**
  * Apply GRAMMAR.md's three multiline-string steps in order: drop a leading
- * newline, drop the whitespace that indents a closing delimiter sitting on
- * its own line (keeping the final newline), then strip the common indentation
- * of the non-blank lines. No escape sequences are processed; content is raw.
+ * newline, drop whitespace indenting a closing delimiter on its own line,
+ * then strip the common indentation of the non-blank lines; content stays raw.
  *
  * @param raw - The text between the `"""` delimiters, untouched.
  * @returns The processed string value.

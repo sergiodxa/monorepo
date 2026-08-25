@@ -11,12 +11,9 @@ import type { TableRow } from "remix/data-table";
 import { column as c, table } from "remix/data-table";
 
 /**
- * Engine-owned database schema (WordPress-style `posts` + `post_meta` EAV, plus
- * runtime-defined post types, roles, users, settings, and SQL-backed sessions).
- *
- * These `table()` definitions drive the query layer (`new Database(adapter)`).
- * The physical DDL — indexes, foreign keys, cascade rules — lives in the SQL
- * migration strings in {@link ./migrations.ts}; both must be kept in sync.
+ * Engine-owned database schema (WordPress-style `posts` + `post_meta` EAV,
+ * runtime-defined post types, roles, users, settings, sessions). The physical
+ * DDL lives in {@link ./migrations.ts} and must stay in sync.
  */
 
 /** Core post row. Everything type-specific lives in {@link postMeta}. */

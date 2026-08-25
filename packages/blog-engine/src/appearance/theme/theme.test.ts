@@ -1,3 +1,10 @@
+/**
+ * Coverage for `hexToOklch` (color conversion + malformed-input fallback) and
+ * `renderThemeStyle` (the `:root` block it emits, including engine defaults).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { hexToOklch, renderThemeStyle } from "./theme";

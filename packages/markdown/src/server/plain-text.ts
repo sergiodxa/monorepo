@@ -82,10 +82,9 @@ function childrenText(node: Node, options: ResolvedOptions, separator: string): 
 }
 
 /**
- * Walks a block node, appending one entry per block of prose. Every text-bearing
- * block wraps its content in an `inline` node, so that is where a block ends and
- * the next begins; a table row is collapsed into a single block so its cells do
- * not each become a paragraph.
+ * Walks a block node, appending one entry per block of prose. Each
+ * text-bearing block wraps its content in an `inline` node, marking where a
+ * block ends; a table row's cells combine into a single block.
  */
 function collectBlocks(node: Node, options: ResolvedOptions, blocks: string[]): void {
 	switch (node.type) {
@@ -117,13 +116,9 @@ function collectBlocks(node: Node, options: ResolvedOptions, blocks: string[]): 
 }
 
 /**
- * Extracts the prose from a markdown document, dropping the syntax around it.
- * Frontmatter, reference definitions, link targets, and raw HTML tags are left
- * out; headings, paragraphs, list items, table rows, and block quotes each
- * become one block, separated by a blank line.
- *
- * Compose with an excerpt helper to build a summary: this function preserves the
- * block structure and does not collapse the text into a single line.
+ * Extracts the prose from a markdown document, dropping frontmatter,
+ * reference definitions, link targets, and raw HTML tags along with their
+ * syntax, and keeping block boundaries so callers can compose their own summary.
  *
  * @param markdown - Markdown source, with or without frontmatter
  * @param options - Whether to include code blocks and image alternative text

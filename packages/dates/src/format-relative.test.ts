@@ -1,7 +1,7 @@
 /**
  * Tests for relative time wording: that the unit chosen is the largest one the
- * distance justifies, that a rounded distance carries into the next unit instead of
- * reading as "60 seconds", and that the comparison instant is an argument.
+ * distance justifies, that a distance which rounds to a whole unit carries into
+ * the next unit up, and that the comparison instant is an argument.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { formatRelative } from "./format-relative";
 
-/** The instant every case measures against, so no test touches the clock. */
+/** The instant every test measures against, so each case uses a fixed instant. */
 const NOW = new Date("2026-07-29T12:00:00Z");
 
 /** Shift `NOW` by a number of milliseconds, positive into the future. */
@@ -26,8 +26,7 @@ describe("formatRelative", () => {
 	});
 
 	test("picks the largest unit the distance justifies", () => {
-		// Numbers are forced here so every case names the unit it chose rather than
-		// reading as the word the locale has for it.
+		/** Forces numeric wording so every case names the unit it picked. */
 		let numeric = "always" as const;
 		expect(formatRelative(at(45_000), { locale: "en-US", now: NOW, numeric })).toBe(
 			"in 45 seconds",
@@ -53,7 +52,7 @@ describe("formatRelative", () => {
 	});
 
 	test("carries a rounded distance into the next unit", () => {
-		// 59.6 seconds rounds to 60, which must read as a minute rather than 60 seconds.
+		/** 59.6 seconds rounds to 60, reading as a whole minute. */
 		expect(formatRelative(at(59_600), { locale: "en-US", now: NOW })).toBe("in 1 minute");
 		expect(
 			formatRelative(at(23.7 * 3_600_000), { locale: "en-US", now: NOW, numeric: "always" }),

@@ -1,20 +1,9 @@
 /**
- * Public status page controller. Loads a page by slug — private pages 404, since
- * this route is the page's only access path and private pages have no public route
- * at all. Resolves every attached HTTP/DNS/TCP/cron-job monitor's current status and
- * 90-day uptime bar, and combines them into one page-level status.
- *
- * The response carries a cache policy (see {@link withCachePolicy}), because this is
- * the one page whose traffic spikes exactly when the origin is least able to absorb
- * it: an incident is when everybody reloads a status page at once.
- *
- * Every card here shows a name, a status and a history bar, and never the thing being
- * monitored: an HTTP card omits its URL and a TCP card omits its host and port, because
- * the page is world-readable and its owner published a service's availability, not their
- * configuration. A DNS monitor covers a whole domain across every record type it tracks,
- * so its card says exactly that in words and shows neither the domain nor a single
- * record — a record list is a map of the owner's infrastructure, and the one thing a
- * viewer of a status page needs from it is whether the domain resolves as it should.
+ * Public status page controller — loads a page by slug (private pages 404,
+ * since this route is their only access path) and renders every attached
+ * monitor's current status and 90-day uptime bar into one page-level status,
+ * cached per {@link withCachePolicy}. A DNS monitor's card always reports
+ * whole-domain coverage in words, the fact a viewer of the page needs from it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,21 +61,16 @@ import UptimeBar from "~/resources/views/shared/uptime-bar";
 import routes from "~/routes/web";
 
 /**
- * How long any cache may reuse the rendered page, in milliseconds.
- *
- * Sixty seconds is not a preference: `getTeamHttpSummaries` reads through a KV cache
- * with exactly this TTL, so the page cannot be made staler than the data source it
- * renders. It is also the quantum the page's own "last updated" line is rounded to,
- * which is what keeps the `ETag` stable for as long as the policy claims the bytes
- * are.
+ * How long any cache may reuse the rendered page, in milliseconds — matches
+ * the KV TTL `getTeamHttpSummaries` reads through and the quantum
+ * `renderedAt` rounds to, keeping the page current and its `ETag` stable.
  */
 const CACHE_WINDOW_MS = 60_000;
 
 /**
  * How long a stale copy may be served while one request refreshes it, in
- * milliseconds. Five minutes of cover is what turns an incident's traffic spike into
- * cache hits with a single origin request behind them, and degrades a slow origin to
- * slightly-old numbers rather than to no page at all.
+ * milliseconds. Five minutes of cover turns an incident's traffic spike into
+ * cache hits behind one origin request, serving slightly-old numbers meanwhile.
  */
 const STALE_WHILE_REVALIDATE_MS = 300_000;
 
@@ -98,11 +82,9 @@ const BANNER_MIX: Record<ServiceStatus, ReturnType<typeof combine>> = {
 };
 
 /**
- * Icon shown in the overall-status banner. `computeOverallStatus` never actually
- * returns `"unknown"`, but this mirrors {@link BANNER_MIX} and the handler's own
- * `bannerLabel` lookup (built from `ctx.i18next.t("statusPage.banner.*")`) by
- * aliasing it to the operational icon rather than surfacing a separate "unknown"
- * banner state.
+ * Icon shown in the overall-status banner. `computeOverallStatus` never
+ * returns `"unknown"`, but `ServiceStatus` still requires an entry here;
+ * aliasing it to the operational icon keeps this map exhaustive.
  */
 const BANNER_ICON: Record<ServiceStatus, typeof CircleCheckBigIcon> = {
 	operational: CircleCheckBigIcon,
@@ -149,18 +131,19 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 }
 
 /**
- * The label a service is published under: the team's own public name for it when they set
- * one, and the monitor's internal name otherwise.
- *
- * An empty string counts as unset rather than as a name. A team that cleared the field
- * wants the default back, and rendering the blank would leave a nameless row on a page
- * whose entire job is telling a stranger which service is which.
+ * The label a service is published under: the team's public name for it when
+ * set, the monitor's internal name otherwise. An empty string falls back to
+ * that name too, keeping every row named even after a team clears the field.
  */
 function publicName(displayName: string | null, fallback: string): string {
 	return displayName?.trim() || fallback;
 }
 
-/** GET /status/:slug — the public view of a status page. */
+/**
+ * GET /status/:slug — the public view of a status page. Viewing it apportions
+ * cost to the team that owns the page (ADR-007 §5); its title and description
+ * render as the team wrote them, carrying no translation.
+ */
 export default createAction(
 	routes.statusPage,
 	inject([Database] as const, async (db) => {
@@ -170,7 +153,6 @@ export default createAction(
 		let page = await StatusPage.findBySlugPublic(db, slug);
 		if (!page) return notFound("Not Found");
 
-		// A public status-page view is cost the team owning the page caused (ADR-007 §5).
 		apportionCostByTeam([page.team_id]);
 
 		let attachments = await StatusPage.listAttachments(db, page.id);
@@ -291,10 +273,8 @@ export default createAction(
 
 		/**
 		 * The moment the page reports as its own, rounded down to the start of the
-		 * current {@link CACHE_WINDOW_MS}. Rounding is what makes the page honest and
-		 * cacheable at once: a viewer reading a cached copy is told the time the numbers
-		 * are from rather than the time their request arrived, and because the bytes then
-		 * stop changing every millisecond, a repeat viewer's `ETag` still matches.
+		 * current {@link CACHE_WINDOW_MS}. Rounding ties the reported time to the
+		 * data's freshness window, keeping a repeat viewer's `ETag` stable within it.
 		 */
 		let renderedAt = new Date(Math.floor(Date.now() / CACHE_WINDOW_MS) * CACHE_WINDOW_MS);
 
@@ -303,9 +283,6 @@ export default createAction(
 				title={page.title}
 				locale={ctx.locale}
 				seo={{
-					// The page owner's own description when they wrote one, falling back to
-					// its title. Both are team-authored content, never app copy, so there's
-					// nothing here to translate — and no locale key to reach for either.
 					description: page.description ?? page.title,
 					canonical: SEO.canonical(ctx.url),
 				}}
@@ -365,11 +342,6 @@ export default createAction(
 										</Badge>
 									</div>
 									{service.kind === "dns" && (
-										// The card's own name is whatever the owner called the monitor, which
-										// under the old per-record-type model was often a record type. This
-										// line is what makes the unit truthful — one domain, every record it
-										// tracks — while staying the same sentence for every domain, so it
-										// discloses nothing a viewer did not already know from the page.
 										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 											{ctx.i18next.t("statusPage.dns.coverage")}
 										</p>
@@ -450,25 +422,9 @@ export default createAction(
 );
 
 /**
- * Gives a rendered page its HTTP cache policy and answers a still-current client copy
- * with a `304`.
- *
- * This is what turns "one origin hit per view" into "one origin hit per minute per
- * page, plus `304`s", which is the shape a status page should have. The two savings
- * are separate: `Cache-Control` decides whether a request reaches the Worker at all,
- * while the `ETag` decides whether a body crosses the network to a viewer who is
- * revalidating a copy they already hold.
- *
- * `Vary` is not optional at `public` visibility. The markup is translated per viewer
- * from the `language` cookie and then `Accept-Language`, so a shared cache told to
- * ignore both could hand one viewer another viewer's language. Varying on `Cookie`
- * does cost hit rate for anyone carrying one, which for this route is only the
- * signed-in owner: an anonymous viewer sends no cookie and shares the one hot entry.
- *
- * The body is buffered rather than streamed because an entity tag is a digest of the
- * bytes, and there is nothing to hash until they all exist. Nothing here streams
- * usefully in any case — every query the page renders from is awaited before the
- * first element is produced.
+ * Gives a rendered page its HTTP cache policy and answers a still-current
+ * client copy with a `304`. `Vary` includes `Cookie` since the markup is
+ * translated per viewer, with a weak `ETag` matching each fresh render.
  *
  * @param request - The incoming request, carrying the viewer's validators.
  * @param response - The rendered page.
@@ -488,9 +444,6 @@ async function withCachePolicy(request: Request, response: Response): Promise<Re
 	);
 	vary(headers, ["Accept-Language", "Cookie"]);
 
-	// Weak, because the page is re-rendered per request rather than served from a
-	// stored artifact: it identifies a semantically equivalent render, which is
-	// exactly what `renderedAt`'s rounding to the cache window makes it.
 	let tag = await etag(body, { weak: true });
 	if (!isFailure(tag)) headers.set("ETag", tag.data);
 

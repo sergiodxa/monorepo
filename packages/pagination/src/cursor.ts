@@ -3,8 +3,8 @@
  *
  * A cursor is the base64url of a small JSON payload holding the ordering column
  * names, the boundary row's values for them, and which edge of a page it marks.
- * Naming the columns is what makes an ordering change invalidate old cursors
- * instead of silently seeking on the wrong key.
+ * Naming the columns lets an ordering change invalidate old cursors before they
+ * can seek on the wrong key.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,9 +21,8 @@ import { InvalidCursorError, UnencodableCursorValueError } from "./errors";
 /**
  * A row value that survives a round trip through a cursor.
  *
- * Deliberately narrow: dates, bigints, and `null` are rejected at encode time
- * rather than coerced, because a coerced value compares against a different
- * column type in the seek predicate and quietly returns the wrong page.
+ * Dates, bigints, and `null` are rejected at encode time, since a coerced value
+ * would compare against the wrong column type and return the wrong page.
  */
 export type CursorValue = string | number | boolean;
 
@@ -39,10 +38,8 @@ export type CursorDirection = "after" | "before";
 const CURSOR_VERSION = 1;
 
 /**
- * Wire shape of a decoded cursor payload.
- *
- * The keys are short because cursors travel in query strings, where every byte is
- * paid for by the client; `v` is the version, `d` the direction, `k` the ordering
+ * Keys stay short because cursors travel in query strings where every byte is
+ * paid for by the client: `v` is the version, `d` the direction, `k` the
  * columns, and `p` the boundary row's positionally aligned values.
  */
 interface CursorPayload {
@@ -78,9 +75,8 @@ export interface DecodedCursor {
 /**
  * Narrows an arbitrary row value to something a cursor can carry.
  *
- * `NaN` and `Infinity` are excluded along with `null`, because `JSON.stringify`
- * turns them into `null` and the decoded cursor would then compare against the
- * wrong value.
+ * `NaN` and `Infinity` are excluded along with `null` because `JSON.stringify`
+ * turns each into `null`, and the decoded cursor then compares against it.
  */
 function isCursorValue(value: unknown): value is CursorValue {
 	if (typeof value === "string" || typeof value === "boolean") return true;
@@ -90,8 +86,8 @@ function isCursorValue(value: unknown): value is CursorValue {
 /**
  * Encodes a page boundary as an opaque, URL-safe cursor.
  *
- * Opaque but not secret: it is base64url, not encrypted, so it must only ever
- * carry ordering keys the client is already allowed to see.
+ * The cursor is a plain base64url encoding, readable by anyone who has it, so
+ * it must only ever carry ordering keys the client is already allowed to see.
  *
  * @param direction Edge of the page being encoded, which decides how it is seeked.
  * @param columns Ordering column names, most significant first.
@@ -124,11 +120,10 @@ export function encodeCursor(
 }
 
 /**
- * Decodes and validates a cursor, without interpreting it against an ordering.
+ * Decodes and structurally validates a cursor.
  *
- * Every failure mode collapses into `InvalidCursorError`, so a truncated,
- * re-encoded, or entirely invented cursor is a `400` rather than a thrown
- * `SyntaxError` from `JSON.parse`.
+ * Every failure mode, including a payload that is not valid JSON, resolves to
+ * `InvalidCursorError`, so callers always get a `400`-safe value.
  *
  * @param cursor The opaque string a client sent back.
  * @returns The decoded boundary, or `InvalidCursorError` when it is not a cursor this package minted.

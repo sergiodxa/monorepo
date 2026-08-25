@@ -207,9 +207,8 @@ export class Post {
 
 	/**
 	 * Creates a post row and its metadata rows atomically, then reads the result
-	 * back. Atomic via a transaction on the Durable Object adapter; on D1 (which has
-	 * no interactive transactions) a failed write is compensated by deleting the
-	 * partial post, so the operation is all-or-nothing on both adapters.
+	 * back. D1 lacks interactive transactions, so a failed write is compensated by
+	 * deleting the post only when we generated its id, since a caller-supplied id might collide.
 	 * @param db - Database handle.
 	 * @param input - Core columns plus optional metadata rows.
 	 * @returns The created post with metadata, or `null` if the read-back fails.
@@ -236,12 +235,6 @@ export class Post {
 				}
 			});
 		} catch (error) {
-			// The Durable Object adapter rolls the transaction back, but D1 commits
-			// each statement independently, so a mid-write failure can leave a partial
-			// post. When we generated the id, compensate by deleting the partial post
-			// (its `post_meta` rows cascade, as in destroy), restoring all-or-nothing
-			// on both adapters. When the caller supplied the id, the failure may be a
-			// primary-key collision with a pre-existing post, so we must NOT delete it.
 			if (!input.id) await db.delete(this.table, { id }).catch(() => {});
 			throw error;
 		}
@@ -251,9 +244,8 @@ export class Post {
 
 	/**
 	 * Updates a post row and upserts its metadata entries by key (existing keys are
-	 * updated, new keys inserted) in one transaction. Atomic on the Durable Object
-	 * adapter; on D1 the per-key upsert is idempotent, so a failed update is safe to
-	 * retry to convergence.
+	 * updated, new keys inserted) in one transaction. The per-key upsert is idempotent,
+	 * so a failed update on D1 is safe to retry to convergence.
 	 * @param db - Database handle.
 	 * @param id - The post id to update.
 	 * @param input - Fields to change; omitted fields keep their current value.
@@ -337,8 +329,6 @@ export class Post {
 	static countByAuthor(db: Database, authorId: string): Promise<number> {
 		return db.count(this.table, { where: { author_id: authorId } });
 	}
-
-	// ---- Typed helpers (codec-driven) ----
 
 	/**
 	 * Lists typed posts for one type, decoding each post's metadata via the codec.
@@ -469,7 +459,6 @@ export class Post {
 		return { ...row, meta: codec.deserialize(meta) };
 	}
 
-	/** Current wall-clock time in ISO-8601 UTC. */
 	private static get timestamp(): string {
 		return new Date().toISOString();
 	}

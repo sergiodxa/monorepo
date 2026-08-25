@@ -2,7 +2,7 @@
  * Tests the alert create/update/delete actions: successful create/update/delete
  * mutate `alerts` and redirect to the list; validation failure redirects without
  * mutating anything; the per-team alert cap and each action's team-scoped
- * not-found guard are covered directly. *
+ * not-found guard are covered directly.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -61,8 +61,8 @@ async function postAlertAction(
 
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
 	/**
-	 * Casts `router.map` itself (rather than its arguments) so this helper can map
-	 * several differently-shaped routes without losing type-checking elsewhere.
+	 * Casts `router.map` itself so this helper can map several differently-shaped
+	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
 		middleware: logger
@@ -247,9 +247,9 @@ describe("POST /actions/:team/create-alert", () => {
 	});
 
 	/**
-	 * Never falls back to team-wide: a scope nobody could have picked means the submission
-	 * is not the form we rendered, and quietly widening it would subscribe the channel to
-	 * every monitor the team has.
+	 * A scope nobody could have picked means the submission wasn't the form we
+	 * rendered, so the request is rejected, keeping every alert scoped to a
+	 * monitor the team actually owns.
 	 */
 	test("rejects a scope naming a monitor the team doesn't own, without creating a row", async () => {
 		let { db } = createTestDatabase();
@@ -516,9 +516,9 @@ describe("POST /actions/:team/delete-alert", () => {
 });
 
 /**
- * The `funnel.alert_configured` event. A team that has said where to reach it is a team that
- * expects to be reached, which is the other half of activation — and the strategy's config is
- * a webhook secret or an address, so the event names the strategy and nothing else.
+ * The `funnel.alert_configured` event. A team that has said where to reach it is a team
+ * that expects to be reached, which is the other half of activation, and the strategy's
+ * config is a webhook secret or an address, so the event captures only the strategy.
  */
 describe("create-alert funnel event", () => {
 	/** Every alert-configured event the request emitted. */

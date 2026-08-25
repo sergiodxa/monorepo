@@ -1,11 +1,9 @@
 /**
- * Billing entry point. Owners get redirected to a hosted Polar checkout session (no
- * active subscription) or the hosted customer portal (already subscribed) — billing
- * is 100% Polar-hosted. Non-owners see a message instead of a redirect: only the
- * owner can manage billing. This intentionally has no usage-quantities view for
- * non-owners, since `@pkg/polar` has no equivalent to the raw SDK's
- * `meters.quantities` call — a team-usage view would be a bigger, separate feature,
- * not a one-line addition.
+ * Billing entry point. Owners get redirected to a hosted Polar checkout
+ * session or the hosted customer portal, based on subscription status;
+ * billing stays 100% Polar-hosted. Non-owners see a message, since only the
+ * owner can manage billing. A team-usage view is its own separate feature,
+ * since `@pkg/polar` has no equivalent to the raw SDK's `meters.quantities`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,7 +31,11 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** GET /app/:team/checkout — redirects the owner to Polar-hosted billing. */
+/**
+ * GET /app/:team/checkout — redirects the owner to Polar-hosted billing.
+ * Subscription status comes from the D1 projection (ADR-005); defaulting
+ * to checkout on an unknown answer keeps the mistake recoverable.
+ */
 export default createAction(routes.app.team.checkout, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database, PolarClient] as const, async (db, polar) => {
@@ -79,8 +81,6 @@ export default createAction(routes.app.team.checkout, {
 			);
 		}
 
-		// The D1 projection, not Polar (ADR-005): an unknown answer sends the owner to
-		// checkout, which is the recoverable half of getting this wrong.
 		let hasActiveSubscription = await Subscription.isActive(db, ctx.team.owner_id);
 
 		let url = hasActiveSubscription

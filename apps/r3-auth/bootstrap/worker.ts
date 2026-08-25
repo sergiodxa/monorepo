@@ -20,28 +20,22 @@ import application from "./app";
 
 /**
  * Domain the session cookie is scoped to in production, so one sign-in at this server
- * is visible to every app under it. Left unset elsewhere: a `Domain` naming a host the
- * browser is not on makes the cookie be dropped silently.
+ * is visible to every app under it. A `Domain` naming a different host makes the cookie
+ * be dropped silently, so it stays unset outside production.
  */
 const PRODUCTION_COOKIE_DOMAIN = ".sergiodxa.com";
 
 /**
- * Cron expression that enqueues the daily session sweep.
- *
- * Compared rather than assumed, so adding a second trigger later cannot silently make
- * this one enqueue twice. Note that the trigger is not declared in `wrangler.jsonc` yet:
- * the worker serving production still owns the schedule and the queue's single consumer
- * slot, so this handler is written and unreachable until that moves.
+ * Cron expression that enqueues the daily session sweep. Compared against
+ * each delivery, so adding a second trigger later cannot make this one
+ * enqueue twice — the production schedule and queue slot move here later.
  */
 const DAILY_CRON = "0 0 * * *";
 
 /**
- * Whether the request arrived on the production host, which is the only place the
- * session cookie may carry `Secure` and a domain.
- *
- * Decided per request rather than from a build flag, because the same build serves
- * `localhost` during development and a `workers.dev` host during the verification
- * window, and a `Secure` cookie on plain HTTP is a cookie the browser discards.
+ * Whether the request arrived on the production host, the only place the
+ * session cookie may carry `Secure` and a domain. Decided per request since
+ * the same build also serves `localhost` and a `workers.dev` verification host.
  */
 function isProductionHost(request: Request): boolean {
 	let hostname = new URL(request.url).hostname;
@@ -70,8 +64,8 @@ export default {
 	},
 
 	/**
-	 * Enqueues the work a cron delivery implies rather than doing it inline, so a sweep
-	 * that outgrows the trigger's budget is the queue's problem and gets its own retries.
+	 * Enqueues the work a cron delivery implies, so a sweep that outgrows the
+	 * trigger's budget becomes the queue's problem and gets its own retries.
 	 * @param controller - The trigger being delivered.
 	 */
 	async scheduled(controller) {
@@ -82,11 +76,8 @@ export default {
 
 	/**
 	 * Runs the job each queued message names, inside one container scope for the batch.
-	 *
-	 * A body matching no known message type is logged and acked, never retried: it will
-	 * not match on the fourth delivery either, so retrying would only spend redeliveries
-	 * to reach the same conclusion. Only the `type` is logged — a message body is
-	 * untrusted input and could carry anything.
+	 * Acks a body matching no known type, since a redelivery reaches the same result.
+	 * Logs only the type of an unrecognized body, since its content is untrusted.
 	 * @param batch - The messages this delivery carries.
 	 */
 	async queue(batch) {
@@ -104,7 +95,10 @@ export default {
 
 				switch (result.value.type) {
 					case "cleanExpiredSessions": {
-						// Imported lazily so a `fetch` invocation never pays to parse the job.
+						/**
+						 * Imported lazily, so parsing this job's module is a cost
+						 * only a queue delivery pays.
+						 */
 						let { CleanExpiredSessionsJob } = await import("~/app/jobs/clean-expired-sessions");
 						waitUntil(CleanExpiredSessionsJob.run({ message, uptime }));
 						break;

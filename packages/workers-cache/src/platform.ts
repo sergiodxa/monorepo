@@ -28,8 +28,8 @@ export const TAG_SEPARATOR = ",";
 
 /**
  * Printable ASCII, the only range a tag may be built from. Non-ASCII bytes are
- * rejected here rather than being percent-encoded, so a tag never changes shape
- * between the response header and the later purge call.
+ * rejected outright, so a tag keeps one exact shape between the response
+ * header and the later purge call.
  */
 export const PRINTABLE_ASCII_PATTERN = /^[\x20-\x7E]+$/;
 

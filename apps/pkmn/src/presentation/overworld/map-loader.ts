@@ -1,15 +1,9 @@
 /**
  * Map loading, access helpers, and a built-in sample map.
  *
- * `loadMap` parses an untrusted JSON value against `MapDataSchema` and then runs
- * the cross-field invariants a shape schema cannot express — every tile layer is
- * exactly `width*height` cells long, the collision grid matches, and every
- * non-empty tile ref names a real tileset — returning a `Result` so a malformed
- * map surfaces a clear message instead of a broken render. `GameMap` wraps a
- * validated `TileMap` with the queries movement and encounters need (bounds,
- * collision, encounter membership and rate, warps) plus tileset/layer access for
- * the renderer, keeping those rules out of the scene. `createSampleMap` returns a
- * small hand-built map so the overworld is explorable before authored maps ship.
+ * Validates untrusted map JSON against the cross-field invariants a shape
+ * schema cannot express, then exposes typed map queries for movement and
+ * encounters, plus a small built-in sample map.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,13 +36,9 @@ export class MapLoadError extends Error {
 const LAYER_NAMES = ["ground", "decor", "overhead"] as const;
 
 /**
- * Validates an untrusted parsed JSON value into a typed {@link MapData}.
- *
- * Runs `MapDataSchema` first (shape, types, value ranges), then the cross-field
- * invariants: each layer and the collision grid must hold exactly `width*height`
- * cells, and every non-empty layer cell must name a tileset index that exists.
- * Any failure returns a {@link MapLoadError} naming the offending field so the
- * editor and the loader path both get an actionable message.
+ * Validates untrusted JSON into a {@link MapData}, checking that every layer
+ * and the collision grid hold exactly `width*height` cells and every tile ref
+ * names a real tileset that exists.
  *
  * @param value - The parsed JSON value to validate (untrusted).
  * @returns Success with the validated map, or failure with a {@link MapLoadError}.
@@ -176,13 +166,9 @@ export class GameMap {
 }
 
 /**
- * Lists the zones where a species can be encountered across the given maps.
- *
- * Scans every map's encounter tables for the species and collects each map's id
- * once (in first-seen order) as its zone name, so the detail screen can show
- * "where to catch" it. A species absent from every table yields an empty list,
- * which the UI renders as "Unknown". Kept pure and free of any species-name
- * assumptions so it stays testable without the renderer or the asset store.
+ * Lists the zones where a species can be encountered, for "where to catch"
+ * lookups. Collects each map's id once, in first-seen order; a species absent
+ * everywhere yields an empty list.
  *
  * @param maps - The authored maps to search.
  * @param speciesId - The species identifier to look for in encounter tables.
@@ -198,7 +184,11 @@ export function habitatZones(maps: readonly TileMap[], speciesId: string): strin
 	return zones;
 }
 
-/** Builds a small explorable map: a walled field with a tall-grass patch. */
+/**
+ * Builds a small explorable map: a walled field with a tall-grass patch, a
+ * pond, and a couple of obstacles that give movement something to route
+ * around.
+ */
 export function createSampleMap(): TileMap {
 	let width = 20;
 	let height = 15;
@@ -213,7 +203,6 @@ export function createSampleMap(): TileMap {
 		collision[y * width + (width - 1)] = Collision.Solid;
 	}
 
-	// A pond and a couple of obstacles to make movement meaningful.
 	for (let y = 9; y <= 11; y++)
 		for (let x = 3; x <= 6; x++) collision[y * width + x] = Collision.Water;
 	collision[5 * width + 14] = Collision.Solid;
@@ -253,13 +242,9 @@ export function createSampleMap(): TileMap {
 export const SAMPLE_SPAWN = { mapId: "route-1", x: 5, y: 5, facing: "down" as const };
 
 /**
- * Builds the three interactable NPCs standing around the sample-map spawn.
- *
- * All three sit on walkable interior tiles a step or two from `SAMPLE_SPAWN`
- * (5,5) so the player meets them immediately. The trainer fields a small party
- * whose species are resolved by the caller from loaded content, keeping this
- * helper free of any content assumptions; a single resolved species is fielded
- * twice at staggered levels when the caller has no second species to offer.
+ * Builds the three interactable NPCs standing around the sample-map spawn, on
+ * walkable tiles so the player meets them immediately. Fields the second
+ * species twice, at staggered levels, when the caller supplies only one.
  *
  * @param trainerSpeciesIds - Ordered species the trainer's party is built from.
  */

@@ -47,10 +47,8 @@ const ENV_TOOLS: ToolDescriptor[] = [
 
 /**
  * Create the built-in `env` plugin (namespace `"env"`). `env.get NAME` reads
- * the variable and fails when it is unset; `env.get NAME fallback` reads the
- * fallback instead, for the variable a local run may reasonably leave unset.
- * The permission check comes first either way: a fallback covers an absent
- * value, never an absent grant.
+ * the variable, falling back to a second argument when unset; the permission
+ * check always runs first, so a fallback substitutes only for an absent value.
  */
 export function createEnvPlugin(): Plugin {
 	return {
@@ -96,7 +94,7 @@ function get(args: ToolArg[], context: ToolContext): Result<Value, SpecError> {
 	);
 }
 
-/** Extract the variable name: a required string, never a bare word. */
+/** Extract the variable name as a required string value. */
 function stringArg(args: ToolArg[], index: number): Result<string, ToolError> {
 	let arg = args[index];
 	if (arg === undefined || arg.kind !== "value" || typeof arg.value !== "string") {

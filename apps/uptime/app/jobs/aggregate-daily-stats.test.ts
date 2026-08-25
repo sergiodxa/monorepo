@@ -1,14 +1,10 @@
 /**
- * Unit tests for `AggregateDailyStatsJob.perform()`, covering the branching across its
- * four aggregation sources (HTTP via Analytics Engine, DNS/TCP via their own D1 result
- * tables, cron via `cron_job_pings`) and `MonitorDailyStats.upsertDay`'s
- * replace-on-rerun idempotency. `getHttpDailyAggregate` is mocked since Analytics
- * Engine access has its own service-level tests. The DNS/TCP/cron branches read via raw
- * `db.exec()` SELECTs, which the shared `createTestDatabase()` SQLite adapter can't
- * return rows for (its `shouldReadStatement` always treats `"raw"` operations as
- * writes), so those tests patch `db.exec` on the test's own database instance to return
- * canned aggregate rows, exercising the job's write/rounding/status-classification
- * plumbing without re-verifying the SQL's own date-bounds filtering.
+ * Unit tests for `AggregateDailyStatsJob.perform()`, covering its four aggregation
+ * sources (HTTP via Analytics Engine, DNS/TCP via D1 result tables, cron via
+ * `cron_job_pings`) and `MonitorDailyStats.upsertDay`'s replace-on-rerun idempotency.
+ * `getHttpDailyAggregate` is mocked since Analytics Engine access has its own
+ * service-level tests; DNS/TCP/cron tests patch `db.exec` directly because the shared
+ * in-memory adapter can't answer raw SQL reads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,10 +33,9 @@ vi.doMock("~/app/services/analytics", () => ({
 }));
 
 /**
- * Monitor ids whose write must fail, so the "one bad row doesn't cost the rest their
- * stats" guarantee can be exercised. `MonitorDailyStats` is subclassed rather than
- * object-spread because class statics are non-enumerable, and every method other than
- * `upsertDay` has to keep working.
+ * Monitor ids whose write must fail, exercising the "one bad row doesn't cost the
+ * rest their stats" guarantee. Subclassing (not object-spreading) preserves every
+ * other static method, since class statics are non-enumerable and would be lost.
  */
 let failingWrites = new Set<string>();
 let realDailyStatsModule = await import("~/app/data/monitor-daily-stats");
@@ -77,16 +72,14 @@ async function runJob(db: Database) {
 
 /**
  * Patches `db.exec` on this one instance to return canned rows keyed by the raw SQL
- * statement's `FROM <table>` clause, standing in for the D1 aggregation queries
- * `aggregateD1`/`aggregateCron` run — see the file header for why the real in-memory
- * adapter can't answer them.
+ * statement's `FROM <table>` clause, standing in for the D1 aggregation queries the
+ * job runs, since the in-memory adapter can't return rows for raw SQL reads.
  */
 function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[]>): void {
 	/**
-	 * `db.exec` is also the dispatch point the query builder uses internally for
-	 * `findMany`/`create`/`delete` (any non-string, non-`SqlStatement` argument), so only
-	 * raw SQL-string calls are intercepted here; everything else falls through to the
-	 * real implementation, or `MonitorDailyStats.upsertDay`'s own reads/writes would break.
+	 * `db.exec` also dispatches the query builder's internal `findMany`/`create`/`delete`
+	 * calls, so only raw SQL-string calls are intercepted here; other calls fall through
+	 * to the real implementation, keeping `MonitorDailyStats.upsertDay`'s reads and writes intact.
 	 */
 	let original = (db.exec as (...args: unknown[]) => Promise<unknown>).bind(db);
 	(db as unknown as { exec: unknown }).exec = vi.fn(

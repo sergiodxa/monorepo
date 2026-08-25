@@ -1,9 +1,9 @@
 /**
- * The router's fallback handler: any URL this server does not serve gets the localized
- * 404 document rather than an empty response, so a mistyped endpoint is legible.
+ * The router's fallback handler: a URL beyond this server's routes gets the localized
+ * 404 document, so a mistyped endpoint stays legible.
  *
- * It is the router's `defaultHandler` rather than a splat route, so it cannot shadow a
- * real route or be reached by a request that matched one.
+ * Registered as the router's `defaultHandler`, so it runs for requests that matched no
+ * route and every real route keeps priority over it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +23,7 @@ interface NotFoundContext {
 	i18next: i18n;
 }
 
-/** Renders the fallback 404 document for unmatched routes. */
+/** Responds `404` with the localized not-found document. */
 export default function defaultHandler(ctx: NotFoundContext) {
 	let props = NotFoundViewModel.default({
 		title: ctx.i18next.t("splat.notFound.title"),

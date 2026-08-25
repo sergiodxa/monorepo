@@ -1,13 +1,8 @@
 /**
  * Shared world helper primitives for the ECS-style storage layer.
  *
- * This module centralizes the low-level utilities that read, write, enumerate, and trim world-backed
- * component stores. It defines the common store shapes and persistence groupings used to keep world state
- * handling consistent across the engine.
- *
- * It also provides the boundary between long-lived save data and runtime-only state by exposing helpers that
- * select persistent world slices and ignore transient stores. Keeping that behavior here makes world storage
- * rules explicit in one place instead of scattering them across individual systems.
+ * Centralizes read/write/enumerate/trim utilities for world component
+ * stores, and separates persistent save data from transient runtime state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -96,11 +91,10 @@ export function listComponentEntities<T>(store: ComponentStore<T>): EntityId[] {
 /**
  * Returns a save-only snapshot with transient runtime stores removed.
  *
- * Persistence should contain only long-lived player and creature state. Stripping runtime mirrors here keeps
- * save output stable even when the engine adds new battle-only helper stores.
+ * Excludes wild encounter and opposing trainer creatures because they are
+ * transient; only long-lived player and creature state remains.
  */
 export function pickPersistentWorld(world: World) {
-	// Wild (encounter) and opposing trainer creatures are transient — they never belong in a save.
 	let excluded = new Set<EntityId>();
 	for (let entityId of Object.keys(world.creatureLocation)) {
 		let kind = world.creatureLocation[entityId]?.kind;

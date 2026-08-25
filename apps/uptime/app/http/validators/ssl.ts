@@ -1,7 +1,7 @@
 /**
  * Form validation schema for the `update-ssl` action. SSL monitoring relies on a
- * manually entered expiry date (Workers cannot read TLS certificate details from
- * `fetch()`), so this only validates that data — not a certificate itself.
+ * manually entered expiry date, since Workers cannot read TLS certificate details
+ * from `fetch()`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

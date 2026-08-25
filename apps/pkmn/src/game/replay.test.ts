@@ -1,5 +1,5 @@
 /**
- * Proves the replay harness enforces engine determinism as a regression guard. It builds a fixed initial engine from authored content the same way the engine's own tests do, then replays a fixed, RNG-sensitive command sequence to assert two invariants.
+ * Proves the replay harness enforces engine determinism as a regression guard. It builds a fixed initial engine from authored content and a hand-written bootstrap world, then replays a fixed, RNG-sensitive command sequence to assert two invariants.
  *
  * The assertions stay outcome-agnostic on purpose: the same seed must reproduce identical events and snapshots, and a different seed must change the observable result. Concrete battle numbers are never asserted because the mechanics they depend on are owned by another module and may change.
  *
@@ -22,7 +22,7 @@ import { assertDeterministicReplay, replaySession, replaysAreEqual } from "./rep
 import { createBattleId, createCreatureId, createPlayerId } from "./world/ids";
 import { migrateWorld } from "./world/migrate";
 
-/** Fixed content identifiers, resolved the same way the engine tests resolve them. */
+/** Fixed content identifiers shared by every recording built in this module. */
 let PRIMARY_SPECIES_ID = Object.keys(SPECIES)[0]!;
 let SECONDARY_SPECIES_ID = Object.keys(SPECIES)[1]!;
 let DEFAULT_NATURE_ID = Object.keys(NATURES)[0]!;
@@ -55,7 +55,7 @@ function seededRandom(seed: number): () => number {
 	};
 }
 
-/** Builds one bootstrap creature payload with a damaging move, matching the engine test fixtures. */
+/** Builds one bootstrap creature payload configured with a damaging move. */
 function createBootstrapCreature(species: string) {
 	return {
 		species,
@@ -87,11 +87,9 @@ function createBootstrapCreature(species: string) {
 }
 
 /**
- * Boots a fresh engine seeded with the given seed, from a fixed reproducible starting scenario.
- *
- * The world is assembled exactly like the existing engine tests (authored content plus `migrateWorld` over a
- * hand-written bootstrap world), so the only thing that varies between engines is the seeded RNG. This is the
- * `buildEngine(seed)` factory the harness expects.
+ * Boots a fresh engine from a fixed, hand-written bootstrap world, seeded so
+ * only its RNG output varies between calls. This is the `buildEngine(seed)`
+ * factory the replay harness expects.
  */
 function buildEngine(seed: number): Engine {
 	return Engine.create({
@@ -126,18 +124,9 @@ function buildEngine(seed: number): Engine {
 }
 
 /**
- * Builds a fixed, RNG-sensitive command sequence.
- *
- * It spawns a wild encounter (rolling nature and IVs through the seeded RNG) and then runs a single battle
- * turn against it (the damage roll, accuracy, and turn order all flow through the same RNG), so a different
- * seed produces an observably different session.
- *
- * Exactly one turn is submitted on purpose. The engine rejects a `submit-battle-turn` whose command count does
- * not match the currently requested slots, and after a battle ends (or a creature faints) the requested slots
- * change. A single turn — dispatched while the freshly started 1v1 battle requests one command per active side
- * — always matches, keeping the recording a fixed, seed-independent list that is safe to replay to completion.
- * Both requested slots (the player's side 0 and the enemy's side 1) each get a fight command targeting the
- * other side, so the turn's damage rolls flow through the seeded RNG for both combatants.
+ * Builds a fixed, RNG-sensitive command sequence: a wild encounter spawn
+ * followed by one battle turn. Exactly one turn is submitted because the
+ * engine requires the command count to match the currently requested slots.
  */
 function buildCommands(): Command[] {
 	return [
@@ -167,27 +156,21 @@ test("replaying the same recording twice yields identical events and snapshot", 
 
 	let [first, second] = assertDeterministicReplay(recording, buildEngine);
 
-	// Redundant explicit assertions so the invariant is visible in the test output, not just inside the helper.
 	expect(first.events).toEqual(second.events);
 	expect(first.snapshot).toEqual(second.snapshot);
 	expect(replaysAreEqual(first, second)).toBe(true);
-	// The recording actually exercised the engine (guards against an empty/no-op sequence).
 	expect(first.events.length).toBeGreaterThan(0);
 });
 
 test("different seeds with the same commands produce different results", () => {
 	let commands = buildCommands();
-	// This 1v1 fixture is only weakly seed-sensitive, so the two seeds are chosen to
-	// actually diverge under the current RNG stream rather than left arbitrary.
 	let low: Recording = { seed: 1, commands };
 	let high: Recording = { seed: 999, commands };
 
 	let lowResult = replaySession(low, buildEngine);
 	let highResult = replaySession(high, buildEngine);
 
-	// Each seed is internally deterministic...
 	expect(replaysAreEqual(lowResult, replaySession(low, buildEngine))).toBe(true);
 	expect(replaysAreEqual(highResult, replaySession(high, buildEngine))).toBe(true);
-	// ...but the two seeds must diverge, proving the RNG is threaded through, not ignored.
 	expect(replaysAreEqual(lowResult, highResult)).toBe(false);
 });

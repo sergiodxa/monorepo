@@ -1,8 +1,7 @@
 /**
  * Per-page crawl directives for the `robots` meta tag. It exists so a page can opt out
  * of indexing or link following with a boolean instead of remembering which of the four
- * directive spellings pairs with which, and it deliberately says nothing about
- * site-wide crawl policy, which belongs in `robots.txt`.
+ * directive spellings pairs with which. Site-wide crawl policy belongs in `robots.txt`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +16,9 @@ export interface RobotsOptions {
 }
 
 /**
- * Builds the `robots` meta tag content. Both directives are always spelled out rather
- * than omitting the positive ones, so the emitted value states the page's full policy
- * and a diff of two pages' head output is readable.
+ * Builds the `robots` meta tag content. Every directive is spelled out explicitly, so
+ * the emitted value states the page's full policy and a diff of two pages' head output
+ * stays readable.
  *
  * @param options - Which directives the page opts out of.
  * @returns The directive list, e.g. `"noindex, follow"`.

@@ -1,12 +1,8 @@
 /**
- * Tests for the generated demo atlas.
- *
- * These assert the pure, canvas-free surface: the region map exposes the expected
- * tile / character / creature / UI region names with in-bounds rects, the sheet
- * size derives from the layout, and the character walk animations reference their
- * frames. `buildPlaceholderAtlas` returns null under the test runner (no DOM), and
- * that graceful degradation is asserted too, since renderers rely on it to fall
- * back to procedural drawing.
+ * Tests for the generated demo atlas: region names lie within the derived
+ * sheet bounds, and character walk animations reference their frames.
+ * `buildPlaceholderAtlas` returns null under the test runner (no DOM) so
+ * renderers fall back to procedural drawing, and that is asserted too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,8 +71,6 @@ test("each character facing has a two-frame walk animation over its frames", () 
 });
 
 test("buildPlaceholderAtlas degrades to null without a document (test runner)", () => {
-	// The Bun test runner has no DOM, so no offscreen canvas can be created; the
-	// builder must return null so callers fall back to procedural drawing.
 	expect(globalThis.document).toBeUndefined();
 	expect(buildPlaceholderAtlas()).toBeNull();
 });

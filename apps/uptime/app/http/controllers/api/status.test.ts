@@ -22,7 +22,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** `app/data/monitor.ts` imports `env` from `cloudflare:workers` for `Monitor.ping()`, which this route never calls, but the module-level import still needs a resolvable mock. */
+/** `app/data/monitor.ts` imports `env` from `cloudflare:workers` at module scope for `Monitor.ping()`, so the mock must resolve for the module to load. */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: createQueue() }),
 	waitUntil: (promise: Promise<unknown>) => promise,
@@ -166,7 +166,7 @@ describe("GET /api/v1/status", () => {
 		expect(response.status).toBe(200);
 
 		let body = (await response.json()) as { data: { status: Record<string, unknown> } };
-		/** An `unknown`-status monitor is never counted as down, so the overall rollup stays `operational`. */
+		/** An `unknown`-status monitor counts only toward the `unknown` bucket, keeping the overall rollup `operational`. */
 		expect(body.data.status.overall).toBe("operational");
 		expect(body.data.status.summary).toEqual({ total: 1, up: 0, down: 0, degraded: 0, unknown: 1 });
 	});

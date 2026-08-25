@@ -1,22 +1,6 @@
 /**
- * Pieces the five free-watch emails share: the status vocabulary they report, the
- * unsubscribe header every one of them carries, the way they abbreviate a URL and
- * render an instant, and the bar-plus-totals report the two digests are built around.
- *
- * These readers never created an account, so there is no stored preference to look up
- * and no settings page to send them to. Everything here is written for that: the copy
- * comes from one `emails.trial.*` prefix, and the way to make the mail stop belongs to
- * the family rather than being a per-email decision.
- *
- * This module is deliberately not an email class and not a base class for the five that
- * are. What the trial emails have in common is copy and a couple of small components,
- * not behaviour: each one derives its own recipient, its own subject and its own body,
- * which is the whole of the `Email` contract. ADR-030 rejects a shared base class for
- * exactly that reason — with `to`, `subject` and `body` all still abstract, the base
- * would hold no behaviour at all and amount to an interface with extra coupling, and
- * the ADR prefers a helper function wherever real logic turns out to be shared. That is
- * what these are. It lives under `shared/` so the top level of `app/emails/` stays the
- * inventory of sendable emails the ADR asks that directory to be.
+ * Pieces the five free-watch emails share: status vocabulary, the unsubscribe header, URL
+ * and instant formatting, and the bar-plus-totals report the two digests are built around.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,29 +18,18 @@ import { APP_ORIGIN } from "~/app/lib/origin";
 import routes from "~/routes/web";
 
 /**
- * Result of one check on a watched URL. The public trial is HTTP only, so these three
- * are the whole vocabulary — there is no DNS or TCP half to report here, and the bar's
- * colour mapping is total over them without a per-type branch.
+ * Result of one check on a watched URL: the whole vocabulary the public HTTP-only trial
+ * needs, since the bar's colour mapping is total over exactly these three states.
  *
- * Declared here rather than taken from the schema on purpose. The wider status enum
- * the ping API works in covers check types the trial cannot produce, and widening
- * these emails to match it would mean copy for states no reader of theirs can reach.
+ * Kept to states a trial reader can actually reach, since the trial only ever produces HTTP checks.
  */
 export type TrialStatus = "up" | "degraded" | "down";
 
 /**
  * The unsubscribe endpoint for one lead, which is the same URL under two methods.
  *
- * `GET` renders a confirmation page with a button and changes nothing; `POST` is what
- * actually stops every watch on the address and deletes the lead. That split is not
- * ceremony. Corporate scanners and preview fetchers — Outlook Safe Links, Gmail's own
- * image and link fetcher — follow every URL in a message before a human sees it, so a
- * `GET` that unsubscribed would quietly delete the leads of people who never clicked
- * anything. The visible link in the footer therefore points at the harmless `GET`.
- *
- * The native unsubscribe button Gmail and Apple Mail show is still one click, because
- * {@link trialUnsubscribeHeaders} declares RFC 8058 one-click and those clients `POST`
- * to this URL rather than fetching it. Same URL, and the method is what decides.
+ * `GET` renders a confirmation page and changes nothing, since preview fetchers like Outlook
+ * Safe Links crawl every link before a human does; `POST` is what actually stops the watches.
  *
  * @param token - The lead's unguessable unsubscribe token.
  * @returns The absolute URL for both the footer link and the headers.
@@ -67,9 +40,9 @@ export function trialUnsubscribeUrl(token: string): string {
 
 /**
  * RFC 8058 headers giving the clients that support them a native unsubscribe button.
- * They are worth setting on every one of these messages: the recipients never signed
- * up for an account, so the button is the path most of them will reach for, and Gmail
- * now treats its absence on bulk mail as a deliverability problem.
+ *
+ * Worth setting on every message here, since these recipients never created an account and
+ * Gmail treats a bulk sender without one as a deliverability risk.
  *
  * @param token - The lead's unguessable unsubscribe token.
  * @returns The two headers, ready to merge over the mailer's configured ones.
@@ -97,9 +70,8 @@ const FOOTER_LINK = "color:inherit;text-decoration:underline;font-weight:600;";
 /**
  * Absolute URL of a watch's report page, which only its own token addresses.
  *
- * Built from the typed route rather than a string, so the path cannot drift from the route
- * table; the origin comes from {@link APP_ORIGIN}, same as every other link these emails
- * carry, because a relative href in mail resolves against nothing.
+ * Built from the typed route so the path cannot drift from the route table, with the origin
+ * from {@link APP_ORIGIN} since a relative href in mail resolves against nothing.
  */
 export function trialReportUrl(token: string): string {
 	return `${APP_ORIGIN}${routes.trial.report.href({ token })}`;
@@ -124,22 +96,7 @@ export namespace TrialFooter {
 
 /**
  * The footer every trial email closes with: where the report lives, why this arrived, and how
- * to make it stop — each on a line of its own.
- *
- * They are three separate paragraphs and not one run of sentences because they answer three
- * unrelated questions, and a reader looking for the opt-out should find it as its own block
- * rather than at the end of a wall of small grey text. The mail kit's footer is a single
- * container by design — it ships no wording of its own — so the paragraphs belong here, with
- * their margins inline, since a footer whose spacing depended on a stylesheet would collapse
- * back into one blob in every client that strips one.
- *
- * The opt-out is a real anchor pointing at the harmless `GET`, and the sentence after it
- * spells out that one click ends every watch on the address rather than only the target this
- * message is about, which is the part a reader would otherwise have to guess.
- *
- * The report link belongs here and not beside the subscribe button on purpose: it is the same
- * facts at a stable address rather than a second thing to do, and these emails are allowed
- * exactly one call to action.
+ * to make it stop, each its own paragraph so the opt-out reads as its own block.
  *
  * @example <TrialFooter reportToken={token} unsubscribeToken={lead} reason={reason} t={t} />
  */
@@ -181,14 +138,10 @@ export function trialStatusKey(status: TrialStatus): string {
 }
 
 /**
- * The URL as a heading should say it: without the scheme, and without the trailing
- * slash a bare origin picks up on its way through `URL`.
+ * The URL as a heading should say it: a bare host and path, scheme and trailing slash gone.
  *
- * A heading is the one place the full URL hurts. Mail clients auto-link anything that
- * looks like an address, so `https://api.remix.run/` inside a sentence comes out as a
- * wall of underlined blue at heading size, and the half of it carrying no information
- * is the half that draws the eye. The unabbreviated URL still appears in the message,
- * once, in the table, where it is the value of a row that says it is a URL.
+ * Mail clients auto-link anything that looks like an address, so the full URL at heading size
+ * draws the eye to the half that carries no information; it still appears once, in the table.
  *
  * @param url - The watched URL, absolute.
  * @returns The same URL with the scheme and any trailing slash removed.
@@ -200,11 +153,8 @@ export function trialDisplayUrl(url: string): string {
 /**
  * An instant as one of these emails reports it: in the reader's language, and in UTC.
  *
- * UTC because a lead is an email address and nothing else — they never created an
- * account, so there is no stored timezone to render this in and no settings page that
- * would let them pick one. Naming the zone is what keeps the timestamp honest, since a
- * reader four hours off would otherwise read it as local and think the check ran at a
- * time it did not.
+ * UTC because a lead has no account and therefore no stored timezone; naming the zone keeps
+ * the timestamp honest for a reader whose local time would otherwise read it as their own.
  *
  * @param date - Instant to render.
  * @param locale - Language the surrounding copy is in.
@@ -241,13 +191,10 @@ export namespace TrialReport {
 }
 
 /**
- * One URL's record over one window: the bar, then checks run, uptime, and the slowest
- * response. Shared by the two digests and by the report a repeat submission earns, so a
- * reader who gets six dailies and one weekly is reading the same report at two scales — it
- * is the only thing those two still have in common, since one covers a whole set of URLs
- * for a day and the other one URL for a week. The repeat report reuses it for the same
- * reason it is not a subclass of the wrap-up: what those emails share is this block, not
- * their framing.
+ * One URL's record over one window: the bar, checks run, uptime, and the slowest response.
+ *
+ * Shared by the two digests and by the repeat report, so a reader getting six dailies and
+ * one weekly reads the same report at two different scales.
  *
  * @example <TrialReport segments={hours} stats={stats} rangeStart={start} rangeEnd={end} t={t} />
  */

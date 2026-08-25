@@ -1,10 +1,9 @@
 /**
- * Unit tests for `MaintenanceWindow`'s pure helpers — `parseRecurringPattern` (the
- * `"daily|weekly|monthly:..."` string format `recurring_pattern` rows store) and
- * `isRecurringPatternActive` (whether a recurring pattern's current occurrence covers a
- * given instant, in UTC wall-clock time) — plus `isSuppressing`, whose team/monitor
- * scoping runs as two indexed lookups and so needs the tenant-isolation guarantee
- * covered against a real database. The remaining CRUD methods aren't exercised here.
+ * Unit tests for `MaintenanceWindow`'s pure helpers — `parseRecurringPattern`, for the
+ * `"daily|weekly|monthly:..."` format `recurring_pattern` rows store, and
+ * `isRecurringPatternActive`, for UTC wall-clock occurrence checks — plus
+ * `isSuppressing`, whose team/monitor scoping runs as two indexed lookups and so needs
+ * its tenant-isolation guarantee covered against a real database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

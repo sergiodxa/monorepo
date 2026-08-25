@@ -1,17 +1,16 @@
-import type { CSSMixinDescriptor } from "remix/ui";
-
 /**
- * Covers {@link fieldStackLayout} as pure `css()` output: the single-column
- * layout and its `0.25rem` gap, with no DOM and no rendering involved.
+ * Covers {@link fieldStackLayout} as pure `css()` output: the exact
+ * single-column layout and its `0.25rem` gap.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { CSSMixinDescriptor } from "remix/ui";
+
 import { describe, expect, test } from "vitest";
 
 import { fieldStackLayout } from "./field-stack-layout";
 
-/** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;
 }

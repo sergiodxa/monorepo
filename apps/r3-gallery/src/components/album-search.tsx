@@ -41,9 +41,7 @@ export interface AlbumSearchProps {
 /**
  * Renders a trigger button and its paired mod+k command palette for jumping
  * straight to any album by title. `commandKeys(model)` moves the active
- * match with the arrow keys and follows it on Enter — since the model
- * already keeps the sole remaining match active as soon as typing narrows
- * down to it, Enter selects it with no arrow press required.
+ * match with arrow keys and follows it on Enter, which needs no arrow press once typing alone narrows the results to a single match.
  *
  * @param handle Component handle carrying the searchable albums.
  * @returns The search trigger and its dialog.

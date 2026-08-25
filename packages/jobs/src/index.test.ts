@@ -1,3 +1,12 @@
+/**
+ * Exercises the `Job` base class: lifecycle ack/retry routing, the uptime
+ * ping and its failure handling, kebab-case identifier derivation, and the
+ * usage tracker's per-job cost attribution, against a mocked queue message
+ * and a mocked uptime HTTP endpoint.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { Message } from "@cloudflare/workers-types";
@@ -16,14 +25,12 @@ const UPTIME_URL = "https://uptime.sergiodxa.com";
 const MONITOR_ID = "test-monitor-123";
 const UPTIME_TOKEN = "test-token";
 
-// MSW server setup
 let server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-// Console mocks
 let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
 let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -37,7 +44,6 @@ afterEach(() => {
 	consoleErrorSpy.mockRestore();
 });
 
-// Message mocks
 let retryMock = vi.fn();
 let ackMock = vi.fn();
 
@@ -57,7 +63,6 @@ function createMessage<T extends JSONValue>(body: T): Message<T> {
 	};
 }
 
-// Job subclasses for testing
 class SuccessfulJob extends Job {
 	static schema = s.object({ teamId: s.string() });
 
@@ -119,9 +124,11 @@ class UnexpectedErrorJob extends Job {
 	}
 }
 
-// Subclasses whose names exercise the casing edges of identifier derivation:
-// a trailing acronym, an acronym followed by a word, a single-letter/digit part,
-// and a run of capitals before a capitalized word.
+/**
+ * Names chosen to exercise the casing edges of identifier derivation: a
+ * trailing acronym, an acronym followed by a word, a single-letter/digit
+ * part, and a run of capitals before a capitalized word.
+ */
 class CheckHTTPJob extends Job {
 	async perform(): Promise<void> {}
 }
@@ -158,7 +165,6 @@ describe(Job.name, () => {
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 			expect(consoleErrorSpy).not.toHaveBeenCalled();
 
-			// Verify log structure
 			let [identifier, logData] = consoleInfoSpy.mock.calls[0];
 			expect(identifier).toMatch(/^job:successful-job:/);
 			expect(logData.events).toHaveLength(3);
@@ -202,17 +208,14 @@ describe(Job.name, () => {
 
 			await SuccessfulJobWithMonitor.run({ message, uptime: UPTIME_TOKEN });
 
-			// Job should still ack (uptime failure doesn't fail the job)
 			expect(ackMock).toHaveBeenCalledTimes(1);
 			expect(retryMock).not.toHaveBeenCalled();
 
-			// Should log at info level for uptime failures
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleInfoSpy.mock.calls[0];
 			expect(identifier).toMatch(/^job:successful-job-with-monitor:/);
 
-			// Should have job.started, job.doing-work, job.uptime-failed
 			expect(logData.events).toHaveLength(3);
 			expect(logData.events[0].event).toBe("job.started");
 			expect(logData.events[1].event).toBe("job.doing-work");
@@ -233,11 +236,9 @@ describe(Job.name, () => {
 
 			await SuccessfulJobWithMonitor.run({ message, uptime: UPTIME_TOKEN });
 
-			// Job should still ack (uptime failure doesn't fail the job)
 			expect(ackMock).toHaveBeenCalledTimes(1);
 			expect(retryMock).not.toHaveBeenCalled();
 
-			// Should log at info level for network failures
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleInfoSpy.mock.calls[0];
@@ -258,7 +259,6 @@ describe(Job.name, () => {
 			expect(retryMock).toHaveBeenCalledTimes(1);
 			expect(ackMock).not.toHaveBeenCalled();
 
-			// Should log at error level
 			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleErrorSpy.mock.calls[0];
@@ -292,7 +292,6 @@ describe(Job.name, () => {
 			expect(ackMock).toHaveBeenCalledTimes(1);
 			expect(retryMock).not.toHaveBeenCalled();
 
-			// Should log at error level
 			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleErrorSpy.mock.calls[0];
@@ -332,11 +331,9 @@ describe(Job.name, () => {
 
 			await expect(UnexpectedErrorJob.run({ message })).rejects.toThrow("Something went wrong");
 
-			// Should not call ack or retry - let Cloudflare handle it
 			expect(ackMock).not.toHaveBeenCalled();
 			expect(retryMock).not.toHaveBeenCalled();
 
-			// Should log at error level
 			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleErrorSpy.mock.calls[0];
@@ -360,8 +357,10 @@ describe(Job.name, () => {
 			expect(identifier).toMatch(/^job:successful-job:[a-f0-9-]+$/);
 		});
 
-		// The identifier reaches logs and uptime monitor ids, so these assert the
-		// exact strings the derivation has to keep producing, not just a shape.
+		/**
+		 * The identifier reaches logs and uptime monitor ids, so these assert the
+		 * exact strings the derivation has to keep producing, not just a shape.
+		 */
 		let cases: Array<[typeof CleanJob, string]> = [
 			[CleanJob, "clean-job"],
 			[SuccessfulJobWithMonitor, "successful-job-with-monitor"],
@@ -450,7 +449,6 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			// SuccessfulJob doesn't have static monitorId, so uptime ping should be skipped
 			await SuccessfulJob.run({ message, uptime: UPTIME_TOKEN });
 
 			expect(uptimePinged).toBe(false);
@@ -473,13 +471,9 @@ describe(Job.name, () => {
 });
 
 /**
- * Usage tracking, the mechanism behind per-job-type database cost attribution: the
- * host app registers a tracker that scopes an accumulator to one job, its database
- * adapter's statement observer adds to whichever accumulator is active, and
- * `job.completed` reports the totals.
- *
- * The tracker here is the same async-local shape the app uses, so these also pin that
- * concurrently running jobs are attributed separately rather than sharing a total.
+ * Usage tracking, the mechanism behind per-job-type database cost attribution:
+ * a host app registers a tracker that scopes an accumulator to one job, and
+ * `job.completed` reports the totals, with concurrent jobs attributed separately.
  */
 describe("job usage tracking", () => {
 	let storage = new AsyncLocalStorage<Job.Usage>();
@@ -495,10 +489,12 @@ describe("job usage tracking", () => {
 	}
 
 	class QueryingJob extends Job {
+		/**
+		 * Awaits between statements so the accumulator has to survive a microtask
+		 * boundary, which is the whole reason the tracker owns the scope.
+		 */
 		async perform(): Promise<void> {
 			recordStatement(3, 0);
-			// Awaited between statements: the accumulator has to survive a microtask
-			// boundary, which is the whole reason the tracker owns the scope.
 			await Promise.resolve();
 			recordStatement(0, 2);
 		}
@@ -542,8 +538,10 @@ describe("job usage tracking", () => {
 
 		await QueryingJob.run({ message: createMessage({}) });
 
-		// The same string the log id is built from, so a tracker that attributes cost per job
-		// type and a dashboard grouping by log id cannot disagree about the name.
+		/**
+		 * The same string the log id is built from, so a tracker attributing cost
+		 * per job type and a dashboard grouping by log id agree on the same name.
+		 */
 		expect(contexts).toEqual(["querying-job"]);
 		let [identifier] = consoleInfoSpy.mock.calls[0];
 		expect(String(identifier).split(":")[1]).toBe("querying-job");

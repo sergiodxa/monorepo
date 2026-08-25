@@ -16,7 +16,6 @@ import routes from "~/routes/web";
 
 /** Builds the configured OIDC provider for the current auth request. */
 export class OAuthProviderService {
-	/** Creates the sergiodxa auth provider using the active request origin and env credentials. */
 	async create(requestUrl: string) {
 		return createProvider({
 			auth: {
@@ -30,7 +29,6 @@ export class OAuthProviderService {
 
 /** Registers the OAuth provider factory as an application singleton. */
 export class OAuthProviderServiceProvider implements ServiceProvider {
-	/** Stores the OAuth provider factory in the application container. */
 	register(container: Container) {
 		container.singleton(OAuthProviderService, () => new OAuthProviderService());
 	}

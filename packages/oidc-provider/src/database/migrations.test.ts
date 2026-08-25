@@ -38,8 +38,6 @@ describe(runMigrations, () => {
 	});
 
 	test("the finished schema still carries the PKCE columns 0003 was added for", async () => {
-		// 0003's ALTERs became a no-op once 0001 created the columns itself. This is what
-		// stops that from quietly meaning the columns are gone.
 		await runMigrations(createSqliteDatabaseAdapter(sqliteDb));
 
 		let columns = sqliteDb

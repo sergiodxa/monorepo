@@ -36,11 +36,9 @@ export type ResolvedCallable =
 	  };
 
 /**
- * The suite's resolution table. Built once after loading, then consulted for
- * every call. Resolution rules: a dotted target (`fs.write`) resolves inside
- * that namespace; a bare target resolves among suite commands plus the tools
- * of namespaces the calling file imported; a name matching more than one
- * candidate is an `ambiguous-name` error listing every candidate.
+ * The suite's resolution table, built once after loading and consulted for
+ * every call. A dotted target resolves inside its namespace; a bare target
+ * resolves among suite commands and imported namespaces, erring on ambiguity.
  */
 export interface Registry {
 	/**
@@ -60,10 +58,9 @@ export interface Registry {
 }
 
 /**
- * Build the suite's resolution table from the connected plugins and the
- * loaded definitions. Each plugin's descriptors are read once — a plugin's
- * tool set is stable for its lifetime — so every later resolution is a map
- * lookup.
+ * Build the suite's resolution table from the connected plugins and loaded
+ * definitions. Each plugin's descriptors are read once, since a plugin's tool
+ * set is stable for its lifetime, making every later resolution a map lookup.
  *
  * @param plugins - The connected plugins, one namespace each.
  * @param suite - The loaded suite whose commands and fixtures resolve here.

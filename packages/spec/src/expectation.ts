@@ -28,9 +28,8 @@ export const POLL_INTERVAL_MS = 100;
 
 /**
  * What `expect` and `eventually` need from their caller: the enclosing scope
- * for binding lookups, the suite's resolution table, and the executor's own
- * expression evaluation and tool dispatch (which owns argument evaluation and
- * the central permission gate).
+ * for binding lookups, the suite's resolution table, and the executor's
+ * dispatch seam, which owns argument evaluation and the central permission gate.
  */
 export interface ExpectationHost {
 	/** The enclosing scope, for binding lookups and ambiguity detection. */
@@ -58,10 +57,9 @@ type ExpectMode =
 	| { mode: "observable"; tool: Extract<ResolvedCallable, { kind: "tool" }> };
 
 /**
- * Execute one `expect` statement. The first argument decides the form, never
- * by guessing: a name that is both a binding and a callable is an
- * `ambiguous-name` error; a bound name (or literal) selects the value form; a
- * name resolving to an observable tool selects the observable form.
+ * Execute one `expect` statement. The first argument decides the form: bound
+ * and callable is `ambiguous-name`, a bound name (or literal) selects the
+ * value form, and a callable observable tool selects the observable form.
  *
  * @param node - The `expect` statement to execute.
  * @param host - The executor-provided scope, registry, and dispatch seam.
@@ -86,14 +84,9 @@ export async function executeExpect(
 }
 
 /**
- * Execute one `eventually` block: validate that it contains only `expect`
- * statements and calls to observable tools (a retried mutation is not a
- * retried assertion), then retry the whole block until every statement passes
- * or the deadline expires, reporting the last failure on expiry. Name
- * resolution is deterministic inside the block — `let` is banned, so the
- * scope is frozen — which is why every statement resolves once, before the
- * first attempt: a name that cannot resolve now never will, and retrying it
- * would only burn the deadline before reporting.
+ * Execute one `eventually` block: only `expect` statements and observable
+ * calls may appear, since a retried mutation is not a retried assertion. Every
+ * name resolves once before the first attempt, because `let` is banned inside the block.
  *
  * @param node - The `eventually` statement to execute.
  * @param host - The executor-provided scope, registry, and dispatch seam.
@@ -147,8 +140,10 @@ export async function executeEventually(
 			attempts.push(async () => {
 				let result = await host.callTool(tool, callNode.args, callNode.span);
 				if (isFailure(result)) return failure(anchor(result.error, callNode.span));
-				// A bare observable is still an assertion: `false` fails the
-				// attempt exactly as it fails the expect form of the same call.
+				/**
+				 * A bare observable is still an assertion: `false` fails the
+				 * attempt exactly as it fails the expect form of the same call.
+				 */
 				if (result.data === false) {
 					return failure(
 						anchor(

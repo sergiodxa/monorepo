@@ -36,8 +36,8 @@ interface WebFingerDocument {
 /**
  * Normalizes supported WebFinger resource identifiers to a canonical value.
  *
- * Accepting both the acct URI and homepage URL keeps discovery working for clients
- * that identify a person by site URL instead of account syntax.
+ * Accepting both the acct URI and homepage URL keeps discovery working for
+ * clients that identify a person by account syntax or by plain site URL.
  *
  * @param resource Raw `resource` query parameter from the request URL.
  * @returns The canonical subject when the resource is recognized, otherwise `null`.

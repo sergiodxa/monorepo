@@ -1,44 +1,8 @@
 /**
  * Bridges a Chart.Bar, Chart.Line, Chart.Area, or Chart.Pie root to its
  * sibling Chart.Tooltip surface: tracks whichever plotted point the pointer
- * currently sits nearest to — or, once keyboard focus lands directly on a
- * point, that exact point — and mirrors it onto Chart.Tooltip's rows and
- * position.
- *
- * Every point a chart root renders (a bar's `<rect>`, a line or area's vertex
- * marker, a pie's wedge `<path>`) carries {@link CHART_POINT_ATTRIBUTE} plus
- * its already-localized {@link CHART_POINT_LABEL_ATTRIBUTE} and
- * {@link CHART_POINT_VALUE_ATTRIBUTE}. Points that share one enclosing
- * {@link CHART_POINT_GROUP_ATTRIBUTE} ancestor — every series' point for one
- * category in a grouped bar or multi-line chart — populate the tooltip
- * together, one row each, in document order; a point with no such ancestor
- * populates a lone row on its own, which is the common case for a pie wedge
- * or a single-series chart.
- *
- * Chart.Tooltip pre-renders one {@link CHART_TOOLTIP_ROW_ATTRIBUTE} row per
- * series it could ever need to show at once. This mixin fills each row's
- * {@link CHART_TOOLTIP_LABEL_ATTRIBUTE} and {@link CHART_TOOLTIP_VALUE_ATTRIBUTE}
- * slots from the active point set, hides whichever rows are left over, and
- * writes the active point's screen position onto Chart.Tooltip's host as
- * {@link CHART_TOOLTIP_X_PROPERTY} and {@link CHART_TOOLTIP_Y_PROPERTY} —
- * pixel offsets relative to the chart root's own parent element, the shared
- * positioning container both elements render inside. {@link ChartTooltipChangeEvent}
- * dispatches on the chart root every time the active point set changes,
- * including to empty once nothing is hovered or focused, so a consumer can
- * drive a live-region announcement or cross-highlight a Chart.Legend swatch
- * without reading the tooltip's rows back off the DOM.
- *
- * Why JS: resolving which plotted point the pointer or keyboard focus
- * currently sits nearest to, and positioning a floating tooltip surface
- * against that point's live screen coordinates, both require reading pointer
- * coordinates and element geometry as they change — no CSS selector computes
- * "nearest point to the pointer" or interpolates one element's position from
- * another element's coordinates.
- * No-JS baseline: every point still shows the browser's native tooltip on
- * hover and stays reachable by keyboard focus, its accessible name read from
- * its own `<title>`; Chart.Tooltip itself is never part of that baseline —
- * without this mixin its rows simply stay empty and hidden, so nothing on
- * the page looks broken.
+ * or keyboard focus currently resolves to, and mirrors it onto
+ * Chart.Tooltip's rows and position.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,58 +15,42 @@ import { createElement, createMixin, on } from "remix/ui";
 /**
  * Attribute every plottable point a chart root renders carries: a bar's
  * `<rect>`, a line or area's vertex marker, or a pie's wedge `<path>`.
- * `chartTooltip()` reads every element carrying this attribute beneath its
- * host, in document order, both as the pointer-tracked lookup's candidate
- * set and, once one is resolved, as the entry point into its
- * {@link CHART_POINT_GROUP_ATTRIBUTE} group.
+ * `chartTooltip()` reads it to build its pointer-tracked candidate set.
  */
 export const CHART_POINT_ATTRIBUTE = "data-chart-point";
 
 /**
  * Attribute a point carries its already-localized label on — the category,
  * series name, or slice name a chart renders it under. `chartTooltip()`
- * copies this value, unchanged, into the matching row's
- * {@link CHART_TOOLTIP_LABEL_ATTRIBUTE} slot whenever the point becomes
- * active.
+ * copies it unchanged into the matching row's {@link CHART_TOOLTIP_LABEL_ATTRIBUTE}.
  */
 export const CHART_POINT_LABEL_ATTRIBUTE = "data-chart-label";
 
 /**
  * Attribute a point carries its already-formatted value on, rendered through
- * the consumer's own `Intl` formatting rather than anything this mixin
- * computes. `chartTooltip()` copies this value, unchanged, into the matching
- * row's {@link CHART_TOOLTIP_VALUE_ATTRIBUTE} slot whenever the point becomes
- * active.
+ * the consumer's own `Intl` formatting. `chartTooltip()` copies it unchanged
+ * into the matching row's {@link CHART_TOOLTIP_VALUE_ATTRIBUTE} slot.
  */
 export const CHART_POINT_VALUE_ATTRIBUTE = "data-chart-value";
 
 /**
  * Attribute an ancestor of a cluster of related points carries — every
- * series' point for one category in a grouped or stacked bar chart, or every
- * line's vertex marker at one shared x position in a multi-line chart.
- * `chartTooltip()` walks up from whichever point resolves as active to find
- * the nearest ancestor carrying this attribute, and when one exists, every
- * point beneath it populates the tooltip together instead of just the
- * resolved point alone. A point with no such ancestor — the usual case for a
- * pie wedge or a single-series chart — populates a lone row on its own.
+ * series' point for one category in a grouped bar chart. Every point beneath
+ * the nearest such ancestor populates the tooltip together, one row each.
  */
 export const CHART_POINT_GROUP_ATTRIBUTE = "data-chart-group";
 
 /**
- * Attribute Chart.Tooltip's own root element carries. `chartTooltip()` looks
- * for it among its host's parent element's descendants to find the tooltip
- * surface it drives — the sibling relationship a chart root and its
- * Chart.Tooltip render in, both inside a shared positioning container the
- * consumer supplies.
+ * Attribute Chart.Tooltip's own root element carries. `chartTooltip()` finds
+ * it among its host's parent element's descendants — the sibling
+ * relationship a chart root and its Chart.Tooltip render in.
  */
 export const CHART_TOOLTIP_ATTRIBUTE = "data-chart-tooltip";
 
 /**
  * Attribute every pre-rendered row inside Chart.Tooltip carries, one per
- * series it could ever need to show for one active point set, in document
- * order. `chartTooltip()` fills as many rows as the active point set holds
- * and sets the native `hidden` property on every row beyond that count,
- * rather than creating or removing rows itself.
+ * series it could ever need to show, in document order. `chartTooltip()`
+ * fills as many as the active point set holds and hides the rest.
  */
 export const CHART_TOOLTIP_ROW_ATTRIBUTE = "data-chart-tooltip-row";
 
@@ -121,27 +69,21 @@ export const CHART_TOOLTIP_VALUE_ATTRIBUTE = "data-chart-tooltip-value";
 /**
  * CSS custom property `chartTooltip()` writes on Chart.Tooltip's host with
  * the active point's horizontal pixel offset, relative to the chart root's
- * own parent element. Chart.Tooltip's own styling reads this back —
- * `inset-inline-start: var(--ui-chart-tooltip-x)` alongside a centering
- * transform, for a positioning container with `position: relative` — instead
- * of any component tracking the active point's position as reactive state.
+ * own parent element, for its own styling to read back via `var()`.
  */
 export const CHART_TOOLTIP_X_PROPERTY = "--ui-chart-tooltip-x";
 
 /**
  * CSS custom property `chartTooltip()` writes on Chart.Tooltip's host with
  * the active point's vertical pixel offset, relative to the chart root's own
- * parent element. Chart.Tooltip's own styling reads this back the same way
- * as {@link CHART_TOOLTIP_X_PROPERTY}.
+ * parent element, read back the same way as {@link CHART_TOOLTIP_X_PROPERTY}.
  */
 export const CHART_TOOLTIP_Y_PROPERTY = "--ui-chart-tooltip-y";
 
 /**
  * Largest pixel distance from the pointer to a point's center that still
- * resolves as hovering it once no point sits directly beneath the pointer.
- * Without this ceiling, every position inside a chart root — including its
- * empty margin — would always resolve to whichever point happens to be
- * nearest, however far away that point visually sits.
+ * resolves as hovering it once no point sits directly beneath the pointer,
+ * keeping empty chart margin from always resolving to the nearest point.
  */
 const NEAREST_POINT_MAX_DISTANCE_PX = 48;
 
@@ -168,13 +110,8 @@ export interface ChartTooltipPoint {
 
 /**
  * Dispatched on a chart root by {@link chartTooltip} every time the active
- * point set changes: the pointer moves onto a different point (or off the
- * chart entirely), or keyboard focus moves onto a different point (or away
- * from all of them). Carries every active point's label and value, in the
- * same document order {@link CHART_TOOLTIP_ROW_ATTRIBUTE} rows fill in, so a
- * consumer can drive its own live-region announcement or cross-highlight a
- * Chart.Legend swatch without reading Chart.Tooltip's rows back off the DOM.
- * An empty `points` array means nothing is currently hovered or focused.
+ * point set changes, carrying every active point's label and value so a
+ * consumer can drive a live-region announcement or cross-highlight a legend.
  */
 export class ChartTooltipChangeEvent extends Event {
 	/** Every currently active point's label and value, in document order, or an empty array when nothing is active. */
@@ -202,8 +139,7 @@ function queryPoints(host: HTMLElement): HTMLElement[] {
 /**
  * Resolves the point directly beneath viewport position `(clientX, clientY)`,
  * scoped to `host` — the precise case, matching a pointer sitting anywhere
- * over a filled bar, area, or pie wedge, or exactly on a line's vertex
- * marker.
+ * over a filled bar, area, pie wedge, or exactly on a line's vertex marker.
  *
  * @param host Chart root the resolved point must fall inside.
  * @param clientX Pointer's horizontal viewport position.
@@ -223,8 +159,7 @@ function hitTestPoint(
 /**
  * Resolves the point whose center sits closest to viewport position
  * `(clientX, clientY)`, within {@link NEAREST_POINT_MAX_DISTANCE_PX} — the
- * fallback case, matching a pointer that sits near but not exactly on a
- * line chart's thin vertex marker or a narrow bar.
+ * fallback for a pointer near, but not exactly on, a thin vertex marker.
  *
  * @param host Chart root to search beneath.
  * @param clientX Pointer's horizontal viewport position.
@@ -322,8 +257,7 @@ function findTooltip(host: HTMLElement): HTMLElement | undefined {
 
 /**
  * Fills as many of `tooltip`'s pre-rendered rows as `points` holds, in
- * document order, and sets the native `hidden` property on every row beyond
- * that count — never creating or removing a row itself.
+ * document order, and hides every row beyond that count.
  *
  * @param tooltip Chart.Tooltip host to write rows onto.
  * @param points Active point set to fill rows from, in the order rows should receive them.
@@ -346,8 +280,7 @@ function writeRows(tooltip: HTMLElement, points: readonly ChartTooltipPoint[]): 
 /**
  * Writes `anchor`'s screen position onto `tooltip` as
  * {@link CHART_TOOLTIP_X_PROPERTY} and {@link CHART_TOOLTIP_Y_PROPERTY},
- * relative to `host`'s own parent element — the shared positioning container
- * both `host` and `tooltip` render inside.
+ * relative to `host`'s own parent element, the shared positioning container.
  *
  * @param host Chart root `anchor` belongs to.
  * @param tooltip Chart.Tooltip host to write the position onto.
@@ -381,19 +314,8 @@ function resolveOwnPoint(host: HTMLElement, target: EventTarget | null): HTMLEle
 
 /**
  * Adds pointer- and focus-tracked tooltip coordination to a Chart.Bar,
- * Chart.Line, Chart.Area, or Chart.Pie root. Moving the pointer over the
- * chart resolves the point beneath it (falling back to the nearest point
- * within range when none sits exactly beneath); moving keyboard focus onto a
- * point resolves that exact point directly. Either path resolves the point's
- * {@link CHART_POINT_GROUP_ATTRIBUTE} group, fills the sibling Chart.Tooltip's
- * rows and position (see {@link writeRows}, {@link writePosition}), and
- * dispatches {@link ChartTooltipChangeEvent} on the chart root. The pointer
- * leaving the chart, or focus leaving every point, clears Chart.Tooltip's
- * {@link CHART_TOOLTIP_ATTRIBUTE}-flagged `data-visible` state and dispatches
- * {@link ChartTooltipChangeEvent} with an empty `points` array.
- *
- * Applies to the chart root only — Chart.Tooltip itself takes no mixin of
- * its own, since this one drives it entirely from its sibling.
+ * Chart.Line, Chart.Area, or Chart.Pie root, resolving the active point and
+ * its group into the sibling Chart.Tooltip's rows, position, and events.
  *
  * @returns A mixin descriptor for a chart root's `mix` prop.
  * @example

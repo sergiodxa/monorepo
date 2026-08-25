@@ -1,12 +1,10 @@
 /**
- * Terms of Service controller. Renders the static Terms of Service prose — covering
- * accounts, acceptable use, billing, data retention, service availability, liability,
- * and termination — inside the shared `MarketingLayout` chrome. Every section's copy
- * comes from `legal.terms.sections.*` in the locale files; the sibling `apps/uptime`
- * app only ever translated this page's SEO `meta.title`/`meta.description` (never its
- * body prose), so these `sections.*` keys are new and — like every other freshly
- * added key in this pass — only populated in `en.ts` for now, falling back to English
- * in every other locale until translated.
+ * Terms of Service controller. Renders the static Terms of Service prose —
+ * covering accounts, acceptable use, billing, data retention, service
+ * availability, liability, and termination — inside the shared
+ * `MarketingLayout` chrome. Every section's copy comes from
+ * `legal.terms.sections.*` in the locale files, keys new in this pass and
+ * populated only in `en.ts` for now, falling back to English elsewhere.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +22,11 @@ import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
 
-/** GET /terms — the Terms of Service page. */
+/**
+ * GET /terms — the Terms of Service page. Its Open Graph type is `article`,
+ * matching the `lastUpdated` line and revision history it carries. The
+ * `<article>` wrapper only sets placement, leaving typography to `Typeset`.
+ */
 export default createAction(routes.legal.terms, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.i18next.t);
@@ -36,19 +38,10 @@ export default createAction(routes.legal.terms, async (ctx) => {
 			seo={{
 				description: ctx.i18next.t("legal.terms.meta.description"),
 				canonical: SEO.canonical(ctx.url),
-				// A dated, versioned legal document, not a product page — `article` is
-				// what its `lastUpdated` line and revision history actually describe.
 				og: { type: "article" },
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				{/*
-				 * Type comes from `Typeset`, the same as the docs layout and `/trust` — sizes,
-				 * weights, vertical rhythm, list markers and links are all its decisions, not this
-				 * page's. `preset="reading"` is the long-form rhythm these are.
-				 *
-				 * This element keeps only what is about placement: the measure and its padding.
-				 */}
 				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
 					<Typeset preset="reading">
 						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>

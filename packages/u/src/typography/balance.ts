@@ -6,8 +6,8 @@ import { utility } from "../internal/descriptor";
 
 /**
  * Balances line lengths across a wrapped block, best suited to short text
- * such as headings. Browsers cap balancing to a small number of lines, so
- * it has no effect on long-form body copy — reach for {@link pretty} there.
+ * such as headings, since browsers cap balancing to a small number of
+ * lines. Use {@link pretty} for long-form body copy.
  *
  * @example u.balance()
  * @example css({ textWrap: "balance" })

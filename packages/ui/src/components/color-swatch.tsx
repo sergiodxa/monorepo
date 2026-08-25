@@ -34,13 +34,8 @@ const DEFAULT_SIZE: ColorSwatch.Size = "md";
 
 /**
  * Applied through {@link attrs} so the host is hidden from assistive
- * technology by default: the swatch's fill is a raw color value with no
- * text alternative of its own, and every composed use pairs it with a
- * control or label that already carries the accessible name (a field's
- * typed value, a radio swatch's surrounding label). A consumer rendering
- * the swatch on its own and relying on it to carry meaning overrides this
- * with an explicit `aria-hidden={false}` plus an `aria-label` describing the
- * color.
+ * technology by default, since composed uses supply their own accessible
+ * name; pass `aria-hidden={false}` and `aria-label` to render standalone.
  */
 const DEFAULT_ARIA_HIDDEN = "true";
 
@@ -65,10 +60,9 @@ export namespace ColorSwatch {
 	 */
 	export interface Props extends TagProps<"span"> {
 		/**
-		 * The color to preview, already resolved to a literal CSS color value
-		 * (a hex string, `rgb()`/`hsl()`/`oklch()` function, or named color) —
-		 * never a semantic color role. Required, since a swatch with nothing to
-		 * preview has no reason to render.
+		 * The color to preview, already resolved to a literal CSS value — a hex
+		 * string, `rgb()`/`hsl()`/`oklch()` function, or named color. Required,
+		 * since a swatch with nothing to preview has no reason to render.
 		 */
 		value: string;
 		/** Shape variant. Defaults to {@link DEFAULT_SHAPE}. */
@@ -79,23 +73,9 @@ export namespace ColorSwatch {
 }
 
 /**
- * Renders a fixed-size `<span>` filled with `value`, sized through the
- * `data-size` attribute contract (`"sm"`, `"md"`, or `"lg"`) and shaped
- * through `data-shape` (`"circle"`, `"square"`, or `"rounded"`). `value`
- * never touches `theme.css` — it carries no semantic meaning the theme's
- * color roles could express — and instead lands on a local, per-instance
- * `--ui-color-swatch-value` custom property, set through the inherited
- * `style` prop on every render so the swatch paints correctly on first
- * paint and after every re-render with no script involved.
- *
- * A `::before` layer paints a fixed checkerboard through a
- * `repeating-conic-gradient`, and a `::after` layer stacks
- * `background-color: var(--ui-color-swatch-value)` on top of it, clipped to
- * the same shape as the host. Where `value` is fully opaque the fill layer
- * hides the checkerboard entirely; where it carries any transparency, the
- * checkerboard shows through exactly where the platform's own compositing
- * says it should, so a translucent value reads correctly regardless of
- * whatever background happens to sit behind the swatch on the page.
+ * Renders a fixed-size `<span>` that paints `value` through a local
+ * `--ui-color-swatch-value` custom property, layered over a `::before`
+ * checkerboard so any transparency in `value` reads correctly.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the swatch's markup.

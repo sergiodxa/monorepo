@@ -1,10 +1,8 @@
 /**
- * Value object wrapping an OpenID Connect ID token issued by auth.sergiodxa.com. The
- * `IdToken` class extends JWT to expose strongly-typed getters for the standard claims
- * this app relies on (subject, audience, name, email, picture, username, email
- * verification), and `verifyIdToken` validates a raw token's signature against the
- * issuer's remote JWKS plus its audience and issuer claims. Never trust these claims
- * without going through `verifyIdToken` first.
+ * Value object wrapping an OpenID Connect ID token issued by auth.sergiodxa.com.
+ * `IdToken` exposes typed getters for the claims this app relies on, and
+ * `verifyIdToken` checks a raw token's signature against the issuer's remote JWKS
+ * plus its audience and issuer claims before trusting any of them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,7 +52,8 @@ export default class IdToken extends JWT {
 
 /**
  * Verifies an ID token's signature against the auth server's remote JWKS, and its
- * audience/issuer claims.
+ * audience/issuer claims. Pins verification to ES256, the algorithm the auth server
+ * publishes today, so every token is checked against one fixed algorithm.
  *
  * @param token Raw JWT string from the OAuth callback.
  * @param verificationKey Resolver for the auth server's published keys.
@@ -71,9 +70,6 @@ export async function verifyIdToken(
 	return await IdToken.verify(token, verificationKey, {
 		audience: clientId,
 		issuer: "auth.sergiodxa.com",
-		// Pinned rather than inferred from the key: the auth server publishes one
-		// algorithm today, and this is what keeps a token that names another from being
-		// verified with whatever key the JWKS happens to offer for it.
 		algorithms: [JWK.Algorithm.ES256],
 	});
 }

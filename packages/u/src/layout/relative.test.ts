@@ -1,6 +1,4 @@
 /**
- * Unit tests for `relative()`'s fixed `position: relative` declaration.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

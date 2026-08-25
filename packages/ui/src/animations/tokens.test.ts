@@ -1,7 +1,6 @@
 /**
  * Unit tests for the shared motion vocabulary in {@link "./tokens"}: every
- * assertion checks the token objects' exact values, with no DOM and no
- * rendering involved.
+ * assertion reads a token object's exact value directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

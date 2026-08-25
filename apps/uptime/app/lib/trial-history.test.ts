@@ -61,8 +61,9 @@ describe("dailyStatsFromChecks", () => {
 	});
 
 	/**
-	 * A day nothing answered on must not average to zero — the same rule `watchStats` follows,
-	 * so the carried history and the trial's own report cannot disagree about the same day.
+	 * A day nothing answered on reports no average, the same rule `watchStats`
+	 * follows, so the carried history and the trial's own report agree about
+	 * the same day.
 	 */
 	test("reports no average or maximum when nothing answered", () => {
 		let rows = dailyStatsFromChecks(
@@ -76,8 +77,8 @@ describe("dailyStatsFromChecks", () => {
 	});
 
 	/**
-	 * Averaging over only the checks that answered. Including the failures as zeroes would
-	 * report a day that was half down as twice as fast as it was.
+	 * Averaging only the checks that answered keeps a half-down day's reported
+	 * speed representative of what actually responded.
 	 */
 	test("averages only the checks that reported a time", () => {
 		let rows = dailyStatsFromChecks(

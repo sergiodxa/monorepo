@@ -1,15 +1,9 @@
 /**
- * The framed message surface nested inside a conversational row's content
- * slot — the visible shape carrying a single turn's text, sized to its own
- * content up to a share of the row's available width instead of stretching
- * edge to edge. Seven variants cover the tones a turn can carry, from a
- * solid emphasized fill down to a fully unframed one, and an `align`
- * attribute hugs the frame to either edge of the row so a back-and-forth
- * conversation reads as two interleaved columns. `Bubble.Content` holds the
- * turn's text, `Bubble.Reactions` lays a row of already-pressed toggle
- * controls across the frame's lower edge, and `Bubble.Group` stacks several
- * bubbles from the same turn into one tightly spaced run, softening the
- * corners where consecutive frames touch.
+ * The framed message surface inside a conversational row's content slot,
+ * sized to its own content up to a share of the row's width. Variants cover
+ * tones from a solid fill to fully unframed, and `align` hugs either row
+ * edge. `Bubble.Content`, `Bubble.Reactions`, and `Bubble.Group` compose the
+ * turn's text, its reaction toggles, and multi-bubble runs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,9 +22,8 @@ import { attrs } from "remix/ui";
 
 /**
  * Named container {@link Bubble} declares on its own host, so
- * {@link Bubble.Reactions} can tell how much of the frame's own width it has
- * to lay chips across and fall back to a plain, non-overlapping row once
- * that space runs out.
+ * {@link Bubble.Reactions} can measure the frame's own width and fall back to
+ * a plain, non-overlapping row once that space runs out.
  */
 const CONTAINER_NAME = "ui-bubble";
 
@@ -42,8 +35,7 @@ const DEFAULT_ALIGN: Bubble.Align = "start";
 
 /**
  * ARIA role applied to {@link Bubble.Reactions} through {@link attrs},
- * announcing the row as one related set of pressed toggles rather than a
- * handful of unrelated buttons.
+ * announcing the row as one related set of pressed toggles.
  */
 const DEFAULT_REACTIONS_ROLE = "group";
 
@@ -52,13 +44,9 @@ const DEFAULT_REACTIONS_ROLE = "group";
  */
 export namespace Bubble {
 	/**
-	 * Visual weight the frame renders with: `"default"` and `"secondary"` fill
-	 * solid in the primary and neutral tones, `"muted"` and `"tinted"` shade a
-	 * soft neutral or primary background behind a matching subtle border,
-	 * `"outline"` keeps a transparent fill behind a strong border, `"ghost"`
-	 * drops both fill and border for running text that reads as unframed, and
-	 * `"destructive"` fills solid in the danger tone for a turn that failed to
-	 * send or was retracted.
+	 * Visual weight the frame renders with: solid `"default"`/`"secondary"` fills,
+	 * soft `"muted"`/`"tinted"` tints, a bordered `"outline"`, an unframed
+	 * `"ghost"`, and a solid danger fill for `"destructive"`.
 	 */
 	export type Variant =
 		| "default"
@@ -70,10 +58,9 @@ export namespace Bubble {
 		| "destructive";
 
 	/**
-	 * Edge of the row the frame hugs: `"start"` keeps it flush with the row's
-	 * leading edge (flipping under `dir="rtl"`), `"end"` keeps it flush with
-	 * the trailing edge. A consumer typically pairs one edge with the
-	 * reader's own turns and the other with everyone else's.
+	 * Edge of the row the frame hugs: `"start"` stays flush with the row's
+	 * leading edge (flipping under `dir="rtl"`), `"end"` stays flush with the
+	 * trailing edge, typically paired with the reader's own turns vs everyone else's.
 	 */
 	export type Align = "start" | "end";
 
@@ -98,12 +85,11 @@ export namespace Bubble {
 	}
 
 	/**
-	 * Props accepted by {@link Bubble.Reactions}. `aria-label` is required,
-	 * since the row otherwise carries no accessible name of its own for
-	 * assistive technology to announce.
+	 * Props accepted by {@link Bubble.Reactions}. `aria-label` is required so
+	 * assistive technology has an accessible name to announce for this row.
 	 */
 	export interface ReactionsProps extends Omit<TagProps<"div">, "aria-label"> {
-		/** Accessible label describing the row as a set of reactions, not a bare group of buttons. */
+		/** Accessible label describing the row as a set of reactions. */
 		"aria-label": string;
 		/** One or more already-pressed toggle controls, each scoped to a single reaction. */
 		children: RemixNode;
@@ -119,24 +105,9 @@ export namespace Bubble {
 }
 
 /**
- * Renders the frame itself: a `<div>` sized to hug its own content up to
- * eighty percent of its row's available width, colored and shaped through
- * the `data-variant` and `data-align` attribute contract. The auto-margin
- * alignment trick pushes the frame against whichever edge `align` names —
- * `marginInlineEnd: auto` for `"start"`, `marginInlineStart: auto` for
- * `"end"` — so the frame lands flush against that edge whether its row is a
- * plain block container or a flex column, with no cooperation needed from
- * the row itself. The corner nearest that same edge, on the frame's
- * lower side, rounds by a smaller radius than the other three, reading as a
- * faint point toward whatever sits beside the row. `"ghost"` drops the
- * eighty-percent cap and the auto margins entirely, filling its row edge to
- * edge for long-form text meant to read as unframed running copy rather than
- * a distinct shape.
- *
- * The frame declares the `ui-bubble` named container so {@link Bubble.Reactions}
- * can adapt to its own rendered width, and carries a `--ui-bubble-reactions-justify`
- * custom property set by `align`, which that same part reads to line its
- * chips up under the same edge the frame itself hugs.
+ * Renders the frame, pushed to the edge `align` names via auto margins so it
+ * aligns correctly regardless of its row's layout. Its nearest corner falls
+ * back to a literal `0.125rem`, since `roundedCorner()` has no `"xs"` step.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the frame's markup.
@@ -178,9 +149,6 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 
 					data("align", "start", [
 						mie("auto"),
-						// `roundedCorner()`'s radius scale has no "xs" step, and passing
-						// an arbitrary name falls back to `0px` instead of this
-						// component's own `0.125rem` — see final report for the gap.
 						raw({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" }),
 						vars({ "ui-bubble-reactions-justify": "flex-start" }),
 					]),
@@ -220,17 +188,8 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 
 /**
  * Renders {@link Bubble.ContentProps.children} as the frame's padded text
- * slot: a `<div>` sized for a comfortable reading measure at chat scale,
- * breaking long unbroken runs (a URL, a token) at the inline box edge
- * instead of overflowing it. Its own text color comes from the ancestor
- * {@link Bubble}'s `variant` through ordinary CSS inheritance rather than
- * reading the attribute itself.
- *
- * A message long enough to want collapsing composes a `Disclosure` around
- * the overflowing portion, and a message carrying metadata worth showing on
- * demand — a model name, a token count, an edit timestamp — composes a
- * `Popover` triggered from a control inside this slot, rather than either
- * pattern being built into this component.
+ * slot, breaking long unbroken runs at the inline box edge and taking its
+ * text color from the ancestor {@link Bubble}'s `variant` via CSS inheritance.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the text slot's markup.
@@ -282,21 +241,9 @@ Bubble.Content = function BubbleContent(handle: Handle<Bubble.ContentProps>) {
 };
 
 /**
- * Renders {@link Bubble.ReactionsProps.children} as a `role="group"` row
- * anchored to the ancestor {@link Bubble}'s lower edge: a negative
- * block-start margin lifts the row up into the frame's own bottom padding so
- * its chips read as pinned to the corner rather than sitting fully below it,
- * and `justify-content` reads the `--ui-bubble-reactions-justify` custom
- * property the frame sets from its own `align`, lining the row up under the
- * same edge the frame hugs. Once the frame's own `ui-bubble` container
- * narrows past a short-message width, the row drops back into normal flow
- * with a small gap instead, so a wrapped second row of chips never climbs
- * back up over the frame's text.
- *
- * Every chip inside is an independently pressed `ToggleButton` carrying its
- * own `aria-pressed`, `name`, and `value` for one reaction each — this part
- * contributes only the shared layout and the anchor to the frame's edge,
- * with no reaction state of its own.
+ * Renders {@link Bubble.ReactionsProps.children} as a `role="group"` row: a
+ * negative block-start margin pins it into the frame's lower padding, aligned
+ * via the `--ui-bubble-reactions-justify` property the frame sets from `align`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the reaction row's markup.
@@ -350,14 +297,9 @@ Bubble.Reactions = function BubbleReactions(handle: Handle<Bubble.ReactionsProps
 };
 
 /**
- * Renders {@link Bubble.GroupProps.children} as a single tightly spaced
- * column of consecutive {@link Bubble} frames from the same turn: a small
- * gap between them, with the touching corners at each shared edge softened
- * to a smaller radius so the run reads as one continuous shape rather than a
- * stack of separate frames. Each frame keeps its own `variant` and `align`
- * entirely on its own — the outermost corners of the first and last frame
- * stay whatever those props already draw, since only the corners actually
- * touching a neighbor ever change.
+ * Renders {@link Bubble.GroupProps.children} as a tightly spaced column of
+ * consecutive {@link Bubble} frames, softening only the corners touching a
+ * neighbor to a smaller radius, so the run reads as one continuous shape.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the run's markup.

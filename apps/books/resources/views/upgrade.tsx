@@ -1,7 +1,7 @@
 /**
- * Upgrade view: the pitch for moving from the single book to the Complete Package, and
- * the email field that resolves the reader's existing purchase. It asks for an address
- * rather than a login because the only record of the purchase lives in Polar.
+ * Upgrade view: the pitch for moving from the single book to the Complete
+ * Package, and the email field that resolves the reader's existing purchase.
+ * The address alone is enough since Polar holds the record of the purchase.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

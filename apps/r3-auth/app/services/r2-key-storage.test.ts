@@ -35,8 +35,6 @@ describe("createR2KeyStorage", () => {
 		expect(file).not.toBeNull();
 		expect(await file?.text()).toBe('{"id":"key-1"}');
 		expect(file?.name).toBe("jwks.json");
-		// Compared against the source file's own type rather than the literal, because the
-		// runtime normalizes a MIME type on construction and the round trip is what matters.
 		expect(file?.type).toBe(stored.type);
 	});
 
@@ -65,7 +63,6 @@ describe("createR2KeyStorage", () => {
 		let second = await storage.list({ prefix: "jwks:", limit: 1, cursor: first.cursor });
 
 		expect(second.files).toEqual([{ key: "jwks:key-2" }]);
-		// The listing is exhausted, and `JWK.signingKeys` pages until the cursor is gone.
 		expect(second.cursor).toBeUndefined();
 	});
 

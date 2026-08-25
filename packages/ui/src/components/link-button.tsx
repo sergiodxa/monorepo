@@ -69,20 +69,9 @@ export namespace LinkButton {
 }
 
 /**
- * Renders a native `<a>` host, colored and shaped through the same
- * `data-color`, `data-variant`, and `data-size` attribute contract as
- * {@link Button}: `"solid"` fills the link with the color's solid background
- * and on-solid foreground, `"outline"` renders a strong colored border over a
- * transparent fill, and `"ghost"` renders just the colored label over a
- * transparent fill until hovered. Hover and active states ride the native
- * `:hover` and `:active` pseudo-classes, and a keyboard focus-visible ring
- * reads in the link's own semantic color.
- *
- * The host has no native disabled state — set `aria-disabled="true"` directly
- * on it to render the dimmed treatment and block pointer clicks and hover.
- * `aria-disabled` doesn't remove the host from tab order or stop keyboard
- * activation on its own, so also drop `href` at the markup level for a link
- * that must be fully inert.
+ * Renders a native `<a>` host, colored and shaped through the same color,
+ * variant, and size data attributes as {@link Button}. `aria-disabled="true"`
+ * keeps it focusable while dimmed, so drop `href` too for full inertness.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
@@ -129,9 +118,11 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					weight("medium"),
 					pi(4),
 					pb(2),
-					// Every variant carries the same border width, colored to match its
-					// own fill (transparent for ghost) — so solid/ghost render exactly
-					// the same footprint as outline instead of shrinking by the border.
+					/**
+					 * Every variant carries the same border width, colored to match its
+					 * own fill (transparent for ghost), so solid, outline, and ghost
+					 * render at the same footprint.
+					 */
 					border({ width: 2 }),
 					data("size", "sm", [pi(3), pb(1.5)]),
 					data("size", "lg", [pi(5), pb(2.5), text("base")]),

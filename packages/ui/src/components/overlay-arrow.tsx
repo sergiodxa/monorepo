@@ -40,9 +40,7 @@ export namespace OverlayArrow {
 	/**
 	 * Side (and, for the four corner variants, alignment) of the trigger an
 	 * overlay renders relative to. {@link OverlayArrow} reads only the leading
-	 * segment (`"top"`, `"bottom"`, `"left"`, or `"right"`) to choose which
-	 * edge it attaches to and how it's oriented; the `-start`/`-end` suffix
-	 * carries no visual effect of its own on the arrow.
+	 * segment; the `-start`/`-end` suffix carries no visual effect on the arrow.
 	 */
 	export type Placement =
 		| "top"
@@ -72,18 +70,9 @@ export namespace OverlayArrow {
 }
 
 /**
- * Renders a decorative pointer glyph as an absolutely positioned `<div>`
- * carrying a `data-placement` attribute, filling its child shape with the
- * same tint as the overlay surface it belongs to so the two blend into one
- * shape. The arrow attaches to the edge of the overlay nearest the trigger —
- * the block-start edge when the overlay renders below the trigger
- * (`"bottom"`), the block-end edge when it renders above (`"top"`), and the
- * physical right or left edge when it renders to the trigger's left or right
- * — and rotates to point back toward it. The `"left"`/`"right"` sides name a
- * physical side of the viewport chosen by the positioning engine rather than
- * a reading-direction-relative one, so the arrow keeps attaching to that same
- * physical side under any `dir` value. Its own child (an inline `<svg>`
- * triangle, typically) supplies the actual arrow shape and size.
+ * Renders a decorative pointer glyph, rotating to point back at the trigger
+ * from whichever edge the overlay attaches to. `"left"`/`"right"` name a
+ * physical viewport side, so the arrow keeps attaching there under any `dir`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the arrow's markup.
@@ -111,9 +100,6 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 					absolute(),
 					fill("neutral.tint"),
 					pointerEvents(),
-					// `left`/`right` (physical inset) have no `@pkg/u` equivalent — only
-					// the full logical `inset()` shorthand exists, which would also
-					// touch the untouched sides here.
 					when('&[data-placement^="bottom"]', [
 						mi("auto"),
 						rotate(180),

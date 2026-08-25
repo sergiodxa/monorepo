@@ -1,8 +1,6 @@
 /**
- * Data-schema for validating CMS article form submissions. `ArticleSchema`
- * defaults title, locale, and content when absent and treats slug, excerpt,
- * canonical_url, and published_at as optional. Exists to normalize and validate
- * article input before it reaches the repository layer.
+ * Normalizes CMS article form submissions so the repository layer receives
+ * validated input.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +9,8 @@
 import { defaulted, object, optional, string } from "remix/data-schema";
 
 /**
- * Validates CMS article form payloads and applies defaults for optional fields.
+ * A parsed article always carries a title, locale, and content, so a partially
+ * filled form still yields a persistable record.
  */
 export const ArticleSchema = object({
 	title: defaulted(string(), "Untitled article"),

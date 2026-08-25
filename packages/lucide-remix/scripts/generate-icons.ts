@@ -121,9 +121,8 @@ async function resetIconsDir() {
 
 /**
  * Writes `src/registry.ts`: one named export per icon holding its raw node
- * data, so `<Icon />` can `import * as registry` and look up any icon by its
- * (converted) name, while each `src/icons/<name>.ts` module imports only the
- * one constant it needs for tree-shaking.
+ * data, so `<Icon />` can look up any icon by its converted name while each
+ * `src/icons/<name>.ts` module imports only the one constant it needs for tree-shaking.
  */
 async function writeRegistryFile(iconNames: string[]) {
 	let entries = iconNames
@@ -142,9 +141,8 @@ ${entries}
 
 /**
  * Writes `src/icon-names.ts`: a compile-time-checked map from each icon's
- * public kebab-case name to its `registry.ts` export name (a valid
- * identifier can't contain hyphens), plus the `IconName` union used to
- * typecheck `<Icon name />`.
+ * public kebab-case name to its `registry.ts` export name (identifiers can't
+ * contain hyphens), plus the `IconName` union used to typecheck `<Icon name />`.
  */
 async function writeIconNamesFile(iconNames: string[]) {
 	let entries = iconNames

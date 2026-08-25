@@ -1,7 +1,6 @@
 /**
- * Route definitions for the blog RSS feeds. Declares the combined site feed
- * endpoint alongside dedicated article, tutorial, and bookmark feed URLs so
- * subscribers can follow either everything or a single content stream.
+ * Route definitions for the blog RSS feeds: the combined site feed plus the
+ * per-type article, tutorial, and bookmark feeds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +9,8 @@
 import { get, route } from "remix/routes";
 
 /**
- * Exposes RSS endpoints for the site feed plus article, tutorial, and bookmark feeds.
+ * Typed feed URL helpers so subscribers can follow everything or a single
+ * content stream.
  */
 export default route({
 	feed: get("/rss"),

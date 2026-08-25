@@ -1,8 +1,8 @@
 /**
  * The logout confirmation page: the interactive way out of the identity provider,
  * shown when a browser reaches `/oidc/logout` without a usable RP-initiated logout
- * request. It is a single form posting back to the same URL, so signing out is a
- * deliberate `POST` rather than something a link on another site can trigger.
+ * request. Posting the same URL back to itself keeps sign-out a deliberate action
+ * that only this page's own form can start.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,9 +32,8 @@ namespace LogoutView {
 /**
  * Renders the sign-out confirmation form.
  *
- * The page carries no island, so it opts out of the client runtime and ships no
- * JavaScript — while still getting the palette, reset and token layer from the document
- * layout, which is what a standalone `<html>` here used to give up.
+ * The confirmation renders as static markup, picking up the palette, reset and
+ * token layer straight from the shared document layout.
  */
 export default function LogoutView(handle: Handle<LogoutView.Setup>) {
 	return () => {

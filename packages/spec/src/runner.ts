@@ -34,10 +34,9 @@ export interface RunOptions {
 	/** Extra plugins beyond the built-ins this run registers. */
 	plugins?: Plugin[];
 	/**
-	 * Which built-in namespaces to register; omit for all of them, which is the
-	 * CLI's behavior. Narrowing this is not a permission decision — a namespace
-	 * left out does not exist, so a spec naming it fails to resolve instead of
-	 * being told which flag would allow it (see `createBuiltinPlugins`).
+	 * Which built-in namespaces to register; omit for all of them, as the CLI
+	 * does. Excluding a namespace here makes it unresolvable, so a spec
+	 * naming it fails as an unknown name (see `createBuiltinPlugins`).
 	 */
 	builtins?: readonly BuiltinNamespace[];
 	/**
@@ -48,9 +47,9 @@ export interface RunOptions {
 }
 
 /**
- * Load and execute a suite from disk. Load failures (unreadable directory, parse
- * errors, duplicate definitions) fail the whole run before any test starts;
- * test failures do not — they are outcomes inside the returned result.
+ * Load and execute a suite from disk. Load failures (unreadable directory,
+ * parse errors, duplicate definitions) fail the whole run before any test
+ * starts, while test failures surface as outcomes inside the returned result.
  *
  * @param options - Suite directory, grants, and optional plugin and concurrency choices.
  * @returns Per-test outcomes, or the error that prevented the run entirely.

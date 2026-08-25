@@ -1,8 +1,8 @@
 /**
- * Mirrors subjects into Polar customers so billing elsewhere can resolve a person by
- * the id this server issues. Creates a customer, finds one by email, and links the
- * external id — never overwriting one Polar already holds, because Polar refuses to
- * change an external id once set and the existing link is the authoritative one.
+ * Mirrors subjects into Polar customers so billing elsewhere can resolve a
+ * person by the id this server issues. Creates a customer, finds one by email,
+ * and links the external id, preserving whichever link Polar already holds
+ * since Polar treats an external id as authoritative once set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,11 +17,9 @@ export type BillableSubject = Pick<SelectSubject, "id" | "email_address" | "disp
 
 export default class Customer {
 	/**
-	 * Creates the Polar customer for a subject and links it to the subject's id.
-	 *
-	 * The link is a second call because customer creation does not accept an external
-	 * id; a failure between the two leaves an unlinked customer that
-	 * {@link Customer.findOrCreateByEmail} will find and link on the next sign-in.
+	 * Creates the customer, then links it to the subject id in a second call,
+	 * since only `updateCustomer` accepts the external id. A failure between the
+	 * two is repaired by `findOrCreateByEmail` on the next sign-in.
 	 */
 	static async create(polar: PolarClient, subject: BillableSubject): Promise<PolarCustomer> {
 		let customer = await polar.createCustomer(subject.email_address, subject.display_name);

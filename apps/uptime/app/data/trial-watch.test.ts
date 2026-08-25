@@ -1,12 +1,9 @@
 /**
  * Unit tests for the `TrialWatch` data-access model: the hourly `next_due_at` claim, the
- * `recordCheck` write path that folds a check into both the history table and the row's
- * counters, the change-email bound that stops a flapping target emailing 168 times in a
- * week, the two independent deadlines (checking ends at 7 days, the conversion offer at 30),
- * and the cleanup sweeps.
- *
- * The predicates are tested as pure functions against literal rows rather than through the
- * database, because that is how the sweep calls them — on the row the claim just handed it.
+ * `recordCheck` write path, the change-email bound that stops a flapping target emailing 168
+ * times in a week, the two independent deadlines (checking ends at 7 days, the conversion offer
+ * at 30), and the cleanup sweeps. The predicates are exercised as pure functions against
+ * literal rows, because that is how the sweep calls them — on the row the claim just handed it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -92,14 +89,15 @@ describe("TrialWatch.create", () => {
 		expect((await createWatch({ last_status: "up" })).last_status).toBe("up");
 	});
 
+	/**
+	 * The report page's whole key, so the token has to be long enough that guessing one is no
+	 * strategy, and its own value apart from the id that other tables carry and pages expose.
+	 */
 	test("issues a report token, so every watch has a page it can be read at", async () => {
 		let watch = await createWatch();
 
 		expect(watch.report_token).toBeTypeOf("string");
-		// Long enough that guessing one is not a strategy; the UUID form is 36 characters.
 		expect(watch.report_token.length).toBeGreaterThanOrEqual(32);
-		// Never the id: the id is a key other tables carry, and a report URL derived from it
-		// would be reachable from anywhere an id is exposed.
 		expect(watch.report_token).not.toBe(watch.id);
 	});
 
@@ -120,9 +118,8 @@ describe("TrialWatch.create", () => {
 });
 
 /**
- * The report page's only read, and its whole authorization: a token in a URL, with no lead and
- * no session to narrow it. The unknown-token case is the one that must stay a `null` rather
- * than a wrong watch, since that is what makes the page a 404 instead of somebody else's data.
+ * The report page's only read, and its whole authorization: a token in a URL is everything the
+ * page has to go on, so an unknown token must answer `null` for the page to 404.
  */
 describe("TrialWatch.findByReportToken", () => {
 	test("finds the watch its token was issued for", async () => {
@@ -154,8 +151,8 @@ describe("TrialWatch.findByReportToken", () => {
 });
 
 /**
- * `claimDue` is a claim, not a query: it takes the watches whose next check has arrived and
- * advances that column in the same call, so what matters is the state it leaves behind.
+ * `claimDue` takes the watches whose next check has arrived and advances that column in the
+ * same call, so what matters is the state it leaves behind.
  */
 describe("TrialWatch.claimDue", () => {
 	test("claims nothing before the first check is due", async () => {
@@ -186,8 +183,6 @@ describe("TrialWatch.claimDue", () => {
 	test("advances by one whole hour rather than catching up on every missed check", async () => {
 		let watch = await createWatch();
 
-		// Six hours of downtime: the watch is due once when the sweep comes back, not six
-		// times, and the next due time lands on the following hour boundary.
 		let scheduledAt = Date.now() + 6 * MS_PER_HOUR;
 		let claimed = await TrialWatch.claimDue(db, scheduledAt);
 
@@ -584,8 +579,8 @@ describe("TrialWatch conversion", () => {
 	});
 
 	/**
-	 * The product's own example: attempts on days 0, 3 and 6, signing up on day 32. Two of
-	 * the three are still inside their own thirty-day windows and the first is not.
+	 * The product's own example: attempts on days 0, 3 and 6, signing up on day 32, where the
+	 * later two are still inside their own thirty-day windows.
 	 */
 	test("converts only the attempts still inside their own windows", async () => {
 		let day0 = await createWatch({ url: "https://a.example" });
@@ -641,8 +636,8 @@ describe("TrialWatch.listByLead", () => {
 
 /**
  * The free-watch cap, which is the whole of "one free week per person per URL per thirty
- * days": a row exists for the pair, or it does not. The spellings that used to walk past it
- * are the point of every case here.
+ * days": the existence of a row for the pair decides it, so the spellings that once slipped
+ * past the lookup are the point of every case here.
  */
 describe("TrialWatch.findByNormalizedUrl", () => {
 	test("stores the key beside the URL, derived and not supplied", async () => {
@@ -753,10 +748,9 @@ describe("TrialWatch.deleteExpiredResults", () => {
 	});
 
 	/**
-	 * The whole reason the condition follows the watch instead of aging `checked_at`. A watch
-	 * three weeks past its week of checking is still convertible and is still what a repeat
-	 * submission is answered with, so its results are exactly what a report would draw on —
-	 * and an age of seven days would have taken every one of them.
+	 * The condition follows the watch's own lifetime: a watch three weeks past its week of
+	 * checking is still convertible and still answers a repeat submission, so its whole history
+	 * is exactly what a report draws on.
 	 */
 	test("keeps history older than the week, while the watch it belongs to lives", async () => {
 		let watch = await createWatch();

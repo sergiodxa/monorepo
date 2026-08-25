@@ -49,10 +49,9 @@ export interface CalendarDay {
 }
 
 /**
- * One cell of a day grid: the calendar fields, the instant the day starts at in
- * the zone it was built for, and the stable key aggregations join on. Grid
- * helpers return arrays of these so a UI layer renders them without recomputing
- * anything zone-dependent.
+ * One cell of a day grid: the calendar fields, the start instant, and the
+ * stable key aggregations join on. Grid helpers return arrays of these so a UI
+ * layer renders without recomputing anything zone-dependent.
  */
 export interface Day extends CalendarDay {
 	/** The first instant of this calendar day in `timeZone`. */

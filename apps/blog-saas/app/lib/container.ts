@@ -18,7 +18,7 @@ import { BlogProvisioner } from "~/app/services/blog-provisioner";
 /**
  * The platform service container (ADR-008). Registered once per isolate; the worker
  * and cron wrap each unit of work in `container.scope(...)`, so controllers and jobs
- * resolve dependencies with `inject([Database, ...])` instead of ad-hoc construction.
+ * resolve dependencies with `inject([Database, ...])`.
  */
 export const container = new ServiceContainer();
 

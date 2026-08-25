@@ -1,36 +1,9 @@
 /**
- * Product-funnel instrumentation: one typed function per step between "a stranger probed a
- * URL" and "an account started paying", each emitted as a `funnel.*` structured log line.
- * It exists because the durable counters only know how many of each thing happened per day,
- * and the questions that decide what to build next — which CTA, which campaign, whether the
- * first check succeeded, whether a trial saw an incident — are properties of one event.
- *
- * ## Why the logger and not a new table or a new dataset
- *
- * Workers Logs is queryable per field, retained long enough to answer a question about last
- * week, and already carries every other structured event this app emits — so a funnel event
- * lands next to the `job.*` and `trial_conversion.*` lines that explain it. The durable
- * aggregates the operator reads every morning are `trial_daily_stats`, which is written from
- * the rows themselves and is therefore correct even for a day whose logs have rolled off;
- * these events are the *detail* under those totals, not a second source of truth for them.
- * A table would need a migration and a retention sweep to answer questions asked once, and
- * the ping Analytics Engine dataset is per-team by construction: every query against it
- * filters a team id and a monitor id, neither of which most of these events has.
- *
- * ## What is deliberately not here
- *
- * There is no `email_verification_sent` and no `email_verified`. The trial has no
- * verification step by design — an address is asked for once, and the confirmation email
- * *is* the proof it works — so those two events could only ever be emitted as fictions, and
- * a funnel with an invented 100%-passing step in it is worse than one with an honest gap.
- *
- * ## Nothing personal is ever in an event
- *
- * The property types carry no field for a full URL, an address, a token or a response body:
- * targets are described by hostname, people by opaque id. {@link scrub} is the backstop
- * behind that, not the rule — any string value that looks like an address, a URL, a query
- * string or an oversized blob is replaced before it leaves this module, so a future property
- * added carelessly degrades to `[redacted]` rather than to a leak.
+ * Structured `funnel.*` log events for each step between an anonymous URL
+ * probe and a paying subscription, so a question about one property — a
+ * campaign, a check result — can be answered from the individual event. Every
+ * property type carries hostnames and opaque ids only; {@link scrub} redacts
+ * any string that looks like an address, URL, or token before it ships.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

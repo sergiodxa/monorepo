@@ -9,15 +9,9 @@ import { when } from "./when";
 /**
  * Sugar over `when("&:placeholder-shown", input)`, matching an input or
  * textarea while it is empty and therefore still showing its placeholder.
+ * Enables the float-label pattern with no JavaScript, paired with `u.has()`.
  *
- * This is what makes the float-label pattern possible with no JavaScript:
- * combine it with `u.has()` on the field wrapper and the label can sit inside
- * an empty field, then shrink and move above it the moment the user types —
- * `u.has(":placeholder-shown", ...)` on the wrapper describes the resting
- * position, and the wrapper's default styles describe the floated one.
- *
- * For styling the placeholder *text* itself, use `u.placeholder()`.
- *
+ * @see u.placeholder - styles the placeholder text itself.
  * @example u.placeholderShown(u.fg("neutral.muted"))
  * @example css({ "&:placeholder-shown": { color: "..." } })
  */

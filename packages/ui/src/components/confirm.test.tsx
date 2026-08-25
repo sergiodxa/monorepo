@@ -3,8 +3,7 @@
  * closes the panel through an Invoker Command, and the submit mode `form`
  * switches on, where the panel's content is wrapped in a real `<form>` and
  * the confirming control becomes its submit button — the shape a
- * server-rendered destructive action needs, which the close-only control
- * could never perform.
+ * server-rendered destructive action needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

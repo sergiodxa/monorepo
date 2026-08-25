@@ -42,10 +42,9 @@ export class ReconcileSubscriptionsJob extends Job {
 		);
 
 		/**
-		 * Both directions of drift, resolved to the same thing: the subscription as Polar has
-		 * it right now. A row Polar no longer lists is re-fetched rather than guessed at, so
-		 * the projection keeps holding Polar's own status string instead of one this job
-		 * invented — and the repair path stays a single loop over subscriptions.
+		 * Both directions of drift resolve to the same fetch: the subscription state
+		 * Polar reports right now. A drifted row is re-fetched, keeping the
+		 * projection aligned with Polar's own status through one repair loop.
 		 */
 		let drifted: PolarSubscription[] = live.filter(
 			(subscription) => !activeStoredIds.has(subscription.id),
@@ -76,14 +75,9 @@ export class ReconcileSubscriptionsJob extends Job {
 			repaired += 1;
 
 			/**
-			 * The trial funnel's payment stamp, repaired here for the same reason the entitlement
-			 * is: a first-payment webhook that never arrived would otherwise leave a converted
-			 * customer recorded forever as a free signup, and the report would understate the one
-			 * number it exists to produce. Only rows that drifted reach this loop, so a working
-			 * webhook never gets here twice, and `markPaid` refuses to move a stamp that is
-			 * already set — the cost of a repair is that the payment is dated the day it was
-			 * noticed rather than the day it happened, which is at most a day out and is better
-			 * than never recording it at all.
+			 * The trial funnel's payment stamp, repaired here because a missed webhook
+			 * would otherwise leave a converted customer counted as a free signup.
+			 * `markPaid` only sets an unset stamp, dating the payment to the day of repair.
 			 */
 			if (entitled) await TrialConversion.markPaid(db, ownerId);
 

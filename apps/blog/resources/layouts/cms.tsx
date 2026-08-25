@@ -42,9 +42,6 @@ export namespace CMSLayout {
 	};
 }
 
-/**
- * Ordered links shown in the CMS navigation bar.
- */
 let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 	{ href: routes.cms.articles.index.href(), label: "Articles" },
@@ -56,7 +53,9 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 ];
 
 /**
- * Builds the CMS document layout with shared navigation and styles.
+ * The screens sit behind auth, so the shell carries only a title, and dresses
+ * them in a sans face over a flat tint — the pairing that keeps dense tables and
+ * forms scannable.
  *
  * @returns A renderer that wraps page content in the CMS shell.
  */
@@ -65,10 +64,6 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 		let { activePath, children, title } = handle.props;
 
 		return (
-			/* No description or canonical: these screens sit behind auth and have
-			nothing to say to a crawler. The CMS also drops the public pages' serif and
-			parchment wash for the sans face on a flat tint — dense tables and forms,
-			where a reading typeface and a gradient both work against scanning. */
 			<DocumentLayout
 				title={title}
 				bodyMix={[m(0), font("sans"), bg("neutral.tint"), fg("neutral.emphasis")]}

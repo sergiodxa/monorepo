@@ -71,11 +71,9 @@ interface BodySpec {
 }
 
 /**
- * Create the built-in `http` plugin (namespace `"http"`). Its tools take an
- * absolute URL and an optional body, pass the runtime's `net` permission
- * check for the URL's host and port, and perform the request with the global
- * fetch. HTTP error statuses are result values; only network-level failures
- * (and misuse) are errors.
+ * Create the built-in `http` plugin (namespace `"http"`). Tools take an
+ * absolute URL and optional body, check the `net` permission for the URL's
+ * host and port, then fetch; only network failures or misuse become errors.
  */
 export function createHttpPlugin(): Plugin {
 	return {
@@ -96,9 +94,8 @@ export function createHttpPlugin(): Plugin {
 
 /**
  * Build the descriptor of one request tool: an action requiring the `net`
- * grant, taking an absolute URL, an optional bare body, and the word-tagged
- * `headers`/`form`/`json`/`text` options and `bearer`/`basic` auth shortcuts
- * that may follow in any order.
+ * grant, an absolute URL, an optional bare body, and the order-independent
+ * `headers`/`form`/`json`/`text`/`bearer`/`basic` word-tagged options.
  */
 function describeVerb(verb: HttpVerb): ToolDescriptor {
 	return {
@@ -166,12 +163,9 @@ function isVerb(tool: string): tool is HttpVerb {
 }
 
 /**
- * Run one request tool end to end: parse the URL and its optional
- * word-tagged arguments, reject a body on GET, encode the body and headers,
- * require an absolute http(s) URL, pass the permission gate for the URL's
- * host and port, then fetch and shape the response. The permission check is
- * the last guard before the fetch, so no malformed call ever reaches the
- * network.
+ * Run one request tool end to end: validate the arguments, reject a body on
+ * GET, and encode the request before checking the `net` permission — that
+ * check gates last, so a malformed call never reaches the network.
  */
 async function request(
 	verb: HttpVerb,
@@ -207,13 +201,13 @@ interface RequestArguments {
 }
 
 /**
- * Validate the raw tool arguments: a required URL string, then any mix of
- * word-tagged options (`headers`/`form`/`json`/`text`, each consuming the next
- * argument), the auth shortcuts (`bearer` consuming one value, `basic` two), and
- * a single back-compatible bare body (a string is text, any other value is
- * JSON). At most one body, one `headers` block, and one auth option; a second
- * body, a second `headers`, a second auth option (including `bearer` with
- * `basic`), an unknown word, or a word missing its value(s) is a tool error.
+ * Validate the raw tool arguments into a URL, an optional body, headers, and
+ * an auth credential. Word-tagged options and the auth shortcuts may follow
+ * in any order, but each of body, `headers`, and auth is accepted once.
+ *
+ * @throws {ToolError} on a missing/non-string URL, an unknown option word, a
+ * second body, `headers` block, or auth option, or a word missing its
+ * value(s).
  */
 function readArgs(verb: HttpVerb, args: ToolArg[]): Result<RequestArguments, SpecError> {
 	let first = args[0];
@@ -285,10 +279,11 @@ function readArgs(verb: HttpVerb, args: ToolArg[]): Result<RequestArguments, Spe
 }
 
 /**
- * Read a `bearer` or `basic` auth option starting at its tag: `bearer` consumes
- * one following string (the token), `basic` two (the username and password).
- * Reports how many arguments (tag included) it consumed so the caller advances
- * past them. A missing or non-string credential value is a tool error.
+ * Read a `bearer` or `basic` auth option starting at its tag: `bearer`
+ * consumes one following string (the token), `basic` two (the username and
+ * password), reporting how many arguments, tag included, it consumed.
+ *
+ * @throws {ToolError} when a credential value is missing or not a string.
  */
 function readAuth(
 	verb: HttpVerb,
@@ -374,18 +369,12 @@ function portOf(url: URL): number {
 }
 
 /**
- * Perform the fetch and shape the response into the tool's result value:
- * `{ status, ok, headers, text, json }`, where `headers` maps lowercased
- * names to values and `json` is the parsed body when parseable, else null.
- * Redirects are followed by hand, never by fetch: every redirect target is a
- * new network destination and must pass the same `net` check as the
- * spec-written URL — otherwise a granted host could bounce the request to a
- * host the caller never granted. The prebuilt `init` (method, body, and any
- * author headers) carries forward on a body-preserving redirect, except the
- * credential headers (`Authorization`/`Cookie`/`Proxy-Authorization`), which
- * are stripped when the hop crosses origins so they never leak to another
- * host; a redirect that rewrites the method to GET drops the body and all its
- * headers with it.
+ * Perform the fetch, following redirects by hand rather than through fetch's
+ * own handling, so each redirect target passes the same `net` check as the
+ * original URL before any request reaches it.
+ *
+ * @returns Success shaped as `{ status, ok, headers, text, json }` from the
+ * final response, or a permission-denied or tool-error failure.
  */
 async function perform(
 	verb: HttpVerb,
@@ -482,13 +471,9 @@ function parseLocation(verb: HttpVerb, location: string, base: URL): Result<URL,
 const CROSS_ORIGIN_STRIPPED_HEADERS = ["authorization", "cookie", "proxy-authorization"];
 
 /**
- * The init for the next hop, per the fetch standard's method rewrite: a 303 —
- * and a 301/302 answering a non-GET — switches to GET and drops the body (and
- * the author headers that rode with it); a body-preserving redirect (307/308,
- * or 301/302 on a GET) keeps the init, but strips the credential headers
- * (`Authorization`/`Cookie`/`Proxy-Authorization`) when the hop crosses
- * origins, matching fetch so a credential set for one host never rides along
- * to a different one.
+ * The init for the next hop, per the fetch standard's method rewrite: 303,
+ * or a non-GET 301/302, switches to GET and drops the body; other statuses
+ * keep the init but strip credential headers when the hop crosses origins.
  */
 function redirectInit(init: RequestInit, status: number, from: URL, to: URL): RequestInit {
 	if (status === 303 || ((status === 301 || status === 302) && init.method !== "GET")) {
@@ -517,13 +502,9 @@ function stripCredentialHeaders(init: RequestInit): RequestInit {
 }
 
 /**
- * Build the fetch init for a verb, its optional body, its optional `bearer`/
- * `basic` credential, and its optional `headers` object. The layering fixes
- * precedence: the body's default content type goes down first, then the
- * `Authorization` header derived from `bearer`/`basic`, then the author's
- * `headers` with lowercased names — so an explicit `content-type` overrides the
- * body's default and an explicit `authorization` header overrides `bearer`/
- * `basic`. An absent body sets no body and no default content type.
+ * Build the fetch init for a verb, optional body, `bearer`/`basic`
+ * credential, and `headers`, layered so an explicit `content-type` overrides
+ * the body's default and an explicit `authorization` overrides `bearer`/`basic`.
  */
 function buildInit(
 	verb: HttpVerb,
@@ -556,10 +537,9 @@ function buildInit(
 }
 
 /**
- * Render an auth spec into its `Authorization` header value: `bearer` becomes
- * `Bearer <token>`; `basic` becomes `Basic <base64(user:pass)>` per RFC 7617.
- * `btoa` rejects a credential outside Latin-1, which surfaces as a tool error
- * rather than an unhandled throw.
+ * Render an auth spec into its `Authorization` header value: `bearer`
+ * becomes `Bearer <token>`; `basic` becomes `Basic <base64(user:pass)>` per
+ * RFC 7617, reporting a credential outside Latin-1 as a tool error.
  */
 function authorizationHeader(verb: HttpVerb, auth: AuthSpec): Result<string, SpecError> {
 	if (auth.kind === "bearer") return success(`Bearer ${auth.token}`);
@@ -584,10 +564,10 @@ interface EncodedBody {
 
 /**
  * Serialize a body spec into its wire string and default content type:
- * `text` verbatim as text/plain (a non-string value is a tool error), `form`
- * urlencoded via URLSearchParams as application/x-www-form-urlencoded, and
- * `json` as JSON of any value as application/json. An absent body yields
- * neither.
+ * `text` verbatim as text/plain, `form` urlencoded via URLSearchParams as
+ * application/x-www-form-urlencoded, and `json` as JSON of any value.
+ *
+ * @throws {ToolError} when a `text` body value is not a string.
  */
 function encodeBody(verb: HttpVerb, body: BodySpec | undefined): Result<EncodedBody, SpecError> {
 	if (body === undefined) return success({ body: undefined, contentType: undefined });

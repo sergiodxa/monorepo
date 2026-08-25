@@ -1,11 +1,9 @@
 /**
- * The style object shape `css()` accepts, aliased from its own parameter type
- * rather than redeclared by hand, since `remix/ui` doesn't export that type by
- * name. Shared by every module that builds a nested selector, at-rule, or
- * gated block ahead of one `css()` call as its own separately-typed variable
- * instead of a computed key inline in one large object literal — assigning
- * into an already-typed variable keeps each nested block checked directly
- * against this one type, rather than widening past what `css()` accepts.
+ * The style object shape `css()` accepts, aliased directly from `css()`'s own
+ * parameter type because `remix/ui` doesn't export that type under its own
+ * name. Modules that build a nested selector, at-rule, or gated block ahead
+ * of a `css()` call assign it into its own `CSSStyles` variable first, so
+ * each nested block gets checked against this exact type as it's written.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

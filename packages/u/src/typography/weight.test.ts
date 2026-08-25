@@ -30,8 +30,6 @@ describe("weight", () => {
 	});
 
 	test("the weight keeps no unit, so the declaration survives the serializer", async () => {
-		// `font-weight` is one of the properties the serializer leaves unitless, so
-		// handing it a bare number is safe here where `-webkit-line-clamp` is not.
 		expect(await declarations(weight("bold"))).not.toContain("font-weight: 700px");
 	});
 });

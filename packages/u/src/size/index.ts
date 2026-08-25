@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { aspect } from "./aspect";
 export type { AspectRatioName } from "./aspect";
 export { bleed } from "./bleed";

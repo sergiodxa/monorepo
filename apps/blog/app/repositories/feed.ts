@@ -22,20 +22,17 @@ export namespace Feed {
 	/**
 	 * One normalized entry in the combined public activity feed.
 	 *
-	 * `slug` is present for internal post routes, while `url` is present for external bookmarks.
+	 * `slug` is present for internal post routes, while `url` is present for
+	 * external bookmarks.
 	 */
 	export interface ActivityItem {
-		/** Logical content source used for rendering and routing decisions. */
 		kind: "article" | "tutorial" | "bookmark" | "glossary";
-		/** Human-readable title shown in feed UIs. */
 		title: string;
-		/** Internal slug used to build routes for article/tutorial/glossary entries. */
 		slug?: string;
-		/** External destination URL for bookmark entries. */
 		url?: string;
-		/** Canonical ISO-8601 activity date used by feed clients. */
+		/** Activity date in ISO-8601 format. */
 		date: string;
-		/** True when content is scheduled for the future and should be presented as preview. */
+		/** True when the publish date is in the future. */
 		preview: boolean;
 	}
 }
@@ -70,8 +67,8 @@ export class Feed {
 	/**
 	 * Determines whether a feed item should be flagged as preview content.
 	 *
-	 * This delegates publish-state semantics to `Post.isPublishedAt`, including the
-	 * app rule that `published_at === null` is considered published (not preview).
+	 * Publish-state semantics come from `Post.isPublishedAt`, where a null
+	 * `published_at` counts as published.
 	 *
 	 * @param input Source object that may include a publish date field.
 	 * @returns True only when the publish date exists and is in the future.
@@ -82,10 +79,9 @@ export class Feed {
 	}
 
 	/**
-	 * Builds the public activity feed from articles, tutorials, bookmarks, and glossary terms.
-	 *
-	 * Data is loaded in parallel, normalized to a shared shape, filtered to valid dates,
-	 * sorted newest-first, and finally converted to ISO date strings for API/UI stability.
+	 * Builds the public activity feed from articles, tutorials, bookmarks, and
+	 * glossary terms. Items whose date cannot be parsed are dropped, and dates are
+	 * emitted as ISO strings for API and UI stability.
 	 *
 	 * @param db Database connection used to read post sources.
 	 * @param limit Optional maximum number of items; non-positive values return an empty list.

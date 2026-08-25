@@ -1,9 +1,9 @@
 /**
  * OAuth 2.0 Token Revocation endpoint controller (RFC 7009).
  *
- * Authenticates the calling client and revokes refresh tokens (sessions). Access
- * tokens are stateless JWTs and cannot be revoked; the endpoint always returns 200
- * regardless of token validity to prevent enumeration.
+ * Authenticates the calling client and revokes refresh tokens (sessions); access
+ * tokens are stateless JWTs that remain valid until they expire naturally. The
+ * endpoint always returns 200 regardless of token validity to prevent enumeration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +24,6 @@ import parseBasicAuth from "../../shared/lib/parse-basic-auth";
 import { reject } from "../../shared/lib/reject";
 import Session from "../models/session";
 
-/** Validation schema for token revocation request bodies. */
 let RevokeSchema = s.object({
 	token: s.string(),
 	token_type_hint: s.optional(s.enum_(["access_token", "refresh_token"])),
@@ -34,13 +33,8 @@ let RevokeSchema = s.object({
 
 /**
  * OAuth 2.0 Token Revocation endpoint (RFC 7009).
- * Allows clients to notify the authorization server that a token is no longer needed.
- *
- * Per RFC 7009, this endpoint always returns 200 OK regardless of token validity
- * to prevent token enumeration attacks.
- *
- * Note: Access tokens are stateless JWTs and cannot be revoked server-side.
- * Only refresh tokens (sessions) can be truly revoked.
+ * Always returns 200 regardless of validity, preventing token enumeration.
+ * Revokes refresh tokens (sessions); access tokens expire naturally as JWTs.
  * @returns An empty `200` `Response` on success, or an OAuth error `Response` for bad client auth.
  */
 export default createAction(

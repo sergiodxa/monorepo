@@ -42,10 +42,9 @@ export interface BlogEngineConfig {
 		/** Emails or subject ids always mapped to the admin role on login. */
 		admins?: string[];
 		/**
-		 * Grant the admin role to the first user to sign in when no admin exists yet.
-		 * Default `true` (self-hosted convenience). Multi-tenant hosts set `false` and
-		 * rely on `admins`, so a stray SSO user cannot claim admin on a freshly
-		 * provisioned tenant before its owner signs in.
+		 * Grants the admin role to the first sign-in when no admin exists yet. Default
+		 * `true` for self-hosted; multi-tenant hosts set `false` and rely on `admins`,
+		 * so a stray SSO user cannot claim admin before the tenant's owner signs in.
 		 */
 		bootstrapFirstAdmin?: boolean;
 	};
@@ -82,11 +81,9 @@ export interface BlogEngine {
 }
 
 /**
- * Creates a blog engine bound to injected storage and secrets — the WordPress-core
- * boundary. The same engine runs inside a Cloudflare Durable Object (the SaaS
- * platform) or a plain Worker with D1 (self-hosted); the host differs only in the
- * {@link BlogEngineConfig.database} adapter it injects. Everything a blog owner
- * edits (title, theme, post types, posts, users, roles) lives in the blog's own DB.
+ * Creates a blog engine bound to injected storage and secrets; hosts differ
+ * only in the {@link BlogEngineConfig.database} adapter they inject. Every edit
+ * a blog owner makes lives in that blog's own DB.
  * @param config - Injected storage, OIDC config, and session secret.
  * @returns An engine exposing `fetch` and `migrate`.
  */

@@ -1,17 +1,14 @@
 /**
  * `/trust` — how the monitoring actually works, and who runs it.
  *
- * Monitoring is bought on trust before it is bought on features: a tool that tells you your
- * site is down is worth nothing unless you believe it, and worse than nothing if it cries
- * wolf. This page is where that case gets made in plain terms — where checks run from, how an
- * incident is confirmed before anyone is woken, what is and is not stored, and what happens
- * when this service itself has a bad day.
+ * Monitoring is bought on trust before it is bought on features: a false alarm costs the
+ * same credibility as a missed one. This page makes that case in plain terms — where checks
+ * run from, how an incident gets confirmed, what gets stored, and what happens when this
+ * service itself has a bad day.
  *
- * Every claim here has to be something the implementation actually does. Nothing on this page
- * may be aspirational, and nothing may describe internal hostnames, credentials, or anything
- * that would help somebody attack the service. Where the implementation does less than a
- * reader might hope — there is no second confirming check before the first notification — the
- * copy says so plainly instead of leaving the gap for them to discover during an outage.
+ * Every claim here matches what the implementation actually does, staying free of internal
+ * hostnames, credentials, or anything that would help an attacker; where the system falls
+ * short of what a reader might hope, the copy names the gap plainly, ahead of any outage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,34 +25,38 @@ import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marke
 import routes from "~/routes/web";
 
 /**
- * The person who builds and operates the service. A single external link rather than a
- * translatable string, because the destination is the same in every locale and the
- * accountability this page claims is worthless if the name isn't checkable.
+ * The person who builds and operates the service, kept as a single external link because
+ * the destination is the same in every locale, and the accountability this page claims
+ * depends on the name being checkable.
  */
 const FOUNDER_URL = "https://sergiodxa.com";
 
 /**
- * Where this app's source lives. "Code-available" rather than "open source" in the copy: the
- * repository carries its own license with conditions, and the claim being made here is only
- * that a reader can go and check the code, not that they may reuse it.
+ * Where this app's source lives. The copy calls it "code-available" since the repository
+ * carries its own license with conditions: reading the code is open to everyone, and reuse
+ * stays governed by that license.
  */
 const SOURCE_URL = "https://github.com/sergiodxa/monorepo/tree/main/apps/uptime";
 
 /**
  * This service's own status page, built with the same cron-job monitoring the product
- * sells. It reports the app's scheduled internal work checking in on time — which is a
- * narrower claim than "everything is fine", and the copy beside it says so.
+ * sells. It reports only that scheduled internal work checked in on time, and the copy
+ * beside it states that scope plainly.
  */
 const OWN_STATUS_PAGE_URL = "https://uptime.sergiodxa.com/status/uptime";
 
 /**
  * The nine location hints a monitor can be probed from, in the order the monitor form
- * lists them. Named here so the page enumerates the same set the form offers rather
- * than a prose approximation of it; each id is a `trust.regions.*` copy key.
+ * lists them, so the page enumerates exactly the set the form offers; each id is a
+ * `trust.regions.*` copy key.
  */
 const PROBE_REGIONS = ["afr", "apac", "eeur", "enam", "me", "oc", "sam", "weur", "wnam"] as const;
 
-/** GET /trust — the trust and reliability page. */
+/**
+ * GET /trust — the trust and reliability page. Typography comes entirely from `Typeset`
+ * with `preset="reading"`; the `<article>` around it carries only the page's own measure
+ * and padding.
+ */
 export default createAction(routes.trust, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.i18next.t);
@@ -70,15 +71,6 @@ export default createAction(routes.trust, async (ctx) => {
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				{/*
-				 * Every type decision — sizes, weights, vertical rhythm, list markers, and the
-				 * brand-colored underlined links this page's whole argument rests on — comes from
-				 * `Typeset`, the way the docs layout and the blog's post view already take theirs.
-				 * `preset="reading"` is the long-form rhythm, which is what this is.
-				 *
-				 * This element keeps only what is genuinely about *this* page's placement on the
-				 * screen: the measure and the padding around it.
-				 */}
 				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
 					<Typeset preset="reading">
 						<h1>{ctx.i18next.t("trust.heading")}</h1>

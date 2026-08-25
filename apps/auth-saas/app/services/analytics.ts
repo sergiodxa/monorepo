@@ -10,23 +10,15 @@
 
 import { env } from "cloudflare:workers";
 
-/**
- * Event types for analytics tracking.
- */
 type EventType = "authentication" | "registration" | "verification" | "logout";
 
-/**
- * MAU count result from Analytics Engine query.
- */
 interface MAUResult {
 	tenant_id: string;
 	mau: number;
 }
 
-/** UUID v4 regex pattern for tenant/subject ID validation. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** YYYY-MM pattern for month validation. */
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
@@ -64,14 +56,7 @@ function escapeSqlString(value: string): string {
 	return value.replace(/'/g, "''");
 }
 
-/**
- * Error thrown when analytics input validation fails.
- */
 class AnalyticsValidationError extends Error {
-	/**
-	 * Creates a new AnalyticsValidationError.
-	 * @param message - The error message.
-	 */
 	constructor(message: string) {
 		super(message);
 		this.name = "AnalyticsValidationError";
@@ -79,16 +64,9 @@ class AnalyticsValidationError extends Error {
 }
 
 /**
- * Analytics service for tracking authentication events and MAU.
- * Uses Cloudflare Analytics Engine for high-cardinality metrics.
- *
- * Data model in Analytics Engine:
- * - blob1: tenant_id
- * - blob2: event_type (mau, authentication, registration, etc.)
- * - blob3: subject_id
- * - blob4: month (YYYY-MM format for MAU tracking)
- * - double1: count (always 1 for individual events)
- * - index1: tenant_id (for efficient querying)
+ * Analytics service for tracking authentication events and MAU via
+ * Cloudflare Analytics Engine, storing tenant/event/subject/month across
+ * blob1-blob4 and a per-event count in double1.
  *
  * @example
  * AnalyticsService.trackAuthentication(tenantId, subjectId);
@@ -96,8 +74,9 @@ class AnalyticsValidationError extends Error {
  */
 export default class AnalyticsService {
 	/**
-	 * Track an authentication event for MAU counting.
-	 * Should be called on successful authentication.
+	 * Records an authentication event and an MAU event for the tenant, both
+	 * timestamped to the current month so MAU can be queried without the
+	 * caller tracking months.
 	 * @param tenantId - The tenant identifier.
 	 * @param subjectId - The user identifier.
 	 */
@@ -118,7 +97,7 @@ export default class AnalyticsService {
 	}
 
 	/**
-	 * Track a user registration event.
+	 * Records a registration event timestamped to the current month.
 	 * @param tenantId - The tenant identifier.
 	 * @param subjectId - The user identifier.
 	 */
@@ -133,7 +112,7 @@ export default class AnalyticsService {
 	}
 
 	/**
-	 * Track an email verification event.
+	 * Records an email-verification event timestamped to the current month.
 	 * @param tenantId - The tenant identifier.
 	 * @param subjectId - The user identifier.
 	 */
@@ -148,7 +127,7 @@ export default class AnalyticsService {
 	}
 
 	/**
-	 * Track a logout event.
+	 * Records a logout event timestamped to the current month.
 	 * @param tenantId - The tenant identifier.
 	 * @param subjectId - The user identifier.
 	 */
@@ -163,7 +142,7 @@ export default class AnalyticsService {
 	}
 
 	/**
-	 * Track a generic event.
+	 * Records an event of the given type timestamped to the current month.
 	 * @param tenantId - The tenant identifier.
 	 * @param eventType - The type of event to track.
 	 * @param subjectId - The user identifier.

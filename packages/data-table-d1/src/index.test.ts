@@ -1,14 +1,14 @@
 /**
- * Tests for the D1 `DatabaseDriver` that a real binding cannot express.
+ * Tests for D1 `DatabaseDriver` behaviour a controllable `meta` shim can exercise.
  *
  * The adapter's behaviour is exercised against an actual D1 binding in
- * `index.workers.test.ts`. What is left here needs a `meta` the test controls, which a real
- * binding by definition does not offer: that the adapter reports the `duration` D1 sent rather
- * than timing statements itself, and that it reports zeros — instead of guessing — when a
- * statement comes back with no counters at all.
+ * `index.workers.test.ts`; what is left here needs a `meta` the test itself
+ * controls: that the adapter reports the `duration` D1 sent rather than timing
+ * statements itself, and reports zeros — instead of guessing — when a statement
+ * comes back with no counters at all.
  *
- * Both run against a `D1Database`-shaped shim over an in-memory `node:sqlite` database, which
- * is also why they stay on the threads pool: workerd has no `node:sqlite`.
+ * Both run against a `D1Database`-shaped shim over an in-memory `node:sqlite`
+ * database, so they stay on the threads pool, where `node:sqlite` is available.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,11 +26,9 @@ import { createD1DatabaseAdapter } from "./index";
 import type { SQLInputValue } from "node:sqlite";
 
 /**
- * Minimal `D1Database`-shaped wrapper over a `node:sqlite` database.
- *
- * Each prepared statement executes immediately and autocommits, mirroring D1, which
- * exposes no `BEGIN`/`COMMIT`/`ROLLBACK`. Results are shaped like D1's `D1Result`
- * (`{ results, meta: { changes, last_row_id } }`).
+ * Minimal `D1Database`-shaped wrapper over a `node:sqlite` database. Each
+ * prepared statement executes immediately and autocommits, mirroring D1's own
+ * lack of `BEGIN`/`COMMIT`/`ROLLBACK`, with results shaped like D1's `D1Result`.
  * @param db Open `node:sqlite` database.
  * @returns An object matching the `D1Database` surface consumed by the adapter.
  */
@@ -76,11 +74,9 @@ function createD1Shim(db: DatabaseSync): D1Database {
 const SHIM_DURATION_MS = 1.5;
 
 /**
- * Reads the change count and last insert id after a statement, shaped like D1 meta,
- * plus the `rows_read`/`rows_written`/`duration` fields D1 reports and the adapter's
- * `onStatement` observer surfaces. `rows_read` is the number of rows the statement
- * returned, which is as close as a SQLite shim can get to D1's "rows read from tables
- * and indexes" — the shim can pin the plumbing, not the planner.
+ * Reads the change count and last insert id after a statement, shaped like D1
+ * meta plus the `rows_read`/`rows_written`/`duration` fields the adapter's
+ * `onStatement` observer surfaces; `rows_read` stands in for D1's own count.
  * @param db Open `node:sqlite` database.
  * @param rowsRead Rows the statement returned.
  * @param rowsWritten Rows the statement wrote, measured as a `total_changes()` delta
@@ -121,8 +117,8 @@ function readTotalChanges(db: DatabaseSync): number {
 }
 
 /**
- * A `D1Database` shim whose statements report no metadata at all, standing in for a
- * D1 build (or a future one) that omits the row counters.
+ * A `D1Database` shim whose statements return an empty `meta`, standing in for
+ * a D1 build (or a future one) that omits the row counters.
  * @param db Open `node:sqlite` database.
  * @returns An object matching the `D1Database` surface, with empty statement meta.
  */
@@ -183,11 +179,7 @@ describe("createD1DatabaseAdapter onStatement", () => {
 		await db.findMany(users);
 
 		expect(observations).toHaveLength(1);
-		// The shim reports a fixed duration no real statement would take, so an adapter that
-		// timed the call itself could not produce this number.
 		expect(observations[0]?.durationMs).toBe(SHIM_DURATION_MS);
-		// The counters travel the same path, and the real binding's own values are asserted in
-		// `index.workers.test.ts`.
 		expect(observations[0]?.rowsRead).toBe(2);
 		expect(observations[0]?.rowsWritten).toBe(0);
 	});

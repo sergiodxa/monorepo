@@ -10,12 +10,9 @@
 import { formatLanguageString, parse, pick } from "./parser";
 
 /**
- * Gets the client's preferred locale from the Accept-Language header.
- *
- * Wildcard ranges and tags `Intl.Locale` cannot represent are ignored; among
- * the remaining tags the highest-quality one wins. Returns `undefined` when
- * the header is missing or no valid locale is left, so callers can fall
- * through to the runtime default locale.
+ * Gets the client's preferred locale from the Accept-Language header,
+ * ignoring wildcard ranges and unrepresentable tags. Returns `undefined` when
+ * nothing remains, so callers can fall back to the runtime default locale.
  *
  * @param requestOrHeaders - The incoming Request, or its Headers.
  * @returns The best client locale, or `undefined` when unavailable.
@@ -37,12 +34,9 @@ export function getClientLocales(requestOrHeaders: Request | Headers): string | 
 
 	for (let locale of parsedLocales) {
 		try {
-			// Constructing an Intl.Locale throws on tags Intl cannot represent
 			new Intl.Locale(locale);
 			validLocales.push(locale);
-		} catch {
-			// Skip invalid tags instead of failing the whole header
-		}
+		} catch {}
 	}
 
 	let locale = pick(Intl.DateTimeFormat.supportedLocalesOf(validLocales), acceptLanguage);

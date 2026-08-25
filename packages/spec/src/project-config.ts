@@ -82,8 +82,7 @@ export interface PluginDeclaration {
 /**
  * A parsed `spec/config.jsonc`: the suite's project configuration. The
  * `plugins` key lists the plugins a project declares, in file order; the
- * `permissions` key declares the grants the suite requires, which stay inert
- * until the caller opts in with `--allow-config`.
+ * `permissions` key declares the grants that stay inert until `--allow-config`.
  */
 export interface ProjectConfig {
 	/** The declared plugins; empty when no config exists or it declares none. */
@@ -111,12 +110,9 @@ export interface LaunchPlan {
 }
 
 /**
- * Extract the `--allow-plugins` grant from a raw argument list, returning the
- * remaining arguments untouched for the permission parser to handle. A bare
- * flag authorizes every declared plugin; `--allow-plugins=a,b` authorizes the
- * named namespaces; repeated flags union, and a bare flag absorbs scopes.
- * Handled here rather than in the permission engine because launching a plugin
- * is not one of the four capability families `--allow-*` grants.
+ * Extract the `--allow-plugins` grant from a raw argument list, leaving the
+ * remaining arguments for the permission parser to handle. Plugin launch sits
+ * outside the four `--allow-*` capability families, so it gets its own parse here.
  *
  * @param args - The raw CLI arguments after `run`.
  * @returns The launch grant plus the arguments that were not `--allow-plugins`.
@@ -154,11 +150,9 @@ export function parsePluginGrant(
 }
 
 /**
- * Read the `spec/config.jsonc` that governs a suite directory. The config file
- * lives in the directory passed to `spec run` (the suite dir); `config.jsonc`
- * is tried before `config.json`. A missing config file is not an error — it
- * simply declares no plugins. The file is JSONC (comments and trailing commas
- * tolerated), and relative command paths resolve against its directory.
+ * Read the `spec/config.jsonc` that governs a suite directory (JSONC, so
+ * comments and trailing commas are tolerated), trying `config.jsonc` before
+ * `config.json`. A missing file simply declares no plugins.
  *
  * @param suiteRoot - The suite directory `spec run` was pointed at.
  * @returns The parsed config, or the failure that made it unreadable.
@@ -190,9 +184,8 @@ export async function loadProjectConfig(
 
 /**
  * Split the config's declarations into the ones the grant authorizes and the
- * namespaces it refuses. Refusal is not yet a failure — a declared plugin the
- * suite never imports may stay unlaunched with no consequence — so this only
- * partitions; {@link deniedReferences} decides whether a refusal actually bites.
+ * namespaces it refuses. An unimported refusal stays harmless — only
+ * {@link deniedReferences} turns a refusal the suite depends on into a failure.
  *
  * @param config - The parsed project config.
  * @param grant - The caller's `--allow-plugins` grant.
@@ -209,10 +202,9 @@ export function planPluginLaunch(config: ProjectConfig, grant: PluginLaunchGrant
 }
 
 /**
- * Which refused namespaces the suite actually imports with `use`. A denied
- * declaration only matters when a spec depends on it; those it does not import
- * stay dormant. The result drives the deny-by-default diagnostic, so a caller
- * who forgot `--allow-plugins` is told exactly which grant is missing.
+ * Which refused namespaces the suite actually imports with `use` — a denied
+ * declaration only matters when a spec depends on it. The result drives the
+ * deny-by-default diagnostic, naming exactly the grant a caller is missing.
  *
  * @param suite - The loaded suite, for its files' `use` imports.
  * @param deniedNamespaces - The namespaces refused by {@link planPluginLaunch}.
@@ -236,9 +228,8 @@ export function deniedReferences(suite: LoadedSuite, deniedNamespaces: string[])
 
 /**
  * Build the deny-by-default diagnostic for a suite that imports plugins it was
- * not authorized to launch. Shaped like a permission denial — code
- * `permission-denied` with a `--allow-plugins` remedy — so it reads the same as
- * every other refused capability.
+ * not authorized to launch, shaped like every other refused capability: code
+ * `permission-denied` with a `--allow-plugins` remedy.
  *
  * @param namespaces - The imported-but-unauthorized namespaces.
  * @returns The error the CLI reports before any test runs.
@@ -256,9 +247,8 @@ export function launchDeniedError(namespaces: string[]): SpecError {
 
 /**
  * Connect the authorized plugins over the stdio transport, in declaration
- * order. Each connection spawns the plugin's command and completes its describe
- * handshake; if any fails, the ones already connected are disposed before the
- * failure is returned, so a partial launch never leaks a child process.
+ * order, each spawning its command and completing the describe handshake. A
+ * failure disposes every plugin already connected, so a launch never leaks a child.
  *
  * @param launch - The declarations {@link planPluginLaunch} authorized.
  * @returns The connected plugins, ready to pass to `runSuite`, or the failure.
@@ -294,9 +284,7 @@ export async function disposeAll(plugins: Plugin[]): Promise<void> {
 		if (plugin.dispose === undefined) continue;
 		try {
 			await plugin.dispose();
-		} catch {
-			// Teardown failures are never run failures.
-		}
+		} catch {}
 	}
 }
 
@@ -311,7 +299,6 @@ function widenLaunchGrant(current: PluginLaunchGrant, namespaces: string[]): Plu
 	return { mode: "scoped", namespaces: merged };
 }
 
-/** Whether a launch grant authorizes launching a given namespace. */
 function grantAdmits(grant: PluginLaunchGrant, namespace: string): boolean {
 	if (grant.mode === "all") return true;
 	if (grant.mode === "scoped") return grant.namespaces.includes(namespace);
@@ -368,10 +355,8 @@ function validateConfig(
 
 /**
  * Validate the `permissions` key into a {@link PermissionsConfig}. An absent
- * key declares nothing; every malformed entry is a `usage-error` naming the
- * offending entry, so a broken declaration is never silently ignored. This
- * runs whenever the config is read, before any opt-in — a bad config is a bad
- * config regardless of whether `--allow-config` is in play.
+ * key declares nothing; every malformed entry becomes a `usage-error` naming
+ * it, checked at config load time regardless of `--allow-config`.
  *
  * @param field - The raw `permissions` value from the parsed config.
  * @param path - The config file path, for diagnostics.
@@ -407,10 +392,9 @@ function validatePermissions(field: unknown, path: string): Result<PermissionsCo
 }
 
 /**
- * Validate one `permissions.allow` entry: a bare family string (a whole-family
- * grant) or a `[family, ...scopes]` tuple (a scoped grant). The family must be
- * one the runtime knows; a tuple needs at least one non-empty string scope.
- * Anything else is a `usage-error` naming the offending entry.
+ * Validate one `permissions.allow` entry: a bare family string (whole-family
+ * grant) or a `[family, ...scopes]` tuple with at least one non-empty scope,
+ * the family always one the runtime knows, else a `usage-error` naming it.
  */
 function validatePermissionEntry(
 	entry: unknown,
@@ -469,10 +453,9 @@ function describeEntry(entry: unknown): string {
 }
 
 /**
- * The plugin launch grant a config's `permissions.allow` declares. A bare
- * `"plugins"` entry authorizes every declared plugin; a `["plugins", ...]`
- * tuple names the namespaces. Applied only when `--allow-config` opts in, and
- * unioned with any `--allow-plugins` flag exactly as two flags would union.
+ * The plugin launch grant a config's `permissions.allow` declares: a bare
+ * `"plugins"` entry authorizes every plugin, a `["plugins", ...]` tuple names
+ * the namespaces, applied under `--allow-config` and unioned with `--allow-plugins`.
  *
  * @param entries - The validated allow-list entries.
  * @returns The launch grant the config declares.
@@ -565,8 +548,7 @@ function validateDeclaration(
 /**
  * Resolve one command argument. An argument starting with `.` is a config-
  * relative path, made absolute against the config directory so the command
- * runs identically from any working directory; every other argument (an
- * executable found on `PATH`, an absolute path, a plain flag) is left verbatim.
+ * runs identically from any working directory; anything else is left verbatim.
  */
 function resolveCommandPart(part: string, directory: string): string {
 	if (part.startsWith(".")) return resolve(directory, part);

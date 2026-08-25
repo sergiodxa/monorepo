@@ -12,13 +12,9 @@ import type { SqliteDatabase, SqliteStatement } from "./sqlite";
 import { toPositional } from "./sqlite";
 
 /**
- * Binds an integral number as a SQLite INTEGER rather than a REAL.
- *
- * `node:sqlite` maps every JS number to REAL, so `?/60000` performs float division where
- * `bun:sqlite` — and the D1/SQLite engines in production — perform integer division. Code
- * that relies on truncating division silently computes different results. BigInt is the only
- * JS type `node:sqlite` binds as INTEGER; reads come back as numbers either way, since
- * `setReadBigInts` stays off.
+ * Binds an integral number as a SQLite INTEGER: `node:sqlite` otherwise maps
+ * every JS number to REAL, causing float division where `bun:sqlite` and
+ * production truncate. Reads stay plain numbers since `setReadBigInts` is off.
  * @param value One binding as the caller passed it.
  */
 function toBinding(value: unknown): unknown {
@@ -36,18 +32,13 @@ function toBindings(values: unknown[]): unknown[] {
 export type { SqliteDatabase, SqliteStatement } from "./sqlite";
 
 /**
- * Opens an in-memory SQLite database.
+ * Opens an in-memory SQLite database with double-quoted string literals
+ * enabled, matching `bun:sqlite`'s handling of unresolved identifiers since
+ * production SQL already depends on it.
  * @param filename SQLite file to open; `:memory:` for a private database.
  * @returns The database, narrowed to the surface the mocks use.
  */
 export function openDatabase(filename: string): SqliteDatabase {
-	// Double-quoted string literals are SQLite's legacy behaviour: an identifier that does
-	// not resolve silently degrades to a string. `bun:sqlite` enables it and `node:sqlite`
-	// does not, so without this the same SQL behaves differently per runtime — and the
-	// repo's migration history already contains a statement that relies on it
-	// (20250520185608 copies "subject_id" out of a table whose column is `user_id`).
-	// Matching Bun keeps the two runners byte-identical; the cost is that a double-quoted
-	// typo stays silent here rather than erroring.
 	let database = new DatabaseSync(filename, { enableDoubleQuotedStringLiterals: true });
 
 	return {
@@ -55,9 +46,11 @@ export function openDatabase(filename: string): SqliteDatabase {
 			let statement = database.prepare(sql);
 
 			return {
+				/**
+				 * Catches `columns()`'s throw for a statement with no result columns,
+				 * returning the empty list callers read as a signal to run for effect.
+				 */
 				get columnNames(): string[] {
-					// `columns()` throws for a statement that returns none, where the callers
-					// expect the empty list that tells them to run for effect instead.
 					try {
 						return statement.columns().map((column) => column.name);
 					} catch {
@@ -69,9 +62,11 @@ export function openDatabase(filename: string): SqliteDatabase {
 					return statement.all(...(toBindings(values) as never[])) as Record<string, unknown>[];
 				},
 
+				/**
+				 * Normalizes a miss to `null`: `node:sqlite` reports `undefined` where
+				 * `bun:sqlite` reports `null`, and callers compare only against `null`.
+				 */
 				get(...values: unknown[]): Record<string, unknown> | null {
-					// Normalized to `null`: `node:sqlite` reports a miss as `undefined` while
-					// `bun:sqlite` reports it as `null`, and the callers compare against `null`.
 					return (statement.get(...(toBindings(values) as never[])) ?? null) as Record<
 						string,
 						unknown
@@ -84,8 +79,11 @@ export function openDatabase(filename: string): SqliteDatabase {
 			};
 		},
 
+		/**
+		 * Executes SQL directly when no bindings are given, so a `;`-separated
+		 * script runs in full; otherwise prepares and runs a single statement.
+		 */
 		exec(sql: string, ...values: unknown[]): void {
-			// Only the no-binding form can carry a multi-statement script.
 			if (values.length === 0) {
 				database.exec(sql);
 				return;

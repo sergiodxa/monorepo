@@ -2,7 +2,8 @@
  * Schemas for every form and query string the admin area accepts: the client and
  * subject editors, the `intent` variants each page's single POST route discriminates
  * on, and the page number the two listings read. Administration is the one place that
- * can rewrite a relying party's redirect URI, so nothing reaches a model unvalidated.
+ * can rewrite a relying party's redirect URI, so every value is validated before it
+ * reaches a model.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,11 +16,9 @@ import * as checks from "remix/data-schema/checks";
 const DESCRIPTION_MAX_LENGTH = 280;
 
 /**
- * A URL field that is allowed to be left empty.
- *
- * An empty text input posts `""`, which is not a URL and must not be a validation
- * failure for an optional field — it is how an administrator clears the value, so it
- * normalizes to `null` rather than being rejected or stored as an empty string.
+ * An empty text input posts `""`. For an optional field that is how an administrator
+ * clears the value, so it normalizes to `null` here, staying clear of both a
+ * validation error and storage as an empty string.
  */
 function optionalUrl() {
 	return s.optional(
@@ -32,19 +31,17 @@ function optionalUrl() {
 /**
  * A checkbox as a form posts it: present with a value when ticked, absent otherwise.
  *
- * The browser sends nothing at all for an unticked box, so the absence — not a `"off"`
- * value — is what has to mean `false`.
+ * The browser sends nothing at all for an unticked box, so this treats that absence
+ * as the signal for `false`.
  */
 function checkbox() {
 	return s.optional(s.string()).transform((value) => value === "on");
 }
 
 /**
- * A checkbox whose stored form is the text `"true"` / `"false"`.
- *
- * The two `*_session_required` columns are `text`, not booleans, so a round trip
- * through this form has to land back on those exact strings or a client's back-channel
- * logout silently stops carrying its `sid`.
+ * The two `*_session_required` columns store `text`, so a round trip through this
+ * form has to land back on the exact strings `"true"` / `"false"`, or a client's
+ * back-channel logout silently stops carrying its `sid`.
  */
 function textBooleanCheckbox() {
 	return s.optional(s.string()).transform((value) => (value === "on" ? "true" : "false"));
@@ -75,8 +72,8 @@ export type CreateClientForm = s.InferOutput<typeof CreateClientSchema>;
 /**
  * A client edit, as the edit form posts it.
  *
- * The secret is never an input: `regenerateSecret` rotates it and the new value is
- * revealed once, which is the only way it can change.
+ * `regenerateSecret` rotates the secret and reveals the new value once, the only way
+ * it changes.
  */
 export const UpdateClientSchema = s.object({
 	...CLIENT_FIELDS,
@@ -91,9 +88,9 @@ export const UpdateClientSchema = s.object({
 export type UpdateClientForm = s.InferOutput<typeof UpdateClientSchema>;
 
 /**
- * A subject edit, as the edit form posts it. The email address is deliberately absent:
- * it is the identity provider linking a social identity to an account, so changing it
- * from an admin screen would silently re-point that link.
+ * A subject edit, as the edit form posts it. The email address is the identity
+ * provider's link between a social identity and this account, so this form leaves it
+ * untouched.
  */
 export const UpdateSubjectSchema = s.object({
 	displayName: s.string().pipe(checks.minLength(1)),
@@ -107,9 +104,9 @@ export const UpdateSubjectSchema = s.object({
 export type UpdateSubjectForm = s.InferOutput<typeof UpdateSubjectSchema>;
 
 /**
- * The client list's only intent. Declared as a variant rather than a bare object so a
- * post naming any other intent fails validation instead of falling through to a
- * deletion, which is the failure mode worth designing against on this page.
+ * The client list's only intent, declared as a variant: a post naming any other
+ * intent fails validation up front, before it can fall through to a deletion — the
+ * failure mode this page guards against.
  */
 export const ClientsIntentSchema = s.variant("intent", {
 	delete: s.object({

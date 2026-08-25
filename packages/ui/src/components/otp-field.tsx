@@ -28,11 +28,8 @@ const DEFAULT_AUTO_COMPLETE = "one-time-code";
 export namespace OtpField {
 	/**
 	 * Every {@link Input} prop except `type`, `list`, `role`, `inputMode`,
-	 * `autoComplete`, and `maxLength` — this control always renders a plain
-	 * text control, with no paired `<datalist>` and the platform's own
-	 * implicit textbox role, and `inputMode`/`autoComplete`/`maxLength` read
-	 * from `inputMode`/`autoComplete`/`length` below instead, each defaulted
-	 * for the one-time-code case.
+	 * `autoComplete`, and `maxLength`, fixed to a plain text control with
+	 * `inputMode`/`autoComplete`/`length` read from the fields below instead.
 	 */
 	export interface Props extends Omit<
 		Input.Props,
@@ -51,9 +48,8 @@ export namespace OtpField {
 		inputMode?: Input.Props["inputMode"];
 		/**
 		 * Platform autofill hint passed straight through to the native
-		 * `autoComplete` attribute. Defaults to {@link DEFAULT_AUTO_COMPLETE},
-		 * the value a browser or OS keyboard looks for to offer a code received
-		 * by SMS or email as a one-tap suggestion.
+		 * `autoComplete` attribute. Defaults to {@link DEFAULT_AUTO_COMPLETE}, which
+		 * a browser or OS keyboard looks for to offer an SMS or email code inline.
 		 */
 		autoComplete?: Input.Props["autoComplete"];
 	}
@@ -61,23 +57,8 @@ export namespace OtpField {
 
 /**
  * Renders a single native `<input>` for entering a one-time verification
- * code, building on {@link Input} for its box, color, and interaction-state
- * styling — every hover, focus-visible, invalid, and disabled behavior
- * documented there carries over unchanged. On top of that, the control's
- * text renders centered, at the library's base text size and a medium
- * weight, with tabular figures so digits never shift the layout as they
- * change. Sizing stays a single full-width control rather than one box per
- * character, since one native `<input>` is what carries the platform's own
- * `autoComplete="one-time-code"` autofill contract reliably.
- *
- * `inputMode` defaults to {@link DEFAULT_INPUT_MODE} for a numeric virtual
- * keyboard, `autoComplete` defaults to {@link DEFAULT_AUTO_COMPLETE} for
- * SMS/email code autofill, and `length` (defaulting to
- * {@link DEFAULT_LENGTH}) sets the control's native `maxLength`. A boxed,
- * per-character presentation is available as a paired opt-in behavior
- * (`otpSlots()`) that a consuming island applies for focus advance/retreat
- * between digits and paste-splitting; without it, this same control still
- * accepts a pasted or typed code in full.
+ * code, built on {@link Input}, sized as one full-width control since a
+ * single `<input>` is what carries `autoComplete="one-time-code"` reliably.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the field's markup.

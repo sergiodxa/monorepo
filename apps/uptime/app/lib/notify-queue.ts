@@ -23,18 +23,9 @@ import { sendQueueBatch } from "~/app/lib/queue";
 export type NotifyMonitorType = "dns" | "tcp" | "cron" | "ssl";
 
 /**
- * One monitor's status transition, as it travels over the queue. The shape is a stable
- * contract with messages already in flight: adding a field is safe, renaming or
- * removing one is not.
- *
- * `previousStatus` is always the value the monitor held *before* the sweep wrote its
- * new one, because that's what decides whether a transition is a recovery.
- *
- * A domain monitor's `dns` message is the same two statuses and nothing more, even though
- * the alert it produces reports per-record findings. The findings are already durable in
- * `dns_monitor_records`, and putting a copy on the queue would mean a message that can
- * outlive its own truth — redelivered an hour later, it would announce records that have
- * since been accepted or restored. The consumer reads the rows instead.
+ * One monitor's status transition, as it travels over the queue — a stable contract with
+ * messages already in flight, where only added fields stay compatible. A domain monitor's
+ * message stays two statuses; the consumer rereads `dns_monitor_records` for detail.
  */
 export type NotifyMessage =
 	| {

@@ -25,10 +25,8 @@ import { panelChrome } from "../styles/panel-chrome";
 
 /**
  * Native tab-stop order applied to {@link ScrollArea.Viewport} through
- * {@link attrs} unless a consumer supplies its own `tabIndex`, so the
- * scrollable region is reachable with the keyboard (arrow keys and
- * Page Up/Down scroll it once it holds focus) even when none of its content
- * is itself focusable.
+ * {@link attrs} unless a consumer supplies its own `tabIndex`, keeping it
+ * reachable via keyboard even when none of its content is focusable.
  */
 const DEFAULT_TAB_INDEX = 0;
 
@@ -56,11 +54,8 @@ export namespace ScrollArea {
 
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * `orientation` selects which axis scrolls and defaults to
-	 * {@link DEFAULT_ORIENTATION}; `tabIndex` defaults to
-	 * {@link DEFAULT_TAB_INDEX} but stays overridable (set it to `-1` when the
-	 * viewport's own content is already reachable in Tab order and the
-	 * viewport itself shouldn't be a separate stop).
+	 * `orientation` defaults to {@link DEFAULT_ORIENTATION}; `tabIndex` defaults
+	 * to {@link DEFAULT_TAB_INDEX}, overridable to `-1` when content is reachable.
 	 */
 	export interface ViewportProps extends TagProps<"div"> {
 		/** Axis the viewport scrolls along. Defaults to {@link DEFAULT_ORIENTATION}. */
@@ -70,9 +65,8 @@ export namespace ScrollArea {
 
 /**
  * Renders the scroll area's outer panel: a relatively positioned, rounded,
- * bordered `<div>` that visually frames whatever {@link ScrollArea.Viewport}
- * scrolls inside it. The panel itself never scrolls or clips — it is a pure
- * frame, so it composes cleanly with a consumer's own layout around it.
+ * bordered `<div>` that frames whatever {@link ScrollArea.Viewport} scrolls
+ * inside it, staying a fixed border around the scrolling content.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the panel's markup.
@@ -93,18 +87,8 @@ export function ScrollArea(handle: Handle<ScrollArea.Props>) {
 
 /**
  * Renders the scroll area's scrolling surface: a `<div>` filling its parent
- * panel on both axes, clipping and scrolling along the axis named by
- * `data-orientation`, with a thin, inset native scrollbar (`scrollbar-width:
- * thin`, `scrollbar-gutter: stable` so its reserved gutter never shifts
- * content as it appears or disappears) styled to match the panel's border in
- * WebKit browsers. Smooth-scrolls to in-page anchors and programmatic
- * `scrollIntoView` calls, falling back to an instant jump under
- * `prefers-reduced-motion: reduce`. Gains a focus ring in the semantic
- * primary color when it becomes focus-visible, which happens on its own
- * `tabIndex` stop or on any focusable descendant scrolling it into view. The
- * WebKit scrollbar's own thickness is set with physical `width`/`height`
- * rather than a logical sizing property — WebKit's scrollbar pseudo-elements
- * sit outside the regular box model and don't recognize logical sizing.
+ * panel, clipping and scrolling along the axis named by `data-orientation`
+ * with a thin native scrollbar that gains a focus ring when focus-visible.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the viewport's markup.
@@ -137,9 +121,6 @@ ScrollArea.Viewport = function ScrollAreaViewport(handle: Handle<ScrollArea.View
 						scrollbarWidth: "thin",
 						scrollbarGutter: "stable",
 					}),
-					// `overflowBlock`/`overflowInline` are logical axis-scoped overflow
-					// properties with no `@pkg/u` equivalent (`u.overflow()` only covers
-					// the physical `overflowX`/`overflowY` pair).
 					data("orientation", "vertical", raw({ overflowBlock: "auto", overflowInline: "hidden" })),
 					data(
 						"orientation",

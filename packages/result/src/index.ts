@@ -1,3 +1,11 @@
+/**
+ * Public entry point for the result package: constructors, type guards,
+ * and combinators for working with `Result` values.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export type { Success, Failure, Result } from "./types.js";
 export { success } from "./success.js";
 export { failure } from "./failure.js";

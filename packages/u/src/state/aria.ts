@@ -7,21 +7,13 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { when } from "./when";
 
 /**
- * Sugar over `when(...)` for an element's own `aria-*` attribute selector:
- * targets `&[aria-{attribute}]` (present with any value) when no `value` is
- * given, or `&[aria-{attribute}="{value}"]` when one is.
+ * Sugar over `when(...)` for an element's `aria-*` attribute selector: two
+ * args match the attribute present with any value — including `"false"` —
+ * while three args match a value exactly; pass `"true"` for the truthy case.
  *
- * `checked()`, `disabled()`, and `invalid()` already bundle the common ARIA
- * states with their native equivalents, so this wrapper is for the rest —
- * `aria-expanded`, `aria-selected`, `aria-current`, `aria-pressed`,
- * `aria-busy`, `aria-sort`.
- *
- * The three-argument form matches the attribute value as an exact string, so
- * it cannot express "any value except `false`": `aria("expanded", input)`
- * matches an `aria-expanded="false"` element too, because the attribute is
- * present. Target the truthy state explicitly with
- * `aria("expanded", "true", input)`.
- *
+ * @see checked
+ * @see disabled
+ * @see invalid
  * @example u.aria("selected", "true", u.bg("brand.tint"))
  * @example css({ '&[aria-selected="true"]': { backgroundColor: "..." } })
  * @example u.aria("busy", u.opacity(50))

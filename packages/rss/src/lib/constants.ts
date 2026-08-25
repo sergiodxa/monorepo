@@ -1,4 +1,11 @@
 /**
+ * Namespace and version constants shared across the RSS package.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Stores the RSS version serialized by this package.
  */
 export const RSS_VERSION = "2.0";

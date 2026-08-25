@@ -1,14 +1,9 @@
 /**
- * Dashboard tab-panel fragment controller. GET /app/:team/dashboard/panel/:type —
- * loads and renders just the requested monitor type's table, with no document
- * shell, so the dashboard's "dashboard-panel" `Frame` can swap it in without a full
- * page reload. Requires `requireUser` + `requireTeam`.
- *
- * Renders the tab bar and the requested tab's table together, so a named `Frame`
- * reload keeps the tab bar's active state in sync with whichever monitor-type table
- * it swapped in. Alongside the tab bar it renders `RefreshFrameButton`, which reloads
- * that same `Frame` from the current tab's fragment, so the table's data can be pulled
- * again without a full page reload.
+ * Dashboard tab-panel fragment controller. GET /app/:team/dashboard/panel/:type
+ * loads and renders one monitor type's table with no document shell, so the
+ * dashboard's `Frame` can swap it in without a full page reload. Alongside the tab
+ * bar it renders `RefreshFrameButton`, which reloads the same `Frame` from the
+ * current tab's fragment.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -84,10 +79,9 @@ const CRON_JOB_STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 };
 
 /**
- * Short, private cache window on every response — long enough that a
- * `<link rel="prefetch">` for an inactive tab gets reused by the real `Frame` fetch a
- * moment later if the user does click it, short enough that monitor status can't go
- * meaningfully stale for someone who leaves the tab open.
+ * Short, private cache window: long enough that a `<link rel="prefetch">` for an
+ * inactive tab is reused by the real `Frame` fetch moments later, short enough that
+ * monitor status stays fresh for someone who leaves the tab open.
  */
 const CACHE_CONTROL = "private, max-age=5";
 
@@ -103,9 +97,8 @@ namespace DashboardPanel {
 		refreshLabel: string;
 		/**
 		 * Per-render value appended to the refresh control's frame `src`, so clicking it
-		 * always reaches the server instead of being answered out of the browser cache by
-		 * an earlier response still inside its {@link CACHE_CONTROL} window. Every reload
-		 * re-renders this fragment with a new value, so consecutive clicks each get one.
+		 * always reaches the server instead of being answered from the browser cache by an
+		 * earlier response still inside its {@link CACHE_CONTROL} window.
 		 */
 		refreshToken: string;
 	}
@@ -167,12 +160,14 @@ namespace DashboardPanel {
 		);
 }
 
-/** Renders the tab bar plus the table for whichever tab {@link DashboardPanel.Props.tab} names. */
+/**
+ * Renders the tab bar plus the table for whichever tab {@link DashboardPanel.Props.tab}
+ * names. The wrapper keeps the tab bar at full width so its block-end border spans the
+ * row, with the refresh control absolutely positioned over the row's trailing end.
+ */
 function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 	return () => {
 		let props = handle.props;
-		// Falls back to a full page load of the current tab when the runtime isn't
-		// there to intercept the click; with it, only the frame re-navigates.
 		let refreshHref = `${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${props.tab}`;
 		let refreshSrc = `${routes.app.team.dashboard.panel.href({
 			team: props.team.slug,
@@ -181,12 +176,6 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 
 		return (
 			<>
-				{/*
-				 * Native browser prefetch for every inactive tab's fragment — no JS
-				 * trigger needed, the browser fetches these as soon as it parses them.
-				 * Reused by the click-triggered `Frame` fetch since both requests hit
-				 * the same URL and the controller responds with a short `Cache-Control`.
-				 */}
 				{DASHBOARD_TABS.filter((tab) => tab !== props.tab).map((tab) => (
 					<link
 						key={tab}
@@ -196,11 +185,6 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 					/>
 				))}
 
-				{/*
-				 * The tab bar keeps the full content width, so its own block-end border
-				 * still runs the whole way across, and the refresh control sits over the
-				 * trailing end of that same row rather than cutting the border short.
-				 */}
 				<div mix={[relative(), mbe(4)]}>
 					<Tabs>
 						<Tabs.List
@@ -364,10 +348,9 @@ namespace DnsTable {
 }
 
 /**
- * A DNS monitor is a whole domain, so a row here names the domain and its last outcome and
- * stops there: how many records that domain carries, and which of them are watched, is a
- * count this fragment would have to buy a second query for on a tab meant to be glanced at.
- * The list page owns that number, and the monitor's own page owns the records themselves.
+ * A DNS monitor is a whole domain, so a row here names the domain and its last outcome
+ * only: record counts are a second query this glance-only tab skips, owned instead by
+ * the list page and the monitor's own page.
  */
 function DnsTable(handle: Handle<DnsTable.Props>) {
 	return () => {
@@ -518,8 +501,8 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 
 /**
  * A cron-job monitor together with its schedule already described in the viewer's
- * language: the tables here take no request context, so the sentence is built by the
- * controller rather than inside the component.
+ * language, built by the controller since the tables here render with no request
+ * context to build the sentence themselves.
  */
 interface CronJobRow {
 	monitor: SelectCronJobMonitor;

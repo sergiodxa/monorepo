@@ -316,23 +316,26 @@ describe("schedule.isDue", () => {
 	});
 });
 
+/**
+ * A daily 09:00 job stays at 09:00 local when the offset moves underneath it, so on
+ * a transition day the interval between two runs is 23 or 25 hours, and a monitor's
+ * deadline has to track that stretched or shortened day.
+ */
 describe("lateness across a daylight saving transition", () => {
-	// The reason the zone is an argument at all: a daily 09:00 job stays at 09:00 local
-	// when the offset moves underneath it, so the interval between two runs is 23 or 25
-	// hours rather than 24, and a monitor must not be called late for that hour.
-
+	/**
+	 * New York loses an hour on 2026-03-08, moving 02:00 EST to 03:00 EDT, so the
+	 * daily 09:00 deadline lands 23 hours after the last run. An hour before it is
+	 * exactly where a UTC-only calculation would call the job late.
+	 */
 	test("keeps a daily deadline at its local time when the clock springs forward", () => {
-		// New York moves 02:00 EST to 03:00 EDT on 2026-03-08, losing an hour.
 		let schedule = scheduleFor("0 9 * * *");
-		let lastRun = new Date("2026-03-07T14:00:00Z"); // 09:00 EST
+		let lastRun = new Date("2026-03-07T14:00:00Z");
 		let options = { timeZone: "America/New_York" } as const;
 
 		let deadline = schedule.expectedBy(lastRun, options);
-		expect(deadline.toISOString()).toBe("2026-03-08T13:00:00.000Z"); // 09:00 EDT
+		expect(deadline.toISOString()).toBe("2026-03-08T13:00:00.000Z");
 		expect(deadline.getTime() - lastRun.getTime()).toBe(23 * 3_600_000);
 
-		// An hour before the deadline is exactly where a UTC-only calculation would have
-		// declared the job late, so it is the assertion worth having.
 		expect(schedule.isDue(lastRun, { ...options, now: new Date("2026-03-08T12:00:00Z") })).toBe(
 			false,
 		);
@@ -342,77 +345,89 @@ describe("lateness across a daylight saving transition", () => {
 		expect(schedule.isDue(lastRun, { ...options, now: deadline })).toBe(true);
 	});
 
+	/**
+	 * New York repeats an hour on 2026-11-01, moving 02:00 EDT back to 01:00 EST, so
+	 * the daily 09:00 deadline lands 25 hours after the last run. Exactly 24 hours
+	 * on, the job is not yet late, because its own 09:00 has not come round yet.
+	 */
 	test("keeps a daily deadline at its local time when the clock falls back", () => {
-		// New York moves 02:00 EDT to 01:00 EST on 2026-11-01, repeating an hour.
 		let schedule = scheduleFor("0 9 * * *");
-		let lastRun = new Date("2026-10-31T13:00:00Z"); // 09:00 EDT
+		let lastRun = new Date("2026-10-31T13:00:00Z");
 		let options = { timeZone: "America/New_York" } as const;
 
 		let deadline = schedule.expectedBy(lastRun, options);
-		expect(deadline.toISOString()).toBe("2026-11-01T14:00:00.000Z"); // 09:00 EST
+		expect(deadline.toISOString()).toBe("2026-11-01T14:00:00.000Z");
 		expect(deadline.getTime() - lastRun.getTime()).toBe(25 * 3_600_000);
 
-		// 24 hours after the last run the job is not yet late, because its own 09:00 has
-		// not come round in the zone it is configured in.
 		expect(schedule.isDue(lastRun, { ...options, now: new Date("2026-11-01T13:00:00Z") })).toBe(
 			false,
 		);
 		expect(schedule.isDue(lastRun, { ...options, now: deadline })).toBe(true);
 	});
 
+	/**
+	 * 02:30 never happens on 2026-03-08 in New York, so the run lands at 03:30 EDT
+	 * instead, keeping a dead man's switch hearing from the job every day.
+	 */
 	test("carries a deadline out of an hour the clock skips instead of dropping the day", () => {
-		// 02:30 never happens on 2026-03-08 in New York, so the run lands at 03:30 EDT.
-		// Dropping it would leave a dead man's switch expecting nothing for a whole day.
 		let schedule = scheduleFor("30 2 * * *");
-		let lastRun = new Date("2026-03-07T07:30:00Z"); // 02:30 EST
+		let lastRun = new Date("2026-03-07T07:30:00Z");
 		let options = { timeZone: "America/New_York" } as const;
 
 		let deadline = schedule.expectedBy(lastRun, options);
-		expect(deadline.toISOString()).toBe("2026-03-08T07:30:00.000Z"); // 03:30 EDT
+		expect(deadline.toISOString()).toBe("2026-03-08T07:30:00.000Z");
 		expect(schedule.isDue(lastRun, { ...options, now: deadline })).toBe(true);
 	});
 
+	/**
+	 * 01:30 happens twice on 2026-11-01 in New York. An appointment is kept once, so
+	 * the deadline sits at its first pass, one day after the last run.
+	 */
 	test("expects a repeated wall time once, on its first pass", () => {
-		// 01:30 happens twice on 2026-11-01 in New York. An appointment is kept once, so
-		// the deadline is the first pass and the job is not asked to ping again an hour on.
 		let schedule = scheduleFor("30 1 * * *");
-		let lastRun = new Date("2026-10-31T05:30:00Z"); // 01:30 EDT
+		let lastRun = new Date("2026-10-31T05:30:00Z");
 		let options = { timeZone: "America/New_York" } as const;
 
 		expect(schedule.expectedBy(lastRun, options).toISOString()).toBe("2026-11-01T05:30:00.000Z");
 	});
 
+	/**
+	 * An hourly schedule tracks elapsed time, so it fires in both passes of 01:00
+	 * and the deadline stays exactly one hour after the last run.
+	 */
 	test("keeps an interval's spacing through a repeated hour rather than its wall time", () => {
-		// An hourly schedule is not an appointment, so it fires in both passes of 01:00
-		// and the deadline stays one hour after the last run.
 		let schedule = scheduleFor("0 * * * *");
-		let lastRun = new Date("2026-11-01T05:00:00Z"); // 01:00 EDT
+		let lastRun = new Date("2026-11-01T05:00:00Z");
 		let options = { timeZone: "America/New_York" } as const;
 
 		let deadline = schedule.expectedBy(lastRun, options);
-		expect(deadline.toISOString()).toBe("2026-11-01T06:00:00.000Z"); // 01:00 EST
+		expect(deadline.toISOString()).toBe("2026-11-01T06:00:00.000Z");
 		expect(deadline.getTime() - lastRun.getTime()).toBe(3_600_000);
 	});
 
+	/**
+	 * The case a monitor meets in practice: it checks at 03:00 EDT, the instant the
+	 * clock reaches after skipping 02:00, while the 02:30 run is still pending. The
+	 * deadline lands within the hour rather than a full day out.
+	 */
 	test("still expects the run carried out of a skipped hour after the clock has jumped", () => {
-		// The case a monitor meets in practice: it pings at 03:00 EDT, the instant the clock
-		// reaches after skipping 02:00, and its 02:30 run has not happened yet. Reading the
-		// deadline as the next day would leave the switch expecting nothing for 23 hours.
 		let schedule = scheduleFor("30 2 * * *");
 		let options = { timeZone: "America/New_York" } as const;
-		let lastRun = new Date("2026-03-08T07:00:00Z"); // 03:00 EDT, just past the jump
+		let lastRun = new Date("2026-03-08T07:00:00Z");
 
 		let deadline = schedule.expectedBy(lastRun, options);
-		expect(deadline.toISOString()).toBe("2026-03-08T07:30:00.000Z"); // 03:30 EDT
+		expect(deadline.toISOString()).toBe("2026-03-08T07:30:00.000Z");
 		expect(schedule.isDue(lastRun, { ...options, now: new Date("2026-03-08T07:29:00Z") })).toBe(
 			false,
 		);
 		expect(schedule.isDue(lastRun, { ...options, now: deadline })).toBe(true);
 	});
 
+	/**
+	 * Madrid springs forward on 2026-03-29 and falls back on 2026-10-25, verifying
+	 * a daily deadline still holds its local time through both transitions.
+	 */
 	test("holds a daily deadline at its local time in a second zone", () => {
-		// Madrid springs forward on 2026-03-29 and falls back on 2026-10-25, so the same
-		// schedule is checked in a zone whose transitions land on different dates.
 		let schedule = scheduleFor("0 9 * * *");
 		let options = { timeZone: "Europe/Madrid" } as const;
 

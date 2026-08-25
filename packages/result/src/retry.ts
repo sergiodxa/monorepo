@@ -121,7 +121,10 @@ export async function retry<T, E extends Error>(
 
 		let backoff = options.backoff ?? DEFAULT_BACKOFF;
 
-		// "constant" repeats the base delay, so it needs no adjustment.
+		/**
+		 * The constant strategy keeps this equal to the base delay; linear and
+		 * exponential scale it further below.
+		 */
 		let delay = options.delay;
 		if (backoff === "linear") delay = options.delay * attempts;
 		if (backoff === "exponential") {

@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { absolute } from "./absolute";
 export { anchor } from "./anchor";
 export type { AnchorSide } from "./anchor";

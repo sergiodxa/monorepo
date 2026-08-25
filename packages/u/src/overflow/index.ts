@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { clip } from "./clip";
 export { divide } from "./divide";
 export type { DivideAxis } from "./divide";

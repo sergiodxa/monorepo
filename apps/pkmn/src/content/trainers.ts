@@ -1,22 +1,9 @@
 /**
- * The on-disk trainer JSON format and its `remix/data-schema` validator plus
- * loader.
- *
- * This module is the single contract the trainer EDITOR targets and any trainer
- * LOADER trusts. It defines {@link TrainerDefinition} — the JSON-clean shape one
- * authored trainer serializes to — and {@link TrainerSchema}, which validates an
- * untrusted parsed JSON value into a typed definition (or a list of clear
- * issues). Keeping the format, its validation, and the loader together, free of
- * any renderer or DOM dependency, lets the editor, the export action, and a
- * later battle runtime all import the same contract and lets it be unit-tested.
- *
- * A trainer carries a stable `id`, a display `name`, an optional `spriteId`
- * (a manifest image id, or `null` for none), three battle `quotes` (`intro`,
- * `win`, `lose`), and a `party` of 1–6 members. Each member references a
- * `speciesId`, a `level`, and up to four optional `moves`. Species and move ids
- * are validated only as non-empty strings — the format never hard-fails on an
- * unknown id at load time, so a definition stays loadable even as the roster
- * changes; the editor is what constrains authors to real ids.
+ * The on-disk trainer JSON format with its validator and loader — the single
+ * contract the trainer editor targets and every loader trusts. Species and move
+ * ids validate as non-empty strings, leaving id resolution to the editor, so an
+ * authored definition stays loadable as the roster changes. The format stays
+ * free of renderer and DOM dependencies, so a battle runtime can share it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,7 +22,7 @@ import {
 } from "remix/data-schema";
 import { max, min, minLength } from "remix/data-schema/checks";
 
-/** Minimum number of creatures a trainer must field (a party of zero is invalid). */
+/** Minimum number of creatures a trainer must field. */
 export const MIN_PARTY_SIZE = 1;
 
 /** Maximum number of creatures a trainer may field, matching the source games. */
@@ -50,20 +37,13 @@ export const MAX_LEVEL = 100;
 /** Maximum number of moves a single party member may be given. */
 export const MAX_MOVES_PER_MEMBER = 4;
 
-/** A whole (>= 1) integer id/level/count that cannot be zero, negative, or fractional. */
 const levelNumber = () =>
 	number()
 		.refine(Number.isInteger, "Level must be a whole number.")
 		.pipe(min(MIN_LEVEL), max(MAX_LEVEL));
 
-/** A non-empty identifier string (a species or move id); never blank. */
 const idString = () => string().pipe(minLength(1));
 
-/**
- * Validates one party member: a species reference, its spawn level, and an
- * optional list of up to {@link MAX_MOVES_PER_MEMBER} move ids. Ids are only
- * shape-checked (non-empty strings), not resolved against any roster.
- */
 const PartyMemberSchema = object({
 	speciesId: idString(),
 	level: levelNumber(),
@@ -75,7 +55,7 @@ const PartyMemberSchema = object({
 	),
 });
 
-/** Validates a trainer's three battle quotes (all required, may be empty strings). */
+/** A trainer's three battle quotes; every key is required and may be empty. */
 const QuotesSchema = object({
 	intro: string(),
 	win: string(),
@@ -105,17 +85,13 @@ export const TrainerSchema = object({
 
 /**
  * One creature slot in a trainer's party, spawned fresh for each battle. Written
- * out explicitly (rather than inferred) so `moves` is a genuinely optional key —
- * the schema's `optional(...)` infers it as a required key that may be `undefined`,
- * which would force every JSON-clean member and every editor clone to carry the
- * field even when there are no moves.
+ * out explicitly so `moves` stays a genuinely optional key that JSON-clean
+ * members and editor clones may omit.
  */
 export interface TrainerPartyMember {
-	/** The species this party member is spawned from. */
 	speciesId: string;
-	/** The level this party member is spawned at. */
 	level: number;
-	/** Up to {@link MAX_MOVES_PER_MEMBER} move ids; omitted for a member with no moves. */
+	/** Up to {@link MAX_MOVES_PER_MEMBER} move ids. */
 	moves?: string[];
 }
 
@@ -130,13 +106,12 @@ export interface TrainerDefinition {
 	name: string;
 	/** Manifest image id for the trainer's sprite, or `null`/absent for none. */
 	spriteId?: string | null;
-	/** The three battle quotes (intro/win/lose). */
 	quotes: TrainerQuotes;
 	/** The ordered creatures the trainer sends out, 1–{@link MAX_PARTY_SIZE}. */
 	party: TrainerPartyMember[];
 }
 
-/** Error thrown/returned when a parsed value is not a valid {@link TrainerDefinition}. */
+/** Reports which rule a value broke while failing {@link TrainerDefinition} validation. */
 export class TrainerValidationError extends Error {
 	/**
 	 * @param message Human-readable description of why the value is invalid.
@@ -149,12 +124,8 @@ export class TrainerValidationError extends Error {
 
 /**
  * Validates an untrusted parsed JSON value into a {@link TrainerDefinition}.
- *
- * The loader is pure and disk-free: callers hand it an already-parsed value
- * (e.g. from a file read or a bundled JSON import) and receive back
- * a typed definition or a {@link TrainerValidationError} carrying the first
- * validation issue. It never touches the filesystem so it can be unit-tested
- * directly and reused by both the editor and the export handler.
+ * Callers hand over an already-parsed value and get back a typed definition or
+ * a {@link TrainerValidationError} carrying the first validation issue.
  *
  * @param value The parsed JSON value to validate (untrusted).
  * @returns Success with the typed definition, or failure with a validation error.

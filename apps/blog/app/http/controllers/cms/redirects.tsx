@@ -22,26 +22,20 @@ import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/resources/views/cm
 import routes from "~/routes/web";
 
 /**
- * CMS controller for redirect CRUD screens backed by the REDIRECTS KV namespace.
- *
- * The route is intentionally middleware-free because auth and CMS scoping are
- * resolved by higher-level route composition before these actions execute.
+ * CMS redirect CRUD backed by the REDIRECTS KV namespace. Auth and CMS scoping are resolved
+ * by higher-level route composition before these actions execute.
  */
 export default createController(routes.cms.redirects, {
 	/**
-	 * No local middleware is registered for this controller.
-	 *
-	 * Contract: every action runs with only globally-applied middleware and resolves
-	 * redirect persistence through the shared redirects service.
+	 * Every action runs under the globally applied middleware alone and resolves redirect
+	 * persistence through the redirects service.
 	 */
 	middleware: [],
 
 	actions: {
 		/**
-		 * Renders the redirects index with one delete endpoint per stored rule.
-		 *
-		 * Non-obvious behavior: redirect sources are URI-encoded when building
-		 * `deleteAction` so paths like `/docs/getting-started` survive route params.
+		 * Redirect sources are URI-encoded when building `deleteAction` so nested paths like
+		 * `/docs/getting-started` survive as a single route param.
 		 *
 		 * @returns SSR HTML view model for the CMS redirects listing page.
 		 */
@@ -59,11 +53,8 @@ export default createController(routes.cms.redirects, {
 		}),
 
 		/**
-		 * Validates the create form, normalizes the source path, and upserts KV data.
-		 *
-		 * Contract: invalid payloads fail fast through `succeeded(...)`; blank or
-		 * non-normalizable paths are treated as recoverable UX errors and redirected
-		 * back to the creation form.
+		 * Invalid payloads fail fast through `succeeded(...)`, while a blank or non-normalizable
+		 * path counts as a recoverable UX error and returns to the creation form.
 		 *
 		 * @param ctx - Request context providing form data extraction and params.
 		 * @returns See Other redirect to `new` on missing paths, otherwise `index`.
@@ -86,10 +77,8 @@ export default createController(routes.cms.redirects, {
 		}),
 
 		/**
-		 * Deletes a redirect resolved from the encoded `:id` route segment.
-		 *
-		 * Non-obvious behavior: malformed or empty params are handled as no-ops to
-		 * keep delete links idempotent and avoid surfacing decoding failures in CMS.
+		 * A malformed or empty `:id` resolves to a plain redirect, so delete links stay idempotent
+		 * and a decoding failure ends as a harmless navigation.
 		 *
 		 * @param ctx - Request context exposing route params.
 		 * @returns See Other redirect to the redirects index in all cases.
@@ -105,10 +94,8 @@ export default createController(routes.cms.redirects, {
 		}),
 
 		/**
-		 * Renders the redirect creation form with a live KV redirect count.
-		 *
-		 * The count is informational only and helps operators estimate namespace
-		 * usage while creating new rules.
+		 * The live KV redirect count is informational and helps operators gauge namespace usage
+		 * while creating rules.
 		 *
 		 * @returns SSR HTML view model for the CMS "New Redirect" page.
 		 */
@@ -125,10 +112,8 @@ export default createController(routes.cms.redirects, {
 });
 
 /**
- * Decodes and normalizes a redirect source path from route params.
- *
- * Contract: returns `null` when no usable path can be produced, so callers can
- * safely short-circuit destructive operations.
+ * Returns `null` when no usable path can be produced, so callers can short-circuit
+ * destructive operations.
  *
  * @param id - URI-encoded redirect source path captured from `:id`.
  * @returns Normalized path string when valid, otherwise `null`.

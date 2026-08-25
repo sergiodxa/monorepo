@@ -1,3 +1,11 @@
+/**
+ * Crockford Base32 encoding and decoding for TypeID suffixes, mapping
+ * between UUID strings and their 26-character Base32 representation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { assertUUID } from "@pkg/uuid";
 
 import { InvalidBase32CharacterError, InvalidBase32StringError } from "./errors";

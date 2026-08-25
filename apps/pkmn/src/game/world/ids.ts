@@ -1,15 +1,8 @@
 /**
- * Shared world identifier primitives for entity-backed records in this module.
+ * Shared world identifier primitives for entity-backed records.
  *
- * This module defines the specialized identifier aliases used by the world layer
- * and exposes the small set of factory functions that create them through the
- * common entity id strategy. Its purpose is to keep identifier creation
- * consistent while giving each world concept a distinct type at the module API.
- *
- * By centralizing these aliases and constructors here, the rest of the world
- * code can depend on stable, semantic ids without coupling to the underlying
- * string-building details. This keeps call sites explicit about intent while
- * preserving one shared source of truth for how these ids are derived.
+ * Provides typed id aliases and factories built on the shared entity id
+ * strategy, keeping identifier creation consistent across the world layer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

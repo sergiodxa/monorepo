@@ -1,11 +1,8 @@
 /**
- * Bridges battle-specific state into the world layer so a single battle entity can expose the
- * participants, phase, sides, pending requests, logs, and per-combatant data needed by selectors
- * and other world-oriented systems.
- *
- * This module defines the component contracts and helper behavior that let battle runtime data be
- * registered, synchronized, queried, and cleaned up through the same world abstractions used by
- * the rest of the game engine, while keeping the underlying battle runtime encapsulated.
+ * Bridges battle-specific state into the world layer so one battle entity
+ * carries the participants, phase, sides, pending requests, logs, and
+ * per-combatant data that selectors and other world systems read, while the
+ * underlying battle runtime stays encapsulated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,13 +31,9 @@ import { getComponent, removeComponent, requireComponent } from "./helpers";
 
 /** Participants attached to one battle entity. */
 export interface BattleParticipantsComponent {
-	/** Player entity on the allied side. */
 	playerId: PlayerId;
-	/** Opposing entity on the enemy side. */
 	enemyId: PlayerId;
-	/** Stable creature ids on the allied side. */
 	playerParty: CreatureId[];
-	/** Stable creature ids on the enemy side. */
 	enemyParty: CreatureId[];
 }
 
@@ -54,13 +47,10 @@ export interface BattleRuntimeHandle {
 
 /** Public battle phase mirrored into world components for selectors. */
 export interface BattlePhaseComponent {
-	/** Current turn number. */
 	turn: number;
-	/** Current lifecycle phase. */
 	phase: BattleState["phase"];
 	/** Winning side when the battle has finished. */
 	winnerSide: number | null;
-	/** Active battle format slot count. */
 	slots: 1 | 2 | 3;
 }
 
@@ -69,19 +59,12 @@ export interface BattleFieldComponent extends FieldEffectState {}
 
 /** Per-side battle state mirrored for selectors. */
 export interface BattleSideComponent {
-	/** Owning battle entity. */
 	battleId: BattleId;
-	/** Side index in the battle state. */
 	side: number;
-	/** Whether this side may leave voluntarily. */
 	canLeaveBattle: boolean;
-	/** Pending Healing Wish count. */
 	pendingHealingWishCount: number;
-	/** Follow Me slot for the current turn, if any. */
 	followMeUserSlot: number | null;
-	/** Team index assigned to each active slot. */
 	slotTeams: number[];
-	/** Side-wide battle effects. */
 	effects: SideEffectState;
 }
 
@@ -105,21 +88,15 @@ export interface BattleLogComponent {
 
 /** Transient member mirror for one creature participating in battle. */
 export interface BattleMemberComponent {
-	/** Owning battle entity. */
 	battleId: BattleId;
-	/** Backing persistent creature entity. */
 	creatureId: CreatureId;
-	/** Side index in the current battle. */
 	side: number;
-	/** Team index inside that side. */
 	teamIndex: number;
-	/** Creature index inside that team. */
 	creatureIndex: number;
 	/** Active slot when currently on the field. */
 	activeSlot: number | null;
 	/** Whether the team holding this member has been eliminated. */
 	eliminated: boolean;
-	/** Mutable damage currently taken in battle. */
 	damage: number;
 	/** Current persistent-style status shown in selectors. */
 	status: State | null;
@@ -159,14 +136,9 @@ export function getBattleLog(world: World, battleId: BattleId): BattleLogCompone
 }
 
 /**
- * Copies the final state of every player-side combatant back into persistent stores.
- *
- * Battles run on cloned creature aggregates, so damage, major status, and spent PP
- * only exist in the runtime until this runs. It walks the player side (side 0) in
- * flat party order, mirrors each combatant's `damage`/`status`/`pp` onto the
- * persistent components, and downgrades toxic (escalating) poison to regular
- * poison, matching the Gen 3 battle-end rule. Enemy sides are intentionally left
- * untouched — the world does not persist opponents.
+ * Copies player-side combatant results into persistent stores because battles
+ * run on cloned aggregates. Downgrades escalating (toxic) poison to regular
+ * poison per the Gen 3 battle-end rule, walking the player side in flat order.
  */
 export function writeBackPlayerBattleResults(
 	world: World,
@@ -203,18 +175,13 @@ export function writeBackPlayerBattleResults(
 }
 
 /**
- * Deletes every transient mirror component and entity id for one finished battle.
- *
- * Battles are ephemeral: once a session ends its mirrors carry no save value, so
- * removing them (and their `battle*` entity ids) keeps the world from accumulating
- * dead battle state and stops those ids from leaking into snapshots.
+ * Deletes every transient mirror component and entity id for one finished
+ * battle. Runs only once the presentation finishes animating the ending, so
+ * selectBattle can read the enemy meanwhile; mirrors carry no save value.
  */
 export function cleanupBattle(world: World, battleId: BattleId) {
 	let removedIds = new Set<string>([battleId]);
 
-	// Uncaptured wild creatures and opposing trainer creatures leave with the battle.
-	// This is deferred to cleanup (rather than done at battle finish) so the presentation
-	// can still read the enemy through selectBattle while it animates the ending.
 	let participants = getComponent(world.battleParticipants, battleId);
 	for (let enemyId of participants?.enemyParty ?? []) {
 		let kind = world.creatureLocation[enemyId]?.kind;
@@ -262,11 +229,9 @@ export function cleanupBattle(world: World, battleId: BattleId) {
 }
 
 /**
- * Mirrors one runtime battle step back into ECS stores after the engine advances the private session.
- *
- * This keeps selectors world-driven even while the underlying turn resolver still lives in the generator
- * runtime. Every call rewrites the public battle mirrors from the authoritative runtime state so UI reads
- * never need to reach into battle internals.
+ * Mirrors one battle step into ECS stores so selectors stay world-driven
+ * while the resolver lives in the generator runtime. Creature indices use
+ * one running offset per side, since the party array is flat across teams.
  */
 export function syncBattleState(
 	world: World,
@@ -326,9 +291,6 @@ export function syncBattleState(
 		};
 
 		let creatureIds = sideIndex === 0 ? participants.playerParty : participants.enemyParty;
-		// The party id list is flat across every team on the side, so ids are indexed by a
-		// running offset rather than the per-team creature index. With a single team the two
-		// are equal, so single-team sides keep their exact previous mapping.
 		let partyIndex = 0;
 
 		for (let teamIndex = 0; teamIndex < side.teams.length; teamIndex += 1) {
@@ -388,10 +350,9 @@ export function getBattleMemberEntityId(
 }
 
 /**
- * Returns the active slot index for one team member, if it is currently on the field.
- *
- * The mirror stores field occupancy explicitly because selectors care about who is active, not just which
- * team owns a combatant.
+ * Returns the active slot index for one team member, if it is currently
+ * on the field. The mirror stores occupancy explicitly, since selectors
+ * need to know who is active, beyond which team owns a combatant.
  */
 function getActiveSlotIndex(
 	state: BattleState,

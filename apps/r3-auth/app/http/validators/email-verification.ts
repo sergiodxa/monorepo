@@ -12,10 +12,8 @@ import * as s from "remix/data-schema";
 
 /**
  * Shape of a token this server issues: base64url over 32 random bytes, unpadded.
- *
- * Anchored and length-exact, so a truncated, padded or hand-written value never becomes a
- * lookup. It is a shape check and nothing more — holding a well-formed token proves
- * nothing until the store says it was issued.
+ * Anchored and length-exact so a malformed value never becomes a lookup — a shape
+ * check only, proving nothing until the store confirms the token was issued.
  */
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -27,8 +25,8 @@ export const VerifyEmailQuerySchema = s.object({
 /**
  * The confirmation form's body, which carries the same token the page was opened with.
  *
- * The token travels as a hidden field rather than in the submission's query string, so the
- * request that spends it does not put it in a `Referer` header or an access log.
+ * The token travels as a hidden field, keeping it off the request URL that a `Referer`
+ * header or access log would otherwise capture.
  */
 export const VerifyEmailFormSchema = s.object({
 	token: s.string().refine((value) => TOKEN_PATTERN.test(value), "Invalid token"),

@@ -1,13 +1,8 @@
 /**
- * Headless scroll-follow state for a conversational message viewport: owns
- * whether the reader is currently auto-following the live edge, which turn
- * the viewport is anchored to, which messages are currently visible, and
- * which scrollable edges can still be reached. Backs a message scroller's
- * viewport the same way `DragSession` backs a drag-and-drop interaction and
- * `ResizeSession` backs a resizable panel group — every measurement (scroll
- * position, resize, intersection) is taken outside this class and fed in as
- * a plain value, so the state and its transitions stay unit-testable without
- * a DOM.
+ * Headless scroll-follow state for a conversational message viewport: the
+ * pinned live edge, the anchored turn, the visible messages, and the
+ * reachable scroll edges. Every measurement arrives through a setter, so the
+ * state and its transitions stay unit-testable without a DOM.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,13 +12,10 @@ import { TypedEventTarget } from "remix/ui";
 
 import { dispatchChange } from "../utils/dispatch-change";
 
-/** Whether auto-follow starts engaged when a constructor option omits it. */
 const DEFAULT_PINNED = true;
 
-/** Alignment a scrolled-to message resolves to when an option omits it. */
 const DEFAULT_ALIGN: ScrollFollowModel.Align = "start";
 
-/** Whether a scroll intent animates when an option omits it. */
 const DEFAULT_SMOOTH = true;
 
 /**
@@ -41,13 +33,13 @@ export namespace ScrollFollowModel {
 	export interface ScrollToMessageOptions {
 		/** Where the message lands in the viewport. Defaults to `"start"`. */
 		align?: Align;
-		/** Whether the viewport animates to the message instead of jumping instantly. Defaults to `true`. */
+		/** Whether the viewport animates on its way to the message. Defaults to `true`. */
 		smooth?: boolean;
 	}
 
 	/**
 	 * One scroll intent recorded by an intent method (`scrollToEnd`,
-	 * `scrollToStart`, `scrollToMessage`) and read back by the mixin that
+	 * `scrollToStart`, `scrollToMessage`) and read back by the caller that
 	 * fulfills it against the real viewport.
 	 */
 	export type ScrollRequest =
@@ -55,7 +47,7 @@ export namespace ScrollFollowModel {
 		| { type: "start" }
 		| { type: "message"; id: string; align: Align; smooth: boolean };
 
-	/** Reachability of the two ends of the scrollable region, as measured by the mixin. */
+	/** Reachability of the two ends of the scrollable region, as last measured. */
 	export interface ReachableEdges {
 		/** Whether the viewport can still be scrolled toward its start edge. */
 		start: boolean;
@@ -83,23 +75,9 @@ export namespace ScrollFollowModel {
 }
 
 /**
- * Owns the state a message scroller's viewport needs beyond what's already
- * on screen: whether the reader is auto-following the live edge, the turn
- * the viewport is anchored to while older history prepends above it, the set
- * of currently visible messages, and which scrollable edges remain
- * reachable. None of this is computed here — the mixin measures scroll
- * position, resize, and intersection and feeds the results in through the
- * setter methods below, keeping this class free of `getBoundingClientRect`
- * and observer calls.
- *
- * `scrollToEnd()`, `scrollToStart()`, and `scrollToMessage()` are intent
- * methods: they record what the viewport should do next and dispatch
- * `"change"`, and the mixin fulfills the recorded {@link ScrollFollowModel.ScrollRequest}
- * against the real viewport, then calls {@link ScrollFollowModel.consumeScrollRequest}
- * once it has. Any consumer that needs to know whether a particular message
- * is currently visible subscribes to `"change"` and reads
- * {@link ScrollFollowModel.isMessageVisible} instead of attaching its own
- * observer, mirroring the mixin's own lazily-attached one.
+ * Auto-follow state for a message viewport: the pinned live edge, the
+ * anchored turn, the visible messages, and the reachable scroll edges. Every
+ * measurement arrives through a setter, so transitions stay DOM-free.
  *
  * @example
  * let model = new ScrollFollowModel();
@@ -130,19 +108,17 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Whether the viewport is currently auto-following the live edge: new
-	 * messages should scroll the reader down as they arrive. Set by the
-	 * mixin through {@link setPinned} as it observes the reader's own
-	 * scrolling.
+	 * Whether the viewport is auto-following the live edge, so arriving
+	 * messages scroll the reader down. Updated through {@link setPinned}.
 	 */
 	get pinned(): boolean {
 		return this.#pinned;
 	}
 
 	/**
-	 * Id of the turn the viewport is currently anchored to, or `null` before
-	 * one has been measured. Read back by the mixin to hold the reader's
-	 * position when older history prepends above this turn.
+	 * Id of the turn the viewport is anchored to, or `null` before one has
+	 * been measured. Read back to hold the reader's position while older
+	 * history prepends above this turn.
 	 */
 	get anchorTurnId(): string | null {
 		return this.#anchorTurnId;
@@ -167,20 +143,18 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * The scroll intent recorded by the most recent call to
-	 * {@link scrollToEnd}, {@link scrollToStart}, or {@link scrollToMessage}
-	 * that the mixin hasn't fulfilled yet, or `null` once
-	 * {@link consumeScrollRequest} has cleared it.
+	 * The scroll intent recorded by {@link scrollToEnd},
+	 * {@link scrollToStart}, or {@link scrollToMessage} that is still
+	 * unfulfilled, or `null` once {@link consumeScrollRequest} has cleared it.
 	 */
 	get pendingScrollRequest(): ScrollFollowModel.ScrollRequest | null {
 		return this.#pendingScrollRequest;
 	}
 
 	/**
-	 * Records whether the viewport is auto-following the live edge. Called by
-	 * the mixin as it observes the reader scrolling toward or away from it.
-	 * A no-op, dispatching nothing, when `pinned` already matches the current
-	 * value.
+	 * Records whether the viewport is auto-following the live edge, as
+	 * observed while the reader scrolls. A no-op, dispatching nothing, when
+	 * `pinned` already matches the current value.
 	 *
 	 * @param pinned Whether auto-follow is engaged.
 	 */
@@ -192,10 +166,9 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Records which turn the viewport is currently anchored to. Called by the
-	 * mixin once it has measured which turn sits nearest the viewport's
-	 * anchor edge. A no-op, dispatching nothing, when `id` already matches
-	 * the current anchor.
+	 * Records which turn the viewport is anchored to, once the caller has
+	 * measured which turn sits nearest the anchor edge. A no-op, dispatching
+	 * nothing, when `id` already matches the current anchor.
 	 *
 	 * @param id Id of the turn to anchor to, or `null` when none is measured.
 	 */
@@ -207,10 +180,9 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Records whether a single message is currently visible in the viewport,
-	 * mirroring one entry of the mixin's own `IntersectionObserver` callback.
-	 * A no-op, dispatching nothing, when `visible` already matches the
-	 * message's current membership in {@link visibleMessageIds}.
+	 * Records whether a single message is visible, one entry at a time to
+	 * match an `IntersectionObserver` callback. A no-op, dispatching nothing,
+	 * when `visible` already matches membership in {@link visibleMessageIds}.
 	 *
 	 * @param id Id of the message the visibility report is about.
 	 * @param visible Whether the message is currently visible.
@@ -226,10 +198,9 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Reports whether a message is currently visible, per the last report
-	 * given to {@link setMessageVisible}. The read side of the model's
-	 * visibility API: a consumer calls this instead of measuring visibility
-	 * itself.
+	 * Reports whether a message is visible, per the last report given to
+	 * {@link setMessageVisible}. The read side of the visibility API, so a
+	 * consumer reads visibility here after each `"change"`.
 	 *
 	 * @param id Id of the message to test.
 	 * @returns `true` when the message is currently visible.
@@ -239,10 +210,9 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Records which scrollable edges the viewport can currently reach. Called
-	 * by the mixin after every scroll or resize measurement, since both
-	 * edges are always measured together in one pass. A no-op, dispatching
-	 * nothing, when neither edge's reachability actually changes.
+	 * Records which scrollable edges the viewport can reach. Takes both edges
+	 * at once because one scroll or resize measurement yields both. A no-op,
+	 * dispatching nothing, when neither edge's reachability changes.
 	 *
 	 * @param edges Reachability of the start and end edges.
 	 */
@@ -255,10 +225,9 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Records an intent to scroll to the live edge of the conversation.
-	 * Always dispatches `"change"`, even when a request is already pending,
-	 * so a repeated call (e.g. a second click on a "jump to latest" control)
-	 * always reaches the mixin.
+	 * Records an intent to scroll to the live edge of the conversation. Always
+	 * dispatches `"change"`, even while a request is pending, so a repeated
+	 * "jump to latest" click still reaches the viewport.
 	 */
 	scrollToEnd(): void {
 		this.#pendingScrollRequest = { type: "end" };
@@ -292,11 +261,9 @@ export class ScrollFollowModel extends TypedEventTarget<ScrollFollowModel.EventM
 	}
 
 	/**
-	 * Reads and clears the pending scroll request in one step. Called by the
-	 * mixin once it has performed the recorded intent against the real
-	 * viewport, so a request is fulfilled exactly once. Does not dispatch
-	 * `"change"` itself — clearing the request is bookkeeping, not a state
-	 * update a subscriber needs to react to.
+	 * Reads and clears the pending scroll request in one step, so an intent is
+	 * fulfilled exactly once. Clearing stays silent — subscribers already
+	 * reacted when the intent was recorded.
 	 *
 	 * @returns The scroll request that was pending, or `null` when there was none.
 	 */

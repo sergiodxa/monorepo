@@ -1,7 +1,7 @@
 /**
  * Unit tests for the pointerdown guard in {@link "./is-new-primary-press"}:
  * every assertion passes a plain `{ isPrimary, button }` pair alongside a
- * tracked pointer id, with no DOM and no rendering involved.
+ * tracked pointer id.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

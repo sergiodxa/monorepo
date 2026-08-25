@@ -23,13 +23,9 @@ import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 /**
- * Patches a test database's driver so writes to the given JSON-typed columns are
- * `JSON.stringify`-d before binding and `JSON.parse`-d back on read. The SQLite
- * test adapter binds column values as-is with no column-type awareness, so passing a
- * plain object into a `c.json()` column (here, `config`) throws at the SQLite binding
- * layer. Every caller works with a parsed object (`alert.config.strategy` in
- * `app/services/alerts.ts`), so this codec is required to exercise `create`/`update`
- * against the real database instead of mocking the model away.
+ * The SQLite test adapter binds column values as-is, so a plain object bound into a
+ * `c.json()` column throws at the binding layer. Encoding the named columns on write and
+ * decoding on read lets `create`/`update` run for real while callers see a parsed `config`.
  */
 function patchJsonColumns(adapter: DatabaseDriver, columns: string[]): void {
 	let originalExecute = adapter.execute.bind(adapter);
@@ -78,9 +74,7 @@ function decodeJsonColumns(
 				if (column in output && typeof output[column] === "string") {
 					try {
 						output[column] = JSON.parse(output[column] as string);
-					} catch {
-						// Not JSON — leave the raw string as-is.
-					}
+					} catch {}
 				}
 			}
 			return output;
@@ -142,7 +136,7 @@ describe("Alert.listByTeam", () => {
 		});
 		await Alert.create(db, "team-2", { monitor_id: null, name: "Other team", config: emailConfig });
 
-		/** Backdate the first alert so ordering doesn't depend on same-millisecond ties. */
+		/** Backdate the first alert so the ordering assertion rests on a real time gap. */
 		await Alert.updateById(db, first.id, { created_at: Date.now() - 60_000 });
 
 		let alerts = await Alert.listByTeam(db, "team-1");

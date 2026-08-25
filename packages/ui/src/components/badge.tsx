@@ -68,11 +68,7 @@ export namespace Badge {
 /**
  * Renders a single-line pill host, colored and shaped through the
  * `data-color` and `data-variant` attribute contract: `"default"` fills the
- * pill solid with the color's on-solid foreground, `"secondary"` tints the
- * fill and keeps the color's regular foreground, and `"outline"` renders a
- * transparent chip with just a colored border and foreground. Compose
- * {@link Badge.Icon} and {@link Badge.Text} as children for glyph-plus-label
- * content.
+ * pill solid, `"secondary"` tints the fill, `"outline"` keeps just a border.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the badge's markup.
@@ -160,9 +156,8 @@ export function Badge(handle: Handle<Badge.Props>) {
 
 /**
  * Renders the badge's leading or trailing glyph slot: an inert, shrink-proof
- * `<span>` sized to hold a single small icon, hidden from assistive
- * technology by default since the badge's meaning is carried by
- * {@link Badge.Text} instead.
+ * `<span>` sized to hold a single small icon and hidden from assistive
+ * technology, since {@link Badge.Text} carries the badge's meaning.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the icon slot's markup.

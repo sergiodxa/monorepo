@@ -48,16 +48,16 @@ import tenantOwner from "~/app/http/middleware/tenant-owner";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import routes from "~/routes/web";
 
-// Typed as a non-tuple Middleware[] so the router context stays the base
-// RequestContext (with its global augmentations) rather than a middleware-branded
-// context; the mapped controllers are typed against that same default context.
-// `formData()` is cast to the base Middleware to drop its context-transform brand;
-// the value it provides is surfaced via the global `formData` context augmentation
-// (see config/router-context.d.ts), not the transform.
+/**
+ * Kept as a non-tuple Middleware[] so the router context stays the base
+ * RequestContext; `formData()` is cast to Middleware since its value is
+ * surfaced via the global `formData` context augmentation.
+ */
 let globalMiddleware: Middleware[] = [
-	// First, so everything after it — the session, the dashboard and tenant guards —
-	// sees a plain `GET` and treats a `HEAD` probe exactly as it would the request
-	// behind it.
+	/**
+	 * Runs first so every later middleware — the session, the dashboard, and
+	 * tenant guards — treats a `HEAD` probe as the `GET` request behind it.
+	 */
 	headRequests(),
 	trailingSlash,
 	logger,
@@ -80,16 +80,23 @@ export const router = createRouter({
 	defaultHandler: notFound,
 });
 
-// The current fetch-router requires one map() per route group (nested route-map
-// keys in a controller throw at runtime). Middleware does not cascade across
-// separate map() calls, so each group lists its full chain on top of the
-// router-global middleware.
-// Tokenless cross-origin protection (Sec-Fetch-Site/Origin). Rejects same-site too,
-// so a tenant subdomain cannot forge requests to the platform dashboard.
+/**
+ * Tokenless cross-origin protection (Sec-Fetch-Site/Origin). Rejects same-site
+ * requests too, so a tenant subdomain cannot forge requests to the platform
+ * dashboard.
+ */
 let crossOrigin = cop();
+/**
+ * Each route group below repeats its full middleware chain on top of the
+ * router-global middleware: a nested route-map key throws at runtime, and
+ * middleware does not cascade across separate `map()` calls.
+ */
 let dashboard: Middleware[] = [session, crossOrigin];
-// Mutations on tenant-scoped resources require owner or admin; `viewer` members keep
-// read access (requireTenantRole only gates non-safe methods).
+/**
+ * Mutations on tenant-scoped resources require owner or admin; `viewer`
+ * members keep read access since `requireTenantRole` only gates non-safe
+ * methods.
+ */
 let tenantScope: Middleware[] = [
 	session,
 	crossOrigin,
@@ -98,7 +105,6 @@ let tenantScope: Middleware[] = [
 	subscription,
 ];
 
-// Public + webhook + onboarding.
 router.map(routes.index, index);
 router.map(routes.health, health);
 router.map(routes.api.webhooks, { actions: { polar: polarWebhook } });
@@ -106,31 +112,36 @@ router.map(routes.onboarding, {
 	actions: { index: onboardingIndex, callback: onboardingCallback },
 });
 
-// Dashboard shell + tenant list/detail (ownership enforced inside the controllers).
 router.map(routes.dashboard.index, {
 	middleware: dashboard,
 	handler: dashboardIndex as RequestHandler,
 });
 router.map(routes.logout, { middleware: dashboard, handler: logout as RequestHandler });
+/** Enforces ownership inside the controller itself. */
 router.map(routes.dashboard.tenants, { middleware: dashboard, actions: tenants });
-// These compose the controller's own tenant middleware onto the dashboard chain
-// (spreading `{ ...ctrl, middleware }` would otherwise drop it, unsetting
-// `context.tenant`). Branding/hostname are owner+admin; billing is owner-only and
-// intentionally skips the `subscription` gate so a lapsed plan can still be fixed.
+/**
+ * Composes the controller's own tenant middleware onto the dashboard chain;
+ * spreading `{ ...ctrl, middleware }` would drop it and unset `context.tenant`.
+ * Branding requires owner or admin.
+ */
 router.map(routes.dashboard.tenants.branding, {
 	...branding,
 	middleware: [...dashboard, tenantOwner, requireTenantRole("owner", "admin"), subscription],
 });
+/** Hostname changes require owner or admin. */
 router.map(routes.dashboard.tenants.hostname, {
 	...hostname,
 	middleware: [...dashboard, tenantOwner, requireTenantRole("owner", "admin")],
 });
+/**
+ * Billing is owner-only and leaves out the `subscription` gate so an owner on
+ * a lapsed plan can still reach billing to fix it.
+ */
 router.map(routes.dashboard.tenants.billing, {
 	...billing,
 	middleware: [...dashboard, tenantOwner, requireTenantRole("owner")],
 });
 
-// Tenant-scoped management (owner + active subscription required).
 router.map(routes.dashboard.tenants.clients, { middleware: tenantScope, actions: clients });
 router.map(routes.dashboard.tenants.clients["redirect-uris"], {
 	middleware: tenantScope,

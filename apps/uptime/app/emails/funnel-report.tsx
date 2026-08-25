@@ -1,28 +1,9 @@
 /**
- * Yesterday's public-trial funnel, as one internal email: the five counters for the day,
- * every conversion it produced itemised, and thirty days of context underneath.
- *
- * It is written as a report rather than as mail. There is no call to action, no branding
- * beyond the layout kit's defaults, and — the part worth stating because every other email
- * in this directory does the opposite — **no unsubscribe link and no RFC 8058 headers**.
- * Those exist because the trial emails go to strangers who never asked for an account and
- * must be able to make them stop; this one goes to an address an operator put in a worker
- * variable, and offering to delete their own reporting would be nonsense.
- *
- * The whole report is in the subject as well as the body, because the common day is one
- * where nothing needs acting on and the point is to be readable from a notification.
- *
- * ## Why this email is not translated
- *
- * Every other email here takes a `t` and draws its copy from `app/locales`, and this one
- * deliberately does not. The rule exists because user-facing copy has readers whose language
- * we do not choose. This has exactly one reader, at exactly one address, chosen by whoever
- * configured the deployment — there is no recipient locale to resolve, so the translator
- * would be constructed only to be handed the fallback language every single time. Six
- * dictionaries of operational vocabulary that five of them would never render, and a
- * six-file edit for every column added to the report, buys nothing. If this email ever
- * acquires a second reader whose language differs, that is the moment to move the copy —
- * and the class is small enough that the move is mechanical.
+ * Yesterday's public-trial funnel, as one internal email: the five counters for the
+ * day, every conversion itemised, and thirty days of context, addressed to whoever
+ * configured the deployment. It carries no unsubscribe link or RFC 8058 headers, since
+ * this recipient set up the reporting themselves, and no translation, since it has
+ * exactly one reader whose language is already known.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,12 +37,9 @@ export namespace FunnelReportEmail {
 		/** When their first payment landed, or `null` for a free signup. */
 		paidAt: Date | null;
 		/**
-		 * Where they first arrived, or `null` when the session never carried it.
-		 *
-		 * The whole reason to record it: without this the report says a conversion happened and
-		 * cannot say which outreach link produced it, which is the one question founder-led sales
-		 * needs answered. Printed as "unknown" rather than folded into a direct-traffic bucket,
-		 * because a blocked cookie and a direct visit are not the same fact.
+		 * Where they first arrived, or `null` when the session never carried it, kept so the
+		 * report can name which outreach link produced a conversion. Printed as "unknown" to
+		 * keep a blocked cookie distinct from a direct visit.
 		 */
 		attribution: string | null;
 	}
@@ -95,14 +73,8 @@ namespace ConversionSection {
 
 /**
  * One converted account: the URLs that brought them in as a caption, then the numbers.
- *
- * The URL line is a caption rather than a table row because it is what identifies the
- * account — no name, no address and no subject appears in this email, and the URLs are the
- * only human-readable thing a conversion record holds. Stacked tables would otherwise read
- * as one long table with no idea where one account ends and the next begins.
- *
- * A paid account gets the two dates as well; a free one is deliberately shorter, because the
- * interesting question about it is only how long and how many emails it took to get there.
+ * The caption identifies the account, since no name, address, or subject appears in
+ * this email; a paid account also gets its two payment dates.
  */
 function ConversionSection(handle: Handle<ConversionSection.Props>) {
 	return () => {

@@ -50,14 +50,16 @@ function serializeCronJob(monitor: SelectCronJobMonitor) {
 	};
 }
 
+/**
+ * `timezone` is checked against the runtime's IANA list rather than taken as free text: the
+ * zone decides when a job counts as late, so an unmatched value would schedule it against the
+ * wrong wall clock.
+ */
 const CreateCronJobSchema = s.object({
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(100)),
 	description: s.optional(s.string().pipe(checks.maxLength(500))),
 	cronExpression: s.string().pipe(checks.minLength(1)),
 	gracePeriodSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 300),
-	// Checked against the runtime's IANA list, not taken as free text: the zone decides
-	// when a job counts as late, so a value that never matches a real zone would
-	// schedule it against the wrong wall clock.
 	timezone: s.defaulted(
 		s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE),
 		DEFAULT_TIMEZONE,
@@ -84,7 +86,11 @@ export default createController(cronJobsRoutes, {
 			},
 		},
 
-		/** POST /api/v1/cron-jobs — creates a cron-job monitor for the team. */
+		/**
+		 * POST /api/v1/cron-jobs — creates a cron-job monitor for the team. The cron
+		 * expression is stored normalized, so one schedule has a single spelling in the
+		 * database.
+		 */
 		cronJobsCreate: {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
@@ -97,8 +103,6 @@ export default createController(cronJobsRoutes, {
 					);
 				}
 
-				// The failure's message names the reason, the field at fault, and the
-				// character index inside the expression the client sent.
 				let schedule = Schedule.parse(result.data.cronExpression);
 				if (isFailure(schedule)) {
 					return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
@@ -108,7 +112,6 @@ export default createController(cronJobsRoutes, {
 				let cronJob = await CronJobMonitor.create(db, ctx.apiTeam.id, {
 					name: result.data.name,
 					description: result.data.description ?? null,
-					// Stored normalized, so one schedule has one spelling in the database.
 					cron_expression: schedule.data.toString(),
 					grace_period_seconds: result.data.gracePeriodSeconds,
 					timezone: result.data.timezone,

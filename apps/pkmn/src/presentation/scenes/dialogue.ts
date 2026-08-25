@@ -1,11 +1,9 @@
 /**
  * The dialogue scene: a message window over another scene.
  *
- * It reveals a sequence of messages one character at a time in a bottom window,
- * advancing (or skipping the reveal) on A and popping when the last message is
- * dismissed. It is translucent so the scene beneath — usually the overworld —
- * stays visible, and it dispatches nothing itself; scripts that need to change
- * state do so around it.
+ * Reveals messages one character at a time, advancing or skipping on A and
+ * popping after the last message. It stays translucent so the scene beneath
+ * remains visible; callers change game state around it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

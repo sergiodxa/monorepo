@@ -15,13 +15,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 let kv = createKVNamespace();
 
 /**
- * The binding is exposed as a getter so every read resolves the namespace the current test
- * is using: the factory below runs once, when the subject first imports the module, while
- * `beforeEach` installs fresh storage per test. The subject reads `env.KV` per call, so the
- * getter is what keeps one test's codes out of the next one's storage.
- *
- * The mock has to be registered before the subject is imported, which is why every import
- * below it is dynamic.
+ * A getter, so every read resolves the namespace `beforeEach` installed for the
+ * current test while the subject reads `env.KV` per call. The mock registers
+ * before the subject imports it, so the imports below are dynamic.
  */
 vi.doMock("cloudflare:workers", () => ({
 	env: {
@@ -204,6 +200,10 @@ describe("clients", () => {
 		).toBeNull();
 	});
 
+	/**
+	 * The lookup answers only whether an address is registered, so a duplicate
+	 * resolves to one registration, and to the same one on every call.
+	 */
 	test("answers with one stable registration when two clients share a logout URI", async () => {
 		let twin = await Client.create(db, {
 			name: "Blog Mirror",
@@ -214,9 +214,6 @@ describe("clients", () => {
 		let first = await repository.findClientByLogoutUri("https://blog.example.com/logout");
 		let second = await repository.findClientByLogoutUri("https://blog.example.com/logout");
 
-		// Either registration proves the address is registered, which is the only question
-		// asked of this lookup, so a duplicate is answered rather than refused — and the
-		// same one every time, so the behavior never depends on row order.
 		let firstId = first?.id ?? "";
 		let secondId = second?.id ?? "";
 

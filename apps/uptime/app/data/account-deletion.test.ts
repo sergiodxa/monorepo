@@ -1,8 +1,8 @@
 /**
- * Tests the deletion queue: that enqueueing twice is one request rather than two the sweep
- * would process in sequence, that a repeat keeps the original request date while taking the
- * fresher address, and that removal — the one operation both cancelling and completing use — is
- * safe to call for a subject who has nothing queued.
+ * Tests the deletion queue: that enqueueing twice leaves one request for the sweep, that a
+ * repeat keeps the original request date while taking the fresher address, and that removal
+ * — the one operation both cancelling and completing use — is safe for a subject with
+ * nothing queued.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,8 +27,8 @@ describe("AccountDeletion.enqueue", () => {
 	});
 
 	/**
-	 * A double-submitted form must not leave two rows: the sweep would erase the account on the
-	 * first and then attempt the whole cascade again on the second within the same run.
+	 * A double-submitted form must leave exactly one row: the sweep would erase the account on
+	 * the first and then attempt the whole cascade again on the second within the same run.
 	 */
 	test("is one request per subject however many times it is asked for", async () => {
 		let { db } = createTestDatabase();

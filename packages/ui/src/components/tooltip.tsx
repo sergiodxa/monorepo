@@ -40,29 +40,16 @@ const DEFAULT_PLACEMENT: Popover.Placement = "top";
 const DEFAULT_SHOW_ARROW = true;
 
 /**
- * Selector matching the sibling immediately before {@link Tooltip}'s host —
- * the trigger — while it's pointer-hovered. Read only from inside an
- * `@media (hover: hover)` block (see the render function below), so a coarse
- * pointer that merely taps the trigger never latches into a stuck-open hover
- * state.
- *
- * The `:is()` wrapper is load-bearing, not cosmetic: the style serializer only
- * recognizes a key as a nested selector when it starts with `&`, `@`, `:`, `[`
- * or `.`, so a bare `*:hover ~ &` would be emitted as a declaration and the
- * hover-open rule would never reach the browser. `:is()` takes the specificity
- * of its argument, so what this matches is unchanged.
+ * Selector matching the pointer-hovered trigger — the sibling immediately
+ * before {@link Tooltip}'s host — for use only inside `@media (hover: hover)`,
+ * wrapped in `:is()` since the style serializer treats a bare selector starting with `*` as a plain declaration.
  */
 const HOVERED_TRIGGER_SELECTOR = ":is(*:hover) ~ &";
 
 /**
- * Selector matching {@link Tooltip}'s entered state through either its own
- * native `:popover-open` — set once a consumer's `popovertarget` (or
- * `commandfor`/`command="toggle-popover"`) invoker activates it, or, once
- * broadly supported, an `interestfor` attribute pointing at this host's `id`
- * — or the trigger sibling immediately before it carrying keyboard focus.
- * Unlike {@link HOVERED_TRIGGER_SELECTOR}, this path needs no hover
- * capability, so it stays available to a keyboard or switch-control user
- * regardless of pointer type.
+ * Selector matching {@link Tooltip}'s entered state: native `:popover-open` —
+ * set by a `popovertarget` (or `commandfor`/`command="toggle-popover"`)
+ * invoker, or an `interestfor` attribute — or keyboard focus on the trigger sibling immediately before it.
  */
 const ENTERED_SELECTOR = "&:popover-open, *:focus-visible ~ &";
 
@@ -72,42 +59,23 @@ const ENTERED_SELECTOR = "&:popover-open, *:focus-visible ~ &";
 export namespace Tooltip {
 	/**
 	 * Every prop {@link Popover.Props} accepts except `popover` and `role`,
-	 * which this component fixes on the consumer's behalf: `popover` is
-	 * always `"hint"`, so the tooltip layers over an already-open `"auto"`
-	 * popover instead of dismissing it, and `role` is always `"tooltip"`,
-	 * satisfying the WAI-ARIA tooltip pattern without a consumer needing to
-	 * repeat it.
+	 * fixed here: `popover` is always `"hint"` so the tooltip layers over an
+	 * open `"auto"` popover, and `role` is always `"tooltip"` per WAI-ARIA.
 	 */
 	export interface Props extends Omit<Popover.Props, "popover" | "role"> {
 		/**
-		 * Whether to render a pointer-arrow child pointing back at the trigger.
-		 * Defaults to {@link DEFAULT_SHOW_ARROW}.
+		 * Whether to render a pointer-arrow child pointing back at the trigger,
+		 * filled to match this host's own solid background so the two read as
+		 * one continuous shape. Defaults to {@link DEFAULT_SHOW_ARROW}.
 		 */
 		showArrow?: boolean;
 	}
 }
 
 /**
- * Renders the hint itself through {@link Popover}, inheriting its
- * `popover`-attributed host, `data-placement` contract, and CSS anchor
- * positioning, with `popover` fixed to `"hint"` and `role` fixed to
- * `"tooltip"`. The host stays transparent to layout and fully present in the
- * DOM at all times — its exit state (`opacity: 0`, `scale: 0.95`, and the
- * platform's own `display: none` default for an unopened `[popover]`) lifts
- * the moment the sibling immediately before it (the trigger) is
- * pointer-hovered under `@media (hover: hover)`, carries `:focus-visible`,
- * or the host itself reaches `:popover-open` — the state a `popovertarget`
- * (or `commandfor`) invoker on that same trigger sets when activated, and
- * the state an `interestfor` attribute will set declaratively once that
- * platform feature lands more broadly. A `@starting-style` block paired with
- * `transition-behavior: allow-discrete` animates every one of those entries
- * as a fade paired with a scale, and `@media (prefers-reduced-motion:
- * reduce)` collapses that motion to the opacity fade alone.
- *
- * `showArrow` renders {@link OverlayArrow} as the panel's last child by
- * default, filled to match this host's own solid background instead of
- * {@link OverlayArrow}'s tinted default, so the two read as one continuous
- * shape.
+ * Renders the hint through {@link Popover}, fixing `popover` to `"hint"` and
+ * `role` to `"tooltip"`. The host stays present in the DOM, entering on
+ * `:popover-open`, `:focus-visible`, or the trigger's hover, animated via `@starting-style`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the hint's markup.

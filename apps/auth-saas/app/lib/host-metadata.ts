@@ -11,12 +11,9 @@
 import * as s from "remix/data-schema";
 
 /**
- * Custom hostname metadata attached to Cloudflare for SaaS hostnames.
- *
- * Single source of truth for the shape written by `HostnameService.createHostname`
- * (as `custom_metadata`) and read back by the worker entry from
- * `request.cf.hostMetadata`. Keys are snake_case because they round-trip through
- * the Cloudflare API verbatim.
+ * Single source of truth for the metadata shape `HostnameService.createHostname`
+ * writes and the worker entry reads from `request.cf.hostMetadata`. Keys stay
+ * snake_case to round-trip through the Cloudflare API verbatim.
  */
 export const HostMetadataSchema = s.object({
 	tenant_id: s.union([s.literal("platform"), s.string()]),

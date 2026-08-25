@@ -32,8 +32,6 @@ describe("brightness", () => {
 	});
 
 	test("the factor carries no unit, so the filter function stays valid", async () => {
-		// The mixin stringifies its value; a bare number would be emitted as
-		// `1.1px` and turn `brightness(1.1px)` into a dropped declaration.
 		expect(await declarations(brightness(1.1))).toContain("--ui-filter-brightness: 1.1");
 	});
 });

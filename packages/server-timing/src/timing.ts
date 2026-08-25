@@ -9,15 +9,8 @@
 
 /**
  * A measurement that starts the moment it is constructed and stops at `end()`.
- *
- * Each instance is single use: `end()` stamps the finish time, and reusing the instance
- * for a second measurement would silently overwrite the first. Take a new one per thing
- * you want to time.
- *
- * The clock is `performance.now()` rather than `Date.now()` because it is monotonic and
- * sub-millisecond, and because the `Server-Timing` header reports fractional milliseconds.
- * Note that some server runtimes deliberately freeze that clock between I/O operations,
- * so a measurement around pure computation can legitimately read as zero.
+ * Each instance is single use: a second `end()` call overwrites the first finish
+ * time, so take a new instance per thing timed.
  */
 export class Timing {
 	/** Metric name. Emitted as the entry's leading token, so keep it short and stable. */
@@ -49,13 +42,9 @@ export class Timing {
 	}
 
 	/**
-	 * Milliseconds elapsed between construction and `end()`.
-	 *
-	 * Reports zero while the measurement is still running, so an entry that was never
-	 * ended is reported without a duration rather than with a nonsensical one. The
-	 * negative guard covers a runtime whose clock is not strictly monotonic: a metric that
-	 * appears to have finished before it started is reported as zero, not as a negative
-	 * duration that would make the whole header invalid.
+	 * Milliseconds elapsed between construction and `end()`. Reads as zero until
+	 * `end()` runs, and stays zero if the clock reports a negative span, since a
+	 * non-monotonic reading should not surface as an invalid negative duration.
 	 */
 	get duration(): number {
 		if (this.#end === 0) return 0;
@@ -73,12 +62,8 @@ export class Timing {
 
 	/**
 	 * Formats the measurement as one `Server-Timing` entry.
-	 *
-	 * Empty parts are dropped rather than emitted blank, because the header's grammar
-	 * treats a missing `desc` or `dur` as "not reported" while a present-but-empty one is
-	 * simply malformed. The duration is fixed at two decimals: the clock has more
-	 * precision than that, but nothing downstream reads it, and unbounded digits only make
-	 * the header longer.
+	 * Drops empty parts instead of emitting them blank, since the header's grammar reads a
+	 * present-but-empty `desc` or `dur` as malformed rather than absent.
 	 *
 	 * @returns The entry, e.g. `db;desc="findUserById";dur=12.34`.
 	 */

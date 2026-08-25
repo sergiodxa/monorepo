@@ -1,12 +1,9 @@
 /**
  * Unit tests for `ReconcileSubscriptionsJob.perform`: it repairs drift in both directions
  * (a subscription Polar lists as active that the projection missed, and a projection row
- * Polar no longer lists), leaves an agreeing projection untouched, and logs every repair at
- * error level so a broken webhook delivery stops being silent.
- *
- * Polar is faked through the service container, the way `app/data/monitor.test.ts` fakes it:
- * `PolarClient` is a container singleton, so a double is registered instead of a request
- * being intercepted, and no `fetch` is involved either way.
+ * Polar no longer lists), leaves an agreeing projection untouched, and logs every repair
+ * at error level so a broken webhook delivery stays visible. `PolarClient` is a container
+ * singleton, so a double is registered here instead of a request being intercepted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

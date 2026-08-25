@@ -1,11 +1,9 @@
 /**
  * Wild-encounter rolling for the overworld.
  *
- * When the player steps onto a tall-grass tile the scene rolls against the tile's
- * encounter rate (`random() < rate / 255`, the Gen 3 style check) and, on a hit,
- * chooses a species and level — from the tile's authored encounter table when it
- * has one, otherwise from the loaded content as a fallback. The scene turns that
- * choice into a wild creature through the engine's `spawn-encounter` command.
+ * Rolls against a tile's encounter rate using the Gen 3 style check
+ * (`random() < rate / 255`), then picks a species and level from the
+ * tile's encounter table or a content fallback.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,9 +27,8 @@ export function rollEncounter(map: GameMap, x: number, y: number, random: () => 
 /**
  * Chooses the species and level for an encounter.
  *
- * Prefers the tile's weighted encounter table; when a map ships none (like the
- * built-in sample), it falls back to a random content species at a low level so
- * the overworld still produces battles.
+ * Prefers the tile's weighted table; falls back to a random content
+ * species at a low level so a table-less map still produces battles.
  */
 export function chooseEncounter(
 	table: EncounterEntry[],

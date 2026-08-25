@@ -23,12 +23,10 @@ const DASHBOARD_TABS = ["http", "dns", "tcp", "cron-jobs"] as const;
 const SetDashboardTabSchema = f.object({ tab: f.field(s.enum_(DASHBOARD_TABS)) });
 
 /**
- * POST /actions/:team/set-dashboard-tab
- *
- * Bakes its own `requireUser`/`requireTeam` chain in (rather than taking it from
- * `bootstrap/app.tsx`) since it's the only leaf directly under `routes.actions` — every
- * other leaf sits under a resource group, each with its own `createController()` call
- * there. See `routes/web.ts`'s docblock on `actions`.
+ * POST /actions/:team/set-dashboard-tab. Bakes in its own `requireUser`/`requireTeam`
+ * chain because it is the only leaf directly under `routes.actions`; every other
+ * leaf sits under a resource group with its own `createController()` call.
+ * @see routes/web.ts
  */
 export const setDashboardTab = createAction(routes.actions.setDashboardTab, {
 	middleware: [requireUser, requireTeam],

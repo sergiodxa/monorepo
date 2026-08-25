@@ -1,17 +1,8 @@
 /**
- * Fixed-grid sprite sheets and frame-sequence animations.
- *
- * A `SpriteSheet` wraps one image whose frames are a uniform grid addressed by
- * index (left-to-right, top-to-bottom), drawing a single frame with optional
- * horizontal flip. A `SpriteAnimation` steps through a list of frame indices on
- * the fixed timestep to drive walk cycles and battle effects. Both work in
- * internal pixels; scaling and smoothing are the client's concern.
- *
- * A uniform grid is a degenerate atlas, so `gridRegions` bridges the two: it
- * turns a `columns × rows` grid into a named-region map an `Atlas` can consume,
- * letting callers address grid frames by name ("prefix.0", "prefix.1", …)
- * without the atlas needing to know the sheet was a grid. This keeps the older
- * index-based `SpriteSheet` API working while newer code speaks in regions.
+ * Fixed-grid sprite sheets and frame-sequence animations, stepped on the fixed
+ * timestep in internal pixels; scaling and smoothing are the client's job.
+ * `gridRegions` turns a grid into a named-region map so an `Atlas` can
+ * address grid frames by name.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,11 +11,8 @@ import type { Rect } from "./atlas";
 
 /**
  * Builds a named-region map for a uniform grid of `frameWidth` x `frameHeight`
- * cells, laid out left-to-right then top-to-bottom.
- *
- * Each cell `i` becomes the region `` `${prefix}${i}` `` (prefix defaults to
- * `"frame."`), so a grid can be handed to an `Atlas` and addressed by name. Pure:
- * computes rects from the grid dimensions only, no image or canvas access.
+ * cells (`` `${prefix}${i}` ``), letting a grid image be handed to an `Atlas`
+ * and addressed by name. Pure: derives rects from the dimensions alone.
  */
 export function gridRegions(
 	columns: number,

@@ -1,7 +1,6 @@
 /**
- * Unit tests for `place()`'s partial-options behavior: only the given
- * option keys should produce a property, with no stray `undefined`
- * properties for the omitted one.
+ * Unit tests for `place()`'s partial-options behavior: each given option
+ * key produces exactly its own declarations.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -9,11 +9,9 @@ import { utility } from "../internal/descriptor";
 import { color } from "../internal/tokens";
 
 /**
- * Applies `fill` — the SVG paint property a `<path>`/`<svg>` shape reads its
- * color from, the same semantic-tone resolution `u.fg()` uses for `color`.
- * Called with no value it resolves the tiny system default
- * (`var(--ui-fg, CanvasText)`); called with a bare tone it defaults to that
- * tone's plain `fg` weight.
+ * Applies the SVG `fill` paint property, resolving semantic tones the same way
+ * `color` does. With no value it resolves the system default
+ * (`var(--ui-fg, CanvasText)`); a bare tone resolves that tone's `fg` weight.
  *
  * @example u.fill()
  * @example css({ fill: "var(--ui-fg, CanvasText)" })

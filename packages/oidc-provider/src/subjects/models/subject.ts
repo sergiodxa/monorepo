@@ -17,7 +17,6 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
 
 /**
  * Model for subjects (users).
- * Manages user registration, profile updates, and email verification.
  */
 export default class Subject {
 	/** Error thrown when an operation requires a verified email. */
@@ -139,9 +138,8 @@ export default class Subject {
 
 	/**
 	 * Imports a subject from another identity store, preserving its id so the OIDC
-	 * `sub` stays stable and client apps keep their local `subject_id` links.
-	 * Verified-email timestamps carry over; imported subjects have no passkeys and
-	 * must add one via the magic-link flow on first login.
+	 * `sub` and client `subject_id` links stay stable. Verified-email timestamps
+	 * carry over; login requires adding a passkey via magic link first.
 	 * @param db - Database instance.
 	 * @param data - Source subject fields (id required; timestamps as ISO strings).
 	 * @returns The imported subject record.
@@ -221,7 +219,6 @@ export default class Subject {
 		let subject = await db.findOne(Subject.table, { where: { id } });
 		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
 
-		// Check username uniqueness if being changed
 		if (data.username && data.username !== subject.username) {
 			let existing = await Subject.findByUsername(db, data.username);
 			if (existing && existing.id !== id) {

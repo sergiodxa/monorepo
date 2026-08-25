@@ -25,7 +25,6 @@ const SENDER = { email: "no-reply@example.com", name: "Example" };
 class WelcomeEmail implements Email {
 	constructor(private user: { email: string }) {}
 
-	/** Recipient derived from the user record. */
 	get to() {
 		return { email: this.user.email };
 	}

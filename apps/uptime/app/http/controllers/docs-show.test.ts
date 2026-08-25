@@ -1,9 +1,9 @@
 /**
- * Tests the `/docs/*slug` controller: a real slug (sourced from the real Markdown
- * files under `resources/docs/**`) renders its parsed Markdoc content inside the shared `DocsLayout` chrome
- * along with a canonical link and its frontmatter description in `<head>`, and an
- * unknown slug renders the same not-found page the router's `defaultHandler` uses —
- * with no canonical link, since a 404 is not an indexable document.
+ * Tests the `/docs/*slug` controller. A real slug (backed by Markdown under
+ * `resources/docs/**`) renders its parsed Markdoc content inside the shared
+ * `DocsLayout` chrome, with a canonical link and frontmatter description in
+ * `<head>`. An unknown slug renders the router's shared not-found page,
+ * reserving the canonical link for indexable pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,7 +29,7 @@ import routes from "~/routes/web";
 
 import docsShow from "./docs-show";
 
-/** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
+/** Renders through `renderToString`, sufficient for this page's plain-element tree. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);
@@ -79,7 +79,6 @@ describe("GET /docs/*slug", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(
 			`<link rel="canonical" href="${SEO.baseUrl}${routes.docs.show.href({ slug: "overview" })}" />`,
 		);
@@ -105,10 +104,7 @@ describe("GET /docs/*slug", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 
-		// "docs" links to the docs index, since it's a real page.
 		expect(body).toContain(`href="${routes.docs.index.href()}"`);
-		// "api" and "resources" are directory groupings with no page of their own —
-		// they must not be rendered as links to `/docs/api` or `/docs/api/resources`.
 		expect(body).not.toContain('href="/docs/api"');
 		expect(body).not.toContain('href="/docs/api/resources"');
 	});
@@ -129,7 +125,6 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain("<title>Page Not Found | Documentation - Uptime</title>");
 		expect(body).toContain("<h1>Page Not Found</h1>");
 		expect(body).toContain("The documentation page you're looking for doesn't exist.");
-		// A 404 must not advertise itself as a canonical, indexable document.
 		expect(body).not.toContain('rel="canonical"');
 	});
 });

@@ -33,12 +33,9 @@ const SetupSchema = s.object({
 });
 
 /**
- * Provisions tenant metadata (tenant id, issuer, region) from the control plane.
- *
- * Called once at tenant creation and again whenever the tenant's canonical
- * hostname changes, so the OIDC issuer always matches the hostname clients use.
- * Guarded by the management-auth middleware, which accepts the platform's signed
- * internal token even before an issuer exists on a freshly-created tenant.
+ * Provisions tenant metadata from the control plane, re-run whenever the
+ * tenant's hostname changes so the OIDC issuer stays aligned with it. The
+ * management-auth middleware allows this before an issuer exists yet.
  * @returns A JSON `Response` `{ ok: true }` on success, or a `badRequest` on invalid payload.
  */
 export const create = createAction(

@@ -54,24 +54,16 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * `@pkg/validate`'s `validate()` flattens `FormData`, which `f.object()` rejects
+ * as invalid — a real, separately-flagged bug in `@pkg/validate`. This mock
+ * forwards the form data unflattened so these tests exercise real branching.
  */
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
 
 /**
- * The billing client the container hands the actions, with the one call `ingestPings`
- * would make spied on. Registered so that "this request billed nothing" is asserted
- * against a client that was available to be used, rather than passing because resolving
- * one would have thrown.
+ * The billing client the container hands the actions, with the call it makes
+ * spied on so "this request billed nothing" is asserted against a client that
+ * was available to use, not one that would have thrown on resolution.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
 let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
@@ -118,11 +110,9 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 }
 
 /**
- * Wraps `seeded` so a logger the funnel-event assertions can read back is installed first,
- * standing in for the request logger middleware. Composed into one middleware rather than
- * added beside it, because a route's middleware list here is a fixed-length tuple. Only the
- * suite that asserts on events passes a logger — every other test runs with none, which is
- * what pins that instrumentation is optional.
+ * Wraps `seeded` so a logger the funnel-event assertions can read back is
+ * installed first, composed into one middleware because a route's middleware
+ * list here is a fixed-length tuple; only those tests pass a logger.
  */
 function seedLogger(logger: BatchedLogger | undefined, seeded: Middleware): Middleware {
 	return (ctx, next) => {
@@ -442,11 +432,9 @@ describe("playMonitor", () => {
 });
 
 /**
- * Where an on-demand HTTP check is billed, which is not here. `playMonitor` enqueues and
- * returns; the check itself happens later in `CheckHttpJob`, and that job is what bills it,
- * keyed on the job id the message carries. Billing at enqueue too would charge twice for
- * one check — and would charge for a message the job may legitimately drop — so what is
- * pinned here is that this request ingests nothing at all, whatever it did with the queue.
+ * `playMonitor` only enqueues; `CheckHttpJob` bills the check later, keyed on
+ * the job id. Billing here too would double-charge, or bill a message the job
+ * may legitimately drop — so this pins that the request ingests nothing.
  */
 describe("playMonitor billing", () => {
 	test("bills nothing at enqueue, leaving the check the job performs to bill itself", async () => {
@@ -511,10 +499,9 @@ describe("playMonitor billing", () => {
 });
 
 /**
- * The JSON branch a hydrated page takes. It exists because the check is enqueued, not run,
- * so the only thing this request can report is the baseline to compare a later poll
- * against — and because a page that never navigates would otherwise leave a flash message
- * queued for some unrelated later navigation.
+ * The JSON branch a hydrated page takes: since the check is enqueued, not run,
+ * the only thing this request can report is the baseline to compare a later
+ * poll against, and a flash would otherwise queue for an unrelated navigation.
  */
 describe("playMonitor for a caller asking for JSON", () => {
 	/** Sends the play action with an explicit JSON `Accept`, the way the hydrated button does. */

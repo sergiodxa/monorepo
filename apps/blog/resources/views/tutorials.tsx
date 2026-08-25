@@ -1,8 +1,7 @@
 /**
- * View for the public tutorials list page. Renders an intro, an RSS subscribe
- * link, and a dated list of tutorial rows (with optional preview badges) inside
- * the shared BlogLayout. Exports helpers to build a tutorial href from a slug
- * and to format list dates. Exists to index all published tutorials.
+ * View for the public tutorials list page: intro copy, an RSS subscribe link,
+ * and a dated list of tutorial rows with optional preview badges, rendered
+ * inside the shared blog layout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,11 +86,6 @@ export function TutorialsView() {
 				) : (
 					<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
 						{model.items.map((item) => (
-							/* The shared list-row treatment used by every public index page: a
-							tinted, hairline-bordered card on the `lg` radius, one padding step
-							on all sides, with the title claiming the free track and the date
-							sitting in an auto track beside it. Baseline alignment replaces the
-							old hand-tuned nudge that pushed the date down to meet the title. */
 							<li
 								key={item.href}
 								mix={[

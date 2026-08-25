@@ -1,7 +1,7 @@
 /**
  * Tests for the send-email mock: both send shapes normalize into one record, recipients
- * flatten to plain addresses, and the checks the platform performs — a sender, at least one
- * recipient, verified destinations — reject rather than silently accept.
+ * flatten to plain addresses, and messages missing a sender, a recipient, or a verified
+ * destination are rejected.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

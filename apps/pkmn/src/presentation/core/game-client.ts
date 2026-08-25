@@ -1,13 +1,9 @@
 /**
- * The composition root of the presentation layer.
- *
- * `GameClient` owns the single canvas, the fixed-timestep loop, and every
- * subsystem (input, assets, audio, scenes, saves), and it holds the engine that
- * scenes drive. It scales the internal 240x160 image to the largest integer
- * multiple that fits its host, keeps drawing in internal pixels with smoothing
- * off, and runs simulation at a constant 60 Hz while rendering once per animation
- * frame. Scenes never touch the engine directly for mutation: they call
- * `dispatch`, which forwards the resulting events to the active scene.
+ * Owns the canvas, fixed-timestep loop, and every subsystem (input, assets,
+ * audio, scenes, saves) around the engine scenes drive. Scales the internal
+ * 240x160 image to the largest integer multiple that fits its host, drawing in
+ * internal pixels with smoothing off, and steps simulation at a constant 60 Hz
+ * while rendering once per frame; scenes mutate the engine only through `dispatch`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,12 +37,9 @@ export class GameClient {
 	readonly input = new InputManager();
 
 	/**
-	 * Eagerly-loaded assets addressed by manifest id.
-	 *
-	 * Authored maps are inlined over their manifest URL entries with the imported
-	 * JSON modules, because the Bun HTML dev server's SPA fallback returns the app
-	 * shell (not the file) for a runtime `fetch` of a content path — so the map must
-	 * be bundled in as a module. `AssetStore` validates each inlined map at boot.
+	 * Eagerly-loaded assets addressed by manifest id. Authored maps ship as
+	 * bundled modules, inlined over their manifest URL entries, because the dev
+	 * server resolves any runtime `fetch` for a content path to the app shell.
 	 */
 	readonly assets = new AssetStore({
 		...(manifest as AssetManifest),

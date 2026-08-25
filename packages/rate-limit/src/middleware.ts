@@ -77,9 +77,8 @@ export interface RateLimitMiddlewareOptions {
 	key?: (context: RequestContext) => string | Promise<string>;
 	/**
 	 * Namespace for this registration's keys, so two limiters over one backend
-	 * cannot share a counter. Defaults to a per-registration name derived from
-	 * registration order; pass an explicit prefix whenever the keys are persisted or
-	 * inspected, so they stay stable across deploys.
+	 * cannot share a counter; defaults to a per-registration name. Pass an explicit
+	 * prefix when keys are persisted or inspected, so they stay stable across deploys.
 	 */
 	prefix?: string;
 	/** Budget units one request spends, or a function computing them. Defaults to 1. */
@@ -104,13 +103,9 @@ export interface RateLimitMiddlewareOptions {
 }
 
 /**
- * Creates a middleware that limits every request in its scope.
- *
- * The budget is spent before `next()`, so a denied request never reaches the
- * handler, and the decision is reported on the response either way: an allowed
- * request learns how much quota is left, a denied one learns when to come back.
- * Keys are namespaced per registration, so mounting two limiters over the same
- * backend keeps two independent counters.
+ * Creates a middleware that limits every request in its scope. It spends the
+ * budget before `next()`, so a denial never reaches the handler, and reports
+ * the decision on every response, keeping registrations' keys independent.
  *
  * @param options - Adapter, key derivation, and policy; see {@link RateLimitMiddlewareOptions}.
  * @returns A middleware that counts the request and annotates the response.

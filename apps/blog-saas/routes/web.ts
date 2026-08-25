@@ -1,5 +1,3 @@
-import { form, get, post, resources, route } from "remix/routes";
-
 /**
  * The platform dashboard + marketing route map (mapped in `bootstrap/app.ts`).
  *
@@ -10,6 +8,8 @@ import { form, get, post, resources, route } from "remix/routes";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { form, get, post, resources, route } from "remix/routes";
+
 export default route({
 	index: get("/"),
 	health: get("/health"),

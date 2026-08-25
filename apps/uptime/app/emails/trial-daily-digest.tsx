@@ -1,21 +1,9 @@
 /**
- * One day of a lead's free watches, in one email. A visitor who tried three URLs gets
- * one digest a day covering all three rather than three digests, so the unit here is
- * the address rather than the URL.
- *
- * The bar is one segment per hour. That is the granularity the data already has — a
- * watch runs one check an hour — so a 24-segment row is the record itself rather than
- * an aggregate of it, and no bad hour is averaged away. It also fits: 24 segments
- * across the 552px of card the layout leaves is about 21px each, wide enough that one
- * bad hour is visible at a glance.
- *
- * With several URLs the digest opens with a roll-up line and then gives each URL its
- * own headed section. Both, rather than one or the other: on the six days out of seven
- * when nothing happened the roll-up is the whole email and the reader is done after one
- * line, and on the day something did happen the per-URL headings say which one without
- * making anybody decode an unlabelled bar. With a single URL both collapse into the
- * heading, so the common case is a plain one-target report and not a list of one
- * (ADR-030).
+ * One day of a lead's free watches, grouped by address so every URL they watch lands
+ * in one digest. The bar is one segment per hour, matching the watch's own check
+ * frequency, so every bad hour stays visible in the record. Several URLs get a
+ * roll-up line plus a headed section each; a single URL collapses both into one
+ * plain report (ADR-030).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -107,8 +95,8 @@ function TargetSection(handle: Handle<TargetSection.Props>) {
 }
 
 /**
- * A day of hourly checks across everything one address is watching, reported without
- * a call to action.
+ * A day of hourly checks across everything one address is watching, reported as a
+ * plain status update.
  *
  * @example ctx.email.later(new TrialDailyDigestEmail({ to, targets, locale, t }));
  */
@@ -131,9 +119,9 @@ export class TrialDailyDigestEmail implements Email {
 	}
 
 	/**
-	 * Subject naming the one URL, or counting them when there are several. Two keys
-	 * rather than an i18next plural, because the two forms interpolate different
-	 * variables and a plural rule can only vary the wording around one.
+	 * Subject naming the one URL, or counting them when there are several, using two
+	 * translation keys since each form interpolates different variables and a plural
+	 * rule can only vary wording around a single one.
 	 */
 	get subject(): string {
 		let { t } = this.#digest;

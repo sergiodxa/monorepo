@@ -1,3 +1,9 @@
+/**
+ * Tests the Grant model's find-or-create, lookup, and revocation behavior.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";

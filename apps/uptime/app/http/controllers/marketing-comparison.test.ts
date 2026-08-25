@@ -4,11 +4,10 @@
  * table and its `<head>` SEO metadata (200), and an unknown slug renders the same
  * not-found page the router's `defaultHandler` uses (404).
  *
- * The three optional sections (honest take, "perfect for" banner, cost comparison) are
- * covered against fixture records this file registers in the `comparisons` map itself
- * rather than against a real competitor — the content for them is filled in per
- * competitor over time, so a test reading a real record would assert nothing at all
- * for as long as that record is still missing the fields.
+ * The three optional sections (honest take, "perfect for" banner, cost
+ * comparison) are covered against fixture records this file registers in the
+ * `comparisons` map, since real competitor records fill in that content over
+ * time and would assert nothing while still missing it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,7 +72,7 @@ async function getComparison(slug: string) {
 	return container.scope(() => router.fetch(request));
 }
 
-/** A minimal comparison record: everything {@link MarketingContent.ComparisonPage} requires and none of the optional sections. */
+/** A comparison record with exactly the fields {@link MarketingContent.ComparisonPage} requires. */
 function createFixture(slug: string): MarketingContent.ComparisonPage {
 	return {
 		slug,
@@ -108,9 +107,11 @@ comparisons[WITH_SECTIONS_SLUG] = {
 	pricingScenarios: [
 		{
 			scenario: "Fixture scenario",
-			// 10 monitors every 30 minutes is 13,440 pings — inside the included
-			// allowance, so this row prices at the bare base subscription and the
-			// yearly saving is (29 - 5) x 12.
+			/**
+			 * 10 monitors every 30 minutes is 13,440 pings — inside the included
+			 * allowance, so this row prices at the bare base subscription and the
+			 * yearly saving is (29 - 5) x 12.
+			 */
 			usage: { monitors: 10, intervalMinutes: 30 },
 			theirCost: "$29/mo",
 			theirCostUsd: 29,
@@ -154,7 +155,6 @@ describe("GET /vs/:slug", () => {
 		expect(body).toContain('type="application/ld+json"');
 		expect(body).toContain("SoftwareApplication");
 		expect(body).toContain("FAQPage");
-		// The FAQ schema must describe the questions the page actually renders.
 		expect(body).toContain(content.faqs[0]!.question);
 	});
 
@@ -171,9 +171,10 @@ describe("GET /vs/:slug", () => {
 		expect(body).toContain(content.perfectFor!.title);
 		expect(body).toContain(content.perfectFor!.highlights[0]!);
 		expect(body).toContain(`>${content.pricingScenarios![0]!.scenario}</td>`);
-		// Both our cost and the saving are computed from the pricing model, never
-		// authored in the record — a stale figure in a comparison table is exactly
-		// what that indirection exists to prevent.
+		/**
+		 * Both our cost and the saving are computed from the pricing model at
+		 * render time, so the table always reflects the model's current numbers.
+		 */
 		expect(body).toContain(">$5/mo</td>");
 		expect(body).toContain(">~$288/year</td>");
 		expect(body).toContain(">Savings</th>");

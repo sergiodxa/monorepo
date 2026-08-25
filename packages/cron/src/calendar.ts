@@ -1,7 +1,7 @@
 /**
  * Proleptic Gregorian calendar arithmetic on plain wall-clock numbers: month
- * lengths and weekday of a date. No `Date` and no time zone is involved, so the
- * occurrence search can walk a calendar without an instant existing yet.
+ * lengths and weekday of a date, so the occurrence search can walk a calendar
+ * without an instant existing yet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,7 @@ const COMMON_YEAR_MONTH_LENGTHS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30
 
 /**
  * Sakamoto's month offsets, indexed by month number (1-12), used to derive a
- * weekday without constructing a `Date`.
+ * weekday through arithmetic alone.
  */
 const SAKAMOTO_MONTH_OFFSETS = [0, 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
 
@@ -49,7 +49,7 @@ export function daysInMonth(year: number, month: number): number {
 /**
  * The longest a month can ever be, February included at its leap-year length.
  * Used to decide whether a day-of-month value can occur in a month at all,
- * without picking a year.
+ * across every year.
  *
  * @param month - Month number, 1 for January through 12 for December.
  * @returns The month's maximum length, or `0` for a month outside 1-12.

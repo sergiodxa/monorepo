@@ -167,10 +167,12 @@ describe("lex: multiline strings", () => {
 		expect(lexOk('"""\n\tfoo\n\n\tbar\n"""')[0]?.value).toBe("foo\n\nbar\n");
 	});
 
+	/**
+	 * The middle line is a single space: it is blank, so the common indent
+	 * stays two spaces (per GRAMMAR.md, blank lines are ignored when
+	 * computing it) and the text lines dedent fully.
+	 */
 	test("a whitespace-only line with less indentation does not cap the strip", () => {
-		// The middle line is a single space: it is blank, so the common indent
-		// stays two spaces (per GRAMMAR.md, blank lines are ignored when
-		// computing it) and the text lines dedent fully.
 		expect(lexOk('"""\n  a\n \n  b\n"""')[0]?.value).toBe("a\n\nb\n");
 	});
 

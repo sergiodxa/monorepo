@@ -1,9 +1,9 @@
 /**
  * Helpers for defensively reading JSON request bodies.
  *
- * Management API controllers accept untrusted JSON, so this module parses it
- * without throwing and lets callers branch on whether they got data or a ready
- * `Response` to return.
+ * Management API controllers accept untrusted JSON, so this module resolves
+ * parsing to either the parsed data or a ready `badRequest` `Response`,
+ * letting callers branch on the outcome via {@link isResponse}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,11 +12,9 @@
 import { badRequest } from "@pkg/http/response/json";
 
 /**
- * Safely parses a JSON object from a request body.
- *
- * Never throws: malformed JSON or a non-object top-level value yields a
- * `badRequest` `Response` the caller can return directly, distinguished from a
- * successful parse via {@link isResponse}.
+ * Safely parses a JSON object from a request body, resolving to either the
+ * parsed object or a ready `badRequest` `Response` for invalid JSON or a
+ * non-object top-level value, distinguished via {@link isResponse}.
  * @param request - The incoming request whose body should be parsed as JSON.
  * @returns The parsed object, or a `badRequest` `Response` when parsing fails.
  * @example

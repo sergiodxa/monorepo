@@ -20,10 +20,8 @@ import { text } from "@pkg/u/typography";
 export namespace Text {
 	/**
 	 * Every native `<span>` attribute, unchanged, plus the `mix` passthrough.
-	 * A text run carries no color, variant, or size prop of its own — it
-	 * always renders at the library's default body-copy size and muted
-	 * foreground color, and its content is whatever `children` the consumer
-	 * supplies.
+	 * Carries no color, variant, or size prop of its own — always rendering
+	 * at the library's default body-copy size and muted foreground color.
 	 */
 	export interface Props extends TagProps<"span"> {}
 }
@@ -31,10 +29,7 @@ export namespace Text {
 /**
  * Renders its children inside a `<span>` sized and colored as a small run of
  * body copy: the library's default text size paired with the neutral muted
- * foreground color. Compose it beneath a heading for supporting copy,
- * alongside a control for a short caption, or anywhere else a passage of
- * text needs that consistent styling without carrying its own color,
- * variant, or size contract.
+ * foreground color.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the text run's markup.

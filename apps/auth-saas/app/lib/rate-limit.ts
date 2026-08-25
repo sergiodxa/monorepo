@@ -7,13 +7,9 @@
  */
 
 /**
- * Paths that require auth rate limiting (10 req/10s).
- *
- * These must match the real OIDC provider routes served by the tenant Durable Object
- * (see `packages/oidc-provider/src/routes.ts`): the authorization endpoint is `/authorize`
- * and UserInfo is `/userinfo` (NOT `/oauth/authorize` / `/oidc/userinfo`, which never
- * matched, leaving those high-traffic identity endpoints uncovered). Keep this list in
- * sync with that route table; `rate-limit.test.ts` pins the concrete paths.
+ * Paths that require auth rate limiting (10 req/10s): the routes actually
+ * served today, keeping the limiter on the high-traffic identity endpoints.
+ * `rate-limit.test.ts` pins the exact list to catch drift.
  */
 const AUTH_RATE_LIMITED_PATHS = [
 	"/authorize",
@@ -46,7 +42,8 @@ interface RateLimiters {
 }
 
 /**
- * Checks if a request should be rate limited based on the endpoint and client IP.
+ * Checks the request path against the management, strict, and auth limiter
+ * path lists in that order, applying whichever matches first.
  * @param request - The incoming request
  * @param limiters - The rate limiter bindings
  * @returns A 429 response if rate limited, null otherwise

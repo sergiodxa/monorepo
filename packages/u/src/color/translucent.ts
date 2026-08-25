@@ -11,12 +11,9 @@ import { media } from "../responsive/media";
 import { bg } from "./bg";
 
 /**
- * An optional translucent surface pattern: a solid background plus backdrop
- * blur, gated behind `prefers-reduced-transparency: no-preference` so a
- * reduced-transparency preference keeps the solid background instead of
- * ever losing legibility to a half-applied blur. Composes `u.bg()`'s system
- * default, `u.backdropBlur()`'s declaration, and `u.media()`'s gate — no
- * hand-built media query of its own.
+ * A solid background plus backdrop blur, gated behind
+ * `prefers-reduced-transparency: no-preference` so a reduced-transparency
+ * preference keeps the plain solid background and stays legible.
  *
  * @example u.translucent("sm")
  * @example css({ backgroundColor: "var(--ui-bg, Canvas)", "@media (prefers-reduced-transparency: no-preference)": { "--ui-backdrop-blur": "var(--ui-blur-sm, 4px)", backdropFilter: "blur(var(--ui-backdrop-blur, 0px)) ...", WebkitBackdropFilter: "blur(var(--ui-backdrop-blur, 0px)) ..." } })

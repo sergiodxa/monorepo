@@ -14,10 +14,8 @@ import { FULL_TURN_RADIANS } from "./full-turn-radians";
 
 /**
  * Thresholds {@link niceStep} compares a candidate step's residual against
- * to decide whether a power-of-ten step should be multiplied by 10, 5, or 2
- * (or left alone) to land on the "nice" step closest to the requested count
- * — the square roots of 50, 10, and 2, i.e. the geometric midpoints between
- * consecutive nice multipliers (`1`, `2`, `5`, `10`).
+ * to choose a multiplier of 1, 2, 5, or 10 — the geometric midpoints between
+ * those multipliers (the square roots of 50, 10, and 2).
  */
 const NICE_STEP_THRESHOLD_10 = Math.sqrt(50);
 const NICE_STEP_THRESHOLD_5 = Math.sqrt(10);
@@ -35,8 +33,7 @@ export namespace LinearScale {
 		/**
 		 * When `true`, an input outside the domain maps to the nearer end of
 		 * the range instead of extrapolating past it. Defaults to `false`,
-		 * which lets a value beyond either end of the domain map to a point
-		 * beyond the corresponding end of the range.
+		 * extrapolating past the corresponding end of the range.
 		 */
 		clamp?: boolean;
 	}
@@ -45,11 +42,7 @@ export namespace LinearScale {
 /**
  * Builds a function mapping a continuous numeric domain onto a continuous
  * numeric range through linear interpolation — the position math behind a
- * chart's value axis, converting a data value into a pixel coordinate (or
- * the reverse, by swapping `domain` and `range`). Neither `domain` nor
- * `range` needs to run low-to-high: passing a descending range (`[height,
- * 0]`) is how a y-axis, where a larger value sits higher on screen, flips
- * growth direction without any extra sign-flipping at the call site.
+ * chart's axis, where a descending range inverts growth direction.
  *
  * @param domain The `[start, end]` bounds of the input values.
  * @param range The `[start, end]` bounds the output is mapped onto.
@@ -125,9 +118,7 @@ export namespace BandScale {
 /**
  * Builds a scale mapping a categorical domain (bar chart categories, a pie
  * chart's legend order) onto evenly sized, evenly spaced bands within a
- * continuous output range — the position math behind a bar chart's
- * category axis, where `domain`'s order decides left-to-right (or top-to-
- * bottom) placement and every category gets an equal share of `range`.
+ * continuous range, in `domain`'s order — a bar chart's category axis.
  *
  * @param domain The ordered category keys to lay out; duplicate keys share
  * the first matching position.
@@ -170,11 +161,8 @@ export function bandScale(
 
 /**
  * A "nice" step size decomposed into `multiplier * 10 ** exponent`, with
- * `multiplier` always one of `1`, `2`, or `5`. {@link ticks} applies a step
- * through this decomposition — dividing by a power of ten for an `exponent`
- * below zero, rather than multiplying by a fractional number — so a
- * fractional step (`0.2`, `0.4`, `0.6`, …) lands on the exact decimal value
- * instead of one nudged off by floating-point rounding.
+ * `multiplier` always `1`, `2`, or `5`. {@link ticks} applies this
+ * decomposition to keep every generated value an exact decimal number.
  */
 interface NiceStep {
 	/** Always `1`, `2`, or `5`. */
@@ -186,13 +174,13 @@ interface NiceStep {
 /**
  * Picks the "nice" step {@link ticks} advances by: a power of ten
  * multiplied by 1, 2, or 5, chosen so dividing `[lo, hi]` by it lands as
- * close as possible to `count` steps while keeping every generated value a
- * round decimal number.
+ * close as possible to `count` round-decimal steps.
  *
  * @param lo Lower bound of the span to step across.
  * @param hi Upper bound of the span to step across.
  * @param count Approximate number of steps the result should produce.
- * @returns The chosen step, decomposed for exact application by {@link tickAt}.
+ * @returns The chosen step. A multiplier of 10 folds into the next power of
+ * ten, so the returned `multiplier` always stays `1`, `2`, or `5`.
  */
 function niceStep(lo: number, hi: number, count: number): NiceStep {
 	let rawStep = (hi - lo) / count;
@@ -205,8 +193,6 @@ function niceStep(lo: number, hi: number, count: number): NiceStep {
 	else if (residual >= NICE_STEP_THRESHOLD_5) multiplier = 5;
 	else if (residual >= NICE_STEP_THRESHOLD_2) multiplier = 2;
 
-	// A multiplier of 10 folds into the next power of ten instead, so every
-	// step's multiplier stays one of 1, 2, or 5.
 	return multiplier === 10 ? { multiplier: 1, exponent: exponent + 1 } : { multiplier, exponent };
 }
 
@@ -223,10 +209,9 @@ function stepValue(step: NiceStep): number {
 }
 
 /**
- * Computes the `index`-th multiple of a decomposed {@link NiceStep}. A step
- * below one is applied through division by a power of ten rather than
- * multiplication by a fractional number, which is what keeps the result an
- * exact decimal value instead of one nudged off by floating-point rounding.
+ * Computes the `index`-th multiple of a decomposed {@link NiceStep},
+ * applying a step below one through division by a power of ten to land
+ * on an exact decimal value, free of floating-point rounding drift.
  *
  * @param index Which multiple of the step to compute.
  * @param step Step to apply.
@@ -241,19 +226,15 @@ function tickAt(index: number, step: NiceStep): number {
 /**
  * Generates an approximately evenly spaced sequence of "nice" round numbers
  * spanning a domain — the label positions along a chart's value axis. A
- * "nice" step is always a power of ten multiplied by 1, 2, or 5, so labels
- * read as round numbers (`20`, `40`, `60`) instead of an arbitrary division
- * of the domain into equal parts (`16.66`, `33.33`, `50`).
- *
- * The returned array's length can differ from `count`: a "nice" step rarely
- * divides a domain into exactly that many pieces, so the result holds
- * however many of that step's multiples actually fall within the domain.
+ * "nice" step is always a power of ten multiplied by 1, 2, or 5.
  *
  * @param domain The `[start, end]` bounds to generate tick values across.
  * `start` may be greater than `end`, in which case the result descends from
  * `start` to `end` instead of ascending.
  * @param count Approximate number of ticks to generate.
- * @returns The generated tick values, ordered to match the direction of `domain`.
+ * @returns The generated tick values, ordered to match the direction of
+ * `domain`. The array's length can differ from `count` since a "nice" step
+ * rarely divides the domain into exactly that many pieces.
  * @example
  * ticks([0, 100], 5); // [0, 20, 40, 60, 80, 100]
  * @example
@@ -328,15 +309,14 @@ export namespace PieAngles {
 
 /**
  * Allocates a pie or donut chart's wedges: divides the span from
- * `startAngle` to `endAngle` into one slice per value, each sized
- * proportionally to its share of the total, with an optional gap between
- * adjacent slices. A negative value contributes a zero-width slice rather
- * than an inverted one, and an all-zero (or empty-sum) set of values splits
- * the span evenly instead of collapsing every slice to zero width.
+ * `startAngle` to `endAngle` into one slice per value, sized by its share
+ * of the total, with an optional gap between adjacent slices.
  *
  * @param values The magnitude each slice represents, in the order the wedges should be drawn.
  * @param options Tuning for the total span and the gap between slices.
  * @returns One {@link PieAngles.Slice} per input value, in the same order.
+ * A negative value produces a zero-width slice, and an all-zero set of
+ * values splits the span evenly across all slices.
  * @example
  * pieAngles([1, 1, 2]);
  * // [

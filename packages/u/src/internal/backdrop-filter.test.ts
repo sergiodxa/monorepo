@@ -1,5 +1,7 @@
 /**
- * Unit tests for the shared backdrop-filter-composability foundation.
+ * Unit tests for the shared backdrop-filter-composability foundation. The
+ * prefixed key keeps its leading dash so it kebab-cases to the
+ * `-webkit-backdrop-filter` property Safari recognizes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,9 +13,6 @@ import { declarations } from "./serialize";
 
 describe("backdropFilterFunction", () => {
 	test("sets the given custom property plus the shared composite backdropFilter value, on both the standard and Webkit-prefixed properties", async () => {
-		// The prefixed key only reaches Safari as `-webkit-backdrop-filter` if
-		// it keeps its leading dash; a lowercase `webkit…` spelling would
-		// kebab-case to a property no browser knows.
 		expect(await declarations(backdropFilterFunction({ blur: "12px" }))).toEqual([
 			"--ui-backdrop-blur: 12px",
 			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,

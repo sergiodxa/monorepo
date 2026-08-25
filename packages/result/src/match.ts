@@ -1,3 +1,11 @@
+/**
+ * Pattern-matching dispatch for `Result`, unifying the sync and async cases
+ * behind a single call.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "./types.js";
 
 import { isSuccess } from "./is-success.js";

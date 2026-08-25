@@ -39,10 +39,9 @@ import { memberships, monitorResults, monitors, teams } from "~/database/schema"
 import routes from "~/routes/web";
 
 /**
- * The bindings the page reads, real enough to answer for themselves: an empty KV is a
- * cache miss, so every test starts uncached without arranging one. They live at module
- * scope because the modules under test capture `env` on import; each test's team id is
- * fresh, so the cache keys derived from it never collide across tests.
+ * The bindings the page reads, real enough that an empty KV starts every test
+ * uncached without arranging one. They live at module scope because the modules
+ * under test capture `env` on import; each test's fresh team id keeps its cache keys from colliding.
  */
 let kv = createKVNamespace();
 let queue = createQueue();
@@ -175,7 +174,6 @@ describe("dashboard-card-usage", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Monthly Pings Usage");
-		// The three recorded results, counted as the card's consumed figure.
 		expect(body).toMatch(/>3</);
 	});
 

@@ -2,14 +2,12 @@
  * Team settings page controller. Requires `requireUser` + `requireTeam` +
  * `requireRole("admin")` — only admins and the owner may view or manage settings.
  *
- * Renders the team settings page as a series of card-boxed sections (General, Members,
- * Domains, Billing, Danger Zone); every destructive action (remove member, revoke
- * invite, remove domain) is gated behind an `AlertDialog` confirmation. Billing and Danger
- * Zone are owner-only — an admin who isn't the owner never sees them. The danger-zone
- * delete button relies on the native `pattern="DELETE"` constraint (no client JS) to
- * stay disabled-in-effect until the confirmation input matches exactly. The Pending
- * Invitations and Verified Domains cards each swap their table for an `Empty` state
- * when their list has zero rows, instead of rendering a table with only a header row.
+ * Renders the page as card-boxed sections (General, Members, Domains, Billing, Danger
+ * Zone); every destructive action is gated behind an `AlertDialog` confirmation. Billing
+ * and Danger Zone are owner-only — an admin who isn't the owner never sees them. The
+ * danger-zone delete button relies on the native `pattern="DELETE"` constraint to stay
+ * disabled-in-effect until the confirmation input matches exactly. The Pending Invitations
+ * and Verified Domains cards each swap their table for an `Empty` state when empty.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -108,7 +106,7 @@ function formatRelativeTime(target: Date, locale: string): { text: string; isExp
 /**
  * Splits a translated string containing exactly one `<code>...</code>` span into plain
  * text plus a `<code>` node, so the domain-verification note can render an inline code
- * fragment from locale copy without a raw-HTML sink.
+ * fragment straight from locale copy through matched substrings.
  */
 function renderInlineCode(text: string): RemixNode {
 	let match = /^(.*)<code>(.*)<\/code>(.*)$/s.exec(text);
@@ -126,18 +124,16 @@ function renderInlineCode(text: string): RemixNode {
 /**
  * Viewport from which a section's card is allowed to bleed past its column.
  *
- * `AppShell` pads its content area by 20px below this width and 48px from it up, so a card
- * reaching a further 6 spacing units out each side has room only above the threshold —
- * below it the card would overflow the viewport and the page would scroll sideways.
+ * `AppShell` pads its content area by 20px below this width and 48px above it, so a
+ * card bleeding 6 spacing units past that padding has room only above the threshold.
  */
 const CARD_BLEED_FROM = "(min-width: 768px)";
 
 /**
  * The bordered card each section on this page is built around.
  *
- * Pulled out by exactly the inline padding its own rows carry (`p(5, 6)`), so the copy
- * inside the card lines up with the section heading above it rather than sitting one
- * padding-width to its right.
+ * Pulled out by exactly the inline padding its own rows carry (`p(5, 6)`), so the
+ * card's edge lines up with the section heading above it.
  */
 function settingsCard(tone: "neutral" | "danger" = "neutral") {
 	return [
@@ -161,7 +157,14 @@ function textInput() {
 	];
 }
 
-/** GET /app/:team/settings — team settings: general, members, domains, billing, danger zone. */
+/**
+ * GET /app/:team/settings — team settings: general, members, domains, billing, danger zone.
+ *
+ * The transfer-ownership menu item stays disabled until a transfer action exists.
+ *
+ * Field's own trailing margin spaces the danger-zone confirmation input from the footer
+ * below, keeping this card's footer rhythm consistent with the rest of the page.
+ */
 export default createAction(routes.app.team.settings, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],
 	handler: inject([Database, AuthSDK] as const, async (db, authSdk) => {
@@ -196,7 +199,6 @@ export default createAction(routes.app.team.settings, {
 					heading={ctx.i18next.t("page.settings.header.title")}
 				>
 					<div mix={[vstack({ gap: 12 })]}>
-						{/* General */}
 						<section
 							id="general"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
@@ -274,7 +276,6 @@ export default createAction(routes.app.team.settings, {
 							</div>
 						</section>
 
-						{/* Members */}
 						<section
 							id="members"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
@@ -461,7 +462,6 @@ export default createAction(routes.app.team.settings, {
 																		{viewerIsOwner && member.role === "admin" && (
 																			<>
 																				<hr mix={[menuSeparator]} />
-																				{/* Inert until a transfer-ownership action exists. */}
 																				<button type="button" disabled mix={[menuItem]}>
 																					<HandshakeIcon size={16} strokeWidth={1.5} />
 																					<span>
@@ -653,7 +653,6 @@ export default createAction(routes.app.team.settings, {
 							</div>
 						</section>
 
-						{/* Domains */}
 						<section
 							id="domains"
 							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
@@ -942,7 +941,6 @@ export default createAction(routes.app.team.settings, {
 							)}
 						</section>
 
-						{/* Billing — owner only */}
 						{viewerIsOwner && (
 							<section
 								id="billing"
@@ -989,7 +987,6 @@ export default createAction(routes.app.team.settings, {
 							</section>
 						)}
 
-						{/* Danger Zone — owner only */}
 						{viewerIsOwner && (
 							<section
 								id="danger"
@@ -1020,17 +1017,7 @@ export default createAction(routes.app.team.settings, {
 											</p>
 										</div>
 
-										<div
-											mix={[
-												// `Field`'s own trailing margin already spaces the
-												// confirmation input from the footer below, so this region
-												// carries no bottom padding of its own — otherwise the two
-												// would stack into a gap far larger than every other card's
-												// footer rhythm.
-												p(6, 6, 0, 6),
-												vstack({ gap: 4 }),
-											]}
-										>
+										<div mix={[p(6, 6, 0, 6), vstack({ gap: 4 })]}>
 											<p mix={[m(0), fontSize("sm"), fg("danger")]}>
 												{ctx.i18next.t("page.settings.danger.card.warning")}
 											</p>

@@ -15,9 +15,8 @@ export interface TransitionOptions {
 
 /**
  * Applies the `transition-property`/`transition-timing-function`/
- * `transition-duration` triplet for the given CSS property list — the
- * shared pattern behind most hover/focus/press/selection state changes,
- * so a call site only has to name which properties animate.
+ * `transition-duration` triplet behind most hover, focus, press and selection
+ * state changes, so a call site only names which properties animate.
  *
  * @example u.transition("color, background-color")
  * @example css({ transitionProperty: "color, background-color", transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)", transitionDuration: "150ms" })

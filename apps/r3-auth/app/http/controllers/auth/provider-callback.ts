@@ -1,12 +1,9 @@
 /**
- * The external sign-in callback. Resolves the provider identity to one of this
- * server's subjects, issues the authorization code for the request parked in the
- * session, sets the browser-state cookie session management depends on, and answers
- * the relying party in the response mode it asked for.
- *
- * Everything that can go wrong after the authorization request is known is reported to
- * the relying party as an OAuth error at its own redirect URI, never as a page here:
- * the person's browser belongs to the flow they started, not to this endpoint.
+ * The external sign-in callback. Resolves the provider identity to a subject, issues
+ * the authorization code for the request parked in the session, and answers the
+ * relying party in the response mode it asked for. Anything that goes wrong after the
+ * authorization request is known reaches the relying party as an OAuth error at its
+ * own redirect URI, keeping the person's browser inside the flow they started.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,11 +34,9 @@ import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import routes from "~/routes/web";
 
 /**
- * Name of the OpenID Connect Session Management browser-state cookie.
- *
- * Frozen: the check-session iframe recomputes the `session_state` a relying party was
- * given from exactly this cookie, so renaming it silently breaks session monitoring
- * for every client already running.
+ * Name of the OpenID Connect Session Management browser-state cookie. Frozen: the
+ * check-session iframe recomputes the `session_state` a relying party was given from
+ * exactly this cookie, so renaming it breaks session monitoring for live clients.
  */
 export const OP_BROWSER_STATE_COOKIE = "op_browser_state";
 
@@ -49,11 +44,9 @@ export const OP_BROWSER_STATE_COOKIE = "op_browser_state";
 const OP_BROWSER_STATE_MAX_AGE = 60 * 60 * 24 * 30;
 
 /**
- * Serializes the browser-state cookie.
- *
- * `SameSite=None; Secure` is required rather than incidental: the cookie is read from
- * a cross-origin iframe embedded by relying parties, and a `Lax` cookie is not sent
- * there at all.
+ * Serializes the browser-state cookie. `SameSite=None; Secure` is required: relying
+ * parties read the cookie from a cross-origin iframe, which receives it only under
+ * those attributes.
  */
 function opBrowserStateCookie(value: string): string {
 	return `${OP_BROWSER_STATE_COOKIE}=${value}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${OP_BROWSER_STATE_MAX_AGE}`;
@@ -83,7 +76,11 @@ async function errorResponse(
 	);
 }
 
-/** GET /auth/:provider/callback — completes an external sign-in and answers the relying party. */
+/**
+ * GET /auth/:provider/callback — completes an external sign-in and answers the
+ * relying party. The parked authorization request is read before the exchange, and
+ * cleared once answered unless this server's own client still needs it downstream.
+ */
 export default createAction(
 	routes.auth.providerCallback,
 	inject([Database, PolarClient, RateLimiters] as const, async (db, polar, limiters) => {
@@ -98,8 +95,6 @@ export default createAction(
 			return badRequest({ message: "Invalid provider" });
 		}
 
-		// Read before the exchange: without a parked request there is nowhere to send
-		// either an answer or an error, and the only honest response is a refusal here.
 		let authz = getAuthz();
 		if (!authz) {
 			ctx.logger.info("oauth_missing_authz_session");
@@ -132,9 +127,6 @@ export default createAction(
 			scope: authz.scope,
 			opBrowserState,
 			responseMode: authz.responseMode,
-			// The challenge the relying party committed to on the authorization request,
-			// carried through the session so a provider sign-in enforces PKCE exactly as a
-			// password sign-in does.
 			pkce: authz.codeChallenge
 				? { challenge: authz.codeChallenge, method: authz.codeChallengeMethod ?? "S256" }
 				: null,
@@ -150,19 +142,10 @@ export default createAction(
 
 		ctx.logger.info("oauth_login_success", { provider: "github", subjectId: subject.data });
 
-		// Queued, never awaited: the notice is flushed after the response, so a refused
-		// delivery cannot turn a completed sign-in into an error the person sees.
 		await notifyNewSignIn(ctx, db, subject.data);
 
-		// The same single condition the credential path applies, on the same successful-only
-		// branch: null `email_verified_at` means nothing has proven this address, which for a
-		// provider sign-in means the provider did not report it verified. A provider that did
-		// leaves the column set, so this sends nothing and no method check is needed here.
 		await sendVerificationEmail(ctx, db, subject.data);
 
-		// Cleared once answered, except for this server's own client: its callback is the
-		// next request in the same flow and still has to check the `state` and the redirect
-		// URI this request parked.
 		if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
 
 		let response = await authorizationResponse(
@@ -172,8 +155,6 @@ export default createAction(
 			result.data.responseMode,
 		);
 
-		// Only on success: the cookie names a browser this server has an active session
-		// for, and there is no session to monitor behind an error.
 		response.headers.append("Set-Cookie", opBrowserStateCookie(opBrowserState));
 
 		return response;

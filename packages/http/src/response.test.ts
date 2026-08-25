@@ -1,3 +1,10 @@
+/**
+ * Tests for the Response builders, covering their Content-Type headers,
+ * bodies, status defaults, and header overrides.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { describe, expect, test } from "vitest";
 

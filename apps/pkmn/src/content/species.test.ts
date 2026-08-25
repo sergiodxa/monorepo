@@ -1,14 +1,8 @@
 /**
- * Guards the species roster loaded from `species.json` and the migration that put
- * it there.
- *
- * Every one of the original 151 species must carry an `evYield` that is a partial
- * stat set of non-negative integers keyed only by valid {@link Stat} values and
- * summing to a small total, so a data-file typo or omission fails loudly here.
- * The migration checks pin the roster count and a few well-known species' stats,
- * types, growth rate, gender, evolution, and learnset so the JSON re-typed through
- * {@link parseSpecies} keeps its exact values; a final group proves the loader
- * rejects malformed data instead of shipping a broken roster.
+ * Guards the species roster loaded from `species.json`. Every one of the
+ * original 151 species must yield a small partial stat set keyed by valid
+ * {@link Stat} values, well-known species must keep their exact authored values
+ * through {@link parseSpecies}, and malformed data must throw at load time.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +19,6 @@ import { MOVES } from "./moves";
 import { SPECIES } from "./species";
 import { parseSpecies } from "./species-schema";
 
-/** Valid stat keys an EV yield is allowed to use. */
 let STAT_VALUES = Object.values(Stat);
 
 /** Highest combined EV a single species may yield on faint. */
@@ -33,8 +26,7 @@ let MAX_YIELD_TOTAL = 3;
 
 /**
  * Species whose level-up learnsets were authored so wild-caught creatures learn
- * moves in normal play. These must each carry a non-empty, ascending level-up
- * learnset that references only real move ids.
+ * moves in normal play.
  */
 let AUTHORED_LEARNSET_SPECIES = ["RATICATE", "ARBOK", "PIKACHU", "RAICHU"];
 
@@ -45,11 +37,9 @@ test("the roster still holds the original 151 species", () => {
 describe("every species has a valid EV yield", () => {
 	for (let [id, species] of Object.entries(SPECIES)) {
 		test(`${id} yields a small partial stat set of non-negative integers`, () => {
-			// The content layer guarantees a yield even though the contract type is optional.
 			expect(species.evYield).toBeDefined();
 			let yieldEntries = Object.entries(species.evYield ?? {});
 
-			// A yield must award at least one effort value.
 			expect(yieldEntries.length).toBeGreaterThan(0);
 
 			let total = 0;
@@ -73,16 +63,13 @@ describe("newly-authored species have valid level-up learnsets", () => {
 
 			let levelUpMoves = species!.learnset.filter(isLevelUpMove);
 
-			// A wild-caught creature of this species must be able to learn moves.
 			expect(levelUpMoves.length).toBeGreaterThan(0);
 
 			let previousLevel = -1;
 			for (let entry of levelUpMoves) {
-				// Entries are sorted ascending by level (ties allowed).
 				expect(entry.level).toBeGreaterThanOrEqual(previousLevel);
 				previousLevel = entry.level;
 
-				// Every referenced move id resolves in the move roster.
 				expect(MOVES).toHaveProperty(entry.moveId);
 			}
 		});

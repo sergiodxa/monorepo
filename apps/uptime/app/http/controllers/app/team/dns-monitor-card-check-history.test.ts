@@ -128,9 +128,9 @@ describe("dns-monitor-card-check-history", () => {
 	});
 
 	/**
-	 * A query that did not answer is never diffed, so a check that lost some of its queries
-	 * knows less about the domain than a whole one does. Reporting it as "no changes" would
-	 * turn the part we never looked at into a clean bill of health.
+	 * A failed query carries no diff data, so a sweep that lost some of its queries knows
+	 * less about the domain than a complete one does. Reporting it as "no changes" would
+	 * present the skipped portion as a clean bill of health.
 	 */
 	test("reports a partial sweep as partial rather than as a clean check", async () => {
 		let { db, team, membership } = await createFixture();

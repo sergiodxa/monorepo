@@ -24,7 +24,6 @@ import { apiKeys, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
-/** Inserts a team owned by a fresh random subject. */
 async function seedTeam(db: Db) {
 	return await db.create(
 		teams,
@@ -39,7 +38,6 @@ async function seedTeam(db: Db) {
 	);
 }
 
-/** Creates an API key for `teamId` with `scopes`, returning both the row and plaintext key. */
 async function seedApiKey(
 	db: Db,
 	teamId: string,

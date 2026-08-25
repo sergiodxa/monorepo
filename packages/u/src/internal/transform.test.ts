@@ -1,5 +1,7 @@
 /**
- * Unit tests for the shared transform-composability foundation.
+ * Unit tests for the shared transform-composability foundation. Values reach
+ * `transformFunction` already stringified by `angle()`/`scaleFactor()`,
+ * because a bare number would serialize with a wrong `px` suffix.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,9 +40,6 @@ describe("transformFunction", () => {
 	});
 
 	test("sets multiple custom properties in one call", async () => {
-		// `angle()` and `scaleFactor()` stringify before this point on purpose:
-		// a bare number here would serialize with a `px` suffix, which is wrong
-		// for both an angle and a unitless scale factor.
 		expect(await declarations(transformFunction({ scaleX: "1.5", scaleY: "1.5" }))).toEqual([
 			"--ui-scale-x: 1.5",
 			"--ui-scale-y: 1.5",

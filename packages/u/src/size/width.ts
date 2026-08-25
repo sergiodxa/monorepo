@@ -1,12 +1,9 @@
 /**
- * `@pkg/u` is logical-property-first everywhere else in the `size/` family
- * (`u.is()`, `u.bs()`, ...), but some components size themselves relative to
- * the physical viewport/container axis on purpose — e.g. a chat bubble whose
- * `width` describes its shape relative to the screen, not the inline
- * reading direction, and must not flip under a different writing-mode or
- * direction. This utility is a deliberate, narrow exception scoped to that
- * one use case: it sets the physical `width` property directly. For the
- * logical default, use `u.is()` (`inline-size`) instead.
+ * The physical-axis exception in an otherwise logical-property-first `size/`
+ * family: a few components size themselves against the physical viewport or
+ * container axis on purpose — a chat bubble whose width describes its shape
+ * relative to the screen holds that shape under any writing-mode or
+ * direction. `u.is()` (`inline-size`) covers the logical default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +14,9 @@ import { utility } from "../internal/descriptor";
 import { boxLength } from "../internal/tokens";
 
 /**
- * Applies the physical `width` property. Prefer `u.is()` (`inline-size`)
- * unless the element's sizing is genuinely tied to the physical viewport
- * axis rather than the logical inline axis.
+ * Applies the physical `width` property, for an element whose sizing is tied
+ * to the physical viewport axis; `u.is()` (`inline-size`) covers sizing along
+ * the logical inline axis.
  *
  * @example u.width("full")
  * @example css({ width: "100%" })

@@ -63,21 +63,14 @@ export namespace TimeField {
 		description?: RemixNode;
 		/**
 		 * Validation message rendered through {@link FieldError} beneath the
-		 * control — after the description, when both are present — and
-		 * referenced by the control's `aria-describedby`. Its presence alone
-		 * marks the control's `aria-invalid`, unless `aria-invalid` is set
-		 * explicitly.
-		 *
-		 * Optional inside a {@link Form} carrying `issues`: the field then
-		 * finds its own message by `name` through form context, and an
-		 * explicit value here still wins over whatever context holds.
+		 * control, marking `aria-invalid` unless set explicitly. Falls back to
+		 * a {@link Form}'s own `issues` message by `name`; an explicit value wins.
 		 */
 		errorMessage?: RemixNode;
 		/**
-		 * Native `autofocus`. Defaults to `true` for the first invalid field
-		 * of an enclosing {@link Form}'s `issues`, so a server round-trip
-		 * lands keyboard focus on the first problem with no client
-		 * JavaScript; pass it explicitly to decide for this field yourself.
+		 * Native `autofocus`. Defaults to `true` for the first invalid field of
+		 * an enclosing {@link Form}'s `issues`, landing keyboard focus on the
+		 * problem with no client JavaScript; pass explicitly to override.
 		 */
 		autoFocus?: boolean;
 		/** Native `name` submitted with an enclosing form. */
@@ -106,35 +99,9 @@ export namespace TimeField {
 }
 
 /**
- * Renders a complete time field in one call: a root element stacking
- * {@link Label}, a native `<input type="time">` control through
- * {@link Input}, and, when supplied, {@link Description} and
- * {@link FieldError} in a single column with a small gap between them. The
- * label's `for`, the control's `id`, and the control's `aria-describedby` are
- * all computed from this instance's own stable identifier, so the parts stay
- * correctly associated with no id bookkeeping left to the consumer.
- *
- * The control rides the platform's own time-entry widget — picking apart and
- * navigating between hour, minute, and (when `step` calls for it) second and
- * day-period segments is the browser's own built-in behavior, not something
- * this field tracks. `value`, `defaultValue`, `min`, and `max` all read and
- * write that widget's native `"HH:mm"` (or `"HH:mm:ss"` once `step` asks for
- * second-level granularity) string format.
- *
- * The control's keyboard focus ring reads `color` (defaulting to
- * `"neutral"`), and an invalid state — driven by `errorMessage`'s
- * presence, or an explicit `aria-invalid` override — recolors both the
- * border and ring to the semantic danger tone regardless of `color`; see
- * {@link Input} for the rest of the control's own styling contract.
- * Composing {@link Label}, {@link Input}, {@link Description}, and
- * {@link FieldError} directly instead remains available for a field whose
- * wiring or layout this wrapper doesn't cover.
- *
- * Inside a {@link Form} carrying `issues`, the field needs no `errorMessage`
- * of its own: it looks its message up by `name` through form context, and the
- * first invalid field of that render also picks up `autofocus`, so a parse
- * failure re-rendered from the server both shows every message and lands
- * keyboard focus on the first one. An explicit `errorMessage` still wins.
+ * Composes {@link Label}, a native `<input type="time">` control through
+ * {@link Input}, {@link Description}, and {@link FieldError} into one field,
+ * computing every id and `aria-describedby` link from this identifier.
  *
  * @param handle Runtime handle carrying the root element's props and this instance's stable identifier.
  * @returns The render function producing the field's markup.

@@ -1,14 +1,9 @@
 /**
- * Establishes an ambient heading level read by every heading and every
- * further nested scope rendered inside it, so composing sections keeps a
- * document outline sequential without ever passing a level by hand. The
- * outermost scope in a tree, with nothing wrapping it, starts the outline
- * at its first level; a scope nested inside another moves one level deeper
- * automatically; and an explicit `level` fixes a scope's depth outright
- * where a document's structure calls for it. Renders a real host element
- * styled with `display: contents`, so composing it never inserts a layout
- * box of its own, while still giving a DOM-based lookup something concrete
- * to find through `data-heading-level`.
+ * Establishes an ambient heading level read by nested headings and scopes,
+ * keeping a document outline sequential without passing a level by hand.
+ * Nesting moves one level deeper unless an explicit `level` fixes it, and
+ * renders a `display: contents` host so composing it adds no layout box
+ * while still exposing the depth via `data-heading-level`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +20,8 @@ import { contents } from "@pkg/u/layout";
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
- * Native tag rendered for each supported {@link HeadingLevel}, keeping the
- * level-to-element mapping a single lookup instead of a conditional chain.
+ * Native tag rendered for each supported {@link HeadingLevel}, as a single
+ * level-to-element lookup table.
  */
 export const TAG_BY_LEVEL: Record<HeadingLevel, "h1" | "h2" | "h3" | "h4" | "h5" | "h6"> = {
 	1: "h1",
@@ -37,7 +32,6 @@ export const TAG_BY_LEVEL: Record<HeadingLevel, "h1" | "h2" | "h3" | "h4" | "h5"
 	6: "h6",
 };
 
-/** Semantic depth a resolution falls back to when nothing supplies one at all. */
 const DEFAULT_LEVEL: HeadingLevel = 1;
 
 /** Deepest semantic depth the native heading elements support; a resolution past this clamps down to it. */
@@ -54,9 +48,9 @@ export namespace HeadingScope {
 	}
 
 	/**
-	 * Every native `<div>` attribute, plus the `mix` passthrough and an
-	 * optional `level` fixing this scope's depth outright instead of moving
-	 * one level past its own ambient scope.
+	 * Native `<div>` attributes, plus `mix` and an optional `level` that
+	 * fixes this scope's depth outright, overriding the ambient
+	 * one-level-deeper default.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/**
@@ -69,10 +63,9 @@ export namespace HeadingScope {
 }
 
 /**
- * Reads the semantic depth provided by the nearest ancestor
- * {@link HeadingScope}, guarded so a lookup finding no ancestor scope at
- * all resolves to `undefined` rather than reaching the caller as a thrown
- * error, whichever way that absence happens to surface.
+ * Reads the semantic depth from the nearest ancestor {@link HeadingScope},
+ * always resolving safely to `undefined` when no ancestor scope exists,
+ * regardless of how that absence surfaces.
  *
  * @param handle Runtime handle of the component performing the lookup.
  * @returns The nearest ancestor scope's depth, or `undefined` where nothing wraps the caller.
@@ -90,14 +83,9 @@ export function readAmbientLevel(handle: Handle<unknown, any>): HeadingLevel | u
 }
 
 /**
- * Resolves the semantic depth a heading renders at: an explicit level
- * always wins, otherwise the nearest ancestor {@link HeadingScope}'s depth
- * applies, and `1` is the final fallback where nothing supplies either.
- * The result always lands in the native `1`–`6` range — a resolution past
- * `6` clamps down to it and, in dev mode, logs a `console.warn` explaining
- * that the nesting has gone past the native heading range and should be
- * flattened, or restarted from a new top-level scope, instead of nested
- * further.
+ * Resolves the semantic depth a heading renders at: an explicit level wins,
+ * then the nearest ancestor {@link HeadingScope}'s depth, then `1`, clamped
+ * to `6` with a dev-mode warning to flatten or restart the nesting.
  *
  * @param handle Runtime handle of the component resolving its depth.
  * @param explicitLevel A `level` passed directly to the component, if any.
@@ -125,18 +113,9 @@ export function resolveHeadingLevel(
 }
 
 /**
- * Establishes an ambient heading level for every heading and every further
- * nested {@link HeadingScope} rendered inside it. An explicit `level` prop
- * fixes this scope's depth outright; otherwise, this scope moves one level
- * past its own ambient scope, or starts the outline at `1` where no scope
- * wraps it at all — reading that ambient value through
- * {@link readAmbientLevel} always resolves to the nearest ancestor scope's
- * depth, never this scope's own, since a scope's own depth has not been
- * published yet at the point it looks outward for one. Renders a `<div>`
- * styled with `display: contents`, so it never inserts a layout box of its
- * own, forwarding `mix` and every other host attribute, and carries
- * `data-heading-level` so a DOM-based lookup can find the active scope's
- * depth directly.
+ * Establishes an ambient heading level for descendants: an explicit `level`
+ * fixes it, otherwise one level past the nearest ancestor {@link HeadingScope},
+ * read before this scope publishes its own depth, or `1` with no ancestor.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link HeadingScope.Context} to descendants.
  * @returns The render function producing the scope's markup.

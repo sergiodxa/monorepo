@@ -1,12 +1,9 @@
 /**
  * The scene contract for the presentation layer.
  *
- * A scene owns one screen of the game (title, overworld, battle, a menu) and is
- * driven by `SceneStack`: it renders, updates on the fixed timestep, and may sit
- * beneath other scenes in the stack. Scenes receive the `GameClient` as their
- * context so they can reach the engine, input, assets, and audio without global
- * state. `translucent` lets a menu draw over the scene below it; `onEngineEvents`
- * lets a scene react to the events a dispatch produced.
+ * A scene owns one screen of the game and is driven by `SceneStack`, which
+ * renders it, steps it on the fixed timestep, and may layer it beneath other
+ * scenes. It receives the `GameClient` as context to reach engine and input.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

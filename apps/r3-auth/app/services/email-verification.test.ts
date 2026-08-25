@@ -1,15 +1,13 @@
 /**
- * Router-level tests of email verification: which sign-ins produce a message and which do
- * not, the window that holds a second one back, and everything the token has to be — usable
- * once, dead when it expires, and bound to the address it was issued for.
+ * Router-level tests of email verification: which sign-ins produce a message, the window
+ * that holds a second one back, and everything a token has to be — usable once, dead when
+ * it expires, and bound to the address it was issued for.
  *
- * Mail is recorded rather than mocked, so what a test reads is the message a provider would
- * have received, including the link it carries. The link is followed the way a reader would:
- * pulled out of the message, requested, and then confirmed with the button the page carries.
- *
- * The split across the two methods is what several of these are about. Anything that merely
- * fetches the URL — a mail scanner, a link checker, a bodyless probe — must leave the token
- * exactly as it found it, so the person's own click still works.
+ * Mail is recorded rather than mocked, so a test reads the message a provider would have
+ * received, including the link it carries, then follows that link the way a reader would:
+ * pulled from the message, requested, and confirmed with the page's button. Anything that
+ * merely fetches the URL — a mail scanner, a link checker, a bodyless probe — must leave
+ * the token exactly as it found it, so the person's own click still works.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -219,23 +217,24 @@ describe("sending the verification email", () => {
 		expect(lastVerification()).toBeUndefined();
 	});
 
+	/**
+	 * Gated on a successful sign-in only: an endpoint that mails whichever address was
+	 * typed at it is an existence oracle with a mailer attached.
+	 */
 	test("mails nothing when the sign-in is refused", async () => {
-		// The whole reason this is gated on a successful sign-in: an endpoint that mails
-		// whichever address was typed at it is an existence oracle with a mailer attached.
 		let response = await credentialSignIn({ password: "not-the-password" });
 
-		// The sign-in page again, carrying the refusal — and no mail of any kind behind it.
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain("Invalid email or password.");
 		expect(lastVerification()).toBeUndefined();
 		expect(app.mail.messages).toHaveLength(0);
 	});
 
+	/** Answered by SSO: the new session traces back to a sign-in that already happened. */
 	test("mails nothing when an already-signed-in browser authorizes another client", async () => {
 		await signIn(app, fixtures);
 		app.mail.clear();
 
-		// Answered by SSO: a session row opens, but nobody authenticated here.
 		await app.fetch(new Request(authorizeUrl(fixtures)));
 
 		expect(app.mail.messages).toHaveLength(0);
@@ -271,7 +270,6 @@ describe("the resend window", () => {
 
 		app.mail.clear();
 
-		// A second successful sign-in for the same still-unverified address.
 		await credentialSignIn();
 
 		expect(lastVerification()).toBeUndefined();
@@ -281,7 +279,6 @@ describe("the resend window", () => {
 		await credentialSignIn();
 		app.mail.clear();
 
-		// KV expiring the marker is exactly this: the key stops being there.
 		let cooldown = (await app.kv.list({ prefix: "email-verification-cooldown:" })).keys;
 		expect(cooldown).toHaveLength(1);
 		await app.kv.delete(cooldown[0]!.name);
@@ -292,8 +289,6 @@ describe("the resend window", () => {
 	});
 
 	test("leaves the suppressed request holding a token that still works", async () => {
-		// The invariant the shared five minutes exists for: a held-back send never replaces a
-		// live link, so suppression cannot strand somebody with no way to verify.
 		await credentialSignIn();
 		let token = lastToken();
 
@@ -332,8 +327,8 @@ describe("the resend endpoint", () => {
 		);
 	}
 
+	/** Sign-in already spent the resend window, so the test lets it lapse first. */
 	test("mails a fresh link to the signed-in subject's own address", async () => {
-		// Signing in already spent the window, so let it lapse first.
 		for (let key of (await app.kv.list({ prefix: "email-verification-cooldown:" })).keys) {
 			await app.kv.delete(key.name);
 		}
@@ -375,18 +370,14 @@ describe("following a verification link", () => {
 		let body = await response.text();
 
 		expect(body).toContain("Confirm your email address");
-		// The button is a real form: it posts back here, carrying the token in the body.
 		expect(body).toContain(`method="post"`);
 		expect(body).toContain(`action="${routes.verifyEmail.action.href()}"`);
 		expect(body).toContain(token);
 
-		// The whole point of the split: opening the link is not the confirmation.
 		expect((await storedSubject())?.email_verified_at).toBeNull();
 	});
 
 	test("leaves the token usable after a scanner has fetched the link", async () => {
-		// What a mail scanner or a link checker does to every URL in a message. Neither of
-		// them presses anything, so neither of them may verify an address or burn a link.
 		await credentialSignIn();
 		let token = lastToken();
 
@@ -396,7 +387,6 @@ describe("following a verification link", () => {
 
 		expect((await storedSubject())?.email_verified_at).toBeNull();
 
-		// And the person's own click still works, which is the failure this prevents.
 		expect((await confirm(token)).status).toBe(200);
 		expect((await storedSubject())?.email_verified_at).not.toBeNull();
 	});
@@ -461,7 +451,6 @@ describe("following a verification link", () => {
 		await credentialSignIn();
 		let token = lastToken();
 
-		// Expiry is the record ceasing to exist, which is what this does.
 		for (let key of (await app.kv.list({ prefix: "email-verification:" })).keys) {
 			await app.kv.delete(key.name);
 		}
@@ -478,8 +467,6 @@ describe("following a verification link", () => {
 		await credentialSignIn();
 		let token = lastToken();
 
-		// The token proves one address. Once the row names a different one, it proves nothing
-		// about what stamping the column would now be asserting.
 		await app.db.update(subjects, fixtures.subjectId, { email_address: "moved@example.com" });
 
 		expect((await follow(token)).status).toBe(400);
@@ -491,8 +478,6 @@ describe("following a verification link", () => {
 	});
 
 	test("refuses a token issued for another subject's address", async () => {
-		// Two unverified subjects, each with their own live token; neither token may confirm
-		// the other's address.
 		await credentialSignIn();
 		let janeToken = lastToken();
 
@@ -507,7 +492,6 @@ describe("following a verification link", () => {
 
 		let newcomer = await app.db.findOne(subjects, { where: { email_address: NEW_EMAIL } });
 		expect(newcomer?.email_verified_at).not.toBeNull();
-		// The other account is untouched: a token confirms the address it was mailed to.
 		expect((await storedSubject())?.email_verified_at).toBeNull();
 	});
 

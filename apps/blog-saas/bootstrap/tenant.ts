@@ -31,9 +31,9 @@ export interface PlatformMeta {
 }
 
 /**
- * Builds the minimal placeholder page served for a suspended blog, prompting the
- * owner to fix billing. Returned instead of the real site so public traffic hits a
- * clear message rather than an error.
+ * Builds the minimal placeholder page served for a suspended blog, prompting
+ * the owner to fix billing so public traffic sees a clear message while the
+ * blog is suspended.
  *
  * @returns A 402 Payment Required HTML response.
  */
@@ -48,9 +48,9 @@ function suspendedPage(): Response {
 }
 
 /**
- * Per-tenant Durable Object hosting a blog. A thin host, not an application: it
- * stores control-plane-pushed config in its own SQLite, boots `@pkg/blog-engine`
- * over a SqlStorage adapter, enforces lifecycle state, and forwards requests.
+ * Per-tenant Durable Object hosting a blog: stores control-plane-pushed config
+ * in its own SQLite, boots `@pkg/blog-engine` over a SqlStorage adapter,
+ * enforces lifecycle state, and forwards requests.
  */
 export default class Blog extends DurableObject<Cloudflare.Env> {
 	/** Cached tenant config; `null` until the DO is provisioned via {@link initialize}. */
@@ -68,8 +68,10 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	 */
 	constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
 		super(ctx, env);
-		// A constructor cannot await; the runtime is what holds requests back until
-		// this settles, so the promise is deliberately left to it.
+		/**
+		 * A constructor cannot await; the runtime holds requests back until this
+		 * settles, so the promise is left for it to track.
+		 */
 		void ctx.blockConcurrencyWhile(async () => {
 			this.ensureMetaTable();
 			this.#meta = this.readMeta();
@@ -131,17 +133,15 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 				clientId: meta.oidc_client_id,
 				clientSecret: meta.oidc_client_secret,
 				admins: [meta.owner],
-				// Multi-tenant: only the provisioned owner (allow-listed above) may be an
-				// admin. Disable the first-user bootstrap so a stray SSO visitor to a
-				// freshly provisioned tenant cannot claim admin before the owner does.
+				/**
+				 * Disables the first-user bootstrap so only the allow-listed owner can
+				 * claim admin on a freshly provisioned tenant.
+				 */
 				bootstrapFirstAdmin: false,
 			},
 		});
-		// Engine-owned migrations, inside blockConcurrencyWhile on boot.
 		await this.#app.migrate();
 	}
-
-	// ---- RPC surface (control plane only) ----
 
 	/**
 	 * One-time provisioning called by the control plane before the hostname goes live:
@@ -173,8 +173,7 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Reports lightweight tenant stats for the dashboard without exposing engine
-	 * internals.
+	 * Reports the tenant's storage footprint for the dashboard.
 	 *
 	 * @returns The DO's SQLite database size in bytes.
 	 */
@@ -194,13 +193,9 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		this.#app = null;
 	}
 
-	// ---- Request path ----
-
 	/**
 	 * Serves a request through the tenant's blog engine after enforcing lifecycle
-	 * gates: unprovisioned → 404, deleted → 410, custom-domain-active subdomain hides
-	 * public pages (admin stays), suspended → 402 for public paths (the admin surface,
-	 * `/cms` plus its `/auth` login flow, stays open so billing can be fixed).
+	 * gates for unprovisioned, deleted, custom-domain, and suspended tenants.
 	 *
 	 * @param request The incoming request routed to this tenant DO.
 	 * @returns The engine's response, or a lifecycle-gate response (404/410/402).
@@ -210,23 +205,24 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		let meta = this.#meta;
 		let url = new URL(request.url);
 
-		// Deleted blogs answer 410 during the retention window (before purge).
+		/** Deleted blogs answer 410 during the retention window before purge. */
 		if (meta.status === "deleted") return new Response("Gone", { status: 410 });
 
-		// Once the custom domain is active the public site moves there and the subdomain
-		// stops serving public pages (no redirect). The admin surface (`/cms`, `/auth`)
-		// stays on the subdomain because the per-blog OIDC client's callback is
-		// registered there; otherwise activating a domain would lock the owner out.
+		/**
+		 * Once the custom domain is active, the subdomain answers 404 for public
+		 * pages while keeping `/cms` and `/auth` reachable there, since the
+		 * per-blog OIDC client's callback is registered on the subdomain.
+		 */
 		if (meta.custom_hostname_active === 1 && url.hostname === meta.subdomain_host) {
 			let isAdminPath = url.pathname.startsWith("/cms") || url.pathname.startsWith("/auth");
 			if (!isAdminPath) return new Response("Not found", { status: 404 });
 		}
 
-		// Suspension: public traffic blocked, but the whole admin surface stays reachable
-		// so the owner can fix billing. `/cms` is the CMS itself; `/auth` is the OIDC
-		// login flow the CMS depends on — an unauthenticated owner hitting `/cms` is
-		// redirected to `/auth/login`, so blocking `/auth` here would 402 that redirect
-		// and lock the owner out of the very page meant to stay open.
+		/**
+		 * Suspension blocks public traffic but keeps the admin surface reachable
+		 * so the owner can fix billing: `/cms` redirects an unauthenticated owner
+		 * to `/auth/login`, so `/auth` stays open too or that redirect 402s them.
+		 */
 		let isAdminPath = url.pathname.startsWith("/cms") || url.pathname.startsWith("/auth");
 		if (meta.status === "suspended" && !isAdminPath) {
 			return suspendedPage();

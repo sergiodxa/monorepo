@@ -23,10 +23,9 @@ import { attrs } from "remix/ui";
 const DEFAULT_ROLE = "separator";
 
 /**
- * Default `aria-orientation` value applied through {@link attrs}. It keeps
- * the accessibility contract and the CSS variant selector on the same
- * attribute, so a consumer only ever sets one thing to flip the divider's
- * axis: `aria-orientation="vertical"`.
+ * Default `aria-orientation` value applied through {@link attrs}. Keeping
+ * the accessibility attribute and the CSS variant selector on the same
+ * value lets a consumer flip the axis by setting `aria-orientation="vertical"`.
  */
 const DEFAULT_ORIENTATION = "horizontal";
 
@@ -37,18 +36,15 @@ export namespace Separator {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
 	 * Setting `aria-orientation="vertical"` switches both the accessibility
-	 * contract and the rendered axis to a vertical divider; leaving it unset
-	 * (or set to `"horizontal"`) keeps the default horizontal line.
+	 * contract and the rendered axis to a vertical divider.
 	 */
 	export interface Props extends TagProps<"div"> {}
 }
 
 /**
- * Renders a static hairline divider between two groups of content. The host
- * element carries the `separator` role and defaults to a horizontal
- * orientation, filling the inline axis of its container at hairline
- * thickness; setting `aria-orientation="vertical"` flips it to a full
- * block-axis, hairline-wide vertical line instead.
+ * Renders a static hairline divider between two groups of content, carrying
+ * the `separator` role and defaulting to a full-width horizontal line;
+ * setting `aria-orientation="vertical"` flips it to a full-height vertical line.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the divider's markup.

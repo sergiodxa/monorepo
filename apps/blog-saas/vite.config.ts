@@ -1,7 +1,9 @@
 /**
  * Vite build configuration for the blog-saas worker: registers the Cloudflare plugin,
  * resolves tsconfig path aliases, and defines a `client` build environment that bundles
- * the browser hydration entry so server-rendered `remix/ui` pages hydrate.
+ * the browser hydration entry so server-rendered `remix/ui` pages hydrate. The
+ * `@cloudflare/vite-plugin` detects this environment and serves the bundle through the
+ * `ASSETS` binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,10 +21,6 @@ export default defineConfig({
 
 	resolve: { tsconfigPaths: true },
 
-	// The `client` build environment bundles `bootstrap/browser.ts` so
-	// server-rendered `remix/ui` pages hydrate.
-	// The `@cloudflare/vite-plugin` detects this environment, emits the bundle,
-	// and wires the deployed worker to serve it (via the `ASSETS` binding).
 	environments: {
 		client: {
 			build: {

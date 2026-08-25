@@ -53,16 +53,15 @@ const DEFAULT_PANEL_ROLE = "tabpanel";
 
 /**
  * {@link Tabs.List}'s own inter-tab gap, applied through `hstack({ gap:
- * LIST_GAP })`. Reused as-is when computing a controlled `activeIndex`'s
- * indicator offset (see {@link tabIndicatorMix}), so the two stay in sync by
- * construction instead of by a duplicated literal.
+ * LIST_GAP })` and reused when computing a controlled `activeIndex`'s
+ * indicator offset (see {@link tabIndicatorMix}), keeping the two in sync.
  */
 const LIST_GAP: SpacingValue = 1;
 
 /**
  * Default {@link Tabs.PanelProps.tabIndex}, applied through {@link attrs}
- * unless a consumer supplies its own, so the panel's content is reachable by
- * moving focus straight into it rather than tabbing through {@link Tabs.List} first.
+ * unless a consumer supplies its own, so a keyboard user can move focus
+ * straight into the panel's content after activating a tab.
  */
 const DEFAULT_PANEL_TAB_INDEX = 0;
 
@@ -80,7 +79,7 @@ export namespace Tabs {
 	/**
 	 * Value {@link Tabs} stores in component context so every
 	 * {@link Tabs.List} and {@link Tabs.Tab} nested inside mirrors the same
-	 * orientation onto themselves without a consumer repeating it.
+	 * orientation automatically.
 	 */
 	export interface Context {
 		/** The root's resolved layout axis. */
@@ -100,40 +99,24 @@ export namespace Tabs {
 	 */
 	export interface ListProps extends TagProps<"div"> {
 		/**
-		 * Index of the currently active tab, for a tab bar with no
-		 * client-side measurement of the active {@link Tabs.Tab}'s bounding
-		 * box available — e.g. a link-based tab bar where each tab is a real
-		 * navigation and the active one is known from the current route
-		 * server-side, not from tracked selection state. When given together
-		 * with `tabSize`, {@link Tabs.List} computes and sets its own
-		 * `--ui-tab-indicator-*` custom properties from them directly,
-		 * instead of leaving those properties at their resting fallback for
-		 * something else (a future client-measured behavior) to set. Omit
-		 * both props to keep today's default: the indicator stays at its
-		 * resting, invisible fallback until something else sets those
-		 * custom properties — unchanged from before this prop existed.
+		 * Index of the currently active tab, for a route-driven tab bar with
+		 * no client-side measurement of the active tab's bounds. Given with
+		 * `tabSize`, {@link Tabs.List} computes its own indicator position.
 		 */
 		activeIndex?: number;
 
 		/**
 		 * Every {@link Tabs.Tab}'s fixed size along the enclosing
-		 * {@link Tabs}'s layout axis (inline-size when horizontal, block-size
-		 * when vertical) — required alongside `activeIndex`, since a
-		 * controlled index alone doesn't say how far apart the tabs actually
-		 * sit. A number resolves against the spacing scale, same as every
-		 * other sizing prop in this package; a raw CSS length string
-		 * (`"110px"`) passes through unchanged — most callers with a fixed
-		 * pixel-width tab bar want the latter. Ignored unless `activeIndex`
-		 * is also given.
+		 * {@link Tabs}'s layout axis, required alongside `activeIndex` since
+		 * the indicator's offset depends on how far apart the tabs sit.
 		 */
 		tabSize?: SizeValue;
 	}
 
 	/**
-	 * Props accepted by {@link Tabs.Tab}. A type alias rather than an
-	 * interface, since the native anchor props already encode the
-	 * relationship between `href` and `role` as a union; `href` is narrowed
-	 * to required here, since a tab that goes nowhere isn't a link-mode tab.
+	 * Props accepted by {@link Tabs.Tab}. A type alias, since the native
+	 * anchor props already encode `href`/`role` as a union; `href` is
+	 * narrowed to required, since every tab is link-mode and needs one.
 	 */
 	export type TabProps = TagProps<"a"> & {
 		/** The page this tab navigates to. */
@@ -153,11 +136,8 @@ export namespace Tabs {
 
 /**
  * Renders the root host: a plain `<div>` stacking {@link Tabs.List} above
- * {@link Tabs.Panels} by default, switching to a side-by-side row when
- * `orientation` is `"vertical"`. The resolved axis is shared through
- * component context, so every {@link Tabs.List} and {@link Tabs.Tab} nested
- * inside mirrors it onto its own `data-orientation` attribute and switches
- * its own layout and border sides from that, without reading an ancestor.
+ * {@link Tabs.Panels}, switching to a side-by-side row when `orientation`
+ * is `"vertical"` and sharing that axis through component context.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link Tabs.Context}.
  * @returns The render function producing the root's markup.
@@ -201,16 +181,8 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
 
 /**
  * Computes the `--ui-tab-indicator-*` custom properties {@link Tabs.List}'s
- * own sliding indicator reads, for a controlled `activeIndex` with no
- * client-side measurement available — e.g. a link-based tab bar rendering
- * server-controlled active state, with no bounding box to measure from since
- * there's no client behavior tracking selection at all. Every
- * {@link Tabs.Tab} is assumed to share one fixed `tabSize` along `orientation`'s
- * axis and to sit `LIST_GAP` apart (the same gap {@link Tabs.List} lays them
- * out with via `hstack`), so the active tab's leading edge is `activeIndex`
- * tab-and-gap widths from the start — the same offset a real flex layout of
- * equal-width, evenly gapped items produces, computed here instead of read
- * back from one.
+ * sliding indicator reads for a controlled `activeIndex`. Assumes every
+ * {@link Tabs.Tab} shares one fixed `tabSize` and sits `LIST_GAP` apart.
  *
  * @param orientation The enclosing {@link Tabs}'s layout axis.
  * @param activeIndex Index of the active tab among its siblings.
@@ -242,16 +214,8 @@ export function tabIndicatorMix(
 
 /**
  * Renders the tab strip: a `role="tablist"` host laying {@link Tabs.Tab}
- * links out in a row with a shared block-end border underlining the whole
- * strip, or in a column with a shared inline-end border alongside it when
- * the enclosing {@link Tabs}'s orientation is `"vertical"`. A sliding accent
- * bar sits over that shared border through an absolutely positioned
- * pseudo-element, its offset, length, and opacity read from
- * `--ui-tab-indicator-*` custom properties; every one of those falls back to
- * a resting, invisible state by default, ready for a behavior that tracks
- * the active tab to animate them — or, when `activeIndex`/`tabSize` are
- * given, computed internally instead (see {@link tabIndicatorMix}), for a
- * tab bar with no client-side measurement available at all.
+ * links out in a row, or a column when `orientation` is `"vertical"`, with
+ * a sliding accent bar reading `--ui-tab-indicator-*` custom properties.
  *
  * @param handle Runtime handle carrying the host's props.
  * @returns The render function producing the tab strip's markup.
@@ -262,8 +226,8 @@ export function tabIndicatorMix(
  * </Tabs.List>
  * @example
  * // A link-based, server-controlled tab bar: `activeIndex` comes from the
- * // current route, not from any client-tracked selection state, so
- * // `Tabs.List` computes its own sliding indicator with no client JS at all.
+ * // current route, so `Tabs.List` computes its own sliding indicator
+ * // directly from server-rendered state.
  * <Tabs.List aria-label={t("dashboard.tabs")} activeIndex={activeIndex} tabSize="110px">
  * 	<Tabs.Tab href="/dashboard/overview" aria-selected={activeIndex === 0}>
  * 		{t("dashboard.overview")}
@@ -327,15 +291,9 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 };
 
 /**
- * Renders a single tab: a native `<a>` carrying the `tab` role, styled to
- * read as part of the strip rather than as body copy, its own block-end (or,
- * in a vertical strip, inline-end) border kept transparent to reserve the
- * space {@link Tabs.List}'s sliding indicator occupies. Set
- * `aria-selected="true"` on whichever tab points at the page currently being
- * viewed to color it as active; set `aria-disabled="true"` to mute a tab
- * that shouldn't be followed, keeping in mind that only omitting or
- * neutralizing `href` actually stops the navigation, since a plain link has
- * no native disabled state.
+ * Renders a single tab: a native `<a>` carrying the `tab` role, its own
+ * border edge kept transparent to reserve space for the sliding indicator.
+ * Omitting `href` disables navigation; pair it with `aria-disabled="true"`.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the tab's markup.
@@ -406,9 +364,8 @@ Tabs.Panels = function TabsPanels(handle: Handle<Tabs.PanelsProps>) {
 
 /**
  * Renders the current tab's content: a padded `<div>` carrying the
- * `tabpanel` role, focusable by default so a keyboard user can jump straight
- * into it after activating a tab; that focus shows a keyboard
- * focus-visible ring.
+ * `tabpanel` role, focusable by default so a keyboard user can jump
+ * straight into it after activating a tab, with a focus-visible ring.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the panel's markup.

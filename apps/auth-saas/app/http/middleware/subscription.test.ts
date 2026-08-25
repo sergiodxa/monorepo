@@ -1,10 +1,8 @@
 /**
- * Behavioural tests for the subscription middleware: the billing-gate decision it
- * makes from a tenant's subscription status (active/trialing pass, past_due passes
- * with a warning flag, canceled/unpaid/incomplete block and redirect to billing),
- * the platform/internal-tenant exemptions, and the missing-context guard. The
- * `Database` is an injected fake resolved through a real service-container scope; no
- * network or SQL runs.
+ * Behavioural tests for the subscription middleware: the billing-gate decision from a
+ * tenant's subscription status (active/trialing pass, past_due warns, canceled/unpaid/
+ * incomplete redirect to billing), the platform/internal-tenant exemptions, and the
+ * missing-context guard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +56,6 @@ async function runWithSubscription(
 describe("subscription middleware — exemptions", () => {
 	test("exempts the platform tenant without a database lookup", async () => {
 		let container = new ServiceContainer();
-		// No Database registered: resolving one would throw, proving no lookup happens.
 		let next = passthroughNext();
 
 		let response = await container.scope(() =>

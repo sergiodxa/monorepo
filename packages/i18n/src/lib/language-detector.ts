@@ -20,9 +20,9 @@ export type DetectionMethod = "searchParams" | "cookie" | "session" | "header" |
 export interface LanguageDetectorOptions {
 	/**
 	 * The languages the application supports. Detected values are matched
-	 * against this list (strictly first, then loosely by primary code), so the
-	 * detector never returns a language the application cannot serve. Keep it
-	 * in sync with the `supportedLngs` i18next option.
+	 * against this list (strict, then loose by primary code) so the detector
+	 * never returns an unsupported language. Keep in sync with the
+	 * `supportedLngs` i18next option.
 	 */
 	supportedLanguages: string[];
 	/**
@@ -59,8 +59,8 @@ export interface LanguageDetectorOptions {
 	/**
 	 * The order in which detection methods run. The first supported match wins;
 	 * methods missing their required option are skipped. Defaults to
-	 * `searchParams`, `cookie`, `session`, `header`, with `custom` prepended
-	 * when `findLocale` is provided.
+	 * `searchParams`, `cookie`, `session`, `header`, with `custom` prepended when
+	 * `findLocale` is provided.
 	 */
 	order?: DetectionMethod[];
 	/**
@@ -72,11 +72,9 @@ export interface LanguageDetectorOptions {
 }
 
 /**
- * Detects the user's preferred language fully server-side from a Request,
- * using search params, a cookie, the session, the Accept-Language header, or
- * custom logic. Every candidate is validated against the supported languages,
- * and the fallback language is returned when nothing matches, so the result is
- * always a language the application can serve.
+ * Detects the user's preferred language server-side from a Request, probing
+ * search params, a cookie, the session, the Accept-Language header, or custom
+ * logic; every candidate is validated so the result is always a supported language.
  */
 export class LanguageDetector {
 	/**
@@ -89,8 +87,8 @@ export class LanguageDetector {
 	 * method in order and returning the first supported match.
 	 *
 	 * @param request - The incoming request.
-	 * @param session - A live session for the request; when provided, the
-	 * `session` method reads it directly instead of loading from storage.
+	 * @param session - A live session for the request, read directly by the
+	 * `session` method when provided.
 	 * @returns The detected language, or the fallback language when no method matches.
 	 * @example let locale = await detector.detect(request);
 	 */
@@ -121,7 +119,6 @@ export class LanguageDetector {
 		return order;
 	}
 
-	/** Reads the language from the configured search parameter, if present. */
 	private fromSearchParams(request: Request): string | null {
 		let url = new URL(request.url);
 		let value = url.searchParams.get(this.options.searchParamKey ?? "lng");
@@ -129,7 +126,6 @@ export class LanguageDetector {
 		return this.fromSupported(value);
 	}
 
-	/** Reads the language from the configured cookie, if any. */
 	private async fromCookie(request: Request): Promise<string | null> {
 		if (!this.options.cookie) return null;
 
@@ -139,14 +135,12 @@ export class LanguageDetector {
 		return this.fromSupported(value);
 	}
 
-	/** Reads the language from a live session provided by the caller. */
 	private fromSession(session: Session): string | null {
 		let value = session.get(this.options.sessionKey ?? "lng");
 		if (typeof value !== "string" || !value) return null;
 		return this.fromSupported(value);
 	}
 
-	/** Loads the session from storage using the session cookie and reads the language. */
 	private async fromSessionStorage(request: Request): Promise<string | null> {
 		if (!this.options.sessionCookie || !this.options.sessionStorage) return null;
 
@@ -164,7 +158,6 @@ export class LanguageDetector {
 		return this.fromSupported(request.headers.get("Accept-Language"));
 	}
 
-	/** Resolves the language through the configured `findLocale` lookup, if any. */
 	private async fromCustom(request: Request): Promise<string | null> {
 		if (!this.options.findLocale) return null;
 

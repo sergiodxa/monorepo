@@ -1,15 +1,11 @@
 /**
- * The page a verification link lands on while its token is still unspent: the heading, one
- * sentence, and the single button whose submission is what actually confirms the address.
+ * The page a verification link lands on while its token is still unspent: a heading, one
+ * sentence, and the button whose submission actually confirms the address. Opening a link
+ * is not a decision — mailbox scanners and link checkers follow URLs too — so only the
+ * button press confirms, with the token carried as a hidden form field.
  *
- * The button exists because opening a link is not a decision anybody made. A mailbox is
- * read by scanners and link checkers as well as by its owner, and every one of them
- * follows the URL; only a person presses this. The token travels as a hidden field so the
- * request that spends it carries it in a body rather than in a URL.
- *
- * The address the token was issued for is never shown: the link is enough to reach this
- * page, and repeating the mailbox on it would tell whoever holds the link whose account it
- * belongs to.
+ * The address the token was issued for stays off the page: the link alone is enough to
+ * reach it, and showing the mailbox here would expose whose account the link belongs to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

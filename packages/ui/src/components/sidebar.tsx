@@ -1,13 +1,9 @@
 /**
  * An application shell's primary navigation rail, composed from a layout
- * root, the collapsible rail itself, a main-content inset, and a family of
+ * root, a collapsible rail, a main-content inset, and a family of
  * group/menu/item parts for organizing links. Collapsing rides a single
- * checkbox's native `:checked` state instead of tracked JavaScript state, a
- * mobile-width drawer variant rides {@link Dialog}, and the scrollable
- * regions ride {@link ScrollArea}'s viewport — so the whole shell works with
- * zero library JavaScript, and an app only adds behavior (for instance,
- * mirroring the collapse state into a cookie so the next page loads already
- * collapsed) by attaching its own mixin to the pieces below.
+ * checkbox's native `:checked` state, so the whole shell works with zero
+ * library JavaScript.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -122,25 +118,22 @@ const DEFAULT_SHOW_ICON = false;
 
 /**
  * Named container {@link Sidebar.Provider} declares on its own host, so
- * {@link Sidebar} and {@link Sidebar.Rail} can query the shell's own overall
- * width to decide whether there's room for a persistent rail, regardless of
- * how deep inside the page the shell happens to sit.
+ * {@link Sidebar} and {@link Sidebar.Rail} can query the shell's overall
+ * width for room to show a persistent rail, regardless of nesting depth.
  */
 const PROVIDER_CONTAINER_NAME = "ui-sidebar-provider";
 
 /**
  * Named container {@link Sidebar.Inset} declares on its own host, so content
  * rendered inside it — a Card, a Table, anything sized by its surroundings —
- * responds to the inset's own available width (which grows and shrinks as
- * the rail expands, collapses, or slides away) instead of the page's.
+ * responds to the inset's own available width as the rail expands or collapses.
  */
 const INSET_CONTAINER_NAME = "ui-sidebar-inset";
 
 /**
  * Container query matching a shell wide enough to host the persistent rail
- * alongside its inset. Below this width, {@link Sidebar}'s `"icon"` and
- * `"offcanvas"` collapse modes step aside entirely in favor of
- * {@link Sidebar.MobileNav}.
+ * alongside its inset; below this width, {@link Sidebar}'s `"icon"` and
+ * `"offcanvas"` collapse modes step aside for {@link Sidebar.MobileNav}.
  */
 const WIDE_SHELL_QUERY = `@container ${PROVIDER_CONTAINER_NAME} (min-width: 48rem)`;
 
@@ -153,9 +146,8 @@ const TOGGLE_CHECKED_SELECTOR = '[data-slot="toggle"]:checked';
 
 /**
  * Resolves the `aria-current` value an anchor-based nav part renders with:
- * an explicit `aria-current` always wins, and a `current`/`active` shorthand
- * of `true` falls back to `"page"` — the value assistive technology treats
- * as "the page currently open" — when nothing more specific was supplied.
+ * an explicit `aria-current` always wins, and a `current`/`active`
+ * shorthand of `true` falls back to `"page"` when nothing else was given.
  */
 function resolveAriaCurrent(
 	current: boolean | undefined,
@@ -170,30 +162,22 @@ function resolveAriaCurrent(
 export namespace Sidebar {
 	/**
 	 * Visual treatment the rail renders with: `"sidebar"` sits flush against
-	 * its edge of the shell, `"floating"` insets itself with a margin, a
-	 * rounded, shadowed panel look, and — where the platform supports it and
-	 * the user hasn't asked for reduced transparency — a blurred backdrop,
-	 * and `"inset"` renders that same rounded, shadowed panel look without
-	 * the transparency.
+	 * its edge, `"floating"` insets itself with a margin, a rounded, shadowed
+	 * panel, and a blurred backdrop; `"inset"` renders the same panel without blur.
 	 */
 	export type Variant = "sidebar" | "floating" | "inset";
 
 	/**
-	 * How the rail collapses: `"none"` never collapses and always renders at
-	 * full width regardless of the shell's own size, `"icon"` narrows to an
-	 * icon-only rail, and `"offcanvas"` narrows all the way to nothing. Every
-	 * mode but `"none"` steps aside for {@link Sidebar.MobileNav} once the
-	 * shell narrows past {@link WIDE_SHELL_QUERY}.
+	 * How the rail collapses: `"none"` always renders at full width, `"icon"`
+	 * narrows to an icon-only rail, and `"offcanvas"` narrows to nothing. Every
+	 * mode but `"none"` yields to {@link Sidebar.MobileNav} on narrow shells.
 	 */
 	export type Collapsible = "none" | "offcanvas" | "icon";
 
 	/**
 	 * Physical edge of the shell the rail docks against and, for
 	 * {@link Sidebar.MobileNav}, slides in from. `"left"` and `"right"` name
-	 * that edge regardless of `dir` — the same fixed side a docked panel
-	 * keeps attaching to under any reading direction, matching how an
-	 * edge-docked drawer stays pinned to one physical side of the viewport
-	 * rather than mirroring for reading direction.
+	 * that edge regardless of `dir`, staying pinned to one physical side.
 	 */
 	export type Side = "left" | "right";
 
@@ -212,10 +196,7 @@ export namespace Sidebar {
 	/**
 	 * Every native `<div>` attribute, plus the `mix` passthrough. Establishes
 	 * the shell's row layout — {@link Sidebar} beside {@link Sidebar.Inset} —
-	 * the {@link PROVIDER_CONTAINER_NAME} named container both of them and
-	 * {@link Sidebar.Rail} query, and every collapse-driven rule keyed off
-	 * {@link Sidebar.Trigger}'s checkbox reaching `:checked` anywhere in this
-	 * subtree.
+	 * plus the {@link PROVIDER_CONTAINER_NAME} container and `:checked` collapse rules.
 	 */
 	export interface ProviderProps extends TagProps<"div"> {
 		/** {@link Sidebar} and {@link Sidebar.Inset}, in either order. */
@@ -265,11 +246,9 @@ export namespace Sidebar {
 	export interface NavProps extends TagProps<"nav"> {}
 
 	/**
-	 * Props accepted by {@link Sidebar.Item}. Built as an intersection rather
-	 * than an interface extension because the underlying anchor prop type is
-	 * a union keyed on `href` (the accessible-anchor contract restricts
-	 * `role` once `href` is present), which an `interface … extends` clause
-	 * cannot carry.
+	 * Props accepted by {@link Sidebar.Item}, built as an intersection because
+	 * the underlying anchor prop type is a union keyed on `href` — the
+	 * accessible-anchor contract restricts `role` once `href` is present.
 	 */
 	export type ItemProps = TagProps<"a"> & {
 		/** Destination the item navigates to. */
@@ -341,9 +320,8 @@ export namespace Sidebar {
 	export interface MenuActionProps extends TagProps<"button"> {
 		/**
 		 * Whether the control stays invisible until its ancestor
-		 * {@link Sidebar.MenuItem} is hovered or contains focus. Defaults to
-		 * {@link DEFAULT_SHOW_ON_HOVER}; set to `false` to keep it always
-		 * visible, for an action important enough to show at rest.
+		 * {@link Sidebar.MenuItem} is hovered or focused. Defaults to
+		 * {@link DEFAULT_SHOW_ON_HOVER}; set `false` to keep it always visible.
 		 */
 		showOnHover?: boolean;
 	}
@@ -391,10 +369,9 @@ export namespace Sidebar {
 	};
 
 	/**
-	 * Props accepted by {@link Sidebar.Rail}. Every native `<label>` attribute
-	 * except `htmlFor`, which this component narrows to required — it's the
-	 * id of {@link Sidebar.Trigger}'s own checkbox, the control this rail
-	 * mirrors.
+	 * Props accepted by {@link Sidebar.Rail}: every native `<label>` attribute
+	 * except `htmlFor`, narrowed to required since it names the id of
+	 * {@link Sidebar.Trigger}'s own checkbox, the control this rail mirrors.
 	 */
 	export interface RailProps extends Omit<TagProps<"label">, "htmlFor"> {
 		/** Id of the {@link Sidebar.Trigger} checkbox this rail toggles. */
@@ -402,10 +379,9 @@ export namespace Sidebar {
 	}
 
 	/**
-	 * Props accepted by {@link Sidebar.Trigger}. Every native `<input>`
-	 * attribute except `type` and `role`, which the platform's checkbox
-	 * semantics already fix, so `id`, `checked`, `defaultChecked`, and
-	 * `disabled` all work exactly as they would on a bare checkbox.
+	 * Props accepted by {@link Sidebar.Trigger}: every native `<input>`
+	 * attribute except `type` and `role`, fixed by the platform's checkbox
+	 * semantics, so `id`, `checked`, `defaultChecked`, and `disabled` all work.
 	 */
 	export interface TriggerProps extends Omit<TagProps<"input">, "type" | "role"> {
 		/**
@@ -427,26 +403,9 @@ export namespace Sidebar {
 }
 
 /**
- * Renders the rail itself: a native `<aside>` filling the shell's block size,
- * sized through the `data-variant`, `data-collapsible`, and `data-side`
- * attribute contract. `"sidebar"` sits flush with a single divider border on
- * the edge facing {@link Sidebar.Inset}; `"floating"` and `"inset"` both
- * render a rounded, shadowed panel look, with `"floating"` additionally
- * insetting itself by a margin and, where the platform supports it and the
- * user hasn't asked for reduced transparency, blurring what's behind it.
- * `side` picks which physical edge the divider border renders against —
- * mirrored by {@link Sidebar.Rail} — padded on that same physical edge with
- * `env(safe-area-inset-*)` so the rail clears a device's notch or rounded
- * corner when the shell spans the full display.
- *
- * Every collapse-driven layout change — narrowing to an icon-only rail,
- * sliding fully off its edge, hiding in favor of {@link Sidebar.MobileNav}
- * once {@link WIDE_SHELL_QUERY} no longer matches — is declared here as
- * rules keyed off the ancestor {@link Sidebar.Provider}'s own `:has()` state
- * and the {@link PROVIDER_CONTAINER_NAME} container it establishes, since
- * this host's `data-collapsible` and `data-side` attributes are what those
- * rules match against. The `"none"` mode matches neither rule set, so it
- * renders at a permanent full width regardless of the shell's own size.
+ * Renders the rail itself: a native `<aside>` sized and styled through its
+ * `data-variant`, `data-collapsible`, and `data-side` attributes, with
+ * every collapse rule keyed off {@link Sidebar.Provider}'s `:has()` state.
  *
  * @param handle Runtime handle carrying the host `<aside>`'s props.
  * @returns The render function producing the rail's markup.
@@ -537,18 +496,8 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 
 /**
  * Renders the shell's layout root: a flex row placing {@link Sidebar} beside
- * {@link Sidebar.Inset}, filling at least the full dynamic viewport block
- * size. Declares the {@link PROVIDER_CONTAINER_NAME} named container both of
- * those parts and {@link Sidebar.Rail} query to find out how much room the
- * shell has, and hosts every rule driving the collapse itself: wherever
- * {@link Sidebar.Trigger}'s checkbox reaches `:checked` anywhere in this
- * subtree — inside {@link Sidebar} itself, inside {@link Sidebar.Inset}, or
- * anywhere else a consumer places it — the matching descendant rules apply,
- * regardless of how deep the checkbox sits. No JavaScript observes or
- * mirrors that state anywhere in this module; a consumer wanting it to
- * survive a reload attaches its own mixin to {@link Sidebar.Trigger} that
- * writes the checkbox's `checked` value into a cookie the next page's markup
- * already reflects.
+ * {@link Sidebar.Inset}, hosting every collapse rule keyed purely off
+ * {@link Sidebar.Trigger}'s checkbox reaching `:checked` in this subtree.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the shell's markup.
@@ -620,15 +569,9 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 };
 
 /**
- * Renders the docked, edge-to-edge mobile substitute for {@link Sidebar}: the
- * same nav content re-composed inside {@link Dialog}, docked to `side` and
- * sliding in from it, sized to {@link Sidebar}'s own mobile width and padded
- * on every edge with `env(safe-area-inset-*)` since a drawer this size
- * commonly spans a device's full display. A consumer opens it the same way
- * any {@link Dialog} opens — a `<button commandfor={id} command="show-modal">`
- * elsewhere on the page — since Invoker Commands, not a viewport check, are
- * what decide when the mobile nav is showing; a container query only ever
- * governs {@link Sidebar}'s own persistent rendering, never this drawer's.
+ * Renders the docked, edge-to-edge mobile substitute for {@link Sidebar}:
+ * {@link Sidebar}'s nav content re-composed inside {@link Dialog}, docked
+ * to `side` and opened via Invoker Commands, not a viewport check.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props, plus `side`.
  * @returns The render function producing the drawer's markup.
@@ -690,12 +633,9 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 };
 
 /**
- * Renders the rail's header slot: a `<header>` laying out its children in a
- * centered row, block-sized to a fixed height with a divider border below
- * it, padded on its block-start edge with `env(safe-area-inset-top)` in
- * addition to its own padding for when the rail spans a device's full
- * display. Compose {@link Sidebar.Trigger}, a logo, or a workspace switcher
- * as its children.
+ * Renders the rail's header slot: a `<header>` laying out its children in
+ * a centered row, block-sized to a fixed height with a divider border
+ * below it and safe-area padding on its block-start edge.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the header slot's markup.
@@ -739,10 +679,8 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 
 /**
  * Renders the rail's own scrollable nav region: {@link ScrollArea.Viewport}
- * laid out as a padded, gap-separated column, so its content — typically one
- * or more {@link Sidebar.Group}s — scrolls independently of
- * {@link Sidebar.Header} and {@link Sidebar.Footer} once it overflows the
- * rail's own block size.
+ * laid out as a padded, gap-separated column that scrolls independently of
+ * {@link Sidebar.Header} and {@link Sidebar.Footer} once it overflows.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the content region's markup.
@@ -779,11 +717,9 @@ Sidebar.Content = function SidebarContent(handle: Handle<Sidebar.ContentProps>) 
 };
 
 /**
- * Renders the rail's footer slot: a `<footer>` laying out its children in a
- * centered row with a divider border above it, padded on its block-end edge
- * with `env(safe-area-inset-bottom)` in addition to its own padding for when
- * the rail spans a device's full display. Compose an account switcher or a
- * settings link as its children.
+ * Renders the rail's footer slot: a `<footer>` laying out its children in
+ * a centered row with a divider border above it and safe-area padding on
+ * its block-end edge.
  *
  * @param handle Runtime handle carrying the host `<footer>`'s props.
  * @returns The render function producing the footer slot's markup.
@@ -826,9 +762,8 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 
 /**
  * Renders a flat navigation list: a `<nav>` stacking its {@link Sidebar.Item}
- * children in a column with a small gap, an alternative to
- * {@link Sidebar.Menu}'s group-oriented structure for a rail that just needs
- * a simple, ungrouped set of links.
+ * children in a column with a small gap, suited to a rail with a simple,
+ * ungrouped set of links.
  *
  * @param handle Runtime handle carrying the host `<nav>`'s props.
  * @returns The render function producing the list's markup.
@@ -848,12 +783,8 @@ Sidebar.Nav = function SidebarNav(handle: Handle<Sidebar.NavProps>) {
 
 /**
  * Renders a single row inside {@link Sidebar.Nav}: a native `<a>` colored
- * through the `data-color` attribute contract, filled and tinted only once
- * it's current — reading `aria-current` directly, the same way
- * {@link Sidebar.MenuLink} does — rather than at rest, where every item
- * renders in the same neutral tone regardless of `color`. A keyboard
- * focus-visible ring always reads in the item's own semantic color, current
- * or not.
+ * through `data-color`, tinted once `aria-current` is set, matching
+ * {@link Sidebar.MenuLink}; its focus ring always reads in that same color.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the row's markup.
@@ -959,9 +890,7 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 /**
  * Renders a related cluster of {@link Sidebar.Menu} items: a `<section>`
  * stacking its children in a column, gaining a divider border and extra
- * space above itself once it follows another {@link Sidebar.Group} sibling,
- * so groups read as visually separated without either one needing to know
- * about the other.
+ * space above itself whenever it follows another {@link Sidebar.Group}.
  *
  * @param handle Runtime handle carrying the host `<section>`'s props.
  * @returns The render function producing the group's markup.
@@ -1007,12 +936,8 @@ Sidebar.Group = function SidebarGroup(handle: Handle<Sidebar.GroupProps>) {
 
 /**
  * Renders {@link Sidebar.Group}'s label: a small, muted, uppercase heading
- * row. Once the ancestor {@link Sidebar} collapses to its icon-only rail,
- * {@link Sidebar.Provider} clips this label down to nothing visually while
- * keeping it in the accessibility tree, so the group it names stays
- * announced even though its text disappears from view. Compose
- * {@link Sidebar.GroupAction} as a trailing child for a label row that also
- * carries an action.
+ * row, visually clipped once the ancestor {@link Sidebar} collapses to
+ * icon-only, while staying announced to assistive technology.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the label's markup.
@@ -1048,11 +973,9 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 };
 
 /**
- * Renders a small icon-only action button anchored to {@link Sidebar.GroupLabel}'s
- * trailing edge — adding a new item to the group, for instance. In dev mode,
- * an action whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * Renders a small icon-only action button anchored to
+ * {@link Sidebar.GroupLabel}'s trailing edge. In dev mode, an action with no
+ * plain text and no `aria-label`/`aria-labelledby` logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the action's markup.
@@ -1188,12 +1111,8 @@ Sidebar.MenuItem = function SidebarMenuItem(handle: Handle<Sidebar.MenuItemProps
 
 /**
  * Renders a native `<button>` row for an in-page action inside
- * {@link Sidebar.Menu} — one that doesn't navigate, unlike
- * {@link Sidebar.MenuLink}. Sized through `data-size`, and marked as the
- * current selection through `active`, independent of any navigation state.
- * The row's first direct `<svg>` (or `[data-slot="icon"]`) child is sized and
- * muted as a leading icon; a following `<span>` truncates instead of
- * wrapping, so a long label never grows the rail.
+ * {@link Sidebar.Menu}, sized through `data-size` and marked current via
+ * `active`; its leading icon is muted, and a trailing label truncates.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the row's markup.
@@ -1228,9 +1147,7 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
 /**
  * Renders a native `<a>` row for navigation inside {@link Sidebar.Menu},
  * visually identical to {@link Sidebar.MenuButton}. `active` sets
- * `aria-current="page"` when `aria-current` is otherwise unset, and the
- * row's current-page treatment reads `aria-current` directly rather than a
- * separate tracked flag, matching {@link Sidebar.Item}.
+ * `aria-current="page"` when unset, with styling reading that attribute directly.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the row's markup.
@@ -1331,10 +1248,8 @@ function menuRowMixins() {
 
 /**
  * Renders a small icon-only action anchored to {@link Sidebar.MenuItem}'s
- * trailing edge, invisible until `showOnHover` reveals it on hover or focus
- * within the row. In dev mode, an action whose content carries no plain text
- * and no `aria-label`/`aria-labelledby` logs a `console.warn`, since
- * assistive technology otherwise has no accessible name to announce for it.
+ * trailing edge, revealed by `showOnHover` on hover or focus within the row.
+ * In dev mode, an action with no accessible name logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the action's markup.
@@ -1396,9 +1311,8 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 
 /**
  * Renders a small count or status pill pinned to the trailing edge of a
- * {@link Sidebar.MenuButton} or {@link Sidebar.MenuLink} row. Hidden entirely
- * once the ancestor {@link Sidebar} collapses to its icon-only rail, since
- * there's no room left to show it.
+ * {@link Sidebar.MenuButton} or {@link Sidebar.MenuLink} row, hidden once
+ * the ancestor {@link Sidebar} collapses to its icon-only rail.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the pill's markup.
@@ -1437,11 +1351,7 @@ Sidebar.MenuBadge = function SidebarMenuBadge(handle: Handle<Sidebar.MenuBadgePr
 /**
  * Renders a static loading placeholder shaped like {@link Sidebar.MenuButton}:
  * an optional icon-shaped {@link Skeleton} block followed by a text-shaped
- * one. Neither block animates on its own — compose the `pulse()` or
- * `shimmer()` factory from the animation layer through `mix` (or the
- * `parts`-equivalent `style` override below) for a breathing or sweeping
- * loading cue. Vary the text block's `inlineSize` per row via `style` for a
- * staggered, more natural-looking loading list.
+ * one; compose `pulse()` or `shimmer()` through `mix` for a loading cue.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the placeholder's markup.
@@ -1488,9 +1398,8 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 
 /**
  * Renders a nested list of sub-rows beneath a {@link Sidebar.MenuItem}: a
- * `<ul>` indented from and bordered against the rail's inline-start edge.
- * Hidden entirely once the ancestor {@link Sidebar} collapses to its
- * icon-only rail, since a nested list has nowhere legible left to render.
+ * `<ul>` indented from and bordered against the rail's inline-start edge,
+ * hidden once the ancestor {@link Sidebar} collapses to its icon-only rail.
  *
  * @param handle Runtime handle carrying the host `<ul>`'s props.
  * @returns The render function producing the nested list's markup.
@@ -1546,8 +1455,7 @@ Sidebar.MenuSubItem = function SidebarMenuSubItem(handle: Handle<Sidebar.MenuSub
 /**
  * Renders a native `<button>` row for an in-page action inside
  * {@link Sidebar.MenuSub}, smaller and more muted than
- * {@link Sidebar.MenuButton}. Marked as the current selection through
- * `active`, independent of any navigation state.
+ * {@link Sidebar.MenuButton}, marked current through `active`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the row's markup.
@@ -1640,16 +1548,9 @@ function menuSubRowMixins() {
 }
 
 /**
- * Renders a thin drag-styled affordance running along {@link Sidebar}'s own
- * edge, mirroring {@link Sidebar.Trigger}'s checkbox through `htmlFor` — a
- * click anywhere along it toggles the same collapse state, the platform's
- * ordinary `<label>`/form-control association rather than anything tracked
- * here. Positioned against the physical edge matching the ancestor rail's
- * own `data-side`, and hidden below {@link WIDE_SHELL_QUERY}, since the rail
- * itself is already hidden there in favor of {@link Sidebar.MobileNav}.
- * Marked `aria-hidden`, since {@link Sidebar.Trigger}'s own checkbox is
- * already the control assistive technology and the keyboard reach — this
- * rail is a pointer-only convenience layered alongside it.
+ * Renders a thin drag-styled affordance along {@link Sidebar}'s own edge,
+ * toggling {@link Sidebar.Trigger}'s checkbox through a native `<label>`
+ * association; marked `aria-hidden` since that checkbox is the accessible control.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the rail's markup.
@@ -1701,15 +1602,9 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 };
 
 /**
- * Renders the collapse toggle: a native `<input type="checkbox">`, visually
- * hidden but focusable, wrapped in a `<label>` styled as an icon-only
- * button. Its `:checked` state is what every collapse rule in
- * {@link Sidebar.Provider} reads — checked means the rail is collapsed
- * (icon-only, or fully off its edge), unchecked is the default, fully
- * expanded rail. Since it's a real checkbox, it's reachable in Tab order and
- * toggles on Space with no script anywhere in the path; the visible button
- * shape reads its focus-visible and disabled state straight off that same
- * input through `:has()`.
+ * Renders the collapse toggle: a native, keyboard-reachable
+ * `<input type="checkbox">` wrapped in a button-styled `<label>`; its
+ * `:checked` state drives every collapse rule in {@link Sidebar.Provider}.
  *
  * @param handle Runtime handle carrying the host checkbox's props.
  * @returns The render function producing the toggle's markup.
@@ -1752,14 +1647,9 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 };
 
 /**
- * Renders the shell's main content region: {@link ScrollArea.Viewport} laid
- * out as a growing flex column, filling the space {@link Sidebar} doesn't
- * occupy inside {@link Sidebar.Provider}'s row and shrinking or growing
- * automatically as the rail collapses, slides away, or expands — no explicit
- * margin coordination is needed, since both sit in the same flex row.
- * Declares the {@link INSET_CONTAINER_NAME} named container, so page content
- * rendered inside it (a Card, a Table, a dashboard grid) sizes itself
- * against the inset's own available width instead of the page's.
+ * Renders the shell's main content region: {@link ScrollArea.Viewport}
+ * laid out as a growing flex column that resizes as {@link Sidebar}
+ * collapses or expands, declaring {@link INSET_CONTAINER_NAME} for nested sizing.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the inset's markup.

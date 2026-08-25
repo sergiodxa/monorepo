@@ -1,12 +1,11 @@
 /**
- * `/password/forgot` — the page that asks which address needs a recovery link, and the
- * submission that produces one. It is the only way back into an account whose password is
- * lost, and it is unauthenticated by definition.
+ * `/password/forgot` — the unauthenticated page that asks which address needs a recovery
+ * link, and the submission that produces one. It is the way back into an account whose
+ * password is lost.
  *
- * Its whole design is one rule: the answer must not depend on whether the address belongs
- * to a subject. Both cases run the same validation, claim the same per-address cooldown and
- * render the same page with the same status, and neither is reported in a log line — so the
- * form cannot be used to find out who has an account here.
+ * Every well-formed submission is answered identically whether or not the address belongs to
+ * a subject: same validation, same per-address cooldown, same page and status, and logs that
+ * record only that a request arrived.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,11 +60,9 @@ function requestPage(
 }
 
 /**
- * Renders the one page a well-formed submission ever produces.
- *
- * The same response for a registered address, an unregistered one and an address inside its
- * cooldown: same view, same `200`, same headers. It offers no way onward, because the only
- * one it could offer is trying again, which the cooldown would refuse.
+ * Renders the one page a well-formed submission ever produces: same view, same `200`, same
+ * headers for a registered address, an unregistered one, and an address inside its cooldown.
+ * It ends the flow, since the only step left is a retry the cooldown refuses.
  */
 function sentPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
@@ -93,13 +90,9 @@ export default createController(routes.password.forgot, {
 		},
 
 		/**
-		 * POST /password/forgot — issues a reset for the address when one exists, and answers
-		 * identically when it does not.
-		 *
-		 * The limiter is the same IP-keyed budget password attempts spend, which bounds how
-		 * many requests one caller can make. It is not the control that bounds mail: that is
-		 * the per-address cooldown inside {@link requestPasswordReset}, because this budget
-		 * is keyed by address of the caller and a distributed caller walks through it.
+		 * POST /password/forgot — issues a reset when the address exists and answers identically
+		 * otherwise; {@link requestPasswordReset} returns nothing, so there is no outcome here to
+		 * branch on. Its per-address cooldown bounds mail; the shared IP budget bounds callers.
 		 */
 		action: inject([Database, RateLimiters] as const, async (db, limiters) => {
 			let ctx = getContext();
@@ -109,7 +102,6 @@ export default createController(routes.password.forgot, {
 
 			let result = await validate(ctx.formData, ForgotPasswordSchema);
 			if (isFailure(result)) {
-				// No address in the payload, here or anywhere else on this path.
 				ctx.logger.info("password_reset_form_invalid");
 				return requestPage(
 					ctx,
@@ -118,8 +110,6 @@ export default createController(routes.password.forgot, {
 				);
 			}
 
-			// Returns nothing on purpose: there is no outcome to branch on, so this
-			// controller cannot leak one.
 			await requestPasswordReset(ctx, db, result.data.email);
 
 			return sentPage(ctx);

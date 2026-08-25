@@ -1,11 +1,8 @@
 import { isSuccess } from "@pkg/result";
 /**
- * Verifies the {@link TrainerEditor} as pure logic: field setters (id, name,
- * sprite, quotes) mutate the snapshot; party mutations add/remove/reorder members
- * and enforce the {@link MAX_PARTY_SIZE} cap; per-member setters change species,
- * clamp levels, and clean/cap move lists (dropping the field when empty). The
- * editor is exercised without a DOM, and its snapshots are checked to satisfy the
- * trainer schema so the in-progress state can never drift past what exports.
+ * Exercises the {@link TrainerEditor} as pure logic: setters, party mutations
+ * and the {@link MAX_PARTY_SIZE} cap. Snapshots are checked against the trainer
+ * schema, so in-progress state stays within what the export path accepts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

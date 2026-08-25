@@ -6,7 +6,7 @@ import { utility } from "../internal/descriptor";
 
 /**
  * Sets `display: contents`, removing the host element's own box so its
- * children lay out as if the host weren't there.
+ * children participate directly in the parent's layout.
  *
  * @example u.contents()
  * @example css({ display: "contents" })

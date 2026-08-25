@@ -8,17 +8,9 @@ import { resolveBox } from "../internal/box";
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies logical `scroll-padding` on a scroll container, insetting the region
- * a snap position or an anchor jump is allowed to land in. Without it, a
- * sticky header sitting inside the container covers the top of whatever the
- * scroll just brought into view — the reader arrives at a heading that is
- * hidden behind the bar. Give the container scroll-padding equal to the
- * header's height and the landing point clears it.
- *
- * Follows the same 1/2/4-value logical mapping as `p()`: one value applies all
- * sides; two values map to block then inline; four values map to block-start,
- * inline-end, block-end, and inline-start — see
- * [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
+ * Applies logical `scroll-padding` so a scroll snap position or anchor jump
+ * lands clear of a sticky header — set it to the header's height. Follows
+ * `p()`'s 1/2/4-value logical mapping; see [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
  *
  * @example u.scrollPadding(4)
  * @example css({ scrollPadding: "calc(var(--ui-spacing, 0.25rem) * 4)" })

@@ -1,11 +1,9 @@
 /**
  * Interactable overworld NPCs and the pure geometry of talking to them.
  *
- * The overworld ships with a few fixed characters — a healer, a shop, and a
- * trainer — placed on walkable tiles near the spawn. This module owns their
- * typed data and the tile math the scene needs (which NPC sits on a tile, and
- * which one the player is standing next to and facing), keeping that decision
- * logic out of the renderer so it can be unit-tested without a canvas.
+ * Owns the fixed healer, shop, and trainer characters and the tile math for
+ * who occupies a tile and who the player faces, kept separate from the
+ * renderer so it can be unit-tested without a canvas.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +15,7 @@ export type NpcRole = "healer" | "shop" | "trainer";
 
 /** One creature slot in a trainer's party, spawned fresh for each battle. */
 export interface TrainerPartyMember {
-	/** The species this party member is spawned from. */
 	speciesId: string;
-	/** The level this party member is spawned at. */
 	level: number;
 }
 
@@ -37,9 +33,7 @@ export interface TrainerData {
 export interface Npc {
 	/** Stable identifier, unique within a map. */
 	id: string;
-	/** Tile column the NPC occupies. */
 	x: number;
-	/** Tile row the NPC occupies. */
 	y: number;
 	/** Which behavior fires on interaction. */
 	role: NpcRole;
@@ -63,10 +57,8 @@ export function npcAt(npcs: readonly Npc[], x: number, y: number): Npc | null {
 /**
  * Returns the NPC the player is positioned to interact with, or null.
  *
- * Interaction requires the player to stand on the tile directly adjacent to the
- * NPC and face toward it, matching how talking works in the source games: the
- * tile one step ahead of the player, in their facing direction, must hold an
- * NPC.
+ * Requires the player to stand adjacent to the NPC and face toward it: the
+ * tile one step ahead in the facing direction must hold the NPC.
  */
 export function facingNpc(
 	npcs: readonly Npc[],

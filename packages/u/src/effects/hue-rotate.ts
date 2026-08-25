@@ -8,22 +8,9 @@ import { filterFunction } from "../internal/filter";
 import { angle } from "../internal/transform";
 
 /**
- * Applies a `filter: hue-rotate(...)`, rotating every pixel's hue around the
- * colour wheel by the given angle while leaving lightness and saturation
- * alone. The real use is recolouring a whole image or icon in one
- * declaration — tinting a single source asset per theme, or shifting a
- * decorative illustration to match a brand hue — without shipping a second
- * copy of the file.
- *
- * Because it rotates rather than negates, `u.hueRotate(180)` lands on the
- * opposite hue but keeps the original lightness, so a light image stays
- * light. That is the difference from `u.invert()`, which flips lightness too
- * and turns a light image dark.
- *
- * A bare number is degrees; a string passes through unchanged, for `turn`,
- * `rad`, or a `calc(...)`. Composes through the shared composite `filter`
- * declaration, so it combines with every other filter utility instead of
- * overwriting them.
+ * Applies a `filter: hue-rotate(...)`, rotating every pixel's hue by the given
+ * angle while preserving lightness and saturation, so one source asset can be
+ * retinted per theme. A bare number is degrees; strings pass through as-is.
  *
  * @example u.hueRotate()
  * @example css({ "--ui-filter-hue-rotate": "90deg", filter: "... hue-rotate(var(--ui-filter-hue-rotate, 0deg)) ..." })

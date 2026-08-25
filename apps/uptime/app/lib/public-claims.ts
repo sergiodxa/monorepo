@@ -1,20 +1,14 @@
 /**
- * Scanner behind the two rules every piece of public-facing copy in this app has to
- * follow: it must not restate a price as a literal, and it must not claim social proof
- * we cannot show. Given a module's source it reports each string literal that breaks
- * either one, with the offending text, so the guard beside it can name the line.
+ * Scanner behind the two rules public-facing copy must follow: no price restated
+ * as a literal, and no unsubstantiated social-proof claim. Given a module's
+ * source, it reports each offending string literal so the guard can name the line.
  *
- * Both rules are about a failure that type-checks and renders perfectly. A hardcoded
- * `"$5/mo includes 100,000 pings"` goes stale the day pricing changes and nothing points
- * at it — this app shipped exactly that string in a dead locale namespace for months. And
- * an invented customer count is the kind of copy that costs a monitoring product the only
- * thing it sells, while looking like ordinary marketing in review.
+ * Both catch a failure that type-checks and renders perfectly: a hardcoded price
+ * goes stale the moment pricing changes, and an invented customer count costs a
+ * monitoring product the credibility it sells.
  *
- * The scan is deliberately over string *literals* rather than rendered output, because at
- * runtime an interpolated figure and a hardcoded one are the same characters. Source text
- * is the only place the difference is still visible: copy that reads pricing through
- * `~/app/lib/pricing` or an i18n `{{placeholder}}` cannot go stale, and copy that spells
- * the number out can.
+ * The scan reads string literals directly: an interpolated figure and a
+ * hardcoded one render identically, so only source text still tells them apart.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,11 +39,9 @@ const QUOTE_LIMIT = 120;
 const PRICING_CONTEXT = /\b(ping|pings|month|months|\/mo\b|included|block|blocks|billed|bill)\b/i;
 
 /**
- * Figures the pricing model owns. Any of these inside a string that also carries
- * {@link PRICING_CONTEXT} is a restatement of something `~/app/lib/pricing` already knows.
- *
- * Written as digit-grouped and bare alternatives rather than one loose `\d` pattern so the
- * rule stays specific to *our* numbers: a page may say "every 5 minutes" freely.
+ * Figures the pricing model owns. Paired with {@link PRICING_CONTEXT}, a match
+ * flags a restatement of what `~/app/lib/pricing` already knows — written as
+ * digit-grouped and bare alternatives so the rule stays specific to *our* numbers.
  */
 const PRICING_FIGURES = /\b(100[,.]?000|10[,.]?000|100000|10000)\b/;
 
@@ -57,12 +49,9 @@ const PRICING_FIGURES = /\b(100[,.]?000|10[,.]?000|100000|10000)\b/;
 const CURRENCY_LITERAL = /\$\s?\d/;
 
 /**
- * Claims we cannot substantiate, as the phrasings they actually get written in.
- *
- * `guaranteed`/`SLA` are here rather than under a separate rule because the Terms decline
- * to offer one in as many words, so any marketing surface promising it contradicts the
- * contract. The Terms' own disclosure is exempted by the guard, not by this list — the
- * scanner has no idea which file it is reading.
+ * Unsubstantiated claims, as the phrasings they actually get written in.
+ * `guaranteed`/`SLA` sit here because the Terms decline to offer either, so any
+ * surface promising one contradicts the contract regardless of which page it's on.
  */
 const SOCIAL_PROOF = [
 	/\bthousands of\b/i,
@@ -80,12 +69,9 @@ const SOCIAL_PROOF = [
 ];
 
 /**
- * Every string literal in `source`, with the line it starts on.
- *
- * A hand-rolled walk rather than a regex, because the alternative has to decide whether a
- * quote inside a literal opens a new one, and it always gets that wrong on a possessive in
- * a template string. Comments are skipped: the rules are about copy a visitor can read,
- * and a docblock quoting `"$5/mo"` to explain the rule is not a violation of it.
+ * Every string literal in `source`, with the line it starts on. Walks the
+ * source by hand, since a regex misreads a possessive quote inside a template
+ * string as a closing one; comments are skipped as out of scope.
  */
 function stringLiterals(source: string): Array<{ line: number; text: string }> {
 	let literals: Array<{ line: number; text: string }> = [];
@@ -99,7 +85,6 @@ function stringLiterals(source: string): Array<{ line: number; text: string }> {
 			continue;
 		}
 
-		// Skip comments wholesale, both flavours.
 		if (char === "/" && source[i + 1] === "/") {
 			while (i < source.length && source[i] !== "\n") i++;
 			line++;
@@ -118,8 +103,6 @@ function stringLiterals(source: string): Array<{ line: number; text: string }> {
 
 		if (char !== '"' && char !== "'" && char !== "`") continue;
 
-		// Collect to the matching close, honouring escapes and counting newlines so the
-		// reported line stays right for multi-line template literals.
 		let quote = char;
 		let startLine = line;
 		let text = "";
@@ -144,11 +127,9 @@ function stringLiterals(source: string): Array<{ line: number; text: string }> {
 }
 
 /**
- * Reports every string literal in `source` that restates a price or claims social proof.
- *
- * A literal carrying an i18n placeholder or a template expression for the figure is not a
- * restatement, so `"{{price}}/month includes {{included}} pings"` passes: the numbers
- * arrive from the pricing module at render time and cannot drift.
+ * Reports every string literal in `source` that restates a price or claims
+ * social proof. A literal carrying an i18n placeholder for the figure passes,
+ * since the pricing module supplies that number fresh at render time.
  *
  * @param source - A module's full text.
  * @returns Violations in source order; empty when the module is clean.

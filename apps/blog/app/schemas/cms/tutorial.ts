@@ -1,8 +1,6 @@
 /**
- * Data-schema for validating CMS tutorial form submissions. `TutorialSchema`
- * defaults title, excerpt, and content when absent and treats slug, tags, and
- * published_at as optional. Exists to normalize and validate tutorial input
- * before it reaches the repository layer.
+ * Normalizes CMS tutorial form submissions so the repository layer receives
+ * validated input.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +9,8 @@
 import { defaulted, object, optional, string } from "remix/data-schema";
 
 /**
- * Validates CMS tutorial form payloads and applies safe defaults for authoring fields.
+ * A parsed tutorial always carries a title, excerpt, and content, so a draft
+ * can be saved from a partially filled form.
  */
 export const TutorialSchema = object({
 	title: defaulted(string(), "Untitled tutorial"),

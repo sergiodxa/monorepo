@@ -113,13 +113,15 @@ describe("tcpMonitorNew", () => {
 		expect(body).toContain("Host");
 	});
 
+	/**
+	 * The card is presentation only: whatever it looks like, the request it
+	 * produces has to keep matching what the create action already accepts.
+	 */
 	test("posts to the create-TCP-monitor action with every field", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await send(db, team, membership)).text();
 
-		// The card layout is presentation only: the request this form produces has to stay
-		// exactly what the create action already accepts.
 		expect(body).toContain('method="post"');
 		expect(body).toContain(
 			`action="${routes.actions.monitor.tcp.create.href({ team: team.slug })}"`,
@@ -127,7 +129,7 @@ describe("tcpMonitorNew", () => {
 		expect(body).toContain('name="name"');
 		expect(body).toContain('name="interval_seconds"');
 		expect(body).toContain('name="timeout_ms"');
-		// A new monitor is always created enabled, so the toggle is edit-only.
+		/** A new monitor is always created enabled, making the toggle edit-only. */
 		expect(body).not.toContain('name="is_enabled"');
 	});
 

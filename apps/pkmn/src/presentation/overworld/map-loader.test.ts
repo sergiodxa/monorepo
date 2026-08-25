@@ -84,7 +84,6 @@ test("loadMap rejects a collision grid of the wrong length", () => {
 });
 
 test("loadMap rejects a tile ref naming a tileset index that does not exist", () => {
-	// Cell packs tileset index 3 but the map declares only one tileset.
 	let result = loadMap(
 		validMapJson({
 			layers: {
@@ -109,7 +108,6 @@ test("the authored route-1.json loads through the validator with its migrated ev
 	expect(isSuccess(result)).toBe(true);
 	if (isFailure(result)) return;
 	expect(result.data.events).toHaveLength(3);
-	// Each migrated event is a single page carrying its trigger and command list.
 	let youngster = result.data.events.find((event) => event.id === "route-1-youngster")!;
 	expect(youngster.pages).toHaveLength(1);
 	expect(youngster.pages[0]!.trigger).toBe("action");
@@ -135,9 +133,9 @@ test("createSampleMap returns a 20x15 route with a walled border", () => {
 	let map = createSampleMap();
 	expect(map.width).toBe(20);
 	expect(map.height).toBe(15);
-	expect(map.collision[0]).toBe(Collision.Solid); // top-left corner
-	expect(map.collision[map.width - 1]).toBe(Collision.Solid); // top-right corner
-	expect(map.collision[(map.height - 1) * map.width]).toBe(Collision.Solid); // bottom-left
+	expect(map.collision[0]).toBe(Collision.Solid);
+	expect(map.collision[map.width - 1]).toBe(Collision.Solid);
+	expect(map.collision[(map.height - 1) * map.width]).toBe(Collision.Solid);
 });
 
 test("createSampleMap carves a walkable interior and a single encounter zone", () => {
@@ -171,15 +169,15 @@ test("inBounds accepts interior tiles and rejects tiles outside the grid", () =>
 });
 
 test("isBlocked blocks solid, water, and out-of-bounds tiles but allows plain ground", () => {
-	expect(SAMPLE.isBlocked(0, 0)).toBe(true); // solid border
-	expect(SAMPLE.isBlocked(4, 10)).toBe(true); // inside the pond (water)
-	expect(SAMPLE.isBlocked(-1, 5)).toBe(true); // out of bounds
-	expect(SAMPLE.isBlocked(5, 5)).toBe(false); // walkable spawn
+	expect(SAMPLE.isBlocked(0, 0)).toBe(true);
+	expect(SAMPLE.isBlocked(4, 10)).toBe(true);
+	expect(SAMPLE.isBlocked(-1, 5)).toBe(true);
+	expect(SAMPLE.isBlocked(5, 5)).toBe(false);
 });
 
 test("isEncounter is true only for tiles in the grass zone", () => {
-	expect(SAMPLE.isEncounter(9, 3)).toBe(true); // inside the zone
-	expect(SAMPLE.isEncounter(5, 5)).toBe(false); // plain ground
+	expect(SAMPLE.isEncounter(9, 3)).toBe(true);
+	expect(SAMPLE.isEncounter(5, 5)).toBe(false);
 });
 
 test("encounterRate returns the zone rate on grass and 0 elsewhere", () => {

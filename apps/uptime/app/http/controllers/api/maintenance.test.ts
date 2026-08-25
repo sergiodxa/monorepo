@@ -1,9 +1,9 @@
 /**
  * Tests the `/api/v1/maintenance` collection endpoints: listing and creating
  * maintenance windows for the authenticated team. Covers happy paths, validation
- * failures (missing name, `endsAt` before `startsAt`, a `monitorId` that doesn't
- * belong to the team), missing/invalid API keys, wrong-scope keys, and that the
- * index never leaks another team's windows.
+ * failures (a blank name, `endsAt` before `startsAt`, a `monitorId` scoped to another
+ * team), missing/invalid API keys, wrong-scope keys, and that the index returns only
+ * the calling team's windows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,10 +24,9 @@ import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` (imported by `./maintenance`) reads `env` from
- * `cloudflare:workers` at module load time, so it has to resolve under the test runner. These
- * endpoints touch no binding, and the empty strict env proves it: any read would throw by
- * the binding's name instead of quietly answering `undefined`.
+ * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
+ * must resolve under the test runner. An empty strict env proves these endpoints touch no
+ * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
@@ -330,7 +329,7 @@ describe("POST /api/v1/maintenance", () => {
 		expect(created?.monitor_id).toBeNull();
 	});
 
-	/** An HTTP monitor's id under a DNS type names nothing, so it is a 404 rather than stored. */
+	/** An HTTP monitor's id under a DNS type names nothing, so the request 404s. */
 	test("returns 404 when the monitorId doesn't exist in the monitorType's own table", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

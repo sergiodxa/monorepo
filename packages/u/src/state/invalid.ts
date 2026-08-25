@@ -7,8 +7,9 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { when } from "./when";
 
 /**
- * Sugar over `when('&:user-invalid, &[aria-invalid="true"]', input)`. A
- * selector wrapper only — it defines no visual invalid recipe of its own.
+ * Waits for user interaction before flagging a field invalid, matching
+ * `:user-invalid` alongside the ARIA fallback so validation only surfaces
+ * once it is meaningful to the person filling in the field.
  *
  * @example u.invalid(u.border("danger"))
  * @example css({ '&:user-invalid, &[aria-invalid="true"]': { borderColor: "..." } })

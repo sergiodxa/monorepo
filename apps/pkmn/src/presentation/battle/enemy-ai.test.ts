@@ -1,10 +1,7 @@
 /**
- * Verifies the deterministic enemy move-selection AI.
- *
- * These assertions pin down the choice policy the battle scene relies on: prefer
- * the highest expected damage (base power weighted by type effectiveness), skip
- * moves that are out of PP or disabled, break ties toward the lowest slot index,
- * and fall back gracefully when no damaging or usable move exists.
+ * Verifies the deterministic enemy move-selection AI: prefer the highest
+ * expected damage, skip moves out of PP or disabled, break ties toward the
+ * lowest slot index, and fall back gracefully when no move is usable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,7 +14,6 @@ import { Effectiveness } from "~/game/data/type";
 
 import { chooseEnemyAction, type EnemyMoveOption } from "./enemy-ai";
 
-/** A tiny type chart: fire is super effective on grass, weak on water. */
 let TYPE_CHART: Matchup<string> = {
 	fire: { grass: Effectiveness.SUPER, water: Effectiveness.WEAK },
 	water: { fire: Effectiveness.SUPER, grass: Effectiveness.WEAK },
@@ -50,8 +46,6 @@ test("prefers the higher-power move among usable damaging moves", () => {
 });
 
 test("weights damage by type effectiveness against the defender", () => {
-	// The weaker-power fire move (super effective, 60 * 2 = 120) beats the
-	// higher-power normal move (80 * 1 = 80) once effectiveness is applied.
 	let choice = chooseEnemyAction({
 		moves: [
 			move({ index: 0, power: 80, type: "normal" }),
@@ -109,7 +103,6 @@ test("falls back to any usable move when no damaging move is available", () => {
 		typeChart: TYPE_CHART,
 	});
 
-	// Slot 0 is empty; the first usable (status) move is slot 1.
 	expect(choice).toBe(1);
 });
 

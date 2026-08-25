@@ -1,23 +1,9 @@
 /**
- * The reads and the two writes behind the team digests: who is owed one, what a team's
- * monitors did over a window, and the stamp that says a digest went out.
+ * The reads and the two writes behind team digests: who is owed one, what a team's
+ * monitors did over a window, and the stamp that records delivery.
  *
- * A read model rather than a table. Nothing here owns storage of its own — the recipients
- * come from `memberships`, the report from `monitor_daily_stats`, and the schedule from two
- * columns on the membership row — and it exists as its own module because the digest is the
- * only caller of all three. Putting the four-table monitor union in `Team` would give teams a
- * method about email, and putting the membership schedule in `MonitorDailyStats` would give a
- * stats table a method about people.
- *
- * **The report is read from the daily roll-up, never from the result streams.** `AggregateDailyStatsJob`
- * already reduces every monitor's day to one row, across all four monitor types, so a digest
- * is a range scan over `monitor_daily_stats` — one query per team, whatever the window — where
- * going to the sources would mean an Analytics Engine query for HTTP plus three D1 scans per
- * team and a retention window that no longer reaches back seven days. It also means the digest
- * and the dashboard's uptime bars report the same numbers, because they read the same rows.
- *
- * The window is therefore whole UTC days ending yesterday, and both digests are scheduled after
- * the roll-up that writes them (see `SendTeamDigestsJob`).
+ * Reports come from the daily roll-up, so a digest is one range scan per team and
+ * matches the dashboard's uptime bars. Windows are whole UTC days ending yesterday.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,17 +69,8 @@ const STAMP_COLUMN = {
 
 /**
  * Every monitor a digest reports on, of all four types, as one relation of
- * `(id, type, name, team_id)`.
- *
- * One fragment used by both queries below, so "which monitors count" cannot come to mean two
- * different things — the recipient query asks whether a team has any, and the report query
- * lists them, and a team the first one skipped must not be a team the second would have
- * reported on.
- *
- * Disabled monitors are left out. Nothing checks them, so every day of theirs is a gap, and a
- * digest listing a row of "no data" for a monitor the team switched off months ago would be
- * noise the reader has to re-learn to ignore every morning. `enabled_at IS NOT NULL` and
- * `is_enabled = 1` are the same condition spelled the two ways the tables spell it.
+ * `(id, type, name, team_id)`. Shared by both queries so "which monitors count" has
+ * one definition. Only enabled monitors qualify, so a digest lists what a team runs.
  */
 const ENABLED_MONITORS = `
 	          SELECT id, 'http' AS type, name, team_id FROM ${getTableName(monitors)} WHERE enabled_at IS NOT NULL
@@ -115,23 +92,9 @@ interface MonitorDayRow {
 
 export default class TeamDigest {
 	/**
-	 * Every membership owed the given digest, oldest team first.
-	 *
-	 * Two conditions, and each one is what keeps a send from being wasted. The stamp must
-	 * predate `cutoff` — midnight UTC on the day of the run — so a cron trigger delivered twice
-	 * or a queue message redelivered after a failure finds nothing left to do. And the team must
-	 * have at least one enabled monitor, because a digest of nothing is not worth an email, and
-	 * because the member's address is resolved from the auth server one request at a time: a
-	 * team skipped here costs no request at all.
-	 *
-	 * Membership rows are returned whether or not the member wants the email. The opt-out lives
-	 * on `user_preferences`, which is a different table and a different unit, and joining it in
-	 * would put the same rule in SQL as well as in `UserPreferences.wants` — the job filters
-	 * with the one that a test can call.
-	 *
-	 * The ordering groups each team's members together, which is what lets the job build one
-	 * report per team, and ends in the row id so that two memberships written in the same
-	 * millisecond still come back in the same order on every run.
+	 * Every membership owed the given digest, oldest team first. A stamp predating
+	 * `cutoff` makes a redelivered trigger a no-op; requiring an enabled monitor spares
+	 * an address lookup for a team with nothing to report. Opt-out is the caller's.
 	 *
 	 * @param db - Database handle.
 	 * @param period - Which digest is being sent.
@@ -156,14 +119,9 @@ export default class TeamDigest {
 	}
 
 	/**
-	 * Every enabled monitor of one team, with the days of `[since, until]` the roll-up has for
-	 * it, in one query. Monitors are ordered by name and each one's days oldest first, which is
-	 * the order the email renders them in.
-	 *
-	 * A monitor with no days at all is still returned, and that is the point of the outer join:
-	 * a monitor enabled yesterday, or one whose checks all failed to record, is part of what the
-	 * team is running, and an email that counts how many monitors it covers must not quietly
-	 * cover fewer than the team has.
+	 * Every enabled monitor of one team, with the days of `[since, until]` the roll-up
+	 * has for it, ordered as the email renders them. A monitor with no days is still
+	 * returned, so the count of monitors an email covers matches what the team runs.
 	 *
 	 * @param db - Database handle.
 	 * @param teamId - Team to report on.
@@ -206,7 +164,7 @@ export default class TeamDigest {
 				byMonitor.set(key, monitor);
 			}
 
-			/** The outer join's miss: a monitor with no day in the window, carried with no days. */
+			/** The outer join's miss: the monitor is kept, with its day list left empty. */
 			if (row.date === null || row.status === null) continue;
 
 			monitor.days.push({
@@ -221,11 +179,9 @@ export default class TeamDigest {
 	}
 
 	/**
-	 * Stamps one membership's digest, which is what moves its next one to the following run.
-	 *
-	 * **Call it only after a transport accepted the message.** A send that failed has to stay
-	 * due, so the next delivery of the same day's trigger retries it; stamping first would turn
-	 * one refused message into a day with no digest at all.
+	 * Stamps one membership's digest, moving its next one to the following run. Call
+	 * it only after a transport accepted the message, so a refused send stays due and
+	 * the next delivery of the same day's trigger retries it.
 	 *
 	 * @param db - Database handle.
 	 * @param membershipId - The membership that was mailed.

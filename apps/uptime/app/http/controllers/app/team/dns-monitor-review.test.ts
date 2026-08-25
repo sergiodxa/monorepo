@@ -45,11 +45,9 @@ let { handler } = (await import("./dns-monitor-review")).default as {
 };
 
 /**
- * A record box that is ticked, matched as an attribute on the input itself.
- *
- * `checked` alone appears in the checkbox's own `:has(~ input:checked)` styles, and the
- * attribute is only absent when it is absent — `checked="0"` is present, and a browser
- * reads presence as ticked — so both halves have to be asserted precisely.
+ * Matches a ticked record checkbox by the presence of the `checked` attribute itself,
+ * since a browser treats `checked="0"` as ticked and `:checked` styles key off presence
+ * alone rather than the attribute's value.
  */
 const TICKED = /name="record_ids"[^>]*\schecked(?=[\s/>])/g;
 
@@ -75,7 +73,6 @@ function record(
 	};
 }
 
-/** Creates an in-memory database seeded with a team, a membership and one domain monitor. */
 async function createFixture() {
 	let { db } = createTestDatabase();
 
@@ -215,10 +212,8 @@ describe("dnsMonitorReview", () => {
 		expect(body).toContain('id="dns-review-resolving"');
 		expect(body).toContain("192.0.2.1");
 		expect(body).toContain("10 mx.example.com");
-		// Discovery stores what it found watched, so the review offers it watched.
 		expect(body.match(/name="record_ids"/g)).toHaveLength(2);
 		expect(body.match(TICKED)).toHaveLength(2);
-		// The submit posts one decision for the whole monitor, not one per record.
 		expect(body).toContain(routes.actions.monitor.dns.review.href({ team: team.slug }));
 		expect(body).toContain(`value="${monitor.id}"`);
 	});
@@ -242,9 +237,6 @@ describe("dnsMonitorReview", () => {
 		expect(body).toContain(en.page.dnsMonitorReview.table.columns.type);
 		expect(body).toContain(en.page.dnsMonitorReview.table.columns.value);
 		expect(body).toContain(en.page.dnsMonitorReview.table.columns.watched);
-		// A 400-character DKIM key gets a bounded box that scrolls its own overflow rather
-		// than setting the height of every row around it — and the whole value is still
-		// there, because comparing it against the provider's is the only use it has.
 		expect(body).toContain("max-block-size: 3lh;");
 		expect(body).toContain(`v=DKIM1; k=rsa; p=${"A".repeat(400)}`);
 	});
@@ -266,9 +258,6 @@ describe("dnsMonitorReview", () => {
 
 		expect(body).toContain('id="dns-review-discovered"');
 		expect(body).not.toContain('id="dns-review-resolving"');
-		// Accepting a record that appeared on its own must be an act, never a default.
-		// Matched as an attribute rather than as the word: `:checked` appears in the
-		// checkbox's own stylesheet, and `checked="0"` would read as ticked to a browser.
 		expect(body).not.toMatch(TICKED);
 	});
 
@@ -291,9 +280,6 @@ describe("dnsMonitorReview", () => {
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
 		expect(body).toContain('id="dns-review-declared"');
-		// The note that keeps a proxied zone — where this group is the common case — from
-		// reading as a fault is rendered with the group, not only in the docs. Asserted by
-		// its id rather than its copy, so the test outlives a rewording.
 		expect(body).toContain('id="dns-review-proxied-note"');
 		expect(body).not.toMatch(TICKED);
 	});
@@ -322,10 +308,6 @@ describe("dnsMonitorReview", () => {
 
 		expect(body).toContain('id="dns-review-unparsed"');
 		expect(body).toContain("$ORIGIN example.com.");
-		// Each reason is named per line, so two lines refused for different reasons never
-		// collapse into one undifferentiated "could not read this". Asserted against the
-		// dictionary rather than a literal, since a reason with no copy renders as its own
-		// code and would otherwise pass a test looking for that code.
 		expect(body).toContain(en.page.dnsMonitorReview.unparsed.reasons.originDirective);
 		expect(body).toContain(en.page.dnsMonitorReview.unparsed.reasons.unsupportedType);
 	});
@@ -353,8 +335,6 @@ describe("dnsMonitorReview", () => {
 			})
 		).text();
 
-		// A repeated line is news of a different kind: nothing was lost, so it never joins
-		// the block that says lines were not imported.
 		expect(body).toContain('id="dns-review-duplicates"');
 		expect(body).not.toContain('id="dns-review-unparsed"');
 	});
@@ -385,8 +365,6 @@ describe("dnsMonitorReview", () => {
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
-		// Refused here rather than at check time, where a budget cut-off would read as the
-		// customer's records having vanished.
 		expect(body).toContain('id="dns-review-names-cap"');
 		expect(body).toContain("disabled");
 	});

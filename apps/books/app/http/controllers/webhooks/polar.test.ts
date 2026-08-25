@@ -18,10 +18,9 @@ import { FakePolarClient, makeEvent, makeOrderPaidEvent } from "~/app/lib/test/p
 import { fetchApp } from "~/app/lib/test/router";
 import { Buttondown } from "~/app/services/buttondown";
 
-/** An origin other than the app's own, standing in for Polar's delivery. */
+/** A third-party origin, standing in for Polar's webhook delivery. */
 const FOREIGN_ORIGIN = "https://api.polar.sh";
 
-/** Delivers one webhook body against scripted clients. */
 function deliver(
 	polar: FakePolarClient,
 	buttondown: FakeButtondown,
@@ -154,8 +153,6 @@ describe("cross-origin protection", () => {
 			headers: { "content-type": "application/json", origin: FOREIGN_ORIGIN },
 		});
 
-		// The delivery is authenticated by its signature, not its origin: Polar posts from
-		// its own origin, so a rejection here would drop every paid-order event.
 		expect(response.status).toBe(200);
 		expect(buttondown.tagged).toHaveLength(1);
 	});
@@ -168,7 +165,6 @@ describe("cross-origin protection", () => {
 			services: [[Buttondown, new FakeButtondown()]],
 		});
 
-		// Proves the bypass is scoped to the webhook rather than disabling the protection.
 		expect(response.status).toBe(403);
 	});
 });

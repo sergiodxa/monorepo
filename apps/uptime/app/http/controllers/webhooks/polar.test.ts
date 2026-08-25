@@ -1,14 +1,13 @@
 /**
- * Tests `POST /webhooks/polar`: signature rejection, the upsert that records subscription
- * state, the scheduling it applies to the owner's monitors, and everything it deliberately
- * ignores (other event types, other products, an unlinked customer, an out-of-order
- * redelivery).
+ * Tests `POST /webhooks/polar`: signature rejection, the upsert that records
+ * subscription state, the scheduling it applies to the owner's monitors, and
+ * everything it deliberately ignores (other event types, other products, an
+ * unlinked customer, an out-of-order redelivery).
  *
- * `PolarClient.parseWebhook` is faked in the service container rather than signing a real
- * Standard Webhooks request: verification itself is covered in `@pkg/polar`, and a real
- * signature would also have to satisfy the SDK's full payload schema — the whole
- * subscription, its product, its prices and its meters — which says nothing about this
- * controller. What is tested here is that an unverified payload never reaches the database.
+ * `PolarClient.parseWebhook` is faked in the service container rather than
+ * signing a real Standard Webhooks request: verification itself is covered
+ * in `@pkg/polar`, and a real signature would also have to satisfy the SDK's
+ * full payload schema, which says nothing about this controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -196,7 +195,6 @@ describe("POST /webhooks/polar", () => {
 			),
 		);
 
-		// The `subscription.active` event that preceded it, arriving second.
 		let response = await dispatch(db, fakePolar(success(event("subscription.active"))));
 
 		expect(await response.json()).toEqual({ ignored: true });

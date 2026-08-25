@@ -1,3 +1,10 @@
+/**
+ * Validates that an RSS channel carries the fields RSS 2.0 requires.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RSS } from "../index";
 
 /**

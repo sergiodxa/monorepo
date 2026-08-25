@@ -4,11 +4,8 @@
  * `uptime:session` cookie's attributes (path, httpOnly, SameSite, one-year
  * lifetime, and the `secure` flag it forwards), round-tripping session data
  * through KV under the `session:` prefix, and rejecting a cookie signed with a
- * different secret.
- *
- * These run inside workerd against the real `KV` binding the app declares. The fake they
- * replaced stubbed `list()` to an empty result, so the prefix assertion below had to reach
- * into the fake's own Map; it now reads the namespace's listing.
+ * different secret. They run inside workerd against the real `KV` binding the
+ * app declares, reading the namespace's listing directly to assert the prefix.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +18,11 @@ import { describe, expect, test } from "vitest";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 
 describe("createSessionMiddleware", () => {
+	/**
+	 * `/read` echoes the session value only when it is exactly the string `/set`
+	 * wrote; session values are untyped, so anything else reads back as empty and
+	 * surfaces as a mismatch instead of a default stringification.
+	 */
 	function buildRouter(kv: KVNamespace, secret: string, secure: boolean) {
 		let router = createRouter({
 			middleware: [createSessionMiddleware(kv, secret, secure)],
@@ -33,9 +35,6 @@ describe("createSessionMiddleware", () => {
 		});
 
 		router.get("/read", (ctx) => {
-			// Session values are untyped, so only the string `/set` wrote is echoed back —
-			// anything else reads as empty and shows up as a mismatch rather than as a
-			// default stringification.
 			let probe = ctx.session.get("probe");
 			return new Response(typeof probe === "string" ? probe : "");
 		});

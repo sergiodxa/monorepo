@@ -1,10 +1,7 @@
 /**
- * Logical `inset` shorthand resolution, mirroring the 1/2/4-value box
- * shorthand `u.p()`/`u.m()` use for padding and margin. `inset` has no
- * dedicated logical-box helper of its own in `internal/box.ts` (that one is
- * typed specifically for `"padding" | "margin"`), so this module resolves
- * the same value counts against `inset`/`insetBlock`/`insetInline`'s own
- * property names directly.
+ * Logical `inset` shorthand resolution for the 1/2/4-value box form,
+ * resolved directly against `inset`/`insetBlock`/`insetInline` because the
+ * shared logical-box helper is typed for `"padding" | "margin"`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,12 +39,11 @@ function resolveInset(values: SpacingValue[]): CSSStyles {
 }
 
 /**
- * Applies a logical `inset` shorthand using the spacing scale or a raw CSS
- * length. One value applies all four sides; two values map to block then
- * inline; four values map to block-start, inline-end, block-end, and
- * inline-start — see
- * [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
+ * Applies a logical `inset` shorthand from the spacing scale or a raw CSS
+ * length. One value covers every side; two map to block then inline; four
+ * map to block-start, inline-end, block-end, inline-start.
  *
+ * @see [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values)
  * @example u.inset(4)
  * @example css({ inset: "calc(var(--ui-spacing, 0.25rem) * 4)" })
  * @example u.inset(0, "auto")

@@ -2,11 +2,8 @@
  * The scene stack that sequences and layers the presentation's screens.
  *
  * Only the top scene updates, but rendering walks up from the deepest opaque
- * scene so a translucent overlay (a pause menu, a dialogue box) can draw on top
- * of the scene it suspended. Lifecycle callbacks fire in the order a player
- * expects: pushing suspends the current scene and enters the new one; popping
- * exits the top and resumes the one beneath. The stack holds the `GameClient`
- * so it can hand it to every lifecycle and frame callback.
+ * scene so a translucent overlay can draw over the scene it suspended.
+ * Pushing suspends the current scene; popping resumes the one beneath it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

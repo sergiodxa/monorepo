@@ -1,10 +1,10 @@
 /**
  * The token revocation endpoint (RFC 7009). Authenticates the client, then deletes the
- * session a refresh token names. Access tokens are self-contained JWTs and cannot be
- * withdrawn, so a hint naming one is accepted and does nothing.
+ * session a refresh token names. Access tokens are self-contained JWTs that expire on
+ * their own, so a hint naming one succeeds with storage untouched.
  *
- * Always answers `200`, even for a token that does not exist or is not the caller's:
- * anything else turns the endpoint into an oracle for which tokens are live.
+ * Always answers `200`, whatever the token was: any other status turns the endpoint
+ * into an oracle for which tokens are live.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

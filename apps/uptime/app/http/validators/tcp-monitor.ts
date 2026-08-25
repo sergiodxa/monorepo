@@ -1,12 +1,8 @@
 /**
  * Form validation schemas for TCP monitor create/update/delete/check actions.
- * `UpdateTcpMonitorSchema` extends the create fields with the target `monitor_id` and
- * its own `is_enabled` default: the create form has no enabled toggle at all (only the
- * edit form does — see `resources/views/tcp-monitors/form.tsx`), so a create always
- * defaults to enabled, matching the `tcp_monitors` table's own default. The edit form's
- * checkbox, being an HTML checkbox, is simply absent from the submitted body when
- * unchecked, so the update schema must default the *opposite* way — to `false` — for
- * unchecking "Enabled" to actually disable the monitor instead of silently no-op'ing.
+ * `UpdateTcpMonitorSchema` defaults `is_enabled` to `false` so an unchecked
+ * edit-form checkbox (absent from the submitted body) disables the monitor;
+ * `CreateTcpMonitorSchema` defaults it to `true`, matching the table default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

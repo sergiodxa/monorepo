@@ -5,11 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * The `will-change` keywords naming the browser's own optimization strategy,
- * plus the CSS property names most commonly hinted ahead of an animation. The
- * `(string & {})` member keeps the type a plain string for any other property
- * name or a comma-separated list of several, so it only adds autocomplete for
- * the common cases rather than narrowing what's accepted.
+ * The `will-change` keywords plus the CSS property names most commonly hinted
+ * ahead of an animation. The `(string & {})` member keeps the type a plain
+ * string, so autocomplete covers those cases while any value stays accepted.
  */
 export type WillChangeValue =
 	| "auto"

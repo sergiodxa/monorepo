@@ -12,15 +12,14 @@ import * as s from "remix/data-schema";
 
 /**
  * Shared markdown parser (prism-highlighted fences, per the repo rule). Post bodies
- * carry no frontmatter, so a permissive schema is used. The parsed Markdoc tree is
- * rendered to `remix/ui` nodes by `MarkdownView` from `@pkg/markdown/client`.
+ * carry no frontmatter, so a permissive schema is used.
  */
 const parser = new Markdown({ frontmatter: s.object({}) });
 
 /**
- * Parses markdown source into a Markdoc render tree, or `null` when empty/invalid.
- * The tree is opaque here — `MarkdownView` is what knows how to render it — so the
- * return type stays `unknown`, which already admits the `null` empty/invalid case.
+ * Parses markdown source into a Markdoc render tree, or `null` when empty or
+ * invalid. The tree's shape stays opaque here since only the client-side renderer
+ * interprets it, so the return type stays `unknown`, which already admits `null`.
  * @param raw - Markdown source.
  * @returns The parsed content tree, or `null`.
  */

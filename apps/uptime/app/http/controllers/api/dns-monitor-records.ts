@@ -1,12 +1,9 @@
 /**
- * API v1 sub-resource for a DNS monitor's tracked records: list them, and toggle whether a
- * deviation from one alerts. Both leaves ride the existing
- * `dns-monitors:read`/`dns-monitors:write` scopes rather than a pair of their own, because a
- * key that may reconfigure a domain monitor may decide which of its records are watched.
- *
- * This is the only channel a script has for declining a record: an API-created monitor
- * imports and enables everything discovery found, since there is no human standing there to
- * review it.
+ * API v1 sub-resource for a DNS monitor's tracked records: lists them and toggles whether a
+ * deviation from one alerts. Rides the existing `dns-monitors:read`/`write` scopes rather
+ * than a pair of their own, since a key that can reconfigure a domain monitor can already
+ * decide which of its records are watched. The update leaf is the only channel a script has
+ * for declining a record, since an API-created monitor imports and enables everything discovery found.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,16 +30,9 @@ const DnsMonitorIdParams = s.object({ dnsMonitorId: s.string() });
 const DnsMonitorRecordParams = s.object({ dnsMonitorId: s.string(), recordId: s.string() });
 
 /**
- * The record's enable/decline decision, and nothing else.
- *
- * `unknownKeys: "error"` rather than the default strip, which is the load-bearing choice
- * here: `(name, recordType, value)` are the record's identity and the key the diff runs on,
- * so a caller that sends one is asking to retarget the expectation rather than to change it.
- * Stripping would accept that request, answer `200`, and silently do nothing — the caller
- * would go on believing it had edited the record. Refusing says what actually happened.
- *
- * `isEnabled` is required rather than optional for the same reason: a `PATCH` with nothing
- * writable in it expresses no decision, and answering `200` to it would claim one was made.
+ * The record's enable/decline decision, and nothing else. `unknownKeys: "error"` rejects a
+ * body that also sends `name`/`recordType`/`value`, since those identify the record rather
+ * than change it; `isEnabled` is required so every accepted body expresses one decision.
  */
 const UpdateDnsMonitorRecordSchema = s.object({ isEnabled: s.boolean() }, { unknownKeys: "error" });
 
@@ -95,11 +85,9 @@ export const dnsMonitorRecordsRoutes = {
 export default createController(dnsMonitorRecordsRoutes, {
 	actions: {
 		/**
-		 * GET /api/v1/dns-monitors/:dnsMonitorId/records — the monitor's tracked records.
-		 *
-		 * Unpaginated, like the other sub-resource lists: the set is a monitor's configuration
-		 * rather than history, it is bounded by the names an import found, and a caller
-		 * deciding which records to decline needs all of them to decide against.
+		 * GET /api/v1/dns-monitors/:dnsMonitorId/records — the monitor's tracked records,
+		 * unpaginated since a caller declining records needs the whole list. A monitor scoped
+		 * to another team draws the same 404 as one that doesn't exist, keeping both indistinguishable.
 		 */
 		dnsMonitorRecordsIndex: {
 			middleware: [requireApiKey("dns-monitors:read")],
@@ -107,8 +95,6 @@ export default createController(dnsMonitorRecordsRoutes, {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
 				let db = getServiceContainer().get(Database);
 
-				// Scoped to the caller's team, and a miss is 404 rather than 403: answering 403
-				// would confirm the id names a real monitor belonging to somebody else.
 				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
@@ -118,10 +104,9 @@ export default createController(dnsMonitorRecordsRoutes, {
 		},
 
 		/**
-		 * PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId — enables or declines one
-		 * record. Enabling one discovery reported as `new` also settles it to `ok`, which is
-		 * `DnsMonitorRecord.setEnabled`'s job, so the row is re-read before serializing rather
-		 * than patched in memory.
+		 * PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId — enables or declines one record,
+		 * checking existence before reading the body so an unmatched id 404s. Re-reads the row after
+		 * `setEnabled`, which may settle a `new` discovery to `ok`.
 		 */
 		dnsMonitorRecordUpdate: {
 			middleware: [requireApiKey("dns-monitors:write")],
@@ -132,8 +117,6 @@ export default createController(dnsMonitorRecordsRoutes, {
 				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
-				// Both existence checks run before the body is read, so a record id that names
-				// nothing answers 404 rather than a 400 about a body nobody will ever apply.
 				let existing = await findRecordForMonitor(db, dnsMonitorId, recordId);
 				if (!existing) return apiError("NOT_FOUND", "DNS record not found", NotFound);
 
@@ -155,8 +138,8 @@ export default createController(dnsMonitorRecordsRoutes, {
 
 /**
  * One record, scoped to its monitor, so an id belonging to another monitor — and therefore
- * possibly to another team — matches nothing instead of being addressable through a monitor
- * the caller does own.
+ * possibly to another team — resolves only when looked up through the monitor that actually
+ * owns it.
  */
 async function findRecordForMonitor(db: Database, monitorId: string, recordId: string) {
 	return await db.findOne(dnsMonitorRecords, {

@@ -1,7 +1,6 @@
 /**
  * Unit tests for the shared hue spectrum in {@link "./hue-spectrum"}: every
- * assertion checks the exported string's shape directly, with no DOM and no
- * rendering involved.
+ * assertion checks the exported string's shape via plain value comparisons.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

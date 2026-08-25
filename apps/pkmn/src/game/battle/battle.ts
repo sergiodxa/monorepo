@@ -1,13 +1,8 @@
 /**
- * Coordinates the battle domain model and turn-resolution flow for this module.
- * It defines the battle-facing types and orchestrates how combatants, effects,
- * actions, and outcome rules are evaluated during encounters.
- *
- * The module serves as the central integration point for battle systems that
- * compute damage, resolve actions, apply ongoing effects, process replacements,
- * and advance turn state. Its purpose is to keep battle progression consistent,
- * deterministic, and isolated from any particular content set or presentation
- * layer.
+ * Coordinates the battle domain model and turn-resolution flow: the
+ * battle-facing types, and how combatants, effects, actions, and outcome
+ * rules are evaluated to keep battle progression consistent, deterministic,
+ * and isolated from any particular content set or presentation layer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -117,19 +112,19 @@ export interface LeaveTurnCommand {
 }
 
 /**
- * Uses a recovery item on one creature during a turn, consuming the acting slot's action.
- *
- * The command carries the already-resolved medicine effect so the battle layer stays
- * content-agnostic: the boundary that owns the inventory looks the item up, decrements
- * it, and submits the generic effect here. `creature` is the team-local index of the
- * target on the acting slot's team, which may be a benched or fainted teammate. A null
- * `effect` marks an item the owning boundary could not actually consume (out of stock
- * or not a medicine); it still spends the action but applies nothing.
+ * Uses a recovery item on one creature during a turn, consuming the acting
+ * slot's action. The already-resolved effect keeps the battle layer
+ * content-agnostic: the boundary owning the inventory resolves the item.
  */
 export interface UseItemTurnCommand {
 	type: "use-item";
 	itemId: ItemId;
+	/**
+	 * Null when the owning boundary could not actually consume the item (out
+	 * of stock or not a medicine); the action still spends but nothing applies.
+	 */
 	effect: MedicineEffect | null;
+	/** Team-local index, reachable even when the teammate is benched or fainted. */
 	creature: number;
 }
 
@@ -605,6 +600,12 @@ export class Battle {
 		}
 	}
 
+	/**
+	 * Resolves one submitted turn into events, honoring the computed action
+	 * order. A failed escape attempt or a used item still consumes that slot's
+	 * turn while the rest of the turn, including the opposing move, resolves.
+	 * @yields Battle lifecycle events in the order they should be rendered by the caller.
+	 */
 	private *resolveTurn(requests: BattlePosition[], commands: TurnCommand[]): BattleTurnSession {
 		for (let action of this.getTurnActions(requests, commands)) {
 			if (action.command.type === "leave-battle") {
@@ -612,8 +613,6 @@ export class Battle {
 					this.forfeitSide(action.userPosition.side);
 					return;
 				}
-				// A failed escape consumes this combatant's action; the rest of the
-				// turn (the opposing side's move) still resolves.
 				yield { type: "escape-failed", user: action.userPosition };
 				continue;
 			}
@@ -624,7 +623,6 @@ export class Battle {
 			}
 
 			if (action.command.type === "use-item") {
-				// Using an item spends this slot's action; the opposing side's move still resolves.
 				for (let event of this.resolveItemUse(action.userPosition, action.command)) yield event;
 				continue;
 			}
@@ -691,23 +689,15 @@ export class Battle {
 	}
 
 	/**
-	 * Applies a recovery item to one creature on the acting slot's side and team.
-	 *
-	 * The item's action is always spent, matching Gen 3 where using an item consumes
-	 * the turn even if it heals nothing. The target is addressed by its team-local
-	 * index so benched and fainted teammates can be treated. The medicine effect is
-	 * resolved against the target's live HP and status, the persistent damage/status
-	 * are updated, and an `item-used` event carries the outcome to the presentation.
-	 * A no-op result (full HP, unmatched status cure, revive on a healthy target)
-	 * still consumes the turn but reports no change.
+	 * Applies a recovery item to one creature, always spending the acting
+	 * slot's action to match Gen 3: a null effect, full HP, an unmatched
+	 * status cure, or a revive on a healthy target all still consume the turn.
 	 * @yields {BattleEvent.ItemUsedEvent} The events resulting from the item use.
 	 */
 	private *resolveItemUse(
 		userPosition: BattlePosition,
 		command: UseItemTurnCommand,
 	): Generator<BattleEvent.ItemUsedEvent, void, void> {
-		// A null effect means the owning boundary could not consume the item; the
-		// action is still spent, but nothing is applied and no event is emitted.
 		if (command.effect === null) return;
 
 		let side = this.state.sides[userPosition.side];
@@ -902,16 +892,9 @@ export class Battle {
 	}
 
 	/**
-	 * Rolls the standard escape-odds formula for one combatant leaving the battle.
-	 *
-	 * Compares the leaving combatant's effective Speed against the opposing active
-	 * combatant's. A faster (or equal) escapee always gets away. Otherwise the odds
-	 * grow with the running failed-attempt count via
-	 * `F = floor(pSpd * 128 / eSpd) + 30 * attempts`: `F >= 256` always succeeds,
-	 * else success needs `randomInt(0..255) < F`. Each failure bumps the attempt
-	 * counter so repeated tries become more likely. With no opposing combatant the
-	 * escape trivially succeeds.
-	 *
+	 * Rolls the standard escape-odds formula: a faster or equal escapee always
+	 * gets away, otherwise each failed attempt raises the odds via
+	 * `floor(pSpd * 128 / eSpd) + 30 * attempts` compared against a 0-255 roll.
 	 * @returns Whether the escape succeeds; a failure has already incremented the attempt count.
 	 */
 	private resolveEscapeAttempt(position: BattlePosition, combatant: CombatantState): boolean {

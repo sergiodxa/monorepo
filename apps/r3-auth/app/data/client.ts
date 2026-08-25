@@ -17,7 +17,7 @@ import type { SelectClient } from "~/database/schema";
 import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
 import { clients } from "~/database/schema";
 
-/** Fields accepted when registering a client. The secret is generated, never supplied. */
+/** Fields accepted when registering a client; the secret is generated on create. */
 export interface CreateClientInput {
 	name: string;
 	description?: string | null;
@@ -28,7 +28,7 @@ export interface CreateClientInput {
 
 /**
  * Fields accepted when updating a client. `regenerateSecret` rotates the secret,
- * which is the only way to change it — it is never accepted as an input.
+ * which is the only way to change it.
  */
 export interface UpdateClientInput {
 	name?: string;
@@ -51,14 +51,8 @@ export default class Client {
 
 	/**
 	 * Finds a client by the exact logout URI it registered, or `null` when no client
-	 * registered that address.
-	 *
-	 * The comparison is a plain equality on the stored column: no prefix, origin or
-	 * trailing-slash leniency, since this is what decides whether an address is a
-	 * destination the server may send a browser to.
-	 *
-	 * Nothing stops two clients registering the same address, so the oldest registration
-	 * is taken to keep the answer stable.
+	 * registered that address. Exact equality on the stored column decides whether an
+	 * address is a destination the server may send a browser to; the oldest match wins.
 	 */
 	static async findByLogoutUri(db: Database, logoutUri: string): Promise<SelectClient | null> {
 		return await db.findOne(clients, {
@@ -85,8 +79,8 @@ export default class Client {
 	}
 
 	/**
-	 * Registers a client with a freshly generated secret. The returned row carries that
-	 * secret, which is the one moment it can be shown: it is never displayed again.
+	 * Registers a client with a freshly generated secret. The returned row is the one
+	 * place that secret is ever surfaced, so a caller shows it right away or loses it.
 	 */
 	static async create(db: Database, input: CreateClientInput): Promise<SelectClient> {
 		return await db.create(
@@ -106,7 +100,7 @@ export default class Client {
 
 	/**
 	 * Updates a client, rotating its secret when asked. `newSecret` is set only on a
-	 * rotation, so a caller can reveal it once and otherwise show nothing.
+	 * rotation, so a caller reveals it exactly once.
 	 *
 	 * @returns The updated row, plus the new secret when one was generated.
 	 */
@@ -136,9 +130,7 @@ export default class Client {
 	/**
 	 * Returns the authorization server's own client registration, creating it on first
 	 * use with a generated secret and callback URLs derived from the request origin.
-	 *
-	 * It inserts only when the row is missing, so an existing registration — and the
-	 * origin already recorded on it — is never rewritten.
+	 * An existing registration keeps the origin already recorded on it.
 	 *
 	 * @param requestUrl - URL of the request that needs the registration, used as the origin.
 	 */

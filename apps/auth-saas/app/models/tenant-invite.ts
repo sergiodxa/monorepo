@@ -23,7 +23,6 @@ import type { TenantMemberRole } from "./tenant-member";
  * let pending = await TenantInvite.listPendingByTenant(db, tenantId);
  */
 export default class TenantInvite {
-	/** The `tenant_invites` D1 table definition (columns, primary key, timestamps). */
 	static table = table({
 		name: "tenant_invites",
 		primaryKey: ["id"],
@@ -41,7 +40,6 @@ export default class TenantInvite {
 	});
 
 	/**
-	 * Lists all pending invites for a tenant.
 	 * @param db - Database connection.
 	 * @param tenantId - The tenant ID.
 	 * @returns A promise resolving to the tenant's unaccepted invite rows.
@@ -53,7 +51,6 @@ export default class TenantInvite {
 	}
 
 	/**
-	 * Lists all pending invites for an email address.
 	 * @param db - Database connection.
 	 * @param email - The email address.
 	 * @returns A promise resolving to the unaccepted invite rows for that email.
@@ -75,7 +72,6 @@ export default class TenantInvite {
 	}
 
 	/**
-	 * Finds a pending invite by tenant and email.
 	 * @param db - Database connection.
 	 * @param tenantId - The tenant ID.
 	 * @param email - The email address.
@@ -88,7 +84,6 @@ export default class TenantInvite {
 	}
 
 	/**
-	 * Creates a new invite.
 	 * @param db - Database connection.
 	 * @param data - Invite data.
 	 * @returns A promise resolving to the newly-created invite row.
@@ -120,7 +115,6 @@ export default class TenantInvite {
 	}
 
 	/**
-	 * Marks an invite as accepted.
 	 * @param db - Database connection.
 	 * @param id - The invite ID.
 	 * @returns A promise resolving to the updated (accepted) invite row.

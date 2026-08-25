@@ -114,7 +114,6 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 			await job.perform();
 		});
 
-		// The record the job looks up is the contract with the team that published it.
 		let query = new URL(lookups[0]?.url ?? "");
 		expect(query.searchParams.get("name")).toBe("_ping-verification.example.com");
 		expect(query.searchParams.get("type")).toBe("TXT");
@@ -169,7 +168,6 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 
 	test("swallows a DNS lookup failure and logs it instead of throwing", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
-		// A transport failure, so the job sees a rejected call rather than an error status.
 		server.use(http.get(DNS_URL, () => HttpResponse.error()));
 		let logger = new BatchedLogger("test");
 

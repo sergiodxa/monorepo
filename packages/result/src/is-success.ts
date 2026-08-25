@@ -1,3 +1,10 @@
+/**
+ * Type guard for narrowing a `Result` to its `Success` case.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result, Success } from "./types.js";
 
 /**

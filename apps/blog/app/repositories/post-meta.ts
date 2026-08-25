@@ -20,13 +20,10 @@ export namespace PostMeta {
 	 * Optional fields allow deterministic ids/timestamps in imports and tests.
 	 */
 	export interface CreateInput {
-		/** Stable metadata id; generated automatically when omitted. */
+		/** Generated automatically when omitted. */
 		id?: string;
-		/** Parent post id that owns this metadata entry. */
 		post_id: string;
-		/** Logical metadata key (for example, category or tag). */
 		key: string;
-		/** String value stored for the provided key. */
 		value: string;
 		/** Creation timestamp override in ISO-8601 format. */
 		created_at?: string;
@@ -40,9 +37,6 @@ export namespace PostMeta {
  * Methods keep DB field names in snake_case to match schema columns.
  */
 export class PostMeta {
-	/**
-	 * Schema table reference shared by all repository queries.
-	 */
 	static table = schema.postMeta;
 
 	/**
@@ -59,7 +53,7 @@ export class PostMeta {
 	 * Lists all metadata rows that belong to one post.
 	 * @param db Database client used for the query.
 	 * @param post_id Parent post id.
-	 * @returns All metadata rows for the post, ordered by DB default behavior.
+	 * @returns All metadata rows for the post, in database order.
 	 */
 	static findByPostId(db: Database, post_id: string) {
 		return db.findMany(this.table, { where: { post_id } });
@@ -99,9 +93,6 @@ export class PostMeta {
 		return this.findById(db, id);
 	}
 
-	/**
-	 * Generates the current UTC timestamp in ISO-8601 format.
-	 */
 	private static get timestamp() {
 		return new Date().toISOString();
 	}

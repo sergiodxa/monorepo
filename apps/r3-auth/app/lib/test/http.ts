@@ -1,12 +1,9 @@
 /**
- * Test-only harness for driving the whole app over HTTP: in-memory Cloudflare
- * bindings, a migrated database, a container holding the same services production
- * registers, and a client that keeps cookies between requests so a multi-step flow can
- * be exercised the way a browser performs it.
- *
- * The `cloudflare:workers` mock is installed here, at module load and before the
- * application is imported, so every module that captures `env` at load time captures
- * these bindings.
+ * Test-only harness for driving the whole app over HTTP: in-memory Cloudflare bindings, a
+ * migrated database, a container holding the same services production registers, and a
+ * cookie-keeping client that exercises a multi-step flow the way a browser would. The
+ * `cloudflare:workers` mock installs here, before the application import, so every module
+ * capturing `env` at load time captures these bindings.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,21 +50,20 @@ export interface TestAppOptions {
 	limits?: RateLimitBudgets;
 	/**
 	 * The billing client provisioning resolves. Defaults to one that answers every call
-	 * with a canned customer, so a test that is not about billing never reaches the
-	 * network; pass a failing one to exercise a sign-in that outlives a billing outage,
-	 * or a recording one to assert on the customer provisioning produced.
+	 * with a canned customer, so tests unrelated to billing run entirely offline; pass a
+	 * failing client to exercise an outage, or a recording one to assert on provisioning.
 	 */
 	polar?: PolarClient;
 	/**
 	 * Transport every mailer in this instance delivers through. Defaults to a recording
-	 * one, so a test reads what was sent instead of mocking a provider; pass a transport
-	 * that fails to exercise a send path's behaviour when delivery is refused.
+	 * one, so a test reads what the app actually sent; pass a transport that fails to
+	 * exercise a send path's behaviour when delivery is refused.
 	 */
 	mailTransport?: MailTransport;
 }
 
 /**
- * A billing client that succeeds without talking to anything.
+ * A billing client that answers every call from memory.
  *
  * Shaped as the subset of the real client provisioning calls, because the vendor SDK
  * would otherwise be loaded and a request issued for a concern no HTTP test is about.
@@ -106,13 +102,9 @@ function waitUntil(promise: Promise<unknown>): void {
 }
 
 /**
- * The bindings every app instance shares, as one object that outlives them all.
- *
- * `createTestApp` gives each instance fresh storage by replacing the two properties here
- * rather than by re-registering the module: the mock factory runs once, on the first
- * import below, so a second registration would reach nothing. Every module reads
- * `env.KV`/`env.R2` off this object when it needs them, which is what makes replacing a
- * property visible to a module that loaded long before.
+ * The bindings every app instance shares, as one object that outlives them all. Every module
+ * reads `env.KV`/`env.R2` off it live, so `createTestApp` swaps those two properties in
+ * place to give each instance fresh storage that already-loaded modules see.
  */
 let bindings: Record<string, unknown> = {
 	...TEST_ENV,
@@ -123,12 +115,9 @@ let bindings: Record<string, unknown> = {
 vi.doMock("cloudflare:workers", () => ({ env: bindings, waitUntil }));
 
 /**
- * The application modules, imported on first use rather than at module load.
- *
- * They cannot be static imports: the `cloudflare:workers` mock above has to be in
- * place before any of them captures `env`. They cannot be top-level awaits either —
- * a test file's `beforeEach` can run before an imported module's top-level await has
- * settled, which surfaces as the harness's own bindings being uninitialized.
+ * The application modules, imported lazily so the `cloudflare:workers` mock above is already
+ * installed before any of them captures `env`. Loaded once and cached, so a test file's
+ * `beforeEach` always finds a settled import with bindings initialized.
  */
 async function loadModules() {
 	modules ??= Promise.all([
@@ -159,11 +148,9 @@ let modules:
 /** One isolated app instance: its router, its storage, and a cookie-keeping client. */
 export interface TestApp {
 	/**
-	 * The app's router, exposed so a test can map an extra route onto it.
-	 *
-	 * That is how the guards get exercised before the pages they protect exist: a stub
-	 * action mapped here still passes through the whole global middleware chain, so what
-	 * the test drives is the real session, logging and rendering path.
+	 * The app's router, exposed so a test can map an extra route onto it and exercise guards
+	 * before the pages they protect exist: a stub action mapped here still passes through the
+	 * whole global middleware chain — the real session, logging and rendering path.
 	 */
 	router: ReturnType<Awaited<ReturnType<typeof loadModules>>["application"]>;
 	/** The migrated in-memory database every controller resolves. */
@@ -174,8 +161,8 @@ export interface TestApp {
 	r2: ReturnType<typeof createR2Bucket>;
 	/**
 	 * The recording transport both mailers deliver through, so a test asserts on the
-	 * messages the app actually produced rather than on a mocked provider. It records
-	 * nothing when the test supplied a transport of its own.
+	 * messages the app actually produced. Stays empty when a test option supplies a
+	 * different transport.
 	 */
 	mail: MemoryTransport;
 	/**
@@ -186,26 +173,21 @@ export interface TestApp {
 	/** Discards stored cookies, which is how a test starts as a different visitor. */
 	resetCookies(): void;
 	/**
-	 * Puts a token pair into a real browser session and hands the client the signed
-	 * cookie naming it, so the next request arrives signed in to this server itself.
-	 *
-	 * Writes through the same storage and signs with the same secret the app uses, so
-	 * what a test sets up is what the session middleware reads back.
+	 * Puts a token pair into a real browser session and hands the client the signed cookie
+	 * naming it, writing through the same storage and secret the app itself uses, so what a
+	 * test sets up is what the session middleware reads back.
 	 */
 	signIn(accessToken: string, refreshToken: string): Promise<void>;
 }
 
 /**
- * Builds an app instance backed by fresh in-memory storage.
- *
- * Each call resets the shared KV and R2 bindings, so tests never see each other's
- * sessions, codes or signing keys.
+ * Builds an app instance with fresh KV and R2 bindings, kept in a local reference so it
+ * keeps its own storage once a later call points the shared bindings elsewhere, and
+ * registers mail under production's key so a test exercises the real mailer path.
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
 	let { application, RateLimiters, createTestDatabase, DatabaseKey } = await loadModules();
 
-	// Held locally as well as installed, so this instance keeps its own storage even once a
-	// later `createTestApp()` has pointed the shared bindings at fresh namespaces.
 	let appKv = createKVNamespace();
 	let appR2 = createR2Bucket();
 
@@ -218,9 +200,6 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 	container.singleton(DatabaseKey, () => db);
 	container.singleton(PolarClient, () => options.polar ?? createStubPolarClient());
 
-	// A recording transport unless the test brought its own, registered under the same key
-	// production registers the platform one under — so what a test drives is the real
-	// middleware, the real mailer and the real email classes, with only delivery replaced.
 	let recorder = new MemoryTransport();
 	let transport: MailTransport = options.mailTransport ?? recorder;
 	container.singleton(MailTransport, () => transport);

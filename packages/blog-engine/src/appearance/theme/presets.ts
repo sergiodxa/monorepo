@@ -10,7 +10,7 @@
 /** Named typography preset mapping to a system font stack. */
 export type FontPreset = "sans" | "serif" | "mono" | "slab";
 
-/** System font stacks for each typography preset (no web fonts to load). */
+/** System font stacks for each typography preset, already available on the device. */
 export const FONT_STACKS: Record<FontPreset, string> = {
 	sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 	serif: "Iowan Old Style, Apple Garamond, Baskerville, 'Times New Roman', Georgia, serif",

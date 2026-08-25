@@ -1,3 +1,10 @@
+/**
+ * Public entry point for the logger package, exporting the immediate,
+ * batched, and request-scoped logger implementations.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { Logger as ImmediateLogger } from "./logger";
 
 export * from "./logger";

@@ -1,21 +1,9 @@
 /**
- * Importer export flow for the dev tools. Where the atlas export
- * (`atlas-export.ts`) assigns a single drawn sprite as ONE named region of an
- * atlas, this module takes an existing PNG plus a whole set of pre-computed
- * regions (from the pure {@link sliceGrid}/manual helpers in `atlas-slicer.ts`)
- * and registers the image as a full atlas in `src/content/manifest.json` — image
- * URL plus EVERY region at once — so the game can blit any tile/sprite by region
- * name.
- *
- * It is split into a pure half and a server half. The pure half
- * ({@link deriveImporterTarget} + {@link registerAtlas}) validates the atlas id
- * and its regions, derives the image write path/url from the id (reusing the same
- * `src/assets/<id>.png` shaping as `deriveSpriteTarget`), and shapes the manifest
- * mutation — registering the image under `images` and the whole atlas under
- * `atlases[id]` — without touching disk, so the mapping is unit-testable. The
- * server half ({@link runImporterExport}) writes the PNG through the shared
- * {@link runBinaryExport} (so it reuses the exact path-safety guard and base64
- * decode) and persists the updated manifest behind {@link validateWritePath}.
+ * Importer export for the dev tools: takes an existing PNG plus a set of
+ * pre-computed regions and registers it in `src/content/manifest.json` as an
+ * image URL plus EVERY region at once, so the game can blit any tile by name.
+ * The pure half ({@link deriveImporterTarget} + {@link registerAtlas}) shapes the
+ * manifest mutation off-disk, so the mapping stays unit-testable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,7 +71,7 @@ function validateRegionName(raw: string): Result<string, AtlasExportError> {
 
 /**
  * Validates one region rect: every field a non-negative integer and both
- * dimensions positive, so a region can never be zero-sized or fractional.
+ * dimensions positive, so every region keeps a whole, positive-sized rect.
  *
  * @param name The region name, echoed into any error message.
  * @param rect The candidate rect.
@@ -147,11 +135,9 @@ export interface ImporterAssignment {
 }
 
 /**
- * Validates an importer assignment and derives its export target: the image
- * target (via {@link deriveSpriteTarget}, so the write path/url match every other
- * sprite export) plus the validated atlas id and its full region map. The atlas
- * id doubles as the image name. Rejects an empty region map, an invalid region
- * name, or a bad rect. Pure — no disk, canvas, or network — so it is unit-testable.
+ * Validates an importer assignment (an id plus at least one well-formed region)
+ * and derives its export target. The id doubles as the image name and is shaped
+ * by {@link deriveSpriteTarget}, so the PNG lands beside every sprite export.
  *
  * @param assignment The untrusted assignment (atlas id + region map).
  * @returns Success with an {@link ImporterExportTarget}, or failure with a
@@ -163,8 +149,6 @@ export function deriveImporterTarget(
 	let atlasId = validateAtlasId(assignment.id);
 	if (isFailure(atlasId)) return failure(atlasId.error);
 
-	// The id also names the image file; reuse the sprite shaping for path/url so an
-	// importer atlas lands beside every other sprite export.
 	let image = deriveSpriteTarget(atlasId.data);
 	if (isFailure(image)) return failure(image.error);
 
@@ -188,13 +172,9 @@ export function deriveImporterTarget(
 }
 
 /**
- * Returns a copy of the manifest with the imported image registered under
- * `images` (id → url) and the WHOLE atlas registered under `atlases[atlasId]`
- * (image url + every region). Built by folding {@link registerAtlasRegion} over
- * each region so it shares the exact merge semantics — creating the atlas entry
- * when absent, adding/updating each region otherwise, and carrying through
- * unrelated manifest kinds and atlas fields untouched. Pure: never mutates the
- * input.
+ * Returns a copy of the manifest with the image registered under `images` and
+ * the WHOLE atlas under `atlases[atlasId]`. Folds {@link registerAtlasRegion}
+ * over each region, so merge semantics match a single-region registration.
  *
  * @param manifest The current manifest contents.
  * @param target The derived importer export target (image + atlas id + regions).
@@ -233,10 +213,9 @@ export interface ImporterExportResult {
 }
 
 /**
- * Reads the manifest from disk, tolerating an absent file (treated as an empty
- * manifest) so the first import bootstraps it, and coercing missing `images` /
- * `atlases` maps to empty objects. A present-but-invalid manifest is a hard error
- * rather than being silently overwritten.
+ * Reads the manifest from disk, treating an absent file as empty so the first
+ * import bootstraps it and coercing missing `images` / `atlases` maps to empty
+ * objects. A present-but-invalid manifest fails hard, leaving disk intact.
  *
  * @returns Success with the parsed manifest, or failure describing the problem.
  */
@@ -270,9 +249,8 @@ interface ImporterExportPayload {
 
 /**
  * Reads an untrusted region map off a payload, verifying it is an object of
- * name → `{x,y,w,h}` numeric rects. Structural only — the per-region name and
- * bounds rules are enforced later by {@link deriveImporterTarget}. Rejects a
- * non-object or a malformed rect entry.
+ * name → numeric `{x,y,w,h}` rects. Structural only; the per-region name and
+ * bounds rules are enforced later by {@link deriveImporterTarget}.
  *
  * @param value The untrusted `regions` field.
  * @returns Success with the region map, or failure with an
@@ -313,14 +291,8 @@ function readRegions(value: unknown): Result<Record<string, Rect>, ExportValidat
 
 /**
  * Validates an importer export payload, writes the PNG to `src/assets/<id>.png`,
- * and registers it in `src/content/manifest.json` as a flat image AND as a full
- * atlas with every region.
- *
- * The id/regions are validated by {@link deriveImporterTarget}; the PNG bytes are
- * written through {@link runBinaryExport} so they share the same path-safety guard
- * and base64 decode as every other binary write; and the manifest write path is
- * the fixed {@link MANIFEST_PATH}, itself re-checked by {@link validateWritePath}.
- * Any step failing surfaces as a failure result rather than a partial import.
+ * and registers it in the manifest as a flat image AND as a full atlas. The PNG
+ * goes through {@link runBinaryExport} to reuse its path guard and base64 decode.
  *
  * @param payload The parsed JSON body from an importer export request (untrusted).
  * @returns Success with an {@link ImporterExportResult}, or failure with a
@@ -344,8 +316,6 @@ export async function runImporterExport(
 	let target = deriveImporterTarget({ id: body.id, regions: regions.data });
 	if (isFailure(target)) return failure(target.error);
 
-	// Write the PNG through the binary export so it shares the same path-safety
-	// guard and base64 decode as every other binary write.
 	let pngResult = await runBinaryExport({
 		path: target.data.image.path,
 		contentsBase64: body.pngBase64,

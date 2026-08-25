@@ -22,8 +22,8 @@ export function hostnameCacheKey(hostname: string): string {
 }
 
 /**
- * Time-to-live (seconds) for a cached hostname resolution. Kept short so that a
- * missed invalidation cannot route to a stale tenant for long.
+ * Time-to-live (seconds) for a cached hostname resolution. Kept short so a missed
+ * invalidation self-heals within minutes.
  */
 export const HOSTNAME_CACHE_TTL = 300;
 

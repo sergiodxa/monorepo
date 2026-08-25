@@ -47,7 +47,7 @@ export namespace BlogLayout {
 	}
 
 	/**
-	 * Represents a single link in the main navigation.
+	 * One link in the blog's main navigation bar.
 	 */
 	export interface NavigationItem {
 		href: string;
@@ -55,9 +55,6 @@ export namespace BlogLayout {
 	}
 }
 
-/**
- * Lists the primary navigation links shown in the blog header.
- */
 let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.feed.href(), label: "Home" },
 	{ href: routes.articles.href(), label: "Articles" },
@@ -68,7 +65,9 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
 ];
 
 /**
- * Creates the shared HTML layout used by public blog pages.
+ * Fixed attachment holds the sheen's light source still while content scrolls,
+ * its base color repeats the gradient's outer stop so wide viewports stay seamless,
+ * and the wash spans the two neutral steps brand 600 link text clears AA against.
  *
  * @returns A renderer that wraps page content with head metadata and navigation.
  */
@@ -87,17 +86,6 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 					minBs("100vh"),
 					font("serif"),
 					fg("neutral.emphasis"),
-					/* The silver sheen: a fixed, oversized radial gradient running from the
-					lightest neutral tint out to the next step, so the page reads as a
-					sheet of brushed metal catching light at its top-left corner rather
-					than a flat fill. Fixed attachment keeps the light source still while
-					the content scrolls past it, and the base color matches the outer stop
-					so a viewport wider than the gradient shows no seam.
-
-					The wash deliberately spans only those two steps. Link text is brand's
-					600 step, which clears AA against both of them (4.91:1 and 4.63:1) and
-					stops clearing it against anything darker, so letting the sheen deepen
-					further would trade readable links for a more dramatic gradient. */
 					bg({
 						color: "neutral.bg-tint-hover",
 						image: radialGradient(

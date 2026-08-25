@@ -27,9 +27,8 @@ describe("COST_RESOURCES", () => {
 
 	/**
 	 * A recorded data point positions its quantities by this list's index, so reordering it
-	 * silently reinterprets every point already written — `double4` would stop meaning rows
-	 * read. Appending is safe; this pins the prefix so a reorder fails here instead of
-	 * quietly restating history.
+	 * silently reinterprets every point already written — `double4` would stop meaning what it
+	 * once read. This pins the prefix, keeping appends the only safe change.
 	 */
 	test("keeps the prefix every already-written data point was positioned by", () => {
 		expect(COST_RESOURCES.slice(0, 6)).toEqual([
@@ -61,21 +60,13 @@ describe("priceCostQuantities", () => {
 		let quantities = createCostQuantities();
 		quantities.emailSent = 1_000;
 
-		// The card's $0.35 per thousand. In dollars this would be 0.35; a 100× error here is
-		// the one that would be hardest to notice downstream.
 		expect(priceCostQuantities(quantities)).toBeCloseTo(35, 9);
 	});
 
 	/**
-	 * ADR-002 §9's expected column for one successful HTTP check, whose per-resource usage
-	 * was derived by hand from `EXPLAIN QUERY PLAN` and the platform's billing docs, totals
-	 * $0.000034767 — `0.0034767` cents. Reproducing it from this card is what says the two
-	 * documents describe the same system.
-	 *
-	 * To five decimals rather than more, because ADR-002's total is the sum of eleven lines
-	 * each already rounded to nine decimal places in dollars. This card multiplies out
-	 * exactly, so the two agree to 0.02% and not further — and it is the card, not the
-	 * table, that is the arithmetic of record.
+	 * ADR-002 §9's expected column for one successful HTTP check totals $0.000034767
+	 * (`0.0034767` cents), hand-derived from `EXPLAIN QUERY PLAN` and the billing docs.
+	 * Matching it to five decimals — ADR-002's own rounding precision — confirms this card prices the same system.
 	 */
 	test("reproduces ADR-002's expected cost for one successful HTTP check", () => {
 		let quantities = createCostQuantities();

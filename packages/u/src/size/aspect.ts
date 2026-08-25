@@ -19,17 +19,9 @@ const ASPECT_RATIOS: Record<AspectRatioName, string> = {
 };
 
 /**
- * Applies `aspect-ratio`, either from a width and height pair or one of a
- * handful of common named ratios. Aspect ratios otherwise vary too
- * continuously for a full token family to pay for itself, so only these few
- * common shapes get names:
- *
- * - `"square"` — 1 / 1
- * - `"video"` — 16 / 9, standard widescreen video
- * - `"widescreen"` — 21 / 9, ultrawide/cinema
- * - `"portrait"` — 3 / 4, print/photo portrait orientation
- * - `"story"` — 9 / 16, vertical video (Stories, Reels, Shorts)
- * - `"photo"` — 4 / 3, standard print/photo landscape orientation
+ * Applies `aspect-ratio`, either from a width/height pair or one of the named
+ * ratios in `AspectRatioName`. Ratios vary too continuously for a full token
+ * family to pay for itself, so only a handful of common shapes get names.
  *
  * @example u.aspect(16, 9)
  * @example css({ aspectRatio: "16 / 9" })

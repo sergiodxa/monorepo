@@ -33,7 +33,6 @@ let { handler } = (await import("./dns-monitor-card-results")).default as {
 	handler: RequestHandler<any>;
 };
 
-/** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
 	let { db } = createTestDatabase();
 

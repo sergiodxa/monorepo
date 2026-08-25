@@ -34,11 +34,9 @@ interface PolarEvent {
 }
 
 /**
- * Webhook handler for `POST /api/webhooks/polar`: verifies the signature, then on
- * subscription create/update events upserts the subscription and activates the
- * account's blogs when entitled or suspends them when the status is non-entitling
- * (so a downgrade delivered as `subscription.updated` takes effect immediately), and
- * on cancel/revoke events suspends them.
+ * Webhook handler for `POST /api/webhooks/polar`: verifies the signature, upserts
+ * the subscription, and activates or suspends the account's blogs by entitlement —
+ * a downgrade delivered as `subscription.updated` suspends them immediately.
  *
  * @returns `401` for an invalid signature, otherwise `{ received: true }` JSON
  *   (including for ignored events referencing unknown accounts).
@@ -56,8 +54,6 @@ export default createAction(
 		let accountId = data.metadata?.account_id;
 		if (!accountId) return json({ received: true });
 
-		// The account_id comes from metadata we set at checkout, but only act on it if the
-		// account actually exists (ignore events referencing unknown/removed accounts).
 		let account = await Account.findById(db, accountId);
 		if (!account) return json({ received: true });
 
@@ -76,10 +72,6 @@ export default createAction(
 					current_period_start: data.current_period_start ?? null,
 					current_period_end: data.current_period_end ?? null,
 				});
-				// Only our configured product with an entitling status keeps blogs serving;
-				// anything else (different product, or a status that moved to past_due/
-				// unpaid/canceled/etc. on this same update event) must suspend the account's
-				// blogs now rather than waiting for a separate cancel/revoke event.
 				let target = webhookBlogStatus(data.product_id, status, env.POLAR_PRODUCT_ID);
 				await provisioner.setAccountBlogsStatus(accountId, target);
 				break;
@@ -97,8 +89,8 @@ export default createAction(
 );
 
 /**
- * Maps a Polar status string to our subscription status enum. Unknown statuses fail
- * closed to `past_due` (no entitlement granted) rather than defaulting to `active`.
+ * Maps a Polar status string to our subscription status enum, failing closed to
+ * `past_due` so an unrecognized status never carries entitlement.
  *
  * @param status The raw status string from the Polar event (may be undefined).
  * @returns The corresponding {@link SubscriptionStatus}, or `past_due` if unknown.
@@ -139,12 +131,9 @@ export function entitlesActivation(
 }
 
 /**
- * Decides the blog status a create/update subscription event must fan out to the
- * account's blogs: `active` when the event {@link entitlesActivation entitles}
- * activation, otherwise `suspended`. Returning `suspended` for every non-entitling
- * event is what makes an `active → past_due`/`unpaid`/`canceled` transition delivered
- * as a `subscription.updated` take effect immediately, instead of leaving blogs
- * serving until a later cancel/revoke event.
+ * Decides the blog status a create/update event fans out to the account's blogs:
+ * `active` when {@link entitlesActivation entitled}, otherwise `suspended` — so a
+ * downgrade delivered as `subscription.updated` suspends the blogs immediately.
  *
  * @param productId The product id from the event (may be undefined).
  * @param status The normalized subscription status.

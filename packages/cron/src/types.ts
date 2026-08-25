@@ -1,7 +1,7 @@
 /**
  * The vocabulary every other module in the package shares: which of the five cron
  * fields an error points at, a wall-clock time inside a descriptor, and the option
- * bags occurrence queries take. Each bag names its time zone, so none is inherited.
+ * bags occurrence queries take. Each bag names its own time zone explicitly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +58,7 @@ export interface ExpectedByOptions {
 	grace?: DurationInput;
 }
 
-/** Deadline options plus the instant being judged, so no ambient clock is read. */
+/** Deadline options plus the instant being judged, pinned to a caller-supplied value. */
 export interface IsDueOptions extends ExpectedByOptions {
 	now: Date;
 }

@@ -1,3 +1,11 @@
+/**
+ * Accept-header content negotiation: parse quality-ordered client
+ * preferences and pick the response representation that matches.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 const shortToMime = new Map<string, string[]>([
 	["json", ["application/json"]],
 	["html", ["text/html"]],
@@ -25,8 +33,8 @@ const mimeToShort = new Map<string, string>([
 ]);
 
 /**
- * Represents a parsed Accept header for content negotiation.
- * Provides methods to check accepted content types and find preferences.
+ * Holds an Accept header's types ordered by quality so callers can query
+ * preference without re-parsing on every check.
  */
 export class AcceptList {
 	private types: string[];
@@ -36,8 +44,9 @@ export class AcceptList {
 	}
 
 	/**
-	 * Checks if a content type is accepted by the client.
-	 * Supports shorthand types like "json", "html", "xml", "text", "markdown".
+	 * Matches shorthand types ("json", "html", "xml", "text", "markdown") as
+	 * well as full MIME types, and treats a wildcard Accept header as
+	 * matching any type.
 	 * @param type - The content type or shorthand to check
 	 * @returns True if the type is accepted
 	 * @example
@@ -51,7 +60,7 @@ export class AcceptList {
 	}
 
 	/**
-	 * Returns all accepted types in preference order (highest quality first).
+	 * Accepted types sorted by preference, highest quality first.
 	 * @returns Array of MIME types sorted by preference
 	 * @example
 	 * let types = accepts(request).all(); // ["text/html", "application/json", ...]
@@ -61,8 +70,9 @@ export class AcceptList {
 	}
 
 	/**
-	 * Finds the most preferred type from a list of available types.
-	 * Returns the first match based on client preference, or null if none match.
+	 * Walks the client's accepted types in preference order and returns the
+	 * first one present in `types`; a wildcard Accept header matches the
+	 * first of `types` rather than every candidate.
 	 * @param types - Available content types to choose from
 	 * @returns The preferred type or null
 	 * @example
@@ -85,11 +95,6 @@ export class AcceptList {
 		return mimeToShort.get(mimeType) ?? null;
 	}
 
-	/**
-	 * Parses an Accept header string into an array of MIME types sorted by quality.
-	 * @param header - The Accept header value
-	 * @returns Array of MIME types sorted by preference (highest quality first)
-	 */
 	private parseAcceptHeader(header: string): string[] {
 		return header
 			.split(",")
@@ -106,19 +111,14 @@ export class AcceptList {
 			.map(({ type }) => type);
 	}
 
-	/**
-	 * Resolves a shorthand type to an array of MIME types.
-	 * @param type - The shorthand type or full MIME type
-	 * @returns Array of MIME types
-	 */
 	private resolveType(type: string): string[] {
 		return shortToMime.get(type) ?? [type];
 	}
 }
 
 /**
- * Parses the Accept header from a request for content negotiation.
- * Returns an AcceptList that can be queried for accepted content types.
+ * Reads the Accept header, defaulting to accepting every type when the
+ * client sends none.
  * @param request - The incoming request
  * @returns An AcceptList instance for querying accepted types
  * @example
@@ -132,9 +132,9 @@ export function accepts(request: Request): AcceptList {
 }
 
 /**
- * Responds with the appropriate content type based on the Accept header.
- * Similar to Rails' respond_to, calls the matching handler for the preferred type.
- * Returns 406 Not Acceptable if no handler matches and no default is provided.
+ * Calls the handler for the client's preferred type, trying candidates in
+ * quality order; answers 406 Not Acceptable when nothing matches and no
+ * `default` handler is given.
  * @param request - The incoming request
  * @param handlers - Object mapping content types to response handlers
  * @returns The response from the matching handler

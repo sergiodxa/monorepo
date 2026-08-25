@@ -19,9 +19,8 @@ import { attrs } from "remix/ui";
 
 /**
  * `aria-hidden="true"` applied through {@link attrs} unless a consumer
- * overrides it. The indicator only restates a selection state its host
- * already exposes through `aria-selected`/`aria-current`, so assistive
- * technology gains nothing from encountering the marker itself.
+ * overrides it. The indicator restates a selection state already exposed
+ * via `aria-selected`/`aria-current`, so assistive technology gains nothing.
  */
 const DEFAULT_ARIA_HIDDEN = "true";
 
@@ -31,28 +30,16 @@ const DEFAULT_ARIA_HIDDEN = "true";
 export namespace SelectionIndicator {
 	/**
 	 * Every native `<div>` attribute, plus the `mix` passthrough. Selection
-	 * state rides the same native attributes a selectable row or tab already
-	 * carries: set `aria-selected="true"` for a menu, listbox, or tab option,
-	 * or a truthy `aria-current` for a nav-style current-item marker, directly
-	 * on this host. There is no separate boolean prop for it, since the
-	 * attribute doubles as both the styling hook and the value a consumer was
-	 * already going to set.
+	 * state reads directly from `aria-selected`/`aria-current` already set on
+	 * the host, so there is no separate boolean prop to duplicate it.
 	 */
 	export interface Props extends TagProps<"div"> {}
 }
 
 /**
- * Renders a fixed-size marker that is present in the layout at all times but
- * only becomes visible once its own host carries `aria-selected="true"` or a
- * truthy `aria-current` — `visibility` toggles rather than `display`, so the
- * marker's footprint stays reserved and sibling content never shifts when
- * selection changes. Sizes itself from `--ui-selection-indicator-size`
- * (defaulting to a compact square that fits a menu or listbox item's leading
- * checkmark slot) and colors from `currentColor`, inheriting whatever text
- * color the surrounding row sets. A consumer building a sliding tab-strip
- * underline instead repositions and reshapes it through the `mix`
- * passthrough — this component's own styling covers only sizing, color, and
- * the selected/unselected visibility switch.
+ * Renders a marker that stays present in the layout at all times but only
+ * becomes visible once its host carries `aria-selected="true"` or a truthy
+ * `aria-current`, so sibling content never reflows on selection change.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the indicator's markup.

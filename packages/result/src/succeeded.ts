@@ -1,3 +1,10 @@
+/**
+ * Assertion helper that narrows a Result to Success or throws.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result, Success } from "./types.js";
 
 import { isFailure } from "./is-failure.js";

@@ -1,14 +1,12 @@
 /**
  * A supplementary detail panel that appears beside a trigger on hover or
  * keyboard focus — a user card beneath an @mention, a definition beneath a
- * term. Its panel shares {@link Popover}'s treatment: the same rounded,
- * bordered, shadowed surface tinted with the neutral tint background, sized
- * narrower and padded for a compact block of text. Reveal rides `:hover` and
- * `:focus-within` on the compound root rather than the Popover API, since
- * showing a surface on hover has no invoker to click — the hover path sits
- * behind `@media (hover: hover)` so a coarse pointer never gets a stuck-open
- * panel, and the focus path stays unconditional, so a keyboard user (and a
- * touch user tapping into a focusable trigger) reaches the same content.
+ * term. Its panel shares {@link Popover}'s rounded, bordered, shadowed
+ * surface, sized narrower and padded for a compact block of text. Reveal
+ * rides `:hover` and `:focus-within` on the compound root, since a
+ * hover-revealed surface has no invoker to click — the hover path sits
+ * behind `@media (hover: hover)` to avoid a stuck-open panel on coarse
+ * pointers, while focus stays unconditional for keyboard and touch users.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,11 +47,9 @@ const DEFAULT_PLACEMENT: HoverCard.Placement = "bottom";
  */
 export namespace HoverCard {
 	/**
-	 * Side of the trigger the panel renders against, and — for the four
-	 * corner variants — which of the trigger's edges it aligns to along the
-	 * perpendicular axis. Each names a physical side of the viewport, so a
-	 * placement keeps attaching to that same physical side under any `dir`
-	 * value rather than mirroring for reading direction.
+	 * Side of the trigger the panel renders against, and — for corner variants
+	 * — which trigger edge it aligns to on the perpendicular axis. Names a
+	 * physical viewport side, so it keeps attaching under any `dir` value.
 	 */
 	export type Placement = AnchorPlacement;
 
@@ -72,11 +68,9 @@ export namespace HoverCard {
 	 */
 	export interface TriggerProps extends TagProps<"span"> {
 		/**
-		 * The visible trigger, typically a link, button, or another element
-		 * that already accepts keyboard focus on its own — the root only
-		 * reveals {@link HoverCard.Content} while focus or a hover-capable
-		 * pointer rests somewhere inside it, so a non-focusable child leaves
-		 * the panel reachable by pointer alone.
+		 * The visible trigger — a link, button, or other element. The root
+		 * reveals {@link HoverCard.Content} whenever focus or a hover-capable
+		 * pointer rests inside it, so pointer users reach the panel even without a focusable child.
 		 */
 		children: RemixNode;
 	}
@@ -93,15 +87,9 @@ export namespace HoverCard {
 }
 
 /**
- * Renders the compound root: a `<span>` establishing the positioning context
- * {@link HoverCard.Content} anchors against and the hover/focus-within scope
- * that reveals it. Because `:hover` and `:focus-within` both bubble up from
- * any descendant, wrapping {@link HoverCard.Trigger} and
- * {@link HoverCard.Content} in the same root reproduces "stay open while the
- * pointer or focus is on the trigger or the panel" without tracking either
- * state in script — moving the pointer from the trigger across the gap into
- * the panel keeps the root hovered the whole way, and moving focus from the
- * trigger onto a link inside the panel keeps it focus-within the whole way.
+ * Renders the compound root: a `<span>` providing {@link HoverCard.Content}'s
+ * anchor and the hover/focus-within scope that reveals it, so hovering or
+ * focusing the trigger or panel keeps it open with no script-tracked state.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the compound root's markup.
@@ -155,11 +143,9 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 }
 
 /**
- * Renders {@link HoverCard.TriggerProps.children} inside a `<span>` that
- * generates no box of its own (`display: contents`), so it neither adds an
- * extra inline wrapper to the trigger's layout nor changes its own hover or
- * focus-within participation — the root above still sees straight through to
- * whatever focusable or hoverable element the trigger renders.
+ * Renders {@link HoverCard.TriggerProps.children} inside a `<span>` styled
+ * `display: contents`, so the trigger keeps the child's own layout and
+ * hover/focus-within participation, visible straight through to the root above.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the trigger's markup.
@@ -181,33 +167,9 @@ HoverCard.Trigger = function HoverCardTrigger(handle: Handle<HoverCard.TriggerPr
 };
 
 /**
- * Renders the panel itself: a rounded, bordered, softly shadowed `<div>`
- * sharing {@link Popover}'s surface treatment, absolutely positioned against
- * the {@link HoverCard} root through the same `data-placement` attribute
- * contract Popover and {@link OverlayArrow} use, offset from the trigger by
- * `--ui-popover-offset`. It renders in the document's normal stacking order
- * (layered above nearby content through `--ui-hover-card-z`) rather than the
- * top layer, since it never carries the `popover` attribute — nothing calls
- * `showPopover()`, and revealing it is entirely `:hover`/`:focus-within`
- * driven.
- *
- * Hidden by default (`visibility: hidden`, transparent, inert to pointer
- * events), it fades to its resting opacity only once the ancestor root's
- * `&:hover`/`&:focus-within` rule matches, over `durations.fast` — the
- * catalog's timing for small anchored surfaces. `visibility` and
- * `pointer-events` ride along in the same transition (via
- * `transition-behavior: allow-discrete`) rather than snapping instantly, so
- * the panel stays visible and interactive for the whole
- * `--ui-hover-card-close-delay` grace window after the pointer leaves the
- * trigger — long enough to cross the gap into the panel itself before it
- * actually disappears. Opening is delayed by `--ui-hover-card-open-delay` on
- * hover and unset (immediate) on focus-within, matching a keyboard user
- * moving focus straight onto the trigger. `prefers-reduced-motion: reduce`
- * collapses every delay and duration to zero, so no preference for reduced
- * motion is read as an invitation to linger either.
- *
- * Compose {@link OverlayArrow} as a direct child for a pointer glyph back to
- * the trigger, exactly as {@link Popover} does.
+ * Renders the panel: a `<div>` sharing {@link Popover}'s surface and placement
+ * contract, kept in normal stacking order for its CSS-driven hover/focus
+ * reveal, with delays tuned for pointer and keyboard users.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the panel's markup.

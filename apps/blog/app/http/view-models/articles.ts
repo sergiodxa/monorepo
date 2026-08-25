@@ -1,8 +1,8 @@
 /**
- * View model for the articles index. Maps article repository list records into
+ * View model for the articles index. Maps repository list records into
  * render-ready rows, building each `/articles/:slug` link from canonical route
- * definitions and deriving preview state from publish-date semantics. It exists to keep
- * article listing controllers free of routing and publish-state logic; order is preserved.
+ * definitions and deriving preview state from publish-date semantics. Repository
+ * ordering is preserved.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,17 +14,14 @@ import { Post } from "~/app/repositories/post";
 import routes from "~/routes/web";
 
 /**
- * Shape contracts for the articles index view.
- *
- * These types represent the exact data expected by the articles template,
- * after repository records are converted into route-aware UI values.
+ * Shape contracts for the articles index view: the exact data the template
+ * expects once repository records become route-aware UI values.
  */
 export namespace ArticlesViewModel {
 	/**
 	 * Render-ready values for one article row in the index list.
 	 *
-	 * Each field is already normalized for presentation, so templates can render
-	 * without additional routing or publish-state logic.
+	 * Each field is already normalized, so templates render them directly.
 	 */
 	export interface Item {
 		/**
@@ -34,9 +31,6 @@ export namespace ArticlesViewModel {
 		 * `/articles/:slug` contract.
 		 */
 		href: string;
-		/**
-		 * Human-readable article title shown as the list label.
-		 */
 		label: string;
 		/**
 		 * Effective display date for the row.
@@ -59,10 +53,7 @@ export namespace ArticlesViewModel {
 	 */
 	export interface Page {
 		/**
-		 * Ordered row models rendered by the articles page.
-		 *
-		 * Order is preserved from the repository result; this view-model does not
-		 * sort, filter, or paginate the incoming collection.
+		 * Row models in the order the repository returned them.
 		 */
 		items: Array<Item>;
 	}
@@ -73,10 +64,8 @@ export namespace ArticlesViewModel {
  */
 export class ArticlesViewModel {
 	/**
-	 * Converts repository list records into `ArticlesViewModel.Page`.
-	 *
-	 * The mapper centralizes two contracts: route generation for each slug and
-	 * preview detection based on `Post.isPublishedAt` publish-state semantics.
+	 * Centralizes two contracts for the index route: route generation per slug,
+	 * and preview detection based on `Post.isPublishedAt` semantics.
 	 *
 	 * @param articles Articles fetched for the index route.
 	 * @returns Template-ready page payload with stable ordering.

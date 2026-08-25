@@ -26,9 +26,8 @@ export { createProvider, resolveEndSessionEndpoint } from "@pkg/oidc-client";
 export type EngineAuthConfig = OIDCConfig & {
 	/**
 	 * Grant the admin role to the first user to sign in while no admin exists yet.
-	 * Default `true` (self-hosted convenience). Multi-tenant hosts set `false` so a
-	 * stray SSO user cannot claim admin on a freshly provisioned tenant before its
-	 * owner does.
+	 * Defaults to `true` for self-hosted convenience; multi-tenant hosts set `false` so
+	 * a stray SSO user cannot claim admin before the tenant's real owner does.
 	 */
 	bootstrapFirstAdmin?: boolean;
 };

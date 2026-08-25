@@ -1,12 +1,11 @@
 /**
  * Tests for the dashboard per-monitor-type count stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
- * `~/app/services/analytics` both read `env` at module load, and MSW intercepts the
- * `http` resource's `queryAnalytics` call so it never hits the network (the other
- * resources' counts come straight from DB tables, with no analytics fallback to
- * exercise). `ctx.team`/`ctx.membership`/auth/i18next state is seeded
- * directly, standing in for the real `requireUser`/`requireTeam`/i18n middleware
- * chain, following the template in `app/http/controllers/actions/monitors.test.ts`.
+ * `~/app/services/analytics` both read `env` at module load. MSW intercepts
+ * the `http` resource's `queryAnalytics` call so it never hits the network;
+ * every other resource's count comes straight from DB tables. `ctx.team`,
+ * `ctx.membership`, auth, and i18next state are seeded directly, standing in
+ * for the real `requireUser`/`requireTeam`/i18n middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,10 +41,9 @@ import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * The bindings the page reads, real enough to answer for themselves: an empty KV is a
- * cache miss, so every test starts uncached without arranging one. They live at module
- * scope because the modules under test capture `env` on import; each test's team id is
- * fresh, so the cache keys derived from it never collide across tests.
+ * An empty KV is a cache miss, so every test starts uncached without arranging
+ * one. These live at module scope since the modules under test capture `env`
+ * on import, and each test's fresh team id keeps its cache keys collision-free.
  */
 let kv = createKVNamespace();
 let queue = createQueue();
@@ -199,18 +197,22 @@ describe("dashboard-card-count", () => {
 		let body = await response.text();
 		expect(body).toContain("DNS Monitors");
 		expect(body).toContain("2");
-		// One badge per state rather than one joined string, which is what keeps each part
-		// separately translatable — and only for a state with something in it: "0 error" is a
-		// fact about nothing, and holding a line open for it made every card three lines tall.
+		/**
+		 * Each state renders its own badge, so every part stays separately
+		 * translatable, and only for a state with a nonzero count — a blank "0
+		 * error" line was dead weight that pushed every card to three lines tall.
+		 */
 		expect(body).toContain(">1 ok</span>");
 		expect(body).toContain(">1 changed</span>");
 		expect(body).not.toContain("0 error");
-		// Colored by state, which is what the pills buy over the muted lines they replace.
+		/** Colored by state, so severity reads at a glance. */
 		expect(body).toContain('data-color="success"');
 		expect(body).toContain('data-color="warning"');
-		// Each card carries the link to its own type's form, which is what replaced the single
-		// "create monitor" button the header gave up to the quick check. It lands on the DNS
-		// form rather than on a chooser.
+		/**
+		 * Each card links straight to its own monitor type's creation form, since
+		 * the quick check replaced the single header "create monitor" button that
+		 * used to route everyone through a picker.
+		 */
 		expect(body).toContain(`href="${routes.app.team.dnsMonitors.new.href({ team: team.slug })}"`);
 		expect(body).toContain(`aria-label="${en.page.dashboard.stats.dnsMonitors.create}"`);
 	});
@@ -220,9 +222,11 @@ describe("dashboard-card-count", () => {
 
 		let body = await (await send(db, team, membership, "dns")).text();
 
-		// Every state is zero, so the breakdown is empty rather than three pills saying so.
-		// The cards share a flex row and stretch to whichever has the most to say, so a card
-		// with nothing to report costs the row no alignment.
+		/**
+		 * When every state is zero, the breakdown renders no pills at all. Cards
+		 * share a flex row and stretch to whichever has the most to say, so an
+		 * empty card keeps the row's alignment intact.
+		 */
 		expect(body).toContain("DNS Monitors");
 		expect(body).not.toContain("0 ok");
 		expect(body).not.toContain("0 changed");
@@ -269,8 +273,10 @@ describe("dashboard-card-count", () => {
 		expect(body).not.toContain("0 down");
 		expect(body).toContain(`href="${routes.app.team.monitors.new.href({ team: team.slug })}"`);
 		expect(body).toContain(`aria-label="${en.page.dashboard.stats.httpMonitors.create}"`);
-		// The summaries are read through the KV cache, so the answer has to be in the namespace
-		// afterwards — the next load of this card is what the write is for.
+		/**
+		 * Card loads read the KV cache first, so this write has to land in the
+		 * namespace for the next load to find it.
+		 */
 		expect(await kv.get(buildCacheKey(team.id, "httpSummaries"), "json")).not.toBeNull();
 	});
 });

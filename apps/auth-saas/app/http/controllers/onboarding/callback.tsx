@@ -1,9 +1,8 @@
 /**
- * `GET /onboarding/callback` — the platform OAuth callback. Exchanges the authorization
- * code for tokens, validates the ID token, resolves pending tenant ownership, and
- * establishes the platform session before redirecting to the dashboard. The error page
- * is rendered with `remix/ui` JSX via `ctx.render` (replacing the former Tailwind-CDN
- * `html()` string template); all OAuth/onboarding behavior is preserved.
+ * `GET /onboarding/callback` — the platform OAuth callback. Exchanges the
+ * authorization code for tokens, verifies the ID token, resolves pending
+ * tenant ownership, and establishes the platform session before redirecting
+ * to the dashboard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,20 +26,17 @@ import Tenant from "~/app/models/tenant";
 import { AuthErrorPage, PublicDocument } from "~/app/views/landing";
 import routes from "~/routes/web";
 
-/** Schema for OAuth callback query parameters. */
 let CallbackSchema = s.object({
 	code: s.string(),
 	state: s.string(),
 });
 
-/** Schema for the OAuth state cookie. */
 let OAuthStateSchema = s.object({
 	codeVerifier: s.string(),
 	state: s.string(),
 	nonce: s.string(),
 });
 
-/** Schema for the token response. */
 let TokenResponseSchema = s.object({
 	access_token: s.string(),
 	token_type: s.string(),
@@ -49,21 +45,19 @@ let TokenResponseSchema = s.object({
 	refresh_token: s.optional(s.string()),
 });
 
-/** Schema for ID token claims (minimal). */
 let IdTokenClaimsSchema = s.object({
 	sub: s.string(),
 	email: s.optional(s.string()),
 	email_verified: s.optional(s.boolean()),
-	/** Session ID from the tenant (sid claim) */
 	sid: s.optional(s.string()),
 });
 
-/** Well-known client ID for the dashboard OAuth client. */
 const DASHBOARD_CLIENT_ID = "dashboard";
 
 /**
- * OAuth callback handler for platform authentication.
- * Exchanges the authorization code for tokens and creates a platform session.
+ * Exchanges the authorization code for tokens, then verifies the ID token's
+ * signature, issuer, audience, and nonce against the platform JWKS so only a
+ * valid, unreplayed token can establish a platform session.
  */
 export default createAction(
 	routes.onboarding.callback,
@@ -72,7 +66,6 @@ export default createAction(
 		let log = logger.loader("/onboarding/callback");
 		let url = new URL(request.url);
 
-		// Parse callback parameters
 		let params = Object.fromEntries(url.searchParams);
 		let result = await validate(params, CallbackSchema);
 		if (isFailure(result)) {
@@ -82,7 +75,6 @@ export default createAction(
 
 		let { code, state } = result.data;
 
-		// Get and validate OAuth state from cookie
 		let cookieHeader = request.headers.get("Cookie") ?? "";
 		let stateMatch = cookieHeader.match(/__oauth_state=([^;]+)/);
 		if (!stateMatch || !stateMatch[1]) {
@@ -101,13 +93,11 @@ export default createAction(
 
 		let { codeVerifier, state: expectedState, nonce: expectedNonce } = oauthStateResult.data;
 
-		// Verify state matches (CSRF protection)
 		if (state !== expectedState) {
 			log.error("State mismatch", { expected: expectedState, received: state });
 			return renderError("Security validation failed. Please try again.");
 		}
 
-		// Exchange code for tokens
 		let baseUrl = `${url.protocol}//${url.host}`;
 		let tokenUrl = new URL("/oauth/token", baseUrl);
 
@@ -138,17 +128,12 @@ export default createAction(
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		// Get the ID token from the token response.
 		let idToken = tokenResult.data.id_token;
 		if (!idToken) {
 			log.error("No ID token in response");
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		// Verify the ID token's signature and claims against the platform tenant JWKS.
-		// The previous flow trusted a base64-decoded payload; an attacker who could reach
-		// this endpoint could mint a session for any subject. We now require a valid
-		// signature, issuer, audience, and time claims before trusting any claim.
 		let verifiedClaims = await verifyIdToken(idToken, {
 			jwksUrl: new URL("/.well-known/jwks.json", baseUrl).toString(),
 			issuer: `https://${env.PLATFORM_DOMAIN}`,
@@ -159,8 +144,6 @@ export default createAction(
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		// Bind the ID token to this authorization request: the nonce must match the one
-		// stored when the flow started, rejecting replayed or injected tokens.
 		if (verifiedClaims.nonce !== expectedNonce) {
 			log.error("ID token nonce mismatch");
 			return renderError("Security validation failed. Please try again.");
@@ -178,13 +161,11 @@ export default createAction(
 			return renderError("Email is required for authentication.");
 		}
 
-		// Resolve any pending ownership for this email
 		let resolvedCount = await Tenant.resolvePendingOwnership(db, email, subjectId);
 		if (resolvedCount > 0) {
 			log.info("Resolved pending ownership", { email, count: resolvedCount });
 		}
 
-		// Create platform session with the tenant session ID from the ID token
 		let sessionToken = await createSessionToken(
 			subjectId,
 			email,
@@ -194,11 +175,9 @@ export default createAction(
 
 		log.info("Login successful", { subjectId, tenantSessionId });
 
-		// Redirect to dashboard with session cookie (Secure in production via the helper).
 		let headers = new Headers();
 		headers.set("Location", routes.dashboard.index.href());
 		headers.append("Set-Cookie", createSessionCookie(sessionToken, !import.meta.env.DEV));
-		// Clear the OAuth state cookie
 		headers.append("Set-Cookie", `__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 
 		return new Response(null, { status: 302, headers });

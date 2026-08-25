@@ -1,12 +1,9 @@
 /**
  * Fixed-timestep timing constants shared by the game loop and input layer.
  *
- * The presentation advances its simulation at a constant rate that is decoupled
- * from the render cadence: `GameClient` accumulates real elapsed time and steps
- * the active scene in whole `FIXED_STEP_MS` slices, capping catch-up work at
- * `MAX_FRAME_MS` so a backgrounded tab cannot trigger a spiral of death. These
- * constants live in their own module so the client loop and input edge
- * detection can agree on the step size without importing one another.
+ * `GameClient` accumulates real elapsed time and steps the active scene in
+ * whole `FIXED_STEP_MS` slices, capping catch-up at `MAX_FRAME_MS` so a
+ * backgrounded tab cannot trigger a spiral of death.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

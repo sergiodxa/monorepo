@@ -1,10 +1,8 @@
 /**
- * Verifies the pure atlas slicer: {@link gridDimensions} counts only whole tiles
- * that fit (honouring margin and spacing, excluding ragged partial tiles),
- * {@link sliceGrid} emits row-major rects under both naming schemes, and the
- * manual-region helpers ({@link addRegion}, {@link removeRegion},
- * {@link renameRegion}, {@link regionsToMap}) add/remove/rename without mutating
- * their input and keep names unique.
+ * Verifies the pure atlas slicer: {@link gridDimensions} counts only the tiles
+ * that fit wholly under a given margin and spacing, {@link sliceGrid} emits
+ * row-major rects under both naming schemes, and the manual-region helpers
+ * return fresh lists with unique names.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,7 +28,6 @@ describe("gridDimensions", () => {
 	});
 
 	test("excludes a ragged partial tile at the right/bottom edge", () => {
-		// 70×40 with 16×16 tiles: 4 whole columns (70/16 = 4.375), 2 whole rows.
 		expect(gridDimensions(70, 40, { tileWidth: 16, tileHeight: 16 })).toEqual({
 			columns: 4,
 			rows: 2,
@@ -38,7 +35,6 @@ describe("gridDimensions", () => {
 	});
 
 	test("honours an outer margin", () => {
-		// 36×36, 16×16 tiles, margin 2: usable 32 → exactly 2 columns/rows.
 		expect(gridDimensions(36, 36, { tileWidth: 16, tileHeight: 16, margin: 2 })).toEqual({
 			columns: 2,
 			rows: 2,
@@ -46,7 +42,6 @@ describe("gridDimensions", () => {
 	});
 
 	test("honours inter-tile spacing", () => {
-		// 50 wide, 16px tiles, 2px spacing: 16 + 16+2 = 34, +16+2 = 52 > 50 → 2 columns.
 		expect(gridDimensions(50, 16, { tileWidth: 16, tileHeight: 16, spacing: 2 })).toEqual({
 			columns: 2,
 			rows: 1,
@@ -54,8 +49,6 @@ describe("gridDimensions", () => {
 	});
 
 	test("combines margin and spacing", () => {
-		// margin 1 each side, 2px spacing, 16px tiles across 52px:
-		// usable = 52 - 2 = 50; (50 + 2) / (16 + 2) = 52/18 = 2.88 → 2 columns.
 		expect(
 			gridDimensions(52, 18, { tileWidth: 16, tileHeight: 16, margin: 1, spacing: 2 }),
 		).toEqual({ columns: 2, rows: 1 });
@@ -107,10 +100,8 @@ describe("sliceGrid", () => {
 			margin: 1,
 			spacing: 2,
 		});
-		// usable width 36; (36 + 2) / 18 = 2.11 → 2 columns; height usable 18 → 1 row.
 		expect(Object.keys(regions)).toEqual(["tile.0", "tile.1"]);
 		expect(regions["tile.0"]).toEqual({ x: 1, y: 1, w: 16, h: 16 });
-		// second column starts at margin(1) + (tile 16 + spacing 2) = 19.
 		expect(regions["tile.1"]).toEqual({ x: 19, y: 1, w: 16, h: 16 });
 	});
 
@@ -124,7 +115,6 @@ describe("sliceGrid", () => {
 			expect(rect.x + rect.w).toBeLessThanOrEqual(70);
 			expect(rect.y + rect.h).toBeLessThanOrEqual(40);
 		}
-		// 4 columns × 2 rows = 8 whole tiles.
 		expect(Object.keys(regions)).toHaveLength(8);
 	});
 });

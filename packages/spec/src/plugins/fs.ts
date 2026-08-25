@@ -388,7 +388,6 @@ function serializeContent(content: Value): Result<string, ToolError> {
 	);
 }
 
-/** Narrow a value to a plain object (not an array, not null). */
 function isValueObject(value: Value): value is ValueObject {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

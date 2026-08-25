@@ -32,10 +32,9 @@ let metadata: OIDCMetadata = {
 } as OIDCMetadata;
 
 /**
- * Builds the real blog engine over an in-memory database adapter (the engine runs
- * its own migrations lazily before the first request) and drives a GET request
- * through its full `fetch` path — the same `container.scope(() => router.fetch())`
- * the host uses in production.
+ * Builds the real blog engine over an in-memory database adapter (migrations run
+ * lazily on first request) and drives a GET request through the same `fetch`
+ * path production traffic takes via `container.scope(() => router.fetch())`.
  */
 function createEngine() {
 	let sqliteDb = openDatabase(":memory:");
@@ -54,22 +53,16 @@ function createEngine() {
 
 describe("createBlogEngine — service-container DI over the full fetch path", () => {
 	test("resolves Database inside the request scope for the sitemap endpoint", async () => {
-		// The sitemap handler is wrapped in `inject([Database])` and queries post
-		// types/posts, so a working XML response proves the per-request Database
-		// resolved inside `container.scope`.
 		let engine = createEngine();
 		let response = await engine.fetch(new Request("https://blog.example.com/sitemap.xml"));
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("xml");
 		let body = await response.text();
-		// A freshly-seeded blog always has at least the home URL in its sitemap.
 		expect(body).toContain("https://blog.example.com/");
 	});
 
 	test("resolves Database inside the request scope for the home feed", async () => {
-		// The home feed (`GET /`) is also wrapped in `inject([Database])`; it renders
-		// HTML from `loadSiteChrome`/`PostType.findVisible`, both DB-backed.
 		let engine = createEngine();
 		let response = await engine.fetch(new Request("https://blog.example.com/"));
 
@@ -77,9 +70,12 @@ describe("createBlogEngine — service-container DI over the full fetch path", (
 		expect(response.headers.get("content-type")).toContain("text/html");
 	});
 
+	/**
+	 * The original bug surfaced as an uncaught `ServiceNotFoundError` bubbling
+	 * to a 500, so any 2xx/3xx/4xx response demonstrates the fix — only a 500
+	 * indicates the regression.
+	 */
 	test("does not fail with a 500 from a broken DI path", async () => {
-		// Negative guard: the original bug surfaced as an uncaught ServiceNotFoundError
-		// bubbling to a 500. Any 2xx/3xx/4xx is acceptable; a 500 is not.
 		let engine = createEngine();
 		let response = await engine.fetch(new Request("https://blog.example.com/sitemap.xml"));
 

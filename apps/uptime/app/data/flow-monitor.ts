@@ -1,16 +1,9 @@
 /**
- * Data-access model for flow monitors. Exposes CRUD over the `flow_monitors` table scoped to
- * a team, the claim each sweep runs to take the monitors whose `interval_seconds` has come
- * round, its `flow_monitor_results` history, and the single `recordCheckResult` write path
- * every caller uses, so a check's history-insert and cached-fields-update never drift apart.
- *
- * `interval_seconds` must be one of `FLOW_INTERVALS_SECONDS`, and that is enforced here rather
- * than left to callers because there is one write path and several of them. Refused, not
- * clamped: a caller asking for 60 seconds should be told no rather than given 900 and left to
- * find the difference in a latency chart.
- *
- * Which hosts a monitor may reach is deliberately not a column and not written here — it is
- * resolved from the team's verified domains on every run (see `flow-check.ts`).
+ * Data-access model for flow monitors: team-scoped CRUD, the claim each sweep runs to take
+ * the monitors whose `interval_seconds` has come round, result history, and the single
+ * `recordCheckResult` write path that keeps a check's history insert and its cached-fields
+ * update together. Only the intervals in `FLOW_INTERVALS_SECONDS` are accepted, so a caller
+ * asking for 60 seconds is told at the call instead of finding 900 in a latency chart.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,12 +24,9 @@ import { flowMonitorResults, flowMonitors } from "~/database/schema";
 const RESULT_HISTORY_LIMIT = 50;
 
 /**
- * What a claimed monitor's check needs to read. Adding a column the check uses is one edit
- * here: {@link ClaimedFlowMonitor} and {@link FlowMonitor.claimDue}'s return type follow.
- *
- * `team_id` is not read by the check itself — the sweep apportions its own cost across the
- * teams whose monitors it swept (ADR-007 §5) and bills each run to one of them, and the
- * `RETURNING` projection is where that costs nothing.
+ * The columns a claimed monitor's check reads. `team_id` rides along so the sweep can
+ * apportion its own cost across the teams it swept (ADR-007 §5) and bill each run to one of
+ * them, which the `RETURNING` projection provides for free.
  */
 const CLAIM_COLUMNS = ["id", "team_id", "source", "last_status"] as const;
 
@@ -88,7 +78,7 @@ export default class FlowMonitor {
 		return await claimDue(db, flowMonitors, CLAIM_COLUMNS, scheduledAt);
 	}
 
-	/** Finds a single flow monitor scoped to a team, or `null` when it isn't theirs. */
+	/** Finds a single flow monitor within a team, or `null` when the id belongs elsewhere. */
 	static async findByIdForTeam(db: Database, teamId: string, monitorId: string) {
 		return await db.findOne(flowMonitors, { where: { id: monitorId, team_id: teamId } });
 	}
@@ -174,11 +164,6 @@ export default class FlowMonitor {
 	}
 }
 
-/**
- * Refuses an interval that is not on the list.
- *
- * @throws If `seconds` is not a selectable flow interval.
- */
 function assertInterval(seconds: number): void {
 	if (isFlowIntervalSeconds(seconds)) return;
 	throw new Error(`${seconds} is not a selectable flow monitor interval.`);

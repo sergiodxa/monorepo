@@ -2,11 +2,9 @@ import { unwrap } from "@pkg/result";
 /**
  * Verifies the encounter system spawns reproducible, unowned wild creatures.
  *
- * The tests confirm `spawnEncounter` writes identity, progress, moves, health, status, and an encounter
- * location; that under a seeded RNG the nature, per-stat IVs (0..31), and derived moveset are
- * deterministic; that experience matches the species growth curve for the requested level; that explicit
- * nature/IV/move overrides bypass the RNG; and that the creature is left unowned until a capture converts
- * it. A tiny inline content source pins the roster so the assertions are exact.
+ * The tests confirm `spawnEncounter` writes the full component set deterministically under
+ * a seeded RNG, sets experience from the species growth curve, honors explicit overrides,
+ * and leaves the creature unowned until a capture converts it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,7 +53,10 @@ function move(pp: number): Move {
 	};
 }
 
-/** Builds a medium-fast content source with two natures and a small level-up learnset. */
+/**
+ * Builds a medium-fast content source with two natures and a small level-up learnset;
+ * insertion order is A then B, so a nature RNG index maps directly to the nature id.
+ */
 function createGameData(): GameData {
 	let species: Species = {
 		number: 1,
@@ -75,7 +76,6 @@ function createGameData(): GameData {
 		eggGroup: ["monster"],
 	} as unknown as Species;
 	let source: GameDataSource = {
-		// Nature insertion order is A then B, so the RNG index maps directly to the nature id.
 		natures: {
 			[NATURE_A]: { increases: null, decreases: null },
 			[NATURE_B]: { increases: null, decreases: null },
@@ -126,9 +126,12 @@ test("spawnEncounter writes the full component set at an encounter location", ()
 	expect(world.entities).toContain(creatureId);
 });
 
+/**
+ * The fixture species has a 50/50 gender ratio, so a low random draw resolves female
+ * and a high draw resolves male.
+ */
 test("spawnEncounter rolls a gender deterministically from the even ratio", () => {
 	let { world } = createWorld();
-	// The fixture species is a 50/50 ratio: a low draw is female, a high draw is male.
 	let female = spawnEncounter(
 		createGameData(),
 		world,
@@ -144,14 +147,16 @@ test("spawnEncounter rolls a gender deterministically from the even ratio", () =
 
 	expect(world.creatureInstance[female.creatureId]?.gender).toBe(Gender.Female);
 	expect(world.creatureInstance[male.creatureId]?.gender).toBe(Gender.Male);
-	// Instance state also seeds a null held item and zero friendship.
 	expect(world.creatureInstance[female.creatureId]?.heldItemId).toBeNull();
 	expect(world.creatureInstance[female.creatureId]?.friendship).toBe(0);
 });
 
+/**
+ * A genderless species never consults the ratio branch, so any random draw still
+ * resolves as genderless.
+ */
 test("spawnEncounter always yields genderless for a species with no ratio", () => {
 	let { world } = createWorld();
-	// Retarget the fixture species to genderless before loading content.
 	let genderlessSource: GameDataSource = {
 		natures: {
 			[NATURE_A]: { increases: null, decreases: null },
@@ -182,7 +187,6 @@ test("spawnEncounter always yields genderless for a species with no ratio", () =
 		gameData,
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
-		// Any draw yields genderless; the ratio branch never turns a roll into a sex.
 		() => 0.5,
 	);
 
@@ -201,9 +205,9 @@ test("spawnEncounter leaves the creature unowned until a capture converts it", (
 	expect(world.ownership[creatureId]).toBeUndefined();
 });
 
+/** Medium-fast level 8 works out to 8^3, or 512 experience on the growth curve. */
 test("spawnEncounter sets experience to the species curve total for the level", () => {
 	let { world } = createWorld();
-	// Medium-fast level 8 === 8^3 === 512.
 	let { creatureId } = spawnEncounter(
 		createGameData(),
 		world,
@@ -214,10 +218,13 @@ test("spawnEncounter sets experience to the species curve total for the level", 
 	expect(world.creatureProgress[creatureId]?.experience).toBe(512);
 });
 
+/**
+ * Rolls consume the RNG in order: one nature index, then six IVs in HP, Attack, Defense,
+ * SpAtk, SpDef, Speed order. A 0.6 nature roll floors to index 1 (NATURE_B); each IV roll
+ * r floors to r * 32.
+ */
 test("spawnEncounter rolls nature and IVs deterministically from a scripted RNG", () => {
 	let { world } = createWorld();
-	// Call order: 1 nature index, then 6 IV rolls in HP, Attack, Defense, SpAtk, SpDef, Speed order.
-	// Nature roll 0.6 -> floor(0.6 * 2) === 1 -> NATURE_B. IV roll r -> floor(r * 32).
 	let rolls = [0.6, 0, 0.5, 0.99, 0.25, 0.75, 0.1];
 	let index = 0;
 	let random = () => rolls[index++]!;
@@ -239,13 +246,15 @@ test("spawnEncounter rolls nature and IVs deterministically from a scripted RNG"
 		[Stat.SpecialDefense]: 24,
 		[Stat.Speed]: 3,
 	});
-	// EVs always start at zero.
 	expect(progress.ev).toEqual(statSet(0));
 });
 
+/**
+ * At level 5 the species knows Tackle (learned at 1) and Growl (learned at 3) but not
+ * Ember (learned at 7); PP mirrors each move's authored maximum, with empty slots at zero.
+ */
 test("spawnEncounter derives the most recent level-up moves for the level", () => {
 	let { world } = createWorld();
-	// At level 5 the species knows Tackle (1) and Growl (3) but not Ember (7).
 	let { creatureId } = spawnEncounter(
 		createGameData(),
 		world,
@@ -255,7 +264,6 @@ test("spawnEncounter derives the most recent level-up moves for the level", () =
 
 	let moves = world.creatureMoves[creatureId]!;
 	expect(moves.moveset).toEqual([TACKLE, GROWL, null, null]);
-	// PP mirrors each move's authored maximum, with empty slots at zero.
 	expect(moves.pp).toEqual([35, 40, 0, 0]);
 });
 
@@ -271,9 +279,9 @@ test("spawnEncounter includes higher-level moves once the level qualifies", () =
 	expect(world.creatureMoves[creatureId]?.moveset).toEqual([TACKLE, GROWL, EMBER, null]);
 });
 
+/** A throwing random function proves the overrides bypass every random roll. */
 test("spawnEncounter honors explicit nature, IV, and move overrides without the RNG", () => {
 	let { world } = createWorld();
-	// A throwing RNG proves the overrides bypass every random roll.
 	let random = () => {
 		throw new Error("random should not be called when everything is overridden");
 	};
@@ -313,9 +321,12 @@ test("spawnEncounter honors explicit nature, IV, and move overrides without the 
 	expect(world.creatureMoves[creatureId]?.moveset).toEqual([EMBER, null, null, null]);
 });
 
+/**
+ * Only nature and HP are pinned; the remaining five IVs still consume RNG rolls in stat
+ * order, so HP keeps its override of 15 while every other stat rolls floor(0.5 * 32) === 16.
+ */
 test("spawnEncounter rolls IVs for stats missing from a partial IV override", () => {
 	let { world } = createWorld();
-	// Only nature and HP are pinned; the remaining five IVs still consume RNG rolls in stat order.
 	let rolls = [0, 0.5, 0.5, 0.5, 0.5, 0.5];
 	let index = 0;
 	let random = () => rolls[index++]!;
@@ -333,7 +344,6 @@ test("spawnEncounter rolls IVs for stats missing from a partial IV override", ()
 	);
 
 	let progress = world.creatureProgress[creatureId]!;
-	// The override wins for HP; every other stat rolls floor(0.5 * 32) === 16.
 	expect(progress.iv[Stat.HP]).toBe(15);
 	expect(progress.iv[Stat.Attack]).toBe(16);
 	expect(progress.iv[Stat.Speed]).toBe(16);

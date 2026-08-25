@@ -29,7 +29,6 @@ export const show = createAction(
 		let { logger } = getContext();
 		let log = logger.loader("/api/stats");
 
-		// Fetch all counts in parallel for better performance
 		let [totalUsers, totalClients, totalSessions, activeSessions, monthlyActiveUsers] =
 			await Promise.all([
 				Subject.count(db),

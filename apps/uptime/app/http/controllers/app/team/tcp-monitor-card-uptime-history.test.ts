@@ -1,6 +1,6 @@
 /**
  * Tests for the TCP monitor uptime-history fragment controller. `~/app/data/tcp-monitor`
- * doesn't import `cloudflare:workers`, so no module mock is needed here.
+ * keeps to database-safe imports, so this suite needs only the database fixture below.
  * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
  * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
  *
@@ -33,7 +33,6 @@ let { handler } = (await import("./tcp-monitor-card-uptime-history")).default as
 	handler: RequestHandler<any>;
 };
 
-/** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
 	let { db } = createTestDatabase();
 
@@ -79,7 +78,6 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Sends a GET request through a minimal router mapping a single page route. */
 async function send(
 	db: Database,
 	team: SelectTeam,

@@ -7,10 +7,9 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { when } from "./when";
 
 /**
- * Sugar over an element's own `data-*` attribute selector: targets
- * `&[data-{attribute}]` (present with any value, including a bare boolean
- * attribute) when no `value` is given, or `&[data-{attribute}="{value}"]`
- * when one is.
+ * Sugar over an element's own `data-*` attribute selector: matches
+ * `&[data-{attribute}]` (any value, including a bare boolean attribute) with no
+ * `value` argument, or `&[data-{attribute}="{value}"]` with one.
  *
  * @example u.data("orientation", "vertical", u.flexCol())
  * @example css({ '&[data-orientation="vertical"]': { flexDirection: "column" } })

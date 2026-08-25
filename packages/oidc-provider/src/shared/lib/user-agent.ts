@@ -39,11 +39,12 @@ export function parseUserAgent(userAgent: string | null): ParsedUserAgent {
 
 /**
  * Identifies the browser from a user agent string.
+ * Checks proceed from most specific to least specific because some browsers
+ * embed other engines' tokens (e.g. Chrome-based browsers include "Safari/").
  * @param ua - Raw user agent string.
  * @returns A browser name, or `"Unknown Browser"` when none matches.
  */
 function parseBrowser(ua: string): string {
-	// Order matters - check more specific browsers first
 	if (ua.includes("Edg/")) return "Edge";
 	if (ua.includes("OPR/") || ua.includes("Opera")) return "Opera";
 	if (ua.includes("Chrome/") && !ua.includes("Chromium")) return "Chrome";
@@ -60,11 +61,9 @@ function parseBrowser(ua: string): string {
  * @returns An OS name, or `"Unknown OS"` when none matches.
  */
 function parseOS(ua: string): string {
-	// Mobile OS first
 	if (ua.includes("iPhone") || ua.includes("iPad")) return "iOS";
 	if (ua.includes("Android")) return "Android";
 
-	// Desktop OS
 	if (ua.includes("Mac OS X") || ua.includes("macOS")) return "macOS";
 	if (ua.includes("Windows NT 10")) return "Windows 10";
 	if (ua.includes("Windows NT 11") || (ua.includes("Windows NT 10") && ua.includes("Win64")))

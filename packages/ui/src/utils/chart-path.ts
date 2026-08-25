@@ -36,11 +36,8 @@ export function linePath(points: readonly Point[]): string {
 }
 
 /**
- * Builds the `d` attribute for the same connected line {@link linePath}
- * draws, closed into a filled region: after the last point, the path runs
- * straight to `baselineY` at the last point's `x`, across to `baselineY` at
- * the first point's `x`, and closes with `Z` back to the first point. Backs
- * an area chart's filled series.
+ * Builds the `d` attribute for the line {@link linePath} draws, closed into
+ * a filled region down to `baselineY`, for an area chart's filled series.
  *
  * @param points Already-scaled pixel positions along the top edge of the area, in draw order.
  * @param baselineY Pixel `y` position the area closes down (or up) to — typically the zero line or the chart's floor.
@@ -72,26 +69,25 @@ export namespace ArcPath {
 		/** Vertical pixel position of the circle's center. */
 		cy: number;
 		/**
-		 * Pixel distance from the center to the wedge's inner edge. Omit or
-		 * pass `0` for a solid pie wedge that reaches all the way to the
-		 * center; pass a positive value for a donut segment with a hole.
-		 * Defaults to `0`.
+		 * Pixel distance from the center to the wedge's inner edge. Omit or pass
+		 * `0` for a solid pie wedge reaching the center; a positive value
+		 * produces a donut segment with a hole.
+		 *
+		 * @default `0`
 		 */
 		innerRadius?: number;
 		/** Pixel distance from the center to the wedge's outer edge. */
 		outerRadius: number;
 		/**
-		 * Angle, in radians, where the wedge starts. `0` points straight up
-		 * (12 o'clock) and positive angles sweep clockwise, matching the
-		 * angle convention a pie chart's slice-angle allocation already
-		 * produces.
+		 * Angle, in radians, where the wedge starts. `0` points straight up (12
+		 * o'clock) with positive angles sweeping clockwise, the convention a
+		 * pie chart's slice allocation already produces.
 		 */
 		startAngle: number;
 		/**
 		 * Angle, in radians, where the wedge ends, measured on the same
-		 * clockwise-from-12-o'clock scale as `startAngle`. Must be greater
-		 * than `startAngle` — the wedge always sweeps clockwise from start
-		 * to end.
+		 * clockwise-from-12-o'clock scale as `startAngle`. Must be greater than
+		 * `startAngle` — the wedge sweeps clockwise from start to end.
 		 */
 		endAngle: number;
 	}
@@ -101,20 +97,16 @@ export namespace ArcPath {
 const DEFAULT_INNER_RADIUS = 0;
 
 /**
- * Tolerance for treating a sweep as a full turn. Trigonometric round-off
- * means a sweep computed as "the whole circle" rarely lands on exactly
- * {@link FULL_TURN_RADIANS}, so anything within this tolerance (or past it)
- * is clamped to one.
+ * Tolerance for treating a sweep as a full turn: trigonometric round-off
+ * rarely lands a full-circle sweep exactly on {@link FULL_TURN_RADIANS}, so
+ * anything within (or past) this tolerance clamps to one full turn.
  */
 const FULL_TURN_EPSILON = 1e-6;
 
 /**
- * Decimal places kept on every computed coordinate. `Math.sin`/`Math.cos` of
- * a "clean" angle (a multiple of a simple fraction of π) is almost never
- * exactly `0`, `1`, or `-1` in floating point — rounding at this precision
- * discards that noise while staying far finer than a screen pixel, so output
- * strings stay exact for known inputs instead of trailing off into
- * `1e-16`-scale artifacts.
+ * Decimal places kept on every computed coordinate: coarse enough to round
+ * away the floating-point noise `Math.sin`/`Math.cos` leave on "clean"
+ * angles, yet finer than a screen pixel, so output stays exact.
  */
 const COORDINATE_PRECISION = 6;
 
@@ -131,11 +123,9 @@ function pointOnCircle(cx: number, cy: number, radius: number, angle: number): P
 }
 
 /**
- * Builds a complete circle as two 180° arcs (top-to-bottom, then back). A
- * single `A` command cannot sweep a full turn — its start and end point
- * would coincide, which most renderers treat as nothing to draw — so a full
- * turn always goes through this two-arc form instead, for both the outer
- * silhouette and, when present, the inner hole.
+ * Builds a complete circle as two 180° arcs (top-to-bottom, then back): a
+ * single `A` command can't sweep a full turn since coincident start/end
+ * points render as nothing, so a full turn always uses this two-arc form.
  */
 function fullCirclePath(cx: number, cy: number, radius: number, sweepFlag: 0 | 1): string {
 	let top = pointOnCircle(cx, cy, radius, 0);
@@ -145,12 +135,9 @@ function fullCirclePath(cx: number, cy: number, radius: number, sweepFlag: 0 | 1
 }
 
 /**
- * Builds the `d` attribute for a pie or donut wedge spanning `startAngle` to
- * `endAngle`. With `innerRadius` at its default of `0` the wedge is a solid
- * slice that meets at the center; with a positive `innerRadius` it is a
- * donut segment bounded by two concentric arcs. A sweep spanning a full turn
- * (or more) renders as a complete ring or disc instead of a degenerate arc.
- * Backs a pie or donut chart's plotted slices.
+ * Builds the `d` attribute for a pie or donut wedge spanning `startAngle`
+ * to `endAngle`, solid when `innerRadius` is `0` and a donut segment
+ * otherwise. A full-turn (or larger) sweep renders as a full ring or disc.
  *
  * @param options Center, radii, and the clockwise angle span the wedge covers.
  * @returns An SVG path `d` string, or an empty string when `outerRadius` or the angle span is zero or negative.

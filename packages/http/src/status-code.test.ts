@@ -1,3 +1,10 @@
+/**
+ * Tests for the StatusCode constants, verifying each code's numeric status
+ * and status text and that all codes satisfy the StatusCode type.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { StatusCode as StatusCodeType } from "./status-code";

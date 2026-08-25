@@ -1,10 +1,8 @@
 /**
- * The email an hourly re-check produces when it disagrees with the one before it:
- * what the URL is doing now, what it was doing until now, and the minute it changed.
- *
- * It is the shortest of the four on purpose. A reader who opens this has one question,
- * and every line that is not the answer to it delays the answer, so there is no
- * summary, no bar, and no call to action here (ADR-030).
+ * The email an hourly re-check produces when it disagrees with the one
+ * before it: what the URL is doing now, what it was doing until now, and
+ * the minute it changed. It carries just that answer, so the reader reaches
+ * it immediately (ADR-030).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +56,7 @@ export namespace TrialChangeEmail {
  * @example ctx.email.later(new TrialChangeEmail({ ...transition, locale, t }));
  */
 export class TrialChangeEmail implements Email {
-	/** The transition this email reports; nothing is loaded while rendering. */
+	/** The transition this email reports, fully resolved so rendering stays synchronous. */
 	#change: TrialChangeEmail.Data;
 
 	/**
@@ -76,8 +74,8 @@ export class TrialChangeEmail implements Email {
 	}
 
 	/**
-	 * Subject naming the URL and its new state, with no timestamp in it: the subject
-	 * is read in a notification, where the reader already knows when it arrived.
+	 * Subject naming the URL and its new state. A notification's arrival time
+	 * is already known to the reader, so the timestamp belongs in the body.
 	 */
 	get subject(): string {
 		let { t, url } = this.#change;

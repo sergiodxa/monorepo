@@ -1,19 +1,10 @@
 /**
  * Cloudflare for SaaS custom-hostname client.
  *
- * A single, DI-friendly wrapper over the Cloudflare custom hostnames API
- * (`https://api.cloudflare.com/client/v4/zones/{zone}/custom_hostnames`). It
- * schema-validates API responses (so malformed payloads surface as
- * {@link HostnameApiError} instead of `undefined`) and exposes an instance API
- * that can be registered with `@pkg/service-container` and constructed from
- * per-app configuration.
+ * Schema-validates API responses so malformed payloads surface as
+ * {@link HostnameApiError} instead of `undefined`, and keys the stored
+ * `custom_metadata` field the caller configures for its own entity type.
  *
- * The stored `custom_metadata` key that identifies the owning entity is
- * configurable via the constructor (`metadataKey`), so a caller keys hostnames
- * by whatever entity id it owns (e.g. a `tenant_id` or `blog_id`) — nothing
- * about the metadata written to Cloudflare changes.
- *
- * @see https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -97,12 +88,9 @@ export type SSLValidationRecord = s.InferOutput<typeof SSLValidationRecordSchema
 export type CustomHostname = s.InferOutput<typeof CustomHostnameSchema>;
 
 /**
- * Normalized result of a custom-hostname operation.
- *
- * Exposes both the flattened validation fields (`sslStatus`,
- * `validationTxtName`, `validationTxtValue`) used by status-polling callers and
- * the nested `ssl` object / `hostname` / `createdAt` fields used by model-layer
- * callers, so a single shape satisfies every consumer.
+ * Normalized result of a custom-hostname operation, exposing both the
+ * flattened validation fields used by status-polling callers and the nested
+ * `ssl` object used by model-layer callers so one shape satisfies both.
  */
 export interface HostnameResult {
 	/** Cloudflare's custom hostname ID. */
@@ -172,9 +160,8 @@ export interface HostnameClientOptions {
 	platformDomain?: string;
 	/**
 	 * `custom_metadata` key used to tag the owning entity (e.g. `"tenant_id"` or
-	 * `"blog_id"`). Defaults to `"tenant_id"`. This controls both what is written
-	 * by {@link HostnameClient.create} and what {@link HostnameClient.listByEntity}
-	 * filters on.
+	 * `"blog_id"`), defaulting to `"tenant_id"`. Controls both what
+	 * {@link HostnameClient.create} writes and what {@link HostnameClient.listByEntity} filters on.
 	 */
 	metadataKey?: string;
 }

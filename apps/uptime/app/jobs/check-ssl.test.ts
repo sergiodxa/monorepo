@@ -1,14 +1,9 @@
 /**
- * Unit tests for `CheckSslJob.perform()`, covering the sweep-every-SSL-enabled-monitor
- * pass: persisting `calculateSslStatus`'s result onto the monitor row, passing each
- * monitor's own expiry settings into the calculation, enqueuing a `notify` message only
- * for a status a warning threshold covers, and that one monitor's failure doesn't stop the
- * rest of the sweep.
- *
- * `calculateSslStatus` is mocked so each test controls the exact status/expiry outcome
- * instead of depending on wall-clock arithmetic, and the `QUEUE` binding is an in-memory
- * queue, so the assertions are about the messages that really landed on it. Status
- * classification and alert delivery have their own tests.
+ * Unit tests for `CheckSslJob.perform()`: persisting `calculateSslStatus`'s
+ * result onto the monitor row, passing each monitor's own expiry settings,
+ * enqueuing a `notify` message only when a warning threshold is crossed, and
+ * surviving one monitor's failure without stopping the rest of the sweep.
+ * `calculateSslStatus` is mocked so each test controls the exact outcome.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,13 +43,9 @@ let calculateSslStatusMock = vi.fn(
 );
 
 /**
- * The queue the sweep notifies through. It lives at module scope because the module under
- * test captures `env` on import, so `beforeEach` empties it rather than re-creating it.
- *
- * `~/app/data/monitor` (imported transitively by `./check-ssl`) imports `env` from
- * `cloudflare:workers` too. The `cloudflareWorkersStub()` plugin in the root
- * `vite.config.ts` stubs the module automatically, but its placeholder bindings aren't
- * callable, so the real queue is installed here.
+ * The queue the sweep notifies through, at module scope because the module
+ * under test captures `env` on import, so `beforeEach` empties it rather than
+ * re-creating it; the stubbed `env` module's placeholder bindings aren't callable.
  */
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 

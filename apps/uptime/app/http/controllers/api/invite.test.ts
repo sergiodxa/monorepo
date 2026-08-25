@@ -2,8 +2,8 @@
  * Tests `DELETE /api/v1/invites/:inviteId` (`inviteDestroy`): revokes a pending
  * invite, gated by a real `requireApiKey` bearer-token check baked into the action.
  * Covers the happy path, rejecting deletion of an already-accepted invite,
- * missing/garbage auth, missing scope, and that an invite belonging to another team
- * always 404s rather than 403ing or leaking the row.
+ * missing/garbage auth, missing scope, and a uniform 404 for an invite
+ * belonging to another team that reveals nothing about its existence.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -14,7 +14,6 @@ import { describe, expect, test } from "vitest";
 import { emailTranslator } from "~/app/emails/locale";
 import { VerifyEmailEmail } from "~/app/emails/verify-email";
 
-/** The link a message under test carries. */
 const URL_UNDER_TEST = "https://auth.sergiodxa.com/verify-email?token=abc123";
 
 /** Builds the message with everything held fixed. */

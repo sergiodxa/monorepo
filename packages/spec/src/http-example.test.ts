@@ -21,9 +21,9 @@ import { afterAll, expect, test } from "vitest";
 const PACKAGE_DIR = resolve(import.meta.dirname, "..");
 
 /**
- * The Bun executable, found on PATH. The CLI under test is a Bun program, so it
- * is spawned by name rather than through `process.execPath`, which names
- * whichever runtime happens to be running this file.
+ * The Bun executable, found on PATH. The CLI under test is a Bun program, so
+ * spawning it by name keeps the executable fixed no matter which runtime
+ * happens to be running this file.
  */
 const BUN_EXECUTABLE = "bun";
 
@@ -45,7 +45,7 @@ interface ServerRequest {
 	url?: string | undefined;
 	/** The headers `/reflect` mirrors back, lower-cased as `node:http` presents them. */
 	headers: { authorization?: string | undefined; "content-type"?: string | undefined };
-	/** Decode body chunks as text rather than buffers. */
+	/** Decode the body stream as text. */
 	setEncoding(encoding: "utf8"): unknown;
 	/** Subscribe to the body stream: `data` carries text, `end` closes it. */
 	on(event: "data" | "end", listener: (chunk: string) => void): unknown;
@@ -61,7 +61,7 @@ interface ServerReply {
 
 /** The slice of the running server the teardown needs, kept structural. */
 interface RunningServer {
-	/** Drop live sockets so `close` does not wait on keep-alive connections. */
+	/** Drop live sockets so `close` returns immediately, before keep-alive connections could hold it open. */
 	closeAllConnections(): void;
 	/** Stop listening, calling back once the last connection is gone. */
 	close(done: () => void): unknown;
@@ -85,11 +85,9 @@ async function readBody(request: ServerRequest): Promise<string> {
 }
 
 /**
- * The example server: a tiny router covering the routes the specs hit — a text
- * GET, a JSON GET, a POST that echoes its JSON body back with a 201, and a
- * method-agnostic `/reflect` that mirrors the request's authorization header,
- * content type, and raw body so a spec can prove exactly what the request-option
- * tags (`headers`/`form`/`json`/`text`) put on the wire.
+ * The example server: a tiny router covering the routes the specs hit — a
+ * text GET, a JSON GET, a POST that echoes its body back with a 201, and a
+ * `/reflect` route that mirrors the request so specs can verify the wire.
  */
 async function handle(request: ServerRequest, response: ServerReply): Promise<undefined> {
 	let url = new URL(request.url ?? "/", `http://127.0.0.1:${HTTP_EXAMPLE_PORT}`);
@@ -118,9 +116,9 @@ async function handle(request: ServerRequest, response: ServerReply): Promise<un
 }
 
 /**
- * Bind the example server up front so the test can skip cleanly when the fixed
- * port is already in use. A bind failure arrives as an `error` event rather than
- * a throw, and resolving to `undefined` is what turns it into a skip.
+ * Bind the example server up front so the test can skip cleanly when the
+ * fixed port is already in use. A bind failure surfaces as an `error` event,
+ * and resolving to `undefined` there is what turns it into a skip.
  */
 async function startServer(): Promise<RunningServer | undefined> {
 	let server = createServer((request, response) => void handle(request, response));
@@ -135,8 +133,6 @@ let server = await startServer();
 afterAll(async () => {
 	let running = server;
 	if (running === undefined) return;
-	// Drop live sockets first: `close` alone waits for keep-alive connections
-	// the CLI child may have left open, which would hang the run.
 	running.closeAllConnections();
 	await new Promise<void>((settle) => void running.close(() => settle()));
 });

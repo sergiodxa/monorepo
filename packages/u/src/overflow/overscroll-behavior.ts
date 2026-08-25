@@ -8,15 +8,9 @@ import { utility } from "../internal/descriptor";
 export type OverscrollBehaviorValue = "auto" | "contain" | "none";
 
 /**
- * Applies `overscroll-behavior`, defaulting to `"contain"`. Its real job is
- * stopping scroll chaining: without it, scrolling past the end of a scrollable
- * drawer, dialog, dropdown, or message list hands the remaining momentum to
- * the page behind it, so the background silently scrolls away under a surface
- * the reader is still working in. `"contain"` keeps the scroll inside this
- * element while preserving the platform's overscroll affordance —
- * rubber-banding on iOS, pull-to-refresh on Android. `"none"` also stops the
- * chaining but additionally suppresses that affordance, which is worth it only
- * when the bounce itself is the problem (a canvas or a custom pull gesture).
+ * Applies `overscroll-behavior`, defaulting to `"contain"`: a scroll past the
+ * end stays inside this element and the platform affordance — iOS
+ * rubber-banding, Android pull-to-refresh — survives. `"none"` suppresses it.
  *
  * @example u.overscrollBehavior()
  * @example css({ overscrollBehavior: "contain" })

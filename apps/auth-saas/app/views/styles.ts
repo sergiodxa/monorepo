@@ -1,7 +1,7 @@
 /**
  * Reusable `remix/ui` `css()` mixins for the platform dashboard, replacing the
  * former Tailwind-CDN class strings. Every dashboard view composes these mixins via
- * the `mix` prop so the document no longer depends on an external Tailwind runtime.
+ * the `mix` prop, keeping the document's styling fully self-contained.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,11 +12,9 @@ import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui
 import { css } from "remix/ui";
 
 /**
- * Re-types a `css()` mixin for a specific host element. `css()` binds its mixin to
- * the global `Element`, but `@cloudflare/workers-types` shadows `Element` with
- * HTMLRewriter's, so a plain `Element` mixin is not assignable to the `mix` prop once
- * JSX resolves an element to its concrete DOM type (`<select>`, or `<input>` with a
- * computed `type`). Only the compile-time type changes; the runtime value is identical.
+ * Re-types a `css()` mixin for a specific host element. `css()` binds to the global
+ * `Element`, but `@cloudflare/workers-types` shadows it with HTMLRewriter's, so JSX's
+ * concrete DOM types need a re-typed mixin to satisfy `mix`; only the type changes.
  *
  * @param mixin - The `css()` mixin descriptor to re-type.
  * @returns The same mixin descriptor bound to the requested host node type.
@@ -28,8 +26,6 @@ export function mixFor<Node extends EventTarget>(
 ): MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps> {
 	return mixin as unknown as MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps>;
 }
-
-// ---- Document shell ----
 
 export const body = css({
 	margin: "0",
@@ -72,8 +68,6 @@ export const breadcrumb = css({
 export const breadcrumbSep = css({ color: "#9ca3af" });
 
 export const breadcrumbCurrent = css({ fontWeight: "600" });
-
-// ---- Banners ----
 
 export const warningBanner = css({ background: "#fefce8", borderBottom: "1px solid #fde68a" });
 
@@ -142,8 +136,6 @@ export const noticeYellow = css({
 
 export const noticeYellowStrong = css({ color: "#854d0e", fontSize: "0.875rem", margin: "0" });
 
-// ---- Typography ----
-
 export const pageTitle = css({ fontSize: "1.5rem", fontWeight: "700", margin: "0 0 1.5rem" });
 
 export const sectionTitle = css({ fontSize: "1.125rem", fontWeight: "600", margin: "0 0 1rem" });
@@ -182,8 +174,6 @@ export const codeBlock = css({
 });
 
 export const codePlain = css({ fontFamily: "ui-monospace, monospace" });
-
-// ---- Layout helpers ----
 
 export const header = css({
 	display: "flex",
@@ -233,8 +223,6 @@ export const defList = css({
 export const dt = css({ color: "#6b7280", fontSize: "0.875rem", margin: "0" });
 
 export const dd = css({ margin: "0.25rem 0 0" });
-
-// ---- Cards & sections ----
 
 export const card = css({
 	background: "#ffffff",
@@ -290,8 +278,6 @@ export const listCard = css({
 
 export const infoBox = css({ background: "#f9fafb", borderRadius: "0.5rem", padding: "1rem" });
 
-// ---- Lists ----
-
 export const list = css({ listStyle: "none", margin: "0", padding: "0" });
 
 export const listSpaced = css({
@@ -321,8 +307,6 @@ export const listRowStart = css({
 	borderBottom: "1px solid #e5e7eb",
 	"&:last-child": { borderBottom: "0" },
 });
-
-// ---- Table ----
 
 export const tableWrap = css({
 	background: "#ffffff",
@@ -355,8 +339,6 @@ export const rowLink = css({
 	textDecoration: "none",
 	"&:hover": { color: "#1d4ed8" },
 });
-
-// ---- Forms ----
 
 export const form = css({
 	background: "#ffffff",
@@ -428,8 +410,6 @@ export const checkboxLabel = css({
 	gap: "0.5rem",
 	fontSize: "0.875rem",
 });
-
-// ---- Buttons ----
 
 export const button = css({
 	display: "inline-block",
@@ -506,8 +486,6 @@ export const linkRedSm = css({
 
 export const inlineFormEl = css({ display: "inline" });
 
-// ---- Badges ----
-
 export const badge = css({
 	display: "inline-block",
 	padding: "0.25rem 0.5rem",
@@ -531,8 +509,6 @@ export const badgePurple = css({ background: "#f3e8ff", color: "#6b21a8" });
 export const badgeOrange = css({ background: "#ffedd5", color: "#9a3412" });
 export const badgeYellow = css({ background: "#fef9c3", color: "#854d0e" });
 export const badgeRed = css({ background: "#fee2e2", color: "#991b1b" });
-
-// ---- Misc ----
 
 export const verified = css({ color: "#16a34a", marginLeft: "0.25rem" });
 

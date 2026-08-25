@@ -1,13 +1,9 @@
 /**
- * `@pkg/u` is logical-property-first everywhere else in the `size/` family
- * (`u.minIs()`, `u.minBs()`, ...), but some components size themselves
- * relative to the physical viewport/container axis on purpose — e.g. a chat
- * bubble whose `min-height` describes its shape relative to the screen, not
- * the block progression direction, and must not flip under a different
- * writing-mode or direction. This utility is a deliberate, narrow exception
- * scoped to that one use case: it sets the physical `min-height` property
- * directly. For the logical default, use `u.minBs()` (`min-block-size`)
- * instead.
+ * `@pkg/u` sizes elements with logical properties by default; this utility
+ * applies the physical `min-height` instead, for elements whose shape must
+ * stay fixed regardless of writing-mode or direction (e.g. a chat bubble's
+ * height relative to the screen). Prefer `u.minBs()` for the logical
+ * default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,8 +15,8 @@ import { boxLength } from "../internal/tokens";
 
 /**
  * Applies the physical `min-height` property. Prefer `u.minBs()`
- * (`min-block-size`) unless the element's sizing is genuinely tied to the
- * physical viewport axis rather than the logical block axis.
+ * (`min-block-size`) unless the element's sizing must track the physical
+ * viewport axis regardless of writing-mode or direction.
  *
  * @example u.minHeight("full")
  * @example css({ minHeight: "100%" })

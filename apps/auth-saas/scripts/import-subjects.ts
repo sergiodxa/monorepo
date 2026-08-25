@@ -1,24 +1,13 @@
 /**
- * Imports subjects exported from the legacy IdP (apps/auth) into an auth-saas
- * tenant, preserving each subject id so the OIDC `sub` stays stable and client
- * apps keep their local `subject_id` links. Idempotent: existing ids/emails
- * (HTTP 409) are skipped, so it is safe to re-run for a final delta before cutover.
+ * Imports subjects exported from the legacy IdP into an auth-saas tenant,
+ * preserving each subject id so the OIDC `sub` stays stable and client apps
+ * keep their local `subject_id` links. Idempotent: rows that already exist
+ * (HTTP 409) are skipped, so it's safe to re-run before cutover. The empty
+ * export below makes this an ES module, so its top-level `await` is legal.
  *
- * Export the source rows first, e.g.:
- *   wrangler d1 execute auth --remote --json --command \
- *     "SELECT id, email_address, email_verified_at, display_name, avatar, username, created_at FROM subjects" \
- *     > /tmp/auth-subjects.json
- *
- * Then run:
- *   ISSUER=https://sso.sergiodxa.com \
- *   CLIENT_ID=... CLIENT_SECRET=... \
- *   bun run apps/auth-saas/scripts/import-subjects.ts /tmp/auth-subjects.json
- *
- * CLIENT_ID/CLIENT_SECRET are the sso tenant's management (m2m) client, which the
- * dashboard creates automatically on tenant creation.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
-
-// Marks this standalone script as an ES module, so its top-level `await` is legal.
 export {};
 
 interface SourceSubject {
@@ -30,15 +19,17 @@ interface SourceSubject {
 	username: string | null;
 }
 
-/** Normalizes an epoch-ms or ISO timestamp to an ISO string (or null). */
 function toIso(value: string | number | null): string | null {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "number") return new Date(value).toISOString();
-	// Numeric string -> epoch ms; otherwise assume already ISO.
 	if (/^\d+$/.test(value)) return new Date(Number(value)).toISOString();
 	return value;
 }
 
+/**
+ * Accepts rows as a plain array or as the `[{ results: [...] }]` shape that
+ * `wrangler d1 --json` output uses.
+ */
 async function main() {
 	let issuer = process.env.ISSUER;
 	let clientId = process.env.CLIENT_ID;
@@ -52,7 +43,6 @@ async function main() {
 		process.exit(1);
 	}
 
-	// wrangler d1 --json wraps rows as [{ results: [...] }]; accept either shape.
 	let raw = JSON.parse(await Bun.file(inputPath).text()) as
 		| SourceSubject[]
 		| Array<{ results: SourceSubject[] }>;

@@ -15,7 +15,6 @@ import { session } from "remix/middleware/session";
 
 import { SqlSessionStorage } from "../../database/session-storage";
 
-/** Session lifetime in seconds (one year). */
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
 
 /** Values persisted in a blog admin session. */

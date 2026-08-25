@@ -5,13 +5,9 @@
 import { filterFunction } from "../internal/filter";
 
 /**
- * Applies a `filter: grayscale(...)`, desaturating the element toward grey.
- * `1` (the default) is fully grey and `0` leaves it untouched — a way to dim
- * an inactive or unavailable element without changing its layout. Note it is
- * purely visual: it conveys nothing to assistive technology, so it must not be
- * the only signal that something is unavailable. Composes through the shared
- * composite `filter` declaration, so it combines with every other filter
- * utility instead of overwriting them.
+ * Applies a `filter: grayscale(...)`, desaturating toward grey; `1` (the
+ * default) is fully grey, dimming an inactive element while its layout holds.
+ * Purely visual, so pair it with a cue assistive technology can read.
  *
  * @example u.grayscale()
  * @example css({ "--ui-filter-grayscale": "1", filter: "... grayscale(var(--ui-filter-grayscale, 0)) ..." })

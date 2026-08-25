@@ -1,9 +1,8 @@
 /**
- * Item content definitions for the PKMN content layer.
+ * Authored item catalog for the content layer.
  *
- * This module centralizes the canonical item catalog used by the game content system, including battle items, capture tools, recovery items, and other inventory data. It provides the structured values that connect authored item behavior, pricing, categories, and special effects to the domain types consumed by the engine.
- *
- * As a content-layer source of truth, this file focuses on describing item data rather than implementing mechanics. The engine and domain layers can read from this module to resolve how items should appear, what they cost, and which content-specific rules or notes apply during gameplay.
+ * Every record carries the category, attributes, pricing, and effect payload the
+ * engine resolves at use time, so item behavior stays editable as data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,26 +1,9 @@
 /**
- * Background job that claims the flow monitors whose configured `interval_seconds` has come
- * round and runs those, rather than sweeping every enabled monitor on a cadence of its own
- * (ADR-006). Each run executes the monitor's spec through `runFlowCheck`, records the outcome
- * via `FlowMonitor.recordCheckResult`, and meters what it spent.
- *
- * Delivered every minute like the other sweeps, even though the finest flow interval is
- * fifteen minutes (ADR-027 §7a): the claim is an indexed range that matches nothing in most
- * minutes, and sharing the every-minute delivery is what keeps the trigger list from growing a
- * line per monitor type.
- *
- * What a flow may reach is decided here and not by the spec. Verified domains are team state,
- * so they are read per sweep rather than stored on the monitor — a domain un-verified this
- * morning stops this afternoon's check, with no monitor to re-save. A team with none can run
- * nothing, which is recorded as an `error` result rather than skipped silently: a monitor that
- * quietly stops checking is the failure mode this whole app exists to prevent.
- *
- * A flow run is metered as **one ping per HTTP request it made**, which is what it costs and
- * what it is — several pings with assertions between them. Requests that never happened bill
- * nothing, so a run refused before it started is free.
- *
- * Alerting is deliberately not wired yet: a notification needs a dashboard URL to link to, and
- * flow monitors have no pages. Results are recorded and visible to whatever reads them.
+ * Claims the flow monitors whose interval has come round via an indexed
+ * range and runs each through `runFlowCheck` (ADR-006). Delivered every
+ * minute despite intervals as coarse as fifteen (ADR-027 §7a) so the
+ * trigger list stays flat as monitor types grow. Verified domains are team
+ * state, read fresh each sweep since they are not stored on the monitor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -66,10 +49,9 @@ export class CheckFlowsJob extends Job {
 
 		let teamIds = monitors.map((monitor) => monitor.team_id);
 		/**
-		 * Two queries for the whole sweep, both before the runs so nothing waits on them
-		 * afterwards: who to bill (a ping is billed to the team's owner, who is the Polar
-		 * customer) and what each team is allowed to reach. Per monitor, either would be a D1
-		 * read on every check in the batch.
+		 * Two queries for the whole sweep, run before the checks so nothing waits on
+		 * them afterward: who to bill (the team's owner, the Polar customer) and what
+		 * each team may reach, one read per sweep shared across every monitor.
 		 */
 		let [ownerIds, verifiedDomains] = await Promise.all([
 			Team.ownerIdsByTeamIds(db, teamIds),
@@ -100,9 +82,9 @@ export class CheckFlowsJob extends Job {
 
 			let ownerId = ownerIds.get(outcome.item.team_id);
 			/**
-			 * A monitor whose team names no owner cannot be billed — there is no Polar customer to
-			 * ingest against — but its run already happened and is recorded, so this drops the
-			 * events and says so rather than failing the sweep.
+			 * A monitor whose team names no owner cannot be billed — there is no Polar
+			 * customer to ingest against — but its run already happened and is
+			 * recorded, so this logs the drop and lets the sweep continue.
 			 */
 			if (ownerId === undefined) {
 				this.logger.error("job.check_flows.unbillable_team", {
@@ -140,12 +122,9 @@ export class CheckFlowsJob extends Job {
 	}
 
 	/**
-	 * Runs one monitor's spec and records its result.
-	 *
-	 * Throwing here is what marks a monitor as failed, so everything this returns describes a
-	 * run that finished — which is why the caller can bill for it unconditionally. `runFlowCheck`
-	 * itself never throws: a spec that will not parse or a host the team has not verified is an
-	 * `error` result, recorded like any other.
+	 * Runs one monitor's spec and records its result. Throwing here marks the
+	 * monitor failed, so callers bill unconditionally — `runFlowCheck` never
+	 * throws, resolving bad specs or unverified hosts to an `error` result instead.
 	 */
 	private async check(
 		db: Database,
@@ -156,10 +135,9 @@ export class CheckFlowsJob extends Job {
 		let resultId = await FlowMonitor.recordCheckResult(db, monitor.id, result);
 
 		/**
-		 * One data point per run, not per request: the series this feeds is "how long does the
-		 * flow take", and a point per request would turn a latency chart into a request-count
-		 * chart. A run that never started has no duration to report, and zero is how the rest of
-		 * the dataset already spells "no measurement".
+		 * One data point per run, not per request — the series is "how long does the
+		 * flow take", not a request count. A run that never started reports zero
+		 * duration, matching how the rest of the dataset spells "no measurement".
 		 */
 		writePingResult({
 			monitorId: monitor.id,

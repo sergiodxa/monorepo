@@ -24,12 +24,9 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { alertEvents } from "~/database/schema";
 
 /**
- * Patches a test database's driver so writes to the given JSON-typed columns are
- * `JSON.stringify`-d before binding and `JSON.parse`-d back on read. The SQLite
- * test adapter binds column values as-is with no column-type awareness, so passing a
- * plain object into a `c.json()` column (here, `snapshot`) throws at the SQLite
- * binding layer. This codec is required to exercise `record()`'s snapshot branch
- * against the real database instead of mocking the model away.
+ * The SQLite test adapter binds column values as-is, so a plain object bound into a
+ * `c.json()` column throws at the binding layer. Encoding the named columns on write and
+ * decoding on read lets `record()`'s snapshot branch run against the real database.
  */
 function patchJsonColumns(adapter: DatabaseDriver, columns: string[]): void {
 	let originalExecute = adapter.execute.bind(adapter);
@@ -78,9 +75,7 @@ function decodeJsonColumns(
 				if (column in output && typeof output[column] === "string") {
 					try {
 						output[column] = JSON.parse(output[column] as string);
-					} catch {
-						// Not JSON — leave the raw string as-is.
-					}
+					} catch {}
 				}
 			}
 			return output;
@@ -306,7 +301,7 @@ describe("AlertEvent.listByAlertIds", () => {
 			monitor_type: "http",
 			monitor_name: "Other site",
 		});
-		/** An event for an alert not in the requested list must never show up. */
+		/** A third alert, outside the requested ids, is the control for the scoping. */
 		await AlertEvent.record(db, {
 			alert_id: "alert-3",
 			monitor_id: "monitor-3",

@@ -51,10 +51,9 @@ let RequestSchema = s.object({
 });
 
 /**
- * WebAuthn registration verification endpoint.
- * Verifies a passkey registration response and stores the credential.
- * Rate-limited per email to prevent registration abuse.
- * Passkey registration implicitly verifies email ownership.
+ * Rejects registration when a subject already exists for the email — only an
+ * address that already proved ownership (e.g. via magic link) may attach a
+ * passkey; rate-limited per email, and success implicitly verifies ownership.
  * @returns A JSON `Response` with a redirect (OAuth flow) or subject info, or an error `Response`.
  */
 export default createAction(
@@ -144,12 +143,6 @@ export default createAction(
 
 		let { registrationInfo } = verification;
 
-		// Registration only ever creates a brand-new subject. If one already exists for
-		// this email (e.g. an imported user, or an account created on another device),
-		// attaching a passkey from an unauthenticated registration ceremony would be an
-		// account-takeover vector — that email must prove ownership via magic link
-		// before a passkey can be added. Reject here as defense in depth even though the
-		// /authorize check only offers registration for unknown emails.
 		let existing = await Subject.findByEmail(db, challenge.email);
 		if (existing) {
 			log.info("Registration attempted for existing subject", { subjectId: existing.id });
@@ -167,7 +160,6 @@ export default createAction(
 
 		await Passkey.create(db, {
 			subjectId: subject.id,
-			// credential.id is already a Base64URLString from @simplewebauthn
 			credentialId: registrationInfo.credential.id,
 			publicKey: Buffer.from(registrationInfo.credential.publicKey).toString("base64"),
 			counter: registrationInfo.credential.counter,

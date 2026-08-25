@@ -1,3 +1,10 @@
+/**
+ * Tests for TypeID prefix validation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { isValidPrefix } from "./is-valid-prefix";

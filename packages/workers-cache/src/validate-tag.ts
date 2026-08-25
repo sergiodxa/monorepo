@@ -1,8 +1,8 @@
 /**
  * The single gate a string passes through to become a `CacheTag`. Every builder
- * a vocabulary returns and every serialization runs through it, so a tag that
- * the platform would drop is rejected where it was written instead of turning
- * into a purge that silently matches nothing.
+ * a vocabulary returns and every serialization runs through it, so a tag the
+ * platform would drop is rejected at the point it was written, keeping every
+ * purge call matched against a tag the platform actually recognizes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -97,10 +97,9 @@ export default class IdToken extends JWT {
 	}
 
 	/**
-	 * Generates a new ID token with the given parameters.
-	 * Claims included depend on requested scopes:
-	 * - email scope: email, email_verified
-	 * - profile scope: name, preferred_username, picture
+	 * Generates a new ID token with the given parameters. Adds email and
+	 * email_verified when scope includes "email", and name, preferred_username,
+	 * and picture when scope includes "profile".
 	 * @param issuer - Token issuer URL
 	 * @param subject - User identity data
 	 * @param client - Client requesting the token

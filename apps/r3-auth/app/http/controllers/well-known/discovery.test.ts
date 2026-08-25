@@ -2,7 +2,8 @@
  * Router-level tests of the three discovery documents. They assert the shape relying
  * parties read: the frozen scheme-less issuer, the endpoint URLs, the advertised
  * capabilities, that both metadata paths serve one identical document, and that the
- * published JWKS carries public key material only.
+ * published JWKS carries public key material only — the private scalar would let anybody
+ * mint tokens this server's relying parties trust.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,7 +50,6 @@ beforeEach(async () => {
 	app = await createTestApp();
 });
 
-/** Fetches a discovery path and parses its JSON body. */
 async function fetchJson<T>(path: string): Promise<{ response: Response; body: T }> {
 	let response = await app.fetch(new Request(`${ORIGIN}${path}`));
 	return { response, body: (await response.json()) as T };
@@ -63,8 +63,6 @@ describe("GET /.well-known/openid-configuration", () => {
 
 		expect(response.status).toBe(200);
 
-		// Scheme-less on purpose: relying parties compare this exact string against the
-		// `iss` claim of tokens they already hold.
 		expect(body.issuer).toBe("auth.sergiodxa.com");
 
 		expect(body.authorization_endpoint).toBe("https://auth.sergiodxa.com/authorize");
@@ -78,7 +76,6 @@ describe("GET /.well-known/openid-configuration", () => {
 	test("advertises both client authentication methods the token endpoint accepts", async () => {
 		let { body } = await fetchJson<DiscoveryDocument>(routes.wellKnown.openidConfiguration.href());
 
-		// Credentials in the body have always worked; only the Basic header was published.
 		expect(body.token_endpoint_auth_methods_supported).toEqual([
 			"client_secret_basic",
 			"client_secret_post",
@@ -125,8 +122,6 @@ describe("GET /.well-known/jwks.json", () => {
 		for (let key of body.keys) {
 			expect(key.kty).toBe("EC");
 			expect(key.crv).toBe("P-256");
-			// `d` is the private scalar. Publishing it would hand anybody the ability to
-			// mint tokens this server's relying parties trust.
 			expect(key.d).toBeUndefined();
 		}
 	});

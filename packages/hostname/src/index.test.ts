@@ -1,7 +1,3 @@
-import type { HttpResponseResolver } from "msw";
-
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 /**
  * Covers the unified Cloudflare for SaaS custom-hostname client: request/response
  * schema validation and error mapping to {@link HostnameApiError}, the configurable
@@ -12,6 +8,10 @@ import { setupServer } from "msw/node";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { HttpResponseResolver } from "msw";
+
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { HostnameResult } from "./index";
@@ -68,8 +68,8 @@ interface SentHostname {
 
 /**
  * Parses the JSON body of a recorded call. Every payload the client sends is a
- * `JSON.stringify` result, so an empty body means the request was built wrong and
- * the test should fail loudly rather than assert on `undefined`.
+ * `JSON.stringify` result, so an empty body means the request was built wrong;
+ * throwing immediately surfaces that failure clearly.
  */
 function sentBody(call: RecordedCall | undefined): SentHostname {
 	if (!call?.body) throw new TypeError("expected a serialized JSON body");
@@ -84,7 +84,6 @@ function sentBody(call: RecordedCall | undefined): SentHostname {
 function mockApi(body: Record<string, unknown>, status = 200) {
 	let calls: RecordedCall[] = [];
 
-	/** Records the intercepted request, then replies with the canned payload. */
 	let resolver: HttpResponseResolver = async ({ request }) => {
 		calls.push({
 			url: request.url,

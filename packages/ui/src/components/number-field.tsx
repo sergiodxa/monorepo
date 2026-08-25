@@ -28,8 +28,7 @@ import { Input } from "./input";
 
 /**
  * ARIA role applied to {@link NumberField.Group} through {@link attrs}
- * unless a consumer supplies its own `role`, announcing the frame housing
- * the decrement button, the control, and the increment button as one
+ * unless a consumer supplies its own `role`, announcing the frame as one
  * related unit to assistive technology.
  */
 const DEFAULT_ROLE = "group";
@@ -37,16 +36,14 @@ const DEFAULT_ROLE = "group";
 /**
  * Native `<button>` `type` {@link NumberField.DecrementButton} and
  * {@link NumberField.IncrementButton} fall back to when a consumer doesn't
- * supply one, keeping a click on either from submitting a surrounding
- * `<form>` the way a bare `<button>`'s default type otherwise would.
+ * supply one, keeping a click on either from submitting a surrounding `<form>`.
  */
 const DEFAULT_BUTTON_TYPE: NonNullable<NumberField.DecrementButtonProps["type"]> = "button";
 
 /**
  * Shared box, color, and interaction-state styling for
  * {@link NumberField.DecrementButton} and {@link NumberField.IncrementButton},
- * differing only in which inline edge carries the divider border that
- * separates the button from {@link NumberField.Input} sitting between them.
+ * differing only in which inline edge carries the divider border.
  *
  * @param dividerEdge Which inline edge carries the divider border: `"end"` for the control preceding the input, `"start"` for the one following it.
  * @returns The mixins shared by both stepper buttons.
@@ -78,27 +75,21 @@ export namespace NumberField {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
 	 * `children` composes this field's parts — typically a caption, the
-	 * {@link NumberField.Group} row, and any supporting or validation copy —
-	 * in a single column with a small gap between them.
+	 * {@link NumberField.Group} row, and any supporting or validation copy.
 	 */
 	export interface Props extends TagProps<"div"> {}
 
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
 	 * `children` composes {@link NumberField.DecrementButton},
-	 * {@link NumberField.Input}, and {@link NumberField.IncrementButton} into
-	 * one bordered row that reads as a single control.
+	 * {@link NumberField.Input}, and {@link NumberField.IncrementButton}.
 	 */
 	export interface GroupProps extends TagProps<"div"> {}
 
 	/**
-	 * Every prop {@link Input.Props} accepts except `type` and `role`, which
-	 * this control fixes to `"number"` and the platform's own implicit
-	 * `spinbutton` role, and `color`, which stays unexposed since this
-	 * control's own keyboard focus ring is deferred entirely to its
-	 * enclosing {@link NumberField.Group}. Native `min`, `max`, and `step`
-	 * bound the accepted range and its granularity the same way they would on
-	 * a bare `<input type="number">`.
+	 * Every prop {@link Input.Props} accepts except `type` and `role`, fixed to
+	 * `"number"` and the platform's own `spinbutton` role, and `color`, unexposed
+	 * since the keyboard focus ring is deferred to {@link NumberField.Group}.
 	 */
 	export interface InputProps extends Omit<Input.Props, "type" | "role" | "color"> {}
 
@@ -144,14 +135,8 @@ export function NumberField(handle: Handle<NumberField.Props>) {
 
 /**
  * Renders {@link NumberField}'s frame: a `role="group"` `<div>` drawing a
- * bordered, rounded, tinted-background box around its children and
- * stretching them to a shared height, so
- * {@link NumberField.DecrementButton}, {@link NumberField.Input}, and
- * {@link NumberField.IncrementButton} read as one seamless control instead
- * of three separately boxed elements. Hovering the frame darkens its
- * border, and focusing any control inside it draws a keyboard focus ring
- * around the whole frame through the native `:focus-within` pseudo-class,
- * rather than around whichever part happens to hold focus.
+ * bordered, rounded, tinted-background box that reads as one seamless
+ * control, ringing the whole frame via `:focus-within` when a child gains focus.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the frame's markup.
@@ -193,29 +178,8 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
 
 /**
  * Renders {@link NumberField}'s control: a native `<input type="number">`
- * building on {@link Input} for its padding, type scale, and disabled and
- * invalid state handling, with its own border, background, sizing, and
- * keyboard focus ring stripped away so it sits flush inside the enclosing
- * {@link NumberField.Group} instead of drawing a second competing box. Its
- * value reads centered, and an invalid state — `aria-invalid="true"`, set
- * directly or mirrored in by a validation script, or the platform's own
- * post-interaction `:user-invalid` — recolors the typed digits in the
- * semantic danger tone without adding a border or ring of its own, since
- * {@link NumberField.Group} already owns the frame's shared perimeter. The
- * platform's own visual spin-button arrows are hidden, since
- * {@link NumberField.DecrementButton} and {@link NumberField.IncrementButton}
- * already occupy that same corner of the group with a larger, consistently
- * styled target — a second, browser-drawn pair of arrows right next to them
- * would only compete for the same gesture.
- *
- * `min`, `max`, and `step` bound the accepted range and its granularity
- * through the platform's own typed-entry validation, and the platform's own
- * `ArrowUp`/`ArrowDown` key stepping on a focused input keeps working
- * regardless of the hidden spin buttons. Press-and-hold repeat on
- * {@link NumberField.DecrementButton} and {@link NumberField.IncrementButton}
- * needing `stepUp()`/`stepDown()` is a script-only capability a consumer opts
- * into separately; without it, those buttons render but do nothing; typed
- * entry and the arrow keys remain the no-JS baseline.
+ * built on {@link Input}. The stepper buttons need a separately wired
+ * `stepUp()`/`stepDown()` for press-and-hold repeat; typed entry works without it.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the control's markup.
@@ -261,18 +225,8 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 
 /**
  * Renders a native `<button>` decrementing {@link NumberField.Input}'s
- * value, sitting at the frame's inline-start edge with a divider border
- * along its own inline-end edge separating it from the control. Its content
- * is fixed to a minus glyph marked `aria-hidden`, since this button carries
- * no visible text of its own. Hover and pressed states ride this host's own
- * native `:hover` and `:active` pseudo-classes, a keyboard focus-visible
- * ring reads in the semantic primary tone, and the native `disabled`
- * attribute mutes the control and blocks pointer and keyboard activation
- * alike.
- *
- * In dev mode, a button whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * value; its glyph is `aria-hidden`, so callers must supply an `aria-label`.
+ * In dev mode, a missing `aria-label`/`aria-labelledby` logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the control's markup.
@@ -308,18 +262,8 @@ NumberField.DecrementButton = function NumberFieldDecrementButton(
 
 /**
  * Renders a native `<button>` incrementing {@link NumberField.Input}'s
- * value, sitting at the frame's inline-end edge with a divider border along
- * its own inline-start edge separating it from the control. Its content is
- * fixed to a plus glyph marked `aria-hidden`, since this button carries no
- * visible text of its own. Hover and pressed states ride this host's own
- * native `:hover` and `:active` pseudo-classes, a keyboard focus-visible
- * ring reads in the semantic primary tone, and the native `disabled`
- * attribute mutes the control and blocks pointer and keyboard activation
- * alike.
- *
- * In dev mode, a button whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * value; its glyph is `aria-hidden`, so callers must supply an `aria-label`.
+ * In dev mode, a missing `aria-label`/`aria-labelledby` logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the control's markup.

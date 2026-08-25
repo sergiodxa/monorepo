@@ -1,8 +1,7 @@
 /**
- * View for the logout confirmation page. Renders a centered heading, a
- * "are you sure" prompt, and a form whose submit button posts to the logout
- * action to sign the user out of the CMS. Exists to require an explicit
- * confirmation step before ending the session.
+ * View for the logout confirmation page: a centered heading, a confirmation
+ * prompt, and a form whose submit posts to the logout action, requiring an
+ * explicit step before the session ends.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,7 +27,9 @@ export namespace LogoutView {
 }
 
 /**
- * Creates the logout page renderer with confirmation UI and sign-out form.
+ * Creates the logout page renderer. The confirmation is the submit itself, so
+ * the form renders as `display: contents` with the button directly in the
+ * centered grid, in the danger tone that marks sign-out as destructive.
  */
 export function LogoutView() {
 	return ({ model: _model }: { model: LogoutView.Model }) => (
@@ -46,16 +47,11 @@ export function LogoutView() {
 					Are you sure you want to sign out from CMS?
 				</p>
 
-				{/* The form carries no fields of its own — the confirmation is the submit
-				itself — so it stays `display: contents` and lets the button sit directly in
-				the page's centered grid. */}
 				<Form
 					action={routes.auth.logout.action.href()}
 					method={routes.auth.logout.action.method}
 					mix={[contents()]}
 				>
-					{/* Ending a session is destructive, so the confirm button reads in the
-					danger tone rather than the brand one. */}
 					<Button type="submit" color="danger" size="lg">
 						Sign out
 					</Button>

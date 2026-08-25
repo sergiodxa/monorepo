@@ -17,7 +17,7 @@ import { JWT } from "./jwt";
 /** Seconds of clock drift the tolerance tests allow. */
 const CLOCK_TOLERANCE = 60;
 
-/** Pinned the way a caller is meant to verify, rather than left to the key's own type. */
+/** Verification options requiring the ES256 algorithm, reused across the key-selection tests. */
 const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
 
 /** A token class shaped like the real ones: required claims, narrowed return types. */
@@ -70,8 +70,6 @@ describe("signing and verifying", () => {
 	test("signs from the instance as well as the static", async () => {
 		let token = new JWT({ sub: "user-123" });
 
-		// ECDSA signatures carry a nonce, so two signings of the same claims differ in
-		// the third segment; the header and payload are what must match.
 		let fromInstance = await token.sign(JWK.Algorithm.ES256, keys);
 		let fromStatic = await JWT.sign(token, JWK.Algorithm.ES256, keys);
 
@@ -124,8 +122,6 @@ describe("choosing a key out of a set", () => {
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
-		// The `kid` decides, so a set that does not publish it has nothing to try — this
-		// never reaches a signature check.
 		await expect(JWT.verify(signed, [other], VERIFY)).rejects.toBeInstanceOf(
 			jose.errors.JWKSNoMatchingKey,
 		);
@@ -149,8 +145,6 @@ describe("choosing a key out of a set", () => {
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.RS256, mixed);
 		let header = JSON.parse(atob(signed.split(".")[0] ?? "")) as Record<string, unknown>;
 
-		// The keys arrive newest first, so the ones for other algorithms are passed over
-		// and the newest of the requested algorithm is what the header names.
 		expect(header.alg).toBe("RS256");
 		expect(header.kid).toBe(current.id);
 
@@ -255,8 +249,6 @@ describe("decoding", () => {
 			keys,
 		);
 
-		// Nothing has been authenticated here — this is the "which issuer is this?"
-		// read that happens before a JWKS is even chosen.
 		await expect(JWT.verify(signed, otherKeys)).rejects.toThrow();
 
 		let decoded = JWT.decode(signed);
@@ -282,7 +274,6 @@ describe("the verified token, read both ways", () => {
 	test("exposes the raw claim set through payload", async () => {
 		let signed = await new JWT({ sub: "user-123", nonce: "n-1" }).sign(JWK.Algorithm.ES256, keys);
 
-		// The shape a relying party reads: it wants the claim bag, not accessors.
 		let verified = await JWT.verify(signed, keys);
 
 		expect(verified.payload.sub).toBe("user-123");
@@ -303,7 +294,6 @@ describe("the verified token, read both ways", () => {
 		expect(verified.subject).toBe("user-123");
 		expect(verified.email).toBe("ada@test.dev");
 		expect(verified.emailVerified).toBe(true);
-		// And the payload is still right there on the same object.
 		expect(verified.payload.sub).toBe("user-123");
 	});
 
@@ -396,7 +386,6 @@ describe("registered claim accessors", () => {
 	test("read `exp` in the seconds the RFC defines, as verification does", () => {
 		let token = new JWT({ exp: now() + 3600 });
 
-		// Bounded rather than exact, since the clock moves between building and reading.
 		expect(token.expiresIn).toBeGreaterThan(3590);
 		expect(token.expiresIn).toBeLessThanOrEqual(3600);
 		expect(token.expired).toBe(false);

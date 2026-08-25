@@ -1,14 +1,9 @@
 /**
  * The presentation color palette.
  *
- * Every hard-coded color the renderer uses lives here so the whole look can be
- * retuned in one place and no drawing code carries a raw hex or hsl literal. The
- * constants are grouped by where they are drawn (battle scene, HP bar, windows,
- * text, tiles, the player sprite, and each full-screen scene background) and each
- * one documents its exact call site. Genuinely dynamic colors — the per-species
- * placeholder hue — stay computed by a helper here, with their fixed saturation,
- * lightness, and outline exposed as constants rather than forced into a single
- * value.
+ * Every hard-coded color the renderer uses lives here so the whole look can
+ * be retuned in one place, with each constant documenting its exact call
+ * site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -147,11 +142,8 @@ export const CREATURE_PLACEHOLDER = {
 } as const;
 
 /**
- * Builds the placeholder creature fill for a given hue.
- *
- * The hue is derived per-species by the caller (a stable hash of the species
- * id); saturation and lightness are the fixed `CREATURE_PLACEHOLDER` values so
- * only the hue varies between species.
+ * Builds the placeholder creature fill from a hue, keeping saturation and
+ * lightness fixed so the whole species family shares one look.
  */
 export function creatureColor(hue: number): string {
 	return `hsl(${hue}, ${CREATURE_PLACEHOLDER.saturation}%, ${CREATURE_PLACEHOLDER.lightness}%)`;

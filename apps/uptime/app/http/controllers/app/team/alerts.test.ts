@@ -122,6 +122,10 @@ describe("alerts", () => {
 		expect(body).toContain("Create an alert to get notified when your monitors go down.");
 	});
 
+	/**
+	 * A stored cooldown of 0 renders as "Fastest allowed", since dispatch floors
+	 * every repeat interval regardless of the configured value.
+	 */
 	test("lists a team-wide alert with its strategy, recovery, and cooldown", async () => {
 		let { db, team, membership } = await createFixture();
 		await db.create(
@@ -146,8 +150,6 @@ describe("alerts", () => {
 		expect(body).toContain("Team-wide");
 		expect(body).toContain("Webhook");
 		expect(body).toContain("Yes");
-		// A stored cooldown of 0 reads as the fastest repeat allowed, not as "None": repeats are
-		// floored at dispatch, so no alert notifies once per check however it is configured.
 		expect(body).toContain("Fastest allowed");
 	});
 

@@ -3,11 +3,9 @@
  * on the native Popover API: the host carries the `popover` attribute and
  * opens through `popovertarget` or a Command Invoker (`commandfor`/
  * `command="toggle-popover"`) elsewhere on the page, with no positioning
- * logic running in script. Placement rides CSS anchor positioning — the
- * invoker relationship gives the host an implicit anchor, and the
- * `data-placement` attribute contract picks which `position-area` and
- * fallback list it resolves against. Foundational surface other floating
- * components layer their own content and motion on top of.
+ * logic running in script. Placement rides CSS anchor positioning, using
+ * the invoker relationship as an implicit anchor and the `data-placement`
+ * attribute to pick which `position-area` it resolves against.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,30 +39,26 @@ const DEFAULT_MODE: NonNullable<Popover.Props["popover"]> = "auto";
  */
 export namespace Popover {
 	/**
-	 * Side of the anchor the host renders against, and — for the four corner
-	 * variants — which of the anchor's edges it aligns to along the
-	 * perpendicular axis. Each names a physical side of the viewport, the same
-	 * one a positioning engine would choose when flipping the host to stay in
-	 * view, so a placement keeps attaching to that same physical side under
-	 * any `dir` value rather than mirroring for reading direction.
+	 * Side of the anchor the host renders against, and, for the four corner
+	 * variants, which anchor edge it aligns to along the perpendicular axis.
+	 * Each name is a physical viewport side, fixed under any `dir` value.
 	 */
 	export type Placement = AnchorPlacement;
 
 	/**
 	 * Every native `<div>` attribute, plus the `mix` passthrough, with `id`
-	 * narrowed to required — `popovertarget`, `commandfor`, and this host's own
-	 * implicit CSS anchor reference all target it by that id — and `popover`
-	 * narrowed away from its raw boolean shorthand to the three named modes.
+	 * narrowed to required, since `popovertarget`, `commandfor`, and the host's
+	 * own implicit CSS anchor reference all target it by that id.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "id" | "popover"> {
 		/** Stable id an invoker elsewhere on the page targets to open this host. */
 		id: string;
 		/**
-		 * `popover` attribute mode. `"auto"` closes on outside click or Escape
-		 * and dismisses sibling `"auto"` popovers when shown; `"hint"` layers on
-		 * top of an open `"auto"` popover without closing it, for tooltip-style
-		 * content; `"manual"` closes only when explicitly hidden. Defaults to
-		 * {@link DEFAULT_MODE}.
+		 * `popover` attribute mode: `"auto"` dismisses on outside click or Escape
+		 * and closes sibling `"auto"` popovers when shown; `"hint"` layers over an
+		 * open one without closing it; `"manual"` closes only when hidden explicitly.
+		 *
+		 * @default {@link DEFAULT_MODE}
 		 */
 		popover?: "auto" | "hint" | "manual";
 		/** Side of the anchor to render against. Defaults to {@link DEFAULT_PLACEMENT}. */
@@ -75,23 +69,9 @@ export namespace Popover {
 }
 
 /**
- * Renders the floating surface itself: a `popover`-attributed `<div>` with a
- * rounded, bordered, shadowed panel look, positioned through CSS anchor
- * positioning rather than any script-computed coordinates. An invoker
- * elsewhere on the page — a `<button popovertarget={id}>` or a
- * `<button commandfor={id} command="toggle-popover">` — both opens the host
- * and, per the CSS Anchor Positioning implicit-anchor behavior, becomes the
- * reference its `position-area` resolves against, so no explicit
- * `anchor-name`/`position-anchor` wiring is needed for the common case. A
- * consumer anchoring against something other than its own invoker can still
- * set `position-anchor` through the inherited `style` prop.
- *
- * `position-try-fallbacks` lets the host flip across either axis when its
- * preferred `placement` would overflow the viewport, the CSS-native
- * replacement for a script-driven collision pass. The host carries no
- * transition of its own — compose an `enterExit()`-based factory from the
- * animation layer through `mix` for an entrance/exit fade, since different
- * surfaces built on this one favor different motion.
+ * Renders the floating surface itself: a `popover`-attributed `<div>`
+ * positioned via CSS anchor positioning. The invoker that opens it becomes
+ * the implicit anchor its `position-area` resolves against.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the surface's markup.

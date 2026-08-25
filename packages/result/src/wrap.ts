@@ -1,3 +1,10 @@
+/**
+ * Converts throwing functions into Result-returning functions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { IsAny } from "@pkg/types";
 
 import type { Result } from "./types.js";
@@ -7,11 +14,9 @@ import { success } from "./success.js";
 
 export namespace wrap {
 	/**
-	 * Computes the return type for `wrap` based on the wrapped function's return type.
-	 * - For `any` return types: `Result<any, Error>`
-	 * - For `never` return types (always throws): `Result<never, Error>`
-	 * - For `Promise<T>` return types: `Promise<Result<T, Error>>`
-	 * - For sync return types: `Result<T, Error>`
+	 * Computes `Result<any, Error>` for `any`, `Result<never, Error>` for
+	 * `never`, `Promise<Result<T, Error>>` for promises, and
+	 * `Result<T, Error>` for other sync return types.
 	 */
 	export type ReturnType<T> =
 		IsAny<T> extends true
@@ -25,7 +30,7 @@ export namespace wrap {
 
 /**
  * Convert a throwing function into a Result-returning function.
- * Catches exceptions and returns them as Failure instead of throwing.
+ * Catches exceptions and returns them as Failure values.
  *
  * @param fn - Function to wrap (can be sync or async)
  * @returns Success with the value if fn succeeds, Failure with Error if fn throws

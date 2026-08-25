@@ -37,11 +37,11 @@ const BUN_EXECUTABLE = "bun";
 test(
 	"the dogfood suite passes through the compiled binary",
 	async () => {
-		// Compile the standalone binary from the current source so the run
-		// exercises the shipped artifact. Building fresh (rather than reusing a
-		// stale `bin/spec`) keeps this acceptance test honest to whatever source
-		// the suite is checking — the compile costs ~100ms, negligible next to
-		// the suite it enables.
+		/**
+		 * Builds fresh from current source, rather than reusing a stale
+		 * `bin/spec`, so this run stays honest to whatever source the suite
+		 * is checking.
+		 */
 		let build = spawn(BUN_EXECUTABLE, ["build", CLI_ENTRY, "--compile", "--outfile", BINARY_PATH], {
 			cwd: PACKAGE_DIR,
 			stdio: ["ignore", "pipe", "pipe"],
@@ -55,9 +55,11 @@ test(
 		});
 		expect(buildCode, `spec binary build failed:\n${buildLog}`).toBe(0);
 
-		// The suite's meta-tests spawn `spec` by name, so put a `spec` symlink to
-		// the freshly compiled binary on PATH: every layer of the run — the outer
-		// runner and each spawned child — is the fast compiled binary.
+		/**
+		 * Puts a `spec` symlink to the fresh binary on PATH: the suite's
+		 * meta-tests spawn `spec` by name, so every layer of the run — the
+		 * outer runner and each spawned child — uses the compiled binary.
+		 */
 		let pathDir = mkdtempSync(join(tmpdir(), "spec-dogfood-"));
 		symlinkSync(BINARY_PATH, join(pathDir, "spec"));
 		try {
@@ -67,9 +69,11 @@ test(
 					"run",
 					"spec",
 					"--allow-run=spec,echo",
-					// spec/env.spec reads one real variable through `env.get`, and
-					// `cli.run` forwards only granted names into its children — so the
-					// value has to be both defined here and granted by name here.
+					/**
+					 * `spec/env.spec` reads this through `env.get`, and
+					 * `cli.run` forwards only granted names into its
+					 * children, so the name must be granted here too.
+					 */
 					"--allow-env=SPEC_ENV_FIXTURE",
 				],
 				{

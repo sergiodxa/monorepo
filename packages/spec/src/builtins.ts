@@ -2,11 +2,8 @@
  * The built-in capability set, and how a host chooses part of it.
  *
  * Kept apart from the runner because importing a plugin is not free: `cli` and
- * `browser` spawn processes and `db` imports Bun's SQL client, so a module that
- * imports all eight can only be loaded by a Bun or Node process. A host that
- * cannot load them — or should not offer them — assembles its own list of
- * factories instead and hands it to `runTests`, which is why the runner takes a
- * plugin set rather than reaching for this module itself.
+ * `browser` spawn processes and `db` imports Bun's SQL client. `runTests` takes
+ * a plugin set so a host can assemble the factories it is able to load.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,13 +53,9 @@ const BUILTIN_FACTORIES: Record<BuiltinNamespace, () => Plugin> = {
 };
 
 /**
- * Build the built-in plugins, all of them or a chosen few.
- *
- * Choosing a subset is not a permission decision. A namespace left out is not
- * denied — it does not exist, so a spec naming it fails to resolve rather than
- * being told which flag would allow it. That is the right shape for a capability
- * a host will never offer under any grant: a denial implies a flag that would
- * lift it, and there is none.
+ * Build the built-in plugins, all of them or a chosen few. Choosing a subset
+ * is not a permission decision: a namespace left out simply does not exist,
+ * so a spec naming it fails to resolve, on the same footing as a capability.
  *
  * @param only - Namespaces to build; omit for every built-in. Duplicates collapse.
  * @returns The plugins, in {@link BUILTIN_NAMESPACES} order.

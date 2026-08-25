@@ -12,9 +12,8 @@
 /**
  * Parse an HTTP Basic Authentication header into client credentials.
  *
- * Returns `null` (never throws) for any header that is missing, not `Basic`,
- * malformed base64, or lacking a non-empty id and secret. Both fields are
- * percent-decoded per the OAuth `client_secret_basic` scheme.
+ * Returns `null` (never throws) for a missing, non-`Basic`, malformed, or
+ * incomplete header; both fields are percent-decoded per `client_secret_basic`.
  * @param header - The `Authorization` header value, or null when absent.
  * @returns Parsed `clientId`/`clientSecret`, or null if the header is invalid.
  * @example

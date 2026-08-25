@@ -22,12 +22,9 @@ import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /**
- * Counts the pings the team has consumed so far this month and, independently,
- * projects the consumption its current monitor settings imply — both from the local
- * check history, in parallel, via `Promise.allSettled` so a failure in either one
- * still lets the other render rather than discarding both. Each resolves to `null` —
- * rendered below as "unavailable" — when its own query failed, since "usage
- * unavailable" must never be shown to the user as "0 used".
+ * Counts pings consumed this month and, independently, projects consumption from
+ * current monitor settings, run in parallel via `Promise.allSettled` so one query's
+ * failure still lets the other render. Each resolves to `null` on failure, so "usage unavailable" is never shown as "0 used".
  */
 async function getPingUsage(
 	db: Database,

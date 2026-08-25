@@ -18,13 +18,9 @@ import { isFailure, success } from "@pkg/result";
 import bcrypt from "bcryptjs";
 
 /**
- * Outcome of checking a plaintext against a stored hash.
- *
- * `rehashed` is the whole migration: it is set only when the plaintext was
- * correct and the stored value is behind current policy, and it is the only
- * moment the plaintext is available to derive a replacement from. A caller that
- * ignores it leaves the old hash in place, so the value is returned here rather
- * than written anywhere by this module.
+ * Outcome of checking a plaintext against a stored hash; `rehashed` is set
+ * only when the plaintext matched and the stored hash trails current policy —
+ * the one chance to derive a replacement, which callers must persist themselves.
  */
 export interface VerifiedSecret {
 	/** Whether the plaintext matched the stored hash. */
@@ -34,12 +30,9 @@ export interface VerifiedSecret {
 }
 
 /**
- * Whether a failure means "not written by the current scheme" rather than
- * "the check could not run".
- *
- * A bcrypt hash has too few fields to parse as the current format, so it arrives
- * as a malformed value; that is the signal to route it to the legacy comparison
- * instead of treating it as an error.
+ * Recognizes a failure caused by a stored value in the superseded bcrypt
+ * format, which has too few fields to parse as the current scheme; matching
+ * this failure routes verification to the legacy comparison.
  *
  * @param error Failure returned by the current-scheme verifier.
  * @returns Whether the stored value should be retried against bcrypt.
@@ -69,8 +62,8 @@ async function compareLegacy(stored: string, plaintext: string): Promise<boolean
 /**
  * Derives a replacement hash for a plaintext already known to be correct.
  *
- * A failed re-hash never rejects the secret: the caller keeps its match and the
- * stored value stays in its old format, to be upgraded on a later check.
+ * When re-hashing fails, the match still stands and the stored value stays
+ * in its old format, ready to be upgraded on a later check.
  *
  * @param plaintext Secret that just verified.
  * @returns A match, carrying the replacement hash when one could be derived.
@@ -84,8 +77,8 @@ async function upgrade(plaintext: string): Promise<Result<VerifiedSecret, Crypto
 /**
  * Hashes a secret with the current scheme.
  *
- * The encoded output carries its own cost parameters, so raising them later does
- * not need a schema change or a stored-format flag.
+ * The encoded output carries its own cost parameters, so raising them later
+ * only changes the hashing defaults, leaving each hash self-describing.
  *
  * @param plaintext Secret to hash.
  * @returns Encoded hash such as `$pbkdf2-sha256$i=600000$<salt>$<key>`.
@@ -97,12 +90,9 @@ export function hashSecret(plaintext: string): Promise<Result<string, CryptoErro
 }
 
 /**
- * Checks a plaintext against a stored hash in either supported format.
- *
- * Values in the current format are checked with the parameters they record;
- * anything else is routed to bcrypt, which is what every hash written before the
- * migration looks like. A wrong secret is `matches: false`, never a failure, so
- * "wrong secret" and "could not check" stay distinguishable.
+ * Checks a plaintext against a stored hash in either supported format,
+ * falling back to bcrypt for anything written before the migration; a
+ * wrong secret always resolves to `matches: false`, distinct from a failure.
  *
  * @param stored Hash read from the database, in either format.
  * @param plaintext Presented secret.
@@ -131,11 +121,9 @@ export async function verifySecret(
 }
 
 /**
- * Performs one hashing operation and discards the result.
- *
- * Called where there is nothing to compare against, so that "no stored secret"
- * costs the same as "stored secret that did not match" and the difference cannot
- * be timed from outside.
+ * Performs one hashing operation and discards the result, so checking a
+ * missing secret takes the same time as checking one that does not match,
+ * keeping the two indistinguishable to an outside observer.
  *
  * @param plaintext Presented secret, hashed only to spend the work.
  * @example

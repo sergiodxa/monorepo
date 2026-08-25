@@ -25,11 +25,9 @@ function yesterday(): string {
 }
 
 /**
- * Builds the deterministic Polar deduplication id for a blog-day usage event. Because
- * it depends only on the blog and date, re-sending the same blog-day always carries
- * the same `external_id`, so Polar discards the duplicate — the guard that keeps
- * reporting idempotent when a prior run ingested the event but failed to persist
- * `reported_at`.
+ * Builds the deterministic Polar deduplication id for a blog-day usage event, so
+ * re-sending the same blog-day always carries the same `external_id` and Polar
+ * discards the duplicate if a prior run ingested it but failed to persist `reported_at`.
  *
  * @param blogId The blog the usage belongs to.
  * @param date The reported day as `YYYY-MM-DD`.
@@ -40,12 +38,9 @@ function usageEventId(blogId: string, date: string): string {
 }
 
 /**
- * Daily reporting cron (01:00 UTC): materializes Analytics Engine page views into
- * `usage_daily`, then ingests unreported blog-days into Polar. Each event carries a
- * deterministic `(blog_id, date)` deduplication id, so if a run ingests an event but
- * fails to stamp `reported_at`, the next run re-sends the same id and Polar discards
- * the duplicate — giving true at-most-once billing per blog-day across partial
- * failure. Failures retry next run.
+ * Daily reporting cron (01:00 UTC): materializes yesterday's Analytics Engine
+ * page views into `usage_daily`, then ingests unreported blog-days into Polar
+ * via {@link usageEventId} for at-most-once billing across partial failures.
  *
  * @returns A promise resolving once the day is rolled up and reported.
  */

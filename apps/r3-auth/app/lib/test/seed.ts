@@ -38,23 +38,16 @@ export interface Fixtures {
 /** How a test wants its seeded subject's address to start out. */
 export interface SeedOptions {
 	/**
-	 * Whether `subjects.email_verified_at` starts stamped. Default `true`, so a test that
-	 * is not about verification never has a verification message in its outbox; pass `false`
-	 * to seed the state that asks for one.
+	 * Whether `subjects.email_verified_at` starts stamped. Default `true`, so most tests start
+	 * with a clean outbox; pass `false` to seed the state that asks for one.
 	 */
 	emailVerified?: boolean;
 }
 
 /**
- * Registers a relying party and a subject with a usable password credential.
- *
- * The credential is created verified, the same way registration creates one: `verified_at`
- * answers "is this password known to belong to this account", and for a password chosen at
- * registration for an unclaimed address there is nobody else it could belong to.
- *
- * The address starts verified by default, which is the state most of these tests are set
- * in. It is a separate question from the credential — `subjects.email_verified_at` is about
- * the address, not the password — and the flow that proves it is driven from its own tests.
+ * Registers a relying party and a subject with a usable password credential. The credential
+ * is created verified, since nothing else could hold the password chosen at registration for
+ * an unclaimed address. The address itself starts verified by default.
  */
 export async function seed(app: TestApp, options: SeedOptions = {}): Promise<Fixtures> {
 	let client = await Client.create(app.db, {
@@ -149,11 +142,9 @@ export interface TokenSet {
 }
 
 /**
- * Runs a whole sign-in — park the request, submit credentials, redeem the code — and
- * leaves the client signed in to this server itself.
- *
- * Nothing here reaches past HTTP except the final session write, which stands in for
- * the self-login callback that lands in a later phase.
+ * Runs a whole sign-in — park the request, submit credentials, redeem the code — leaving the
+ * client signed in to this server itself. Only the final session write reaches storage
+ * directly, standing in for the self-login callback that lands in a later phase.
  *
  * @returns The tokens the flow produced.
  */

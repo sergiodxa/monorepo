@@ -1,18 +1,14 @@
-import type { CSSMixinDescriptor } from "remix/ui";
-
 /**
- * These factories were rewritten to compose `@pkg/u/animation`'s
- * `keyframes()`/`animationHost()` instead of one hand-written style object.
- * `animationHost()` emits the longhand `animationName`/`animationDuration`/
- * `animationTimingFunction`/`animationIterationCount` properties rather than
- * the single `animation` shorthand the original hand-written version used —
- * a deliberate, computationally-equivalent design change (not a visual
- * regression), consistent with every other shorthand-to-longhand conversion
- * this migration has made elsewhere (e.g. `transition`).
+ * Unit tests for the looping keyframe factories in `./keyframes`. Each
+ * factory returns a `css()` mixin descriptor whose `args[0]` holds the style
+ * tree, so assertions read the longhand `animation*` properties directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { CSSMixinDescriptor } from "remix/ui";
+
 import { describe, expect, test } from "vitest";
 
 import { pulse, shimmer, spin, textShimmer } from "./keyframes";

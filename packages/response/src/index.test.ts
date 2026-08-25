@@ -1,3 +1,11 @@
+/**
+ * Tests for the HTTP response helpers, covering status codes, JSON body
+ * merging, custom headers, and the redirect helper's target handling.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { describe, expect, test } from "vitest";
 

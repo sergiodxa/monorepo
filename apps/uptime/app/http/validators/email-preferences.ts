@@ -1,10 +1,9 @@
 /**
  * Form validation schema for the `update-emails` action.
  *
- * The form posts the emails the viewer *wants* — one value per switch left on — and an unchecked
- * switch posts nothing at all, which is why the field is a repeated one with no minimum: turning
- * everything off is a legal choice and arrives as an absent field, not as an error. The action
- * turns that list into the refusals stored on the row.
+ * The form posts the emails the viewer wants, one per switch left on. A repeated field
+ * with no minimum lets turning everything off arrive as an absent field; the action turns
+ * the list into the refusals stored on the row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

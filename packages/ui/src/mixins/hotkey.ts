@@ -1,21 +1,8 @@
 /**
  * Global keyboard-shortcut mixin for a Command dialog or any dialog/popover
- * host: listens for a key combination struck anywhere in the document and
- * opens the host if it's currently closed, or closes it again if the same
- * combination strikes while it's already open. Adapts to whichever native
- * API the host exposes — `showModal()`/`close()` for a `<dialog>`,
- * `showPopover()`/`hidePopover()` for a `[popover]` element — so the same
- * mixin pairs with either without the consumer branching on host type.
- *
- * Why JS: a shortcut that opens a host no matter where focus currently sits
- * on the page has no HTML attribute or CSS selector standing in for
- * "recognize this key combination struck anywhere in the document and react
- * to it" — only a document-level `keydown` listener can do that.
- * No-JS baseline: the host still opens through whatever declarative trigger
- * already targets it — a `commandfor`/`command` button for a `<dialog>`, or
- * a `popovertarget` button for a `[popover]` element — the combo is a
- * faster, additional path to that same native open state, never the only
- * one.
+ * host: opens the host when a key combination strikes anywhere in the
+ * document, and closes it again on the same combination while it's already
+ * open, adapting to whichever native open API the host exposes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,10 +42,7 @@ interface ParsedCombo {
 /**
  * Parses a `+`-joined combo string (`"mod+k"`, `"mod+shift+p"`) into the
  * modifier flags and literal trigger key {@link matchesCombo} compares a
- * `keydown` event against. Tokens are matched case-insensitively; `mod`,
- * `ctrl`, `control`, `cmd`, `command`, and `meta` all resolve to the same
- * cross-platform primary-modifier flag, `alt` and `option` are equivalent,
- * and the final token is always the trigger key.
+ * `keydown` event against, matching tokens case-insensitively.
  *
  * @param combo Combo string as passed to {@link hotkey}.
  * @returns The parsed modifier flags and trigger key.
@@ -86,9 +70,8 @@ function parseCombo(combo: string): ParsedCombo {
 
 /**
  * Reports whether `event` strikes exactly the key and modifier combination
- * `combo` describes: every modifier `combo` requires must be held, and no
- * modifier it doesn't require may be, so a combo never fires on a superset
- * chord it wasn't written for.
+ * `combo` describes, requiring every modifier `combo` lists and none it
+ * doesn't, so a combo never fires on a superset chord.
  *
  * @param event `keydown` event observed on the document.
  * @param combo Parsed combo to compare `event` against.
@@ -117,9 +100,7 @@ function isOpen(host: HTMLElement): boolean {
 /**
  * Drives `host` to `open`, through whichever native API applies —
  * `showModal()`/`close()` for a `<dialog>`, `showPopover()`/`hidePopover()`
- * for an element carrying the `popover` attribute — logging a dev-mode
- * warning and doing nothing for a host that's neither, since there's no
- * native open state left to drive.
+ * for an element carrying the `popover` attribute.
  *
  * @param host Element {@link hotkey} is mixed onto.
  * @param open Target open state.
@@ -146,23 +127,8 @@ function setOpen(host: HTMLElement, open: boolean): void {
 
 /**
  * Opens the host when `combo` is struck anywhere in the document while it's
- * closed, and closes it again if `combo` strikes while it's already open.
- * Reads and drives the host's own native open state — `HTMLDialogElement`'s
- * `open` property with `showModal()`/`close()` for a `<dialog>`, the
- * `:popover-open` pseudo-class with `showPopover()`/`hidePopover()` for a
- * `[popover]` element — so it composes with whichever the host already is,
- * without tracking any open state of its own.
- *
- * `combo` is a `+`-joined, case-insensitive list of modifier tokens
- * followed by the trigger key: `mod` (and its spellings `ctrl`, `control`,
- * `cmd`, `command`, `meta`) resolves to the platform's primary modifier,
- * checked as `event.ctrlKey || event.metaKey` so the same combo answers to
- * Ctrl on Windows/Linux and Cmd on macOS; `alt`/`option` checks
- * `event.altKey`; `shift` checks `event.shiftKey`. Every modifier the combo
- * doesn't list must be held up, so `"mod+k"` matches a bare Ctrl/Cmd+K only,
- * never Ctrl/Cmd+Shift+K. A held-down key's repeated `keydown` events are
- * ignored, so the host toggles once per keypress rather than once per
- * repeat tick.
+ * closed, and closes it again on the same combo while it's already open,
+ * driving the host's own native `<dialog>` or `[popover]` open state.
  *
  * @param combo Key combination that opens or closes the host, e.g. `"mod+k"`.
  * @example

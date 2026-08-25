@@ -8,11 +8,9 @@ import { overflow } from "../overflow/overflow";
 import { nowrap } from "./nowrap";
 
 /**
- * Truncates single-line text with an ellipsis once it overflows its box.
- * Requires the element to have a bounded inline size (a `max-inline-size`,
- * a flex/grid item with `min-inline-size: 0`, or similar) or there is
- * nothing to overflow against. Composes `u.overflow("hidden")` and
- * `u.nowrap()`, adding only `text-overflow` of its own.
+ * Truncates single-line text with an ellipsis once it overflows its box;
+ * requires a bounded inline size (`max-inline-size`, a flex/grid item with
+ * `min-inline-size: 0`, or similar) or there is nothing to overflow against.
  *
  * @example u.truncate()
  * @example css({ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" })

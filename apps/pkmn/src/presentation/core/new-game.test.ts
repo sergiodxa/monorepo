@@ -1,10 +1,8 @@
 /**
  * Tests for the new-game world factory.
  *
- * Covers the starting world derived from content: the player owns a starter, and
- * that starter is registered in the bestiary as seen and caught (regression for
- * the bug where a new game left the bestiary empty even though the player already
- * owned the starter).
+ * Covers the regression where a new game left the bestiary empty despite the
+ * player already owning the starter.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

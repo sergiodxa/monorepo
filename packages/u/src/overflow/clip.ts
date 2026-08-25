@@ -6,9 +6,8 @@ import { utility } from "../internal/descriptor";
 
 /**
  * Applies `overflow: clip`, the modern alternative to `overflow: hidden`.
- * Unlike `hidden`, `clip` doesn't establish a scroll container, so the
- * element's overflow can never become scrollable through user input,
- * programmatic scrolling, or focusing a clipped descendant.
+ * Overflow stays permanently unreachable: user input, programmatic scrolling,
+ * and focusing a clipped descendant all leave the element unscrolled.
  *
  * @example u.clip()
  * @example css({ overflow: "clip" })

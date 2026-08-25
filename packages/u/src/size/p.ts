@@ -10,9 +10,9 @@ import { utility } from "../internal/descriptor";
 /**
  * Applies logical padding using the spacing scale or a raw CSS length. One
  * value applies all sides; two values map to block then inline; four values
- * map to block-start, inline-end, block-end, and inline-start — see
- * [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
+ * map to block-start, inline-end, block-end, and inline-start.
  *
+ * @see [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values)
  * @example u.p(4)
  * @example css({ padding: "calc(var(--ui-spacing, 0.25rem) * 4)" })
  * @example u.p(1, 2, 3, 4)

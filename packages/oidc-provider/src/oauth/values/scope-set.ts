@@ -15,7 +15,6 @@
  * requested.isSubsetOf(client.allowedScopes);
  */
 export default class ScopeSet {
-	/** Internal set of scope strings. */
 	private readonly scopes: Set<string>;
 
 	/**
@@ -51,9 +50,7 @@ export default class ScopeSet {
 			if (Array.isArray(parsed) && parsed.every((s) => typeof s === "string")) {
 				return new ScopeSet(parsed as string[]);
 			}
-		} catch {
-			// Invalid JSON, return empty set
-		}
+		} catch {}
 		return new ScopeSet();
 	}
 

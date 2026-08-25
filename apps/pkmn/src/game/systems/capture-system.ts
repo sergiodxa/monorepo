@@ -1,9 +1,9 @@
 /**
  * Coordinates the capture flow for encounter creatures within the game world.
  *
- * This module converts a creature from an encounter-owned state into a player-owned state and records its resulting placement. It updates ownership, assigns the creature to the active party when capacity is available, and falls back to persistent storage when the party is full.
- *
- * By keeping these transitions together, the module centralizes the rules for where newly captured creatures are placed and how their world location is tracked after capture. This helps the rest of the game rely on a single, consistent entry point for capture-related state changes.
+ * This module moves a creature from an encounter-owned state into a player-owned one,
+ * assigning it to the active party when there is room and falling back to persistent
+ * storage otherwise, so a captured creature's placement and location stay consistent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,13 +33,9 @@ export function captureStatusBonus(state: State | null): number {
 }
 
 /**
- * Runs the Gen 3 capture attempt: computes the catch value and rolls up to four shakes.
- *
- * `a = floor((3*maxHP - 2*currentHP) * catchRate * ballMultiplier / (3*maxHP)) * statusBonus`.
- * When `a >= 255` the catch is guaranteed; otherwise four shake checks run against
- * `b = floor(1048560 / floor(sqrt(floor(sqrt(floor(16711680 / a))))))`, and the
- * catch succeeds only if all four pass. On failure the number of passing shakes is
- * reported (capped at 3).
+ * Runs the Gen 3 capture attempt: computes the catch value and rolls up to four shake
+ * checks against it, guaranteeing success once the value reaches 255 and reporting the
+ * number of passing shakes (capped at 3) on failure.
  */
 export function computeCaptureAttempt(params: {
 	maxHP: number;
@@ -68,12 +64,9 @@ export function computeCaptureAttempt(params: {
 }
 
 /**
- * Converts one encounter creature into an owned creature and places it in party or storage.
- *
- * When `gameData` and `random` are supplied the capture also guarantees per-instance
- * state exists, rolling a gender from the species ratio for any creature that reached
- * capture without one (spawned creatures already carry theirs, so this is a no-op for
- * them). The roll flows through the injected RNG so seeded sessions stay reproducible.
+ * Converts one encounter creature into an owned creature, placing it in the party when
+ * there is room and in storage otherwise. Given capture data, it also rolls a gender for
+ * any creature missing instance state through the injected RNG for reproducible seeds.
  */
 export function captureCreature(
 	world: World,

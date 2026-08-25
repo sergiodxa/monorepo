@@ -71,12 +71,9 @@ async function sign(
 }
 
 /**
- * Recomputes the MAC for a payload and compares it in constant time.
- *
- * A signature given as a string is decoded as hex, the form `Hex.encode` produces
- * and the form signature headers usually carry. An undecodable string is reported
- * as a plain mismatch rather than an error, so a malformed header fails closed
- * without needing a second branch at the call site.
+ * Recomputes the MAC for a payload and compares it in constant time. A
+ * signature given as a string decodes as hex; an undecodable string resolves
+ * to a mismatch, so a malformed header fails closed automatically.
  *
  * @param secret Key material; text is read as UTF-8.
  * @param payload Message the signature is supposed to cover.

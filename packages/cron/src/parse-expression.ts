@@ -19,9 +19,8 @@ import { InvalidCronExpression } from "./invalid-cron-expression";
 
 /**
  * The `@` shorthands this package accepts, expanded to the five-field expression
- * they stand for. `@annually` is the long spelling of `@yearly` and `@midnight` of
- * `@daily`, both named by the crontab specification; shorthands with no schedule of
- * their own, such as `@reboot`, are absent and rejected.
+ * they stand for. `@annually` and `@midnight` are the crontab spec's long spellings
+ * of `@yearly` and `@daily`; shorthands with no schedule of their own are rejected.
  */
 const MACROS: Record<string, string | undefined> = {
 	"@hourly": "0 * * * *",
@@ -57,12 +56,9 @@ function tokenize(expression: string): FieldToken[] {
 }
 
 /**
- * Parse a cron expression into the value sets its fields stand for.
- *
- * Five fields are required: a six-field expression is read as a seconds-first
- * schedule and rejected on purpose, because a sub-minute schedule is a promise the
- * runtime cannot keep. Non-standard extensions (`L`, `W`, `#`, `?`) are rejected
- * for the same reason: accepting the syntax would imply honoring the semantics.
+ * Parse a cron expression into the value sets its fields stand for. Five fields
+ * are required, since a sub-minute schedule is a promise the runtime cannot keep,
+ * and non-standard extensions (`L`, `W`, `#`, `?`) imply semantics this rejects.
  *
  * @param expression - The expression as written, whitespace and case as typed.
  * @returns The field sets, or the first failure with its reason, field, and index.

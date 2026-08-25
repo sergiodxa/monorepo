@@ -1,11 +1,8 @@
 /**
- * Tests for the asset store's map loading, validation, and atlas slicing helpers.
- *
- * Focuses on the map path, which is the reliable end-to-end route under the Bun
- * HTML dev server: a manifest map source given as an inline object is validated
- * through the loader and registered (available via `map(id)`), while a malformed
- * inline map is skipped so a bad map never registers a broken value that would
- * crash the renderer. Uses inline map objects so no network or DOM is needed.
+ * Tests for the asset store's map loading, validation, and atlas slicing
+ * helpers. The map path is the reliable end-to-end route under the Bun HTML
+ * dev server: a valid inline map registers under its id, and a malformed one
+ * is skipped so only validated maps ever reach the renderer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +13,6 @@ import { createSampleMap } from "../overworld/map-loader";
 
 import { AssetStore, type AssetManifest, expandAtlasRegions } from "./assets";
 
-/** A manifest with no images/audio/atlases and the given inline maps. */
 function manifestWithMaps(maps: AssetManifest["maps"]): AssetManifest {
 	return { images: {}, audio: {}, maps, atlases: {} };
 }

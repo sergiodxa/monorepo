@@ -12,10 +12,9 @@ import { email } from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 
 /**
- * The copy a visitor reads when the address does not parse. Every field but `email` is
- * an optional string that cannot fail, so this is the only validation message the form
- * can produce — the controller shows it for any issue rather than surfacing the
- * schema's own wording, which is not written for readers.
+ * The copy a visitor reads when the address fails validation. Since only
+ * `email` can fail, the controller shows this exact message for any
+ * validation issue, keeping the wording reader-friendly.
  */
 export const INVALID_EMAIL_MESSAGE = "Invalid email address";
 

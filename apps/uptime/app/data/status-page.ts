@@ -1,12 +1,8 @@
 /**
  * Data-access model for status pages: CRUD, slug uniqueness, and curating which
- * HTTP/DNS/TCP monitors and cron-job monitors a page shows and in what order. Item
- * curation always replaces the full attached set for a page (delete every existing
- * row, then bulk-insert the new one) rather than diffing, since the form always posts
- * the complete selection each time — there's nothing to diff against.
- * `status_page_ssl_monitors` is deliberately never populated here: the underlying
- * `ssl_monitors` table has no rows in production (SSL status lives inline on `monitors`
- * instead — see Phase 5's dashboard card), so an SSL picker would always be empty.
+ * HTTP/DNS/TCP monitors and cron-job monitors a page shows and in what order. Curation
+ * replaces the full attached set each time — the form posts the complete selection, so
+ * a delete plus a bulk insert says everything a diff would.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

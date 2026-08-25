@@ -8,7 +8,7 @@ export type UserSelectValue = "none" | "auto" | "text" | "all" | "contain";
 
 /**
  * Applies `user-select`. Defaults to `"none"`, the common case of a label,
- * icon, or drag handle that shouldn't get highlighted by an incidental
+ * icon, or drag handle that stays clear of highlight through an incidental
  * click-drag.
  *
  * @example u.userSelect()

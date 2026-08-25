@@ -5,11 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies `counter-increment`, incrementing the CSS counter identified by
- * `name` on the element. `name` is the counter's own identifier, not a
- * custom property, so it's given bare with no `--` prefix. `value` is the
- * integer the counter is incremented by; omit it to fall back to CSS's own
- * default of `1`.
+ * Applies `counter-increment` to the element's CSS counter, named by the
+ * bare counter identifier `name`. `value` is the integer the counter is
+ * incremented by; omit it to fall back to CSS's own default of `1`.
  *
  * @example u.counterIncrement("section")
  * @example css({ counterIncrement: "section" })

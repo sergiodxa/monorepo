@@ -1,3 +1,10 @@
+/**
+ * Recursively clones XML element trees.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { XML } from "../index";
 
 /**

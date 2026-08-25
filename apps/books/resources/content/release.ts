@@ -1,12 +1,9 @@
 /**
- * The sales page's marketing copy: the hero, the "what's inside" blocks, the testimonial,
- * the two package descriptions, the upgrade call-out, and the footer line. It lives here
- * as data so the copy can be rewritten — which happens far more often than the layout
- * changes — without reading a single line of markup.
- *
- * Prose carrying inline links stays in the view: a sentence with an anchor inside it is
- * markup, and flattening it into strings here would only move the markup somewhere it
- * cannot be read.
+ * The sales page's marketing copy: hero, "what's inside" blocks, testimonial,
+ * package descriptions, upgrade call-out, and footer. Copy lives here as data
+ * so it can be rewritten without touching markup; prose carrying inline links
+ * stays in the view, since flattening an anchor into a string here would just
+ * hide the markup elsewhere.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +13,6 @@
 export interface DescriptionBlock {
 	/** The feature's name, emoji included — the emoji is part of the design. */
 	title: string;
-	/** The paragraph describing it. */
 	description: string;
 }
 
@@ -44,7 +40,6 @@ export interface PackageCopy {
 	includes?: PackageItem[];
 	/** Paragraphs shown after the contents list. */
 	trailing?: string[];
-	/** Whether an active launch discount applies to this package's price. */
 	discountable: boolean;
 }
 
@@ -118,12 +113,9 @@ export const PRICING = {
 };
 
 /**
- * The two packages, in the order the page lists them: the flagship first, because it is
- * the one the launch discount applies to and the one most readers should buy.
- *
- * Annotated rather than inferred so every package is the same type — the two differ in
- * which optional fields they carry, and an inferred tuple would make the shared fields the
- * only ones a loop can read.
+ * The two packages, in the order the page lists them: the flagship first, since the
+ * launch discount applies only to it. Annotated as `PackageCopy[]` rather than inferred
+ * so both entries share one type despite differing optional fields.
  */
 export const PACKAGES: PackageCopy[] = [
 	{

@@ -25,7 +25,7 @@ beforeEach(async () => {
 	fixtures = await seed(app);
 });
 
-/** Posts the edit form with the given fields, without following the redirect. */
+/** Posts the edit form with the given fields, returning the redirect itself. */
 async function submitEdit(fields: Record<string, string>): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${routes.account.profileEdit.action.href()}`, {
@@ -157,7 +157,6 @@ describe("POST /account/profile/edit", () => {
 		let html = await response.text();
 
 		expect(response.status).toBe(400);
-		// The typing survives the rejection rather than the form resetting to stored values.
 		expect(html).toContain('value="Jane Kept"');
 		expect(html).toContain('value="not-a-url"');
 

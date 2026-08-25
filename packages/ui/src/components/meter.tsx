@@ -28,18 +28,14 @@ const DEFAULT_COLOR: Meter.Color = "neutral";
 
 /**
  * Native `max` value {@link Meter.Indicator} falls back to when `max` is
- * omitted, matching the common percentage-based convention rather than the
- * platform's own default of `1`.
+ * omitted, matching the common percentage-based convention for a bare `value`.
  */
 const DEFAULT_MAX = 100;
 
 /**
- * Selector list matching every engine's pseudo-element for a meter's filled
- * portion: WebKit/Blink split the fill in three depending on how `value`
- * compares to `low`/`high`/`optimum`, while Gecko exposes a single one. This
- * module colors all four identically from `data-color` so the fill's tone
- * always reflects the semantic role a consumer chose, never the platform's
- * own optimum/suboptimum quality judgment.
+ * Selector list matching every engine's pseudo-element for a meter's fill:
+ * WebKit/Blink split it in three depending on `value` vs. `low`/`high`/
+ * `optimum`; Gecko exposes one. All four resolve their color from `data-color`.
  */
 const FILL_PSEUDO_ELEMENTS =
 	"&::-webkit-meter-optimum-value, &::-webkit-meter-suboptimum-value, &::-webkit-meter-even-less-good-value, &::-moz-meter-bar";
@@ -62,12 +58,9 @@ export namespace Meter {
 	export interface Props extends TagProps<"div"> {}
 
 	/**
-	 * Every native `<meter>` attribute — `value`, `min`, `max`, `low`, `high`,
-	 * `optimum`, and `form` all work exactly as they would on a bare element —
-	 * plus `color` and the `mix` passthrough. `max` defaults to
-	 * {@link DEFAULT_MAX} rather than the platform's own default of `1`, so a
-	 * bare `value` reads as a percentage without also passing `max={100}`
-	 * every time.
+	 * Every native `<meter>` attribute, unchanged, plus `color` and the `mix`
+	 * passthrough. `max` defaults to {@link DEFAULT_MAX}, so a bare `value`
+	 * reads directly as a percentage.
 	 */
 	export interface IndicatorProps extends TagProps<"meter"> {
 		/** Semantic color role for the gauge's fill. Defaults to {@link DEFAULT_COLOR}. */
@@ -82,9 +75,8 @@ export namespace Meter {
 
 /**
  * Renders the root column: a `<div>` stacking {@link Meter.Indicator} and an
- * optional {@link Meter.ValueLabel} with a small gap between them. It carries
- * no ARIA of its own — the native `<meter>` element inside already exposes
- * the platform's own meter semantics.
+ * optional {@link Meter.ValueLabel} with a small gap. The native `<meter>`
+ * inside already exposes the platform's meter semantics.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the root column's markup.
@@ -103,21 +95,9 @@ export function Meter(handle: Handle<Meter.Props>) {
 }
 
 /**
- * Renders the gauge itself: a native `<meter>` stripped of its platform
- * chrome via `appearance: none` and redrawn as a pill-shaped track filled in
- * a semantic color, sized through `--ui-*` custom properties with sensible
- * fallbacks. The track color and shape are set on the host itself (the
- * element Firefox draws its track from directly) and mirrored onto the
- * `::-webkit-meter-bar` pseudo-element for Chromium and Safari; the fill
- * color and shape are set on `::-webkit-meter-optimum-value`,
- * `::-webkit-meter-suboptimum-value`, `::-webkit-meter-even-less-good-value`,
- * and `::-moz-meter-bar` alike, so `low`/`high`/`optimum` keep shaping the
- * gauge's accessible semantics without ever changing its rendered color —
- * that's `color`'s job instead.
- *
- * In dev mode, a gauge with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name to announce for it.
+ * Renders the gauge as a pill-shaped track filled in a semantic `color`,
+ * mirrored across each engine's fill pseudo-elements so `low`/`high`/`optimum`
+ * keep shaping accessible semantics independently of the rendered color; dev mode warns when no accessible name is set.
  *
  * @param handle Runtime handle carrying the host `<meter>`'s props.
  * @returns The render function producing the gauge's markup.

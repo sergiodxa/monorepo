@@ -173,8 +173,6 @@ export default function SubjectDetailView(handle: Handle<SubjectDetailView.Props
 
 										<div mix={[mis("auto")]}>
 											<ConfirmAction
-												// The dialog is keyed by position, not by the session id: that id is the
-												// refresh token, and it belongs in the posted field and nowhere else.
 												id={`revoke-session-${index}`}
 												size="sm"
 												trigger={labels.sessions.revoke}

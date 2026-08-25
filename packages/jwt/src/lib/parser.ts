@@ -14,9 +14,9 @@
 /**
  * Base class for every failure this parser raises.
  *
- * A single base means a caller that only wants to distinguish "the token's claims
- * were not what I expected" from a genuine bug needs one `instanceof` check, while
- * the subclasses still let it tell a missing claim from a mistyped one.
+ * A single base lets a caller distinguish malformed claims from a genuine bug
+ * with one `instanceof` check, while subclasses still tell a missing claim
+ * from a mistyped one.
  */
 export class ParserError extends Error {
 	override name = "ParserError";
@@ -55,33 +55,13 @@ export class InvalidTypeError extends ParserError {
 /**
  * Reads values out of a plain object, checking the type of each one.
  *
- * ## Why this throws instead of returning a `Result`
+ * Throws on a mismatch, so a `JWT` subclass's getters can return the claim's
+ * own type without wrapping it for a `Result`.
  *
- * Everything else in this monorepo returns a `Result` rather than throwing, and
- * this class deliberately does not. It exists to be called from inside property
- * getters on `JWT` subclasses:
- *
- * ```ts
+ * @example
  * get email(): string {
  * 	return this.parser.string("email");
  * }
- * ```
- *
- * A getter has no room for a `Result`: returning one would change the type of
- * every claim accessor across every token class in the repo, and force each of
- * their call sites to unwrap a value that, at that point in the flow, has already
- * been through signature verification. Throwing keeps the accessor's type equal to
- * the claim's type.
- *
- * The trade is acceptable because of *where* these reads happen. A claim that is
- * missing or mistyped after a token has verified means the issuer sent something
- * the token class does not model — closer to a programming error than to a runtime
- * condition a caller is expected to branch on. Request handlers already convert an
- * escaped throw into a 500, and the code paths that must not fail hard (verifying
- * an untrusted token) guard with `has` first or catch around the whole verify.
- *
- * Do not "fix" this to match the house convention without changing every token
- * class at the same time.
  */
 export class ObjectParser {
 	/** The object being read from, kept as `object` so reads stay explicit. */
@@ -164,9 +144,8 @@ export class ObjectParser {
 	/**
 	 * Reads a key as a boolean.
 	 *
-	 * Strict: the string `"true"` is a type error, not a `true`. An identity provider
-	 * that sends `email_verified` as a string is sending something the token class
-	 * does not model, and silently coercing it would turn that into a trusted `true`.
+	 * Strict: only an actual boolean passes, so a stringly-typed `email_verified`
+	 * claim from an identity provider surfaces as a type error, never a coerced `true`.
 	 *
 	 * @param key - Claim name to read.
 	 * @returns The boolean value.

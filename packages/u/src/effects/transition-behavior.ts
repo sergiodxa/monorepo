@@ -7,10 +7,9 @@ import { utility } from "../internal/descriptor";
 export type TransitionBehaviorValue = "normal" | "allow-discrete";
 
 /**
- * Applies the `transition-behavior` property on its own — set to
- * `"allow-discrete"` to let a discrete property (e.g. `display`, `content-
- * visibility`) participate in a transition instead of flipping instantly,
- * commonly paired with `@starting-style`.
+ * Applies the `transition-behavior` property on its own; `"allow-discrete"`
+ * lets a discrete property such as `display` or `content-visibility` animate
+ * across a transition, commonly paired with `@starting-style`.
  *
  * @example u.transitionBehavior("allow-discrete")
  * @example css({ transitionBehavior: "allow-discrete" })

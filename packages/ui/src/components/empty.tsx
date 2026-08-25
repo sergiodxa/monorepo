@@ -60,10 +60,9 @@ export namespace Empty {
 	}
 
 	/**
-	 * Props accepted by {@link Empty.Title}. Every native heading-element
-	 * attribute still applies, since the rendered tag depends on the nearest
-	 * ambient heading level, falling back to `<h1>` where nothing supplies
-	 * one.
+	 * Props accepted by {@link Empty.Title}. The rendered tag depends on the
+	 * nearest ambient heading level, falling back to `<h1>` where nothing
+	 * supplies one; every native heading-element attribute still applies.
 	 */
 	export interface TitleProps extends TagProps<"h1"> {
 		/** Heading copy for the empty state. */
@@ -88,12 +87,9 @@ export namespace Empty {
 }
 
 /**
- * Renders the empty-state panel: a full-width, dashed-bordered, centered
- * column that tints its border, background, and text to the color role in
- * {@link Empty.Props.color}. Compose {@link Empty.Icon}, {@link Empty.Title},
- * {@link Empty.Description}, and {@link Empty.Action} inside it — each part
- * inherits the panel's color through `currentcolor` rather than reading the
- * color role itself.
+ * Renders the empty-state panel: a dashed-bordered column tinted to the
+ * color role in {@link Empty.Props.color}. Its compound parts inherit that
+ * color through `currentcolor`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the panel's markup.
@@ -142,10 +138,8 @@ export function Empty(handle: Handle<Empty.Props>) {
 
 /**
  * Renders {@link Empty.IconProps.children} as the icon well: a fully
- * rounded badge, tinted from the current text color, that frames an icon
- * graphic. Hidden from assistive technology by default since the icon is
- * decorative alongside {@link Empty.Title}'s text; pass `aria-hidden={false}`
- * when the icon carries meaning its siblings don't already convey.
+ * rounded, tinted badge framing an icon graphic hidden from assistive
+ * technology, since {@link Empty.Title}'s text already names the state.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the icon well's markup.
@@ -180,11 +174,9 @@ Empty.Icon = function EmptyIcon(handle: Handle<Empty.IconProps>) {
 };
 
 /**
- * Renders {@link Empty.TitleProps.children} as the empty state's heading, in
- * the native heading element matching its ambient depth — the nearest
- * ancestor `HeadingScope`'s depth, or `<h1>` where no scope wraps it at all
- * — sized and weighted as the panel's primary line of text regardless of
- * which level it renders.
+ * Renders {@link Empty.TitleProps.children} as the empty state's heading,
+ * in the native heading element matching its ambient `HeadingScope` depth
+ * (or `<h1>` unscoped), sized as the panel's primary text regardless of level.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the heading's markup.

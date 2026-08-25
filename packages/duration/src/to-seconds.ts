@@ -14,11 +14,8 @@ import { SECOND_MS } from "./units";
 
 /**
  * Convert a duration to whole seconds, rounding to the nearest second with
- * halves rounding up, so `"1500ms"` is `2` and `"1400ms"` is `1`.
- *
- * Anything under half a second rounds down to `0`, which most seconds-based
- * APIs read as "no caching" — pass a duration of at least `"1 second"` when that
- * matters. A bypassed type propagates as `NaN`, matching `toMs()`.
+ * halves rounding up. Durations under half a second round down to `0`, which
+ * most seconds-based APIs read as no caching; a bypassed type propagates as `NaN`.
  *
  * @param input - A duration string, or a number of milliseconds.
  * @returns The duration in whole seconds.

@@ -28,7 +28,6 @@ export default class LogoutUri {
 	/** Error thrown when a logout URI is malformed. */
 	static InvalidLogoutUriError = class extends InvalidUriError {
 		override name = "InvalidLogoutUriError";
-		/** Builds the error with a fixed "Invalid logout URI" message. */
 		constructor() {
 			super("Invalid logout URI");
 		}

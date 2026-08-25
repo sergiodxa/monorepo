@@ -1,3 +1,11 @@
+/**
+ * Tests element traversal, path normalization, and path-based querying
+ * against a small XML tree.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import {

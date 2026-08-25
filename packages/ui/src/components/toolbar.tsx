@@ -26,9 +26,8 @@ const DEFAULT_ROLE = "toolbar";
 
 /**
  * Default {@link Toolbar.Props} orientation, applied through {@link attrs}
- * unless a consumer sets `aria-orientation` directly. Keeping the
- * accessibility contract and the CSS variant selector on the same attribute
- * means a consumer only ever sets one thing to flip the panel's axis.
+ * unless a consumer sets `aria-orientation` directly, so one attribute flips
+ * both the accessibility contract and the CSS layout variant.
  */
 const DEFAULT_ORIENTATION: Toolbar.Orientation = "horizontal";
 
@@ -45,8 +44,7 @@ export namespace Toolbar {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
 	 * Setting `aria-orientation="vertical"` switches both the accessibility
-	 * contract and the rendered layout to a column; leaving it unset (or set
-	 * to `"horizontal"`) keeps the default row layout.
+	 * contract and rendered layout to a column; leaving it unset keeps the row.
 	 */
 	export interface Props extends TagProps<"div"> {}
 }
@@ -54,8 +52,7 @@ export namespace Toolbar {
 /**
  * Renders a bordered, tinted panel grouping a set of interactive controls
  * along one axis. The host carries the `toolbar` role and lays its children
- * out as a horizontally centered row by default; setting
- * `aria-orientation="vertical"` flips it to a left-aligned column instead.
+ * out as a row by default, flipping to a column when `aria-orientation="vertical"`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the toolbar's markup.

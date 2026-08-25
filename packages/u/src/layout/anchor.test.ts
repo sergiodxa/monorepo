@@ -1,5 +1,5 @@
 /**
- * Unit tests for `anchor()`, a plain string resolver (not a mixin).
+ * Unit tests for `anchor()`, a plain string resolver.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

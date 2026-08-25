@@ -25,9 +25,7 @@ import WebAuthnChallenge from "./webauthn/models/webauthn-challenge";
 
 /** Sink for authentication/registration analytics events (host-provided). */
 export interface AnalyticsSink {
-	/** Records that a subject authenticated. */
 	trackAuthentication(tenantId: string, subjectId: string): void;
-	/** Records that a subject registered. */
 	trackRegistration(tenantId: string, subjectId: string): void;
 }
 
@@ -62,13 +60,9 @@ const NOOP_ANALYTICS: AnalyticsSink = {
 };
 
 /**
- * Creates an OIDC/OAuth2 provider bound to injected storage and secrets.
- *
- * The same provider runs inside a Cloudflare Durable Object (the multi-tenant
- * platform) or on a plain Worker with D1 (self-hosted); the host only differs in
- * the {@link OidcProviderConfig.database} adapter it injects. Everything else the
- * provider needs at request time (issuer, signing keys, clients) lives in its own
- * database.
+ * Creates an OIDC/OAuth2 provider bound to injected storage and secrets. The
+ * same engine runs on a Cloudflare Durable Object or a plain Worker with D1;
+ * only the {@link OidcProviderConfig.database} adapter differs by host.
  * @param config - Injected storage, internal secret, and optional analytics.
  * @returns A provider exposing `fetch` and `migrate`.
  */
@@ -118,6 +112,8 @@ export function createOidcProvider(config: OidcProviderConfig): OidcProvider {
 	};
 }
 
-// The platform<->tenant internal-token contract ships from here so the control
-// plane and the provider always agree on algorithm and claims.
+/**
+ * The platform<->tenant internal-token contract ships from here so the
+ * control plane and the provider always agree on algorithm and claims.
+ */
 export { createInternalToken, verifyInternalToken } from "./shared/lib/internal-auth";

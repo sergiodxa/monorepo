@@ -1,18 +1,8 @@
 /**
- * Pure geometry + classification helpers for the map editor's canvas, kept DOM-free
- * so the imperative `MapCanvas` shell in `views/map.tsx` stays thin and this math is
- * unit-testable without a canvas. Two families of helpers live here:
- *
- * - Coordinate math: {@link tileScreenSize}, {@link tileScreenRect}, and
- *   {@link screenToTile} convert between map tile coordinates and the on-canvas
- *   pixels a given zoom produces. One constant, {@link BASE_TILE_PX}, sets how many
- *   display pixels one tile spans at zoom 1; everything else scales off it, so the
- *   view and its tests agree on the blit rectangle.
- * - Event markers: {@link eventMarkerStyle} classifies a {@link MapEvent} by its
- *   first page's trigger and graphic into a badge glyph, accent color, and an
- *   "invisible" flag (a page with no graphic, or a non-`action` trigger) the canvas
- *   should outline rather than fill, so the renderer draws a consistent, legible
- *   marker for every event under the RPG-Maker-XP page model.
+ * Pure geometry and classification helpers for the map editor's canvas, kept as
+ * plain math so the view shell stays thin and testable on its own: tile↔screen
+ * conversion scales off {@link BASE_TILE_PX}, and {@link eventMarkerStyle} turns an
+ * event's first page into the marker glyph, accent color, and outline flag.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,13 +15,9 @@ export const BASE_TILE_PX = 16;
 
 /** An axis-aligned rectangle in canvas pixels: top-left corner plus size. */
 export interface ScreenRect {
-	/** Left edge in canvas pixels. */
 	x: number;
-	/** Top edge in canvas pixels. */
 	y: number;
-	/** Width in canvas pixels. */
 	w: number;
-	/** Height in canvas pixels. */
 	h: number;
 }
 
@@ -50,9 +36,8 @@ export interface EventMarkerStyle {
 	/** The marker's accent color (border + badge background). */
 	color: string;
 	/**
-	 * True when the event's active page has no graphic of its own (or fires without
-	 * an action-button press) so the canvas draws an outlined placeholder rather than
-	 * a solid fill, keeping real sprites unobscured.
+	 * True for a page with no graphic or a non-action trigger, so the canvas draws an
+	 * outlined placeholder and keeps a real sprite visible.
 	 */
 	invisible: boolean;
 }
@@ -64,7 +49,7 @@ export function tileScreenSize(zoom: number): number {
 
 /**
  * The on-canvas rectangle a map tile occupies at a zoom. Pure: the view blits into
- * this rect and its tests assert the math without a canvas.
+ * this rect and its tests assert the math directly.
  *
  * @param x Tile column.
  * @param y Tile row.
@@ -87,9 +72,8 @@ export function canvasSize(
 
 /**
  * Converts a pixel offset within the canvas's own bitmap to a tile coordinate, or
- * `null` when it falls outside the map. Pure integer math: callers pass the offset
- * already mapped into bitmap space (accounting for any CSS scaling) plus the map
- * bounds and zoom.
+ * `null` when it falls outside the map. Integer math on an offset the caller has
+ * already mapped into bitmap space, so CSS scaling is resolved upstream.
  *
  * @param offsetX Horizontal offset in canvas-bitmap pixels.
  * @param offsetY Vertical offset in canvas-bitmap pixels.
@@ -120,7 +104,7 @@ const TRIGGER_STYLE: Record<EventPage["trigger"], { glyph: string; color: string
 	parallel: { glyph: "∥", color: "rgba(244, 114, 182, 0.95)" },
 };
 
-/** The blank marker style for an event with no pages (should not happen in practice). */
+/** The fallback marker style for an event whose page list is empty. */
 const EMPTY_STYLE: EventMarkerStyle = {
 	glyph: "?",
 	color: "rgba(148, 163, 184, 0.95)",
@@ -128,10 +112,9 @@ const EMPTY_STYLE: EventMarkerStyle = {
 };
 
 /**
- * The marker style for one event, classified from its first page: a glyph and accent
- * color reflecting the page's `trigger`, and an "invisible" flag set when the page
- * has no graphic (or fires without an action-button press) so the canvas outlines a
- * placeholder rather than hiding a real sprite behind a solid block.
+ * The marker style for one event, classified from its first page: glyph and accent
+ * color from the page's `trigger`, plus an outline flag for a page with no graphic,
+ * so the canvas keeps a real sprite visible under its marker.
  *
  * @param event The event to classify (its first page is the representative one).
  */

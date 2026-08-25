@@ -2,11 +2,8 @@
  * Privacy Policy controller. Renders the static GDPR-oriented prose — covering data
  * collected, usage, sharing, retention, rights, security, cookies, and the Turnstile
  * bot protection on the public URL checker — inside the shared `MarketingLayout`
- * chrome. Every section's copy comes from
- * `legal.privacy.sections.*` in the locale files; the sibling `apps/uptime` app only
- * ever translated this page's SEO `meta.title`/`meta.description` (never its body
- * prose), so these `sections.*` keys are new and — like every other freshly added
- * key in this pass — only populated in `en.ts` for now, falling back to English in
+ * chrome. Copy comes from `legal.privacy.sections.*` in the locale files; those keys
+ * are freshly added and populated only in `en.ts` for now, falling back to English in
  * every other locale until translated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -32,7 +29,11 @@ import routes from "~/routes/web";
  */
 const TURNSTILE_PRIVACY_ADDENDUM = "https://www.cloudflare.com/en-gb/turnstile-privacy-policy/";
 
-/** GET /privacy — the Privacy Policy page. */
+/**
+ * GET /privacy — the Privacy Policy page. Sets its Open Graph type to `article`
+ * because the page carries a `lastUpdated` line and revision history, marking
+ * it as a dated, versioned legal document.
+ */
 export default createAction(routes.legal.privacy, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.i18next.t);
@@ -44,19 +45,10 @@ export default createAction(routes.legal.privacy, async (ctx) => {
 			seo={{
 				description: ctx.i18next.t("legal.privacy.meta.description"),
 				canonical: SEO.canonical(ctx.url),
-				// A dated, versioned legal document, not a product page — `article` is
-				// what its `lastUpdated` line and revision history actually describe.
 				og: { type: "article" },
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				{/*
-				 * Type comes from `Typeset`, the same as the docs layout and `/trust` — sizes,
-				 * weights, vertical rhythm, list markers and links are all its decisions, not this
-				 * page's. `preset="reading"` is the long-form rhythm these are.
-				 *
-				 * This element keeps only what is about placement: the measure and its padding.
-				 */}
 				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
 					<Typeset preset="reading">
 						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>

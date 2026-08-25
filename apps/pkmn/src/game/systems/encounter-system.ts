@@ -1,14 +1,9 @@
 /**
  * Spawns wild creatures for overworld encounters and creatures for opposing trainers.
  *
- * Given a species and level, this creates a fresh creature entity, rolling anything
- * the caller omits: a random nature, individual values (0..31 per stat), and the
- * moveset (the most recent level-up moves the species would know at that level).
- * Experience is set to the exact total for the level from the species growth curve.
- * Encounter creatures live unowned at an encounter location until a capture converts
- * them; trainer creatures share that transient, unowned shape but sit at a distinct
- * trainer location the capture path refuses. All randomness flows through the
- * injected RNG so both spawns are reproducible under a seed.
+ * Rolls any field the caller omits (nature, IVs, moveset, gender) through the injected
+ * RNG, so spawns stay reproducible under a seed; encounter creatures live unowned until a
+ * capture converts them, while trainer creatures sit at a location the capture path refuses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,11 +63,9 @@ export function spawnEncounter(
 }
 
 /**
- * Creates a non-capturable creature at a trainer location and returns its id.
- *
- * The creature is transient exactly like an encounter creature — excluded from
- * persistence and despawned when its battle ends — but its `trainer` location
- * keeps the capture path from ever converting it into an owned creature.
+ * Creates a non-capturable creature at a trainer location and returns its id. It is
+ * transient like an encounter creature, excluded from persistence and despawned when
+ * its battle ends, but its trainer location keeps the capture path from claiming it.
  */
 export function spawnTrainerCreature(
 	gameData: GameData,

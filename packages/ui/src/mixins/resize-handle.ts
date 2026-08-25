@@ -1,18 +1,13 @@
 /**
  * Pointer-driven resize for one handle of a Resizable panel group: turns a
- * pointer press on the handle into a `ResizeSession`, feeds it the pointer's
- * position along the group's resize axis as the pointer moves, and mirrors
- * every solved panel size back onto its panel element as a CSS custom
- * property, so the panels' own styles read the live layout without any
- * component in the tree holding reactive state.
+ * pointer press into a `ResizeSession`, feeds it pointer position along the
+ * group's axis, and mirrors solved panel sizes back as CSS custom properties.
  *
- * Why JS: dragging a boundary between two flexible panels to redistribute
- * their space — honoring each panel's min/max constraints and cascading a
- * shrink into further panels once an immediate neighbor bottoms out — has no
- * declarative HTML or CSS equivalent; nothing in markup can turn a pointer
- * press/move/release gesture into a solved set of panel sizes.
- * No-JS baseline: the group still renders every panel at its default size;
- * the boundary between panels is fixed in place and cannot be dragged.
+ * Why JS: redistributing space between flexible panels — honoring min/max
+ * constraints and cascading a shrink once a neighbor bottoms out — has no
+ * declarative equivalent for turning a pointer gesture into solved sizes.
+ * No-JS baseline: every panel renders at its default size and the boundary
+ * between them is fixed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,34 +23,29 @@ import { trackHostNode } from "./track-host-node";
 
 /**
  * Axis a Resizable panel group lays its panels out along, and the direction
- * `resizeHandle()` reads pointer movement on: `"horizontal"` panels sit
- * side by side and their shared boundary drags left/right; `"vertical"`
- * panels stack and their shared boundary drags up/down.
+ * `resizeHandle()` reads pointer movement on: `"horizontal"` drags
+ * left/right between side-by-side panels; `"vertical"` drags up/down.
  */
 export type ResizableAxis = "horizontal" | "vertical";
 
 /**
  * Attribute a Resizable panel group's own host element carries.
- * `resizeHandle()` walks up from its handle to the nearest ancestor carrying
- * this attribute to find the group whose direct-child panels and handles it
- * coordinates — the same boundary a nested Resizable group's own handles
- * stop at, so one group's handles never reach into another's panels.
+ * `resizeHandle()` walks up to the nearest ancestor carrying it to find the
+ * group to coordinate, so a nested group's handles never reach outside it.
  */
 export const RESIZABLE_GROUP_ATTRIBUTE = "data-resizable-group";
 
 /**
  * Attribute every panel in a Resizable group carries as a direct child of
- * the group's host element. `resizeHandle()` reads every matching direct
- * child, in document order, as the group's panel list — the same order
- * `ResizeSession`'s `panels` snapshot is indexed by.
+ * the group's host element. `resizeHandle()` reads matching direct children,
+ * in document order, as the panel list `ResizeSession`'s `panels` indexes by.
  */
 export const RESIZABLE_PANEL_ATTRIBUTE = "data-resizable-panel";
 
 /**
  * Attribute every handle in a Resizable group carries as a direct child of
- * the group's host element. `resizeHandle()` reads every matching direct
- * child, in document order, to resolve which pair of panels its own host
- * sits between.
+ * the group's host element. `resizeHandle()` reads matching direct children,
+ * in document order, to resolve which pair of panels its host sits between.
  */
 export const RESIZABLE_HANDLE_ATTRIBUTE = "data-resizable-handle";
 
@@ -75,11 +65,8 @@ export const RESIZABLE_PANEL_MAX_ATTRIBUTE = "data-resizable-max";
 
 /**
  * CSS custom property `resizeHandle()` writes on every panel with its
- * current resolved size, as a percentage of the group's main-axis size
- * (`"42.5%"`). A panel's own styles read its size back through this
- * property — `flex-basis: var(--ui-resizable-panel-size)` for a
- * flex-laid-out group — instead of any component tracking size as reactive
- * state.
+ * current resolved size as a percentage (`"42.5%"`) of the group's
+ * main-axis size, letting a panel's own styles read it back directly.
  */
 export const RESIZABLE_PANEL_SIZE_PROPERTY = "--ui-resizable-panel-size";
 
@@ -94,13 +81,8 @@ declare global {
 
 /**
  * Dispatched on a Resizable group's host by {@link resizeHandle} once a
- * pointer drag ends by releasing over the handle, carrying every panel's
- * settled size so a consumer can persist the layout — writing it to a
- * cookie so the server renders the same split on the next page load, for
- * instance — without holding onto the `ResizeSession` instance itself.
- * Cancelling a drag (`Escape`, a `pointercancel`, or the handle unmounting
- * mid-drag) reverts the panels instead of dispatching this event, since
- * nothing actually settled.
+ * drag ends by releasing over the handle, carrying every panel's settled
+ * size; a cancelled drag reverts the panels instead of dispatching this.
  */
 export class ResizableLayoutChangeEvent extends Event {
 	/** Every panel's settled size, min, and max, in group order. */
@@ -129,8 +111,7 @@ function findGroup(node: HTMLElement): HTMLElement | undefined {
 /**
  * Reads every direct child of `groupNode` carrying `attribute`, in document
  * order — the scoping rule every query in this module uses so a nested
- * Resizable group's own panels and handles never leak into an ancestor
- * group's coordination.
+ * group's panels and handles never leak into an ancestor's coordination.
  *
  * @param groupNode Panel group element to read direct children of.
  * @param attribute Attribute name identifying the child elements to collect.
@@ -174,10 +155,8 @@ function readPanelConstraint(node: HTMLElement, attribute: string): number | und
 
 /**
  * Builds the `ResizeSession.PanelInput` snapshot `start()` needs from a
- * group's panel elements: each panel's id comes from its own `id` attribute,
- * falling back to a positional id when absent; its starting size comes from
- * {@link readPanelSize}, falling back to an even split across every panel
- * when unset; its min/max come from {@link readPanelConstraint}.
+ * group's panel elements: id, size, and min/max each fall back to a
+ * default — a positional id, an even split, and `start()`'s own limits.
  *
  * @param panelNodes A group's panel elements, in document order.
  * @returns The matching panel snapshot, in the same order.
@@ -230,28 +209,9 @@ function roundPercent(value: number): number {
 }
 
 /**
- * Adds pointer-driven resizing to one handle of a Resizable panel group.
- * Pressing the handle starts `session` against the enclosing group's
- * direct-child panels and handles — found through
- * {@link RESIZABLE_GROUP_ATTRIBUTE}, {@link RESIZABLE_PANEL_ATTRIBUTE}, and
- * {@link RESIZABLE_HANDLE_ATTRIBUTE} — dragging feeds the pointer's position
- * along `axis` into `session.move()`, and releasing ends the session.
- * `Escape`, a `pointercancel`, or the handle unmounting mid-drag all cancel
- * the session instead, reverting every panel to the size it had when the
- * drag began.
- *
- * Every `session` `"change"` — from a live drag or a cancelled one reverting
- * — mirrors every panel's resolved size onto it as
- * {@link RESIZABLE_PANEL_SIZE_PROPERTY}, and mirrors this handle's own
- * adjacent panel's size, min, and max onto its `aria-valuenow`,
- * `aria-valuemin`, and `aria-valuemax`, so a screen reader announces the
- * live split the same way sighted users see it drag. A drag that ends by
- * releasing the pointer dispatches {@link ResizableLayoutChangeEvent} on the
- * group with every panel's settled size.
- *
- * Apply one `resizeHandle()` call per handle in the group, all sharing the
- * same `session` instance — only one handle can be mid-drag at a time,
- * which `session` itself enforces.
+ * Adds pointer-driven resizing to one handle of a Resizable panel group,
+ * sharing `session` with every other handle in the group; unmounting only
+ * cancels a handle's own in-progress drag, leaving a sibling's drag alone.
  *
  * @param axis Axis the enclosing group resizes along.
  * @param session Resize session shared by every handle in the same panel group.
@@ -314,9 +274,6 @@ export const resizeHandle = createMixin<HTMLElement, [axis: ResizableAxis, sessi
 
 				session.addEventListener("change", () => syncLayout(session), { signal: handle.signal });
 
-				// Only this handle's own in-progress drag should be cancelled by its
-				// removal — a sibling handle in the same group unmounting while this
-				// one is idle must leave whichever other handle is mid-drag alone.
 				handle.signal.addEventListener("abort", () => {
 					if (activePointerId !== undefined) session.cancel();
 				});

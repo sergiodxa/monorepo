@@ -5,9 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Creates a new stacking context on the host element without otherwise
- * changing its layout, so a later `z-index` on this element (or on a
- * descendant) can't be interleaved with unrelated siblings outside it.
+ * Creates a new stacking context on the host element while preserving its
+ * layout, so a later `z-index` on this element (or a descendant) stays
+ * confined here, isolated from unrelated siblings outside it.
  *
  * @example u.isolate()
  * @example css({ isolation: "isolate" })

@@ -14,8 +14,8 @@ import { JWT } from "@pkg/jwt";
 const ACCESS_TOKEN_TTL = 60 * 60 * 1000;
 
 /**
- * Value Object for OAuth 2.0 Access Tokens.
- * Extends JWT with standard claims for authorization.
+ * Value Object for OAuth 2.0 access tokens.
+ * Covers the RFC 9068 claim set: sub, aud, exp, iat, nbf, jti, and scope.
  */
 export default class AccessToken extends JWT {
 	/**

@@ -19,9 +19,11 @@ describe("ring", () => {
 		]);
 	});
 
+	/**
+	 * `:focus` fires on pointer clicks too, so the ring scopes to
+	 * `:focus-visible` and tracks keyboard and assistive-tech focus.
+	 */
 	test("never nests under plain :focus", async () => {
-		// `:focus` fires on mouse clicks too, so the ring would follow the pointer;
-		// only the `-visible` variant is keyboard-scoped.
 		expect(await serialize(ring())).not.toMatch(/:focus\s*\{/);
 	});
 

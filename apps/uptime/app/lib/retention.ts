@@ -1,27 +1,14 @@
 /**
- * Bounded retention sweeps (ADR-020). A retention job's first run after a window is
- * widened — or after a table that never had a retention job at all gets one — can match
- * millions of rows, and a single unbounded `DELETE` would then write 5–6 rows per deleted
- * row inside one queue invocation: the largest write bill and the longest statement the
- * app ever issues, both at once, with no way to stop halfway. So every sweep here runs
- * the same bounded statement in a loop instead, and stops on two conditions — the batch
- * came back short (nothing left to sweep) or the per-run batch ceiling was reached.
+ * Bounded retention sweeps (ADR-020). An unbounded `DELETE` on a first run, or on a
+ * table that never had a retention job, can match millions of rows in one blocking
+ * statement — the largest write bill and the longest statement the app issues. Every
+ * sweep here instead runs the same bounded statement in a loop, stopping when a batch
+ * comes back short or the per-run ceiling is reached.
  *
- * Hitting the ceiling is not an error: the sweep resumes on the next scheduled run and
- * the table drains over a few nights. It is reported so the caller can log it, which is
- * the signal that a backlog is being worked through rather than kept up with.
+ * Hitting the ceiling is a normal outcome: the sweep resumes on the next scheduled
+ * run, and reporting it lets the caller log a backlog being worked down over nights.
  *
- * The bound is expressed as `id IN (SELECT id … LIMIT ?)` rather than `DELETE … LIMIT ?`.
- * Both work on the local engines this app is tested against, but `LIMIT` on `DELETE`/
- * `UPDATE` is only available when SQLite is compiled with
- * `SQLITE_ENABLE_UPDATE_DELETE_LIMIT`, which is a property of the engine the managed
- * database happens to be built with and not something the app can assert. The subquery
- * form is valid on every SQLite build, needs the same two indexes (the date column for
- * the range, the primary key for the delete), and costs one extra index lookup per row —
- * a price worth paying to not depend on a compile-time flag in a nightly destructive job.
- *
- * Every table swept here has a single-column `id` primary key, which is what makes one
- * shared statement shape work for all of them.
+ * The bound is a subquery, which works uniformly across every SQLite build.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,11 +17,9 @@
 import type { Database } from "remix/data-table";
 
 /**
- * Rows one batch may touch.
- *
- * Ten thousand keeps a batch's write amplification (5–6 rows written per row, across the
- * table and its indexes) inside a fraction of a Worker invocation, while still draining
- * a table of ordinary size in a handful of statements.
+ * Rows one batch may touch. Ten thousand keeps a batch's write amplification (5–6 rows
+ * written per row, across the table and its indexes) inside a fraction of a Worker
+ * invocation, while still draining an ordinary table in a handful of statements.
  */
 export const RETENTION_BATCH_SIZE = 10_000;
 
@@ -93,14 +78,9 @@ export async function deleteOlderThan(
 }
 
 /**
- * Nulls `columns` on rows whose `dateColumn` is strictly older than `cutoff`, in bounded
- * batches — retention for a *field* rather than for a row, so a table can keep its rows
- * for a long window while keeping the sensitive columns on them for a short one.
- *
- * The batch only selects rows that still have a value in at least one of `columns`, which
- * is both what makes the loop terminate (a redacted row stops matching, so every batch
- * makes progress) and what makes the steady-state run cheap (only the rows that crossed
- * the cutoff since the last run match at all).
+ * Nulls `columns` on rows whose `dateColumn` is strictly older than `cutoff`, keeping
+ * the row itself. Each batch selects only rows still holding a value in one of
+ * `columns`, which both ends the loop and keeps a steady-state run cheap.
  * @param db The database to sweep.
  * @param table Table to update; must have a single-column `id` primary key.
  * @param dateColumn Epoch-ms column the cutoff applies to.
@@ -134,14 +114,9 @@ export async function redactOlderThan(
 }
 
 /**
- * Runs one bounded statement until it comes back short or the ceiling is reached.
- *
- * A short batch means the statement's own `LIMIT` was not filled, so nothing is left to
- * match — one statement cheaper than looping until a batch affects zero rows, and the
- * same stopping condition. The loop is sequential on purpose: each batch's result is what
- * decides whether another batch runs at all, and the batches contend for the same rows,
- * so running them concurrently would both break the stopping condition and multiply the
- * peak write rate this whole module exists to bound.
+ * Runs one bounded statement until it comes back short or the ceiling is reached. The
+ * loop stays sequential: each batch's result decides whether another runs, and
+ * concurrent batches would multiply the peak write rate this module bounds.
  */
 async function sweep(
 	db: Database,
@@ -183,12 +158,9 @@ function resolveOptions(options?: BatchedSweepOptions): { batchSize: number; max
 }
 
 /**
- * Quotes a table or column name for interpolation into a statement.
- *
- * Callers pass literals from this app's own schema, never anything a request supplied,
- * but a destructive statement is the wrong place to rely on that: an identifier that
- * isn't a plain lowercase snake_case name is rejected outright rather than quoted and
- * hoped for.
+ * Quotes a table or column name for interpolation into a statement. Since this guards
+ * a destructive statement, an identifier must match a plain lowercase snake_case name
+ * to be quoted at all — everything else is rejected outright.
  */
 function quoteIdentifier(name: string): string {
 	if (!/^[a-z][a-z0-9_]*$/.test(name)) {

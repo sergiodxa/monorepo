@@ -34,8 +34,6 @@ export namespace SampleChapterSection {
 }
 
 /**
- * Renders the sample-chapter offer.
- *
  * The `sample` id is load-bearing: it is the anchor external links point at.
  */
 export default function SampleChapterSection(handle: Handle<SampleChapterSection.Props>) {

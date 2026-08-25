@@ -1,7 +1,6 @@
 /**
  * Pure token resolvers: given a typed token name, return the CSS string a
- * utility should place in a declaration. None of these call `css()`, build a
- * mixin, or register anything at runtime — they only stringify. Component
+ * utility should place in a declaration. They only stringify, so component
  * packages needing the same resolution without a mixin can import them
  * directly (`import { spacing } from "@pkg/u"`).
  *
@@ -31,13 +30,11 @@ const COLOR_PROPERTY_ALIASES: Record<string, string> = {
 };
 
 /**
- * Resolves a {@link ColorValue} to a `var(...)` reference. A raw palette
- * value (`"color.brand.600"`) resolves to `var(--ui-color-brand-600)`. A
- * semantic tone resolves to `var(--ui-{tone}-{property})`, where `property`
- * is either the explicit suffix on `value` (aliased through
- * {@link COLOR_PROPERTY_ALIASES} when it's a friendly short form) or
- * `defaultProperty` when `value` names a bare tone.
+ * Resolves a {@link ColorValue} to a `var(...)` reference, from a palette
+ * path or a tone plus property suffix. Tone names are parenthesis-free, so
+ * a value containing `(` is already a CSS color and passes through verbatim.
  *
+ * @param defaultProperty Property segment used when `value` names a bare tone.
  * @example color("brand.tint") // "var(--ui-brand-bg-tint)"
  * @example color("color.neutral.50") // "var(--ui-color-neutral-50)"
  * @example color("brand", "border") // "var(--ui-brand-border)"
@@ -48,11 +45,6 @@ export function color(value: ColorValue | (string & {}), defaultProperty?: strin
 	if (value === "inherit") return "inherit";
 	if (value.toLowerCase() === "currentcolor") return "currentColor";
 
-	// An already-fully-formed CSS color value — e.g. the output of
-	// `u.colorMix(...)`, or a raw `var(...)` reference — passes through
-	// unchanged instead of being mistaken for a "tone.property" token. Tone
-	// names and their suffixes are always simple identifiers with no
-	// parentheses, so this check is unambiguous.
 	if (value.includes("(")) return value;
 
 	if (value.startsWith("color.")) {
@@ -74,11 +66,9 @@ const LENGTH_PATTERN =
 export type SpacingValue = number | "auto" | (string & {});
 
 /**
- * Resolves one spacing value to a CSS length. A number resolves against the
- * spacing scale (`calc(var(--ui-spacing, 0.25rem) * n)`); `"auto"` passes
- * through for margin's auto-centering; any other string is assumed to
- * already be a valid CSS length (`"13px"`, `"60ch"`, `"100dvh"`) and passes
- * through unchanged.
+ * Resolves one spacing value to a CSS length: a number multiplies the spacing
+ * scale, `"auto"` passes through for margin centering, and any other string
+ * is taken as an already-valid CSS length.
  *
  * @example spacing(4) // "calc(var(--ui-spacing, 0.25rem) * 4)"
  * @example spacing("auto") // "auto"
@@ -105,11 +95,8 @@ export function boxLength(value: SizeValue): string {
 }
 
 /**
- * True when `value` is a raw CSS length string rather than a spacing-scale
- * number. Deliberately not a `value is string` type predicate: a token name
- * such as `"lg"` is a string that is *not* a length, so narrowing on the
- * result would wrongly rule every string out of the negative branch and leave
- * the scale names typed as `never`.
+ * True when `value` is a raw CSS length string. Returns a plain boolean so
+ * scale names such as `"lg"` stay usable as strings in the false branch.
  */
 export function isLength(value: unknown): boolean {
 	return typeof value === "string" && LENGTH_PATTERN.test(value);
@@ -125,13 +112,9 @@ const RADIUS_FALLBACKS: Record<RadiusName, string> = {
 };
 
 /**
- * Resolves a {@link RadiusName} to `var(--ui-radius-{name}, fallback)`, with
- * a sensible fallback baked in so the radius scale works before an app ever
- * defines the variable. A name that isn't a recognized scale step but is
- * already a raw CSS length (`"3px"`, `"0.125rem"`) passes through literally
- * instead of being treated as an app-extensible token name — only a
- * bare-word name (e.g. an app's own `"hero"` step) resolves through the
- * `var(...)` indirection.
+ * Resolves a {@link RadiusName} to `var(--ui-radius-{name}, fallback)`; the
+ * baked fallback keeps the scale working before an app defines the variable.
+ * A raw CSS length passes through literally, a bare word through `var(...)`.
  *
  * @example radius("lg") // "var(--ui-radius-lg, 0.5rem)"
  * @example radius("3px") // "3px"
@@ -175,9 +158,8 @@ const TEXT_FALLBACKS: Record<TextSizeName, string> = {
 };
 
 /**
- * Resolves a {@link TextSizeName} to `var(--ui-text-{name}, fallback)`. A
- * name that isn't a recognized scale step but is already a raw CSS length
- * passes through literally — see {@link radius} for the same rule.
+ * Resolves a {@link TextSizeName} to `var(--ui-text-{name}, fallback)`; a raw
+ * CSS length passes through literally, as in {@link radius}.
  *
  * @example text("lg") // "var(--ui-text-lg, 1.125rem)"
  * @example text("0.9375rem") // "0.9375rem"
@@ -198,16 +180,11 @@ const CONTAINER_FALLBACKS: Record<ContainerName, string> = {
 };
 
 /**
- * Resolves a {@link ContainerName} to `var(--ui-container-{name}, fallback)`,
- * the container scale as a *property value*, where the indirection is what
- * makes the scale themable. A literal length that isn't a recognized scale
- * step (a one-off breakpoint like `"40rem"`) passes through unchanged
- * instead of being treated as an app-extensible token name — see
- * {@link radius} for the same rule.
+ * Resolves a {@link ContainerName} to `var(--ui-container-{name}, fallback)`
+ * for use as a property value, where the indirection makes the scale
+ * themable; a literal length passes through, as in {@link radius}.
  *
- * At-rule conditions can't read custom properties at all, so query builders
- * resolve the same names through {@link containerLength} instead.
- *
+ * @see {@link containerLength} for at-rule conditions.
  * @example container("md") // "var(--ui-container-md, 36rem)"
  * @example container("40rem") // "40rem"
  */
@@ -218,16 +195,9 @@ export function container(name: ContainerName | (string & {})): string {
 }
 
 /**
- * The at-rule counterpart to {@link container}: resolves a
- * {@link ContainerName} to its literal length, never a `var()` reference. A
- * literal length passes through unchanged, exactly as in {@link container}.
- *
- * `@container`/`@media` *conditions* are evaluated before custom properties
- * are substituted, so a `var()` inside one makes the whole at-rule inert —
- * it parses, it is emitted, and it never matches at any size. Only the
- * declarations *inside* an at-rule can read custom properties, which is why
- * {@link container} still resolves to `var(--ui-container-*, fallback)` for
- * property values, where the indirection is what makes the scale themable.
+ * The at-rule counterpart to {@link container}: resolves to a literal
+ * length since `@container`/`@media` evaluate before custom properties
+ * resolve, so a `var()` here would stay inert.
  *
  * @example containerLength("md") // "36rem"
  * @example containerLength("40rem") // "40rem"
@@ -246,12 +216,9 @@ const SHADOW_FALLBACKS: Record<ShadowName, string> = {
 };
 
 /**
- * Resolves a {@link ShadowName} to `var(--ui-shadow-{name}, fallback)`. A
- * literal shadow value can't be reliably told apart from an app-extended
- * token name (both are arbitrary strings with no shape in common with a
- * length), so unlike {@link radius}/{@link text}/{@link container} this
- * resolver has no literal-passthrough escape hatch — a genuinely one-off
- * shadow should compose through `u.raw({ boxShadow: "..." })` instead.
+ * Resolves a {@link ShadowName} to `var(--ui-shadow-{name}, fallback)`. Every
+ * name resolves through the variable, since a literal shadow value and an
+ * app-extended token name share a shape; one-off shadows use `u.raw()`.
  *
  * @example shadow("md") // 'var(--ui-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1))'
  */
@@ -267,9 +234,8 @@ const BLUR_FALLBACKS: Record<BlurName, string> = {
 };
 
 /**
- * Resolves a {@link BlurName} to `var(--ui-blur-{name}, fallback)`. A literal
- * length that isn't a recognized scale step passes through unchanged — see
- * {@link radius} for the same rule.
+ * Resolves a {@link BlurName} to `var(--ui-blur-{name}, fallback)`; a literal
+ * length passes through unchanged, as in {@link radius}.
  *
  * @example blur("sm") // "var(--ui-blur-sm, 4px)"
  * @example blur("8px") // "8px"

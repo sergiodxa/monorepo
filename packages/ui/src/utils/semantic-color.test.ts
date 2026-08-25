@@ -1,10 +1,9 @@
 /**
  * Unit test for the shared semantic color union in
- * {@link "./semantic-color"}: a runtime check that the literal set every
- * component's own `Color` type resolves to is exactly the five tones this
- * module documents, so a change to the shared union surfaces here instead of
- * silently drifting from what each component's styling and `data-color`
- * contract actually handle.
+ * {@link "./semantic-color"}: checks that the literal set every component's
+ * own `Color` type resolves to matches the five tones this module
+ * documents, so a change to the shared union surfaces here before
+ * components' `data-color` styling contracts drift from it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

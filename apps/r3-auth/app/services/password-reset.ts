@@ -1,11 +1,9 @@
 /**
- * The password-recovery token store and the mail it produces: issuing a single-use,
- * short-lived token bound to one subject, holding the per-address cooldown that keeps an
- * unauthenticated endpoint from becoming a mail cannon, and spending a presented token.
- *
- * It is one module because the three questions — may this address be mailed, what token
- * was issued, and which subject does a presented token belong to — have to agree; the
- * controllers only decide what a person sees.
+ * The password-recovery token store and the mail it produces: issues a single-use
+ * token bound to one subject, enforces a per-address cooldown so an unauthenticated
+ * endpoint cannot become a mail cannon, and spends a presented token. Kept as one
+ * module because whether an address may be mailed and which subject a token belongs
+ * to must stay in agreement; callers only decide what a person sees.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,31 +26,16 @@ import { PasswordResetRecordSchema } from "~/app/http/validators/password";
 import routes from "~/routes/web";
 
 /**
- * How long a reset link works for.
- *
- * Longer than the five minutes a code typed back into the same tab gets, because this
- * link is read in an inbox and very often on a different device than the one it is opened
- * on: a phone notification, then a desktop browser, then a password manager. Five minutes
- * loses that person their link and sends them round again. Shorter than an hour, because
- * the token is a bearer credential for one account and every extra minute is time it sits
- * readable in a mailbox, a notification mirror and a browser history.
+ * How long a reset link works for: long enough to survive an inbox opened on a
+ * different device than the one that requested it, short enough that a bearer
+ * credential does not sit readable in mail and browser history for long.
  */
 export const PASSWORD_RESET_TTL = toMs("30 minutes");
 
 /**
- * How long one address must wait before another reset mail can be produced for it.
- *
- * The control that matters on this endpoint: it is unauthenticated and it causes mail to
- * be sent to an address the caller names, so without it anybody can point this server at
- * a mailbox and empty the day's send quota into it — against the sending domain's
- * reputation, not just the recipient's patience. The IP-keyed limiters bound how many
- * requests arrive, not how much mail one address receives, so a distributed caller walks
- * straight through them.
- *
- * It is deliberately well below {@link PASSWORD_RESET_TTL}, which is the invariant that
- * makes suppression safe: a request refused inside the window is a request whose token
- * would still have been valid, so nobody is ever left with no working link. Raising this
- * above the TTL would break that and strand people; the two must be changed together.
+ * How long one address must wait before another reset mail can be produced,
+ * since IP-keyed limits alone let a distributed caller empty a mailbox's quota.
+ * Kept below {@link PASSWORD_RESET_TTL} so a refused request's token is still valid.
  */
 export const PASSWORD_RESET_COOLDOWN = toMs("5 minutes");
 
@@ -60,12 +43,9 @@ export const PASSWORD_RESET_COOLDOWN = toMs("5 minutes");
 const TOKEN_BYTES = 32;
 
 /**
- * Pending resets, keyed by the token's digest rather than the token.
- *
- * A reader of this namespace therefore holds hashes, not credentials: the token exists
- * only in the message that was sent and in the link the person clicks. The key space is
- * this app's own and collides with none of the ones shared with the worker still serving
- * production.
+ * Pending resets, keyed by the token's digest rather than the token: a reader of
+ * this namespace holds hashes, not credentials, since the token itself exists only
+ * in the sent message and the clicked link.
  */
 const TOKEN_KEY_PREFIX = "password-reset:";
 
@@ -105,15 +85,9 @@ function resetUrl(token: string): string {
 }
 
 /**
- * Issues a reset for an address when one belongs to a subject, and queues the mail.
- *
- * Answers nothing. That is the point: the caller returns the same page whatever happened
- * in here, so a caller cannot accidentally branch on whether the address is registered.
- * Every step that could throw is inside one `try`, because a reset request must not become
- * an error page that says "something went wrong for this address and not that one".
- *
- * The cooldown is claimed **before** the subject is looked up, so an address that is not
- * registered is rate-limited exactly like one that is, and the two cost the same lookups.
+ * Issues a reset for an address when one belongs to a subject, queuing the mail in
+ * the account's own locale since whoever opens the link may not be who submitted
+ * the form. Answers identically whether or not the address is registered.
  *
  * @param ctx - The request the form was posted on; its mailer and logger are read from it.
  * @param db - Database the address is resolved against.
@@ -135,8 +109,6 @@ export async function requestPasswordReset(
 
 		let cooldownKey = `${COOLDOWN_KEY_PREFIX}${cooldownDigest}`;
 		if ((await env.KV.get(cooldownKey)) !== null) {
-			// No address, and no subject id either: which mailbox is inside a cooldown is
-			// exactly the fact this endpoint refuses to report.
 			ctx.logger.info("password_reset_suppressed");
 			return;
 		}
@@ -170,10 +142,6 @@ export async function requestPasswordReset(
 		);
 		await env.KV.put(latestKey, tokenDigest, { expirationTtl: ttlSeconds });
 
-		// Deferred, so the response the person sees never depends on the provider, and the
-		// copy is pinned to this server's own language: the reader of a recovery mail is not
-		// necessarily whoever filled in the form, so the requesting browser must not choose
-		// the language a message about somebody's account is written in.
 		ctx.email.later(
 			new ResetPasswordEmail({
 				email: subject.email_address,
@@ -184,7 +152,6 @@ export async function requestPasswordReset(
 			}),
 		);
 
-		// The subject id only. The address is the person, and the token is a credential.
 		ctx.logger.info("password_reset_requested", { subjectId: subject.id });
 	} catch (error) {
 		ctx.logger.error("password_reset_request_failed", {
@@ -194,11 +161,9 @@ export async function requestPasswordReset(
 }
 
 /**
- * The subject a presented token was issued for, without spending it.
- *
- * Used by the page that renders the form, so an expired or already-spent link becomes a
- * page that says so instead of a form whose submission fails. Reading is safe to repeat:
- * only the submission consumes.
+ * The subject a presented token was issued for, leaving it unspent so the page
+ * can flag an expired or already-spent link before the form ever renders; only
+ * submission consumes the token.
  *
  * @returns The subject id, or `null` for a token that is unknown, expired, spent or
  *   stored in a shape this server no longer writes.
@@ -214,12 +179,9 @@ export async function peekPasswordResetToken(token: string): Promise<string | nu
 }
 
 /**
- * Spends a presented token and reports the subject it was issued for.
- *
- * The record is deleted before the caller is told anything, so two submissions of the same
- * link cannot both reach the password write: the second one finds nothing. Deleting first
- * is the safe order — a failure after this point costs the person a new link, whereas
- * deleting afterwards would leave a replayable token behind on every such failure.
+ * Spends a presented token and reports the subject it was issued for. Deletes the
+ * record before reporting anything, so two submissions of the same link cannot
+ * both reach the password write: the second finds nothing already spent.
  *
  * @returns The subject id the token is bound to, or `null` when there is nothing to spend.
  */
@@ -236,19 +198,15 @@ export async function consumePasswordResetToken(token: string): Promise<string |
 	let subjectId = await readRecord(stored);
 	if (!subjectId) return null;
 
-	// The pointer that made this token the newest one goes too, so a later request does not
-	// try to retire a record that is already gone.
 	await env.KV.delete(`${LATEST_KEY_PREFIX}${subjectId}`);
 
 	return subjectId;
 }
 
 /**
- * The subject id inside a stored record, or `null` when the value does not parse.
- *
- * A record that fails validation is treated as no record at all rather than as an error,
- * because the only caller's honest answer to "this link is unusable" is the same page
- * either way.
+ * The subject id inside a stored record, or `null` when the value does not parse:
+ * a record that fails validation reads as no record, since the only honest answer
+ * to "this link is unusable" is the same page either way.
  */
 async function readRecord(stored: string): Promise<string | null> {
 	let parsed: unknown;
@@ -259,8 +217,6 @@ async function readRecord(stored: string): Promise<string | null> {
 		return null;
 	}
 
-	// Narrowed before validating because the validator takes a record: a stored `"null"` or
-	// `"[]"` is as unusable as an unparseable one, and reads as no record either way.
 	if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
 
 	let result = await validate(parsed as Record<string, unknown>, PasswordResetRecordSchema);

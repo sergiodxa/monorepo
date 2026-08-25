@@ -1,11 +1,8 @@
 /**
- * ID-token verification key service for blog. Holds the resolver pointed at the auth
- * server's JWKS endpoint so upstream identity tokens can be verified, and registers it
- * as an application-container singleton.
- *
- * A singleton because the resolver is where the fetched key set is cached: one per
- * isolate fetches the document once and refetches it only when a token names a key it
- * has not seen, which is how a rotation upstream is picked up without a deploy here.
+ * ID-token verification key service for blog. Registers the upstream identity
+ * provider's JWKS resolver as an application-container singleton so the fetched
+ * key set is cached per isolate: fetched once, then refetched when a token names
+ * an unknown key id, so upstream key rotations apply without a deploy here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +20,6 @@ export class IdTokenVerificationKeyService {
 
 /** Registers the identity-token verification key as an app singleton. */
 export class IdTokenVerificationKeyProvider implements ServiceProvider {
-	/** Stores the remote JWK resolver in the application container. */
 	register(container: Container) {
 		container.singleton(IdTokenVerificationKeyService, () => new IdTokenVerificationKeyService());
 	}

@@ -87,8 +87,10 @@ describe("GET /admin/subjects", () => {
 		expect(first).toContain('data-slot="pagination"');
 		expect(first).toContain("?page=2");
 
-		// Oldest first, so the seeded subject leads page one and the last filler is alone
-		// on page two.
+		/**
+		 * Oldest first, so the seeded subject leads page one and the last filler is
+		 * alone on page two.
+		 */
 		expect(first).toContain("Jane Doe");
 
 		let second = await (await get(`${routes.admin.subjects.href()}?page=2`)).text();
@@ -160,18 +162,16 @@ describe("GET /admin/subjects/:subjectId", () => {
 
 		let html = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 
-		// Opened by an Invoker Command rather than script, sealed against backdrop
-		// dismissal, and answered by a form post rather than a fetch.
 		expect(html).toContain('command="show-modal"');
 		expect(html).toContain('role="alertdialog"');
 		expect(html).toContain('closedby="closerequest"');
 		expect(html).toContain('<form method="post"');
 
-		// Regression guard: a button inside a form with no explicit type is a submit
-		// button, and the platform ignores an Invoker Command on a submit button — so a
-		// cancel control without `type="button"` silently does nothing. Asserted per
-		// attribute rather than as one pattern, because their order in the tag is not
-		// part of the contract.
+		/**
+		 * A button inside a form defaults to type="submit", and the platform ignores an
+		 * Invoker Command on a submit button — so the cancel control must carry an
+		 * explicit type="button" for the close command to fire.
+		 */
 		let cancel = html.match(/<button[^>]*command="close"[^>]*>/);
 		expect(cancel?.[0]).toContain('type="button"');
 	});
@@ -182,8 +182,6 @@ describe("GET /admin/subjects/:subjectId", () => {
 
 		let html = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 
-		// The id is that session's refresh token. It belongs in the posted field and
-		// nowhere else — not in an element id a stray script could read off the DOM.
 		expect(html).toContain('id="revoke-session-0"');
 		expect(html).not.toContain(`id="revoke-session-${session.id}"`);
 		expect(html).toContain(`value="${session.id}"`);
@@ -311,7 +309,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 		expect(subject?.username).toBe("janeq");
 		expect(subject?.avatar).toBe("https://example.com/new.png");
 		expect(subject?.role).toBe("user");
-		// The address is not a field on this form, so it cannot have moved.
+		/** The edit form omits the address field, so it stays unchanged. */
 		expect(subject?.email_address).toBe("jane@example.com");
 	});
 

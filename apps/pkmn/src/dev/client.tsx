@@ -1,8 +1,7 @@
 /**
- * Browser entry for the dev tools. Renders the `remix/ui` component tree fully
- * client-side (no SSR/hydration) into `#app` via `createRoot`, and implements
- * client-side view switching between the launcher and the four tool views using
- * the History API so navigation needs no server round-trip. Bundled by Bun.
+ * Browser entry for the dev tools. Renders the `remix/ui` tree client-side into
+ * `#app` via `createRoot` and switches between the launcher and the tool views
+ * through the History API, so navigation stays in the browser. Bundled by Bun.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +26,7 @@ const KNOWN_PATHS: ToolPath[] = ["/", "/sprite", "/map", "/species", "/trainer",
 
 /**
  * Coerces an arbitrary pathname to a known {@link ToolPath}, falling back to the
- * launcher for anything unrecognized so a stale/bad URL never renders blank.
+ * launcher for anything unrecognized so a stale URL still renders the tools.
  *
  * @param pathname The current `location.pathname`.
  * @returns A known tool path.
@@ -38,8 +37,8 @@ function toToolPath(pathname: string): ToolPath {
 
 /**
  * Root application component. Owns the current tool path, re-renders on browser
- * back/forward (`popstate`), and exposes a `navigate` callback that pushes a new
- * history entry and schedules a re-render — switching views without a request.
+ * back/forward (`popstate`), and exposes a `navigate` callback that pushes a
+ * history entry and schedules a re-render, keeping view switches in the browser.
  *
  * @param handle Component handle used to schedule re-renders on navigation.
  * @returns The render function that maps the current path to a tool view.
@@ -47,7 +46,6 @@ function toToolPath(pathname: string): ToolPath {
 function App(handle: Handle<Record<string, never>>) {
 	let current: ToolPath = toToolPath(window.location.pathname);
 
-	/** Switches to `path`, pushing a history entry and scheduling a re-render. */
 	function navigate(path: ToolPath) {
 		if (path !== current) {
 			current = path;
@@ -56,7 +54,6 @@ function App(handle: Handle<Record<string, never>>) {
 		}
 	}
 
-	// Keep the view in sync with browser back/forward navigation.
 	window.addEventListener(
 		"popstate",
 		() => {

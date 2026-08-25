@@ -2,8 +2,8 @@
  * The border, tinted background, and emphasized foreground one semantic
  * color role contributes to a bordered, tinted panel — a full-width status
  * or placeholder panel's coloring for a single `&[data-color="..."]` branch
- * — read from that color's own `--ui-*` variables rather than a hardcoded
- * value.
+ * — read from that color's own `--ui-*` variables, so the panel follows
+ * whatever values the active theme assigns them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

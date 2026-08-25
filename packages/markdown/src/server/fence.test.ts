@@ -1,3 +1,10 @@
+/**
+ * Tests for fence language normalization, checking that aliases resolve to
+ * Prism grammar identifiers that actually exist.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import Prism from "prismjs";
 import { describe, expect, test } from "vitest";
 
@@ -10,12 +17,14 @@ describe("normalizeLanguage", () => {
 		expect(normalizeLanguage("TS")).toBe("typescript");
 	});
 
+	/**
+	 * A grammar must actually answer to the name an alias resolves to, or the
+	 * fence silently renders as flat, unhighlighted text. This assertion
+	 * catches that kind of broken mapping before it ships.
+	 */
 	test("maps jsonc onto a grammar that exists", () => {
 		let language = normalizeLanguage("jsonc");
 		expect(language).toBe("json");
-		// The alias is only worth anything if a grammar answers to the name it
-		// resolves to: an unregistered language leaves the fence untokenized rather
-		// than failing, so the miss is invisible until a code block renders flat.
 		expect(Prism.languages[language]).toBeDefined();
 	});
 });

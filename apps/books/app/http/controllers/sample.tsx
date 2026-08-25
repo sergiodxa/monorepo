@@ -29,14 +29,14 @@ import DocumentLayout from "~/resources/layouts/document";
 import SampleView from "~/resources/views/sample";
 import routes from "~/routes/web";
 
-/** The page's title and its own description: it offers a chapter, it does not sell a book. */
+/** The page's own title and description, accurate to the chapter this route actually delivers. */
 const TITLE = "Read a free sample chapter";
 const DESCRIPTION =
 	"Read a chapter of the React Router OAuth2 Handbook for free: OAuth2 in simple terms.";
 
 /**
  * Copy for the two provider rejections a visitor can act on. Anything else gets the generic
- * message — the provider's own error text is written for API consumers, not for readers.
+ * message, since the provider's own error text is written for API consumers.
  */
 const BLOCKED_MESSAGE =
 	"My upstream provider is blocking you for some reason.\nPlease try with another email address and sorry for the inconvenience.";
@@ -44,18 +44,14 @@ const INVALID_MESSAGE = "Invalid email address. \nPlease try with another email 
 const GENERIC_MESSAGE = "Something went wrong, please try again.";
 
 /**
- * The parsed chapter, memoized after the first request that needs it.
+ * The parsed chapter, memoized per isolate after the first request needs it.
  *
- * Parsing cannot happen at module load, even though the file is bundled and never changes:
- * the Workers runtime forbids asynchronous I/O, timers, and random values in global scope,
- * and the Markdown transform does enough of that to make the whole script fail to deploy —
- * as a validation error at upload time, not as a runtime fault. So the work is deferred to
- * the first reader and kept for every reader after them, which is the same one-parse-per
- * isolate the module-scope version was after.
+ * Parsing at module load runs in the Workers global scope, which forbids the
+ * async I/O the Markdown transform needs and fails validation at deploy time.
  */
 let chapter: ReturnType<Markdown<ReturnType<typeof chapterSchema>>["parse"]> | undefined;
 
-/** The chapter carries no frontmatter, and the parser requires a schema regardless. */
+/** The chapter is plain markdown, yet the parser still requires a schema for it. */
 function chapterSchema() {
 	return s.object({});
 }
@@ -92,21 +88,21 @@ function renderForm(ctx: RequestContext, options: { error?: string; status?: num
 }
 
 /**
- * Renders the unlocked chapter.
- *
- * The document is marked `noindex`: it is the same URL as the form, reachable only by
- * posting to it, and letting a crawler index one of the two states would advertise gated
- * content it cannot reach.
+ * Marked `noindex`: this URL is shared with the form and reached only by
+ * posting to it, so a search listing for either state would surface
+ * content that belongs behind that gate.
  *
  * @param ctx - The request context, for its URL and renderer.
- * @returns The rendered HTML response, or the form again if the chapter cannot be parsed.
+ * @returns The rendered HTML response, or the form again for a parse failure.
  */
 function renderChapter(ctx: RequestContext) {
 	let parsed = readChapter();
 
 	if (isFailure(parsed)) {
-		// Unreachable short of a malformed bundled file, but the reader is already subscribed
-		// at this point, so the honest answer is the page they came from and not a 500.
+		/**
+		 * Reachable only when the bundled chapter itself is malformed. The reader is already
+		 * subscribed, so the response stays the familiar form, with the error shown inline.
+		 */
 		ctx.logger.error("sample_parse_failed", { error: parsed.error.message });
 		return renderForm(ctx, { error: GENERIC_MESSAGE, status: 500 });
 	}

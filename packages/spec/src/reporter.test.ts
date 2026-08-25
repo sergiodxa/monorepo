@@ -1,3 +1,11 @@
+/**
+ * Tests for the suite and fatal-error reporters: pass/fail summaries,
+ * wall-clock timing under concurrency, and permission-denial grouping.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,9 +59,6 @@ describe(reportSuite, () => {
 
 	test("reports the run's wall-clock, not the summed per-test durations", () => {
 		let sink = new BufferSink();
-		// Two 500ms tests that overlapped under concurrency: their durations sum to
-		// 1000ms, but the run's wall-clock was 520ms. Summing would print the
-		// larger, misleading figure; the summary must report the wall-clock.
 		let suite: SuiteResult = {
 			results: [passed("first waiter", 500), passed("second waiter", 500)],
 			passed: 2,

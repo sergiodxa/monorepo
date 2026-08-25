@@ -1,20 +1,11 @@
 /**
- * Extensible token-name interfaces. Each one is empty of behavior — its only
- * job is to hold names as keys so an app can add its own through declaration
- * merging:
+ * Token-name interfaces an app extends through declaration merging. The names
+ * live purely in the type system: a utility turns an accepted name straight
+ * into `var(--ui-radius-{name})`, so the matching CSS variable is what makes
+ * it resolve.
  *
  * @example
- * declare module "@pkg/u" {
- *   interface ColorPalettes {
- *     info: true;
- *   }
- * }
- *
- * No runtime registry backs any of these. A utility that accepts, say, a
- * {@link RadiusName} resolves straight to `var(--ui-radius-{name})` from the
- * typed string — adding a name here only changes what TypeScript accepts,
- * and the matching CSS variable is what makes it actually resolve.
- *
+ * declare module "@pkg/u" { interface ColorPalettes { info: true } }
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -111,10 +102,8 @@ export type PaletteShade = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 
 
 /**
  * Accepted color input across `u.bg()`, `u.fg()`, `u.border()`, `u.ring()`,
- * `u.accent()`, and `u.surface()`: a raw palette reference
- * (`"color.brand.600"`), a semantic tone with an explicit property suffix
- * (`"brand.tint"`, `"brand.muted"`, `"brand.strong"`, ...), or a bare
- * semantic tone name that resolves to that utility's own default property.
+ * `u.accent()`, and `u.surface()`: a raw palette reference, a tone with an
+ * explicit property suffix, or a bare tone taking the utility's own default.
  */
 export type ColorValue =
 	| `color.${ColorPaletteName}.${PaletteShade}`

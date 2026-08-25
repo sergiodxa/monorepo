@@ -1,7 +1,6 @@
 /**
- * Unit tests for {@link ScrollFollowModel}, constructed and driven directly
- * with no DOM and no rendering: every assertion reads model state or
- * observes dispatched "change" events.
+ * Unit tests for {@link ScrollFollowModel}, constructed and driven directly:
+ * every assertion reads model state or observes dispatched "change" events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +10,6 @@ import { describe, expect, test } from "vitest";
 
 import { ScrollFollowModel } from "./scroll-follow-model";
 
-/** Collects `"change"` event dispatch counts for assertions. */
 function countChanges(model: ScrollFollowModel): { count(): number } {
 	let calls = 0;
 

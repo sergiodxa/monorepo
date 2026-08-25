@@ -1,19 +1,8 @@
 /**
  * New cron-job monitor page controller. Requires `requireUser` + `requireTeam`.
- *
- * The fields are framed as three bordered cards — what the job is, when it is
- * expected, and what happens when a run doesn't arrive — with the submit control at
- * the foot of the last one, so the page reads as distinct settings groups rather than
- * one continuous column. All three cards sit inside the same `<form>`, so creating
- * still posts every field in a single request.
- *
- * The field markup is spelled out here rather than pulled from the shared create/edit
- * view, because that view renders the fields as one flat run and only this page splits
- * them across cards; inlining keeps the grouping at the call site instead of pushing a
- * layout concern into a view another page also renders.
- *
- * The cron expression starts blank, forcing a deliberate choice instead of silently
- * scheduling an hourly job.
+ * Fields are framed as three bordered cards inside one `<form>`, so creating posts
+ * every field in a single request. The cron expression starts blank, requiring an
+ * explicit schedule from the person creating the job.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,7 +28,13 @@ import routes from "~/routes/web";
 /** Stable id linking the grace-period field's label to its number input. */
 const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
-/** GET /app/:team/cron-jobs/new — the new cron-job monitor form. */
+/**
+ * GET /app/:team/cron-jobs/new — the new cron-job monitor form.
+ *
+ * UTC leads the timezone list and is marked `selected` directly on its own
+ * `<option>`, since a `<select>` carries its default only through each option's
+ * `selected` attribute.
+ */
 export default createAction(routes.app.team.cronJobs.new, {
 	middleware: [requireUser, requireTeam],
 	handler: () => {
@@ -137,15 +132,6 @@ export default createAction(routes.app.team.cronJobs.new, {
 											label={fields("timezone.label")}
 											description={fields("timezone.description")}
 										>
-											{/*
-											 * The default is marked `selected` on its own `<option>`: `<select>` has
-											 * no `defaultValue` attribute, so spelling it on the host renders as
-											 * inert markup and the browser just keeps the first option — which here
-											 * would happen to be the same zone only by accident of sort order.
-											 *
-											 * UTC leads the list on its own because the IANA enumeration doesn't
-											 * contain it; see `app/lib/timezones.ts` for why that exception exists.
-											 */}
 											<Select name="timezone" required>
 												<Select.Option value={DEFAULT_TIMEZONE} selected>
 													{DEFAULT_TIMEZONE}
@@ -172,7 +158,6 @@ export default createAction(routes.app.team.cronJobs.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										{/* The two switches read as one group, so they sit on the tighter within-group rhythm. */}
 										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 											<Switch name="alert_on_late" value="true" defaultChecked={false}>
 												{fields("alertOnLate.label")}

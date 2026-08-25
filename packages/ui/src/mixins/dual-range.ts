@@ -1,18 +1,7 @@
 /**
  * Coordinates a two-thumb Slider's pair of native `<input type="range">`
- * elements: whenever either thumb's value moves, keeps the pair ordered by
- * clamping the moved thumb back to its partner's value the instant it would
- * cross it, then reports the settled `{ min, max }` pair together.
- *
- * Why JS: two independent `<input type="range">` elements rendered as a
- * min/max pair have no relationship in HTML — dragging or keying the
- * lower-bound thumb has no way to stop at the upper-bound thumb's current
- * value, or the reverse, and nothing lets a consumer read both thumbs'
- * settled values as one unit.
- * No-JS baseline: both inputs still render as two independent range
- * controls, each keyboard-operable and each posting its own value with the
- * form; only the crossing guard between the pair and the combined
- * `{ min, max }` change notification are unavailable.
+ * elements, clamping the moved thumb to its partner's value the instant
+ * it would cross it, then reporting the settled `{ min, max }` pair.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,8 +16,7 @@ import { findPairedRangeInputs } from "../utils/paired-range-inputs";
 /**
  * `data-*` attribute a Slider group's paired range inputs carry so
  * {@link dualRange} can tell the lower-bound thumb from the upper-bound
- * thumb. Set it alongside `type="range"` on both inputs the mixin should
- * coordinate.
+ * thumb; set it on both inputs the mixin should coordinate.
  */
 export const SLIDER_THUMB_ATTRIBUTE = "data-thumb";
 
@@ -50,8 +38,7 @@ declare global {
 /**
  * Dispatched on a Slider group's host by {@link dualRange} whenever either
  * paired thumb settles on a new value, carrying both bounds together so a
- * consumer can render a combined readout (`"$10 – $50"`) or write a hidden
- * form field without reading the two `<input>` elements itself.
+ * consumer can render a combined readout without reading each `<input>`.
  */
 export class DualRangeChangeEvent extends Event {
 	/** Current value of the lower-bound thumb, after clamping. */
@@ -93,20 +80,9 @@ function clampThumbs(
 }
 
 /**
- * Keeps a two-thumb Slider's paired `<input type="range">` elements ordered:
- * dragging or keying the lower-bound thumb past the upper-bound thumb's
- * current value clamps it right back to that value, and the reverse for the
- * upper-bound thumb, so the pair can never cross.
- *
- * Apply it to the Slider group's host element — the element wrapping both
- * range inputs — with each input marked `data-thumb="min"` or
- * `data-thumb="max"` (exported as {@link SLIDER_THUMB_MIN} and
- * {@link SLIDER_THUMB_MAX}) so the mixin can tell the pair apart. It listens
- * for the `input` event bubbling up from either thumb, so no listener needs
- * attaching to the thumbs themselves.
- *
- * Dispatches {@link DualRangeChangeEvent} on the host every time the settled
- * pair changes.
+ * Keeps a two-thumb Slider's paired `<input type="range">` elements ordered,
+ * clamping either thumb to its partner's value the instant it would cross
+ * it, and dispatches {@link DualRangeChangeEvent} with the settled pair.
  *
  * @example
  * <div mix={dualRange()}>

@@ -21,10 +21,8 @@ export interface PlaceOptions {
 
 /**
  * Sets item and/or content placement on both axes from whichever option
- * keys are given, leaving the other untouched when its key is omitted.
- * Composes `u.items()` for `align-items` and `u.content()`/`u.justify()`
- * for `align-content`/`justify-content`; `justify-items` has no dedicated
- * utility of its own to compose, so it's set directly alongside `u.items()`.
+ * keys are given, so a partial options object emits only the declarations
+ * belonging to the keys it carries.
  *
  * @example u.place({ items: "center", content: "between" })
  * @example css({ alignItems: "center", justifyItems: "center", alignContent: "space-between", justifyContent: "space-between" })

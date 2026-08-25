@@ -39,15 +39,14 @@ const DEFAULT_ROLE = "alert";
 const DEFAULT_COLOR = "neutral";
 
 /**
- * Default {@link Alert.Props.live}, announcing an alert's content politely
- * so it doesn't interrupt whatever assistive technology is currently reading.
+ * Default {@link Alert.Props.live}, announcing an alert's content politely so
+ * assistive technology finishes its current utterance first.
  */
 const DEFAULT_LIVE = "polite";
 
 /**
  * `aria-atomic="true"` applied through {@link attrs} unless a consumer
- * overrides it, so assistive technology re-reads the whole alert on update
- * instead of only the part that changed.
+ * overrides it, so assistive technology re-reads the whole alert on update.
  */
 const DEFAULT_ARIA_ATOMIC = "true";
 
@@ -63,8 +62,8 @@ export namespace Alert {
 
 	/**
 	 * `aria-live` politeness applied to the host element. `"off"` omits the
-	 * `aria-live` attribute entirely rather than writing the literal value
-	 * `"off"`, leaving the element's implicit live-region behavior in place.
+	 * `aria-live` attribute, leaving the element's implicit live-region
+	 * behavior in place.
 	 */
 	export type Live = "polite" | "assertive" | "off";
 
@@ -98,9 +97,8 @@ export namespace Alert {
 
 	/**
 	 * Props accepted by {@link Alert.Title}. Every native heading-element
-	 * attribute still applies, since the rendered tag depends on the nearest
-	 * ambient heading level, falling back to `<h1>` where nothing supplies
-	 * one.
+	 * attribute applies, since the rendered tag follows the nearest ambient
+	 * heading level, falling back to `<h1>`.
 	 */
 	export interface TitleProps extends TagProps<"h1"> {
 		/** The alert's heading text. */
@@ -125,16 +123,9 @@ export namespace Alert {
 }
 
 /**
- * Renders an inline status panel: a relatively positioned, flexed container
- * with a rounded border and a color-tinted background driven entirely by
- * {@link Alert.Props.color}. When its children include {@link Alert.Icon} as
- * a direct child, the panel gains inline-start padding to make room for the
- * icon's absolute position, detected with a `:has()` selector rather than
- * any prop or children inspection.
- *
- * `role` defaults to `"alert"` and `aria-atomic` defaults to `true`; both
- * stay overridable through their respective props. `aria-live` is computed
- * from {@link Alert.Props.live} unless a consumer sets `aria-live` directly.
+ * Renders an inline status panel tinted by {@link Alert.Props.color}, gaining
+ * inline-start padding through `:has()` when a direct {@link Alert.Icon}
+ * needs the room. `role`, `aria-atomic`, and `aria-live` stay overridable.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the alert's markup.
@@ -195,11 +186,9 @@ export function Alert(handle: Handle<Alert.Props>) {
 }
 
 /**
- * Renders {@link Alert.IconProps.children} as the alert's leading icon: an
- * absolutely positioned, decorative graphic pinned to the panel's
- * inline/block-start corner, colored from the current text color, with any
- * direct SVG child sized to a `1rem` box. Hidden from assistive technology
- * by default since the alert's color and text already carry its meaning.
+ * Renders {@link Alert.IconProps.children} as the alert's leading icon,
+ * absolutely positioned at the panel's inline/block-start corner with any
+ * direct SVG sized to `1rem`. Decorative, since the text carries the meaning.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the icon's markup.
@@ -254,9 +243,7 @@ Alert.Content = function AlertContent(handle: Handle<Alert.ContentProps>) {
 /**
  * Renders {@link Alert.TitleProps.children} as the alert's heading, inside
  * the native heading element matching the nearest ancestor `HeadingScope`'s
- * semantic depth — or `<h1>` where no scope wraps it at all — sized and
- * weighted as a small, tight-tracked, single-line label above the alert's
- * description regardless of which level it renders.
+ * depth — or `<h1>` where no scope wraps it — styled as a small, tight label.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the title's markup.
@@ -282,9 +269,8 @@ Alert.Title = function AlertTitle(handle: Handle<Alert.TitleProps>) {
 
 /**
  * Renders {@link Alert.DescriptionProps.children} as the alert's supporting
- * message, in a native `<p>` set slightly translucent against the alert's
- * foreground color so it reads as secondary to the title. Any nested `<p>`
- * inherits the same relaxed line height.
+ * message, slightly translucent against the alert's foreground color so it
+ * reads as secondary to the title. Any nested `<p>` keeps its line height.
  *
  * @param handle Runtime handle carrying the host `<p>`'s props.
  * @returns The render function producing the description's markup.
@@ -314,7 +300,7 @@ Alert.Description = function AlertDescription(handle: Handle<Alert.DescriptionPr
 /**
  * Renders {@link Alert.ActionProps.children} as the alert's trailing
  * control — a button, link, or dismiss affordance — pinned to the panel's
- * block-start edge and never stretched or shrunk by its siblings.
+ * block-start edge at its own natural size.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action's markup.

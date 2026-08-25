@@ -12,11 +12,9 @@ import type { CSSMixinDescriptor, Handle, RemixNode } from "remix/ui";
 import * as s from "./styles";
 
 /**
- * Client-side delegated confirmation guard, injected once by {@link Document}. It
- * intercepts submits from forms whose submitter carries the `js-confirm` class and
- * asks for confirmation using the button's `title`, replacing the former per-button
- * inline `onclick="return confirm(...)"` handlers (remix/ui JSX exposes no `onclick`
- * string attribute).
+ * Client-side confirmation guard injected once by {@link Document}. Intercepts submits
+ * from forms whose submitter carries the `js-confirm` class and confirms via the
+ * button's `title`, so each button declares its confirmation prompt as a plain prop.
  */
 export const CONFIRM_SCRIPT =
 	"document.addEventListener('submit',function(e){" +
@@ -122,7 +120,6 @@ export function SubscriptionBadge(
 export interface ConfirmButtonProps {
 	/** Confirmation prompt shown before the form submits. */
 	message: string;
-	/** Style mixin(s) applied to the button. */
 	mix: CSSMixinDescriptor | CSSMixinDescriptor[];
 	/** Button label. */
 	children: RemixNode;
@@ -130,8 +127,8 @@ export interface ConfirmButtonProps {
 
 /**
  * A submit button that asks for confirmation before its form submits. Carries the
- * `js-confirm` class and its prompt in `title`; the guard is wired once by
- * {@link Document} via {@link CONFIRM_SCRIPT}. Replaces inline `onclick` confirms.
+ * `js-confirm` class and its prompt in `title` so {@link CONFIRM_SCRIPT}, wired once
+ * by {@link Document}, can confirm the submit declaratively.
  *
  * @param handle - Component handle with the prompt `message`, `mix` styling, and label.
  * @returns A render function producing the confirming submit button.

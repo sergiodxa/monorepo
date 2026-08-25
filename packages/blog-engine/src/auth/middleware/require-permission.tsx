@@ -19,7 +19,6 @@ import { hasAll } from "../../shared/permissions";
 
 import { getAuthUser, getPermissions } from "./auth";
 
-/** The "no access" page for authenticated users lacking a required permission. */
 function NoAccessPage(_handle: Handle<Record<string, never>>) {
 	return () => (
 		<html lang="en">

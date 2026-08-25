@@ -24,10 +24,13 @@ import { LIMITS, maxLength } from "../../shared/lib/schema-checks";
 import Client from "../models/client";
 import Secret from "../models/secret";
 
-/** Validation schema for the create-secret request body. */
+/**
+ * Validation schema for the create-secret request body.
+ * `expiresAt` is an ISO date string.
+ */
 let CreateSecretSchema = s.object({
 	name: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
-	expiresAt: s.optional(s.string().pipe(maxLength(30))), // ISO date string
+	expiresAt: s.optional(s.string().pipe(maxLength(30))),
 });
 
 /**
@@ -41,7 +44,6 @@ export const index = createAction(
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.loader("/api/clients/:clientId/secrets");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -65,7 +67,6 @@ export const create = createAction(
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/secrets");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -87,7 +88,6 @@ export const create = createAction(
 
 		log.info("Secret created", { clientId, secretId: id });
 
-		// Return the plain secret only once - it cannot be retrieved later
 		return created({
 			id,
 			secret: plainSecret,
@@ -107,7 +107,6 @@ export const destroy = createAction(
 		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/secrets/:id");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });

@@ -1,7 +1,7 @@
 /**
  * Tests for reading the claims of an access token out of this server's own session.
- * Every malformed shape has to answer `null` rather than throw, because the caller's
- * only sane reaction to an unreadable token is to treat the session as signed out.
+ * Every malformed shape answers `null`, because the caller's only sane reaction to an
+ * unreadable token is to treat the session as signed out.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

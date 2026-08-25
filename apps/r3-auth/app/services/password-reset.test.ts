@@ -1,12 +1,9 @@
 /**
- * Router-level tests of password recovery: that a registered address is mailed a link and
- * an unregistered one is answered identically with nothing sent, that the per-address
- * cooldown suppresses a second request, that a token is single-use and bound to the subject
- * it was issued for, that a completed reset replaces the password and revokes every session,
- * and that neither message carries a session id.
- *
- * Mail is recorded rather than mocked, so the app's real mailer and real email classes run
- * and the token under test is the one a reader would have received.
+ * Router-level tests of password recovery: a registered address is mailed a link
+ * and an unregistered one gets the identical response with nothing sent, the
+ * per-address cooldown suppresses a second request, a token is single-use and
+ * bound to its subject, and a completed reset replaces the password and revokes
+ * every session without leaking a session id.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -219,8 +216,6 @@ describe("requesting a password reset", () => {
 		expect(token!.expiration).toBeLessThanOrEqual(nowSeconds + EXPECTED_TOKEN_TTL_SECONDS + 5);
 		expect(cooldown!.expiration).toBeGreaterThanOrEqual(nowSeconds + EXPECTED_COOLDOWN_SECONDS - 5);
 		expect(cooldown!.expiration).toBeLessThanOrEqual(nowSeconds + EXPECTED_COOLDOWN_SECONDS + 5);
-		// The cooldown must never outlive the token, or a suppressed request would strand
-		// somebody with no usable link.
 		expect(cooldown!.expiration!).toBeLessThan(token!.expiration!);
 	});
 
@@ -265,7 +260,6 @@ describe("requesting a password reset", () => {
 		let second = tokenFromMail();
 
 		expect(second).not.toBe(first);
-		// Exactly one live reset per account: the older link is gone rather than parallel.
 		expect(await keysUnder("password-reset:")).toHaveLength(1);
 
 		let replayed = await submitReset(first, NEW_PASSWORD);
@@ -276,7 +270,6 @@ describe("requesting a password reset", () => {
 
 describe("the reset mail", () => {
 	test("carries no session id and no untranslated key", async () => {
-		// A session on the account first, so there is a real refresh token to look for.
 		await signInWith(EMAIL, PASSWORD);
 		app.mail.clear();
 		app.resetCookies();
@@ -326,12 +319,6 @@ describe("opening a reset link", () => {
 	});
 
 	test("spends no sign-in budget on a request carrying no token", async () => {
-		// The budget this page spends from is the one a person's sign-in attempts come out of,
-		// and it is keyed by IP. A crawler, a monitor or a bodyless probe on the bare path is
-		// answered out of the shape check and must therefore cost nothing, or whoever shares an
-		// egress with it cannot sign in.
-		// Two: one for the request that asks for the link, one for opening it. Every probe in
-		// between has to be free, or the last call here is a 429.
 		app = await createTestApp({ limits: { login: 2 } });
 		fixtures = await seed(app);
 
@@ -353,8 +340,6 @@ describe("opening a reset link", () => {
 		app = await createTestApp({ limits: { login: 1 } });
 		fixtures = await seed(app);
 
-		// Well-formed and worthless, which is exactly what a guessing loop sends. The first
-		// costs a store read and the budget; the second is refused before it costs anything.
 		let guess = "a".repeat(43);
 
 		expect((await openResetLink(guess)).status).toBe(400);
@@ -439,7 +424,6 @@ describe("completing a reset", () => {
 		expect(replay.status).toBe(400);
 		expect(await replay.text()).toContain("This link no longer works");
 
-		// The replayed submission changed nothing: the first new password still works.
 		let credential = await Credential.find(app.db, fixtures.subjectId);
 		let stillFirst = await password.verify(credential!.password_hash, NEW_PASSWORD);
 		expect(stillFirst.status === "success" && stillFirst.data).toBe(true);
@@ -448,7 +432,6 @@ describe("completing a reset", () => {
 	test("cannot reset a different subject than the one it was issued for", async () => {
 		let otherId = await seedOtherSubject();
 
-		// A token for the seeded subject, spent while another account exists.
 		await completeReset();
 
 		let otherCredential = await Credential.find(app.db, otherId);
@@ -502,7 +485,6 @@ describe("completing a reset", () => {
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("The two passwords do not match.");
 
-		// The token survives a refused submission, so the person can simply try again.
 		let retry = await submitReset(token, NEW_PASSWORD);
 		expect(retry.status).toBe(200);
 	});

@@ -9,11 +9,9 @@ import { utility } from "../internal/descriptor";
 import { color } from "../internal/tokens";
 
 /**
- * Applies `stroke` — the SVG paint property a `<path>`/`<circle>`/`<line>`
- * shape reads its outline color from, the same semantic-tone resolution
- * `u.fill()` uses for `fill`. Called with no value it resolves the tiny
- * system default (`var(--ui-fg, CanvasText)`); called with a bare tone it
- * defaults to that tone's plain `fg` weight.
+ * Applies `stroke`, resolving a semantic tone to an SVG shape's outline
+ * color. With no value it resolves the system default
+ * `var(--ui-fg, CanvasText)`; a bare tone resolves that tone's `fg` weight.
  *
  * @example u.stroke()
  * @example css({ stroke: "var(--ui-fg, CanvasText)" })

@@ -62,21 +62,14 @@ export namespace DateField {
 		description?: RemixNode;
 		/**
 		 * Validation message rendered through {@link FieldError} beneath the
-		 * control — after the description, when both are present — and
-		 * referenced by the control's `aria-describedby`. Its presence alone
-		 * marks the control's `aria-invalid`, unless `aria-invalid` is set
-		 * explicitly.
-		 *
-		 * Optional inside a {@link Form} carrying `issues`: the field then
-		 * finds its own message by `name` through form context, and an
-		 * explicit value here still wins over whatever context holds.
+		 * control; its presence alone marks `aria-invalid` unless set
+		 * explicitly. Inside a {@link Form} carrying `issues`, an explicit value still wins over the field's own by-`name` lookup.
 		 */
 		errorMessage?: RemixNode;
 		/**
-		 * Native `autofocus`. Defaults to `true` for the first invalid field
-		 * of an enclosing {@link Form}'s `issues`, so a server round-trip
-		 * lands keyboard focus on the first problem with no client
-		 * JavaScript; pass it explicitly to decide for this field yourself.
+		 * Native `autofocus`. Defaults to `true` for the first invalid field of an
+		 * enclosing {@link Form}'s `issues`, landing keyboard focus on the problem
+		 * after a server round-trip; pass it explicitly to override for this field.
 		 */
 		autoFocus?: boolean;
 		/** Native `name` submitted with an enclosing form. */
@@ -105,34 +98,9 @@ export namespace DateField {
 }
 
 /**
- * Renders a complete date field in one call: a root element stacking
- * {@link Label}, a native `<input type="date">` rendered through
- * {@link Input}, and, when supplied, {@link Description} and
- * {@link FieldError} in a single column with a small gap between them. The
- * label's `for`, the control's `id`, and the control's `aria-describedby` are
- * all computed from this instance's own stable identifier, so the parts stay
- * correctly associated with no id bookkeeping left to the consumer.
- *
- * The date picker affordance, value parsing, and locale-aware formatting all
- * come from the platform's own `<input type="date">` implementation — this
- * component contributes the field's box styling, shared with every other
- * single-line control through {@link Input}, plus the label/description/error
- * composition and wiring. The control's keyboard focus ring reads `color`
- * (defaulting to `"neutral"`), and an invalid state — driven by
- * `errorMessage`'s presence, or an explicit `aria-invalid` override — recolors
- * both the border and ring to the semantic danger tone regardless of `color`.
- *
- * `min`/`max` bound the accepted range and `step` sets the granularity, in
- * days, the platform's own date picker and typed-entry validation enforce.
- * Composing {@link Label}, {@link Input}, {@link Description}, and
- * {@link FieldError} directly instead remains available for a field whose
- * wiring or layout this wrapper doesn't cover.
- *
- * Inside a {@link Form} carrying `issues`, the field needs no `errorMessage`
- * of its own: it looks its message up by `name` through form context, and the
- * first invalid field of that render also picks up `autofocus`, so a parse
- * failure re-rendered from the server both shows every message and lands
- * keyboard focus on the first one. An explicit `errorMessage` still wins.
+ * Renders a complete date field in one call, stacking {@link Label},
+ * {@link Input}, and, when supplied, {@link Description} and {@link FieldError}.
+ * An invalid state — from `errorMessage` or an explicit `aria-invalid` override — recolors the border and ring to the semantic danger tone regardless of `color`.
  *
  * @param handle Runtime handle carrying the root element's props and this instance's stable identifier.
  * @returns The render function producing the field's markup.

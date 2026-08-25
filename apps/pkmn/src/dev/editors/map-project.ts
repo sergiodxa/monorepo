@@ -1,22 +1,8 @@
 /**
- * Multi-map project wrapper around the single-map {@link MapEditor}. A `MapProject`
- * owns an ORDERED set of maps and tracks which one is active, so the map tool can
- * manage several maps in one session (the RPG-Maker "map tree") instead of a single
- * map at a time.
- *
- * Each map is held as its own live {@link MapEditor} instance, keyed by id. This is
- * deliberately richer than serializing/rehydrating `MapData` on every switch: an
- * editor holds not just the grids/tilesets/events a `MapData` captures but also the
- * in-progress UI state (active layer/tool, tile selection, zoom, clipboard, the
- * current selection region). Keeping one editor per map means switching maps never
- * touches another map's state, so edits can never leak across maps. The project only
- * mediates lifecycle — create/select/rename/delete and ordered access — and forwards
- * every editing gesture to {@link MapProject.active}.
- *
- * Ids double as the export filename and the manifest key, so the project reuses the
- * same {@link MAP_ID_PATTERN} the export path enforces: a create or rename with a
- * blank, duplicate, or non-slug id is rejected (a {@link Result} failure) before it
- * can produce a map the export could never write.
+ * An ordered set of maps (the RPG-Maker "map tree") with one active map, each held
+ * as its own live {@link MapEditor} so grids, events, and in-progress UI state stay
+ * per map. Ids double as the export filename and the manifest key, so create and
+ * rename validate against {@link MAP_ID_PATTERN} first.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,10 +27,9 @@ export class MapProjectError extends Error {
 }
 
 /**
- * Validates a candidate map id against the same rules the export path enforces
- * ({@link MAP_ID_PATTERN}, length), returning the trimmed id on success. Kept pure so
- * both {@link MapProject.newMap} and {@link MapProject.renameMap} share one gate and a
- * rejected id never reaches the export.
+ * Validates a candidate map id against the rules the export path enforces
+ * ({@link MAP_ID_PATTERN}, length). One shared gate for create and rename, so every
+ * id a project stores is one the export can write.
  *
  * @param id The candidate id (trimmed here).
  * @returns Success with the trimmed id, or failure with a {@link MapProjectError}.
@@ -66,27 +51,26 @@ export function validateMapId(id: string): Result<string, MapProjectError> {
 }
 
 /**
- * An ordered collection of maps (each a live {@link MapEditor}) with one active map,
- * mediating only the lifecycle: create, select, rename, delete, and ordered access.
- * Every editing gesture goes through {@link active}, whose per-map editor holds all of
- * that map's state so switching maps never leaks edits between them. A project always
- * holds at least one map (the last one cannot be deleted).
+ * An ordered collection of maps (each a live {@link MapEditor}) with one active map.
+ * Every editing gesture goes through {@link active}, whose per-map editor owns that
+ * map's whole state; a project always holds at least one map.
  */
 export class MapProject {
-	/** The maps keyed by id, holding a live editor each (insertion order = tree order). */
+	/** Insertion order is the tree order. */
 	#maps: Map<string, MapEditor>;
 
-	/** The id of the active map (always names a key of {@link #maps}). */
+	/** Always names a key of {@link #maps}. */
 	#activeId: string;
 
 	/**
+	 * A supplied id that fails validation falls back to {@link DEFAULT_MAP_ID}, so
+	 * construction always yields a project with a valid active map.
+	 *
 	 * @param options Optional id and dimensions for the first map; omitted fields fall
 	 *   back to the module defaults so a fresh project starts on a sensible empty map.
 	 */
 	constructor(options?: { id?: string; width?: number; height?: number }) {
 		let id = validateMapId(options?.id ?? DEFAULT_MAP_ID);
-		// Fall back to the default id when a caller-supplied one is invalid, so a project
-		// can always be constructed with a valid active map.
 		let firstId = isSuccess(id) ? id.data : DEFAULT_MAP_ID;
 		let width = options?.width ?? DEFAULT_MAP_WIDTH;
 		let height = options?.height ?? DEFAULT_MAP_HEIGHT;
@@ -94,23 +78,25 @@ export class MapProject {
 		this.#activeId = firstId;
 	}
 
-	/** The id of the currently active map. */
+	/** Always names a map the project holds. */
 	get activeMapId(): string {
 		return this.#activeId;
 	}
 
-	/** The active map's editor — the target of every editing gesture. */
+	/**
+	 * The active map's editor — the target of every editing gesture. The active id
+	 * always names a live editor, so the lookup always resolves.
+	 */
 	get active(): MapEditor {
-		// Non-null: the active id always names a live editor by construction.
 		return this.#maps.get(this.#activeId)!;
 	}
 
-	/** How many maps the project holds. */
+	/** The number of maps; always at least one. */
 	get size(): number {
 		return this.#maps.size;
 	}
 
-	/** The map ids in tree order (a copy, so callers cannot mutate the ordering). */
+	/** The map ids in tree order, as a fresh array the caller owns. */
 	mapIds(): string[] {
 		return [...this.#maps.keys()];
 	}
@@ -151,8 +137,8 @@ export class MapProject {
 	}
 
 	/**
-	 * Makes the map with the given id active. A no-op failure for an unknown id, so a
-	 * stale selection can never leave the project pointing at a missing map.
+	 * Makes the map with the given id active. An unknown id fails and leaves the
+	 * selection where it was, so the active id always names a live map.
 	 *
 	 * @param id The map id to activate.
 	 * @returns Success with the id, or failure with a {@link MapProjectError}.
@@ -166,11 +152,9 @@ export class MapProject {
 	}
 
 	/**
-	 * Renames a map, keeping its position in the tree and its live editor (all
-	 * in-progress edits) intact. The new id is validated and must not collide with a
-	 * different existing map; renaming to the same id is a no-op success. The editor's
-	 * own id is updated so an export writes the new filename, and the active selection
-	 * follows the rename.
+	 * Renames a map in place, keeping its tree position and live editor state.
+	 * Renaming to the same id succeeds as a no-op; the editor's id and the active
+	 * selection both follow the rename, so an export writes under the new filename.
 	 *
 	 * @param oldId The id of the map to rename.
 	 * @param newId The new id (validated and trimmed).
@@ -187,8 +171,6 @@ export class MapProject {
 			return failure(new MapProjectError(`A map with id "${valid.data}" already exists.`));
 		}
 
-		// Rebuild the map preserving insertion order, swapping the renamed key in place so
-		// the tree ordering is unchanged.
 		let rebuilt = new Map<string, MapEditor>();
 		for (let [key, value] of this.#maps) {
 			if (key === oldId) rebuilt.set(valid.data, value.setId(valid.data));
@@ -218,7 +200,6 @@ export class MapProject {
 		this.#maps.delete(id);
 
 		if (this.#activeId === id) {
-			// Select the neighbor that used to follow the deleted map, else the one before.
 			let next = ids[index + 1] ?? ids[index - 1]!;
 			this.#activeId = next;
 		}

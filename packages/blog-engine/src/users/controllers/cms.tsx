@@ -26,11 +26,6 @@ import * as s from "../../shared/components/styles";
 import { fieldText } from "../../shared/text";
 import { User } from "../models/user";
 
-/**
- * Loads the shared CMS chrome (current user, permission set, site title) for a view.
- * @param db - Database handle.
- * @returns The current user, their permissions, and the site title.
- */
 async function chrome(db: Database) {
 	let user = getAuthUser();
 	let permissions = await getPermissions();
@@ -38,16 +33,10 @@ async function chrome(db: Database) {
 	return { user, permissions, siteTitle };
 }
 
-/**
- * Renders a user's display label, falling back to their email.
- * @param user - The user, or null.
- * @returns The display name, the email, or `""` when null.
- */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
 
-/** Route params identifying the user being managed (`:id`). */
 const RouteParams = ds.object({ id: ds.string() });
 
 /** `/cms/users` — list users, change role, delete with reassignment (`users.manage`). */

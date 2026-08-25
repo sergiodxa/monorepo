@@ -65,18 +65,15 @@ export interface ExecutionContext {
 	 */
 	usesFor: (definition: DefinitionNode) => readonly string[];
 	/**
-	 * The path of the file that DEFINED a command or fixture. Errors raised
-	 * inside a definition's body carry the body's spans, so they must be
-	 * anchored to the defining file — stamping the calling test's file would
-	 * map those spans onto the wrong source text. When absent (or returning
-	 * undefined), errors keep the calling file.
+	 * The path of the file that DEFINED a command or fixture. Errors inside a
+	 * definition's body anchor to the defining file so their spans map onto
+	 * the source text they came from; when absent, errors keep the calling file.
 	 */
 	fileFor?: (definition: DefinitionNode) => string | undefined;
 	/**
-	 * The parsed grant modes. The executor refuses calls to tools whose
-	 * required permission family is denied outright, before the plugin runs;
-	 * scoped refinement then happens inside the plugin through the
-	 * runtime-owned `PermissionSet`.
+	 * The parsed grant modes: the executor refuses a denied permission family
+	 * before its plugin runs, and scoped refinement (host, binary) happens
+	 * inside the plugin through the runtime-owned `PermissionSet`.
 	 */
 	grants: Grants;
 	/** Path of the file the test lives in, stamped onto every error. */
@@ -93,10 +90,9 @@ interface Environment extends ExecutionContext {
 type BlockOutcome = { kind: "completed" } | { kind: "returned"; value: Value };
 
 /**
- * Execute one test. Its `given`, `when`, and `then` phases share a single
- * scope and run in order; the first failing statement ends the test. Every
- * error is stamped with the failing statement's span, and with the test's
- * file path when the context provides one, before it is returned.
+ * Execute one test: its `given`, `when`, and `then` phases share a single
+ * scope and run in order, and the first failing statement ends the test.
+ * Every error is stamped with the failing statement's span and file path.
  *
  * @param test - The test to execute.
  * @param context - The suite services and grants the test runs against.
@@ -207,18 +203,9 @@ async function evaluateRhs(
 }
 
 /**
- * A bare-path `let`/`return` right-hand side names the value to bind. Normally
- * that is a reference into the scope, but when its head is not a binding it may
- * instead name a zero-argument tool — `let current = browser.url` — whose
- * observed value is what the binding should hold. The resolution is
- * deliberately narrow and never guesses: a bound head is always a reference (a
- * binding and a tool cannot collide here, because a reference requires a bound
- * head), and the path is a call only when it resolves — honoring the file's
- * `use` — to a tool that requires no arguments. Anything else (an ambiguous or
- * unknown path, a command, a tool with required arguments) returns undefined so
- * the caller evaluates the reference normally and its unknown-name error still
- * stands. The call is dispatched through the ordinary tool path, so the
- * runtime's permission gate applies exactly as it does to a written call.
+ * A bare-path `let`/`return` right-hand side normally references the scope;
+ * an unbound head may instead name a zero-argument tool, dispatched through
+ * the ordinary tool path so the runtime's permission gate still applies.
  */
 function zeroArgToolCall(
 	reference: ReferenceNode,
@@ -233,7 +220,6 @@ function zeroArgToolCall(
 	return invokeTool(resolved.data, [], reference.span, scope, environment);
 }
 
-/** Evaluate one expression in the given scope. */
 function evaluateExpression(
 	expression: ExpressionNode,
 	scope: Map<string, Value>,
@@ -351,9 +337,8 @@ async function invokeTool(
 
 /**
  * The runtime's coarse permission gate: a tool whose required permission
- * family is denied outright never reaches its plugin — plugin self-restraint
- * is not load-bearing. Scoped refinement (which host? which binary?) happens
- * inside the plugin through the runtime-owned `PermissionSet`.
+ * family is denied outright never reaches its plugin; scoped refinement
+ * happens inside the plugin through the runtime-owned `PermissionSet`.
  */
 function gateToolCall(
 	tool: Extract<ResolvedCallable, { kind: "tool" }>,
@@ -371,9 +356,8 @@ function gateToolCall(
 
 /**
  * Invoke one suite command: arguments are evaluated as values (a bare word
- * reads the caller's binding of that spelling), bound positionally to the
- * command's parameters in a fresh scope, and the body's `return` value — or
- * `null` when it never returns — is the call's value.
+ * reads the caller's binding of that spelling) and bound positionally to a
+ * fresh scope; the body's `return` value (or `null`) is the call's value.
  */
 async function invokeCommand(
 	command: CommandNode,
@@ -421,12 +405,9 @@ async function runFixture(
 }
 
 /**
- * Run a command or fixture body under the recursion cap; the body's `return`
- * value is the result, and a body that never returns produces `null`. Because
- * `use` is file-scoped, the body resolves bare names against the imports of
- * the file that defined it, not the caller's file — and errors raised inside
- * the body anchor to the defining file, so their spans map onto the source
- * text they came from.
+ * Run a command or fixture body under the recursion cap; a body that never
+ * returns produces `null`. Because `use` is file-scoped, the body resolves
+ * bare names against the defining file's imports, so its errors anchor there.
  */
 async function runBody(
 	definition: DefinitionNode,

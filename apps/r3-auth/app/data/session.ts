@@ -2,7 +2,7 @@
  * Data access for refresh-token sessions: creation, lookup, per-subject listing for
  * the device list, touching on refresh, revocation by id/subject/subject+client, and
  * the expiry sweep the cleanup job runs. A session's id **is** the refresh token, so
- * nothing here logs or regenerates it.
+ * it is treated as a secret and keeps one value for the session's life.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -98,7 +98,7 @@ export default class Session {
 		return result.affectedRows ?? 0;
 	}
 
-	/** Sessions whose expiry has passed and which no longer refresh anything. */
+	/** Sessions whose expiry has passed, ready for the sweep to remove. */
 	static async findExpiredSessions(db: Database): Promise<SelectSession[]> {
 		return await db.findMany(sessions, { where: lte("expires_at", Date.now()) });
 	}
@@ -114,7 +114,7 @@ export default class Session {
 		return result.affectedRows ?? 0;
 	}
 
-	/** Number of sessions that have not expired, for the admin dashboard. */
+	/** Number of sessions still inside their expiry, for the admin dashboard. */
 	static async countActive(db: Database): Promise<number> {
 		return await db.count(sessions, { where: gt("expires_at", Date.now()) });
 	}

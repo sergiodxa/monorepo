@@ -53,7 +53,9 @@ export function glossaryPathFromSlug(slug: string): string {
 }
 
 /**
- * Creates a renderer for the glossary page.
+ * Creates a renderer for the glossary page. Entries carry a hairline border at
+ * rest so the `:target` highlight recolors an existing edge and the row holds
+ * its position; targeted small print takes `fg` to clear AA on the tint.
  *
  * @returns View function that renders glossary entries from the model.
  */
@@ -71,11 +73,6 @@ export function GlossaryView() {
 				<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>My definition of some terms.</p>
 				<dl mix={[m(0), grid(), gap(3)]}>
 					{model.entries.map((item) => (
-						/* The same list-row treatment the other public index pages use — a
-						tinted, hairline-bordered card on the `lg` radius with one padding step
-						on all sides. The border is a real hairline rather than the transparent
-						2px placeholder it used to be, so the `:target` highlight recolors an
-						existing edge instead of growing one and shifting the row. */
 						<div
 							key={item.id}
 							id={item.slug}
@@ -92,9 +89,6 @@ export function GlossaryView() {
 								]),
 								when("&:target dt", fg("brand.emphasis")),
 								when("&:target dd", fg("brand")),
-								/* `fg`, not the `muted` weight this line would otherwise take: muted
-								is the tone's 500 step and lands under AA on the tint behind it, which
-								small print can least afford. */
 								when("&:target small", fg("brand")),
 							]}
 						>

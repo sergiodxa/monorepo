@@ -1,12 +1,9 @@
 /**
- * The sign-in page shown when an authorization request needs a person to authenticate.
- * Two columns on a wide viewport — the requesting client's identity on the left, the
- * sign-in card on the right — collapsing to the card alone on a narrow one, where the
- * client's name becomes the card's own heading so it is never lost.
- *
- * The provider button is always offered; the credential form appears only for a request
- * asking to create an account, which is what keeps the password surface off the page
- * for the flows that do not use it. Neither needs a line of script to work.
+ * The sign-in page for an authorization request needing a person to authenticate.
+ * A wide viewport splits into two columns, client identity beside the sign-in card,
+ * collapsing to the card alone on a narrow one, whose heading becomes the client's
+ * name. The credential form appears only when the request asks to create an
+ * account, confining the password surface to that single flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,8 +83,8 @@ namespace AuthorizeView {
 /**
  * The concentric rings filling the identity panel's lower-left corner.
  *
- * Every ring carries the same color at the same low opacity: the depth comes from
- * them overlapping, not from a gradient, so the figure survives any palette change.
+ * Each ring mixes its alpha into the fill color, so every ring stays translucent
+ * on its own, and the overlaps still accumulate into the figure's depth.
  */
 function ConcentricRings() {
 	return () => (
@@ -100,9 +97,6 @@ function ConcentricRings() {
 				insetInlineStart: 0,
 				blockSize: "37.5rem",
 				inlineSize: "37.5rem",
-				// The alpha is mixed into the color rather than set as `fill-opacity`, so
-				// each ring is translucent on its own and the overlaps still accumulate
-				// into the figure's depth. One opacity on the element would flatten them.
 				fill: "color-mix(in oklab, var(--ui-color-brand-500) 5%, transparent)",
 				".dark &": {
 					fill: "color-mix(in oklab, var(--ui-color-brand-400) 5%, transparent)",
@@ -121,7 +115,12 @@ function ConcentricRings() {
 	);
 }
 
-/** Renders the credential and provider sign-in page for an authorization request. */
+/**
+ * Renders the credential and provider sign-in page for an authorization request.
+ *
+ * The password-recovery link stays visible whether or not the credential form
+ * shows, reaching whoever cannot sign in even outside the registration flow.
+ */
 export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 	return () => {
 		let {
@@ -144,8 +143,6 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 					at(TWO_COLUMN_WIDTH, gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" })),
 				]}
 			>
-				{/* The identity panel is decoration plus context, and the narrow layout's card
-				repeats the client's name, so hiding it there loses nothing. */}
 				<aside
 					mix={[
 						hidden(),
@@ -201,16 +198,12 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 						p(6),
 						bg("color.neutral.50"),
 						dark(bg("color.neutral.900")),
-						// Pushed well down the small viewport so the card sits under the browser
-						// chrome rather than behind it, and centered normally once there is room.
 						pbs("15vh"),
 						at(TWO_COLUMN_WIDTH, pbs(6)),
 					]}
 				>
 					<Card mix={[is("100%"), maxIs("22.5rem")]}>
 						<Card.Header mix={[textAlign("center")]}>
-							{/* The name on the small viewport, the generic heading where the
-							panel beside it already carries the name. */}
 							<Card.Title mix={[at(TWO_COLUMN_WIDTH, hidden())]}>{clientName}</Card.Title>
 							<Card.Title mix={[hidden(), at(TWO_COLUMN_WIDTH, block())]}>{title}</Card.Title>
 							<Card.Description>{description}</Card.Description>
@@ -226,10 +219,6 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 								</Text>
 							)}
 
-							{/* One form for both registering and signing in — the server decides from
-							the email which it is — and every field is required either way, so it is
-							shown whole or not at all rather than behind a disclosure a required
-							field could not be submitted from. */}
 							{showRegistration && (
 								<Form
 									method="post"
@@ -306,11 +295,6 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 								</Button>
 							</Form>
 
-							{/* Always offered, not only alongside the credential form: somebody who cannot
-							remember their password is not registering, and the form is shown for
-							`prompt=create` alone — so gating the link the same way would hide it from
-							exactly the person who needs it. Last in the card, under both ways in, which
-							is where a reader looks once neither has worked. */}
 							<Text mix={[m(0), text("sm"), textAlign("center")]}>
 								<Link href={routes.password.forgot.index.href()} color="brand">
 									{labels.forgotPassword}

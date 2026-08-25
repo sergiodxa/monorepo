@@ -1,12 +1,11 @@
 /**
- * The notice a subject receives once their password has actually been changed through a
- * recovery link, and once every session on the account has been ended.
+ * The notice a subject receives once their password has been changed through a recovery
+ * link, and every session on the account has been ended.
  *
- * It is sent because a completed reset is the last cheap moment to reverse a takeover: the
- * reset mail itself can be deleted from a mailbox somebody else is reading, while this one
- * arrives after the fact and states plainly what happened. It carries no token and no link
- * that acts on the account — only a way back to signing in — and the reply-to address on
- * it reaches a person.
+ * A completed reset is the last cheap moment to reverse a takeover: an attacker reading
+ * the mailbox can delete the reset mail, while this one arrives after the fact and states
+ * plainly what happened. It holds only a way back to signing in, and its reply-to address
+ * reaches a person.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +22,7 @@ import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
 import routes from "~/routes/web";
 
 export namespace PasswordChangedEmail {
-	/** Everything the notice reports, which is deliberately almost nothing. */
+	/** Everything the notice reports, deliberately kept to the address and the language. */
 	export interface Data {
 		/** The subject's own address, which is who the notice is addressed to. */
 		email: string;
@@ -40,7 +39,7 @@ export namespace PasswordChangedEmail {
  * @example await mailer.send(new PasswordChangedEmail({ email, locale, t }));
  */
 export class PasswordChangedEmail implements EmailContract {
-	/** The account this notice is about; nothing is loaded while rendering. */
+	/** The account this notice is about; rendering reads only from here. */
 	#account: PasswordChangedEmail.Data;
 
 	/**
@@ -52,7 +51,7 @@ export class PasswordChangedEmail implements EmailContract {
 		this.#account = account;
 	}
 
-	/** The subject's own address; a security notice never goes anywhere else. */
+	/** The subject's own address, the only recipient a security notice has. */
 	get to(): Address {
 		return { email: this.#account.email };
 	}
@@ -91,11 +90,9 @@ export class PasswordChangedEmail implements EmailContract {
 }
 
 /**
- * Absolute URL of the sign-in entry point.
- *
- * Built from the typed route so it cannot drift from the route table, and against the
- * published issuer host because a relative href in mail resolves against nothing. It acts
- * on nothing by itself: following it only offers the ways in this server already offers.
+ * Absolute URL of the sign-in entry point. Built from the typed route so it tracks the
+ * route table, and against the published issuer host because mail needs an absolute href.
+ * Following it only offers the ways in this server already offers.
  */
 function signInUrl(): string {
 	return new URL(routes.authorize.index.href(), ISSUER_HOST).toString();

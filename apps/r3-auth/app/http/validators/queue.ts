@@ -11,16 +11,16 @@
 import * as s from "remix/data-schema";
 
 /**
- * Every queue message type the worker understands, discriminated by `type`.
- *
- * One member today: the daily session sweep the cron trigger enqueues. It carries no
- * payload on purpose — the job derives everything it needs from the database — so a
- * redelivery of the same body is idempotent.
+ * Every queue message type the worker understands, discriminated by `type`. One
+ * member today: the daily session sweep the cron trigger enqueues, carrying no payload
+ * so a redelivery of the same body is idempotent.
  */
 export const QueueMessageSchema = s.variant("type", {
 	cleanExpiredSessions: s.object({
-		// The type argument is explicit because `literal` would otherwise widen to
-		// `string` and stop discriminating.
+		/**
+		 * The type argument is explicit because `literal` would otherwise widen to
+		 * `string` and stop discriminating.
+		 */
 		type: s.literal<"cleanExpiredSessions">("cleanExpiredSessions"),
 	}),
 });

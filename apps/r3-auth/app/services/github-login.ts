@@ -1,22 +1,13 @@
 /**
- * GitHub sign-in: starting the redirect, finishing the callback, and turning the
- * identity it returns into one of this server's subjects — provisioning the subject,
- * its connection and its billing customer on a first sign-in.
+ * GitHub sign-in: starts the redirect, completes the callback, and resolves the
+ * identity to a subject, provisioning its connection and billing customer on first sign-in.
  *
- * The provider's address list is read here as well, because the per-address `verified`
- * flag is published only there and nowhere on a profile, and `subjects.email_verified_at`
- * is served to relying parties as `email_verified`. Assuming it would record a
- * verification this server never observed.
+ * The database has no transactions, so provisioning writes sequentially and
+ * rolls back the subject when its connection cannot be written — an unconnected
+ * subject is unreachable and would block the next attempt on the same address.
  *
- * The database has no transactions, so provisioning writes sequentially and undoes the
- * subject when the connection it depends on cannot be written: a subject with no
- * connection is unreachable, and it holds the address on the unique column that the
- * next attempt needs.
- *
- * The billing mirror is deliberately not part of that: nobody is charged at sign-up, so
- * making the mirror fatal would put the identity server's availability behind a billing
- * vendor's for an operation with no money in it, and the refusal would also erase the
- * account it just refused. A failed mirror is logged and the person signs in.
+ * A failed billing mirror is only logged: nothing is charged at sign-up, so the
+ * sign-in it already granted stands regardless.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,49 +38,39 @@ const PROVIDER = "github";
 const GITHUB_USER_EMAILS_ENDPOINT = "https://api.github.com/user/emails";
 
 /**
- * The address list as this server reads it: the address and whether GitHub has verified it,
- * with every other field the endpoint returns dropped.
- *
- * Wrapped in an object because the validator takes a keyed input, and the list itself is a
- * bare JSON array; the wrapper never leaves this module.
+ * The address list as this server reads it: the address and whether GitHub has
+ * verified it, with every other field dropped. Wrapped in an object because the
+ * validator takes a keyed input; the wrapper stays module-local.
  */
 const GITHUB_EMAILS_SCHEMA = s.object({
 	emails: s.array(s.object({ email: s.string(), verified: s.boolean() })),
 });
 
 /**
- * Reason reported when provisioning was rolled back. Deliberately says nothing about
- * what failed: the relying party can only retry either way.
+ * Reason reported when provisioning was rolled back — the same text regardless
+ * of which write failed, since the relying party can only retry either way.
  */
 const PROVISIONING_FAILED = "Could not complete the sign-up. Please try again.";
 
 /**
- * A GitHub profile as this server reads it.
- *
- * `node_id` is not part of the provider's declared profile type, but it is present in
- * GitHub's response and it is the identifier already recorded for every connection in
- * this database, so it is read here rather than being lost to the narrower type.
+ * A GitHub profile as this server reads it. `node_id` is not part of the
+ * provider's declared profile type, but it is present in GitHub's response and
+ * is the identifier already recorded for every connection, so it is kept here.
  */
 type GitHubProfile = GitHubAuthProfile & { node_id?: unknown };
 
 /**
- * A completed GitHub sign-in: the profile, and whether GitHub itself reports the address
- * on it as verified.
- *
- * The flag is carried separately because the profile has no field for it — the address
- * list is a second request, and the provider that fetches it keeps only the address it
- * chose. Without this, "verified" could only ever be an assumption about GitHub's
- * behaviour, and this server would record a verification it never observed.
+ * A completed GitHub sign-in: the profile, and whether GitHub reports the
+ * profile's own address as verified. Carried separately because the profile
+ * itself has no such field, so the flag is never assumed from GitHub's behavior.
  */
 export interface GitHubIdentity {
 	/** The profile GitHub authenticated. */
 	profile: GitHubProfile;
 	/**
-	 * Whether GitHub reports {@link GitHubIdentity.profile}'s own address as verified.
-	 *
-	 * `false` whenever that cannot be established — no address, an unreadable list, a
-	 * list the address is absent from — so an unproven address is never recorded as
-	 * proven because a request failed.
+	 * Whether GitHub reports {@link GitHubIdentity.profile}'s own address as
+	 * verified. `false` whenever that cannot be established, so an unproven
+	 * address is never recorded as proven because a request failed.
 	 */
 	emailVerified: boolean;
 }
@@ -117,11 +98,9 @@ export class ProviderLoginError extends Error {
 }
 
 /**
- * Builds the GitHub provider for the request's own origin.
- *
- * Created per request rather than once at module scope because the callback URL has to
- * match the origin the person is actually on — the development host, the deployment's
- * own hostname, or the production domain — and GitHub compares it exactly.
+ * Builds the GitHub provider for the request's own origin. Created fresh per
+ * request because the callback URL must match wherever the person actually
+ * is — dev host, deployment hostname, or production — and GitHub compares it exactly.
  */
 function createProvider(origin: string) {
 	return createGitHubAuthProvider({
@@ -132,30 +111,18 @@ function createProvider(origin: string) {
 }
 
 /**
- * Starts the GitHub flow: stores the OAuth transaction in this server's own session
- * and answers with the redirect to GitHub.
- *
- * The default scopes are exactly what this server needs — the profile and the account's
- * email addresses — so none are requested explicitly.
+ * Starts the GitHub flow: stores the OAuth transaction in this server's own
+ * session and answers with the redirect to GitHub. The default scopes already
+ * cover what this server needs, so none are requested explicitly.
  */
 export async function startGitHubLogin(ctx: RequestContext): Promise<Response> {
 	return await startExternalAuth(createProvider(ctx.url.origin), ctx);
 }
 
 /**
- * Asks GitHub whether it has verified one specific address on the account that just
- * authorized this server.
- *
- * The address list is read here rather than trusted from the profile because the profile
- * carries no verification flag at all: the `verified` boolean lives only on this
- * endpoint's entries, and it is dropped before a profile is assembled. `user:email` is
- * among the scopes the flow requests, so the token this runs with can read it.
- *
- * Fails closed in every direction — a refused or unreadable response, and an address the
- * list does not contain, all report `false`. The comparison is case-insensitive because
- * the mailbox part is the only case-sensitive piece of an address in theory and never in
- * practice, and treating `A@x` and `a@x` as different addresses here would report a
- * verified address as unverified.
+ * Asks GitHub whether it has verified one address on the account that just
+ * authorized this server; the profile carries no such flag. Fails closed on
+ * any refused or unreadable response, logging only the status since the body can quote the address.
  *
  * @param accessToken - The provider token the callback exchanged; never logged.
  * @param email - The address to look up, as the profile reported it.
@@ -175,7 +142,6 @@ async function isGitHubEmailVerified(accessToken: string, email: string | null):
 		});
 
 		if (!response.ok) {
-			// The status only; the body can quote the address the request was about.
 			logger.info("github_emails_unreadable", { status: response.status });
 			return false;
 		}
@@ -198,13 +164,9 @@ async function isGitHubEmailVerified(accessToken: string, email: string | null):
 }
 
 /**
- * Completes the GitHub callback and returns the identity it authenticated, together with
- * GitHub's own verdict on the address.
- *
- * A callback carrying the provider's own `error` is reported as `access_denied`, which
- * is what a person declining the authorization looks like; anything else becomes
- * `server_error` with a fixed description, so nothing about the failure leaks to the
- * relying party.
+ * Completes the GitHub callback and returns the identity it authenticated,
+ * together with GitHub's own verdict on the address. A provider `error` maps
+ * to `access_denied`; anything else becomes a fixed `server_error`, so nothing leaks to the relying party.
  */
 export async function finishGitHubLogin(
 	ctx: RequestContext,
@@ -230,38 +192,22 @@ export async function finishGitHubLogin(
 }
 
 /**
- * The identifier a GitHub identity is recorded under.
- *
- * GitHub's `node_id` is what every existing connection in this database holds, so it
- * stays the identifier of record; the numeric id is used only when a response somehow
- * omits it, so an identity is never left unrecordable.
+ * The identifier a GitHub identity is recorded under: `node_id`, matching
+ * every existing connection in this database. Falls back to the numeric id
+ * only when a response omits it, so an identity is never left unrecordable.
  */
 function externalIdOf(profile: GitHubProfile): string {
 	return typeof profile.node_id === "string" ? profile.node_id : String(profile.id);
 }
 
 /**
- * Resolves a GitHub profile to the subject it signs in as, provisioning one on a first
- * sign-in.
- *
- * A returning identity is matched on its recorded identifier — the node id first, then
- * the numeric id, so a connection written under either is found. A first sign-in whose
- * email already belongs to a subject is refused rather than linked: the email is the
- * only thing tying them together, and silently adopting an existing account on that
- * basis is an account takeover if the address was never proven.
- *
- * A subject provisioned here starts verified only when GitHub said the address is
- * verified. When it did not, `email_verified_at` stays null, which is what makes
- * `email_verified` in UserInfo the truth rather than an assumption, and what puts the
- * account into the flow that asks the person to prove the address.
- *
- * The billing mirror is best effort: a refused or unreachable billing API is logged and
- * the sign-in still completes, because nothing is charged here and an identity server
- * that stops issuing sign-ins when a billing vendor is down is worse than a subject
- * whose customer record arrives late.
+ * Resolves a GitHub profile to the subject it signs in as, provisioning one on
+ * a first sign-in. An email already tied to a subject stops the sign-in,
+ * since address alone proves no ownership and adopting the account on it would be a takeover.
  *
  * @param db - Database the subject and connection are written to.
- * @param polar - Billing client the subject is mirrored into, best effort.
+ * @param polar - Billing client the subject is mirrored into, best effort; a
+ * failed mirror is only logged, since a later lookup by address recovers it.
  * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */
@@ -306,10 +252,6 @@ export async function resolveGitHubSubject(
 		display_name: profile.name ?? profile.login,
 		username: profile.login,
 		avatar: profile.avatar_url ?? "",
-		// Stamped only when GitHub's address list actually said `verified`. Anything else —
-		// an unverified entry, an unreadable list, an address the list does not hold —
-		// leaves this null, because a verification nobody observed is worse than none: it
-		// is published to every relying party as `email_verified: true`.
 		email_verified_at: emailVerified ? Date.now() : null,
 	});
 
@@ -324,12 +266,6 @@ export async function resolveGitHubSubject(
 	try {
 		await Customer.findOrCreateByEmail(polar, email, subject);
 	} catch {
-		// Logged and carried on with: the sign-in is complete without it, and there is
-		// nothing the person could do about a billing outage anyway. Nothing is rolled
-		// back — undoing it would refuse a sign-in that succeeded and erase the account,
-		// and the retry would meet the same outage with nothing left to reconcile from.
-		// `findOrCreateByEmail` looks up by address before creating, so the mirror is
-		// picked up by any later run against the same subject.
 		logger.error("github_customer_create_failed", { subjectId: subject.id });
 	}
 

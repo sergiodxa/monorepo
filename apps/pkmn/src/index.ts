@@ -1,17 +1,13 @@
-import type { GameDataSource } from "~/game/data/game-data";
-
 /**
- * Browser entrypoint: compose content, create the engine, and start the client.
- *
- * This module is the boundary between the document and the game. It assembles the
- * authored content registries into the engine's data source, builds a fresh
- * new-game world, constructs the canvas `GameClient`, and starts it on the boot
- * scene. Everything past this point runs through the presentation layer; the old
- * DOM demo it replaces is gone.
+ * Browser entrypoint and the boundary between the document and the game: it
+ * assembles the authored content registries into the engine's data source,
+ * builds a fresh new-game world, and starts the canvas client on the boot scene.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { GameDataSource } from "~/game/data/game-data";
+
 import { ITEMS } from "~/content/items";
 import { TYPE_MATCHUPS } from "~/content/matchups";
 import { MOVES } from "~/content/moves";

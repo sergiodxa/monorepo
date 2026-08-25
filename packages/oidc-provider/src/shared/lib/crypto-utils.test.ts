@@ -1,3 +1,11 @@
+/**
+ * Tests for HMAC signing, base64url encoding/decoding, and constant-time
+ * string comparison.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils";
@@ -40,7 +48,6 @@ describe("hmacSign", () => {
 	test("returns base64url-encoded signature", async () => {
 		let signature = await hmacSign("test", "secret");
 
-		// Base64url should not contain +, /, or =
 		expect(signature).not.toContain("+");
 		expect(signature).not.toContain("/");
 		expect(signature).not.toContain("=");
@@ -70,26 +77,24 @@ describe("base64UrlEncode", () => {
 	});
 
 	test("encodes Uint8Array to base64url", () => {
-		let bytes = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+		let bytes = new Uint8Array([72, 101, 108, 108, 111]);
 		expect(base64UrlEncode(bytes)).toBe("SGVsbG8");
 	});
 
 	test("replaces + with -", () => {
-		// Bytes that produce + in standard base64
 		let bytes = new Uint8Array([251, 239]);
 		let result = base64UrlEncode(bytes);
 		expect(result).not.toContain("+");
 	});
 
 	test("replaces / with _", () => {
-		// Bytes that produce / in standard base64
 		let bytes = new Uint8Array([255, 255]);
 		let result = base64UrlEncode(bytes);
 		expect(result).not.toContain("/");
 	});
 
 	test("removes padding", () => {
-		let bytes = new Uint8Array([72]); // Would be "SA==" in base64
+		let bytes = new Uint8Array([72]);
 		let result = base64UrlEncode(bytes);
 		expect(result).not.toContain("=");
 	});
@@ -133,7 +138,6 @@ describe("base64UrlDecode", () => {
 	});
 
 	test("handles missing padding", () => {
-		// "SA" without padding should decode to "H"
 		let result = base64UrlDecode("SA");
 		expect(result).toBe("H");
 	});
@@ -224,10 +228,8 @@ describe("hmac verification pattern", () => {
 		let data = "important data";
 		let secret = "my-secret-key";
 
-		// Sign the data
 		let signature = await hmacSign(data, secret);
 
-		// Verify by re-signing and comparing
 		let expectedSignature = await hmacSign(data, secret);
 		expect(constantTimeCompare(signature, expectedSignature)).toBe(true);
 	});
@@ -237,10 +239,8 @@ describe("hmac verification pattern", () => {
 		let tamperedData = "tampered data";
 		let secret = "my-secret-key";
 
-		// Sign the original data
 		let signature = await hmacSign(originalData, secret);
 
-		// Try to verify with tampered data
 		let tamperedSignature = await hmacSign(tamperedData, secret);
 		expect(constantTimeCompare(signature, tamperedSignature)).toBe(false);
 	});
@@ -250,10 +250,8 @@ describe("hmac verification pattern", () => {
 		let correctSecret = "correct-secret";
 		let wrongSecret = "wrong-secret";
 
-		// Sign with correct secret
 		let signature = await hmacSign(data, correctSecret);
 
-		// Try to verify with wrong secret
 		let wrongSignature = await hmacSign(data, wrongSecret);
 		expect(constantTimeCompare(signature, wrongSignature)).toBe(false);
 	});

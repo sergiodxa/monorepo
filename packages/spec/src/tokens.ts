@@ -54,7 +54,6 @@ export type TokenKind =
 
 /** A lexed token: kind, raw text, location, and decoded value when relevant. */
 export interface Token {
-	/** Which kind of token this is. */
 	kind: TokenKind;
 	/** The raw source text the token covers. */
 	text: string;

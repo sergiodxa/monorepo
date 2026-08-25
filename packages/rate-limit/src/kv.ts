@@ -76,11 +76,8 @@ export interface KVAdapterOptions {
 /**
  * Counts attempts as KV entries keyed by prefix, key, and window start.
  *
- * The count is read, incremented, and written back, which is not atomic: two
- * requests that read the same value in the same instant both write the same
- * increment, so the effective limit can drift upward under concurrency. KV's
- * eventual consistency widens that window further. Choose this backend for coarse
- * abuse protection, and a counting backend for a limit that must be exact.
+ * Reads, increments, and writes back the counter, so concurrent requests can
+ * double-count; choose a counting backend when the limit must be exact.
  */
 export class KVAdapter implements Adapter {
 	/** Requests permitted per window, as configured. */
@@ -111,9 +108,8 @@ export class KVAdapter implements Adapter {
 	/**
 	 * Spends budget for a key inside the current aligned window.
 	 *
-	 * A rollover needs no cleanup: the new window has a different entry key, and the
-	 * previous entry expires by TTL. A denied attempt performs no write, so a
-	 * client that keeps retrying costs reads only.
+	 * A rollover needs no cleanup since the new window uses a different entry key,
+	 * and a denied attempt writes nothing, so retries cost reads only.
 	 *
 	 * @param key - Namespaced identifier being limited.
 	 * @param cost - Units to spend, at least 1; defaults to 1.

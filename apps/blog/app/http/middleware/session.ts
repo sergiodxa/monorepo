@@ -1,8 +1,7 @@
 /**
- * HTTP middleware that attaches cookie-based, KV-backed session handling to each
- * request. It defines the session value shape, cookie name, one-year TTL, and KV
- * prefix, and lazily builds a singleton session middleware wired to a signed
- * cookie and `KVSessionStorage`. Exists to persist login state across requests.
+ * Cookie-based session handling: a signed cookie carries the session id while
+ * the values live in KV for a year, so login state survives across requests and
+ * across isolates.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,11 +16,11 @@ import { getEnv } from "~/app/http/middleware/env";
 import { KVSessionStorage } from "~/app/infrastructure/session/kv-session-storage-adapter";
 
 /**
- * Groups session payload types used by this middleware.
+ * Session payload types for cookie-backed sessions.
  */
 export namespace SessionMiddleware {
 	/**
-	 * Represents values persisted in each user session.
+	 * Values kept for the lifetime of a signed-in session.
 	 */
 	export interface Values extends Record<string, unknown> {
 		userId?: string;
@@ -29,26 +28,16 @@ export namespace SessionMiddleware {
 	}
 }
 
-/**
- * Cookie name used to read and persist session IDs.
- */
 const SESSION_COOKIE_NAME = "r3:session";
-/**
- * Session lifetime in seconds (one year).
- */
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
-/**
- * Key prefix for session entries stored in KV.
- */
 const SESSION_PREFIX = "session:";
 
-/**
- * Cached singleton middleware instance reused across requests.
- */
 let cachedSessionMiddleware: ReturnType<typeof createSessionMiddleware> | null = null;
 
 /**
- * Attaches session handling to requests with a lazily created singleton.
+ * Attaches session handling to every request. The underlying middleware is
+ * built on first use because its cookie secret comes from request-scoped env
+ * bindings, then reused by later requests.
  */
 let sessionMiddleware: Middleware = (ctx, next) => {
 	let sessionMiddleware = cachedSessionMiddleware;
@@ -63,9 +52,6 @@ let sessionMiddleware: Middleware = (ctx, next) => {
 
 export default sessionMiddleware;
 
-/**
- * Creates the session middleware with cookie and KV-backed storage.
- */
 function createSessionMiddleware() {
 	let sessionCookie = createCookie(SESSION_COOKIE_NAME, {
 		path: "/",

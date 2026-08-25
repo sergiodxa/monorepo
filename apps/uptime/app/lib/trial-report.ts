@@ -1,21 +1,12 @@
 /**
- * The arithmetic the free-watch reports share: turning a target's checks into the segments of
- * an uptime bar, reading a watch's running totals off as the three numbers under it, and
- * grouping its failures into the incidents a report can name.
+ * The arithmetic the free-watch reports share: turning a target's checks
+ * into bar segments, reading a watch's running totals into the three
+ * numbers under it, and grouping failures into a report's incidents.
  *
- * Shared because the same bar is drawn at three scales by three different senders — one
- * segment per hour over a day for the daily digest, one per day over a week for the wrap-up,
- * and the same week again when a repeat submission is answered with a report instead of a
- * second free week — and the only thing that differs between them is the period. Keeping the
- * bucketing in one place is what stops a bar in one email disagreeing with the same data in
- * another.
- *
- * The two rules every uptime report shares, whoever reads it, live in
- * `~/app/lib/uptime-report` instead: which status wins when several checks fall in one
- * period, and how a ratio is printed.
- *
- * Deliberately not in `~/app/emails/`: nothing here renders, and its callers are assembling
- * data before an email class ever exists.
+ * One place for the bucketing keeps the daily digest, the weekly wrap-up,
+ * and a repeat-submission report agreeing on the same data at three
+ * different scales. It builds that data only; rendering stays with the
+ * email classes that call it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,11 +25,9 @@ export interface Segmentable {
 }
 
 /**
- * Collapses checks into one segment per period: the worst status any check in that period
- * reported, and `null` for a period no check covers.
- *
- * A check outside the range is dropped rather than clamped into the nearest period — a stray
- * row is better missing from the bar than drawn in an hour it did not happen in.
+ * Collapses checks into one segment per period: the worst status any
+ * check in that period reported, `null` for an uncovered period, and
+ * out-of-range checks excluded from the bar entirely.
  *
  * @param results - Checks to place, in any order.
  * @param start - Instant the first period begins at.
@@ -76,18 +65,9 @@ export interface TrialIncident {
 }
 
 /**
- * Groups a target's checks into incidents: maximal runs of consecutive `down` results.
- *
- * **Only `down` opens an incident.** `degraded` is a slow answer, not an outage, and calling
- * it one would make a report claim something the reader can check and disprove. It is still
- * visible — it colours its own segment of the bar, and it is excluded from `checks_ok` — so
- * nothing is hidden by leaving it out of this count.
- *
- * **No duration is derived, deliberately.** Checks are an hour apart, so the only honest
- * statements available are when the first failure was seen, when the last one was, and how
- * many there were. Turning that into "down for 3 hours" would assert something about the
- * fifty-nine minutes between checks that nothing observed, and the error is one-sided:
- * every such figure reads as more precise than the data it came from.
+ * Groups a target's checks into incidents: maximal runs of consecutive
+ * `down` results, closed by any check that answers, including `degraded`.
+ * Checks land an hour apart, so only the count and endpoints are reported.
  *
  * @param results - Checks in any order; sorted here so a caller cannot change the answer.
  * @returns The incidents, oldest first, empty when nothing ever failed.
@@ -118,16 +98,9 @@ export function incidentsFrom(results: Segmentable[]): TrialIncident[] {
 }
 
 /**
- * The three numbers under a report's bar, read off the watch's own running totals rather
- * than re-derived from its history.
- *
- * Those columns already cover exactly the window a whole-watch report describes, so counting
- * 168 rows to reach the same answer would be work with no different result. The bar still
- * needs the rows, because daily segments cannot be recovered from a total.
- *
- * `max_response_time_ms` is zero exactly when nothing ever answered — the column starts at
- * zero and only ever takes a `MAX` against a real measurement — so zero is reported as "no
- * slowest response" rather than as an implausibly fast one.
+ * The three numbers under a report's bar, read from the watch's own
+ * running totals, which already cover the report's exact window. A zero
+ * `max_response_time_ms` signals that nothing ever answered the check.
  *
  * @param watch - The watch to report on.
  * @returns Checks run, uptime as a percentage string, and the slowest response.

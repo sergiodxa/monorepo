@@ -1,14 +1,9 @@
 /**
- * The workspace for a runtime that has no filesystem. Every path is refused,
- * and `cleanup` is a no-op because there is nothing to remove.
- *
- * A run without `fs` and `cli` registered can never reach `resolve` — those are
- * the only capabilities that resolve a path — so this exists to make that
- * arrangement expressible rather than to be used. It also makes the failure
- * legible if the arrangement is ever wrong: a spec that reaches for a file is
- * told there is no filesystem here, in the language's own error shape, instead
- * of crashing on a missing `node:fs` or silently writing into a directory that
- * disappears with the isolate.
+ * The workspace for a runtime that has no filesystem: every path is refused
+ * and `cleanup` is a no-op, since there is nothing to remove. Without `fs`
+ * or `cli` registered, a spec can never reach `resolve`; this workspace
+ * makes that absence legible, so a spec naming a path gets a `ToolError` in
+ * the language's normal diagnostic shape, naming the exact path it tried.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,17 +19,16 @@ import type { Workspace } from "./workspace";
 import { ToolError } from "./errors";
 
 /**
- * Create a workspace that refuses every path.
+ * Create a workspace that refuses every path, shaped as an async factory
+ * returning a `Result` so it works directly as `runTests`'s `createWorkspace`
+ * like the on-disk factory that can genuinely fail — this one never does.
  *
- * Shaped as an async factory returning a `Result` so it is usable directly as
- * `runTests`'s `createWorkspace`, matching the on-disk factory that genuinely
- * can fail; this one never does.
- *
- * @returns A workspace whose `resolve` always fails and whose `cleanup` does nothing.
+ * @returns A workspace whose `resolve` always fails, whose `cleanup` does
+ * nothing, and whose `root` is a placeholder string that no resolution ever
+ * joins onto.
  */
 export async function createNoFilesystemWorkspace(): Promise<Result<Workspace, SpecError>> {
 	let workspace: Workspace = {
-		// Nothing resolves, so the root is only ever reported, never joined onto.
 		root: "<no filesystem>",
 		resolve(path) {
 			return failure(

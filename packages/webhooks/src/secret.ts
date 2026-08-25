@@ -22,11 +22,9 @@ import { decodeBase64 } from "./lib/base64";
 const SECRET_PREFIX = "whsec_";
 
 /**
- * How a caller supplies signing secrets to `verify()`.
- *
- * Both fields are optional in the type and at least one must resolve to a usable
- * secret at runtime: an endpoint whose secret is unset fails closed instead of
- * accepting whatever arrives.
+ * How a caller supplies signing secrets to `verify()`. Both fields are
+ * optional in the type, but at least one must resolve to a usable secret at
+ * runtime, so an endpoint whose secret is unset rejects every delivery.
  */
 export interface SecretOptions {
 	/**
@@ -46,10 +44,8 @@ export interface SecretOptions {
 /**
  * Decodes one secret into the key bytes the HMAC is computed with.
  *
- * The `whsec_` prefix is stripped when present, then the remainder is base64
- * decoded, which is what every specification implementation keys with. A secret
- * that is not base64 is a configuration error rather than a second key format,
- * because guessing between the two would make signatures unverifiable elsewhere.
+ * Environment bindings are typed as `string` optimistically, so a
+ * non-string, empty, or non-base64 secret fails here as a configuration error.
  *
  * @param secret Secret as the sender issued it.
  * @returns Key bytes, or `InvalidSecretError` for a missing, empty, or non-base64 secret.
@@ -57,8 +53,6 @@ export interface SecretOptions {
  * decodeSecret("whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"); // success(24 bytes)
  */
 export function decodeSecret(secret: string): Result<Bytes, InvalidSecretError> {
-	// The type says `string`, but secrets come from environment bindings that are
-	// routinely typed optimistically, so an unset one is handled rather than thrown.
 	if (typeof secret !== "string" || secret.length === 0) {
 		return failure(new InvalidSecretError("no secret was provided"));
 	}
@@ -76,10 +70,8 @@ export function decodeSecret(secret: string): Result<Bytes, InvalidSecretError> 
 /**
  * Resolves the configured secrets into the key material to try, in order.
  *
- * `secret` is tried before `secrets` so the primary secret decides the common
- * case. Every configured secret must decode: one unusable entry fails the whole
- * call, because a silently skipped secret is how a rotation stops working without
- * anyone noticing.
+ * `secret` is tried before `secrets`, and every entry must decode: a
+ * silently skipped secret is how a rotation stops working unnoticed.
  *
  * @param options Secret configuration as passed to `verify()`.
  * @returns Key material for each configured secret, or `InvalidSecretError` when none is usable.

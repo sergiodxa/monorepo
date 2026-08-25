@@ -1,6 +1,4 @@
 /**
- * Unit tests for `autofill()`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

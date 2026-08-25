@@ -21,11 +21,9 @@ export interface LinkValue {
 }
 
 /**
- * Splits a header value on separators that are not inside brackets or quotes.
- *
- * The scanner is shared by the top-level comma split and the per-link semicolon
- * split, because both must ignore a separator that appears inside a `<uri-ref>` or
- * inside a `"quoted string"`.
+ * Splits a header value on separators that are not inside brackets or quotes,
+ * since the top-level comma split and the per-link semicolon split both need to
+ * ignore a separator inside a `<uri-ref>` or a `"quoted string"`.
  */
 function splitOutsideBracketsAndQuotes(value: string, separator: string): string[] {
 	let parts: string[] = [];
@@ -110,11 +108,9 @@ function parseRels(parameters: string[]): string[] {
 }
 
 /**
- * Parses a `Link` header value into its individual links.
- *
- * Malformed entries are dropped rather than raising, because the header being
- * merged into belongs to a response that is already being built and one bad link
- * is not worth failing it.
+ * Parses a `Link` header value into its individual links, dropping malformed
+ * entries instead of raising because the header being merged into belongs to a
+ * response already under construction where one bad link should not fail it.
  *
  * @param header The raw header value, or `null` when the response carries none.
  * @returns The links in source order.

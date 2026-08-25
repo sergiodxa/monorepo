@@ -1,14 +1,8 @@
 import { unwrap } from "@pkg/result";
 /**
- * Verifies the experience system's single-creature grants and battle experience distribution.
- *
- * The tests build a tiny medium-fast content source (experience === level cubed) so level thresholds are
- * exact, then confirm `grantCreatureExperience` accumulates experience, clamps negative amounts, and
- * reports the level delta and new total. They also confirm `awardBattleExperience` splits
- * `floor(baseExperience * enemyLevel / 7)` among non-fainted survivors, skips fainted members and
- * sub-one awards, and emits one grant per surviving creature per defeated enemy. Finally they confirm
- * each survivor gains the fainted species' `evYield` and that the per-stat (255) and total (510) EV
- * caps hold.
+ * Verifies experience grants, battle-experience distribution across
+ * survivors, and effort-value caps (255 per stat, 510 total) using a
+ * medium-fast fixture species where experience equals level cubed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,7 +34,6 @@ let NATURE_ID = "HARDY";
 /** Base experience of the fixture species, chosen so awards land on clean integers. */
 let BASE_EXPERIENCE = 64;
 
-/** Effort value yield of the fixture species: two stats summing to three. */
 let EV_YIELD = { [Stat.Attack]: 2, [Stat.Defense]: 1 };
 
 /** Builds a flat stat block so HP math stays predictable. */
@@ -164,7 +157,6 @@ function createWorld(creatures: Record<string, LegacyCreatureComponent>): {
 
 test("grantCreatureExperience adds experience and reports the new total without a level change", () => {
 	let id = createCreatureId("one");
-	// 125 -> level 5; +50 stays under 216 (level 6), so the level is unchanged.
 	let { world } = createWorld({ [id]: createCreature(125) });
 
 	let grant = grantCreatureExperience(createGameData(), world, id, 50);
@@ -175,7 +167,6 @@ test("grantCreatureExperience adds experience and reports the new total without 
 
 test("grantCreatureExperience reports a level increase when the threshold is crossed", () => {
 	let id = createCreatureId("one");
-	// 125 (level 5) + 875 = 1000, exactly level 10.
 	let { world } = createWorld({ [id]: createCreature(125) });
 
 	let grant = grantCreatureExperience(createGameData(), world, id, 875);
@@ -196,7 +187,6 @@ test("grantCreatureExperience clamps a negative amount to zero", () => {
 test("awardBattleExperience gives the full split to a single survivor", () => {
 	let ally = createCreatureId("ally");
 	let enemy = createCreatureId("enemy");
-	// Enemy at level 10: floor(64 * 10 / 7) = 91, split among 1 survivor.
 	let { world } = createWorld({ [ally]: createCreature(125), [enemy]: createCreature(1000) });
 
 	let grants = awardBattleExperience(createGameData(), world, [enemy], [ally]);
@@ -211,7 +201,6 @@ test("awardBattleExperience splits the award evenly across two survivors", () =>
 	let allyA = createCreatureId("ally-a");
 	let allyB = createCreatureId("ally-b");
 	let enemy = createCreatureId("enemy");
-	// floor(64 * 10 / 7) = 91, floor(91 / 2) = 45 to each survivor.
 	let { world } = createWorld({
 		[allyA]: createCreature(125),
 		[allyB]: createCreature(125),
@@ -229,7 +218,6 @@ test("awardBattleExperience gives fainted party members nothing", () => {
 	let survivor = createCreatureId("survivor");
 	let fainted = createCreatureId("fainted");
 	let enemy = createCreatureId("enemy");
-	// Fixture HP at level 5 is 20, so damage 20 marks a fainted member (damage >= maxHP).
 	let { world } = createWorld({
 		[survivor]: createCreature(125),
 		[fainted]: createCreature(125, 20),
@@ -238,7 +226,6 @@ test("awardBattleExperience gives fainted party members nothing", () => {
 
 	let grants = awardBattleExperience(createGameData(), world, [enemy], [survivor, fainted]);
 
-	// Only the survivor is a participant, so it gets the full 91 and the fainted one is untouched.
 	expect(grants.map((grant) => grant.creatureId)).toEqual([survivor]);
 	expect(world.creatureProgress[survivor]?.experience).toBe(125 + 91);
 	expect(world.creatureProgress[fainted]?.experience).toBe(125);
@@ -260,12 +247,10 @@ test("awardBattleExperience returns nothing when every party member has fainted"
 test("awardBattleExperience skips an enemy whose award rounds down to zero", () => {
 	let ally = createCreatureId("ally");
 	let weakEnemy = createCreatureId("weak");
-	// A base-experience-3 enemy at level 1: floor(3 * 1 / 7) === 0, so no experience is awarded.
 	let { world } = createWorld({
 		[ally]: createCreature(125),
 		[weakEnemy]: createCreature(0),
 	});
-	// Point the enemy at the low-base-experience species loaded into the weak game data.
 	world.creatureIdentity[weakEnemy] = { speciesId: WEAK_SPECIES_ID };
 
 	let grants = awardBattleExperience(createWeakGameData(), world, [weakEnemy], [ally]);
@@ -297,7 +282,6 @@ test("awardBattleExperience emits one grant per enemy for a survivor", () => {
 
 	let grants = awardBattleExperience(createGameData(), world, [enemyA, enemyB], [ally]);
 
-	// One grant per defeated enemy, each adding 91.
 	expect(grants).toHaveLength(2);
 	expect(world.creatureProgress[ally]?.experience).toBe(125 + 91 + 91);
 });
@@ -314,7 +298,6 @@ test("awardBattleExperience adds the fainted species' EV yield to each survivor"
 
 	awardBattleExperience(createGameData(), world, [enemy], [allyA, allyB]);
 
-	// Both survivors gain the fixture yield of Attack +2, Defense +1.
 	for (let ally of [allyA, allyB]) {
 		expect(world.creatureProgress[ally]?.ev[Stat.Attack]).toBe(2);
 		expect(world.creatureProgress[ally]?.ev[Stat.Defense]).toBe(1);
@@ -334,7 +317,6 @@ test("awardBattleExperience accumulates EV yield across multiple defeated enemie
 
 	awardBattleExperience(createGameData(), world, [enemyA, enemyB], [ally]);
 
-	// Two faints of the fixture species: Attack +2 twice, Defense +1 twice.
 	expect(world.creatureProgress[ally]?.ev[Stat.Attack]).toBe(4);
 	expect(world.creatureProgress[ally]?.ev[Stat.Defense]).toBe(2);
 });
@@ -342,7 +324,6 @@ test("awardBattleExperience accumulates EV yield across multiple defeated enemie
 test("awardBattleExperience still awards EV yield when the experience award rounds to zero", () => {
 	let ally = createCreatureId("ally");
 	let weakEnemy = createCreatureId("weak");
-	// A base-experience-3 enemy at level 1 awards no experience, but still yields EVs on faint.
 	let { world } = createWorld({
 		[ally]: createCreature(125),
 		[weakEnemy]: createCreature(0),
@@ -361,7 +342,6 @@ test("grantCreatureEvYield clamps a single stat to 255", () => {
 	let id = createCreatureId("one");
 	let { world } = createWorld({ [id]: createCreature(125, 0, statSet(0)) });
 
-	// Apply Attack +255 twelve times; the stat can never exceed 255.
 	for (let index = 0; index < 12; index += 1) {
 		grantCreatureEvYield(world, id, { [Stat.Attack]: 255 });
 	}
@@ -371,7 +351,6 @@ test("grantCreatureEvYield clamps a single stat to 255", () => {
 
 test("grantCreatureEvYield stops adding once the 510 total cap is reached", () => {
 	let id = createCreatureId("one");
-	// Start already carrying 508 EVs (255 Attack + 253 Defense), leaving 2 points of headroom.
 	let startingEv = {
 		...statSet(0),
 		[Stat.Attack]: 255,
@@ -379,7 +358,6 @@ test("grantCreatureEvYield stops adding once the 510 total cap is reached", () =
 	};
 	let { world } = createWorld({ [id]: createCreature(125, 0, startingEv) });
 
-	// A yield of Speed +3 can only add 2 before the 510 total cap blocks the rest.
 	grantCreatureEvYield(world, id, { [Stat.Speed]: 3 });
 
 	let ev = world.creatureProgress[id]?.ev;

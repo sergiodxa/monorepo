@@ -1,3 +1,10 @@
+/**
+ * Tests getClientIP's handling of the CF-Connecting-IP header across
+ * single, missing, IPv6, and multi-value cases.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { getClientIP } from "./index";

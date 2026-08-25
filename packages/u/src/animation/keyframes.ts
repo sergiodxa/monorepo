@@ -1,9 +1,7 @@
 /**
- * The primitive `@keyframes` emitter. It only produces the keyframes rule
- * itself; it never sets `animationName`, `animationDuration`, or any other
- * host declaration. This package draws the line between CSS primitives and
- * animation opinions here: pairing keyframes with a running animation is a
- * call-site decision (or `u.animation()`'s job), not this utility's.
+ * The primitive `@keyframes` emitter: it produces the keyframes rule alone,
+ * leaving the host declarations that run the animation to the call site or to
+ * `u.animation()`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,16 +12,9 @@ import type { UtilityMixin } from "../internal/descriptor";
 import { nest, utility } from "../internal/descriptor";
 
 /**
- * Emits an `@keyframes` rule under `name`. It does not style the host
- * element at all, so pair it with a plain `css()` call (or reach for
- * `u.animation()` instead) that sets `animationName` and `animationDuration`
- * at the use site.
- *
- * Reach for this rather than writing an `@keyframes` key by hand inside a
- * nested block. The serializer only reads stop keys (`from`, `to`, `50%`) as
- * stop selectors while the `@keyframes` rule sits outside any selector block;
- * nested inside one, every stop serializes as a `50%: [object Object]`
- * declaration that browsers drop. This helper always emits at the top level.
+ * Emits an `@keyframes` rule under `name` at the top level, where the
+ * serializer reads stop keys (`from`, `to`, `50%`) as stop selectors. Pair it
+ * with a `css()` call that sets `animationName` and `animationDuration`.
  *
  * @example
  * <div
@@ -39,7 +30,7 @@ import { nest, utility } from "../internal/descriptor";
  *   ]}
  * />
  * @example
- * // Equivalent only at the top level of a `css()` call, never nested deeper.
+ * // Equivalent at the top level of a `css()` call.
  * css({ "@keyframes fade-in": { from: { opacity: 0 }, to: { opacity: 1 } } })
  */
 export function keyframes<Node extends Element = Element>(

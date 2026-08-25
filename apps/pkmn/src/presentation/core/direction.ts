@@ -1,10 +1,8 @@
 /**
- * The four cardinal facings shared across the presentation.
- *
- * Movement, sprite rows, NPC facing, warps, and save state all speak in these
- * directions, so the type and its small helpers (grid delta, opposite, the sheet
- * row a facing maps to) live in one dependency-free module that overworld and
- * render code can both import without coupling to each other.
+ * The four cardinal facings shared across the presentation. Movement, sprite
+ * rows, NPC facing, warps, and save state all speak in these directions, so
+ * the type and its helpers (grid delta, opposite, sprite row) live in one
+ * dependency-free module importable without coupling to other modules.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

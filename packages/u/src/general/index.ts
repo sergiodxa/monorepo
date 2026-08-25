@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { calc } from "./calc";
 export { counterIncrement } from "./counter-increment";
 export { counterReset } from "./counter-reset";

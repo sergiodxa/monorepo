@@ -1,10 +1,9 @@
 /**
- * Integration tests for `requireTeam`. They run the real database lookup
- * (`Team.findByIdOrSlug` / `Team.findMembership`) against an in-memory SQLite
- * database with real migrations applied, and the real session + auth chain to
- * resolve the viewer, to verify a member can load their team by id or by slug,
- * and that a missing team, a non-member viewer, and an anonymous request all
- * resolve to the same 404 — never leaking whether the team exists.
+ * Integration tests for `requireTeam`, exercising the real `Team.findByIdOrSlug`
+ * / `Team.findMembership` lookups plus the real session and auth chain, to verify
+ * a member loads their team by id or slug, and a missing team, a non-member, and
+ * an anonymous request all resolve to the same 404 — concealing whether the team
+ * exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +33,6 @@ let outsider: Viewer = {
 	avatar: "",
 };
 
-/** Inserts a team owned (and administered) by `owner`, with slug "acme". */
 async function seedTeam(db: Db) {
 	let team = await db.create(
 		teams,

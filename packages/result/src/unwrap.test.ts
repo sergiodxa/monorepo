@@ -1,3 +1,10 @@
+/**
+ * Tests for `unwrap`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";
@@ -27,7 +34,7 @@ describe(unwrap, () => {
 		let error = new Error("Something went wrong");
 		let result: Result<number, Error> = failure(error);
 		let value = unwrap(result, (e) => e.message.length);
-		expect(value).toBe(20); // "Something went wrong".length
+		expect(value).toBe(20);
 	});
 
 	test("fallback receives the error for computation", () => {

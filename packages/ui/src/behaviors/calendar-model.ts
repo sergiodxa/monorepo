@@ -1,7 +1,7 @@
 /**
  * Headless state model for calendar grids: tracks the keyboard-focused day,
  * the visible month page, and an in-progress range selection (anchor plus
- * hover preview), independent of any selected-value storage or rendering.
+ * hover preview), leaving value storage and rendering to the consumer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,10 +11,6 @@ import { TypedEventTarget } from "remix/ui";
 
 import { dispatchChange } from "../utils/dispatch-change";
 
-/**
- * Number of days in a single week, used to translate a "move by one week"
- * navigation intent into a day offset.
- */
 const DAYS_PER_WEEK = 7;
 
 /**
@@ -23,13 +19,10 @@ const DAYS_PER_WEEK = 7;
 export namespace CalendarModel {
 	/**
 	 * An inclusive start/end pair of calendar days, always normalized so
-	 * `start` is not after `end` regardless of the order the two dates were
-	 * produced in.
+	 * `start` comes first, whatever order the two endpoints were picked in.
 	 */
 	export interface Range {
-		/** First day of the range, inclusive. */
 		start: Date;
-		/** Last day of the range, inclusive. */
 		end: Date;
 	}
 
@@ -43,46 +36,37 @@ export namespace CalendarModel {
 		 */
 		focusedDate?: Date;
 		/**
-		 * Earliest day the model will focus or accept as a range endpoint.
-		 * Navigation and range methods clamp to this bound instead of moving
-		 * past it.
+		 * Earliest day the model will focus or accept as a range endpoint;
+		 * navigation and range methods clamp to it.
 		 */
 		min?: Date;
 		/**
-		 * Latest day the model will focus or accept as a range endpoint.
-		 * Navigation and range methods clamp to this bound instead of moving
-		 * past it.
+		 * Latest day the model will focus or accept as a range endpoint;
+		 * navigation and range methods clamp to it.
 		 */
 		max?: Date;
 		/**
 		 * Predicate marking individual days as unselectable (closures on a
-		 * weekend, already-booked slots, …). Navigation still visits these
-		 * days — only {@link CalendarModel.isDisabled} reflects the
-		 * predicate — so keyboard users can pass through a disabled day
-		 * without it disappearing from the grid.
+		 * weekend, already-booked slots, …). Navigation still visits these days,
+		 * so keyboard users can reach a selectable day past them.
 		 */
 		isDateDisabled?: (date: Date) => boolean;
 	}
 
 	/** Events dispatched by {@link CalendarModel} as its state changes. */
 	export interface EventMap {
-		/** Dispatched after focus, the visible month, the range anchor, or the range preview changes. */
+		/**
+		 * Dispatched after focus, the visible month, the range anchor, or the
+		 * range preview changes.
+		 */
 		change: Event;
 	}
 }
 
 /**
- * Owns the interaction state a calendar grid needs beyond the platform's own
- * form controls: which day carries keyboard focus, which month page is on
- * screen, and — while a range is being built — the anchor day and the day
- * currently under pointer/keyboard hover. It does not store a selected date
- * or committed range itself; that value lives wherever the consumer already
- * keeps it (a native date input, a form field), and the model only tracks
- * the ephemeral state around choosing it.
- *
- * Every method that changes state dispatches a plain `"change"` event, so a
- * hydrated island can subscribe once and re-render on any update instead of
- * re-rendering per state slice.
+ * Owns the ephemeral state around picking a date: the keyboard-focused day,
+ * the visible month page, and a range's anchor plus hover preview. The chosen
+ * value stays with the consumer, and every state change dispatches `"change"`.
  *
  * @example
  * let model = new CalendarModel({ focusedDate: new Date(2026, 0, 15) });
@@ -100,8 +84,7 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 
 	/**
 	 * Builds the model with an initial focused day and optional selectable
-	 * bounds. The visible month is derived from the focused day, so callers
-	 * never set it directly.
+	 * bounds. The visible month follows from the focused day.
 	 *
 	 * @param options Initial focus, selectable bounds, and disabled-day rule.
 	 */
@@ -119,17 +102,16 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 
 	/**
 	 * The day that currently carries keyboard/roving-tabindex focus. Always
-	 * a fresh `Date` instance — mutating it does not affect model state.
+	 * a fresh `Date` instance, so callers may mutate it freely.
 	 */
 	get focusedDate(): Date {
 		return new Date(this.#focusedDate);
 	}
 
 	/**
-	 * The first day of the month page currently on screen. Changes whenever
-	 * focus moves into a different month, and can also change on its own via
-	 * {@link showMonth}/{@link showNextMonth}/{@link showPreviousMonth} when
-	 * the consumer pages the grid without moving focus.
+	 * The first day of the month page on screen. Follows focus into a new
+	 * month, and moves on its own when the consumer pages the grid via
+	 * {@link showMonth}/{@link showNextMonth}/{@link showPreviousMonth}.
 	 */
 	get visibleMonth(): Date {
 		return new Date(this.#visibleMonth);
@@ -154,9 +136,8 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 
 	/**
 	 * The range implied by the current anchor and preview day, normalized so
-	 * `start` is not after `end`. `null` when no range selection is in
-	 * progress. Before a preview day is set, this collapses to a single-day
-	 * range starting and ending on the anchor.
+	 * `start` comes first; `null` when no range selection is in progress.
+	 * Before a preview day is set it collapses to a single day on the anchor.
 	 */
 	get previewRange(): CalendarModel.Range | null {
 		if (this.#anchorDate === null) return null;
@@ -179,10 +160,8 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 
 	/**
 	 * Moves focus to an arbitrary day, clamped to the selectable bounds, and
-	 * pages the visible month to match. Use this for pointer selection of a
-	 * grid cell; keyboard navigation should prefer the directional
-	 * `focusNext*`/`focusPrevious*` methods so callers don't duplicate the
-	 * offset math.
+	 * pages the visible month to match. Suits pointer selection of a grid
+	 * cell; the directional `focus*` methods own the keyboard offset math.
 	 *
 	 * @param date Day to focus.
 	 */
@@ -238,11 +217,9 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 	}
 
 	/**
-	 * Pages the visible month to the month containing `date`, without moving
-	 * focus. Use this for a header's month/year picker or any navigation
-	 * that changes what's on screen while leaving the focused day where it
-	 * was (it simply scrolls out of the rendered grid until focus moves
-	 * again).
+	 * Pages the visible month to the month containing `date`, leaving focus
+	 * where it is — the focused day scrolls out of the rendered grid until
+	 * focus moves again. Suits a header's month/year picker.
 	 *
 	 * @param date Any day within the month to display.
 	 */
@@ -254,12 +231,12 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 		dispatchChange(this);
 	}
 
-	/** Pages the visible month forward by one, without moving focus. */
+	/** Pages the visible month forward by one, leaving focus where it is. */
 	showNextMonth(): void {
 		this.showMonth(addMonths(this.#visibleMonth, 1));
 	}
 
-	/** Pages the visible month back by one, without moving focus. */
+	/** Pages the visible month back by one, leaving focus where it is. */
 	showPreviousMonth(): void {
 		this.showMonth(addMonths(this.#visibleMonth, -1));
 	}
@@ -278,10 +255,9 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 	}
 
 	/**
-	 * Updates the pending second endpoint while an anchor is set, so
-	 * {@link previewRange} reflects the day currently under hover or focus.
-	 * A no-op when no range is in progress, so hover handlers can call it
-	 * unconditionally without checking {@link anchorDate} first.
+	 * Updates the pending second endpoint so {@link previewRange} tracks the
+	 * day under hover or focus. A no-op while no range is in progress, so
+	 * hover handlers can call it unconditionally.
 	 *
 	 * @param date Day currently under hover/focus.
 	 */
@@ -294,9 +270,8 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 
 	/**
 	 * Commits the range from the current anchor to `date` and clears the
-	 * pending selection, returning the resolved, normalized range. Returns
-	 * `null` when no range was in progress, in which case the consumer's
-	 * selected value is left untouched.
+	 * pending selection, returning it normalized. With no range in progress
+	 * the consumer's selected value stays untouched.
 	 *
 	 * @param date Day chosen as the second endpoint.
 	 * @returns The committed range, or `null` when there was no anchor.
@@ -318,8 +293,9 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 	}
 
 	/**
-	 * Abandons an in-progress range selection (e.g. on Escape or blur)
-	 * without committing anything. A no-op when no range is in progress.
+	 * Abandons an in-progress range selection (e.g. on Escape or blur),
+	 * leaving the consumer's selected value untouched. A no-op when no range
+	 * is in progress.
 	 */
 	cancelRange(): void {
 		if (this.#anchorDate === null && this.#previewDate === null) return;
@@ -377,9 +353,9 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 	}
 
 	/**
-	 * Whether `date` is outside the model's selectable bounds: before
+	 * Whether `date` falls outside the selectable bounds — before
 	 * {@link min}, after {@link max}, or rejected by the `isDateDisabled`
-	 * predicate passed to the constructor.
+	 * predicate.
 	 *
 	 * @param date Day to test.
 	 */
@@ -391,10 +367,9 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 	}
 
 	/**
-	 * Shared implementation behind every `focus*` method: clamps `date` to
-	 * the selectable bounds, updates the focused day, pages the visible
-	 * month to match, and dispatches `"change"` — unless the day is already
-	 * focused, in which case nothing changes and no event fires.
+	 * Shared by every `focus*` method: clamps to the selectable bounds, pages
+	 * the visible month to match, and dispatches `"change"` only when the
+	 * focused day actually moves.
 	 */
 	#setFocusedDate(date: Date): void {
 		let next = clampDate(startOfDay(date), this.#min, this.#max);
@@ -408,8 +383,7 @@ export class CalendarModel extends TypedEventTarget<CalendarModel.EventMap> {
 
 /**
  * Reports whether two dates fall on the same calendar day, ignoring
- * time-of-day. The comparator every other date-equality check in this
- * module is built from.
+ * time-of-day.
  *
  * @param a First date to compare.
  * @param b Second date to compare.
@@ -435,22 +409,10 @@ function startOfDay(date: Date): Date {
 	return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-/**
- * Returns the first day of the month containing `date`.
- *
- * @param date Any date within the target month.
- * @returns A new `Date` set to the 1st of that month, at midnight.
- */
 function startOfMonth(date: Date): Date {
 	return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-/**
- * Returns the last day of the month containing `date`.
- *
- * @param date Any date within the target month.
- * @returns A new `Date` set to the target month's last day, at midnight.
- */
 function endOfMonth(date: Date): Date {
 	return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
@@ -468,8 +430,8 @@ function daysInMonth(year: number, month: number): number {
 
 /**
  * Adds a whole number of days to a date. Safe across month and year
- * boundaries since day-granularity arithmetic never produces an
- * out-of-range day.
+ * boundaries: the `Date` constructor rolls an overflowing day count into
+ * the neighbouring month.
  *
  * @param date Date to offset.
  * @param amount Number of days to add; negative moves backward.
@@ -481,8 +443,8 @@ function addDays(date: Date, amount: number): Date {
 
 /**
  * Adds a whole number of months to a date, clamping the day of month to the
- * target month's last day when the original day doesn't exist there (e.g.
- * January 31 plus one month lands on February 28, not March 3).
+ * target month's last day when the target month is shorter (January 31 plus
+ * one month lands on February 28).
  *
  * @param date Date to offset.
  * @param amount Number of months to add; negative moves backward.

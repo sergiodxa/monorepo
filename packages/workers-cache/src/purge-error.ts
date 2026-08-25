@@ -10,8 +10,8 @@
 import type { PurgeSelector } from "./types";
 
 /**
- * Error describing a purge that did not happen, returned inside a `Failure` and
- * never thrown. A platform rejection is kept as the error's `cause`.
+ * Error describing a purge that did not happen, delivered as the value inside
+ * a `Failure`. A platform rejection is kept as the error's `cause`.
  */
 export class PurgeError extends Error {
 	/** What the call meant to invalidate, or `undefined` when nothing was selected. */

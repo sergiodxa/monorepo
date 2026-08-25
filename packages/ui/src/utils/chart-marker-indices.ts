@@ -36,13 +36,8 @@ function nearestPointIndex(points: readonly { x: number }[], target: number): nu
 
 /**
  * Picks which of a plotted series' points get an accessible, hoverable
- * marker: generates an approximately evenly spread set of "nice" values
- * across `xDomain` through {@link ticks}, then snaps each one onto whichever
- * actual point in `points` sits closest to it, so every marker lands on real
- * plotted data instead of an interpolated position that was never part of
- * the series. Two "nice" values snapping onto the same nearest point
- * collapse to a single marker, so the returned count can run below
- * `markerCount` for a sparse or unevenly spaced series.
+ * marker by snapping evenly spread "nice" values across `xDomain` onto the
+ * nearest actual point; duplicate snaps collapse into one marker.
  *
  * @param points The series' data points, in draw order along `x`.
  * @param xDomain The `[start, end]` domain {@link ticks} generates its "nice" values across.

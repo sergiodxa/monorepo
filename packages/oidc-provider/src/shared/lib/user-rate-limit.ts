@@ -1,15 +1,12 @@
 /**
  * Per-user rate limiting for authentication endpoints.
  * Uses in-memory storage with TTL-based expiration.
- * This is used within Durable Objects where central rate limiters aren't available.
+ * Runs inside Durable Objects, which provide only local, per-instance state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/**
- * A single rate limit entry tracking request count and window expiration.
- */
 interface RateLimitEntry {
 	count: number;
 	resetAt: number;
@@ -20,9 +17,6 @@ interface RateLimitEntry {
  */
 let cache = new Map<string, RateLimitEntry>();
 
-/**
- * Timestamp of the last cache cleanup.
- */
 let lastCleanup = 0;
 
 /**
@@ -46,25 +40,14 @@ function cleanup() {
 	}
 }
 
-/**
- * Configuration for a rate limit window.
- */
 interface RateLimitConfig {
-	/** Maximum number of requests allowed in the window */
 	maxRequests: number;
-	/** Time window in milliseconds */
 	windowMs: number;
 }
 
-/**
- * Result of a rate limit check.
- */
 interface RateLimitResult {
-	/** Whether the request is allowed */
 	success: boolean;
-	/** Number of requests remaining in the window */
 	remaining: number;
-	/** Timestamp when the window resets */
 	resetAt: number;
 }
 
@@ -124,10 +107,8 @@ export function checkUserRateLimit(
  * Default rate limit configurations for different authentication actions.
  */
 export let USER_RATE_LIMITS = {
-	/** Authentication attempts: 5 per minute per email */
 	authOptions: { maxRequests: 5, windowMs: 60_000 },
 	authVerify: { maxRequests: 5, windowMs: 60_000 },
-	/** Registration: 3 per 5 minutes per email (more strict) */
 	registerOptions: { maxRequests: 3, windowMs: 300_000 },
 	registerVerify: { maxRequests: 3, windowMs: 300_000 },
 } as const;

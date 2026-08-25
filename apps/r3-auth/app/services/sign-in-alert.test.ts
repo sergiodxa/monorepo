@@ -73,9 +73,9 @@ function browserHeaders(extra: Record<string, string> = {}): Record<string, stri
 }
 
 /**
- * A transport whose every delivery is refused, so a test can drive the branch where mail
- * fails without a provider. Written as a `Transport` rather than as a module mock,
- * because a mocked module leaks into every later test file in the same process.
+ * A transport whose every delivery is refused, so a test can drive the branch
+ * where mail fails without a provider. Implemented as a plain `Transport` value
+ * handed directly to the app, so the refusal stays scoped to this one test.
  */
 function refusingTransport() {
 	return {
@@ -141,6 +141,10 @@ describe("the new-sign-in notice", () => {
 		expect(text).toContain(CLIENT_IP);
 	});
 
+	/**
+	 * A GitHub sign-in provisions its own identity, so the notice reports that
+	 * identity's address.
+	 */
 	test("mails the subject after a GitHub sign-in", async () => {
 		respondWithProfile();
 
@@ -166,14 +170,16 @@ describe("the new-sign-in notice", () => {
 
 		expect(response.status).toBe(303);
 		expect(app.mail.messages).toHaveLength(1);
-		// The provisioned subject's own address, not the one the seeded password account uses.
 		expect(app.mail.last!.to).toEqual([{ email: GITHUB_PROFILE.email }]);
 		expect(app.mail.last!.email).toBeInstanceOf(NewSignInEmail);
 	});
 
+	/**
+	 * Hitting the authorize endpoint with no parameters parks a request for the
+	 * server's own registration and redirects to the sign-in page, exercising the
+	 * self-login flow.
+	 */
 	test("mails the subject when they sign in to this server itself", async () => {
-		// No authorization parameters: the server parks a request for its own registration
-		// and redirects the browser back to the sign-in page, which is the self-login flow.
 		let start = await app.fetch(
 			new Request(`${ORIGIN}${routes.authorize.index.href()}`, {
 				redirect: "manual",
@@ -210,27 +216,31 @@ describe("the new-sign-in notice", () => {
 		);
 	});
 
+	/**
+	 * The notice is flushed after the response is produced, so a delivery refusal
+	 * cannot reach the response, and the session the sign-in opened is never rolled
+	 * back over a mail failure.
+	 */
 	test("completes the sign-in even when the provider refuses the message", async () => {
 		app = await createTestApp({ mailTransport: refusingTransport() });
 		fixtures = await seed(app);
 
 		let response = await credentialSignIn();
 
-		// The notice is flushed after the response is produced, so a refusal cannot reach it.
 		expect(response.status).toBe(303);
 		expect(new URL(response.headers.get("location")!).searchParams.get("code")).toBeTruthy();
-		// The session the sign-in opened still exists: nothing was rolled back over mail.
 		expect(await app.db.count(sessions, { where: { subject_id: fixtures.subjectId } })).toBe(1);
 	});
 
+	/**
+	 * `signIn` performs a full sign-in, so the browser already holds a session this
+	 * server issued, and the following authorization request takes the SSO path,
+	 * opening a session without anyone authenticating and so without notifying them.
+	 */
 	test("is not sent when an already-signed-in browser authorizes another client", async () => {
-		// A whole sign-in, so the browser really does hold a session this server issued —
-		// which is what makes the next authorization request take the SSO path.
 		await signIn(app, fixtures);
 		app.mail.clear();
 
-		// A second authorization request from the same browser is answered by SSO, which
-		// opens a session without anybody authenticating, so nobody is notified.
 		await app.fetch(new Request(authorizeUrl(fixtures), { headers: browserHeaders() }));
 
 		expect(app.mail.messages).toHaveLength(0);

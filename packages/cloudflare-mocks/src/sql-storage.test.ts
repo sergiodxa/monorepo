@@ -1,7 +1,7 @@
 /**
  * Tests for the Durable Object `SqlStorage` mock: synchronous execution, single-pass
  * cursor semantics, real `BEGIN`/`ROLLBACK` and savepoint atomicity, and rejection of
- * binding types the platform does not accept.
+ * unsupported binding value types.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

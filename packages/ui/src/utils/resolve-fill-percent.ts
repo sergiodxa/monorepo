@@ -14,10 +14,8 @@ import { clampChannel, roundChannel } from "./color-math";
 
 /**
  * Computes how far `value` has traveled from `min` toward `max` as a
- * percentage, clamped to `[0, 100]` so an out-of-range value never pushes a
- * fill bar past its own edges, and rounded to two decimal places. Returns
- * `0` for a collapsed or inverted range (`max <= min`) instead of dividing by
- * zero.
+ * percentage, clamped to `[0, 100]` and rounded to two decimal places;
+ * returns `0` for a collapsed or inverted range instead of dividing by zero.
  *
  * @param min Lower bound of the range.
  * @param max Upper bound of the range.

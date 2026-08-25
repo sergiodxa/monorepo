@@ -1,8 +1,8 @@
 /**
- * Tests for the worker's cron and queue handlers. The cron must enqueue the sweep for its
- * own expression and nothing else, and the queue must run the job a valid message names
- * while acking — never retrying — a body it cannot read, since a body that matches no
- * schema will not match one on a redelivery either.
+ * Tests for the worker's cron and queue handlers: the cron enqueues the
+ * sweep only for its own expression, and the queue acks a body it cannot
+ * read on the first try, since a schema mismatch persists across
+ * redeliveries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,31 +14,38 @@ import { createEnv, createExecutionContext, createQueue } from "@pkg/cloudflare-
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-/** The queue the cron produces into, holding what it enqueued. */
+/** The queue the cron produces into. */
 let queue = createQueue({ name: "auth" });
 
 /** Collects the work the worker defers, so a test can await what it started. */
 let context = createExecutionContext();
 
-// Registered here, at module scope, because only the imports that run afterwards see it —
-// which is why the worker below is imported dynamically rather than statically.
+/**
+ * Runs at module scope, before the dynamic worker import below resolves
+ * `cloudflare:workers`, so that import sees this mock already registered.
+ */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		QUEUE: queue,
-		// Left unset on purpose: with no token the job skips its uptime ping, so no
-		// test in this file reaches the network.
+		/**
+		 * Undefined here so the job skips its uptime ping, keeping every test
+		 * in this file off the network.
+		 */
 		UPTIME_CRON_API_KEY: undefined,
 	}),
+	/**
+	 * Reads `context` at call time, so reassigning it between tests takes
+	 * effect here.
+	 */
 	waitUntil(promise: Promise<unknown>) {
-		// Read at call time, so replacing the context between tests takes effect here.
 		context.waitUntil(promise);
 	},
 }));
 
 /**
- * The worker under test, pulled in once here rather than inside each helper: it reaches the
- * whole application graph, and loading that graph on first use would spend a test's own time
- * budget on work no test is measuring.
+ * The worker under test, imported once here at module scope. It reaches the
+ * whole application graph, so loading it up front keeps that cost off each
+ * test's own time budget.
  */
 let { default: worker } = await import("~/bootstrap/worker");
 
@@ -47,11 +54,9 @@ let subjectId: string;
 let clientId: string;
 
 /**
- * Delivers a batch to the worker's queue handler and reports what it did with each message.
- *
- * The sweep acks from inside a `waitUntil` promise, so the context is handed to `consume`:
- * without it the pass would read dispositions before that work ran and ack on the handler's
- * behalf, hiding whether it ever acked.
+ * Delivers a batch to the worker's queue handler and reports each message's
+ * disposition. Hands `context` to `consume` so the pass waits for the
+ * sweep's `waitUntil` ack to land before reading dispositions.
  */
 async function deliver(...bodies: unknown[]) {
 	for (let body of bodies) await queue.send(body);
@@ -62,7 +67,6 @@ async function deliver(...bodies: unknown[]) {
 	);
 }
 
-/** Delivers a cron trigger to the worker's scheduled handler. */
 async function schedule(cron: string) {
 	await worker.scheduled?.({
 		cron,
@@ -83,8 +87,10 @@ beforeEach(async () => {
 	let Subject = (await import("~/app/data/subject")).default;
 
 	db = createTestDatabase().db;
-	// Replaces the D1-backed registration, so the job under test resolves this database
-	// through the same container the worker opens a scope on.
+	/**
+	 * Replaces the D1-backed registration, so the worker under test resolves
+	 * this database through the same container it opens a scope on.
+	 */
 	container.singleton(Database, () => db);
 
 	let client = await Client.create(db, {
@@ -103,7 +109,6 @@ beforeEach(async () => {
 	subjectId = subject.id;
 });
 
-/** Inserts a session row expiring at the given instant. */
 async function createSession(expiresAt: number): Promise<string> {
 	let { generateUUID } = await import("@pkg/uuid");
 	let { sessions } = await import("~/database/schema");
@@ -160,7 +165,6 @@ describe("queue", () => {
 		let result = await deliver({ type: "somethingElse" });
 
 		let { sessions } = await import("~/database/schema");
-		// Nothing ran, so the expired row is still there.
 		expect((await db.findMany(sessions)).map((row) => row.id)).toEqual([expired]);
 		expect(result.acked).toHaveLength(1);
 		expect(result.retried).toHaveLength(0);

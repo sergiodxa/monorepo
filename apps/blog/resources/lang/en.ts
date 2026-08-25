@@ -1,14 +1,13 @@
 /**
- * English translation dictionary for blog and the source-of-truth locale.
- * Holds the UI copy for the public site (nav, home, articles, tutorials,
- * bookmarks, glossary, RSS) and the CMS; its shape defines the translation contract.
+ * English UI copy for the public blog site and the CMS.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /**
- * English translation strings used across the blog UI and CMS.
+ * Source-of-truth catalog; its shape defines the keys every other locale must
+ * provide.
  */
 export default {
 	header: { title: "Sergio Xalambrí" },

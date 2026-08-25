@@ -27,10 +27,9 @@ const datetimeLocal = s
 const maintenanceWindowFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	/**
-	 * The `(monitor_type, monitor_id)` pair encoded as one control value — see
-	 * `~/app/lib/monitor-scope`. Validated for shape here and resolved against the team's
-	 * monitors in the action, which is the only place that can tell whether the monitor
-	 * named still exists and still belongs to the team.
+	 * The `(monitor_type, monitor_id)` pair encoded as one control value; see
+	 * `~/app/lib/monitor-scope`. Validated for shape here — resolving whether
+	 * the named monitor exists and belongs to the team happens in the action.
 	 */
 	scope: f.field(s.defaulted(s.string(), "")),
 	starts_at: f.field(datetimeLocal),

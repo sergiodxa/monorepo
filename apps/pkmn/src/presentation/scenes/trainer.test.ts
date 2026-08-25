@@ -1,10 +1,9 @@
 /**
  * Tests for the trainer card's pure content rows.
  *
- * Covers `trainerCardRows`, which maps the player view into the labelled name and
- * money lines the trainer card draws. The canvas drawing and scene wiring are not
- * exercised here; only the ordering and the `₽`-prefixed money formatting are
- * asserted so the card stays a plain function of the player view.
+ * Covers `trainerCardRows`, asserting the labelled name and money rows it
+ * builds from a player view: row order and the `₽`-prefixed money format,
+ * keeping the card a plain function of that view.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

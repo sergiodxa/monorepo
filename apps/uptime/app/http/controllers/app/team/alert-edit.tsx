@@ -1,26 +1,9 @@
 /**
  * Edit alert page controller. Requires `requireUser` + `requireTeam`; 404s when the
- * alert doesn't belong to the current team.
- *
- * The fields are grouped into bordered cards — what the alert watches, where it
- * notifies, and how often it may repeat — each with its own heading and description,
- * so the page reads as distinct settings groups rather than one continuous column.
- * They all stay inside the single `<form>` that posts to `update-alert`, so a
- * submission carries exactly the same fields it always did; only the last card owns
- * the action row. The destructive action gets a second, danger-toned section below,
- * on its own `<form>`.
- *
- * Most of the field markup is written out here rather than pulled from a shared view:
- * a view that had to render either as one block or as three separately-carded groups
- * would exist only to carry that difference between its two callers. The channel card
- * is the exception: its contents match the create page's down to the last attribute,
- * differing only in being prefilled, so they come from `AlertChannelFields`, which also
- * owns the CSS-only disclosure that shows one channel's settings at a time.
- *
- * The danger-zone delete confirmation is `@pkg/ui`'s `AlertDialog` composed
- * directly rather than through the `Confirm` convenience wrapper, since the
- * confirming control is a real `<form method="post">` submit button rather than a
- * `command="close"` action.
+ * alert doesn't belong to the current team. Fields sit in bordered cards inside one
+ * `<form>` that posts to `update-alert`, so a submission always carries the same
+ * fields. The delete confirmation composes `AlertDialog` directly because its
+ * confirming control is a real form submit button.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,7 +55,7 @@ export default createAction(routes.app.team.alerts.edit, {
 
 		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 
-		// Same fixed namespace the create page reads, so both pages label the fields identically.
+		/** Same fixed namespace the create page reads, so both pages label fields identically. */
 		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
 		let config = alert.config;
 		let indexHref = routes.app.team.alerts.index.href({ team: ctx.team.slug });
@@ -166,11 +149,8 @@ export default createAction(routes.app.team.alerts.edit, {
 													name="cooldown_minutes"
 													/**
 													 * `min` stays 0 even though a repeat is never spaced closer than
-													 * {@link MIN_REPEAT_COOLDOWN_MINUTES}. Raising it would make every alert already
-													 * storing a smaller value unsaveable — the field is prefilled from the row, so
-													 * the form would refuse to submit until somebody noticed why. The floor is
-													 * enforced at dispatch, where it reaches stored rows too, and the description
-													 * says so.
+													 * {@link MIN_REPEAT_COOLDOWN_MINUTES}: raising it would make alerts already
+													 * storing a smaller value unsaveable. The floor is enforced at dispatch instead.
 													 */
 													min={0}
 													max={1440}

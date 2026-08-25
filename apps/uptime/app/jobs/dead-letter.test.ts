@@ -21,7 +21,6 @@ beforeEach(() => {
 	consoleError.mockClear();
 });
 
-/** Runs the consumer over one body and returns the events it flushed. */
 function run(body: unknown, attempts = 1) {
 	let message: Message<unknown> = {
 		id: "dlq-message-1",
@@ -44,7 +43,7 @@ describe("DeadLetterJob.run", () => {
 
 		let { identifier, output } = run(body, 2);
 
-		/** Same shape `Job.run` gives every other job, so both filter together. */
+		/** Matches the `job:<kebab-case class name>:<message id>` shape used across job logs, so dead-letter entries filter alongside the run they came from. */
 		expect(identifier).toBe("job:dead-letter-job:dlq-message-1");
 		expect(output).toMatchObject({
 			events: [

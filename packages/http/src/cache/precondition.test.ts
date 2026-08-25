@@ -14,7 +14,6 @@ import { describe, expect, test } from "vitest";
 
 import { precondition, PreconditionFailedError } from "./precondition";
 
-/** Builds a write request carrying the given `If-Match` value, if any. */
 function createRequest(ifMatch?: string): Request {
 	return new Request("https://example.com/article", {
 		method: "PUT",

@@ -25,9 +25,6 @@ export namespace BookmarksViewModel {
 		 * Original bookmark URL used by the primary anchor.
 		 */
 		href: string;
-		/**
-		 * Human-readable title rendered as link text.
-		 */
 		label: string;
 		/**
 		 * Effective display date for the bookmark row.
@@ -46,17 +43,8 @@ export namespace BookmarksViewModel {
 		 * Archive snapshot URL for the trailing metadata action.
 		 */
 		suffixHref?: string;
-		/**
-		 * Compact label rendered for the archive metadata action.
-		 */
 		suffixLabel?: string;
-		/**
-		 * Accessible name for the archive metadata action.
-		 */
 		suffixAriaLabel?: string;
-		/**
-		 * Tooltip text for the archive metadata action.
-		 */
 		suffixTitle?: string;
 	}
 
@@ -76,10 +64,9 @@ export namespace BookmarksViewModel {
  */
 export class BookmarksViewModel {
 	/**
-	 * Normalizes bookmark metadata and derives display-only fields.
+	 * Ordered by activity time: published date when available, otherwise creation
+	 * date. Wayback metadata is attached for absolute HTTP(S) URLs.
 	 *
-	 * The result is ordered by activity time (published date when available, otherwise
-	 * creation date). Wayback metadata is only attached for absolute HTTP(S) URLs.
 	 * @param bookmarks Raw liked-post records returned by the bookmarks repository.
 	 * @returns Bookmarks page payload sorted by most recent activity first.
 	 */
@@ -117,7 +104,7 @@ export class BookmarksViewModel {
 	/**
 	 * Reads publish time from snake_case or camelCase records.
 	 *
-	 * `null` means "already published" in this app and must not be treated as preview.
+	 * `null` marks a record as already published.
 	 */
 	private static publishedAt(input: unknown): string | null {
 		let record = input as { published_at?: string | null; publishedAt?: string | null };
@@ -137,8 +124,8 @@ export class BookmarksViewModel {
 	/**
 	 * Computes a sortable activity timestamp for ordering bookmarks.
 	 *
-	 * Uses publish time first, then creation time as fallback. Invalid dates produce
-	 * `NaN`, which keeps behavior explicit without throwing during sort.
+	 * Publish time wins over creation time; invalid dates yield `NaN` so the sort
+	 * comparison stays explicit.
 	 */
 	private static activityTimestamp(input: unknown): number {
 		let publishedAt = this.publishedAt(input);

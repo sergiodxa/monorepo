@@ -16,14 +16,9 @@ export interface GridTemplateOptions {
 }
 
 /**
- * Applies `grid-template-columns`/`-rows`/`-areas` from whichever option
- * keys are given, leaving the others untouched. Each value is a raw CSS
- * string passed straight through — grid tracks and named areas vary too
- * continuously (fractional units, `repeat()`, `minmax()`, quoted area
- * strings) for a named scale to usefully cover. Pair with {@link repeat}
- * for the extremely common `repeat(count, track)` shape, so a typo in
- * "repeat" or a missing comma doesn't silently produce an invalid track
- * list.
+ * Applies `grid-template-columns`/`-rows`/`-areas` from whichever option keys
+ * are given. Track lists vary too continuously for a named scale, so values
+ * are raw CSS strings; {@link repeat} builds the `repeat(count, track)` shape.
  *
  * @example u.gridTemplate({ columns: "1fr 2fr", rows: "auto 1fr" })
  * @example css({ gridTemplateColumns: "1fr 2fr", gridTemplateRows: "auto 1fr" })

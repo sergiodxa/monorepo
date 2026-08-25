@@ -17,15 +17,9 @@ import type { InsertMonitorContentCheck } from "~/database/schema";
 import { monitorContentChecks } from "~/database/schema";
 
 /**
- * The fields {@link ContentCheck.evaluate} actually reads, which is less than a stored
- * row carries. Declared structurally so a rule that was never persisted — the ones an
- * ad-hoc `POST /api/v1/ping` supplies in its request body — evaluates through the same
- * code as a monitor's own checks. `SelectMonitorContentCheck` satisfies it.
- *
- * `type` is a plain `string` rather than the three-way union, because the stored column
- * is a text enum the schema types as `string` and narrowing here would stop a row from
- * satisfying this. {@link evaluateOne}'s `default` branch is what closes that gap: an
- * unrecognized type fails rather than passing silently.
+ * The fields {@link ContentCheck.evaluate} reads, declared structurally so an in-memory
+ * rule from an ad-hoc `POST /api/v1/ping` runs through the same code as a stored check.
+ * `type` stays `string` to match the stored column; {@link evaluateOne} fails unknown ones.
  */
 export interface ContentCheckRule {
 	type: string;

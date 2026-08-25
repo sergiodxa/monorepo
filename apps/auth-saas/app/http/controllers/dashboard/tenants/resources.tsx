@@ -1,7 +1,6 @@
 /**
  * Tenant API resources controller: lists resources, shows a resource with its scopes,
- * and renders/handles the create and edit forms. Rendering uses `remix/ui` JSX via
- * `ctx.render`; validation, access checks, and redirects are preserved.
+ * and renders/handles the create and edit forms.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

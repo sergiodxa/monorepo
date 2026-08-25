@@ -7,17 +7,9 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { when } from "./when";
 
 /**
- * Applies the given utilities to a list item's marker — its bullet or number —
- * and to a `<summary>`'s disclosure triangle, via `::marker`. Sugar over
- * `when("&::marker", input)`.
- *
- * Only a small set of properties apply here: `color`, the `font-*` family, and
- * `content`. Everything else in the wrapped utilities is ignored, so the
- * marker cannot be padded or positioned through this wrapper.
- *
- * To remove the marker entirely rather than restyle it, use
- * `u.listStyle("none")` — recolouring it to match the background only hides
- * it, leaving the space it occupies in the line box behind.
+ * Applies the given utilities to a list item's marker or a `<summary>`
+ * disclosure triangle via `::marker`; only `color`, `font-*`, and `content`
+ * apply. Use `u.listStyle("none")` to remove the marker along with its space.
  *
  * @example u.marker(u.fg("neutral.muted"))
  * @example css({ "&::marker": { color: "..." } })

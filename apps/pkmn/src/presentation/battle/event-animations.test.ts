@@ -1,11 +1,7 @@
 /**
- * Tests for translating battle events into ordered animation tasks.
- *
- * Covers `buildBattleTasks`: each event kind maps to the expected message text,
- * `damage-dealt` maps to an HP task that points the target bar at its remaining
- * HP, and a faint produces a message followed by a `markFainted`. A recording
- * fake `BattleHud` captures every call; tasks are drained with large `dt` steps
- * to skip the typewriter reveal and linger.
+ * Tests for translating battle events into ordered animation tasks: each event
+ * kind maps to its expected message and HP or faint task, in order. A recording
+ * fake `BattleHud` captures every call, with tasks drained via large `dt` steps.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -117,7 +113,6 @@ test("damage-dealt points the target's HP bar at the remaining HP", () => {
 	];
 	drain(buildBattleTasks(events, hud));
 	expect(hpCalls).toEqual([{ position: TARGET, remaining: 30 }]);
-	// An HP task narrates nothing.
 	expect(messages).toEqual([]);
 });
 
@@ -134,7 +129,6 @@ test("move-missed and move-failed narrate their outcomes", () => {
 test("creature-fainted narrates the faint then marks the slot fainted", () => {
 	let { hud, messages, fainted } = fakeHud();
 	let tasks = buildBattleTasks([{ type: "creature-fainted", target: TARGET }], hud);
-	// Two tasks: a message then the faint marker.
 	expect(tasks).toHaveLength(2);
 	drain(tasks);
 	expect(lastMessage(messages)).toBe("slot-1-0 fainted!");
@@ -153,18 +147,19 @@ test("creature-switched rebinds the slot's HP bar to the fresh creature", () => 
 	expect(switchedIn).toEqual([TARGET]);
 });
 
+/**
+ * Guards against a fainted slot's bar re-animating upward (Bug 2): the bar
+ * must rebind to the fresh creature, so it starts full, before the drain
+ * task runs.
+ */
 test("a switch-in then damage rebinds before draining, never animating up from 0", () => {
 	let { hud, switchedIn, hpCalls } = fakeHud();
-	// A fainted slot is replaced, then the fresh creature is hit: the bar must be
-	// rebound to the new creature (so it starts full) before the drain HP task runs,
-	// guarding against the fainted slot's bar re-animating upward (Bug 2).
 	let events: BattleEvent[] = [
 		{ type: "creature-switched", target: TARGET, creature: 1 },
 		{ type: "damage-dealt", target: TARGET, damage: 10, remainingHP: 40 },
 	];
 	drain(buildBattleTasks(events, hud));
 	expect(switchedIn).toEqual([TARGET]);
-	// The rebind happened and the only HP movement is the downward drain to 40.
 	expect(hpCalls).toEqual([{ position: TARGET, remaining: 40 }]);
 });
 
@@ -197,10 +192,8 @@ test("buildBattleTasks preserves event order across mixed events", () => {
 		{ type: "creature-fainted", target: TARGET },
 	];
 	let tasks = buildBattleTasks(events, hud);
-	// 3 messages (used, effective, fainted) + 1 hp + 1 faint marker.
 	expect(tasks).toHaveLength(5);
 	drain(tasks);
-	// Messages arrived in order; the HP call landed for the target.
 	expect(messages.filter((text): text is string => text !== null)).toContain(
 		"slot-0-0 used Move(ember)!",
 	);
@@ -273,7 +266,6 @@ test("omitting the audio player leaves every event silent and still builds the t
 		{ type: "damage-dealt", target: TARGET, damage: 12, remainingHP: 30 },
 		{ type: "creature-fainted", target: TARGET },
 	];
-	// No audio argument: the tasks still build and drive the HUD without throwing.
 	let tasks = buildBattleTasks(events, hud);
 	drain(tasks);
 	expect(hpCalls).toEqual([{ position: TARGET, remaining: 30 }]);

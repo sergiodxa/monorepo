@@ -1,13 +1,9 @@
 /**
- * Client island: copies a value to the clipboard on click and swaps its label to a
- * confirmation for two seconds. The one place this server ships JavaScript, because
- * reading the clipboard API is the only thing on the admin screens the HTML platform
- * cannot express — it exists for the single moment a newly generated client secret is
- * visible and has to be captured before it is gone.
- *
- * The value is rendered into a visually hidden carrier inside the button and
- * `commandfor` points at it, so the copy mixin always has a same-instance target and
- * the secret never has to be readable anywhere else on the page.
+ * Client island: copies a value to the clipboard, confirming briefly in place —
+ * the one page shipping JavaScript, since only script can read the clipboard API
+ * to capture a newly generated client secret before it disappears. The value
+ * lives in a visually hidden carrier that `commandfor` targets, keeping the
+ * secret confined to this one spot on the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,11 +25,11 @@ import { clientEntry, on } from "remix/ui";
 const CONFIRMATION_MS = 2000;
 
 /**
- * Props must be a `type` rather than an `interface` to satisfy the serializable-props
- * constraint a client entry's props are checked against.
+ * Declared as a `type` to satisfy the serializable-props constraint a client
+ * entry's props are checked against.
  */
 type CopyButtonProps = {
-	/** The text put on the clipboard. Never rendered visibly by this component. */
+	/** The text put on the clipboard, held only within the hidden carrier span. */
 	value: string;
 	/** Resting label. */
 	label: string;
@@ -41,7 +37,11 @@ type CopyButtonProps = {
 	copiedLabel: string;
 };
 
-/** Copies {@link CopyButtonProps.value} to the clipboard, confirming briefly in place. */
+/**
+ * Copies {@link CopyButtonProps.value} to the clipboard, confirming briefly in
+ * place. The click handler and confirmation timeout each trigger a render via
+ * `handle.update()` and are then finished.
+ */
 export const CopyButton = clientEntry(
 	"/resources/components/copy-button.tsx#CopyButton",
 	function CopyButton(handle: Handle<CopyButtonProps>) {
@@ -67,9 +67,6 @@ export const CopyButton = clientEntry(
 					on("ui:copy", (event) => {
 						if (!event.success) return;
 						copied = true;
-						// The re-render is deliberately not waited on: the event handler and the
-						// timer below both finish before the label has swapped, and neither has
-						// anything to do once it has.
 						void handle.update();
 						setTimeout(() => {
 							copied = false;
@@ -79,7 +76,6 @@ export const CopyButton = clientEntry(
 				]}
 			>
 				{copied ? handle.props.copiedLabel : handle.props.label}
-				{/* Keeps the value readable to the copy mixin while rendering no pixels. */}
 				<span id={valueId} mix={[visuallyHidden()]}>
 					{handle.props.value}
 				</span>

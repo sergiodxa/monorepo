@@ -1,19 +1,7 @@
 /**
- * Trainer export flow: a pure payload-shaper plus a server-side write handler.
- *
- * The shaper ({@link shapeTrainerExport}) turns a validated
- * {@link TrainerDefinition} into a `{ path, contents }` pair — the relative write
- * path `src/content/trainers/<id>.json` and the pretty-printed JSON body — with
- * no disk, canvas, or network concerns, so the mapping can be unit-tested
- * directly. A single {@link TRAINER_ID_PATTERN} governs which ids are acceptable
- * (a conservative slug) so the derived path can never smuggle a traversal,
- * extension, or separator past the path-safety guard.
- *
- * The handler ({@link runTrainerExport}) validates an untrusted payload with the
- * trainer schema, shapes it, re-checks the target through the shared path-safety
- * guard (defense in depth), and writes the JSON scoped to the
- * app root. It reuses the same guard every other dev-tools export uses so no
- * write can escape the allow-list.
+ * Trainer export: a pure payload shaper plus a server-side write handler. The
+ * shaper stays free of disk and network concerns so the mapping is unit-testable,
+ * and one conservative id pattern keeps every derived path a single safe segment.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,10 +30,9 @@ export const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "
 export const TRAINER_CONTENT_DIR = "src/content/trainers";
 
 /**
- * Allowed shape for a trainer id: a lowercase slug of letters, digits, and single
- * hyphens, no leading/trailing hyphen. Deliberately stricter than the path-safety
- * guard so an invalid id is rejected with a clear message before any path is
- * constructed and the derived filename is always a single safe segment.
+ * Allowed shape for a trainer id: a lowercase slug of letters, digits, and inner
+ * hyphens. Stricter than the path-safety guard, so a bad id fails with a clear
+ * message before any path work and the filename stays one safe segment.
  */
 export const TRAINER_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
@@ -64,9 +51,7 @@ export interface TrainerExportPayload {
 export interface TrainerExportResult {
 	/** The validated relative path the JSON was written to. */
 	path: string;
-	/** The resolved on-disk location. */
 	absolutePath: string;
-	/** Byte count written to disk. */
 	bytesWritten: number;
 }
 
@@ -82,11 +67,9 @@ export class TrainerIdError extends Error {
 }
 
 /**
- * Validates a trainer id and shapes the export payload (write path + JSON body).
- * The id is validated against {@link TRAINER_ID_PATTERN} so the derived path is
- * always a single safe segment under {@link TRAINER_CONTENT_DIR}; the JSON body
- * is the definition serialized tab-indented with a trailing newline (matching the
- * repo's JSON style).
+ * Validates the trimmed id against {@link TRAINER_ID_PATTERN} so the derived path
+ * is one safe segment under {@link TRAINER_CONTENT_DIR}, then serializes with that
+ * same trimmed id so filename and contents agree.
  *
  * @param definition The validated trainer definition to write.
  * @returns Success with a {@link TrainerExportPayload}, or failure with a
@@ -110,20 +93,14 @@ export function shapeTrainerExport(
 		);
 	}
 
-	// Serialize with the trimmed id so the file contents and filename agree.
 	let contents = `${JSON.stringify({ ...definition, id }, null, "\t")}\n`;
 	return success({ path: `${TRAINER_CONTENT_DIR}/${id}.json`, contents });
 }
 
 /**
- * Validates an untrusted trainer export payload and writes it to disk under
- * {@link APP_ROOT}.
- *
- * The value is first validated with {@link parseTrainer}; the definition is then
- * shaped by {@link shapeTrainerExport} and the destination re-validated with
- * {@link validateWritePath} (defense in depth) before the write. The relative
- * path is resolved against {@link APP_ROOT}, never the process cwd, so the write
- * cannot escape the app.
+ * Validates an untrusted payload with {@link parseTrainer}, shapes it, and
+ * re-checks the destination with {@link validateWritePath} before writing. The
+ * path resolves against {@link APP_ROOT}, keeping every write inside the app.
  *
  * @param payload The parsed JSON body from the export request (untrusted).
  * @returns Success with a {@link TrainerExportResult}, or failure with a

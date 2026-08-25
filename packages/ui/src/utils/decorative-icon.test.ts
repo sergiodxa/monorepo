@@ -14,12 +14,9 @@ import { DEFAULT_ICON_ARIA_HIDDEN } from "./decorative-icon";
 
 describe("DEFAULT_ICON_ARIA_HIDDEN", () => {
 	/**
-	 * The string, not the boolean. `aria-hidden` takes a token, and the renderer
-	 * writes a `true` prop the way HTML wants a boolean attribute written — as the
-	 * bare name — leaving `aria-hidden=""`, which is not that token, so the glyph
-	 * would be announced instead of hidden. This asserts the type as well as the
-	 * value, because the boolean is the spelling that looks tidier and silently
-	 * does nothing.
+	 * `aria-hidden` takes a token, and a `true` boolean prop renders as the
+	 * bare attribute name `aria-hidden=""`, which announces the icon instead
+	 * of hiding it — asserting the type here guards against that regression.
 	 */
 	test('is the string "true", so a decorative icon is really hidden and not just marked', () => {
 		expect(DEFAULT_ICON_ARIA_HIDDEN).toBe("true");

@@ -1,9 +1,9 @@
 /**
- * Repository for tutorial posts, scoping the shared `Post` model to the
- * `tutorial` post type. It defines tutorial metadata types, a codec (including
- * tag parsing/serialization) to/from `post_meta` rows, CRUD/count/find-by-slug
- * helpers, a `listItems` projection, and related-tutorial lookup by shared tags.
- * Filters out unpublished previews by default. Exists for type-safe tutorial data.
+ * Repository for tutorial posts, scoping the shared `Post` model to the `tutorial`
+ * post type. It defines tutorial metadata types, a codec (including tag
+ * parsing/serialization) to/from `post_meta` rows, CRUD/count/find-by-slug helpers, a
+ * `listItems` projection, and related-tutorial lookup by shared tags. Query helpers
+ * return published tutorials by default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -290,9 +290,7 @@ export class TutorialPost {
 	}
 
 	/**
-	 * Deletes a tutorial post by id.
-	 *
-	 * Deletion is delegated to the shared post repository, including related metadata.
+	 * Deletes a tutorial post by id along with its metadata rows.
 	 */
 	static destroy(db: Database, id: string) {
 		return Post.destroy(db, id);
@@ -301,8 +299,7 @@ export class TutorialPost {
 	/**
 	 * Produces a string-array view of metadata tags for matching helpers.
 	 *
-	 * Unlike persistence normalization, this keeps values as-is (no trimming/dedupe)
-	 * because it is only used against already-decoded metadata.
+	 * Values pass through verbatim because the input is already-decoded metadata.
 	 */
 	static tags(metaTags: string | string[] | undefined): Array<string> {
 		if (Array.isArray(metaTags)) {

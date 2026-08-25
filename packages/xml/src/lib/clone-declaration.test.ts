@@ -1,3 +1,10 @@
+/**
+ * Exercises the declaration cloning helper.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { cloneDeclaration } from "./clone-declaration";

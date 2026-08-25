@@ -73,12 +73,8 @@ export default class Credential {
 	/**
 	 * Verifies a plaintext password against the subject's stored hash.
 	 *
-	 * A correct password stored in the superseded hash format is re-hashed and
-	 * written back here, which is the only moment the plaintext is available to
-	 * derive a replacement from. That rewrite leaves `updated_at` alone: it marks
-	 * when the password itself last changed, which a rehash does not.
-	 * A hash that cannot be checked at all counts as a mismatch, so an unreadable
-	 * stored value denies the login instead of granting it.
+	 * A match under the superseded format is rehashed here, leaving `updated_at`
+	 * untouched; an unreadable stored hash counts as a mismatch, denying login.
 	 * @param db - Database instance.
 	 * @param subjectId - Subject whose credential to check.
 	 * @param password - Plaintext password to compare.

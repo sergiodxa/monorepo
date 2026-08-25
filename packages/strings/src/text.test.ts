@@ -62,7 +62,6 @@ describe("truncate", () => {
 	});
 
 	test("measures a combining mark as one character", () => {
-		// Seven code units but six graphemes, so nothing is cut at a limit of six.
 		expect(truncate(`ma${N_TILDE}ana`, { length: 6 })).toBe(`ma${N_TILDE}ana`);
 		expect(truncate(`ma${N_TILDE}ana`, { length: 5 })).toBe(`ma${N_TILDE}a…`);
 	});

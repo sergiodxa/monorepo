@@ -1,9 +1,10 @@
 /**
  * `/sitemap.xml` controller. Lists the homepage, every `/features`, `/for`,
- * `/use-cases`, and `/vs` marketing page (derived from `resources/content/marketing.ts`'s
- * content records, not a hardcoded URL list, so a new content entry is picked up
- * automatically), the legal pages, and every documentation page, then serializes them
- * with `@pkg/sitemap`. It exists so search engines can discover the full public site.
+ * `/use-cases`, and `/vs` marketing page (derived from
+ * `resources/content/marketing.ts`'s content records, so a new content entry
+ * is picked up automatically), the legal pages, and every documentation page,
+ * then serializes them with `@pkg/sitemap`. It exists so search engines can
+ * discover the full public site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
- * KV-backed session storage adapter implementing Remix's `SessionStorage`. It persists
- * session data as JSON in a KV store under a configurable key prefix with a configurable
- * TTL, and supports reading, saving, rotating, and destroying sessions. It exists to back
- * sessions with edge KV storage instead of cookies or a relational database.
+ * KV-backed session storage adapter implementing Remix's `SessionStorage`. Session data
+ * is stored as JSON under a configurable key prefix with a configurable TTL, so sessions
+ * live in edge KV and expire on their own once that TTL lapses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,14 +13,8 @@ import { createSession } from "remix/session";
 
 import type { KVStore } from "~/app/contracts/kv-store";
 
-/**
- * Default KV TTL used when no custom session lifetime is provided.
- */
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
 
-/**
- * Default key prefix used to isolate session entries in KV.
- */
 const SESSION_PREFIX = "session:";
 
 /**
@@ -37,14 +30,8 @@ export namespace KVSessionStorage {
 	 * Storage behavior overrides for key prefix and expiration.
 	 */
 	export interface Options {
-		/**
-		 * Session expiration in seconds for KV writes.
-		 */
 		ttlSeconds?: number;
 
-		/**
-		 * Prefix prepended to every KV session key.
-		 */
 		prefix?: string;
 	}
 }
@@ -59,9 +46,6 @@ export class KVSessionStorage<
 	#kv: KVStore;
 	#options: KVSessionStorage.Options;
 
-	/**
-	 * Creates a KV-backed session storage adapter.
-	 */
 	constructor(kv: KVStore, options: KVSessionStorage.Options = {}) {
 		this.#kv = kv;
 		this.#options = options;
@@ -119,9 +103,6 @@ export class KVSessionStorage<
 	}
 }
 
-/**
- * Parses serialized session data and validates the expected tuple shape.
- */
 function parseSessionData<
 	valueData extends KVSessionStorage.Data,
 	flashData extends KVSessionStorage.Data,
@@ -136,9 +117,6 @@ function parseSessionData<
 	}
 }
 
-/**
- * Checks whether a value is a plain object record.
- */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

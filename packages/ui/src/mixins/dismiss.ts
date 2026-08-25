@@ -1,24 +1,8 @@
 /**
- * Auto-dismiss behavior for a self-contained alert or notification host:
- * counts down a duration to dismissal, pausing the countdown while the
- * pointer hovers the host or focus rests somewhere inside it, and picking
- * back up from wherever it left off once both leave. Also answers the
- * `--ui-dismiss` invoker command from any trigger targeting the host,
- * dismissing right away regardless of the timer. Either path only ever
- * dispatches a `ui:dismiss` event on the host — removing the element from
- * the page, or from whatever queue produced it, is left to a listener the
- * consumer attaches to that event.
- *
- * Why JS: counting down to a dismissal, pausing that countdown while a
- * pointer or keyboard user is still attending to the content, and reacting
- * to a `--ui-dismiss` invoker command fired from a separate trigger element
- * all require script — no HTML attribute or CSS selector expresses "remove
- * this element after N paused-aware milliseconds".
- * No-JS baseline: the host renders and stays on the page for as long as the
- * page is open, fully readable and interactive; only the timed and
- * invoker-triggered dismissal are unavailable, so a host that must be
- * dismissible without JavaScript needs its own non-JS removal path (a form
- * submission, a full navigation) rather than relying on this mixin.
+ * Auto-dismiss behavior for an alert or notification host: counts down to
+ * dismissal, pausing while the pointer or focus is inside, and answers the
+ * `--ui-dismiss` invoker command from any trigger targeting the host. Both
+ * paths only dispatch a `ui:dismiss` event, leaving removal to a listener.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,11 +57,8 @@ export namespace Dismiss {
 }
 
 /**
- * Dispatched on a host by {@link dismiss} when it dismisses — either the
- * auto-dismiss timer running out or the `--ui-dismiss` command firing — so a
- * consumer can remove the host from the page, or from whatever queue
- * produced it, in response. The mixin itself never touches the DOM tree
- * beyond dispatching this event.
+ * Dispatched on a host by {@link dismiss} when it dismisses, so a consumer
+ * can remove the host from the page or from whatever queue produced it.
  */
 export class DismissEvent extends Event {
 	/** What triggered this dismissal. */
@@ -96,16 +77,13 @@ export class DismissEvent extends Event {
  * Adds an auto-dismiss countdown to an alert or notification host, pausing
  * it while the pointer hovers the host or focus rests inside it, and
  * answers the `--ui-dismiss` invoker command from any trigger targeting the
- * host — a close button needs nothing beyond
- * `<button commandfor={hostId} command="--ui-dismiss">`, no mixin or
- * hydration of its own.
+ * host, dispatching {@link DismissEvent} for either path and leaving the
+ * consuming island to decide what dismissal means.
  *
- * Neither path removes the host itself: both dispatch {@link DismissEvent}
- * on it, and the consuming island decides what dismissal means — removing
- * the element directly, or calling into whatever queue owns the surrounding
- * list of hosts.
- *
- * @param options Duration and hover-pause configuration; see {@link Dismiss.Options}.
+ * @param options Duration and hover-pause configuration; see
+ * {@link Dismiss.Options}. A call that omits it receives the mixin
+ * runtime's trailing current-props argument in its place, which is
+ * normalized back to an empty options object.
  * @example
  * <div id="toast-1" role="status" mix={[dismiss({ duration: 4000 })]}>
  * 	Changes saved
@@ -174,9 +152,6 @@ export const dismiss: MixinFactory<HTMLElement, [options?: Dismiss.Options], Ele
 		}
 
 		return (options = {}, props = options as ElementProps) => {
-			// `options` is optional, so a call site that omits it (`dismiss()`)
-			// gets the runtime's trailing current-props argument in its place —
-			// reset it back to an empty options object when that happens.
 			if (props === options) {
 				options = {};
 			}

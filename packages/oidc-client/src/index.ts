@@ -1,18 +1,8 @@
 /**
- * OpenID Connect relying-party helpers shared across the SaaS platform.
- *
- * Two layers live here. The **standalone helpers** ({@link discover},
- * {@link createPkce}, {@link buildAuthorizationUrl}, {@link exchangeCode},
- * {@link verifyIdToken}) drive a confidential-client authorization-code flow with
- * PKCE by hand — the dashboard uses them directly. The **`remix/auth` adapter**
- * ({@link createProvider}, {@link resolveEndSessionEndpoint}, {@link toAuthProfile})
- * wraps `remix/auth`'s OIDC provider for consumers that prefer its
- * `startExternalAuth`/`finishExternalAuth` machinery (the blog engine's admin panel).
- *
- * The ID token is received directly from the token endpoint over TLS with client
- * authentication, so per OIDC §3.1.3.7 {@link verifyIdToken} validates the
- * `iss`/`aud`/`exp`/`sub` claims in place of a signature check for this
- * confidential-client authorization-code flow — TLS provides the transport trust.
+ * OpenID Connect relying-party helpers. {@link discover}, {@link createPkce},
+ * {@link buildAuthorizationUrl}, {@link exchangeCode}, and {@link verifyIdToken}
+ * drive a confidential-client PKCE flow by hand, while {@link createProvider}
+ * and {@link toAuthProfile} adapt it for `remix/auth`'s external-auth flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,10 +10,6 @@
 import type { OIDCAuthProfile, OIDCAuthProviderMetadata } from "remix/auth";
 
 import { createOIDCAuthProvider } from "remix/auth";
-
-// ---------------------------------------------------------------------------
-// Standalone relying-party helpers
-// ---------------------------------------------------------------------------
 
 /** The default OAuth scopes requested when a caller does not specify any. */
 const DEFAULT_SCOPES = ["openid", "profile", "email"];
@@ -193,13 +179,9 @@ export interface OidcProfile {
 }
 
 /**
- * Validates an ID token's claims and extracts the authenticated profile.
- *
- * The signature is **not** verified: the token was received directly from the
- * token endpoint over TLS with client authentication, so per OIDC §3.1.3.7 the
- * mandatory `iss`/`aud`/`exp`/`sub` claims are validated in place of a signature
- * check for this confidential-client authorization-code flow. A token missing any
- * of these is rejected rather than silently accepted.
+ * Validates an ID token's claims and extracts the authenticated profile. Per OIDC
+ * §3.1.3.7, `iss`/`aud`/`exp`/`sub` claim validation substitutes for a signature
+ * check for a token received directly over TLS with client authentication.
  *
  * @param idToken - The compact JWS ID token returned by {@link exchangeCode}.
  * @param expected - The values the token must match.
@@ -230,8 +212,6 @@ export function verifyIdToken(
 		name?: string;
 	};
 
-	// Require iss/aud/exp/sub — a token missing any of these must be rejected, not
-	// silently accepted (per OIDC §3.1.3.7, these are mandatory ID-token claims).
 	if (!claims.iss || claims.iss.replace(/\/+$/, "") !== expected.issuer.replace(/\/+$/, "")) {
 		throw new Error("Issuer mismatch");
 	}
@@ -246,10 +226,6 @@ export function verifyIdToken(
 
 	return { subject: claims.sub, email: claims.email ?? "", displayName: claims.name ?? null };
 }
-
-// ---------------------------------------------------------------------------
-// `remix/auth` OIDC adapter
-// ---------------------------------------------------------------------------
 
 /** OIDC provider discovery metadata (re-exported from `remix/auth`). */
 export type OIDCMetadata = OIDCAuthProviderMetadata;
@@ -268,8 +244,8 @@ export interface OIDCConfig {
 
 /**
  * A normalized authentication profile: the OIDC claims mapped into the field
- * names the SaaS user models consume. Structurally matches the blog engine's
- * `AuthProfile`, so it can be re-exported and typed as that without conversion.
+ * names the SaaS user models consume. The structure matches what those models
+ * expect, so it can be re-exported and typed directly without conversion.
  */
 export interface NormalizedAuthProfile {
 	subjectId: string;
@@ -365,10 +341,6 @@ export function toAuthProfile(profile: OIDCAuthProfile): NormalizedAuthProfile {
 		avatar: profile.picture ?? "",
 	};
 }
-
-// ---------------------------------------------------------------------------
-// base64url helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Encodes bytes as an unpadded base64url string.

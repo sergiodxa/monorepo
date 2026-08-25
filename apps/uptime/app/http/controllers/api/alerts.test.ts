@@ -3,7 +3,7 @@
  * team's alerts with channel config stripped, and `POST` creates one for the
  * email/webhook/slack/discord strategy, enforcing the per-team alert cap. Every
  * action is guarded by `requireApiKey`, so each test authenticates with a real
- * bearer key minted through `ApiKey.create` rather than a fake middleware.
+ * bearer key minted through `ApiKey.create`, exercising that same middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,11 +24,9 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 
 /**
- * `~/app/data/monitor` (imported transitively by `./alerts`, for its `monitorId`
- * validation) reads `env` from `cloudflare:workers` at module load, so the module has to
- * resolve here as well as through the repo-root `bunfig.toml` preload. These endpoints
- * touch no binding, and the empty strict env proves it: any read would throw by the
- * binding's name instead of quietly answering a stand-in value.
+ * `~/app/data/monitor`, imported transitively for `monitorId` validation,
+ * reads `env` from `cloudflare:workers` at module load, so this mock must
+ * also resolve here, alongside the repo-root `bunfig.toml` preload.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 

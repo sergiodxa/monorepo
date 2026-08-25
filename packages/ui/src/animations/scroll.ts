@@ -41,11 +41,11 @@ const DEFAULT_SCROLL_FADE_AXIS: NonNullable<ScrollFade.Options["axis"]> = "block
 const DEFAULT_SCROLL_FADE_SIZE = "3rem";
 const SCROLL_FADE_DIRECTION_PROPERTY = "--ui-scroll-fade-direction";
 const SCROLL_FADE_KEYFRAMES_NAME = "ui-scroll-fade-mask";
-// Proportion of the tracked scroll range each edge's fade takes to ramp
-// fully in (scrolling away from that edge) or fully out (scrolling back
-// toward it). A fixed proportion rather than a fixed length, since the
-// scroll-linked keyframes below are positioned in percentages of whatever
-// range the container's own content happens to scroll.
+/**
+ * Proportion of the tracked scroll range each edge's fade takes to ramp
+ * fully in or out. Held as a proportion because the scroll-linked keyframes
+ * below sit at percentages of whatever range the container's content scrolls.
+ */
 const SCROLL_FADE_RAMP_PERCENT = 8;
 /** Gradient direction each axis paints its mask along; `"inline"` reads its actual value from {@link SCROLL_FADE_DIRECTION_PROPERTY}, mirrored under `:dir(rtl)`. */
 const SCROLL_FADE_AXIS_DIRECTION: Record<NonNullable<ScrollFade.Options["axis"]>, string> = {
@@ -71,15 +71,9 @@ export namespace ScrollShadow {
 }
 
 /**
- * Gives a sticky header or toolbar a shadow that ramps in once the content
- * beneath it starts scrolling, so the element reads as elevated above the
- * page only once there is something to be elevated above. The shadow tracks
- * the nearest scrollable ancestor's block-axis position directly — no
- * scroll listener runs to compute it.
- *
- * A browser without scroll-driven animation support renders the element
- * with no shadow at all times, which stays a fully usable, if less
- * decorated, sticky header.
+ * Gives a sticky header a scroll-driven shadow, so it reads as elevated only
+ * once content has scrolled beneath it. Reduced motion pins the shadow on;
+ * engines without scroll timelines leave the header flat.
  *
  * @param options Tuning for how quickly the shadow settles in.
  * @returns A style mixin, applicable through a host element's `mix` prop.
@@ -101,10 +95,6 @@ export function scrollShadow(options: ScrollShadow.Options = {}): CSSMixinDescri
 			timeline: "scroll(nearest block)",
 			range: `0 ${distance}`,
 		}),
-		// A shadow ramping in and out has no positional movement to collapse
-		// to opacity — the closest reduced-motion equivalent is to stop
-		// tying its presence to scroll position at all and let it settle
-		// permanently into the state it would otherwise scroll toward.
 		media(
 			"(prefers-reduced-motion: reduce)",
 			raw({
@@ -125,25 +115,17 @@ export namespace ScrollProgress {
 	export interface Options {
 		/**
 		 * Scroll axis the indicator's timeline attaches to: `"block"` tracks
-		 * vertical scroll (a reading-progress bar), `"inline"` tracks
-		 * horizontal scroll (a Carousel viewport's progress). Defaults to
-		 * `"block"`.
+		 * vertical scroll (a reading-progress bar), `"inline"` horizontal scroll
+		 * (a Carousel viewport). Defaults to `"block"`.
 		 */
 		axis?: "block" | "inline";
 	}
 }
 
 /**
- * Grows a fill element from empty to full in lockstep with how far its
- * nearest scrollable ancestor has scrolled — a reading-progress bar tied to
- * page scroll, or a Carousel's progress bar tied to its viewport's scroll.
- * The fill grows along the inline dimension starting from the inline-start
- * edge, so it reads correctly in both left-to-right and right-to-left
- * layouts without any extra styling.
- *
- * Apply this to the fill element itself, nested inside a fixed-size track
- * element the consumer supplies. A browser without scroll-driven animation
- * support renders the fill at whatever static size its own CSS gives it.
+ * Grows a fill element in lockstep with its scrollable ancestor's scroll
+ * position, from the inline-start edge so it reads correctly in both writing
+ * directions. Nest it in a fixed-size track; reduced motion ramps opacity.
  *
  * @param options Selects the scroll axis the indicator tracks.
  * @returns A style mixin, applicable through a host element's `mix` prop.
@@ -164,10 +146,6 @@ export function scrollProgress(options: ScrollProgress.Options = {}): CSSMixinDe
 			fillMode: "both",
 			timeline: `scroll(nearest ${axis})`,
 		}),
-		// Collapses the growing fill to a fixed full size and expresses the
-		// same scroll-linked progress as an opacity ramp instead. Only
-		// `animationName`/`inlineSize` are overridden here — duration, easing,
-		// and fill-mode still cascade from the rule above.
 		media("(prefers-reduced-motion: reduce)", [
 			keyframes(SCROLL_PROGRESS_FADE_KEYFRAMES_NAME, {
 				from: { opacity: 0 },
@@ -186,7 +164,7 @@ export namespace ViewReveal {
 	/**
 	 * Edge an element's entry motion translates in from, expressed as a
 	 * logical direction so it stays correct under both writing directions.
-	 * `"none"` fades the element in place with no translation at all.
+	 * `"none"` fades the element in place.
 	 */
 	export type Direction = "block-start" | "block-end" | "inline-start" | "inline-end" | "none";
 
@@ -206,10 +184,9 @@ export namespace ViewReveal {
 		 */
 		distance?: string;
 		/**
-		 * Scroll axis of the element's nearest scrollable ancestor that its
-		 * view-timeline progresses along: `"block"` for a vertically
-		 * scrolling page or panel, `"inline"` for a horizontally scrolling
-		 * one, such as a Carousel. Defaults to `"block"`.
+		 * Scroll axis the element's view-timeline progresses along: `"block"`
+		 * for a vertically scrolling page or panel, `"inline"` for a
+		 * horizontally scrolling one, such as a Carousel. Defaults to `"block"`.
 		 */
 		axis?: "block" | "inline";
 		/**
@@ -222,21 +199,9 @@ export namespace ViewReveal {
 }
 
 /**
- * Plays an element's entry motion as it scrolls into its nearest scrollable
- * ancestor's viewport: a translate-and-fade tied directly to the element's
- * own position, with no intersection observer and no re-render involved.
- * Because the motion is driven purely by geometry, scrolling an already
- * revealed element back out of view and back in replays it — an accepted
- * trade-off for an effect that a browser without scroll-driven animation
- * support simply skips, rendering the element fully visible and in place
- * from the start.
- *
- * The entry translate rides a custom property rather than baking the
- * distance into per-call `@keyframes`, so every call shares one set of
- * keyframes and only the custom property's value differs per element —
- * `@keyframes` names are global to the document, and a name generated fresh
- * per call would either collide across differently configured calls or
- * demand ever-growing bookkeeping to keep them apart.
+ * Plays a translate-and-fade entry as the element scrolls into view; out and
+ * back replays it. `@keyframes` names are document-global, so one shared set
+ * reads its distance from a custom property, mirrored under `:dir(rtl)`.
  *
  * @param options Tuning for the reveal's direction, distance, and range.
  * @returns A style mixin, applicable through a host element's `mix` prop.
@@ -250,10 +215,6 @@ export function viewReveal(options: ViewReveal.Options = {}): CSSMixinDescriptor
 	let range = options.range ?? DEFAULT_VIEW_REVEAL_RANGE;
 
 	let negatedDistance = `calc(-1 * ${distance})`;
-	// Physical translate values assuming left-to-right inline flow; the
-	// inline-start/inline-end cases override the custom property under
-	// `:dir(rtl)` below rather than expressing a logical translate directly,
-	// since `translate` itself only ever accepts physical x/y offsets.
 	let enterTranslate = "0 0";
 	let enterTranslateMirrored = "0 0";
 	let needsMirror = false;
@@ -296,8 +257,6 @@ export function viewReveal(options: ViewReveal.Options = {}): CSSMixinDescriptor
 		}),
 		needsMirror &&
 			when("&:dir(rtl)", raw({ [VIEW_REVEAL_TRANSLATE_PROPERTY]: enterTranslateMirrored })),
-		// Collapses the translate to a fixed resting position and keeps
-		// only the opacity fade, per the reduced-motion contract.
 		media("(prefers-reduced-motion: reduce)", [
 			keyframes(VIEW_REVEAL_REDUCED_KEYFRAMES_NAME, {
 				from: { opacity: 0 },
@@ -319,10 +278,9 @@ export namespace ScrollFade {
 	 */
 	export interface Options {
 		/**
-		 * Scroll axis the fade's timeline attaches to: `"block"` fades the
-		 * container's top and bottom edges, matching a vertically scrolling
-		 * list or panel; `"inline"` fades its start and end edges, matching a
-		 * horizontally scrolling row. Defaults to `"block"`.
+		 * Scroll axis the fade's timeline attaches to: `"block"` fades the top
+		 * and bottom edges of a vertically scrolling list, `"inline"` the start
+		 * and end edges of a horizontally scrolling row. Defaults to `"block"`.
 		 */
 		axis?: "block" | "inline";
 		/**
@@ -334,30 +292,18 @@ export namespace ScrollFade {
 }
 
 /**
- * Builds the four-stop mask-image gradient {@link scrollFade} paints in
- * every state: a leading stop, two middle stops marking where a faded band
- * gives way to the fully opaque middle, and a trailing stop. Only the two
- * middle stops ever change between states — collapsing a middle stop onto
- * its neighboring fixed stop is what reads as "no fade" at that edge, so
- * every state shares the same four-stop shape and no state needs its own
- * differently structured gradient.
+ * Builds the four-stop mask gradient every {@link scrollFade} state paints.
+ * Collapsing a middle stop onto its neighboring fixed stop reads as a fully
+ * opaque edge, so one gradient shape serves every state.
  */
 function scrollFadeMask(direction: string, startStop: string, endStop: string): string {
 	return `linear-gradient(${direction}, transparent 0%, black ${startStop}, black ${endStop}, transparent 100%)`;
 }
 
 /**
- * Fades a scroll container's own edges through a mask that tracks its scroll
- * position directly: an edge reads fully opaque exactly when there is
- * nothing further to scroll toward it, and feathers into a transparent taper
- * the moment there is content beyond it worth hinting at. The mask lives on
- * the scrolling element itself — a MessageScroller viewport, an Attachment
- * group's row, a ScrollArea viewport, or any other element that scrolls its
- * own content — with no separately tracked element involved.
- *
- * A browser without scroll-driven animation support renders both edges
- * permanently faded instead, a constant hint that the container holds more
- * content than currently fits.
+ * Fades a scroll container's own edges through a mask on the scrolling
+ * element itself: each edge reads opaque once scroll reaches it and feathers
+ * while content lies beyond. Without scroll timelines both edges stay faded.
  *
  * @param options Selects the scroll axis the fade tracks and how wide each faded band reads.
  * @returns A style mixin, applicable through a host element's `mix` prop.
@@ -378,11 +324,6 @@ export function scrollFade<node extends Element = Element>(options: ScrollFade.O
 	let settledMask = scrollFadeMask(direction, size, settledStop);
 	let rampPercent = SCROLL_FADE_RAMP_PERCENT;
 
-	// Built as its own statement, with the ramp stop's key assigned after the
-	// literal "0%"/"100%" keys, rather than inline inside the `animation()`
-	// call: an object literal mixing a computed key with literal ones widens
-	// past what `AnimationConfig["keyframes"]` accepts, where an
-	// already-typed variable assigned into afterward does not.
 	let fadeKeyframes: Record<string, CSSStyles> = {
 		"0%": { maskImage: scrollFadeMask(direction, "0%", settledStop) },
 		"100%": { maskImage: scrollFadeMask(direction, size, "100%") },
@@ -390,11 +331,6 @@ export function scrollFade<node extends Element = Element>(options: ScrollFade.O
 	fadeKeyframes[`${rampPercent}%, ${100 - rampPercent}%`] = { maskImage: settledMask };
 
 	return combine<node>([
-		// Static two-edge fallback, active unconditionally: both edges read
-		// as permanently faded, so a container without scroll-driven
-		// animation support still hints that its content extends past what
-		// currently fits, even without tracking where the reader has
-		// scrolled to.
 		mask<node>(settledMask),
 		axis === "inline" &&
 			when<node>("&:dir(rtl)", raw<node>({ [SCROLL_FADE_DIRECTION_PROPERTY]: "left" })),
@@ -406,11 +342,6 @@ export function scrollFade<node extends Element = Element>(options: ScrollFade.O
 				fillMode: "both",
 				timeline: `scroll(self ${axis})`,
 			}),
-			// A mask fade ramping in and out at each edge has no positional
-			// movement to collapse to opacity — the closest reduced-motion
-			// equivalent is to stop tying the fade to scroll position and let
-			// both edges settle permanently into the same faded state the
-			// static fallback above already renders.
 			media<node>("(prefers-reduced-motion: reduce)", [
 				raw<node>({ animationName: "none" }),
 				mask<node>(settledMask),

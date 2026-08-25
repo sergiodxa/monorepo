@@ -1,7 +1,7 @@
 /**
  * Route guard for the admin area: everything {@link requireSubject} requires, plus the
- * `admin` role. A signed-in subject without it is sent to their own account rather
- * than to the sign-in page, since signing in again would not help them.
+ * `admin` role. A signed-in subject lacking the role is routed to their own account,
+ * where only a role change can grant them access.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,8 +17,8 @@ import routes from "~/routes/web";
 /**
  * Requires a signed-in subject holding the `admin` role.
  *
- * Runs `requireSubject` itself rather than assuming it ran earlier, so a controller
- * cannot mount the admin guard without the session guard behind it.
+ * Runs `requireSubject` itself, guaranteeing the session guard always runs ahead of
+ * the admin check no matter how a controller wires its middleware.
  */
 export const requireAdmin: Middleware = (ctx, next) => {
 	/** The role check, run once `requireSubject` has resolved the subject. */

@@ -3,8 +3,8 @@
  * <key>`, hashes it with the same SHA-256 scheme `app/services/api-key.ts` generates
  * keys with, looks the hash up in `api_keys`, rejects missing/invalid/expired keys,
  * checks the scope the calling route requires, and exposes `ctx.apiKey`/`ctx.apiTeam`
- * for the handler. Every check happens per request; nothing here is cached, since a
- * revoked or expired key must stop working immediately.
+ * for the handler. Every check runs per request, so a revoked or expired key
+ * stops working on its very next use.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,9 +25,7 @@ import { apiError } from "~/app/services/api-response";
 
 declare module "remix/router" {
 	interface RequestContext {
-		/** The authenticated API key for the current `/api/v1/*` request. */
 		apiKey: SelectApiKey;
-		/** The team that owns the authenticated API key. */
 		apiTeam: SelectTeam;
 	}
 }

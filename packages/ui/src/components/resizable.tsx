@@ -43,9 +43,8 @@ const DEFAULT_HANDLE_ROLE = "separator";
 
 /**
  * Default {@link Resizable.HandleProps} tab index, applied through
- * {@link attrs} unless a consumer supplies its own, so a handle is reachable
- * in Tab order by default, matching the WAI-ARIA window splitter pattern's
- * focusable separator.
+ * {@link attrs} unless a consumer supplies its own, keeping a handle
+ * reachable in Tab order per the WAI-ARIA window splitter pattern.
  */
 const DEFAULT_HANDLE_TAB_INDEX = 0;
 
@@ -61,10 +60,8 @@ export namespace Resizable {
 
 	/**
 	 * Value {@link Resizable} stores in component context so every
-	 * {@link Resizable.Panel} and {@link Resizable.Handle} nested inside
-	 * mirrors the same axis onto its own `data-orientation` attribute and
-	 * switches its own sizing and cursor from that, without reading an
-	 * ancestor directly.
+	 * {@link Resizable.Panel} and {@link Resizable.Handle} nested inside reads
+	 * the same axis for its own `data-orientation`, sizing, and cursor.
 	 */
 	export interface Context {
 		/** The root's resolved layout axis. */
@@ -103,21 +100,17 @@ export namespace Resizable {
 	}
 
 	/**
-	 * Props accepted by {@link Resizable.Handle}. A handle carries no visible
-	 * text of its own, so `aria-label` or `aria-labelledby` is required for it
-	 * to have an accessible name describing what it resizes; pair it with
-	 * `aria-controls` naming the ids of the panels on either side of it.
+	 * Props accepted by {@link Resizable.Handle}. Its accessible name comes
+	 * entirely from `aria-label` or `aria-labelledby`; pair it with
+	 * `aria-controls` naming the panels on either side.
 	 */
 	export interface HandleProps extends TagProps<"div"> {}
 }
 
 /**
  * Renders the root host: a `<div>` laying {@link Resizable.Panel} and
- * {@link Resizable.Handle} children out in a row by default, switching to a
- * column when `orientation` is `"vertical"`. The resolved axis is shared
- * through component context, so every part nested inside mirrors it onto its
- * own `data-orientation` attribute without reading an ancestor. Set
- * `aria-disabled="true"` to dim the whole group's appearance.
+ * {@link Resizable.Handle} children out in a row, or a column when
+ * `orientation` is `"vertical"`, sharing the resolved axis through context; set `aria-disabled="true"` to dim the whole group.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link Resizable.Context}.
  * @returns The render function producing the root's markup.
@@ -168,12 +161,8 @@ export function Resizable(handle: Handle<Resizable.Props, Resizable.Context>) {
 
 /**
  * Renders a single pane: a `<div>` that grows and shrinks to fill its share
- * of the group's main axis and clips its own overflow with scrolling.
- * `defaultSize` sets its starting share and `minSize`/`maxSize` clamp how far
- * it can shrink or grow along that same axis; every one of those is carried
- * on its own `--ui-resizable-panel-*` custom property, ready for a behavior
- * that tracks pointer input to update the same properties and resize the
- * pane live without this markup changing.
+ * of the group's main axis, clipping overflow with scrolling. Each of
+ * `defaultSize`/`minSize`/`maxSize` lives on a `--ui-resizable-panel-*` custom property a pointer-tracking behavior can update to resize it live.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the pane's markup.
@@ -225,16 +214,8 @@ Resizable.Panel = function ResizablePanel(handle: Handle<Resizable.PanelProps>) 
 
 /**
  * Renders a draggable divider between two adjacent panels: a
- * `role="separator"` `<div>` reachable in Tab order by default, reserving a
- * fixed-size track along the group's main axis and drawing a short bar
- * centered across its cross axis to mark the seam. The bar reads in a
- * stronger border color on hover, and `&[data-resizing]` is ready for a
- * behavior that tracks an active drag to color it in the primary color while
- * the pointer is down. Carries no visible text of its own — `aria-label` or
- * `aria-labelledby` is required so assistive technology has an accessible
- * name for what it resizes, and pairing it with `aria-controls` naming the
- * ids of the panels on either side lets assistive technology announce what
- * the separator controls.
+ * `role="separator"` `<div>` reachable in Tab order, its bar darkening on
+ * hover and ready for `&[data-resizing]` to color it during a drag. Its accessible name comes entirely from `aria-label`/`aria-labelledby`, paired with `aria-controls` naming the panels it resizes.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the handle's markup.
@@ -274,7 +255,7 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 					outlineStyle("none"),
 					when('&[data-orientation="horizontal"]', cursor("col-resize")),
 					when('&[data-orientation="vertical"]', cursor("row-resize")),
-					/** No utility sets the bare CSS `content` property. */
+					/** `raw()` sets the bare CSS `content` property directly, its only utility path. */
 					before(raw({ content: '""' })),
 					data("orientation", "horizontal", before([bs("2.5rem"), is("0.125rem")])),
 					data("orientation", "vertical", before([bs("0.125rem"), is("2.5rem")])),

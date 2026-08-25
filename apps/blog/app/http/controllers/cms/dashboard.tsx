@@ -19,8 +19,8 @@ import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { CMSDashboardView } from "~/resources/views/cms/dashboard";
 
 /**
- * Resolves dashboard metrics from repository models and returns the server-rendered
- * CMS dashboard response.
+ * The four content counters resolve in parallel, so the landing page costs a single round
+ * of queries.
  * @param ctx Request-scoped dependency container used to resolve `Database`.
  * @returns HTML response for the dashboard with aggregate counters.
  */

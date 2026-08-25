@@ -178,7 +178,6 @@ describe("totp.generateSecret", () => {
 	});
 
 	test("encodes 20 bytes by default", () => {
-		// 20 bytes is 32 unpadded base32 characters.
 		expect(totp.generateSecret()).toHaveLength(32);
 	});
 

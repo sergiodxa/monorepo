@@ -59,21 +59,15 @@ export namespace MenubarKeys {
 	 */
 	export interface Options {
 		/**
-		 * Selector, evaluated against the row's direct children, that
-		 * identifies its top-level triggers. Defaults to `[role="menuitem"]`,
-		 * matching `Menubar.Trigger`'s own default role. Scoped to direct
-		 * children only, so a `menuitem`-role row nested inside one of the
-		 * row's own opened Menus is never mistaken for one of the row's own
-		 * triggers.
+		 * Selector, evaluated against the row's direct children, that identifies
+		 * its top-level triggers. Defaults to `[role="menuitem"]`; scoped to
+		 * direct children so nested Menu rows are never mistaken for triggers.
 		 */
 		triggerSelector?: string;
 		/**
 		 * Selector, evaluated against whichever Menu a trigger opens, that
-		 * identifies its rows. Defaults to `[role^="menuitem"]`, matching the
-		 * `menuitem`, `menuitemcheckbox`, and `menuitemradio` roles a
-		 * `Menu.Item` carries. Pass the same value here as whatever
-		 * `itemSelector` a paired `menuKeys()` call on that Menu uses, for
-		 * non-standard markup.
+		 * identifies its rows. Defaults to `[role^="menuitem"]`; pass the same
+		 * value here as the paired `menuKeys()` call's `itemSelector`.
 		 */
 		itemSelector?: string;
 	}
@@ -81,9 +75,8 @@ export namespace MenubarKeys {
 
 /**
  * Collects the row's enabled top-level triggers, in document order, matching
- * `selector` among `host`'s direct children only. Queried fresh on every
- * keystroke and focus change so navigation stays correct as triggers are
- * added, removed, or toggled disabled.
+ * `selector` among `host`'s direct children. Queried fresh on every
+ * interaction so navigation stays correct as triggers change.
  */
 function queryTriggers(host: HTMLElement, selector: string): HTMLButtonElement[] {
 	let candidates = host.querySelectorAll<HTMLButtonElement>(`:scope > ${selector}`);
@@ -93,8 +86,7 @@ function queryTriggers(host: HTMLElement, selector: string): HTMLButtonElement[]
 /**
  * Resolves a trigger's paired Menu — the popover surface its `commandfor`
  * points at — preferring the live `commandForElement` reference and falling
- * back to an `id` lookup for runtimes that parse `commandfor` without yet
- * reflecting the IDL property.
+ * back to an `id` lookup for runtimes that still treat `commandfor` as attribute-only.
  */
 function menuFor(trigger: HTMLButtonElement): HTMLElement | undefined {
 	if (trigger.commandForElement instanceof HTMLElement) return trigger.commandForElement;
@@ -107,9 +99,8 @@ function menuFor(trigger: HTMLButtonElement): HTMLElement | undefined {
 
 /**
  * Finds whichever one of `triggers`' paired Menus is currently showing — at
- * most one at a time, since a shown Menu rides the Popover API's `"auto"`
- * mode, and showing one already dismisses any other `"auto"` surface open
- * alongside it.
+ * most one at a time, since the Popover API's `"auto"` mode already
+ * dismisses any other `"auto"` surface when one opens.
  */
 function findOpenMenu(triggers: readonly HTMLButtonElement[]): OpenMenu | undefined {
 	for (let trigger of triggers) {
@@ -127,13 +118,9 @@ function closeMenu(menu: HTMLElement): void {
 }
 
 /**
- * Opens `trigger`'s paired Menu — if it isn't already showing — and moves
- * focus onto its first or last enabled row, handing focus off into whatever
- * roving tabindex that Menu's own `menuKeys()` mixin already drives from
- * there. Also assigns roving tabindex onto `trigger` itself, so Tab order
- * stays correct for whenever the Menu later closes. Does nothing beyond
- * opening when the Menu has no enabled rows of its own, or doesn't resolve
- * to an element at all.
+ * Opens `trigger`'s paired Menu and moves focus onto its first or last
+ * enabled row, handing off to that Menu's own `menuKeys()` roving tabindex;
+ * also updates `trigger`'s own tabindex for when it later recloses.
  */
 function openMenuAndFocus(
 	triggers: readonly HTMLButtonElement[],
@@ -156,12 +143,8 @@ function openMenuAndFocus(
 
 /**
  * Moves the row's open state onto `target`: closes whichever other
- * trigger's Menu `openEntry` names — if any, and if it isn't `target`'s own
- * — then opens and hands focus into `target`'s Menu the same way
- * {@link openMenuAndFocus} always does. Used everywhere a key both moves
- * along the row and keeps a Menu open across that move, mirroring how a
- * native application's own menu bar swaps which menu shows as focus crosses
- * from one top-level trigger to the next.
+ * trigger's Menu `openEntry` names, then opens and focuses `target`'s Menu
+ * via {@link openMenuAndFocus}, keeping one Menu open as focus moves.
  */
 function switchTo(
 	triggers: readonly HTMLButtonElement[],
@@ -176,36 +159,8 @@ function switchTo(
 
 /**
  * Adapts the WAI-ARIA menubar keyboard pattern onto a Menubar's row of
- * triggers: roving tabindex, `ArrowLeft`/`ArrowRight` and Home/End
- * navigation between them, and typeahead — the identical shape `menuKeys()`
- * gives a Menu's own rows, one level up. Apply it to the Menubar root
- * through its `mix` prop, alongside each Menu it opens rendered as a direct
- * child of that same root — the shape the compound component already
- * composes in — so a keystroke bubbling up from inside an open Menu still
- * reaches this mixin's own listener.
- *
- * `ArrowDown` opens the focused trigger's paired Menu and moves focus onto
- * its first enabled row; `ArrowUp` does the same onto its last row. From
- * there, that Menu's own `menuKeys()` mixin — paired on the Menu itself —
- * owns every further keystroke, since focus and roving tabindex both now sit
- * inside its rows; this mixin leaves `ArrowUp`/`ArrowDown`/`Home`/`End` and
- * typeahead alone whenever focus already sits inside an open Menu rather
- * than on one of the row's own triggers, precisely so it never fights that
- * handed-off keyboard pattern for the same keys.
- *
- * `ArrowLeft`/`ArrowRight` behave the same way whether focus currently sits
- * on a trigger or deep inside its open Menu: when a Menu is showing
- * anywhere in the row, they close it, move to the adjacent trigger, and
- * open and hand off into that trigger's own Menu the same way `ArrowDown`
- * does; when no Menu is open, they just move roving tabindex and focus
- * along the row. `Home`/`End` mirror that same open-aware handoff, but only
- * once focus is back on a trigger, leaving a Home/End struck from inside an
- * open Menu to that Menu's own `menuKeys()` instead.
- *
- * Dismissing an open Menu — Escape, or an outside click, both already
- * native to its `"auto"` popover mode — returns focus to its trigger on its
- * own, through the platform's own popover focus-return behavior, so this
- * mixin never has to handle Escape itself.
+ * triggers, handing off to each opened Menu's own `menuKeys()` mixin once
+ * focus moves inside it, so each mixin owns keys only within its own scope.
  *
  * @param options Selector overrides for non-standard markup.
  * @returns A mixin descriptor for the row's `mix` prop.
@@ -230,10 +185,6 @@ export const menubarKeys: MixinFactory<HTMLElement, [options?: MenubarKeys.Optio
 		let resetBufferId: ReturnType<typeof setTimeout> | undefined;
 
 		return (options = {}, props = options as ElementProps) => {
-			// `options` is optional, so a call site that omits it
-			// (`menubarKeys()`) gets the runtime's trailing current-props
-			// argument in its place — reset it back to an empty options
-			// object when that happens.
 			if (props === options) options = {};
 
 			let triggerSelector = options.triggerSelector ?? DEFAULT_TRIGGER_SELECTOR;

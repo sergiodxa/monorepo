@@ -1,24 +1,7 @@
 /**
- * Ad-hoc ping endpoint: `POST /api/v1/ping`. Runs one HTTP, DNS or TCP check against a
- * target described entirely in the request body, returns what it observed, and forgets
- * it. Nothing is stored, no monitor is created or touched, and no alert is dispatched —
- * the caller is the only consumer of the result.
- *
- * It exists for the checks that have no business becoming monitors. A deploy pipeline
- * that wants to know whether the preview app it just published answers on its freshly
- * minted subdomain would otherwise have to create a monitor, wait for a scheduled check,
- * read the result, and delete the monitor again — four calls and a polling loop to learn
- * something one request can answer.
- *
- * A ping performed here is a ping billed here: it costs the same metered unit as a
- * monitor's scheduled check, which is why the endpoint refuses a team without an active
- * subscription rather than quietly doing unbilled work.
- *
- * The check itself is not implemented here. HTTP goes through `HttpCheck`, the same class
- * `CheckHttpJob` probes monitors with; DNS and TCP go through `checkDns` and
- * `checkTcpConnection`, the same functions their sweeps use. What this controller owns is
- * the request contract, the guards, and the fact that none of the monitor-shaped
- * side effects run.
+ * Ad-hoc ping endpoint: `POST /api/v1/ping`. Runs one HTTP, DNS, or TCP check against a
+ * target described in the request body and returns what it observed, storing nothing and
+ * dispatching no alert. Billed as one metered ping, so it requires an active subscription.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,14 +51,9 @@ const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const BODYLESS_METHODS: readonly string[] = ["GET", "HEAD"];
 
 /**
- * Requests one API key may spend per {@link CALLER_WINDOW}, mirroring the `simple.limit`
- * declared for the `RATE_LIMITER` binding in `wrangler.jsonc` (the binding reports
- * neither, so the two are kept in step by hand).
- *
- * This is an abuse bound, not a product one. The endpoint is authenticated, subscribed
- * and metered, so a caller running it hard is a caller paying for it — what the limit
- * stops is a runaway CI loop turning a stuck retry into an unbounded bill before anyone
- * notices. Sixty a minute is far above any pipeline's real rate.
+ * Requests one API key may spend per {@link CALLER_WINDOW}; mirrors the `simple.limit` in
+ * `wrangler.jsonc` for the `RATE_LIMITER` binding, kept in step by hand. This is an abuse
+ * bound, not a product one — sixty a minute is far above any real pipeline's rate.
  */
 const CALLER_LIMIT = 60;
 
@@ -93,14 +71,9 @@ const ContentCheckSchema = s.object({
 });
 
 /**
- * The request body, discriminated on `type`. Bounds mirror the monitor validators, so a
- * target that would be rejected as a monitor is rejected here too and nobody can use the
- * ad-hoc path to ask for a probe the scheduled path would refuse.
- *
- * Each discriminator passes its type argument explicitly (`s.literal<"http">`) rather
- * than letting it be inferred: `literal`'s parameter is not declared `const`, so an
- * inferred `"http"` widens to `string` and the parsed union stops being discriminated —
- * {@link run} would have nothing to narrow on and every branch would see every field.
+ * The request body, discriminated on `type` with bounds mirroring the monitor
+ * validators. Discriminators pass their literal type explicitly, since letting it
+ * infer would widen `"http"` to `string` and leave {@link run} nothing to narrow on.
  */
 const PingSchema = s.variant("type", {
 	http: s
@@ -117,10 +90,9 @@ const PingSchema = s.variant("type", {
 			contentChecks: s.defaulted(s.array(ContentCheckSchema), []),
 		})
 		/**
-		 * Rejected here rather than left to the probe: constructing a GET or HEAD request
-		 * with a body throws a `TypeError`, which `probe` cannot tell apart from the
-		 * Durable Object being unavailable, so it would surface as a 500 on a request that
-		 * is simply malformed. This is the only cross-field rule the body has.
+		 * Constructing a GET or HEAD request with a body throws a `TypeError` indistinguishable
+		 * from the Durable Object being unavailable; catching it here turns it into a normal
+		 * validation error on this, the only cross-field rule the body has.
 		 */
 		.refine(
 			(value) => value.body === undefined || !BODYLESS_METHODS.includes(value.method),
@@ -151,11 +123,9 @@ interface PingResult {
 }
 
 /**
- * The `RATE_LIMITER` binding, when the running deployment declares one.
- *
- * Read structurally rather than off the generated `Cloudflare.Env`, which is what lets an
- * absent binding be a supported state instead of a crash: a deploy predating the
- * `ratelimits` entry, or a local runtime configured without it, still serves pings.
+ * The `RATE_LIMITER` binding, when the running deployment declares one, checked
+ * structurally on the raw environment so a deploy predating the `ratelimits` entry, or
+ * a local runtime configured without it, keeps serving pings.
  *
  * @returns The binding, or `undefined` when this deployment has none.
  */
@@ -167,15 +137,13 @@ function rateLimiterBinding(): RateLimiterBinding | undefined {
 }
 
 /**
- * Backend counting the caller budget. The binding bills nothing per call; without it the
- * count falls back to the isolate's own memory, which is weaker (each isolate gets its
- * own budget) but free and still bounds a single connection's flood.
+ * Backend counting the caller budget: without a binding it falls back to the isolate's
+ * own memory, weaker but free, still bounding one connection's flood. `as const` keeps
+ * the window a literal duration, which is what both adapters' options require.
  *
  * @returns The adapter to count with.
  */
 function createAdapter(): Adapter {
-	// `as const` keeps the window a duration literal rather than widening it to `string`,
-	// which is what both adapters' options accept.
 	let options = { limit: CALLER_LIMIT, window: CALLER_WINDOW } as const;
 	let binding = rateLimiterBinding();
 
@@ -184,19 +152,15 @@ function createAdapter(): Adapter {
 }
 
 /**
- * The caller budget, built on the first request and reused by the isolate after that: the
- * adapter reads a binding off `env`, which is not module-scope work.
+ * The caller budget, built the first time a request needs it and reused after that,
+ * since building it means reading the `RATE_LIMITER` binding off `env`.
  */
 let limiter: Middleware | undefined;
 
 /**
- * Spends one API key's budget before the handler runs.
- *
- * Keyed on the key itself rather than the calling address, unlike the unauthenticated
- * cron-job ping endpoint: this request already proved who it is, and the budget should
- * follow the key across however many CI runners share an egress address — or move with
- * it when one runner is replaced. Runs after `requireApiKey`, which is what puts
- * `ctx.apiKey` there to read.
+ * Spends one API key's budget before the handler runs, keyed on the key itself so the
+ * budget follows it across however many CI runners share an egress address, or moves
+ * with it when a runner is replaced. Runs after `requireApiKey`, which sets `ctx.apiKey`.
  */
 const limitByApiKey: Middleware = (context, next) => {
 	limiter ??= rateLimit({
@@ -224,10 +188,9 @@ export default createAction(routes.api.v1.ping, {
 		let db = getServiceContainer().get(Database);
 
 		/**
-		 * `stateFor`, not `isActive`: an owner whose subscription state cannot be determined
-		 * fails open and gets their ping, which is the same reading the manual "run check"
-		 * button takes. Refusing a paying customer because a lookup was inconclusive is the
-		 * worse of the two mistakes.
+		 * Reads via `stateFor`: an owner whose subscription state can't be determined fails
+		 * open and gets their ping, matching what the manual "run check" button does —
+		 * refusing a paying customer over an inconclusive lookup is the worse mistake.
 		 */
 		if ((await Subscription.stateFor(db, ctx.apiTeam.owner_id)) === "inactive") {
 			return apiError(
@@ -255,10 +218,9 @@ export default createAction(routes.api.v1.ping, {
 		});
 
 		/**
-		 * Always 200, whatever the target did. A refused connection or an unexpected status
-		 * is the answer the caller asked for, not a failure of this request — the non-2xx
-		 * responses above are reserved for the request itself being wrong. A CI script
-		 * therefore branches on `data.ping.status`, never on the HTTP status.
+		 * Always 200: whatever the target did is the answer the caller asked for, so status
+		 * codes above are reserved for the request itself being malformed. Callers read the
+		 * outcome from `data.ping.status`.
 		 */
 		return apiSuccess({
 			ping: {
@@ -296,9 +258,8 @@ async function runHttp(input: Extract<PingInput, { type: "http" }>): Promise<Pin
 		timeoutSeconds: input.timeoutSeconds,
 		locationHint: input.region,
 		/**
-		 * Sharded on the URL rather than on the ping's own id, which is fresh every time:
-		 * a pipeline checking one endpoint on every deploy then keeps hitting the same
-		 * warm Durable Object instead of scattering across all eight in its region.
+		 * Sharded on the URL, which stays stable across calls, so a pipeline pinging the same
+		 * target on every deploy keeps landing on the same warm Durable Object in its region.
 		 */
 		shardKey: input.url,
 		contentChecks: input.contentChecks.map(toContentCheckRule),
@@ -315,10 +276,9 @@ async function runHttp(input: Extract<PingInput, { type: "http" }>): Promise<Pin
 
 async function runDns(input: Extract<PingInput, { type: "dns" }>): Promise<PingResult> {
 	/**
-	 * `previousValue` is null because an ad-hoc ping has no previous check to have changed
-	 * from. A `changed` status therefore only ever means "did not match the
-	 * `expectedValue` you gave me", which is the only comparison a stateless caller can
-	 * meaningfully ask for.
+	 * `previousValue` is null: an ad-hoc ping has no previous check to have changed from,
+	 * so a `changed` status here only ever means the resolved value didn't match
+	 * `expectedValue` — the one comparison a stateless caller can meaningfully ask for.
 	 */
 	let result = await checkDns(
 		input.domain,
@@ -349,8 +309,8 @@ async function runTcp(input: Extract<PingInput, { type: "tcp" }>): Promise<PingR
 
 /**
  * Turns a request-body content check into the rule the evaluator takes. `is_enabled` is
- * true by construction: a caller who didn't want a rule applied would not have sent it,
- * unlike a stored check, which has a toggle because it outlives the request.
+ * true by construction: a caller who wanted a rule skipped would simply not send it. A
+ * toggle only matters for a check that outlives the request, as a stored one does.
  */
 function toContentCheckRule(check: s.InferOutput<typeof ContentCheckSchema>): ContentCheckRule {
 	return {

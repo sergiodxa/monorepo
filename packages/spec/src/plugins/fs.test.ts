@@ -338,7 +338,7 @@ function createWorkspaceStub(base: string): Workspace {
 	};
 }
 
-/** A permission set granting everything; fs tools never consult it. */
+/** A permission set granting every check, filling the tool context's shape for fs tests. */
 function createPermissionsStub(): PermissionSet {
 	return {
 		checkRun: () => success(undefined),
@@ -349,12 +349,10 @@ function createPermissionsStub(): PermissionSet {
 	};
 }
 
-/** Shorthand for a value argument. */
 function value(data: Value): ToolArg {
 	return { kind: "value", value: data };
 }
 
-/** Shorthand for a bare-word argument. */
 function word(name: string): ToolArg {
 	return { kind: "word", word: name };
 }

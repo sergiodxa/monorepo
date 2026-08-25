@@ -1,14 +1,9 @@
 /**
- * Pure payload-shaping for the sprite export flow. Given a user-supplied sprite
- * name it derives the on-disk write path (`src/assets/<name>.png`), the manifest
- * image id, and the served URL (`/assets/<name>.png`) the game loads by. Kept
- * free of disk, canvas, and network concerns so the mapping can be unit-tested
- * directly; the server action (see `export.ts`) consumes these to write the PNG
- * and register it in `src/content/manifest.json`.
- *
- * A single {@link SPRITE_NAME_PATTERN} governs which names are acceptable — a
- * conservative slug so the derived path can never smuggle a traversal, extension,
- * or separator past the path-safety guard.
+ * Pure payload-shaping for the sprite export flow: derives the on-disk write
+ * path, manifest image id, and served URL from a user-supplied name, staying
+ * free of disk and network work so the mapping is unit-testable.
+ * {@link SPRITE_NAME_PATTERN} is a conservative slug so the derived path can
+ * never smuggle a traversal, extension, or separator past the path-safety check.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,10 +13,8 @@ import { failure, type Result, success } from "@pkg/result";
 
 /**
  * Allowed shape for a sprite name: a lowercase slug of letters, digits, and
- * single hyphens, no leading/trailing hyphen. This is deliberately stricter than
- * the path-safety guard so an invalid name is rejected with a clear message
- * before any path is even constructed. Length is enforced separately (see
- * {@link MAX_SPRITE_NAME_LENGTH}).
+ * single hyphens, no leading or trailing hyphen. Rejected early, before any
+ * path is constructed, so an invalid name never reaches the file system.
  */
 export const SPRITE_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
@@ -56,10 +49,9 @@ export class SpriteNameError extends Error {
 }
 
 /**
- * Validates a sprite name and derives its export target (write path, manifest id,
- * served URL). The name is trimmed first; validation happens against
- * {@link SPRITE_NAME_PATTERN} so the derived path is always a single safe segment
- * under {@link SPRITE_ASSET_DIR}.
+ * Validates a sprite name and derives its export target (write path, manifest
+ * id, served URL). The derived path is always a single safe segment under
+ * {@link SPRITE_ASSET_DIR}.
  *
  * @param rawName The user-supplied sprite name (untrusted, un-trimmed).
  * @returns Success with a {@link SpriteExportTarget}, or failure with a
@@ -90,9 +82,8 @@ export function deriveSpriteTarget(rawName: string): Result<SpriteExportTarget, 
 
 /**
  * The minimal manifest slice the sprite export reads and writes: only `images`
- * is required for registering a sprite; other kinds are carried through
- * untouched. Kept structural (not importing the presentation type) so this pure
- * module has no cross-layer dependency.
+ * is required for registering a sprite; other kinds pass through untouched.
+ * Described structurally, keeping this module free of a presentation dependency.
  */
 export interface ManifestImages {
 	images: Record<string, string>;
@@ -101,8 +92,8 @@ export interface ManifestImages {
 
 /**
  * Returns a copy of the manifest with the sprite registered under `images`
- * (id → served URL), leaving every other entry untouched. Pure: it never mutates
- * the input, so the caller decides when to persist the result.
+ * (id → served URL), leaving every other entry and the input manifest
+ * untouched, so the caller decides when to persist the result.
  *
  * @param manifest The current manifest contents.
  * @param target The derived export target whose name/url is registered.

@@ -1,3 +1,10 @@
+/**
+ * Batched logger that accumulates log entries per execution context and
+ * flushes them as a single console call.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Log } from "./types";
 
 export namespace Logger {
@@ -20,8 +27,8 @@ export namespace Logger {
  */
 export class Logger {
 	/**
-	 * Creates a Logger from a Request object.
-	 * Convenience factory for HTTP request contexts.
+	 * Uses the request's method and URL as the logger's identifier so
+	 * batched output can be traced back to the request that produced it.
 	 */
 	static fromRequest(request: Request): Logger {
 		return new Logger(`${request.method} ${request.url}`);

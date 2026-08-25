@@ -35,12 +35,9 @@ interface MemoryCounter {
 }
 
 /**
- * Counts attempts in a `Map` held by the adapter instance.
- *
- * The counters live and die with the instance, so they are per process and per
- * isolate: two workers do not share a budget. That makes it unsuitable for
- * production limiting but exactly right for tests, where the count must be
- * deterministic and inspectable without a network hop.
+ * Counts attempts in a `Map` held by the adapter instance. Counters live and
+ * die with the instance, shared by no other process or isolate, which makes
+ * this unsuitable for production but exactly right for deterministic tests.
  */
 export class MemoryAdapter implements Adapter {
 	/** Requests permitted per window, as configured. */
@@ -63,11 +60,9 @@ export class MemoryAdapter implements Adapter {
 	}
 
 	/**
-	 * Spends budget for a key inside the current aligned window.
-	 *
-	 * A stale counter from an earlier window is discarded rather than decayed, so
-	 * the first attempt after a rollover sees a full budget. A denied attempt is
-	 * not counted, which keeps `remaining` truthful for the attempts that did land.
+	 * Spends budget for a key inside the current aligned window. A stale counter
+	 * from an earlier window resets to a full budget rather than decaying, and a
+	 * denied attempt is not counted, keeping `remaining` truthful for what landed.
 	 *
 	 * @param key - Namespaced identifier being limited.
 	 * @param cost - Units to spend, at least 1; defaults to 1.

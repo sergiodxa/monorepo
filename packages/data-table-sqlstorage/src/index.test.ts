@@ -114,13 +114,11 @@ describe("createSQLStorageDatabaseAdapter", () => {
 
 		let promise = db.transaction(async (tx) => {
 			await tx.create(users, { id: 1, email: "first@example.com" });
-			// The first write is already issued; throwing here must undo it.
 			throw boom;
 		});
 
 		await expect(promise).rejects.toBe(boom);
 
-		// Atomicity: none of the transaction's writes may remain committed.
 		expect(await db.count(users)).toBe(0);
 	});
 
@@ -129,13 +127,11 @@ describe("createSQLStorageDatabaseAdapter", () => {
 
 		let promise = db.transaction(async (tx) => {
 			await tx.create(users, { id: 2, email: "second@example.com" });
-			// Duplicate primary key: the SQLite driver throws, rolling back id 2.
 			await tx.create(users, { id: 1, email: "conflict@example.com" });
 		});
 
 		await expect(promise).rejects.toThrow();
 
-		// Only the pre-existing row survives; the transaction's write is gone.
 		expect(await db.count(users)).toBe(1);
 		expect(await db.findOne(users, { where: { id: 2 } })).toBeNull();
 	});
@@ -155,7 +151,6 @@ describe("createSQLStorageDatabaseAdapter", () => {
 			await tx.create(users, { id: 3, email: "third@example.com" });
 		});
 
-		// The committed transactions persist; the rolled-back one leaves no trace.
 		let rows = await db.findMany(users, { orderBy: ["id"] });
 		expect(rows.map((row) => row.id)).toEqual([1, 3]);
 	});
@@ -171,7 +166,6 @@ describe("createSQLStorageDatabaseAdapter", () => {
 			await expect(inner).rejects.toThrow();
 		});
 
-		// The inner savepoint rolled back, the outer transaction committed.
 		let rows = await db.findMany(users, { orderBy: ["id"] });
 		expect(rows.map((row) => row.id)).toEqual([1]);
 	});
@@ -179,7 +173,6 @@ describe("createSQLStorageDatabaseAdapter", () => {
 	test("reads and RETURNING writes inside a transaction return live results", async () => {
 		let created = await db.transaction(async (tx) => {
 			let row = await tx.create(users, { id: 7, email: "seven@example.com" }, { returnRow: true });
-			// A read issued within the same transaction observes the write.
 			let count = await tx.count(users);
 			expect(count).toBe(1);
 			return row;
@@ -239,14 +232,9 @@ describe("createSQLStorageDatabaseAdapter", () => {
 		let off = await db.findOne(flags, { where: { id: 1 } });
 		let on = await db.findOne(flags, { where: { id: 2 } });
 
-		// `toBe` rather than a truthiness check on purpose: `0` is the exact value that
-		// used to leak out here, and it renders `checked="0"` — an HTML boolean attribute
-		// that is ON — so a stored `false` came back ticked. Only identity catches that.
 		expect(off?.enabled).toBe(false);
 		expect(on?.enabled).toBe(true);
 
-		// A nullable boolean's `null` is a third state and must survive the decode, or
-		// every `?? true` default written over one silently stops firing.
 		expect(off?.archived).toBe(null);
 		expect(on?.archived).toBe(true);
 	});

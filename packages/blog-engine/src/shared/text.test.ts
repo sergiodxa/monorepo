@@ -1,3 +1,9 @@
+/**
+ * Unit tests for the text coercion helpers in `./text`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { asText, entryText, fieldText } from "./text";

@@ -1,14 +1,9 @@
 /**
  * Canonical move content for the game's content layer.
  *
- * This module defines the move catalog consumed by the battle and rules systems,
- * pairing each move identifier with its authored data such as typing, damage
- * class, power, accuracy, PP, and authored effect metadata.
- *
- * As a content-layer file, it acts as the source of truth for move behavior data
- * without embedding engine logic here. The engine reads these records to resolve
- * move execution consistently while keeping mechanics and authored content
- * separated.
+ * Each id maps to authored typing, damage class, power, accuracy, PP, and an
+ * effect payload the engine resolves at execution time, so move behavior stays
+ * editable as data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -936,15 +931,17 @@ export const MOVES = {
 		pp: 40,
 		effect: { kind: "switch-self", preserveStatStages: true },
 	},
+	/**
+	 * Deferred no-op: Beat Up strikes once per healthy party member using that
+	 * member's Attack, so it lands once the engine gains whole-party iteration
+	 * and per-hit resolution.
+	 */
 	BEAT_UP: {
 		type: Type.DARK,
 		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		// TODO: deferred no-op. Beat Up strikes once per healthy party member, each
-		// hit using that member's Attack against the target's Defense. That requires
-		// whole-party iteration and per-hit resolution the engine does not model yet.
 		effect: { kind: "none" },
 	},
 	BELCH: {
@@ -1745,16 +1742,17 @@ export const MOVES = {
 			],
 		},
 	},
+	/**
+	 * Power comes from the held item's `flingPower`, so the move fails whenever
+	 * the user's item lacks one. Consuming the thrown item after a hit arrives
+	 * with a battle-flow follow-up.
+	 */
 	FLING: {
 		type: Type.DARK,
 		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		// Power is sourced from the user's held item's `flingPower`; the move fails
-		// (deals nothing) when the user holds no item or a fling-less item. Consuming
-		// the thrown item after a hit is not yet wired into the battle flow and is a
-		// documented follow-up.
 		effect: { kind: "power-from-held-item" },
 	},
 	FOCUS_ENERGY: {
@@ -2328,7 +2326,6 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		// Returns 1.5x the last damage the user took this turn, from any category.
 		effect: { kind: "counter-last-any-hit", ratio: 1.5 },
 	},
 	METAL_CLAW: {
@@ -2385,7 +2382,6 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		// Returns double the special damage the user took this turn from the target.
 		effect: { kind: "counter-last-special-hit", ratio: 2 },
 	},
 	MOONBLAST: {
@@ -2447,14 +2443,16 @@ export const MOVES = {
 		pp: 20,
 		effect: { kind: "modify-stat", stat: Stat.SpecialAttack, stages: 2, target: "self" },
 	},
+	/**
+	 * Fixed damage still routes through the type chart, so a target immune to
+	 * Ghost stays at full HP.
+	 */
 	NIGHT_SHADE: {
 		type: Type.GHOST,
 		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		// Deals damage equal to the user's level; its Ghost type still means it
-		// cannot hit a target immune to Ghost.
 		effect: { kind: "fixed-damage", amount: "user-level" },
 	},
 	NIGHT_SLASH: {
@@ -2627,15 +2625,16 @@ export const MOVES = {
 		pp: 10,
 		effect: { kind: "none" },
 	},
+	/**
+	 * Deferred no-op: Present randomly damages at one of several power tiers or
+	 * heals the target, a branch that waits on an effect kind covering it.
+	 */
 	PRESENT: {
 		type: Type.NORMAL,
 		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 90,
 		pp: 15,
-		// TODO: deferred no-op. Present randomly either damages (at one of several
-		// power tiers) or heals the target. That heal-or-damage branch on a single
-		// attacking move has no effect kind yet; defer until one exists.
 		effect: { kind: "none" },
 	},
 	PSYBEAM: {
@@ -2929,14 +2928,16 @@ export const MOVES = {
 		pp: 15,
 		effect: { kind: "none" },
 	},
+	/**
+	 * Fixed damage still routes through the type chart, so a target immune to
+	 * Fighting stays at full HP.
+	 */
 	SEISMIC_TOSS: {
 		type: Type.FIGHTING,
 		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		// Deals damage equal to the user's level; its Fighting type still means it
-		// cannot hit a target immune to Fighting.
 		effect: { kind: "fixed-damage", amount: "user-level" },
 	},
 	SELF_DESTRUCT: {
@@ -3142,15 +3143,16 @@ export const MOVES = {
 		pp: 10,
 		effect: { kind: "none" },
 	},
+	/**
+	 * Deferred no-op: Spit Up's power scales with the user's Stockpile count, so
+	 * it lands once combatant state tracks stockpiling.
+	 */
 	SPIT_UP: {
 		type: Type.NORMAL,
 		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		// TODO: deferred no-op. Spit Up's power scales with the user's Stockpile
-		// count, and no Stockpile counter exists on combatant state yet. Model it
-		// once stockpiling is tracked.
 		effect: { kind: "none" },
 	},
 	SPITE: {
@@ -3262,7 +3264,6 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 10,
-		// Halves the target's current HP (rounded down, minimum 1).
 		effect: { kind: "fixed-damage", amount: "half-target-hp" },
 	},
 	SUPERPOWER: {

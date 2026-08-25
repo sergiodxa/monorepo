@@ -1,8 +1,7 @@
 /**
- * Authentication controllers for the blog. Exposes guest-only login and logout route
- * controllers plus the OAuth callback action, driving a full PKCE authorization-code
- * flow against the external identity provider, verifying the returned ID token, and
- * establishing the local user session. It exists to centralize the sign-in/out lifecycle.
+ * Authentication controllers for the blog: guest-only login and logout pages plus the
+ * OAuth callback that runs the PKCE authorization-code flow, verifies the returned ID
+ * token, and establishes the local user session.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,20 +34,8 @@ interface OAuthTransaction {
 	returnTo?: string;
 }
 
-/**
- * Orchestrates the authentication flow for login, logout, and OAuth callback routes.
- * Keeps login/logout pages guest-only and completes a full PKCE transaction on callback.
- *
- * @example
- * GET /auth/login
- * @example
- * GET /auth/callback?code=...&state=...
- */
+/** Sends visitors that already have a session to the dashboard. */
 let guestOnlyMiddleware: Middleware[] = [
-	/**
-	 * Guards guest-only auth pages by short-circuiting authenticated requests.
-	 * @returns A redirect response when a session already exists.
-	 */
 	async (_ctx, next) => {
 		if (isAuthenticated()) {
 			return redirect(routes.cms.dashboard.href(), { status: redirect.Status.SeeOther });
@@ -62,18 +49,15 @@ let guestOnlyMiddleware: Middleware[] = [
 export let loginController = createController(routes.auth.login, {
 	middleware: guestOnlyMiddleware,
 	actions: {
-		/**
-		 * Renders the login screen where users can start external authentication.
-		 * @returns The login HTML view without mutating session state.
-		 */
+		/** Renders the login screen where visitors start external authentication. */
 		async index(ctx) {
 			return ctx.render(LoginView, {});
 		},
 
 		/**
-		 * Starts an OAuth authorization transaction with PKCE and optional post-login redirect.
-		 * @param ctx The current request context used to derive origin and query params.
-		 * @returns A redirect to the external identity provider authorization endpoint.
+		 * Starts a PKCE authorization transaction, carrying the `next` query param through as
+		 * the post-login destination.
+		 * @returns Redirect to the provider authorization endpoint.
 		 */
 		action: inject([OAuthProviderService] as const, async (oauthProvider) => {
 			let ctx = getContext();
@@ -88,18 +72,15 @@ export let loginController = createController(routes.auth.login, {
 export let logoutController = createController(routes.auth.logout, {
 	middleware: guestOnlyMiddleware,
 	actions: {
-		/**
-		 * Renders the logout confirmation screen before session termination.
-		 * @returns The logout HTML view for user confirmation.
-		 */
+		/** Renders the logout confirmation screen shown before session teardown. */
 		async index(ctx) {
 			return ctx.render(LogoutView, {});
 		},
 
 		/**
-		 * Ends local authentication and redirects through the provider logout endpoint.
-		 * @param ctx The current request context used to build absolute return URLs.
-		 * @returns A 303 redirect response to the provider logout endpoint.
+		 * Hands off to the provider logout endpoint with an `id_token_hint` so the upstream
+		 * session ends too, and clears client state through `Clear-Site-Data`.
+		 * @returns 303 redirect to the provider logout endpoint.
 		 */
 		action(ctx) {
 			let idToken = getIdToken();
@@ -128,9 +109,9 @@ export let logoutController = createController(routes.auth.logout, {
 export let callbackAction = createAction(routes.auth.callback, {
 	middleware: [],
 	/**
-	 * Completes the OAuth callback handshake and establishes the local user session.
-	 * @param ctx The callback request context containing URL params and scoped services.
-	 * @returns The login view with error details or a 303 redirect after successful sign-in.
+	 * Requires the stored transaction and a matching `state` before the code exchange, and
+	 * clears that transaction on every terminal path so one callback serves one login.
+	 * @returns The login view carrying an error, or a 303 redirect once signed in.
 	 */
 	handler: inject(
 		[Database, IdTokenVerificationKeyService, Logger] as const,

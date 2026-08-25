@@ -15,20 +15,9 @@
 import { css } from "remix/ui";
 
 /**
- * Every palette step the app has, declared as `--ui-color-{name}-{step}`
- * custom properties on whichever element wears the mixin — apply it to
- * `<html>` so the whole tree inherits them.
- *
- * All five ramps run 50 (lightest) to 950 (darkest). `neutral` is fully
- * achromatic (hue 0, chroma 0) so text, borders, and surfaces never pick up a
- * tint; `brand` is the blue at hue 250 the sign-in UI is built around;
- * `danger` (25), `warning` (85), and `success` (155) carry status meaning.
- * Chroma peaks mid-ramp and tapers at both ends, so the extremes stay usable
- * as backgrounds and the middle steps stay saturated enough to read as color.
- *
- * The `--ui-font-sans` stack leads with Inter and falls back through the
- * platform UI face before the emoji families, so text renders in Inter where
- * it is installed and in a native sans everywhere else.
+ * Every palette step as `--ui-color-{name}-{step}` custom properties and the
+ * `--ui-font-sans` stack, applied to `<html>` so the whole tree inherits them.
+ * Chroma peaks mid-ramp so both extremes stay usable as plain backgrounds.
  *
  * @example
  * <html mix={[THEME, DOCUMENT]}>
@@ -99,13 +88,9 @@ export const THEME = css({
 });
 
 /**
- * The page surface: white by default, the darkest neutral when the viewer
- * prefers a dark scheme, with `color-scheme: dark` alongside it so form
- * controls, scrollbars, and the canvas behind an overscroll match.
- *
- * Apply it to both `<html>` and `<body>`: the background has to reach the
- * canvas, and `<body>` still needs its own so a shorter page does not show
- * white behind a dark document.
+ * The page surface: white by default, the darkest neutral in a dark scheme,
+ * with `color-scheme: dark` so native controls and scrollbars match. Apply to
+ * both `<html>` and `<body>` so a short page's canvas stays dark beneath it.
  *
  * @example
  * <body mix={DOCUMENT}>

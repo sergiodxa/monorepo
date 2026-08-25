@@ -1,12 +1,7 @@
 /**
- * Coordinates bestiary progress updates for player-owned discovery and capture records.
- * This module exposes the narrow write operations that keep those records consistent
- * with the world state while avoiding duplicate entries.
- *
- * It serves as the system boundary for bestiary mutations, so other parts of the game
- * can record progression without needing to know how seen and caught collections are
- * stored or synchronized. The functions here preserve the invariant that a caught entry
- * is also reflected in the seen collection.
+ * Coordinates bestiary progress updates for player-owned discovery and capture records,
+ * avoiding duplicate entries and preserving the invariant that a caught species is also
+ * recorded as seen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

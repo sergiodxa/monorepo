@@ -1,3 +1,11 @@
+/**
+ * Extracts the success value from a Result or computes a fallback on
+ * failure.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "./types.js";
 
 import { isSuccess } from "./is-success.js";

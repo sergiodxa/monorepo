@@ -1,6 +1,7 @@
 /**
  * Unit tests for `squircle()`'s composition of a radius declaration with the
- * `corner()` progressive-enhancement wrapper.
+ * `corner()` progressive-enhancement wrapper: the unconditional radius is the
+ * shape every browser renders, `corner-shape` only refines it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,8 +30,6 @@ describe("squircle", () => {
 	});
 
 	test("the radius is unconditional and only corner-shape sits behind @supports", async () => {
-		// The fallback shape is the whole point: a browser without
-		// `corner-shape` must still get the plain rounded corners.
 		let css = await serialize(squircle("lg"));
 
 		expect(css.indexOf("border-radius:")).toBeLessThan(css.indexOf("@supports"));

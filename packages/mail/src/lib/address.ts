@@ -17,7 +17,8 @@ const MAILBOX = /^[^\s@]+@[^\s@]+$/;
 
 /**
  * Coerces the single-or-list shape callers write into the list shape transports
- * read, treating a missing value as no recipients rather than as an error.
+ * read. A missing value normalizes to an empty list, keeping an omitted
+ * recipient a valid input.
  *
  * @param value - One address, several addresses, or nothing.
  * @returns A new array; never the caller's own array, so later mutation cannot leak.
@@ -47,9 +48,8 @@ export function formatAddress(address: Address): string {
 
 /**
  * Reports whether an address is routable enough to hand to a provider. The check
- * is deliberately structural rather than a full grammar: it rejects the mistakes
- * that produce silent non-delivery (empty, unsplit, or whitespace-bearing values)
- * without second-guessing which domains exist.
+ * is structural: it rejects the mistakes that produce silent non-delivery — empty,
+ * unsplit, or whitespace-bearing values — while accepting any domain shape.
  *
  * @param address - The mailbox to check.
  * @returns `true` when the address has a local part and a domain around one `@`.

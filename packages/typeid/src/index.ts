@@ -1,3 +1,11 @@
+/**
+ * TypeID value type: a typed, prefixed identifier with a Base32-encoded
+ * UUID suffix.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { UUID } from "@pkg/uuid";
 
 import { assertUUID } from "@pkg/uuid";

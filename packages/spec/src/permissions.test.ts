@@ -282,10 +282,7 @@ describe("createPermissionSet", () => {
 				mkdirSync(join(granted, "real"));
 				symlinkSync(outside, join(granted, "out"));
 				let set = createPermissionSet(grants({ hostFs: { mode: "scoped", scopes: [granted] } }));
-				// A genuine subdirectory stays granted…
 				expect(isSuccess(set.checkHostFs(join(granted, "real", "file.txt")))).toBe(true);
-				// …but a path that only lexically sits under the grant, while its
-				// symlinked ancestor points elsewhere, is refused.
 				let error = expectFailure(set.checkHostFs(join(granted, "out", "escape.txt")));
 				expect(error).toBeInstanceOf(PermissionDeniedError);
 				expect(error.permission).toBe("host-fs");
@@ -295,10 +292,11 @@ describe("createPermissionSet", () => {
 			}
 		});
 
+		/**
+		 * os.tmpdir() is itself a symlink on macOS (/var -> /private/var); the
+		 * grant and the checked path must match through real paths, not spellings.
+		 */
 		test("a grant spelled through a symlinked ancestor admits its real paths", () => {
-			// os.tmpdir() is itself a symlink on macOS (/var -> /private/var):
-			// the grant and the checked path must match through real paths, not
-			// through their spellings.
 			let spelled = mkdtempSync(join(tmpdir(), "spec-spelled-"));
 			let real = realpathSync(spelled);
 			try {
@@ -398,10 +396,12 @@ describe("grantsAdmit", () => {
 });
 
 describe("configWouldAdmit", () => {
+	/**
+	 * The coarse gate's resource is a placeholder tool name, so a scoped
+	 * config admits it exactly as a whole-family one does; the DX hint must
+	 * fire for a scoped tuple too.
+	 */
 	test("a family-gate denial keys off the family being declared, scope or not", () => {
-		// The coarse gate's resource is a placeholder tool name, so a scoped
-		// config admits it exactly as a whole-family one does — the regression:
-		// the DX hint must fire for a scoped tuple, not only a bare family.
 		let scoped = grants({ run: { mode: "scoped", scopes: ["echo"] } });
 		expect(configWouldAdmit(scoped, "run", "cli.run", true)).toBe(true);
 		expect(configWouldAdmit(grants({ run: { mode: "all" } }), "run", "cli.run", true)).toBe(true);

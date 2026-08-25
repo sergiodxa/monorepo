@@ -44,7 +44,6 @@ export default createAction(
 			tenantCount: tenants.length,
 		});
 
-		// If no tenants, redirect to create first tenant
 		if (tenants.length === 0) {
 			return new Response(null, {
 				status: 302,

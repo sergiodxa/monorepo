@@ -337,7 +337,6 @@ describe("eraseAccount", () => {
 		await eraseAccount(db, asPolar(createFakePolar()), SUBJECT, EMAIL);
 		expect(await Lead.findByEmail(db, EMAIL)).toBeNull();
 
-		// The same run again, with no lead left to find.
 		let second = await eraseAccount(db, asPolar(createFakePolar()), SUBJECT, EMAIL);
 		expect(isSuccess(second)).toBe(true);
 	});
@@ -359,7 +358,6 @@ describe("eraseAccount", () => {
 		expect(isSuccess(first)).toBe(true);
 
 		let polar = createFakePolar();
-		// Nothing is active any more, which is what makes a second revocation a no-op.
 		polar.listActiveSubscriptions = vi.fn(async () => []);
 
 		let second = await eraseAccount(db, asPolar(polar), SUBJECT, EMAIL);
@@ -369,13 +367,10 @@ describe("eraseAccount", () => {
 			expect(second.data.teamsDeleted).toBe(0);
 			expect(second.data.membershipsRemoved).toBe(0);
 			expect(second.data.subscriptionsRevoked).toBe(0);
-			// Nothing was destroyed this time, so there is nobody left to be notified about it —
-			// which is why the notification cannot be deferred to a later run.
 			expect(second.data.deletedTeams).toEqual([]);
 		}
 		expect(polar.revokeSubscription).not.toHaveBeenCalled();
 
-		// And the first run's outcome still holds: the owned team is gone, the joined one is not.
 		expect(await db.findOne(teams, { where: { id: owned.id } })).toBeNull();
 		expect(await db.findOne(teams, { where: { id: joined.id } })).not.toBeNull();
 	});

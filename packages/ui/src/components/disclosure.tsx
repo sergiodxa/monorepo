@@ -1,8 +1,8 @@
 /**
  * A single expand/collapse section built on the native `<details>` and
  * `<summary>` elements, so the show/hide state, keyboard handling, and
- * find-in-page behavior all come from the platform rather than tracked
- * state. `Disclosure.Trigger` is the always-visible `<summary>` label and
+ * find-in-page behavior all come from the platform itself.
+ * `Disclosure.Trigger` is the always-visible `<summary>` label and
  * `Disclosure.Panel` is the content it reveals; `Disclosure.Group` stacks
  * several disclosures into one bordered list.
  *
@@ -31,12 +31,9 @@ import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
  */
 export namespace Disclosure {
 	/**
-	 * Every native `<details>` attribute, plus the `mix` passthrough. `open`
-	 * sets the section's initial and current expanded state declaratively —
-	 * there is no separate "default expanded" prop, since the attribute
-	 * itself is what the browser tracks. Setting the same `name` on several
-	 * sibling `Disclosure` elements lets the browser keep only one of them
-	 * open at a time, closing the others automatically when one is opened.
+	 * Every native `<details>` attribute, plus the `mix` passthrough. The
+	 * `open` attribute alone drives expanded state, and sibling disclosures
+	 * sharing a `name` let the browser keep only one open at a time.
 	 */
 	export interface Props extends TagProps<"details"> {
 		/** The section's compound parts: {@link Disclosure.Trigger} followed by {@link Disclosure.Panel}. */
@@ -44,10 +41,9 @@ export namespace Disclosure {
 	}
 
 	/**
-	 * Props accepted by {@link Disclosure.Header}. Every native heading-element
-	 * attribute still applies, since the rendered tag depends on the nearest
-	 * ambient heading level, falling back to `<h1>` where nothing supplies
-	 * one.
+	 * Props accepted by {@link Disclosure.Header}. The rendered tag matches
+	 * the nearest ambient heading level, falling back to `<h1>` where nothing
+	 * supplies one.
 	 */
 	export interface HeaderProps extends TagProps<"h1"> {
 		/** The trigger's label text, exposed as a heading for assistive technology. */
@@ -80,13 +76,9 @@ export namespace Disclosure {
 }
 
 /**
- * Renders the section's `<details>` host: a rounded, bordered container that
- * shows {@link Disclosure.Panel}'s content whenever it carries the native
- * `open` attribute. The reveal animates through the `::details-content`
- * pseudo-element's `block-size`, so the platform's own hide/show behavior
- * still works instantly wherever that pseudo-element or `interpolate-size`
- * isn't supported — the animation is a progressive enhancement layered on
- * top of, never a replacement for, the native toggle.
+ * Renders the section's `<details>` host, revealing
+ * {@link Disclosure.Panel}'s content while `open`. The `::details-content`
+ * block-size transition is a progressive enhancement over the native toggle.
  *
  * @param handle Runtime handle carrying the host `<details>`'s props.
  * @returns The render function producing the section's markup.
@@ -136,15 +128,9 @@ export function Disclosure(handle: Handle<Disclosure.Props>) {
 }
 
 /**
- * Renders {@link Disclosure.HeaderProps.children} as the trigger's label
- * inside the native heading element matching the nearest ambient heading
- * level — `<h1>` where nothing supplies one — exposing the section's
- * question or title as a heading landmark for assistive technology while
- * inheriting its font size, weight, and color from {@link Disclosure.Trigger}
- * through ordinary CSS inheritance. Nest it directly inside
- * {@link Disclosure.Trigger} — a heading is only meaningful there, since
- * `<summary>` must stay the `<details>` element's direct child for the
- * browser to recognize it as the section's trigger.
+ * Renders {@link Disclosure.HeaderProps.children} as an accessible heading
+ * at the ambient level, nested directly inside
+ * {@link Disclosure.Trigger}, since `<summary>` must stay `<details>`'s direct child.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the heading's markup.
@@ -168,15 +154,9 @@ Disclosure.Header = function DisclosureHeader(handle: Handle<Disclosure.HeaderPr
 };
 
 /**
- * Renders {@link Disclosure.TriggerProps.children} inside a native
- * `<summary>`, the section's always-visible, always-focusable label. Its
- * default disclosure triangle is suppressed in favor of a plain row layout,
- * so a consumer supplies its own leading or trailing indicator (an icon that
- * rotates on `[open]`, for instance) as part of its children when one is
- * wanted. Setting `aria-disabled="true"` mutes the label's color and swaps
- * its cursor to signal that the section shouldn't be toggled; the browser
- * still toggles `<details>` on activation regardless, since preventing that
- * natively requires script a consumer attaches itself.
+ * Renders {@link Disclosure.TriggerProps.children} inside a native `<summary>`
+ * with its marker suppressed so a consumer supplies its own indicator.
+ * `aria-disabled="true"` mutes appearance; the consumer's own script must still block toggling.
  *
  * @param handle Runtime handle carrying the host `<summary>`'s props.
  * @returns The render function producing the trigger's markup.
@@ -224,13 +204,9 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 };
 
 /**
- * Renders {@link Disclosure.PanelProps.children} as the section's revealed
- * content: a plain `<div>` positioned after {@link Disclosure.Trigger} inside
- * {@link Disclosure}, which is all a `<details>` element needs for the
- * browser to treat it as the collapsible body the `::details-content`
- * pseudo-element wraps and animates. It carries no padding of its own, so a
- * consumer sizes its own inner content the way {@link Disclosure.Trigger}'s
- * padding is sized.
+ * Renders {@link Disclosure.PanelProps.children} in a `<div>` positioned
+ * after {@link Disclosure.Trigger}, all `<details>` needs to treat it as
+ * the collapsible body. Its padding is left for the consumer to size.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the panel's markup.
@@ -252,13 +228,9 @@ Disclosure.Panel = function DisclosurePanel(handle: Handle<Disclosure.PanelProps
 };
 
 /**
- * Renders {@link Disclosure.GroupProps.children} as a single bordered,
- * rounded list stacking several {@link Disclosure} sections: each section's
- * own border and radius are stripped down to a shared block-end divider,
- * with the outer rounding and block-start border restored only on the first
- * and last direct `<details>` child. Every section inside keeps toggling
- * independently — sharing a `name` across them is what makes the browser
- * hold only one open at a time.
+ * Renders {@link Disclosure.GroupProps.children} as a bordered, rounded list
+ * of {@link Disclosure} sections sharing one divider between them. Sections
+ * keep toggling independently unless they share a `name`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the list's markup.

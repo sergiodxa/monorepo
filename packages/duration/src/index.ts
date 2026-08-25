@@ -1,7 +1,7 @@
 /**
  * Public surface of the duration package: the duration string type, the input
  * union every consumer declares, the conversions to milliseconds and seconds,
- * and the runtime parser with its error. Nothing here touches a `Date`.
+ * and the runtime parser with its error, all expressed as plain numbers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

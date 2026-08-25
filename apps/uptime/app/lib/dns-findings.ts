@@ -2,8 +2,8 @@
  * Presentation rules for the record-level findings a domain sweep produces: the order
  * they are read in, and the one shape a reader will otherwise mistake for a bug. They
  * live apart from the alert pipeline because the plain-text channels and the email render
- * the same findings and must describe them identically, and the email deliberately holds
- * no database handle or Worker binding.
+ * the same findings identically, using only the findings passed to them, with no access
+ * to a database handle or Worker binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +13,7 @@ import type { DnsFinding } from "~/database/schema";
 
 /**
  * Rank of the three outcomes within one record set, so a set's findings always read
- * "gone, edited, appeared" rather than in whatever order the diff bucketed them.
+ * "gone, edited, appeared" in a fixed order regardless of how the diff bucketed them.
  */
 const FINDING_KIND_ORDER: Record<DnsFinding["kind"], number> = {
 	missing: 0,
@@ -22,15 +22,12 @@ const FINDING_KIND_ORDER: Record<DnsFinding["kind"], number> = {
 };
 
 /**
- * Orders findings by the record they belong to, then by outcome.
+ * Orders findings by the record they belong to, then by outcome, so a value edit that
+ * surfaces as a `missing` plus a `new` at the same name and type reads as two adjacent
+ * lines instead of two unrelated incidents scattered through the report.
  *
- * Sorting by `(name, recordType)` first is the load-bearing half: a value edited inside a
- * record set that holds several values is reported as one `missing` plus one `new`, and
- * ordering this way puts those two lines next to each other, where a reader can see they
- * are one event. Grouping by outcome instead would scatter the pair across the body and
- * make the same truthful report read as two unrelated incidents.
- *
- * Sorts in place and returns the same array, since every caller has just built it.
+ * @param findings - Findings to sort in place; every caller has just built the array.
+ * @returns The same array, sorted.
  */
 export function sortDnsFindings(findings: DnsFinding[]): DnsFinding[] {
 	return findings.sort(
@@ -42,14 +39,9 @@ export function sortDnsFindings(findings: DnsFinding[]): DnsFinding[] {
 }
 
 /**
- * Whether the findings include a `missing` and a `new` at the same name and type — the
- * pair a single value edit produces.
- *
- * DNS records have no identity of their own: a record set is a set of values, so editing
- * one value is indistinguishable, at the protocol level, from deleting one and adding
- * another. The report is therefore accurate and reads like a bug, which is why the
- * channels say so in words whenever the shape is present, instead of quietly re-labelling
- * the pair as a change it cannot actually attribute.
+ * Whether the findings include a `missing` and a `new` at the same name and type: the
+ * shape a single value edit produces, since a record set has no identity of its own and
+ * an edited value is indistinguishable, at the protocol level, from delete-then-add.
  */
 export function hasRecordSetEdit(findings: readonly DnsFinding[]): boolean {
 	let missing = new Set(

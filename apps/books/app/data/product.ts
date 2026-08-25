@@ -1,8 +1,9 @@
 /**
- * Catalog of the Polar identifiers this funnel sells against: the two products and the
- * four discount campaigns. Every id here names a live object in Polar — the webhook
- * branches on the product ids and the checkout endpoint applies the discount ids — so
- * they are copied, never regenerated.
+ * Catalog of the Polar identifiers this funnel sells against: the two
+ * products and the four discount campaigns. Every id here names a live
+ * object in Polar — the webhook branches on the product ids and the
+ * checkout endpoint applies the discount ids — so each one is copied here
+ * verbatim.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,12 +16,9 @@ export enum Product {
 }
 
 /**
- * The discount campaigns, by Polar discount id.
- *
- * `EARLY`, `FIRST_WEEK` and `SECOND_WEEK` are launch-window campaigns the checkout
- * endpoint picks between automatically. `UPGRADE` is different in kind: it is never
- * auto-applied, it is handed out only to a reader who already owns Essentials and is
- * moving up to Complete, which is why the discount selection rules exclude it.
+ * The discount campaigns, by Polar discount id. `UPGRADE` is handed out
+ * manually to an Essentials owner moving up to Complete, so discount
+ * selection excludes it from the automatic launch-window set.
  */
 export enum Discounts {
 	EARLY = "e1612305-d990-4f77-90fc-97eced27781d",

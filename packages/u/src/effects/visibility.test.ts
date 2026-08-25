@@ -1,6 +1,4 @@
 /**
- * Unit tests for `visibility()`'s default and explicit values.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

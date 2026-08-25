@@ -48,8 +48,8 @@ export default class Connection {
 	/**
 	 * Lists every provider identity linked to a subject, oldest link first.
 	 *
-	 * Exists so administration can see which providers an account can sign in with —
-	 * a subject with no connection and no credential can no longer authenticate at all.
+	 * Exists so administration can see which providers an account can sign in with: a
+	 * subject keeps a way in for as long as one connection or credential remains.
 	 */
 	static async findBySubjectId(db: Database, subjectId: string): Promise<SelectConnection[]> {
 		return await db.findMany(connections, {
@@ -59,11 +59,9 @@ export default class Connection {
 	}
 
 	/**
-	 * Unlinks a provider identity.
-	 *
-	 * Exists so provisioning can undo itself: this database has no transactions, so a
-	 * sign-up that fails after the connection is written has to remove it explicitly
-	 * rather than roll back.
+	 * Unlinks a provider identity. Exists so provisioning can undo itself: this database
+	 * has no transactions, so a sign-up that fails after the connection is written
+	 * removes it explicitly.
 	 *
 	 * @returns Whether a row was removed.
 	 */

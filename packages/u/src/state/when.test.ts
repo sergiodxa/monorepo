@@ -2,9 +2,9 @@
  * Unit tests for `when.ts`, the primitive selector wrapper every other state
  * utility is sugar over.
  *
- * The environment split is directly reachable here: `import.meta.env.DEV` reads
- * through to `process.env.DEV` at call time, so each branch can be selected by
- * setting or deleting it around an assertion, with no module mocking.
+ * The environment split is directly reachable here: `import.meta.env.DEV`
+ * reads through to `process.env.DEV` at call time, so each branch is
+ * selected by setting or deleting it directly around an assertion.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,8 +41,6 @@ describe("when", () => {
 	test("an array of two utilities merges under the same selector", async () => {
 		let css = await serialize(when("&:hover", [bg("brand.tint"), border("brand")]));
 
-		// One block, not two: a second `&:hover {` would mean the merge happened
-		// after serialization rather than before it.
 		expect(css.split("&:hover {")).toHaveLength(2);
 		expect(await declarations(when("&:hover", [bg("brand.tint"), border("brand")]))).toEqual([
 			"background-color: var(--ui-brand-bg-tint)",
@@ -51,11 +49,6 @@ describe("when", () => {
 	});
 
 	test("a selector the serializer cannot recognize as nested is rejected outright in development", () => {
-		// The serializer only treats a key as a selector when it starts with
-		// `&`, `@`, `:`, `[` or `.`. Anything else — a leading element or class
-		// name, as in `"input:checked ~ &"` — used to be emitted as a declaration
-		// whose value stringifies to `[object Object]`, which browsers discard, so
-		// the rule vanished with no error anywhere. Now it throws instead.
 		expect(() => when("input:checked ~ &", p(4))).toThrow(/would be emitted as a declaration/);
 		expect(() => when("> *", p(4))).toThrow();
 	});
@@ -64,9 +57,6 @@ describe("when", () => {
 		let css = await serialize(when(":is(input:checked) ~ &", p(4)));
 
 		expect(css).toContain(":is(input:checked) ~ & {");
-		// `[object Object]` is the fingerprint of a selector that fell through to
-		// the declaration path; asserting its absence is what proves the rule
-		// actually reached the stylesheet.
 		expect(css).not.toContain("[object Object]");
 	});
 
@@ -79,8 +69,6 @@ describe("when", () => {
 			let warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 			try {
-				// Twice over: the guard has to survive a re-render of the same
-				// component, which is what a per-render throw would break.
 				expect(() => when("form:invalid ~ &", p(4))).not.toThrow();
 				expect(() => when("form:invalid ~ &", p(4))).not.toThrow();
 

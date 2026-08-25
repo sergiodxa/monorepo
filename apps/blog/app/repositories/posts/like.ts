@@ -1,9 +1,7 @@
 /**
- * Repository for `like` posts (liked links/bookmarks), scoping the shared `Post`
- * model to the `like` post type. It defines the title/url metadata shape, a codec
- * to/from `post_meta` rows, standard CRUD/count helpers, and utilities to
- * normalize a URL and build a Wayback Machine snapshot URL from `created_at`.
- * Exists to give callers type-safe like persistence and link helpers.
+ * Like posts (liked links and bookmarks): the shared `Post` model scoped to the
+ * `like` type, with a title/url metadata codec plus URL normalization and
+ * Wayback Machine snapshot helpers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,44 +12,33 @@ import type { Database } from "remix/data-table";
 import { Post } from "~/app/repositories/post";
 
 /**
- * Type contracts for the `like` post repository.
- *
- * These types model the metadata shape persisted in `post_meta` rows
- * and the input payloads accepted by create/update operations.
+ * Type contracts for the metadata persisted in `post_meta` and the payloads
+ * accepted by create and update.
  */
 export namespace LikePost {
 	/**
-	 * Metadata persisted for a like post.
-	 *
-	 * `title` is the display label and `url` is the liked target.
+	 * Metadata persisted for a like post. `url` holds either an absolute HTTP(S)
+	 * URL or a site-relative path.
 	 */
 	export interface Meta {
-		/** Human-readable label shown for the liked URL. */
 		title: string;
-		/** Absolute or site-relative URL that this like points to. */
 		url: string;
 	}
 
 	/**
-	 * Input accepted when creating a like post.
-	 *
-	 * Must include base post fields plus `Meta` values encoded in `meta`.
+	 * Base post fields plus `Meta` values under `meta`, accepted by `create`.
 	 */
 	export interface CreateInput extends Post.TypedCreateInput<Meta> {}
 
 	/**
-	 * Input accepted when updating a like post.
-	 *
-	 * Supports partial base post changes and partial metadata updates.
+	 * Partial post and metadata updates accepted by `update`.
 	 */
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 }
 
 /**
- * Picks the effective metadata value for a key from duplicated rows.
- *
- * Rows are deterministically ordered to avoid DB-order dependence when
- * historical writes produce multiple entries for the same key.
+ * Resolves duplicate rows for a metadata key to the latest write, so the result
+ * stays stable whatever order the database returns rows in.
  *
  * @param rows Metadata rows as returned by the post query.
  * @param key Metadata key to resolve.
@@ -79,30 +66,16 @@ function likeMetaValue(
 }
 
 /**
- * Metadata codec used by generic `Post.*ForType` helpers.
- *
- * Serialization emits only defined fields. Deserialization resolves the
- * latest row per key and falls back to empty strings for missing metadata.
+ * Serialization emits only defined fields; deserialization resolves the latest
+ * row per key and falls back to empty strings.
  */
 let likeMetaCodec: Post.MetaCodec<LikePost.Meta> = {
-	/**
-	 * Converts typed metadata into key/value rows for persistence.
-	 *
-	 * @param meta Typed metadata payload.
-	 * @returns Persistable key/value rows for `post_meta`.
-	 */
 	serialize(meta) {
 		let rows: Array<{ key: string; value: string }> = [];
 		if (typeof meta.title !== "undefined") rows.push({ key: "title", value: meta.title });
 		if (typeof meta.url !== "undefined") rows.push({ key: "url", value: meta.url });
 		return rows;
 	},
-	/**
-	 * Rebuilds typed metadata from fetched key/value rows.
-	 *
-	 * @param rows Metadata rows joined from persistence.
-	 * @returns Normalized metadata with empty-string defaults.
-	 */
 	deserialize(rows) {
 		return {
 			title: likeMetaValue(rows, "title") ?? "",
@@ -112,14 +85,12 @@ let likeMetaCodec: Post.MetaCodec<LikePost.Meta> = {
 };
 
 /**
- * Repository for `like` posts backed by generic `Post` data helpers.
- *
- * This class centralizes type scoping, metadata encoding, and utilities
- * used by controllers/features that manage likes.
+ * Posts of type `like`: shared `Post` CRUD narrowed by post type, plus URL
+ * helpers for the liked target.
  */
 export class LikePost {
 	/**
-	 * Post type discriminator used by all repository operations.
+	 * Discriminator that must match the persisted `posts.type` value.
 	 */
 	static postType = "like" as const;
 
@@ -189,10 +160,8 @@ export class LikePost {
 	}
 
 	/**
-	 * Normalizes user input into an acceptable like URL.
-	 *
-	 * Absolute HTTP(S) and site-relative paths are returned unchanged;
-	 * bare domains/hosts are coerced to `https://`.
+	 * Absolute HTTP(S) URLs and site-relative paths pass through unchanged; bare
+	 * hosts are prefixed with `https://`.
 	 *
 	 * @param url Raw URL input from forms or scripts.
 	 * @returns Normalized URL string suitable for storage/display.
@@ -206,10 +175,8 @@ export class LikePost {
 	}
 
 	/**
-	 * Builds a Wayback Machine snapshot URL from creation time.
-	 *
-	 * Uses the post `created_at` timestamp to construct the archive capture
-	 * key. Returns `null` when `created_at` cannot be parsed as a date.
+	 * Builds a Wayback Machine snapshot URL, using `created_at` as the archive
+	 * capture key.
 	 *
 	 * @param url Original target URL to archive.
 	 * @param created_at Post creation timestamp.

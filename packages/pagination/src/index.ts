@@ -3,8 +3,8 @@
  *
  * One vocabulary for paging: a `Pagination` value object holding the arithmetic, an
  * offset and a keyset strategy over a `remix/data-table` query, validated request
- * parameters, and `Link`/`X-Total-Count` annotation. It returns data and writes
- * headers; it constructs no responses and renders nothing.
+ * parameters, and `Link`/`X-Total-Count` annotation. It returns data and headers
+ * for the caller to assemble into a response.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

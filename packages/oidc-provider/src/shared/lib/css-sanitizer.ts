@@ -1,13 +1,6 @@
 /**
- * CSS sanitizer to prevent CSS injection attacks.
- *
- * Dangerous patterns that can be exploited:
- * - url() with external domains (data exfiltration)
- * - expression() (IE-specific JS execution)
- * - -moz-binding (Firefox XBL binding)
- * - behavior: (IE-specific)
- * - @import (loading external stylesheets)
- * - javascript: pseudo-protocol
+ * Sanitizes custom CSS to block injection vectors such as external url(),
+ * expression(), -moz-binding, behavior, @import, and javascript: protocols.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,7 +61,7 @@ export function sanitizeCss(css: string | null | undefined): string | null {
 }
 
 /**
- * Validates that CSS doesn't contain dangerous patterns.
+ * Validates that CSS contains no dangerous patterns.
  * @param css - The CSS string to validate
  * @returns True if the CSS is safe, false otherwise
  */

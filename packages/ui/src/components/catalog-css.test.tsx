@@ -44,10 +44,9 @@ function isComponent(name: string, value: unknown): value is Function {
 }
 
 /**
- * Renders `element` and returns the CSS of every `<style>` tag it emitted,
- * or `null` when the component could not render at all — a compound member
- * usually needs an ancestor to supply its context, so callers retry through
- * a wrapper rather than treating the first failure as final.
+ * Renders `element` and returns the CSS text of every `<style>` tag it
+ * emitted, or `null` when the component needs an ancestor for context;
+ * callers use `null` as a signal to retry through a different wrapper.
  */
 async function styleOf(element: unknown): Promise<string | null> {
 	try {
@@ -79,11 +78,11 @@ describe("component catalog CSS", () => {
 
 		for (let [key, member] of members) {
 			test(`${name}.${key} emits no stringified style block`, async () => {
-				// A compound member reads its context from an ancestor, so try it
-				// under its own root first and then through each sibling in turn —
-				// the sibling that happens to be its real parent is what finally
-				// lets it render. Skipping a member that never renders would make
-				// this sweep silently vacuous, so a failure to render is a failure.
+				/**
+				 * Tries `member` under its own root, then wrapped by each sibling in
+				 * turn, since its real parent may be any one of them; the assertions
+				 * below fail for a member that renders in none, keeping the sweep honest.
+				 */
 				let wrappers = [
 					jsx(root as never, {
 						...PROBE_PROPS,

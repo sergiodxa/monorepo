@@ -28,7 +28,6 @@ export type SendOptions = Partial<Message>;
 
 /** Configuration every message a mailer sends inherits. */
 export interface MailerOptions {
-	/** Transport that performs delivery. */
 	transport: Transport;
 	/** Sender identity for the app; a message may override it. */
 	from: Address;
@@ -40,7 +39,6 @@ export interface MailerOptions {
 
 /** A message handed to `later()`, kept with its overrides until the queue is flushed. */
 interface QueuedMessage {
-	/** What was queued: a plain message or an email object. */
 	input: Message | Email;
 	/** Overrides recorded at queue time, applied when the queue is flushed. */
 	overrides?: SendOptions;
@@ -60,9 +58,8 @@ export function isEmail(value: Message | Email): value is Email {
 
 /**
  * Chooses the plain-text part. An explicit one always wins, so a caller can
- * replace a derived version that reads badly; otherwise it is derived from the
- * HTML that will actually be sent, which keeps the two parts from disagreeing
- * when an override replaces the body.
+ * replace a derived version that reads badly; otherwise it derives from the
+ * HTML actually sent, keeping the two parts from disagreeing on an override.
  */
 function derivePlainText(message: Message, overrides?: SendOptions): string | undefined {
 	if (overrides?.text !== undefined) return overrides.text;
@@ -133,11 +130,9 @@ export class Mailer {
 	}
 
 	/**
-	 * Normalizes and delivers a message, awaiting the outcome.
-	 *
-	 * Never throws: a render failure, an invalid message, a rejected delivery, and
-	 * a transport that throws all arrive as a `MailError` failure, so the caller
-	 * decides per call site whether a failed send matters.
+	 * Normalizes and delivers a message, awaiting the outcome. Never throws: a
+	 * render failure, an invalid message, a rejected delivery, and a transport
+	 * that throws all arrive as a `MailError` failure for the caller to inspect.
 	 *
 	 * @param input - A plain message, or an email object that renders its own body.
 	 * @param overrides - Fields that replace what the input provides for this send.
@@ -213,9 +208,8 @@ export class Mailer {
 
 	/**
 	 * Produces the shape transports read: configured defaults filled in, address
-	 * lists coerced, a plain-text part derived, and the source email recorded so a
-	 * test can identify a sent message by type. Validation runs last, so a failure
-	 * describes the message that would have been sent.
+	 * lists coerced, a plain-text part derived, and the source email recorded for
+	 * type-based lookup. Validation runs last, so a failure describes the final message.
 	 */
 	async #normalize(
 		input: Message | Email,

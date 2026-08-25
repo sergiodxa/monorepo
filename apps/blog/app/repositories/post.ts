@@ -20,8 +20,7 @@ import { ArticlePost } from "./posts/article";
 /**
  * Shared type contracts for post persistence and typed metadata mapping.
  *
- * The namespace only contains types so callers can compose typed wrappers
- * around generic post rows without introducing runtime dependencies.
+ * Types only, so typed wrappers around generic post rows stay compile-time.
  */
 export namespace Post {
 	/** Allowed discriminator values persisted in `posts.type`. */
@@ -119,8 +118,8 @@ export namespace Post {
 	/**
 	 * Public controller payload returned when resolving a route type + slug.
 	 *
-	 * Article and tutorial shapes intentionally differ so controllers can render
-	 * route-specific UI without extra narrowing logic.
+	 * Article and tutorial shapes differ so controllers render route-specific UI
+	 * straight from the payload.
 	 */
 	export type PublicFoundByTypeAndSlug =
 		| {
@@ -169,9 +168,8 @@ export class Post {
 	static table = schema.posts;
 
 	/**
-	 * Returns whether a `published_at` value is currently considered public.
-	 *
-	 * Contract: `null` means immediately published.
+	 * Contract: `null` means immediately published, and an unparsable timestamp
+	 * counts as unpublished.
 	 *
 	 * @param published_at Persisted publish timestamp (or `null` for immediate publish).
 	 * @returns `true` when the post should be treated as published right now.
@@ -539,7 +537,8 @@ export class Post {
 	/**
 	 * Fetches many posts by id and attaches metadata rows.
 	 *
-	 * Empty `ids` short-circuits to avoid unnecessary queries.
+	 * An empty `ids` list returns immediately, leaving callers free to pass
+	 * unfiltered lists.
 	 */
 	private static async findManyByIds(
 		db: Database,
@@ -554,8 +553,8 @@ export class Post {
 	/**
 	 * Loads post rows joined to metadata rows using adapter-safe predicates only.
 	 *
-	 * This avoids `data-table` relation and direct `IN` execution paths that currently
-	 * fail under the app's adapter while still keeping feed/list reads batched.
+	 * Plain predicates are the paths the app's adapter executes reliably, so feed
+	 * and list reads stay batched in a single query.
 	 */
 	private static findJoinedRows(db: Database, where?: { type?: Post.Type }) {
 		let query = db
@@ -583,7 +582,8 @@ export class Post {
 	}
 
 	/**
-	 * Loads one post and its metadata without the failing relation loader.
+	 * Loads one post plus its metadata as two direct queries the adapter runs
+	 * reliably.
 	 */
 	private static async findOneJoinedById(db: Database, id: string): Promise<Post.FoundPost | null> {
 		let post = await db.findOne(this.table, { where: { id } });
@@ -721,7 +721,7 @@ export class Post {
 		return { ...postRow, type: postType, meta: codec.deserialize(metaRows) };
 	}
 
-	/** Returns the current wall-clock time in ISO-8601 UTC format. */
+	/** ISO-8601 UTC string stamped on every repository-written timestamp. */
 	private static get timestamp() {
 		return new Date().toISOString();
 	}

@@ -3,7 +3,7 @@
  *
  * The digest is checked against the published FIPS 180-2 vector for "abc", so a
  * change in how payloads are encoded before hashing (which would silently break
- * every stored API key digest) fails here instead of in production.
+ * every stored API key digest) is caught here, before it reaches production.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

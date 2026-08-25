@@ -13,10 +13,8 @@ import { describe, expect, test } from "vitest";
 
 import { conditional } from "./conditional";
 
-/** The modification time the fixtures below advertise. */
 const LAST_MODIFIED = "Wed, 21 Oct 2015 07:28:00 GMT";
 
-/** Builds a request carrying the given conditional headers. */
 function createRequest(headers: HeadersInit, method = "GET"): Request {
 	return new Request("https://example.com/page", { method, headers });
 }

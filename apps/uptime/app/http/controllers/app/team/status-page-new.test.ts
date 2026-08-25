@@ -57,10 +57,9 @@ vi.doMock("cloudflare:workers", () => ({
 let { default: statusPageNewAction } = await import("./status-page-new");
 
 /**
- * `createAction`'s return type is `Action<route, context, middleware>`, a union of
- * a bare handler function and `{ middleware, handler }` — TypeScript can't narrow
- * to the object arm statically, even though this controller is always defined as an
- * object at runtime. This asserts the shape so `.handler` is accessible below.
+ * `createAction` returns a union TypeScript can't narrow to the object arm
+ * statically, even though this controller is always defined that way at
+ * runtime, so this assertion makes `.handler` accessible below.
  */
 let statusPageNewModule = statusPageNewAction as unknown as { handler: RequestHandler<any> };
 
@@ -169,7 +168,6 @@ describe("GET /app/:team/status-pages/new", () => {
 		expect(body).toContain(
 			`action="${routes.actions.statusPage.create.href({ team: team.slug })}"`,
 		);
-		// The card grouping is layout only: a submitted form must still carry every field.
 		for (let name of ["name", "slug", "title", "description", "logo_url"]) {
 			expect(body).toContain(`name="${name}"`);
 		}
@@ -209,14 +207,13 @@ describe("GET /app/:team/status-pages/new", () => {
 		let response = await container.scope(() => router.fetch(request));
 		let body = await response.text();
 
-		// The select-all control drives the list by id, so the two must stay in step.
+		/** The select-all control drives the list by id, so the two ids must stay in step. */
 		expect(body).toContain(`id="status-page-monitors-group"`);
 		expect(body).toContain(`aria-labelledby="status-page-monitors-label"`);
-		// The description belongs under the group's caption, not after the whole list.
 		expect(body.indexOf("Select which monitors to display")).toBeLessThan(
 			body.indexOf("status-page-monitors-group"),
 		);
-		// The control is an enhancement: it posts nothing, and the boxes keep their own name.
+		/** The select-all control stays presentation-only, so each checkbox still submits under its own name. */
 		expect(body).toContain(`name="monitor_ids"`);
 	});
 
@@ -239,14 +236,15 @@ describe("GET /app/:team/status-pages/new", () => {
 		);
 		let body = await (await container.scope(() => router.fetch(request))).text();
 
-		// The card body states the field rhythm once, as a gap, in a single rule.
+		/**
+		 * The card states the field rhythm once, as a single gap rule; a per-field
+		 * trailing margin would double the gap before that field. The body pads all
+		 * four edges since the last field ends flush against it, and the two
+		 * visibility switches keep their own tighter gap as one group.
+		 */
 		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
-		// And nothing inside restates it as its own trailing margin, which would
-		// leave that one field sitting on a doubled gap.
 		expect(body).not.toContain("margin-block-end: 28px");
-		// The body pads all four edges now that the last field ends flush with it.
 		expect(body).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
-		// The two visibility switches still read as one group, on their own tighter gap.
 		expect(body).toContain("gap: calc(var(--ui-spacing, 0.25rem) * 4);");
 	});
 });

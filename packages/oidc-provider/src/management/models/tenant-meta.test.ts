@@ -52,10 +52,8 @@ describe("TenantMeta per-Database issuer cache isolation", () => {
 
 	test("one tenant's cached issuer never leaks to another Database", async () => {
 		await TenantMeta.setIssuer(dbA, "tenant-a.example.com");
-		// Prime dbA's cache.
 		expect(await TenantMeta.getIssuer(dbA)).toBe("tenant-a.example.com");
 
-		// dbB has no issuer configured and must not see dbA's cached value.
 		expect(await TenantMeta.getIssuer(dbB)).toBeNull();
 	});
 
@@ -63,11 +61,9 @@ describe("TenantMeta per-Database issuer cache isolation", () => {
 		await TenantMeta.setIssuer(dbA, "tenant-a.example.com");
 		await TenantMeta.setIssuer(dbB, "tenant-b.example.com");
 
-		// Prime both caches.
 		expect(await TenantMeta.getIssuer(dbA)).toBe("tenant-a.example.com");
 		expect(await TenantMeta.getIssuer(dbB)).toBe("tenant-b.example.com");
 
-		// Rotate dbA's issuer; dbB's cached value must stay intact.
 		await TenantMeta.setIssuer(dbA, "tenant-a-renamed.example.com");
 
 		expect(await TenantMeta.getIssuer(dbA)).toBe("tenant-a-renamed.example.com");
@@ -75,16 +71,11 @@ describe("TenantMeta per-Database issuer cache isolation", () => {
 	});
 
 	test("a null issuer is cached per Database and served on repeat reads", async () => {
-		// First read caches the null; a later write is not reflected until the TTL or
-		// an explicit setIssuer invalidation (setIssuer clears it).
 		expect(await TenantMeta.getIssuer(dbA)).toBeNull();
 
-		// Writing through the low-level set() bypasses cache invalidation, so the
-		// cached null is still served (demonstrating the cache is keyed to dbA).
 		await TenantMeta.set(dbA, TenantMeta.KEYS.ISSUER, "written-directly.example.com");
 		expect(await TenantMeta.getIssuer(dbA)).toBeNull();
 
-		// setIssuer clears the cache, after which the fresh value is visible.
 		await TenantMeta.setIssuer(dbA, "proper.example.com");
 		expect(await TenantMeta.getIssuer(dbA)).toBe("proper.example.com");
 	});

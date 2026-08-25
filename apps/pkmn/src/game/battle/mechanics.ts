@@ -1,13 +1,7 @@
 /**
- * Battle mechanics helpers for resolving creature-derived values from the game data layer.
- *
- * This module centralizes the stateless calculations and lookups that turn stored creature
- * state into runtime battle values, such as species data, nature data, experience thresholds,
- * levels, and computed stats.
- *
- * By keeping these rules in a single module, the battle engine can depend on a consistent set
- * of formulas and guards without coupling those decisions to rendering, persistence, or other
- * gameplay systems.
+ * Stateless calculations that turn stored creature state into runtime battle
+ * values — species and nature lookups, experience thresholds, levels, stats, and
+ * size — so the whole engine shares one set of formulas and guards.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,21 +14,21 @@ import { LEVEL_CAP } from "~/game/constant";
 import { GrowthRate } from "~/game/data/growth-rate";
 import { Stat } from "~/game/data/stat";
 
-/** Returns the loaded species record for a creature. */
+/** @throws ReferenceError When the species id is absent from the loaded data. */
 export function getCreatureSpecies(gameData: GameData, creature: Creature): Species {
 	let species = gameData.species.get(creature.speciesId);
 	if (species) return species;
 	throw new ReferenceError(`Species with symbol ${String(creature.speciesId)} not found.`);
 }
 
-/** Returns the loaded nature record for a creature. */
+/** @throws ReferenceError When the nature id is absent from the loaded data. */
 export function getCreatureNature(gameData: GameData, creature: Creature) {
 	let nature = gameData.natures.get(creature.natureId);
 	if (nature) return nature;
 	throw new ReferenceError(`Nature with symbol ${String(creature.natureId)} not found.`);
 }
 
-/** Computes a creature level from its current experience and growth rate. */
+/** Highest level the creature's experience reaches, capped at {@link LEVEL_CAP}. */
 export function getCreatureLevel(gameData: GameData, creature: Creature): number {
 	let { growthRate } = getCreatureSpecies(gameData, creature);
 
@@ -45,7 +39,12 @@ export function getCreatureLevel(gameData: GameData, creature: Creature): number
 	return 1;
 }
 
-/** Returns the total experience required for a growth rate at a given level. */
+/**
+ * Cumulative experience needed to reach a level under a growth rate; the level is
+ * clamped to the 1..{@link LEVEL_CAP} range first.
+ *
+ * @throws RangeError When the growth rate has no curve.
+ */
 export function getExperienceForLevel(growthRate: GrowthRate, level: number): number {
 	let normalizedLevel = Math.max(1, Math.min(level, LEVEL_CAP));
 	if (normalizedLevel === 1) return 0;
@@ -99,7 +98,7 @@ export function getExperienceForLevel(growthRate: GrowthRate, level: number): nu
 	}
 }
 
-/** Computes one stat value for a creature using loaded species and nature data. */
+/** Full stat value at the creature's current level, with its nature applied. */
 export function getCreatureStat(gameData: GameData, creature: Creature, stat: Stat): number {
 	let species = getCreatureSpecies(gameData, creature);
 	let nature = getCreatureNature(gameData, creature);
@@ -118,7 +117,10 @@ export function getCreatureStat(gameData: GameData, creature: Creature, stat: St
 	return statValue;
 }
 
-/** Returns physical dimensions after applying the creature's individual size class. */
+/**
+ * Species dimensions with the creature's own scale applied to height; alpha
+ * creatures always scale at the maximum.
+ */
 export function getCreatureSize(gameData: GameData, creature: Creature): Size {
 	let species = getCreatureSpecies(gameData, creature);
 	let scale = creature.size.alpha ? 255 : creature.size.scale;
@@ -140,7 +142,7 @@ export function getCreatureSizeClass(creature: Creature): Creature.SizeClass {
 	return "xl";
 }
 
-/** Returns the current remaining HP for a creature. */
+/** Max HP at the creature's current level minus its accumulated damage. */
 export function getCreatureCurrentHP(gameData: GameData, creature: Creature): number {
 	return getCreatureStat(gameData, creature, Stat.HP) - creature.status.damage;
 }

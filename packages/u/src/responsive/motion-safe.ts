@@ -7,16 +7,9 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { media } from "./media";
 
 /**
- * Sugar over `media("(prefers-reduced-motion: no-preference)", input)`.
- *
- * The correct default home for a transition or an animation. The styles
- * inside only apply for users who have not asked for less motion, so the
- * reduced-motion case is simply the unwrapped baseline — it needs no extra
- * rule to neutralise anything, because nothing was ever declared for it.
- *
- * This positive-polarity form is safer than gating with the negative one:
- * forgetting the wrapper entirely means no animation at all, rather than an
- * ungated animation that ignores the preference.
+ * Sugar over `media("(prefers-reduced-motion: no-preference)", input)`. Styles
+ * apply only when the user has not asked for less motion, so a missing
+ * wrapper safely defaults to no animation.
  *
  * @example u.motionSafe(u.transitionDuration("150ms"))
  * @example css({ "@media (prefers-reduced-motion: no-preference)": { transitionDuration: "150ms" } })

@@ -1,11 +1,9 @@
 /**
  * Tests for the original bitmap font data and its glyph blitter.
  *
- * Verifies every glyph (and the fallback box) is well-formed — exactly
- * `GLYPH_HEIGHT` rows of `GLYPH_WIDTH` pixels — that `glyphFor` falls back to the
- * box glyph for unknown characters, and that `blitGlyph`/`blitString` emit one
- * `fillRect` per lit pixel at the expected positions. Drawing is asserted against a
- * fake context that records `fillRect` calls, so no real canvas is needed.
+ * Verifies every glyph is well-formed, that `glyphFor` falls back to the box
+ * glyph for unknown characters, and that `blitGlyph`/`blitString` emit one
+ * `fillRect` per lit pixel — asserted against a fake context, no real canvas needed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +56,7 @@ test("glyphFor returns the defined glyph for a known character", () => {
 });
 
 test("glyphFor falls back to the box glyph for an unknown character", () => {
-	expect(glyphFor("☃")).toBe(FALLBACK_GLYPH); // snowman: not in the font.
+	expect(glyphFor("☃")).toBe(FALLBACK_GLYPH);
 });
 
 test("the space glyph has no lit pixels so it only advances the cursor", () => {
@@ -73,7 +71,6 @@ test("blitGlyph fills one rect per lit pixel of a known glyph", () => {
 
 test("blitGlyph places lit pixels at the glyph's row and column offsets", () => {
 	let ctx = fakeContext();
-	// "!" lights the center column (col 2) on rows 0-4 and row 6.
 	blitGlyph(ctx, "!", 10, 20);
 	expect(ctx.calls).toEqual([
 		[12, 20, 1, 1],
@@ -94,7 +91,6 @@ test("blitGlyph on an unknown character draws the fallback box", () => {
 test("blitString advances each glyph by one GLYPH_ADVANCE", () => {
 	let ctx = fakeContext();
 	blitString(ctx, "!!", 0, 0);
-	// Both "!" columns are lit at x=2 for the first glyph and x=2+ADVANCE for the second.
 	let firstX = ctx.calls.slice(0, 6).map((c) => c[0]);
 	let secondX = ctx.calls.slice(6).map((c) => c[0]);
 	expect(firstX.every((x) => x === 2)).toBe(true);

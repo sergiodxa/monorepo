@@ -1,13 +1,7 @@
 /**
  * A horizontal row of top-level triggers modeled on a native application's
- * own menu bar — File, Edit, View — where every trigger opens its own
- * dropdown built from the existing {@link Menu} component, unchanged. The
- * host carries the `menubar` role over a `<div>`, and each
- * {@link Menubar.Trigger} inside renders as a real `<button>`, already
- * reachable in the page's Tab order on its own account: pressing Tab moves
- * from one top-level trigger straight to the next, and opening the trigger's
- * paired {@link Menu} rides the identical Popover API invoker relationship a
- * standalone {@link Menu} trigger elsewhere on a page already uses.
+ * menu bar, where each trigger opens its own dropdown built from the
+ * existing {@link Menu} component.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,9 +47,8 @@ const DEFAULT_TRIGGER_TYPE: NonNullable<Menubar.TriggerProps["type"]> = "button"
 
 /**
  * Invoker Commands verb {@link Menubar.TriggerProps.command} falls back to
- * when omitted, showing the paired {@link Menu} if it's hidden and hiding it
- * again if it's already showing — the identical default a standalone
- * {@link Menu} trigger uses.
+ * when omitted: toggles the paired {@link Menu} between shown and hidden,
+ * the same default a standalone {@link Menu} trigger uses.
  */
 const DEFAULT_TRIGGER_COMMAND: NonNullable<Menubar.TriggerProps["command"]> = "toggle-popover";
 
@@ -70,9 +63,8 @@ export namespace Menubar {
 
 	/**
 	 * Every native `<button>` attribute, plus the `mix` passthrough, with
-	 * `commandfor` narrowed to required — a trigger with no dropdown to open
-	 * isn't a menu-bar trigger — pointed at the `id` of the {@link Menu} this
-	 * trigger opens.
+	 * `commandfor` narrowed to required so it always points at the `id` of
+	 * the {@link Menu} this trigger opens.
 	 */
 	export interface TriggerProps extends Omit<TagProps<"button">, "commandfor"> {
 		/** `id` of the {@link Menu} this trigger opens. */
@@ -81,16 +73,9 @@ export namespace Menubar {
 }
 
 /**
- * Renders the row's host: a native `<div>` carrying the `menubar` role, laying
- * {@link Menubar.Trigger}s out in a single horizontal row over a thin border
- * and a subtly tinted background, echoing a native application's own
- * top-level menu bar. Each trigger inside is a real `<button>`, already
- * reachable in the page's Tab order on its own — moving focus across the row
- * needs no roving-tabindex logic from this module.
- *
- * In dev mode, a root rendered without an `aria-label` or `aria-labelledby`
- * logs a `console.warn`, since assistive technology otherwise has no
- * accessible name to announce for this menu bar.
+ * Renders the row's host: a native `<div>` carrying the `menubar` role for
+ * {@link Menubar.Trigger}s. In dev mode, a root missing an `aria-label` or
+ * `aria-labelledby` logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -141,23 +126,7 @@ export function Menubar(handle: Handle<Menubar.Props>) {
 /**
  * Renders a single top-level trigger: a native `<button>` pointed at the
  * `id` of the {@link Menu} it opens through `commandfor`, with `command`
- * defaulting to `"toggle-popover"` — the identical invoker relationship a
- * standalone {@link Menu} trigger elsewhere on a page already uses, so the
- * same {@link Menu} component composes here entirely unchanged. `role`
- * defaults to `"menuitem"` and `aria-haspopup="menu"` is applied
- * automatically, identifying the trigger as a menu-bar item that owns a
- * submenu. A supporting browser computes `aria-expanded` on the trigger on
- * its own from this same invoker relationship, mirroring the paired
- * {@link Menu}'s shown state with no script of this module's own.
- *
- * Hover and pressed states ride the native `:hover`/`:active` pseudo-classes,
- * a keyboard focus-visible ring reads in the primary color, and the trigger
- * takes on a solid fill for as long as its paired {@link Menu} stays open,
- * reading straight off the same browser-computed `aria-expanded`.
- *
- * In dev mode, a trigger whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * defaulting to `"toggle-popover"` and `role` to `"menuitem"`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the trigger's markup.

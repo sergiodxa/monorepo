@@ -29,8 +29,10 @@ import {
 import { purge as purgeCache } from "./purge";
 import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error";
 
-// Declared here (an imported module, not an ambient .d.ts) so the augmentation
-// is applied in consuming projects that import the middleware.
+/**
+ * Declared as an imported module so the augmentation applies in every
+ * project that imports the middleware.
+ */
 declare module "remix/router" {
 	interface RequestContext {
 		/** Declares how this response caches, and purges cached entries by tag. */
@@ -38,8 +40,10 @@ declare module "remix/router" {
 	}
 }
 
-// Re-exported so a consumer can name the refusal it caught, since the throw only
-// happens through this middleware.
+/**
+ * Re-exported so a consumer can name the refusal it caught, since the throw
+ * only happens through this middleware.
+ */
 export type { CacheRefusalReason } from "./unsafe-cache-policy-error";
 
 export { UnsafeCachePolicyError } from "./unsafe-cache-policy-error";
@@ -160,12 +164,9 @@ function toStructuredLogger(log: CacheLogFunction): CacheLogger {
 }
 
 /**
- * Finds the request's logger without requiring one: a structured logger
- * published as `context.logger`, or a plain log function in that position, which
- * is what a router-level logger middleware installs there.
- *
- * A request with no logger still gets the downgrade — the refusal is enforced
- * either way — but nothing to report it to, which is why development throws.
+ * Reads a structured logger from `context.logger`, or adapts a plain log
+ * function found there, the shape a logger middleware installs. The downgrade
+ * still applies with no logger present, which is why development throws.
  *
  * @param context - The current request context.
  * @returns A logger, or `undefined` when the request has none.
@@ -184,13 +185,9 @@ function resolveLogger(context: RequestContext): CacheLogger | undefined {
 }
 
 /**
- * Whether the request belongs to an identified visitor.
- *
- * A session middleware upstream is the precise signal, so when one ran its
- * session decides: data in it means the request is identified, an untouched one
- * means it is not. Without that middleware the request's cookies are all this
- * can look at, and it errs toward refusing rather than caching a response that
- * may have been built for one visitor.
+ * A session middleware upstream is the precise signal: data present means
+ * identified, absent means anonymous. Without it, cookies decide, erring
+ * toward refusal since a wrongly cached response could leak one visitor's data.
  *
  * @param context - The current request context.
  * @returns `true` when a public policy would be unsafe for this request.
@@ -258,14 +255,9 @@ function withHeaders(
 }
 
 /**
- * Creates a middleware that gives every route in its scope the ability to
- * declare how its response caches and to purge cached entries by tag.
- *
- * The factory carries no policy, so registering it broadly costs nothing: a
- * route that never calls `context.cache()` gets no cache headers at all, and
- * each route decides its own lifetime where the response is built. Register it
- * outside anything that attaches `Set-Cookie` or rewrites the response, since
- * its refusal checks inspect whatever response reaches it.
+ * Creates a middleware publishing `context.cache`; a route that never
+ * declares costs nothing. Register it outside code that attaches
+ * `Set-Cookie` or rewrites the response, since its refusal checks inspect it.
  *
  * @param options - Plumbing only; see {@link WorkersCacheMiddlewareOptions}.
  * @returns A middleware that publishes `context.cache`.

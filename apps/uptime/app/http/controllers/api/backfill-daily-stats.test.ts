@@ -1,10 +1,9 @@
 /**
  * Tests `POST /api/v1/backfill-daily-stats`: enqueues an `aggregateDailyStats`
- * queue message and returns 202 Accepted, gated by
- * `requireApiKey("monitors:write")` like every other `/api/v1/*` endpoint. The
- * `env.QUEUE` binding is an in-memory queue installed through
- * `vi.doMock("cloudflare:workers", ...)`, since the controller reads `env` at
- * module load, so the assertions read the message that really landed on it.
+ * queue message and returns 202, gated by `requireApiKey("monitors:write")`
+ * like every other `/api/v1/*` endpoint. `env.QUEUE` is an in-memory queue
+ * installed via `vi.doMock("cloudflare:workers", ...)` since the controller
+ * reads `env` at module load, so assertions read what actually landed on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,8 +19,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 /**
- * The queue the endpoint enqueues onto. Module scope because the controller captures
- * `env` on import, so it is emptied per test rather than rebuilt.
+ * The queue the endpoint enqueues onto, kept at module scope since the controller
+ * captures `env` on import; `beforeEach` resets it before each test.
  */
 let queue = createQueue({ name: "uptime" });
 

@@ -1,3 +1,10 @@
+/**
+ * Splits an array of Results into separate success values and failure errors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result, Success, Failure } from "./types.js";
 
 import { isFailure } from "./is-failure.js";

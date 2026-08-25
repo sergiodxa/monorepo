@@ -1,7 +1,6 @@
 /**
- * Unit tests for every pure token resolver in {@link "./tokens"}: each one
- * is a plain string function, so these tests assert directly on return
- * values rather than unwrapping a mixin descriptor.
+ * Unit tests for every pure token resolver in {@link "./tokens"}: each one is
+ * a plain string function, so these tests assert directly on return values.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -21,8 +21,6 @@ describe("divide", () => {
 	});
 
 	test("the declarations land inside the between-children child selector", async () => {
-		// The whole point of the utility is that only the gaps between siblings
-		// get a border; a flat declaration would border the container instead.
 		expect(await serialize(divide())).toMatch(
 			/& > \*:not\(:last-child\) \{[\s\S]*border-block-end-width: 1px/,
 		);

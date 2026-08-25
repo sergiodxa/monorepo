@@ -1,4 +1,12 @@
 /**
+ * General-purpose TypeScript utility types for async results, JSON-safe
+ * values, and type-level checks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Extracts the resolved type from an async function's return type.
  * Useful for typing props that receive data from loaders or async queries.
  *
@@ -27,11 +35,9 @@ export type JSONValue =
 	| { [key: string]: JSONValue };
 
 /**
- * Detects if a type is `any`.
- * Returns `true` if T is `any`, `false` otherwise.
- *
- * Useful for handling functions like `JSON.parse` that return `any`,
- * allowing conditional type logic based on whether a type is `any`.
+ * Detects if a type is `any`, distinguishing it from `unknown` and other
+ * types — useful for conditioning logic on results like `JSON.parse` that
+ * type as `any`.
  *
  * @template T - The type to check
  *

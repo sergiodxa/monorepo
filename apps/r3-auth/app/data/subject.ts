@@ -54,8 +54,8 @@ export default class Subject {
 	}
 
 	/**
-	 * Registers a subject. `email_verified_at` defaults to `null`: a password
-	 * registration has not proven the address, and provider logins stamp it explicitly.
+	 * Registers a subject. `email_verified_at` defaults to `null` because a password
+	 * registration leaves the address unproven; provider logins stamp it explicitly.
 	 */
 	static async create(db: Database, input: CreateSubjectInput): Promise<SelectSubject> {
 		return await db.create(

@@ -1,11 +1,9 @@
 /**
  * Tests for the bestiary scene's confirm-to-open wiring.
  *
- * Covers the selection gating driven through a minimal fake client: confirming a
- * species the player has seen pushes a species-detail scene for that species,
- * while confirming an entry that is recorded but not yet seen pushes nothing, and
- * cancelling leaves the bestiary. The canvas drawing is not exercised; only the
- * input routing and the scene it pushes are asserted.
+ * Confirming a seen species pushes its species-detail scene; an unseen entry
+ * and cancelling push nothing. Only the input routing and pushed scene are
+ * asserted here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

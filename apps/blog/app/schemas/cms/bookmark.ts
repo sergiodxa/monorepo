@@ -1,8 +1,6 @@
 /**
- * Data-schema for validating CMS bookmark form submissions. `BookmarkSchema`
- * requires title and url, defaulting them to placeholder values when missing.
- * Exists to normalize and validate bookmark input before it reaches the
- * repository layer.
+ * Normalizes CMS bookmark form submissions so the repository layer receives
+ * validated input.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +9,8 @@
 import { defaulted, object, string } from "remix/data-schema";
 
 /**
- * Validates CMS bookmark form payloads and normalizes missing title/url values.
+ * A parsed bookmark always carries a title and a url, falling back to
+ * placeholder values when the form omits them.
  */
 export const BookmarkSchema = object({
 	title: defaulted(string(), "Untitled bookmark"),

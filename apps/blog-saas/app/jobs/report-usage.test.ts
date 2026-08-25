@@ -1,10 +1,9 @@
 /**
- * Unit tests for the usage-reporting cron `reportUsage`, focused on the metered-usage
- * idempotency fix: each blog-day is ingested into Polar with a deterministic
- * `(blog_id, date)` external id, and a run that ingests an event but fails to stamp
- * `reported_at` re-sends the *same* external id on the next run (so Polar deduplicates
- * instead of double-billing). Uses the real in-memory database harness with a recording
- * fake `PolarClient` and a stubbed analytics `fetch`.
+ * Unit tests for `reportUsage`'s metered-usage idempotency fix: each blog-day is
+ * ingested into Polar with a deterministic `(blog_id, date)` external id, so a run
+ * that ingests an event but fails to stamp `reported_at` re-sends the same id and
+ * Polar deduplicates it on the next run. Runs against the in-memory database
+ * harness with a stubbed analytics `fetch`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,9 +17,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 
 import type { TestDatabase } from "~/app/test/db";
 
-// The analytics helper and job read `env` at import time, and the mock only reaches imports
-// that run after it, so it is installed above the dynamic imports below. Only the Analytics
-// Engine SQL API credentials are supplied, which is all the reporting path reads.
+/**
+ * Installed above the dynamic imports below so the mock is in place before
+ * `env` is read at import time. Only the Analytics Engine SQL API credentials
+ * are supplied, matching what the reporting path reads.
+ */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 	DurableObject: class {},
@@ -55,13 +56,15 @@ interface IngestCall {
 let ingestCalls: IngestCall[];
 let ingestOk: boolean;
 
-/** A fresh container scoping a fake PolarClient over the real test database. */
+/**
+ * A fresh container scoping a fake `PolarClient` over the real test database;
+ * only `ingestPageViews` is overridden, recording calls and returning `ingestOk`.
+ */
 function makeContainer() {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => harness.db);
 	container.singleton(PolarClient, () => {
 		let client = new PolarClient({ accessToken: "t" });
-		// Override just the method the cron calls, recording args and returning `ingestOk`.
 		let fake: PolarClientType["ingestPageViews"] = async (customerId, views, day, externalId) => {
 			ingestCalls.push({ customerId, views, day, externalId });
 			return ingestOk;
@@ -109,9 +112,12 @@ async function seedBillableBlog(slug = "my-blog"): Promise<{ accountId: string; 
 }
 
 describe("reportUsage — metered usage idempotency", () => {
+	/**
+	 * Seeds a fixed-date usage row so the assertions hold regardless of the
+	 * actual UTC date `yesterday()` resolves to when the suite runs.
+	 */
 	test("ingests each blog-day with a deterministic (blog_id, date) external id", async () => {
 		let { blogId } = await seedBillableBlog();
-		// A pre-existing unreported row so the outcome does not depend on `yesterday()`.
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
@@ -124,23 +130,24 @@ describe("reportUsage — metered usage idempotency", () => {
 		expect(call!.externalId).toBe(`page_views:${blogId}:2026-07-01`);
 	});
 
+	/**
+	 * Models a run that ingests the event but never persists `reported_at`, by
+	 * nulling it back out after the first run, then verifies the retry re-sends
+	 * the identical external id.
+	 */
 	test("re-sends the same external id after a markReported failure (dedupe on retry)", async () => {
 		let { blogId } = await seedBillableBlog();
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
-		// First run: Polar accepts the event but we simulate the local stamp not landing
-		// by making the row look unreported again afterwards.
 		ingestOk = true;
 		await makeContainer().scope(() => reportUsage());
 		let firstKeys = ingestCalls.filter((c) => c.day === "2026-07-01").map((c) => c.externalId);
 		expect(firstKeys).toEqual([`page_views:${blogId}:2026-07-01`]);
 
-		// Force the row back to unreported to model the partial failure (stamp lost).
 		let rows = await harness.db.findMany(UsageDaily.table, { where: { blog_id: blogId } });
 		await harness.db.update(UsageDaily.table, { id: rows[0]!.id }, { reported_at: null });
 
-		// Second run re-sends the identical external id, so Polar can deduplicate.
 		ingestCalls = [];
 		await makeContainer().scope(() => reportUsage());
 		let secondKeys = ingestCalls.filter((c) => c.day === "2026-07-01").map((c) => c.externalId);
@@ -152,11 +159,9 @@ describe("reportUsage — metered usage idempotency", () => {
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
-		// First run stamps reported_at (ingestOk = true, no forced reset).
 		await makeContainer().scope(() => reportUsage());
 		expect(ingestCalls.filter((c) => c.day === "2026-07-01")).toHaveLength(1);
 
-		// Second run must skip the already-reported row entirely.
 		ingestCalls = [];
 		await makeContainer().scope(() => reportUsage());
 		expect(ingestCalls.filter((c) => c.day === "2026-07-01")).toHaveLength(0);
@@ -170,7 +175,6 @@ describe("reportUsage — metered usage idempotency", () => {
 		ingestOk = false;
 		await makeContainer().scope(() => reportUsage());
 
-		// The row is still unreported, and a later successful run re-sends the same key.
 		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(1);
 		ingestOk = true;
 		ingestCalls = [];

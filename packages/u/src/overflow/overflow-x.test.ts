@@ -1,6 +1,4 @@
 /**
- * Unit tests for `overflowX()`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

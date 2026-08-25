@@ -1,13 +1,8 @@
 /**
- * Unit tests for `NotifyJob.perform()`, the consumer that dispatches the alerts for one
- * monitor status transition off the sweep that detected it: that each monitor type routes
- * to its own `notify*` helper with the message's statuses and a snapshot rebuilt from the
- * monitor row, that a monitor deleted between the sweep and this job is acknowledged rather
- * than retried, and how malformed messages versus failed lookups map onto
- * non-retriable/retriable outcomes.
- *
- * The `notify*` helpers are mocked — the alert pipeline they run has its own tests — so
- * these tests are about the routing, the reloaded row, and the retry decisions.
+ * Unit tests for `NotifyJob.perform()`: that each monitor type routes to its own
+ * `notify*` helper with a snapshot reloaded from the monitor row, that a monitor deleted
+ * between the sweep and this job is acknowledged rather than retried, and how malformed
+ * messages versus failed lookups map onto non-retriable/retriable outcomes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -62,10 +57,9 @@ let notifyCronJobResultMock = vi.fn(recordCall("cron"));
 let notifySslResultMock = vi.fn(recordCall("ssl"));
 
 /**
- * `~/app/data/monitor` imports `env` from `cloudflare:workers` at module load, and the
- * repo-root preload's placeholder bindings are only strings, so the module is stubbed here
- * for runs from this package's own directory too. Nothing on the routing path this file
- * covers reaches a binding, so none is supplied and one that got read would fail by name.
+ * `~/app/data/monitor` imports `env` from `cloudflare:workers` at module load, and this
+ * package's preload only supplies placeholder strings, so it's stubbed here too. Nothing
+ * on this file's routing path reaches a binding, so none is supplied.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
@@ -84,8 +78,8 @@ let { NotifyJob } = await import("./notify");
 let { default: Monitor } = await import("~/app/data/monitor");
 
 /**
- * The message bodies these tests hand the job. Deliberately loose — the point of several
- * cases is a body the job must reject — so it isn't `NotifyMessage`.
+ * The message bodies these tests hand the job, loose enough to include the malformed
+ * shapes the rejection cases require.
  */
 type MessageBody = {
 	type: string;

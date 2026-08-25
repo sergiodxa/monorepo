@@ -18,8 +18,8 @@ import { validateTimestamps } from "./validations/timestamps";
 /**
  * Stores local account profile data and authorization role.
  *
- * `subject_id` is optional to support accounts that are not yet linked
- * to an external auth subject, and timestamps are always required.
+ * `subject_id` stays nullable so an account can exist before an external
+ * auth subject is linked to it.
  */
 export const users = table({
 	name: "users",

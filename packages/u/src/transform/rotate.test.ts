@@ -26,11 +26,12 @@ describe("rotate", () => {
 		]);
 	});
 
+	/**
+	 * The shared `transform` declaration must keep referencing this utility's
+	 * custom property through serialization, since that reference is what
+	 * makes the rotation take effect.
+	 */
 	test("the emitted transform actually reads the custom property this utility set", async () => {
-		// The whole composition scheme rests on the shared `transform` value
-		// referencing every utility's variable: if the serializer reordered or
-		// rewrote it, each utility would still set its variable and nothing
-		// would move.
 		let css = await declarations(rotate(45));
 
 		expect(css).toContain("--ui-rotate: 45deg");

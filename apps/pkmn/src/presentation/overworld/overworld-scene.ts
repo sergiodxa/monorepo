@@ -1,16 +1,9 @@
 /**
  * The overworld scene: walking the map, running events, and wild battles.
  *
- * It loads a map (from the asset store, or the built-in sample map), follows the
- * player with a clamped camera, and moves the player one tile at a time. Authored
- * map events become live entities whose active page — the last page whose switch and
- * self-switch conditions hold — decides their graphic, autonomous movement, trigger,
- * and command script; the scene draws them, moves them, and fires their commands on
- * the right trigger. When the player finishes a step onto tall grass it rolls a wild
- * encounter and, on a hit, starts a battle. Everything the engine owns (party,
- * battle state, flags) is reached through commands and selectors; the scene only
- * decides where the player is, which page is active, and when a script or battle
- * begins.
+ * Authored map events become live entities whose active page decides their
+ * graphic, movement, trigger, and script. Party, battle state, and flags stay
+ * behind the engine's commands and selectors.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,8 +60,8 @@ const WAIT_FRAME_MS = 1000 / 60;
 /**
  * The essential HUD hint, kept short enough to fit any sane screen width.
  *
- * `overworldHint` falls back to this when no fuller variant fits, so it lists
- * only the two actions the player cannot discover by walking (talk and menu).
+ * `overworldHint` falls back to this when no fuller variant fits, so it teaches
+ * only the two actions a hint is needed for: talk and menu.
  */
 const HUD_HINT_ESSENTIAL = "A: talk   Start: menu";
 
@@ -87,10 +80,8 @@ function hintWidth(text: string): number {
 /**
  * Picks the fullest overworld HUD hint that fits within `maxWidth` pixels.
  *
- * The overworld renders at a fixed internal resolution, so the hint must never
- * exceed the usable width or it is clipped off-screen. This chooses the most
- * informative variant that still measures within the budget, falling back to the
- * shortest essential hint when even that is tight.
+ * Falls back to the shortest essential hint so an oversized hint is never
+ * clipped off-screen at the fixed internal resolution.
  */
 export function overworldHint(maxWidth: number): string {
 	return HUD_HINT_VARIANTS.find((variant) => hintWidth(variant) <= maxWidth) ?? HUD_HINT_ESSENTIAL;
@@ -146,9 +137,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * The index a `show-choices` picker recorded, consumed when its scene pops.
 	 *
-	 * The picker records the pick here (rather than resuming directly) so the single
-	 * resume path in `resume()` — which fires on every scene pop — passes it to the
-	 * runner and clears it. Null while no choice is pending.
+	 * `resume()` fires on every scene pop and applies this value to the runner,
+	 * keeping one resume path in charge of continuing a parked script.
 	 */
 	private pendingChoiceIndex: number | null = null;
 
@@ -158,9 +148,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * The atlas the world draws actors from, or null to draw procedurally.
 	 *
-	 * Prefers a manifest atlas ("overworld") and falls back to the generated demo
-	 * atlas; when neither is available (e.g. no DOM), it is null and the scene
-	 * draws the procedural player/NPC sprites exactly as before.
+	 * Falls back to a generated atlas when no manifest atlas or DOM is available,
+	 * so the scene always has something to draw actors from.
 	 */
 	private atlas: Atlas | null = null;
 
@@ -173,21 +162,23 @@ export class OverworldScene implements Scene {
 	/** @param spawn - Where to place the player when the scene enters. */
 	constructor(private readonly spawn: Spawn = SAMPLE_SPAWN) {}
 
+	/**
+	 * Loads the map, spawns its events and sample NPCs, and starts any autorun event.
+	 *
+	 * The sample trainer NPC fields mid-pool species so its party differs from the
+	 * starter the player begins with.
+	 */
 	enter(game: GameClient) {
 		let data = game.assets.map(this.spawn.mapId) ?? createSampleMap();
 		this.map = new GameMap(data);
 		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
 		this.renderer = new TileMapRenderer(data, (imageId) => game.assets.image(imageId), this.atlas);
 		this.player = new PlayerController(this.spawn.x, this.spawn.y, this.spawn.facing);
-		// The trainer fields mid-pool species so its party differs from the starter it fights.
 		let speciesIds = Object.keys(game.content.species);
 		let first = speciesIds[Math.min(3, speciesIds.length - 1)] ?? speciesIds[0] ?? "";
 		let second = speciesIds[Math.min(4, speciesIds.length - 1)] ?? first;
 		this.npcs = createSampleNpcs([first, second]);
 
-		// Spawn the map's authored events with their active page selected from the
-		// current flags, and give each a fresh movement state. The existing sample
-		// NPCs above stay alongside these map events (unifying the two is a follow-up).
 		this.events = spawnEvents(this.spawn.mapId, this.map.events, (flag) =>
 			game.engine.selectFlag(flag),
 		);
@@ -200,27 +191,29 @@ export class OverworldScene implements Scene {
 
 	exit() {}
 
+	/**
+	 * Continues a script parked on a pushed scene once that scene pops back here.
+	 *
+	 * Only a `show-choices` picker reads the resumed argument, so forwarding a
+	 * null pick as undefined is a no-op for every other blocking command.
+	 */
 	resume() {
-		// Returning from a scene a running script pushed (a dialogue/choice it was
-		// waiting on, or a battle it started): continue the script from where it parked.
-		// The blocked guard means returning from the menu or a non-script scene does
-		// nothing. `advance` inside `resume` runs the next synchronous steps and may
-		// park again on the next blocking command.
 		if (this.interaction?.runner.blocked && this.waitFramesLeft <= 0) {
-			// A parked `show-choices` resumes with the recorded pick; every other blocking
-			// command ignores the argument, so passing null (as undefined) is a no-op there.
 			let index = this.pendingChoiceIndex;
 			this.pendingChoiceIndex = null;
 			this.interaction.runner.resume(index ?? undefined);
 		}
 	}
 
+	/**
+	 * Advances the overworld one frame: movement, interactions, and encounters.
+	 *
+	 * A running interaction freezes the overworld while its pushed scenes drive
+	 * it, so this only counts down a `wait` and settles once the script finishes.
+	 */
 	update(game: GameClient, dt: number) {
 		this.elapsed += dt;
 
-		// A running interaction freezes the overworld: the script drives scenes it
-		// pushed (dialogue/choices/battles) and resumes on their pop, so this loop only
-		// counts down a `wait` and settles when the script finishes.
 		if (this.interaction) {
 			this.tickWait(dt);
 			this.settleInteraction(game);
@@ -254,8 +247,6 @@ export class OverworldScene implements Scene {
 			}
 		}
 
-		// Move every event with an active autonomous-movement page against collision,
-		// the player, other events, and NPCs.
 		for (let entity of this.events) {
 			let page = entity.page;
 			let state = this.movement.get(entity.id);
@@ -283,8 +274,6 @@ export class OverworldScene implements Scene {
 
 		if (arrived) this.checkTouchAndEncounter(game);
 
-		// A parallel event runs continuously in the background: with the player free to
-		// move, start the first eligible one this frame if none is already running.
 		if (!this.interaction) this.runParallelEvents(game);
 	}
 
@@ -301,11 +290,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Fires any touch event the player just reached, else rolls a wild encounter.
 	 *
-	 * Two touch shapes are handled: a `player-touch` event the player steps *onto* (its
-	 * tile equals the player's), and an `event-touch` event the player walks *into*
-	 * (its tile is one step ahead in the facing direction). Either fires its page
-	 * script before an encounter can roll, so stepping onto a trigger tile never also
-	 * starts a wild battle on the same arrival.
+	 * A touch event's script always fires before an encounter can roll, so
+	 * stepping onto a trigger tile never also starts a wild battle on arrival.
 	 */
 	private checkTouchAndEncounter(game: GameClient) {
 		let onTile = eventAt(this.events, this.player.tile.x, this.player.tile.y);
@@ -327,7 +313,7 @@ export class OverworldScene implements Scene {
 		return entity.page?.trigger ?? null;
 	}
 
-	/** True when the player cannot step onto a tile (a sample NPC or a solid event holds it). */
+	/** True when a sample NPC or a solid event holds the tile, blocking the player. */
 	private playerBlocked(x: number, y: number): boolean {
 		if (npcAt(this.npcs, x, y) !== null) return true;
 		let event = eventAt(this.events, x, y);
@@ -337,8 +323,7 @@ export class OverworldScene implements Scene {
 	/**
 	 * True when a tile is impassable for an autonomous event actor moving off `self`.
 	 *
-	 * Events avoid walls, the player, sample NPCs, and other events. An inert or
-	 * invisible event does not block a moving event, matching how it does not block the
+	 * An inert or invisible event lets movement through, same as it does for the
 	 * player, so a patrolling NPC can cross a trigger tile.
 	 */
 	private actorBlocked(self: EventEntity, x: number, y: number): boolean {
@@ -373,16 +358,12 @@ export class OverworldScene implements Scene {
 	/**
 	 * Starts a non-capturable trainer fight against a freshly spawned party.
 	 *
-	 * Shared by the sample trainer NPC and by event-driven `start-trainer-battle`
-	 * scripts. Each fight spawns the whole party as real, transient (save-excluded,
-	 * despawned when the battle ends) creatures and stakes money through the battle
-	 * scene's reward config. The fight is inescapable, capture is disabled, and the
-	 * enemy sends out its next creature as each active one faints, so the player wins
-	 * only when the entire party is down. Returns whether a battle was actually
-	 * pushed, so an event script can tell if it should park on the battle.
+	 * The whole party rides on one enemy team, so a faint forces out the next
+	 * bench creature until the entire party is down; the fight is inescapable.
 	 *
 	 * @param idPrefix - Stable prefix making each spawned creature's trainer id unique.
 	 * @param trainer - The party, optional name, and optional reward to field.
+	 * @returns Whether a battle was actually pushed.
 	 */
 	private startTrainerFight(game: GameClient, idPrefix: string, trainer: TrainerParty): boolean {
 		if (trainer.party.length === 0) return false;
@@ -411,8 +392,6 @@ export class OverworldScene implements Scene {
 			playerId: HERO_ID,
 			enemyId: WILD_ID,
 			playerParty,
-			// The whole party rides on one enemy team, so a faint forces the next
-			// bench creature out through the engine's standard replacement flow.
 			enemyParty,
 			slots: 1,
 			canLeaveBattle: false,
@@ -430,9 +409,10 @@ export class OverworldScene implements Scene {
 	/**
 	 * Starts a fixed (often legendary) wild battle from a `wild-encounter` command.
 	 *
-	 * Spawns one wild creature from the command's authored species/level and pushes a
-	 * normal capturable wild battle, so the player can catch the legendary. Returns
-	 * whether the battle was pushed so the caller can settle the event afterward.
+	 * Spawns one wild creature from the command's authored species and level, and
+	 * pushes a normal capturable battle so the player can catch it.
+	 *
+	 * @returns Whether the battle was pushed, so the caller can settle the event.
 	 */
 	private startWildEncounter(
 		game: GameClient,
@@ -466,10 +446,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Runs the first eligible `autorun` event on map enter.
 	 *
-	 * Only the first eligible autorun event runs its script this enter; a script
-	 * blocks the overworld and drives its own scenes, so starting more than one at a
-	 * time would interleave dialogues. The rest wait until the interaction settles and
-	 * a later frame (or a re-selected page) makes one eligible again.
+	 * A script blocks the overworld and drives its own scenes, so starting more
+	 * than one at once would interleave dialogues; the rest wait for a later frame.
 	 */
 	private runEntryEvents(game: GameClient) {
 		if (this.interaction) return;
@@ -483,11 +461,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Starts the first eligible `parallel` event when the player is free.
 	 *
-	 * A parallel page runs in the background whenever its conditions hold. The scene
-	 * has a single interaction slot, so it starts one parallel script at a time; when
-	 * it settles, the next frame starts the next eligible one. A parallel page whose
-	 * script has no lasting effect will keep re-firing, so authors typically flip a
-	 * self-switch inside it to move the event to a later, quieter page.
+	 * The scene has a single interaction slot, so only one parallel script runs
+	 * at a time; authors flip a self-switch inside it to avoid re-firing forever.
 	 */
 	private runParallelEvents(game: GameClient) {
 		for (let entity of this.events) {
@@ -500,11 +475,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Begins an event's interaction: builds a command runner and advances it once.
 	 *
-	 * The runner runs synchronous commands immediately and parks on the first blocking
-	 * command (text, a choice, a battle, or a wait), whose host hook has pushed the
-	 * scene it waits on. If the script finishes without blocking (or was empty), the
-	 * interaction settles immediately. A second interaction cannot start while one is
-	 * running because the overworld is frozen until it settles.
+	 * The runner parks on the first blocking command and only one interaction runs
+	 * at a time, since the overworld stays frozen until it settles.
 	 */
 	private startInteraction(game: GameClient, entity: EventEntity) {
 		if (this.interaction || !entity.page) return;
@@ -520,11 +492,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Finalizes a running interaction once its script is done.
 	 *
-	 * While the runner is blocked, this does nothing (a pushed scene is driving it, and
-	 * `resume` continues it on pop). When the script finishes, active pages are
-	 * re-selected against the current flags (a `control-switch`/`control-self-switch`
-	 * may have moved events to new pages), and control returns to the player — unless a
-	 * warp is pending, which reloads the map instead.
+	 * Re-selects active pages against current flags once the script finishes, since a
+	 * `control-switch` or self-switch inside it may have moved events to new pages.
 	 */
 	private settleInteraction(game: GameClient) {
 		let active = this.interaction;
@@ -541,19 +510,14 @@ export class OverworldScene implements Scene {
 			return;
 		}
 
-		// Flags the script set may have changed which page each event shows.
 		refreshActivePages(this.events, (flag) => game.engine.selectFlag(flag));
 	}
 
 	/**
 	 * Builds the side-effect surface one event page's commands drive.
 	 *
-	 * Synchronous hooks map to engine dispatches (give-item, heal-party, the two
-	 * switch controls) or mutate the interacting entity (face-player, move). Blocking
-	 * hooks push the scenes the runner parks on: `showText` a dialogue, `showChoices` a
-	 * choice picker that resumes with the picked index, the battle hooks a battle, and
-	 * `warp` records the destination and lets the run end so the map reloads. Every
-	 * hook forwards authored data; no franchise meaning is added here.
+	 * Blocking hooks push the scene the runner parks on and resume it on completion;
+	 * every hook forwards the command's authored data through untouched.
 	 */
 	private buildCommandHost(game: GameClient, entity: EventEntity): EventCommandHost {
 		return {
@@ -564,9 +528,6 @@ export class OverworldScene implements Scene {
 						...(prompt ? { prompt } : {}),
 						labels,
 						onChoose: (index) => {
-							// Resume runs on scene pop through `resume()`; stash the pick for it by
-							// resuming here would double-run, so record it on the runner via resume
-							// after the pop. Instead we resume with the index directly on pop.
 							this.pendingChoiceIndex = index;
 						},
 					}),
@@ -601,9 +562,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Steps an event through an authored route immediately, skipping blocked tiles.
 	 *
-	 * A best-effort overworld nicety for the `move` command: each step turns the entity
-	 * and moves it onto the target tile when free, so an NPC can walk aside or approach
-	 * as part of a cutscene. Blocked steps only turn the entity.
+	 * Each step turns the entity toward its direction and only advances onto a free
+	 * tile, so an NPC can walk aside or approach as part of a cutscene.
 	 */
 	private stepEventRoute(entity: EventEntity, route: readonly Direction[]) {
 		for (let direction of route) {
@@ -621,9 +581,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Reloads the target map at a new position, replacing this scene.
 	 *
-	 * A warp changes which map is loaded, so the overworld is re-entered fresh (new
-	 * events, movement, camera) at the destination tile. Replacing rather than pushing
-	 * keeps the scene stack flat as the player travels between maps.
+	 * Re-enters the overworld fresh at the destination tile, and replacing keeps
+	 * the scene stack flat as the player travels between maps.
 	 */
 	private warpTo(
 		game: GameClient,
@@ -645,19 +604,21 @@ export class OverworldScene implements Scene {
 		};
 	}
 
+	/**
+	 * Draws one frame: ground, actors, the overhead layer, then always-on-top events.
+	 *
+	 * Draws in this order so the overhead layer sits above every ground actor and
+	 * an always-on-top event (a bridge rail, a treetop) still draws above that.
+	 */
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
 		this.renderer.drawGround(ctx, this.camera);
 		for (let npc of this.npcs) this.drawNpc(ctx, npc);
-		// Ground-level events draw with the actors; always-on-top events draw last.
 		for (let entity of this.events)
 			if (!this.isAlwaysOnTop(entity)) this.drawEvent(game, ctx, entity);
 		this.drawPlayer(ctx);
-		// The overhead layer draws above every ground actor, including event NPCs.
 		this.renderer.drawOverhead(ctx, this.camera);
-		// Always-on-top events (a bridge rail, a treetop) draw above the overhead layer.
 		for (let entity of this.events)
 			if (this.isAlwaysOnTop(entity)) this.drawEvent(game, ctx, entity);
-		// Money now lives in the Trainer menu; the HUD only shows the fitting hint.
 		drawText(ctx, overworldHint(hudHintMaxWidth()), HUD_HINT_MARGIN, HUD_HINT_MARGIN, {
 			color: theme.TEXT.inverseWhite,
 		});
@@ -671,12 +632,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Draws one event entity from its active page's graphic, or a placeholder.
 	 *
-	 * An inert event (no active page) or one whose page graphic is `null` is invisible
-	 * by design and draws nothing. Otherwise the graphic blits from the atlas (an atlas
-	 * region) or the raw tileset image (an image rect) at the entity's tile, respecting
-	 * its facing where the region is directional; when the art is missing it falls back
-	 * to a small procedural marker so the entity is still visible before real sprites
-	 * exist.
+	 * Falls back to a small procedural marker when the art is missing, so an event
+	 * stays visible before its real sprite exists.
 	 */
 	private drawEvent(game: GameClient, ctx: CanvasRenderingContext2D, entity: EventEntity) {
 		let graphic = entity.page?.graphic ?? null;
@@ -686,17 +643,16 @@ export class OverworldScene implements Scene {
 
 		if (this.drawEventSprite(game, ctx, graphic, entity.facing, x, y)) return;
 
-		// No sprite art: a facing-tinted procedural body so the entity is visible.
 		this.drawProceduralActor(ctx, x, y, theme.NPC_COLOR.trainer);
 	}
 
 	/**
 	 * Blits an event's graphic ref from the atlas or a raw image, returning success.
 	 *
-	 * An atlas ref first tries a facing-specific region (`"<region>.<facing>.0"`) so a
-	 * directional character sheet turns with the entity, then the region as authored;
-	 * an image ref blits the raw source rect from the named image. Returns false when
-	 * nothing could be drawn so the caller can fall back procedurally.
+	 * Tries a facing-specific atlas region before the authored region, offsetting
+	 * the draw 8px up so the 16px character cell's feet land on the tile.
+	 *
+	 * @returns False when nothing could be drawn, so the caller can fall back procedurally.
 	 */
 	private drawEventSprite(
 		game: GameClient,
@@ -709,7 +665,6 @@ export class OverworldScene implements Scene {
 		if (sprite === null) return false;
 		if ("atlas" in sprite) {
 			let atlas = game.assets.atlas(sprite.atlas) ?? this.atlas;
-			// The 16px character cell sits 8px above the tile so its feet meet the tile.
 			if (drawSprite(ctx, atlas, `${sprite.region}.${facing}.0`, x, y - 8)) return true;
 			return drawSprite(ctx, atlas, sprite.region, x, y - 8);
 		}
@@ -719,7 +674,12 @@ export class OverworldScene implements Scene {
 		return true;
 	}
 
-	/** Rolls a wild encounter for the tile the player just reached and starts the battle. */
+	/**
+	 * Rolls a wild encounter for the tile the player just reached and starts the battle.
+	 *
+	 * Plays the encounter jingle only once the battle is certain to start, and the
+	 * call is a safe no-op when audio is unavailable.
+	 */
 	private checkEncounter(game: GameClient) {
 		let { x, y } = this.player.tile;
 		if (!rollEncounter(this.map, x, y, Math.random)) return;
@@ -744,8 +704,6 @@ export class OverworldScene implements Scene {
 		let wild = spawned.find((event) => event.type === "encounter-spawned");
 		if (wild?.type !== "encounter-spawned") return;
 
-		// A wild battle is now certain to start: sound the encounter jingle as the
-		// battle scene is pushed. Safe no-op when audio is unavailable.
 		game.audio.playSynthSfx("encounter");
 
 		let battleId = createBattleId(`wild-${this.battleCount++}`);
@@ -764,21 +722,18 @@ export class OverworldScene implements Scene {
 	/**
 	 * Draws the player from the atlas character region, or procedurally.
 	 *
-	 * The walk frame alternates only while the player is stepping; standing still
-	 * holds frame 0. When the atlas (or the region) is missing, `drawSprite`
-	 * returns false and the original procedural sprite is drawn instead.
+	 * Offsets the draw 8px up so the 16px character cell's feet meet the tile,
+	 * falling back to the procedural sprite when the atlas region is missing.
 	 */
 	private drawPlayer(ctx: CanvasRenderingContext2D) {
 		let x = Math.round(this.player.pixelX - this.camera.x);
 		let y = Math.round(this.player.pixelY - this.camera.y);
 
 		let frame = this.player.moving && Math.floor(this.elapsed / 180) % 2 === 1 ? 1 : 0;
-		// The 16px character cell sits 8px above the tile so its feet meet the tile.
 		if (drawSprite(ctx, this.atlas, `hero.${this.player.facing}.${frame}`, x, y - 8)) return;
 
 		this.drawProceduralActor(ctx, x, y, theme.PLAYER.body);
 
-		// A small nub indicating facing (procedural fallback only).
 		ctx.fillStyle = theme.PLAYER.facingNub;
 		let cx = x + 8;
 		let cy = y + 2;
@@ -795,9 +750,8 @@ export class OverworldScene implements Scene {
 	/**
 	 * Draws one NPC from the atlas character region, or procedurally.
 	 *
-	 * NPCs share the character art but keep their role label so the three read
-	 * apart; when the atlas is missing they fall back to the role-colored
-	 * procedural sprite, unchanged.
+	 * Keeps the role label over the head so the three NPCs read apart even when
+	 * they share the same character art.
 	 */
 	private drawNpc(ctx: CanvasRenderingContext2D, npc: Npc) {
 		let x = Math.round(npc.x * TILE_SIZE - this.camera.x);
@@ -807,7 +761,6 @@ export class OverworldScene implements Scene {
 			this.drawProceduralActor(ctx, x, y, theme.NPC_COLOR[npc.role]);
 		}
 
-		// The role glyph over the head keeps the three NPCs distinguishable.
 		drawText(ctx, npc.label, x + 8, y - 8, { align: "center", color: theme.TEXT.inverseWhite });
 	}
 
@@ -823,10 +776,8 @@ export class OverworldScene implements Scene {
 /**
  * Whether an event blocks movement onto its tile.
  *
- * An event is solid only while its active page shows a graphic (a visible NPC or
- * creature), so the player and other events cannot walk through it. An inert event
- * (no active page) or an invisible trigger (a page with a `null` graphic) is walkable
- * so the player can step onto it to fire its touch trigger.
+ * An inert or invisible event stays walkable so the player can step onto it to
+ * fire its touch trigger, while a visible page blocks the tile like a wall.
  */
 function isSolidEvent(event: EventEntity): boolean {
 	return event.page !== null && event.page.graphic !== null;

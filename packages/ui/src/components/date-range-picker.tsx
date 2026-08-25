@@ -1,14 +1,12 @@
 /**
  * A paired-field date range control building on {@link DateField} for its
- * plain fallback — a start-date field and an end-date field, each fully
+ * plain fallback — independent start-date and end-date fields, each fully
  * labeled, described, and validated on its own — extended with a
- * {@link DateRangePicker.Group} row and a trigger {@link DateRangePicker.Button}
- * for composing a {@link DateRangePicker.Dialog} — a Popover-hosted calendar
- * surface — alongside it. Composing {@link DateRangePicker.Group} and
- * {@link DateRangePicker.Dialog} as children swaps in that richer
- * trigger-and-calendar layout in place of the paired fallback fields; leaving
- * `children` unset keeps the fallback on its own, a complete,
- * keyboard-operable pair with no composed surface at all.
+ * {@link DateRangePicker.Group} row and a trigger
+ * {@link DateRangePicker.Button} for composing a
+ * {@link DateRangePicker.Dialog} calendar surface alongside it. Leaving
+ * `children` unset keeps the fallback pair on its own, complete and
+ * keyboard-operable with no composed surface at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,28 +23,20 @@ import { DatePicker } from "./date-picker";
 /**
  * Prop types for {@link DateRangePicker} and its compound parts. The
  * {@link DateRangePicker.Group}, {@link DateRangePicker.Button}, and
- * {@link DateRangePicker.Dialog} parts alias {@link DatePicker}'s matching
- * parts directly, since the composed trigger row and calendar surface render
- * and style identically for a range as for a single date — only the
- * calendar a consumer composes inside the dialog, and the pair of controls a
- * consumer composes inside the group, differ between the two.
+ * {@link DateRangePicker.Dialog} parts alias {@link DatePicker}'s matching parts directly, since the trigger row and calendar surface render identically for a range as for a single date.
  */
 export namespace DateRangePicker {
 	/**
-	 * Semantic color role for the fallback pair's keyboard focus rings,
-	 * mirroring {@link DateField.Color}. Read only by the fallback fields —
-	 * {@link DateRangePicker.Group}'s composed control carries no `color` prop
-	 * of its own, since it's rendered directly by the consumer.
+	 * Semantic color role for the fallback pair's keyboard focus rings. Read
+	 * only by the fallback fields — {@link DateRangePicker.Group}'s composed
+	 * control carries no `color` prop of its own.
 	 */
 	export type Color = DateField.Color;
 
 	/**
 	 * Per-part styling for the two {@link DateField} instances the fallback
-	 * pair composes, each forwarded to that field's own `parts`. Applies only
-	 * when `children` is unset — the composed layout styles its own parts
-	 * individually through {@link DateRangePicker.Group},
-	 * {@link DateRangePicker.Button}, and {@link DateRangePicker.Dialog}
-	 * instead.
+	 * pair composes, each forwarded to that field's own `parts`. Read only
+	 * when `children` is unset; the composed layout styles its own parts individually instead.
 	 */
 	export interface PartsProps {
 		/** Per-part styling for the fallback pair's start-date field. */
@@ -57,13 +47,8 @@ export namespace DateRangePicker {
 
 	/**
 	 * Props accepted by {@link DateRangePicker}. Leaving `children` unset
-	 * renders two independent {@link DateField} instances — one for the
-	 * range's start, one for its end — using every field below; composing
-	 * {@link DateRangePicker.Group} and {@link DateRangePicker.Dialog} as
-	 * `children` instead renders the richer trigger-and-calendar layout, and
-	 * every field below goes unread — build the fallback pair's captions,
-	 * supporting copy, and validation messages directly into that composed
-	 * layout instead.
+	 * renders two independent {@link DateField} instances — one per end of
+	 * the range — using every field below; composing {@link DateRangePicker.Group} and {@link DateRangePicker.Dialog} instead renders the richer layout and leaves every field below unread.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
 		/** Semantic color role for the fallback pair's focus rings. Read only when `children` is unset. */
@@ -110,20 +95,15 @@ export namespace DateRangePicker {
 		parts?: PartsProps;
 		/**
 		 * The trigger-and-calendar layout — typically a `Label`,
-		 * {@link DateRangePicker.Group} (housing the range's own start and end
-		 * controls plus {@link DateRangePicker.Button}), and
-		 * {@link DateRangePicker.Dialog} (housing a range calendar) — rendered
-		 * in place of the paired fallback fields. Leaving this unset renders
-		 * that fallback pair instead, every field above passed straight
-		 * through to it unchanged.
+		 * {@link DateRangePicker.Group}, and {@link DateRangePicker.Dialog} —
+		 * rendered in place of the paired fallback fields, leaving every field above unread when set.
 		 */
 		children?: RemixNode;
 	}
 
 	/**
 	 * Every prop {@link DatePicker.GroupProps} accepts, unchanged. `children`
-	 * composes the range's own start and end controls — each an `Input`,
-	 * styled the same way {@link DateField}'s own control is — and
+	 * composes the range's own start and end controls and
 	 * {@link DateRangePicker.Button} into one visual row.
 	 */
 	export interface GroupProps extends DatePicker.GroupProps {}
@@ -137,25 +117,8 @@ export namespace DateRangePicker {
 
 /**
  * Renders {@link DateRangePicker}'s root. Leaving `children` unset renders
- * two independent {@link DateField} instances side by side — a start-date
- * field and an end-date field, each a complete, labeled, keyboard-operable
- * `<input type="date">` — grouped under a native `role="group"`, aligned to
- * their own start edge so a validation message under one field never shifts
- * the other's label out of alignment. `color`, `min`/`max`, `step`,
- * `required`, `disabled`, `readOnly`, and `autoComplete` apply to both fields
- * alike; `startLabel`/`endLabel`, `startDescription`/`endDescription`,
- * `startErrorMessage`/`endErrorMessage`, `startName`/`endName`,
- * `startValue`/`endValue`, and `startDefaultValue`/`endDefaultValue` apply to
- * one field each. Composing {@link DateRangePicker.Group} and
- * {@link DateRangePicker.Dialog} as `children` instead — typically alongside
- * a `Label` and the range's own supporting copy or validation message, built
- * directly into that composition — renders the richer trigger-and-calendar
- * layout in a single column with a small gap between its parts, and every
- * field above goes unread.
- *
- * In dev mode, falling back to the paired fields with no `startLabel` or no
- * `endLabel` set logs a `console.warn` for the field missing one, mirroring
- * {@link DateField}'s own accessible-name requirement.
+ * two independent {@link DateField} instances side by side under a native
+ * `role="group"`, each aligned to its own start edge so a validation message under one never shifts the other's label; composing {@link DateRangePicker.Group} and {@link DateRangePicker.Dialog} as `children` instead renders the richer layout and leaves every field above unread.
  *
  * @param handle Runtime handle carrying the root element's props.
  * @returns The render function producing the date range picker's markup.
@@ -287,11 +250,8 @@ export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
 
 /**
  * Renders {@link DateRangePicker}'s control row: identical to
- * {@link DatePicker.Group}, since {@link DateRangePicker} shares its trigger
- * row's markup and focus-within outline with {@link DatePicker} rather than
- * declaring its own. `children` composes the range's start and end controls
- * side by side with {@link DateRangePicker.Button}, and the whole row gains a
- * keyboard focus ring the moment focus lands anywhere inside it.
+ * {@link DatePicker.Group}'s markup and focus-within outline. `children`
+ * composes the range's start and end controls with {@link DateRangePicker.Button}, and the row gains a keyboard focus ring whenever focus lands anywhere inside it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -306,14 +266,8 @@ DateRangePicker.Group = DatePicker.Group;
 
 /**
  * Renders {@link DateRangePicker}'s trailing trigger: identical to
- * {@link DatePicker.Button}, since a range's trigger reads the same calendar
- * glyph and the same hover/focus-visible styling a single date's trigger
- * does. Point `commandfor` at {@link DateRangePicker.Dialog}'s `id` with
- * `command="toggle-popover"` to wire it up as that surface's invoker.
- *
- * In dev mode, a button with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name to announce for it.
+ * {@link DatePicker.Button}'s calendar glyph and hover/focus-visible
+ * styling. Point `commandfor` at {@link DateRangePicker.Dialog}'s `id` with `command="toggle-popover"` to wire it up as that surface's invoker.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the trigger's markup.
@@ -324,19 +278,8 @@ DateRangePicker.Button = DatePicker.Button;
 
 /**
  * Renders {@link DateRangePicker}'s calendar surface: identical to
- * {@link DatePicker.Dialog}, since a range's floating surface reads the same
- * placement default, padding, and `role="dialog"` a single date's surface
- * does — only the calendar a consumer composes as `children` differs.
- *
- * Opening and closing ride the Popover API exactly as {@link Popover}
- * documents — {@link DateRangePicker.Button}'s
- * `commandfor`/`command="toggle-popover"` both shows this surface and, by
- * that same invoker relationship, becomes its implicit CSS anchor, with no
- * positioning logic running in script. The composed calendar's day cells
- * carry no click or key handling of their own inside this surface either —
- * pair a `calendarKeys()`/`rangePreview()` mixin from the behavior layer,
- * applied where the calendar itself is composed, for a live, arrow-key- or
- * drag-extended range over the same markup.
+ * {@link DatePicker.Dialog}'s placement default, padding, and
+ * `role="dialog"`, with only the calendar a consumer composes as `children` differing. {@link DateRangePicker.Button}'s `commandfor`/`command="toggle-popover"` both opens this surface and becomes its implicit CSS anchor; pair a `calendarKeys()`/`rangePreview()` mixin on the composed calendar for a live, arrow-key- or drag-extended range.
  *
  * @param handle Runtime handle carrying the host's {@link Popover} props.
  * @returns The render function producing the surface's markup.

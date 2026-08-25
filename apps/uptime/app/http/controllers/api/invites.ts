@@ -1,8 +1,8 @@
 /**
  * API v1 collection endpoints for team invites: `GET /api/v1/invites` lists every
  * invite (pending and accepted) and `POST /api/v1/invites` creates a pending one.
- * Requires `invites:read`/`invites:write` via `requireApiKey`. Unlike the web invite
- * flow, this only inserts the row and does not send an email.
+ * Requires `invites:read`/`invites:write` via `requireApiKey`. Creating an invite
+ * only inserts the row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -65,9 +65,11 @@ describe.each(FIELD_SPECS.map((spec) => [spec.field, spec] as const))(
 			for (let form of forms.rangeSteps) expectExpandsCorrectly(spec, form);
 		});
 
+		/**
+		 * A step on a single value runs from it to the field's maximum, so `5/10` names
+		 * every tenth minute starting at the fifth.
+		 */
 		test(`expands each of the ${forms.valueSteps.length} single values written with a step`, () => {
-			// A step on a single value runs from it to the field maximum, which is how
-			// "5/10" reaches every tenth minute from the fifth rather than meaning only 5.
 			for (let form of forms.valueSteps) expectExpandsCorrectly(spec, form);
 		});
 
@@ -76,9 +78,11 @@ describe.each(FIELD_SPECS.map((spec) => [spec.field, spec] as const))(
 			if (spec.names === null) expect(forms.names).toEqual([]);
 		});
 
+		/**
+		 * A list folds overlapping items together, and iterating every pair of values
+		 * covers every ordering and every collision exhaustively.
+		 */
 		test("expands every two-value list, sorted and deduplicated", () => {
-			// Overlapping items are the case a list has to fold rather than repeat, and the
-			// pair covers it exhaustively: every ordering and every collision.
 			for (let first = spec.min; first <= spec.max; first++) {
 				for (let second = spec.min; second <= spec.max; second++) {
 					expectExpandsCorrectly(spec, `${first},${second}`);
@@ -154,10 +158,12 @@ describe("macros", () => {
 });
 
 describe("whitespace between fields", () => {
+	/**
+	 * A non-breaking space counts as a separator too, since a field is a run of
+	 * non-whitespace and the runtime's idea of whitespace includes it, so a
+	 * document's invisible character still parses as a field boundary.
+	 */
 	test("any run of whitespace separates two fields", () => {
-		// A non-breaking space counts, because a field is a run of non-whitespace and the
-		// runtime's idea of whitespace includes it. An expression pasted out of a document
-		// therefore still parses rather than failing on a character nobody can see.
 		for (let separator of [" ", "  ", "\t", "\n", "\r", "\u00a0", " \t "]) {
 			let expression = ["0", "9", "*", "*", "1-5"].join(separator);
 			expect({ separator, fields: parseExpression(expression) }).toEqual({
@@ -173,9 +179,12 @@ describe("whitespace between fields", () => {
 });
 
 describe("values a number would accept but the grammar does not", () => {
+	/**
+	 * Only digits count, so "00" is zero and "007" is seven while "+7" and "7.0" fall
+	 * outside the value grammar entirely; a stored expression that grows a leading
+	 * zero must keep its meaning.
+	 */
 	test("reads leading zeros as the number they spell", () => {
-		// Digits only, so "00" is zero and "007" is seven, while "+7" and "7.0" are not
-		// values at all. A stored expression that grew a zero must not change meaning.
 		expect(expectedValues(specFor("minute"), "00")).toEqual([0]);
 		for (let form of ["00", "007", "0000009"]) {
 			expectExpandsCorrectly(specFor("hour"), form);

@@ -77,7 +77,6 @@ export default createController(routes.dashboard.billing, {
 			let account = await Account.findById(db, accountId);
 			let origin = new URL(ctx.request.url).origin;
 
-			// Best-effort: fall through to the billing page if Polar is unavailable.
 			try {
 				if (account?.polar_customer_id) {
 					let { url } = await polar.createPortalSession(account.polar_customer_id);

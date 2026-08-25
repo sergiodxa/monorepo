@@ -1,3 +1,10 @@
+/**
+ * Tests for `wrap`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { isFailure } from "./is-failure.js";
@@ -111,7 +118,6 @@ describe(wrap, () => {
 	});
 
 	test("can wrap fetch", async () => {
-		// This test assumes fetch might fail with invalid URL
 		let result = await wrap(async () => {
 			throw new Error("Network error");
 		});

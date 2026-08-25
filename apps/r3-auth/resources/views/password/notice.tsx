@@ -23,9 +23,9 @@ namespace PasswordNoticeView {
 		/** The explanation under it, already translated. */
 		description: string;
 		/**
-		 * The single way onward, when there is one. A page reporting an outcome nobody has to
-		 * act on — a link is on its way — offers none rather than inviting a second attempt
-		 * the cooldown would refuse.
+		 * The single way onward, when there is one. A page reporting an outcome nobody
+		 * must act on — a link already on its way — leaves this null, since an action
+		 * here would only invite an attempt the cooldown refuses.
 		 */
 		action: { label: string; href: string } | null;
 	}

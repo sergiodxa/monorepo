@@ -2,8 +2,8 @@
  * Wires up the app-wide dependency-injection container (ADR-008) and registers the
  * services every request, job and queue message resolves from: the D1-backed
  * `Database`, the Polar billing client, the five rate limiters, the mail transport and
- * the background mailer built on it. Request-lifetime values — session, current subject,
- * request logger — never live here; they belong to middleware and request context.
+ * the background mailer built on it. Request-lifetime values — session, current
+ * subject, request logger — belong to middleware and request context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,8 +23,8 @@ import RateLimiters from "~/app/services/rate-limiters";
 
 /**
  * The app service container. Registered once per isolate; the worker wraps each unit
- * of work in `container.scope(...)`, so handlers resolve dependencies with
- * `inject([Database, ...])` instead of constructing them.
+ * of work in `container.scope(...)`, so handlers resolve their dependencies with
+ * `inject([Database, ...])`.
  *
  * @example
  * await container.scope(() => router.fetch(request));
@@ -32,10 +32,9 @@ import RateLimiters from "~/app/services/rate-limiters";
 export const container = new ServiceContainer();
 
 /**
- * `now` is overridden to epoch-ms because the timestamp columns are `c.integer()`
- * holding milliseconds since the epoch, matching the rows already in the database.
- * The library's default `now()` returns a `Date`, which D1 cannot bind — and which
- * would sort and compare wrongly against every existing row even if it could.
+ * `now` is overridden to epoch-ms because the timestamp columns are `c.integer()` holding
+ * milliseconds since the epoch, matching the rows already in the database: D1 binds an
+ * integer, and integers sort and compare correctly against every row already stored.
  */
 container.singleton(
 	Database,
@@ -43,27 +42,16 @@ container.singleton(
 );
 
 /**
- * The billing client, holding {@link readPolarAccessToken} rather than a token: the
- * token is a Secrets Store binding, so reading it is asynchronous and a container
- * factory is not. Passing the function defers the read to the first call that actually
- * bills — which is only ever the provisioning of a brand-new subject — so the vast
- * majority of isolates never read the secret at all, and none of them read it at module
- * scope, where an await would fail the Worker's upload validation.
+ * The billing client holds {@link readPolarAccessToken}: the token is a Secrets Store
+ * binding, read asynchronously, while a container factory is synchronous. Deferring the
+ * read to the first call that bills keeps the await inside a request, where it is allowed.
  */
 container.singleton(PolarClient, () => new PolarClient({ accessToken: readPolarAccessToken }));
 
 /**
- * Reads the Polar access token from the Secrets Store binding, falling back to the
- * plain `POLAR_ACCESS_TOKEN_LOCAL` variable.
- *
- * The fallback is what makes local development work: a Secrets Store binding resolves
- * against Cloudflare's network, and the local simulation of it is an empty store, so
- * `get()` there throws for a secret nobody put in it. Production has no such variable,
- * so a failure there stays a failure and is reported by the caller instead of being
- * quietly swallowed.
- *
- * Exported so the three outcomes can be asserted apart from a live billing call; the
- * client above is the only caller.
+ * Reads the Polar access token from the Secrets Store binding, falling back to the plain
+ * `POLAR_ACCESS_TOKEN_LOCAL` variable so local development works against the store's empty
+ * local simulation. Production configures the binding alone, so a failure there is real.
  *
  * @returns The Polar API access token.
  * @throws {Error} When the binding cannot be read and no local value is configured.
@@ -87,11 +75,8 @@ container.singleton(MailTransport, () => new CloudflareTransport(env.EMAIL));
 
 /**
  * Mailer for the send paths with no request behind them — a queue message or a scheduled
- * sweep — carrying the sender identity the mail middleware applies to request paths.
- *
- * HTTP handlers must not resolve this one: `ctx.email` is theirs, and only that mailer's
- * `later()` queue is flushed after the response. A message deferred on this one would sit
- * in the queue until the isolate is discarded, and never be sent.
+ * sweep — carrying the sender identity request paths use. HTTP handlers belong on
+ * `ctx.email`, whose `later()` queue is the one flushed once the response is sent.
  */
 container.singleton(
 	Mailer,

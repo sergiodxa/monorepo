@@ -1,11 +1,7 @@
 /**
  * Regression coverage for the battle-to-world synchronization bridge, focused on how
- * runtime combatants are mapped back onto their persistent creature ids when a single
- * side carries more than one team.
- *
- * These tests build a minimal world and a hand-rolled runtime battle state so the
- * multi-team mapping path can be exercised directly, independent of how the engine
- * currently assembles sides.
+ * runtime combatants map back onto persistent creature ids when a side carries more
+ * than one team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,7 +32,6 @@ import {
 import { Creature } from "./creature";
 import { createBattleId, createCreatureId, createPlayerId } from "./ids";
 
-/** Builds a bare combatant with a controllable status/damage/pp footprint for assertions. */
 function createCombatant(options: {
 	damage?: number;
 	state?: State | null;
@@ -61,12 +56,10 @@ function createCombatant(options: {
 	);
 }
 
-/** Wraps a list of combatants into a runtime team. */
 function createTeam(creatures: CombatantState[]): BattleTeamState {
 	return { creatures, eliminated: false };
 }
 
-/** Assembles a runtime side from its teams, activating each team's first creature by slot. */
 function createSide(teams: BattleTeamState[]): BattleSideState {
 	let active: Array<BattleActiveSlotState | null> = teams.map((team, teamIndex) => ({
 		teamIndex,
@@ -85,7 +78,6 @@ function createSide(teams: BattleTeamState[]): BattleSideState {
 	};
 }
 
-/** Builds a runtime battle state from the two prepared sides. */
 function createBattleState(playerSide: BattleSideState, enemySide: BattleSideState): BattleState {
 	return {
 		turn: 1,
@@ -130,17 +122,17 @@ function createWorld(): World {
 	};
 }
 
+/**
+ * Team B's combatants carry damage values distinct from team A's, letting the
+ * assertions confirm each combatant lands on its own id in the flat party list.
+ */
 test("syncBattleState maps a multi-team player side back to flat party ids by global index", () => {
-	// Player side carries two teams (A: 2 creatures, B: 2 creatures). The flat party id
-	// list stores them in team order, so team B's members live at indices 2 and 3.
 	let teamAFirst = createCreatureId("a1");
 	let teamASecond = createCreatureId("a2");
 	let teamBFirst = createCreatureId("b1");
 	let teamBSecond = createCreatureId("b2");
 	let playerParty: CreatureId[] = [teamAFirst, teamASecond, teamBFirst, teamBSecond];
 
-	// Give the second team distinctive damage so a wrong (per-team) mapping would land it on
-	// a first-team id instead of its own id.
 	let teamA = createTeam([
 		createCombatant({ damage: 5, state: State.Burned }),
 		createCombatant({ damage: 6 }),
@@ -166,7 +158,6 @@ test("syncBattleState maps a multi-team player side back to flat party ids by gl
 	let runtime = { battle: { state } } as unknown as BattleRuntimeHandle;
 	syncBattleState(world, runtime, battleId, []);
 
-	// The mirror for team B slot 0 must point at teamBFirst (flat index 2), not teamAFirst.
 	let teamBFirstMember = world.battleMember[getBattleMemberEntityId(battleId, 0, 1, 0)];
 	let teamBSecondMember = world.battleMember[getBattleMemberEntityId(battleId, 0, 1, 1)];
 	expect(teamBFirstMember?.creatureId).toBe(teamBFirst);
@@ -176,7 +167,6 @@ test("syncBattleState maps a multi-team player side back to flat party ids by gl
 	expect(teamBSecondMember?.damage).toBe(41);
 	expect(teamBSecondMember?.status).toBe(State.Asleep);
 
-	// Team A stays mapped to its own ids at the front of the flat list.
 	let teamAFirstMember = world.battleMember[getBattleMemberEntityId(battleId, 0, 0, 0)];
 	let teamASecondMember = world.battleMember[getBattleMemberEntityId(battleId, 0, 0, 1)];
 	expect(teamAFirstMember?.creatureId).toBe(teamAFirst);
@@ -185,6 +175,11 @@ test("syncBattleState maps a multi-team player side back to flat party ids by gl
 	expect(teamASecondMember?.damage).toBe(6);
 });
 
+/**
+ * Team B's first creature keeps an existing moveset in the moves store so PP
+ * write-back has data to preserve, and its escalating poison downgrades to
+ * regular poison once battle ends.
+ */
 test("writeBackPlayerBattleResults writes multi-team results to the matching flat party ids", () => {
 	let teamAFirst = createCreatureId("a1");
 	let teamASecond = createCreatureId("a2");
@@ -210,22 +205,22 @@ test("writeBackPlayerBattleResults writes multi-team results to the matching fla
 		enemyParty: [createCreatureId("e1")],
 	};
 
-	// Seed the moves store so PP write-back has a moveset to preserve for team B's first creature.
 	world.creatureMoves[teamBFirst] = { moveset: ["move-a", null, null, null], pp: [10, 0, 0, 0] };
 
 	let runtime = { battle: { state } } as unknown as BattleRuntimeHandle;
 	writeBackPlayerBattleResults(world, runtime, battleId);
 
-	// Team B's first creature (flat index 2) receives its own results, not team A's.
 	expect(world.creatureHealth[teamBFirst]?.damage).toBe(40);
-	// Escalating poison downgrades to regular at battle end.
 	expect(world.creatureStatus[teamBFirst]).toEqual({ state: State.Poisoned, poison: "regular" });
 	expect(world.creatureMoves[teamBFirst]?.pp).toEqual([3, 0, 0, 0]);
 
-	// Team A's first creature is untouched by team B's larger damage value.
 	expect(world.creatureHealth[teamAFirst]?.damage).toBe(5);
 });
 
+/**
+ * Ownership keeps a creature alive through cleanup regardless of its battle side,
+ * covering the player-owned ally placed in an enemy-side slot.
+ */
 test("cleanupBattle despawns unowned trainer creatures like encounter creatures", () => {
 	let world = createWorld();
 	let battleId = createBattleId("trainer-cleanup");
@@ -233,7 +228,6 @@ test("cleanupBattle despawns unowned trainer creatures like encounter creatures"
 	let trainerId = createCreatureId("trainer-1");
 	let allyId = createCreatureId("ally-1");
 
-	// Seed a wild and a trainer enemy plus one owned ally, each with a full component set.
 	for (let id of [wildId, trainerId, allyId]) {
 		world.entities.push(id);
 		world.creatureIdentity[id] = { speciesId: "test-species" };
@@ -245,7 +239,6 @@ test("cleanupBattle despawns unowned trainer creatures like encounter creatures"
 	world.creatureLocation[wildId] = { kind: "encounter", encounterId: "e1" };
 	world.creatureLocation[trainerId] = { kind: "trainer", trainerId: "rival-0" };
 	world.creatureLocation[allyId] = { kind: "battle", battleId, side: 1, slot: 0 };
-	// The ally is owned, so it must survive cleanup even though it sat on the enemy side.
 	world.ownership[allyId] = { ownerId: createPlayerId("hero") };
 
 	world.battleParticipants[battleId] = {
@@ -257,7 +250,6 @@ test("cleanupBattle despawns unowned trainer creatures like encounter creatures"
 
 	cleanupBattle(world, battleId);
 
-	// Both transient enemy kinds are gone from the world; the owned creature stays.
 	expect(trainerId in world.creatureIdentity).toBe(false);
 	expect(trainerId in world.creatureLocation).toBe(false);
 	expect(world.entities.includes(trainerId)).toBe(false);

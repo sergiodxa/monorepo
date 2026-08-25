@@ -1,6 +1,4 @@
 /**
- * Unit tests for the shared box-shadow-composability foundation.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

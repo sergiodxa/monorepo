@@ -1,7 +1,7 @@
 /**
- * Unit tests for {@link CalendarModel}, constructed and driven directly with
- * no DOM and no rendering: every assertion reads focus/visible-month/range
- * state or observes dispatched "change" events.
+ * Unit tests for {@link CalendarModel}, constructed and driven directly:
+ * every assertion reads focus/visible-month/range state or observes
+ * dispatched "change" events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -441,8 +441,8 @@ describe(CalendarModel.name, () => {
 				isDateDisabled: (date) => date.getDay() === 0 || date.getDay() === 6,
 			});
 
-			expect(model.isDisabled(new Date(2026, 2, 14))).toBe(true); // Saturday
-			expect(model.isDisabled(new Date(2026, 2, 16))).toBe(false); // Monday
+			expect(model.isDisabled(new Date(2026, 2, 14))).toBe(true);
+			expect(model.isDisabled(new Date(2026, 2, 16))).toBe(false);
 		});
 
 		test("navigation still reaches a day the isDateDisabled predicate rejects", () => {

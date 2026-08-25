@@ -61,22 +61,9 @@ export default class Alert {
 	}
 
 	/**
-	 * Finds every alert applicable to one monitor's check result: the ones scoped to that
-	 * exact monitor, the ones scoped to its whole type, and every team-wide alert.
-	 *
-	 * Deliberately two statements instead of one `monitor_id = ? OR monitor_id IS NULL`
-	 * disjunction: SQLite cannot satisfy an `OR` across two different conditions on the
-	 * same column with one index scan, so the single-statement form degrades to a full
-	 * scan of every alert row of every team. Split, each half is an index seek on
-	 * `alerts_team_monitor_idx (team_id, monitor_id)` returning a handful of rows, and
-	 * both run concurrently so the extra statement costs no latency.
-	 *
-	 * The type is then matched in memory rather than by a third statement or a wider
-	 * index: a team holds at most {@link MAX_ALERTS_PER_TEAM} alerts, so both seeks
-	 * together return a set small enough that filtering it costs nothing measurable.
-	 *
-	 * Monitor-scoped rows come first so the more specific alerts keep their current
-	 * precedence if a caller ever stops treating the list as unordered.
+	 * Every alert applicable to a monitor's check result, monitor-scoped rows first so the
+	 * specific ones keep precedence. Two concurrent seeks on `alerts_team_monitor_idx` beat an
+	 * `OR` SQLite full-scans, and {@link MAX_ALERTS_PER_TEAM} keeps type matching in memory.
 	 */
 	static async listForMonitor(
 		db: Database,

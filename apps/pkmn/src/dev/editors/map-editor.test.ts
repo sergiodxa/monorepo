@@ -1,15 +1,13 @@
-import { isSuccess } from "@pkg/result";
 /**
- * Verifies the pure map-editor logic without a canvas: creating and resizing the
- * map (layers/collision stay `width * height`, resize preserves the overlap),
- * tileset add/remove (removal clears and reindexes packed refs), painting/erasing
- * and flood-filling tile layers and the collision grid, event add/configure/move/
- * remove, and that {@link MapEditor.toMapData} produces a schema-valid map that
- * round-trips through `loadMap`.
+ * Verifies the pure map-editor logic without a canvas: creating and resizing the map
+ * (layers and collision stay `width * height`, resize preserves the overlap), tileset
+ * add/remove with ref reindexing, painting, erasing, flood-filling, event
+ * add/configure/move/remove, and a serialized map that round-trips through `loadMap`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isSuccess } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { loadMap } from "~/presentation/overworld/map-loader";
@@ -23,7 +21,6 @@ import { Collision } from "~/presentation/render/tilemap";
 
 import { clampZoom, DEFAULT_ZOOM, MapEditor, MAX_ZOOM, MIN_ZOOM } from "./map-editor";
 
-/** Serialized key for conditional-branch commands' successful command list. */
 const THEN_BRANCH_KEY = ("th" + "en") as "then";
 
 /** A minimal tileset declaration tests add to give paint refs something to name. */
@@ -75,11 +72,9 @@ describe("resize", () => {
 
 		editor.resize(4, 4);
 		expect(editor.width).toBe(4);
-		// The (0,0) tile is preserved; the (2,2) tile is preserved too.
 		expect(editor.cellAt("ground", 0, 0)).toBe(packTileRef(0, 5));
 		expect(editor.cellAt("ground", 2, 2)).toBe(packTileRef(0, 5));
 		expect(editor.collisionAt(1, 1)).toBe(Collision.Solid);
-		// A newly exposed cell is empty / walkable.
 		expect(editor.cellAt("ground", 3, 3)).toBe(EMPTY_CELL);
 		expect(editor.collisionAt(3, 3)).toBe(Collision.Walkable);
 	});
@@ -111,11 +106,11 @@ describe("tilesets", () => {
 		editor.addTileset(tileset("b"));
 		editor.addTileset(tileset("c"));
 		editor.selectTile(0, 1);
-		editor.paintTile("ground", 0, 0); // tileset 0
+		editor.paintTile("ground", 0, 0);
 		editor.selectTile(1, 2);
-		editor.paintTile("ground", 1, 0); // tileset 1 (removed)
+		editor.paintTile("ground", 1, 0);
 		editor.selectTile(2, 3);
-		editor.paintTile("ground", 2, 0); // tileset 2 -> becomes 1
+		editor.paintTile("ground", 2, 0);
 
 		editor.removeTileset(1);
 		expect(editor.tilesets.map((t) => t.id)).toEqual(["a", "c"]);
@@ -133,7 +128,6 @@ describe("painting tile layers", () => {
 		editor.selectTile(0, 7);
 		editor.paintTile("decor", 1, 0);
 		expect(editor.cellAt("decor", 1, 0)).toBe(packTileRef(0, 7));
-		// Other layers are untouched.
 		expect(editor.cellAt("ground", 1, 0)).toBe(EMPTY_CELL);
 	});
 
@@ -197,9 +191,9 @@ describe("fill", () => {
 		editor.createMap(3, 1);
 		editor.addTileset(tileset("a"));
 		editor.selectTile(0, 1);
-		editor.setCell("ground", 1, 0, packTileRef(0, 9)); // wall in the middle
+		editor.setCell("ground", 1, 0, packTileRef(0, 9));
 		let changed = editor.fillTile("ground", 0, 0);
-		expect(changed).toBe(1); // only the seed cell
+		expect(changed).toBe(1);
 		expect(editor.cellAt("ground", 2, 0)).toBe(EMPTY_CELL);
 	});
 
@@ -276,7 +270,7 @@ describe("events", () => {
 		editor.moveEvent(placed.id, 3, 4);
 		expect(editor.eventAt(3, 4)!.id).toBe(placed.id);
 		editor.moveEvent(placed.id, 99, 99);
-		expect(editor.eventAt(3, 4)!.id).toBe(placed.id); // unchanged
+		expect(editor.eventAt(3, 4)!.id).toBe(placed.id);
 	});
 
 	test("removeEvent drops the event by id", () => {
@@ -329,12 +323,12 @@ describe("zoom", () => {
 		let editor = new MapEditor();
 		editor.setZoom(MIN_ZOOM);
 		editor.stepZoom(-1);
-		expect(editor.zoom).toBe(MIN_ZOOM); // clamped at the floor
-		editor.stepZoom(5); // only steps by one regardless of magnitude
+		expect(editor.zoom).toBe(MIN_ZOOM);
+		editor.stepZoom(5);
 		expect(editor.zoom).toBe(MIN_ZOOM + 1);
 		editor.setZoom(MAX_ZOOM);
 		editor.stepZoom(1);
-		expect(editor.zoom).toBe(MAX_ZOOM); // clamped at the ceiling
+		expect(editor.zoom).toBe(MAX_ZOOM);
 	});
 });
 
@@ -349,7 +343,6 @@ describe("visual toggles", () => {
 		let editor = new MapEditor();
 		expect(editor.toggleLayer("decor")).toBe(false);
 		expect(editor.isLayerVisible("decor")).toBe(false);
-		// Other layers are untouched.
 		expect(editor.isLayerVisible("ground")).toBe(true);
 		expect(editor.toggleLayer("decor")).toBe(true);
 		expect(editor.isLayerVisible("decor")).toBe(true);

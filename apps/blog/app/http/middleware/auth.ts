@@ -1,9 +1,7 @@
 /**
- * HTTP auth middleware and session helpers. It configures a session-based auth
- * scheme that reads the user id from the session and verifies it against the user
- * repository, and exports helpers to read the current user, check
- * authenticated/admin status, log in/out, and get/set the stored ID token.
- * Exists as the app's central authentication and identity access layer.
+ * Session-based authentication: the session carries the user id, which is
+ * verified against the user repository on every request so handlers always see
+ * a live user record.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,13 +50,12 @@ export let auth = createAuthMiddleware({
 	],
 });
 
-/**
- * Default auth middleware export for route middleware registration.
- */
 export default auth;
 
 /**
- * Returns the current authenticated user from request context.
+ * Resolves the authenticated user once per request and caches it in context so
+ * repeated calls reuse the same record. Requires the auth middleware to have
+ * run for the request.
  */
 export function getAuthUser() {
 	let ctx = getContext();
@@ -93,7 +90,8 @@ export function isAdmin() {
 }
 
 /**
- * Regenerates the session and signs in the provided user.
+ * Signs the user in under a freshly generated session id, so the signed-in
+ * session is distinct from the one held while anonymous.
  */
 export function login(user: schema.SelectUser) {
 	let session = readSession();
@@ -112,7 +110,8 @@ export function logout() {
 }
 
 /**
- * Returns the stored identity token from the current session.
+ * Reads the identity token held in the session, or `null` when the session
+ * holds none.
  */
 export function getIdToken() {
 	let session = readSession();

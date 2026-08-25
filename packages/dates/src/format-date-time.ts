@@ -111,12 +111,9 @@ export function formatDateTime(date: Date, options: FormatDateTimeOptions): stri
 }
 
 /**
- * Render the span between two instants as one range, collapsing whatever the two
- * ends share. `Intl` decides what to elide, so a same-month range reads as
- * "Jul 29 - 31, 2026" without this package owning any layout rules.
- *
- * The time half is off unless a `timeStyle` is given, because a range of days is the
- * common case and adding times to it makes it unreadable.
+ * Render the span between two instants as one range, collapsing whatever the
+ * two ends share via `Intl`'s own elision. The time half stays out unless a
+ * `timeStyle` is given, since adding times to a day range reads poorly.
  *
  * @param start - First instant of the span.
  * @param end - Last instant of the span.

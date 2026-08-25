@@ -10,18 +10,9 @@
 import type { CronFieldName } from "./types";
 
 /**
- * Why an expression was rejected, as a code an app maps to its own wording:
- *
- * - `empty`: no fields at all.
- * - `field-count`: fewer or more fields than the five standard ones.
- * - `seconds-not-supported`: six fields, i.e. a seconds-first expression.
- * - `unknown-macro`: an `@` shorthand outside the supported set.
- * - `syntax`: a field that is not a list of values, ranges, or steps.
- * - `unknown-name`: a month or weekday name that is not a known abbreviation.
- * - `out-of-range`: a numeric value outside the field's bounds.
- * - `reversed-range`: a range whose start is greater than its end.
- * - `invalid-step`: a step that is missing, not a number, or zero.
- * - `impossible-date`: a day-of-month and month pair no calendar year contains.
+ * Why an expression was rejected, as a code an app maps to its own wording. A
+ * `field-count` mismatch, `seconds-not-supported`, `unknown-macro`, and `empty`
+ * describe the whole expression; every other reason belongs to one field.
  */
 export type InvalidCronReason =
 	| "empty"

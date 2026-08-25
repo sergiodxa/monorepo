@@ -14,9 +14,9 @@ import { env } from "cloudflare:workers";
 import { column as c, table } from "remix/data-table";
 
 /**
- * Lazily-constructed shared Polar client. Created once from the access token in
- * the environment and reused across calls (the previous service instantiated the
- * SDK per call; a single instance is behaviour-identical and cheaper).
+ * Lazily-constructed shared Polar client, built once from the access token in
+ * the environment and reused across calls to avoid re-creating the SDK on
+ * every request.
  */
 let polarClient: PolarClient | undefined;
 
@@ -67,11 +67,9 @@ export default class Subscription {
 	});
 
 	/**
-	 * Subscription statuses that entitle a tenant to serve traffic. `active` and
-	 * `trialing` grant full access; `past_due` keeps access with a warning (the dashboard
-	 * subscription gate only blocks `canceled`/`unpaid`/`incomplete`). Kept in sync with
-	 * the subscription middleware so the runtime entitlement gate and the dashboard gate
-	 * agree on when a tenant's OIDC provider surface stays up.
+	 * Subscription statuses that entitle a tenant to serve traffic: `active` and
+	 * `trialing` grant full access, `past_due` keeps access with a warning. Kept
+	 * in sync with the subscription middleware so both gates agree on suspension.
 	 */
 	static ENTITLING_STATUSES = new Set(["active", "trialing", "past_due"]);
 
@@ -153,7 +151,6 @@ export default class Subscription {
 		let id = crypto.randomUUID();
 		let now = new Date().toISOString();
 
-		// Create customer in Polar
 		let customer = await polar().createCustomer(ownerEmail, tenantName, {
 			tenant_id: tenantId,
 		});
@@ -163,7 +160,7 @@ export default class Subscription {
 			tenant_id: tenantId,
 			polar_customer_id: customer.id,
 			polar_subscription_id: null,
-			status: "trialing", // Start with trial
+			status: "trialing",
 			current_period_start: now,
 			current_period_end: null,
 			created_at: now,
@@ -189,10 +186,8 @@ export default class Subscription {
 		});
 		if (!subscription) throw new Subscription.NotFoundError(tenantId);
 
-		// Fetch subscription details from Polar
 		let polarSub = await polar().getSubscription(polarSubscriptionId);
 
-		// Map Polar status to our status enum
 		let status = Subscription.mapPolarStatus(polarSub.status);
 
 		await db.update(
@@ -226,13 +221,11 @@ export default class Subscription {
 		if (!subscription) throw new Subscription.NotFoundError(tenantId);
 
 		if (!subscription.polar_subscription_id) {
-			// No subscription linked yet, nothing to sync
 			return subscription;
 		}
 
 		let polarSub = await polar().getSubscription(subscription.polar_subscription_id);
 
-		// Map Polar status to our status enum
 		let status = Subscription.mapPolarStatus(polarSub.status);
 
 		await db.update(

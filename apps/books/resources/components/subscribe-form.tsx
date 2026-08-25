@@ -1,12 +1,9 @@
 /**
- * The email-capture form shared by every page that collects an address: an optional
- * heading, one email field with a submit button beside it, the reassurance line, and a
- * server-rendered error slot.
- *
- * It is a plain `<form method="post">` with native constraint validation. There is no
- * submit spinner or disabled state — the browser's own progress indication covers a
- * document navigation, and adding them back would mean shipping this site's only
- * client-side JavaScript for a progress bar.
+ * The email-capture form shared by every page that collects an address: a
+ * heading, an email field with a submit button, a reassurance line, and an
+ * error slot. It relies on native `<form method="post">` submission and the
+ * browser's own progress indication, keeping this site free of client-side
+ * JavaScript.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,7 +28,10 @@ export namespace SubscribeForm {
 	export interface Props {
 		/** Where the form posts. */
 		action: string;
-		/** The submit button's label. */
+		/**
+		 * The submit button's label, rendered through CSS `text-transform:
+		 * capitalize` so callers can pass it in natural case.
+		 */
 		submitLabel: string;
 		/** Optional heading rendered above the field. */
 		title?: string;
@@ -59,7 +59,11 @@ export namespace SubscribeForm {
 	}
 }
 
-/** Renders the email-capture form. */
+/**
+ * Renders the email-capture form. Native `:user-invalid` styling marks only a
+ * touched field, and the reassurance line keeps its padding at every width so
+ * it never sits flush against the viewport edge on a phone.
+ */
 export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 	return () => {
 		let {
@@ -81,8 +85,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 
 				{title && <h2 mix={[pi(5), text("base"), weight("semibold")]}>{title}</h2>}
 
-				{/* Stacked on a phone, side by side from `lg` up, where the field grows and the
-				button keeps its intrinsic width. */}
 				<div
 					mix={[
 						vstack({ gap: 2.5, align: "stretch" }),
@@ -94,10 +96,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 						<label for="email" mix={[visuallyHidden()]}>
 							{label}
 						</label>
-						{/* Native validation is the whole validation story on the client now, and it
-						is better than what it replaced: `:user-invalid` only styles a field the
-						visitor has actually interacted with, so the border turns red as they leave
-						a malformed address rather than only after a round trip. */}
 						<input
 							id="email"
 							type="email"
@@ -134,9 +132,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 							css({ borderRadius: "0.125rem" }),
 							pi(5),
 							pb(2.5),
-							// The label is capitalized in CSS rather than in the copy, matching how the
-							// site has always rendered these buttons: "read free sample" reads as
-							// "Read Free Sample" without the caller having to title-case its string.
 							textTransform("capitalize"),
 							bg("color.neutral.950"),
 							fg("color.neutral.50"),
@@ -153,11 +148,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 							vstack({ gap: 0.5, align: "baseline" }),
 							pretty(),
 							fg("color.neutral.700"),
-							/* Indented at every width, unlike the heading-and-field pair above, which
-							drops its padding once the two sit side by side. The original indented this
-							line only from `lg` up, which left it flush against the viewport edge on a
-							phone while everything above it was inset — visibly broken, so not carried
-							over. */
 							pi(5),
 							dark(fg("color.neutral.300")),
 						]}
@@ -178,8 +168,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 						)}
 					</small>
 				) : (
-					/* With no reassurance line to sit inside, the error stands on its own — the
-					treatment the upgrade form has always given it. */
 					error && (
 						<p
 							mix={[

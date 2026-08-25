@@ -1,7 +1,7 @@
 /**
  * Tests the plain-text derivation: that link targets survive, that structure turns
- * into readable line breaks rather than a wall of text, and that markup a reader
- * cannot act on — document head, styles, and hidden preheaders — is dropped.
+ * into readable line breaks, and that markup a reader cannot act on — document
+ * head, styles, and hidden preheaders — is dropped.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

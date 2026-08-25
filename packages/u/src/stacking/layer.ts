@@ -9,10 +9,8 @@ import { z } from "./z";
 
 /**
  * Composes {@link isolate} and {@link z} so a single call gets both a new
- * stacking context and a stacking order. Only numbers are accepted — this
- * package doesn't define named component layers such as `"toast"` or
- * `"modal"`, since stacking order for those is an app or component concern,
- * not a lower-level styling primitive.
+ * stacking context and a stacking order. Accepts only numeric values,
+ * leaving named layers like `"toast"` or `"modal"` to app or component code.
  *
  * @example u.layer(10)
  * @example css({ isolation: "isolate", zIndex: 10 })

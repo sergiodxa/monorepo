@@ -1,3 +1,10 @@
+/**
+ * Exercises validateChannel against required-field acceptance and rejection.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { validateChannel } from "./validate-channel";

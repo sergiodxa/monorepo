@@ -1,29 +1,10 @@
 /**
- * Team dashboard controller. Resolves the selected monitor-type tab (query param,
- * falling back to the persisted cookie, then "http") and persists it back to the
- * cookie so a later visit without `?tab=` remembers it, then renders the dashboard
- * shell. All of the dashboard's actual data — the stat cards' usage/overview/count
- * figures and the tab table — loads via named `Frame`s pointed at their own
- * fragment routes (`dashboard-card-usage.tsx`, `-uptime.tsx`, `-slowest-endpoint.tsx`,
- * `-count.tsx`, `dashboard-panel.tsx`), so this controller no longer blocks on any of
- * it (notably Polar's API, the slowest of those fetches) before it can render the
- * page shell. Requires `requireUser` + `requireTeam`.
- *
- * The quick check is the header's action, in place of the "create monitor" button this
- * page used to end its header with. It is the one thing here a visitor submits, and it
- * belongs where a page's verbs already are; putting it there also gives the numbers below
- * the full width, which the fixed column it used to sit beside was taking off them. It
- * stays a `Frame` for the reason it always was — running a check has to swap that bar
- * alone, since a full navigation would refetch every frame around it to report one URL —
- * and its fallback is a pair of control-height bars rather than a card, since that is the
- * shape it streams into now.
- *
- * With the quick check gone from the content, the stat rows are two plain wrapping rows
- * rather than a grid: three overview figures, then one card per monitor type, each of
- * which carries the link to that type's own form. Those four links are what replaced the
- * single button, and they land on the specific form instead of a chooser. Their skeletons
- * reserve a badge-height pill rather than subtitle lines, matching the one-line breakdown
- * those cards stream in with.
+ * Team dashboard controller. Resolves the monitor-type tab from `?tab=`, falling back to
+ * the persisted cookie then "http", and persists the choice back to the cookie. The stat
+ * cards and tab table load via named `Frame`s pointed at their own fragment routes, so the
+ * page shell renders immediately while their slowest fetch (Polar's usage API) streams in
+ * behind each fallback. The quick check is the header's action and stays its own `Frame`,
+ * isolating a check run to that bar.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -94,10 +75,9 @@ export default createAction(routes.app.team.dashboard.index, {
 					heading={ctx.i18next.t("page.dashboard.header.title")}
 					actions={
 						/**
-						 * The fallback is the bar's own two controls, at the height they render at,
-						 * and only where the bar is a row in the header: below 768px it is a popover
-						 * behind an icon button, and a placeholder for a closed sheet would be a
-						 * placeholder for nothing.
+						 * The fallback mirrors the bar's own two controls at the height they render at,
+						 * shown only where the bar is a header row (768px and up); below that width the
+						 * quick check lives in a popover behind an icon button instead.
 						 */
 						<Frame
 							name="dashboard-quick-ping"

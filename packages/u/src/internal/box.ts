@@ -13,10 +13,10 @@ import { spacing } from "./tokens";
 
 /**
  * Resolves a 1, 2, or 4-value logical box shorthand for `padding`, `margin`,
- * `scroll-padding`, or `scroll-margin`. One value applies uniformly; two
- * values map to block then inline; four values map to block-start, inline-end,
- * block-end, and inline-start — see
- * [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
+ * `scroll-padding`, or `scroll-margin`: one value applies uniformly, two map
+ * to block then inline, four to block-start, inline-end, block-end, inline-start.
+ *
+ * @see [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values)
  */
 export function resolveBox(
 	prefix: "padding" | "margin" | "scrollPadding" | "scrollMargin",

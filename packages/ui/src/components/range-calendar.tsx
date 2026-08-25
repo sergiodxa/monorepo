@@ -26,29 +26,22 @@ import { Input } from "./input";
 const DEFAULT_COLOR: RangeCalendar.Color = "neutral";
 
 /**
- * Prop types for {@link RangeCalendar} and its compound parts. Every part but
- * {@link RangeCalendar.Cell} is an alias of {@link Calendar}'s matching part,
- * since {@link RangeCalendar} shares {@link Calendar}'s header, grid, and row
- * markup rather than declaring an independent shape of its own;
- * {@link RangeCalendar.Cell} builds on {@link Calendar.CellProps}, adding no
- * new fields of its own — only new attributes a consumer sets directly on
- * the rendered element.
+ * Prop types for {@link RangeCalendar} and its compound parts. Every part
+ * but {@link RangeCalendar.Cell} aliases {@link Calendar}'s matching part,
+ * sharing its header, grid, and row markup.
  */
 export namespace RangeCalendar {
 	/**
 	 * Semantic color role for the bare fallback pair's keyboard focus rings,
-	 * each mapped to its matching `--ui-*` variables, mirroring
-	 * {@link Calendar.Color}. The composed grid's day cells read fixed
-	 * semantic roles instead, matching every rendered month regardless of
-	 * this value.
+	 * mapped to `--ui-*` variables like {@link Calendar.Color}. The composed
+	 * grid's day cells always use fixed semantic roles, regardless of this value.
 	 */
 	export type Color = Calendar.Color;
 
 	/**
 	 * Per-part styling for the bare fallback pair's two internally composed
 	 * inputs, layered after each input's own built-in styling. Style the
-	 * composed grid's parts individually instead through {@link Calendar}'s
-	 * own compound parts, aliased on {@link RangeCalendar}.
+	 * composed grid's parts through {@link Calendar}'s own compound parts.
 	 */
 	export interface PartsProps {
 		/** Styling for the bare fallback's start-date input, rendered through {@link Input}. */
@@ -58,11 +51,9 @@ export namespace RangeCalendar {
 	}
 
 	/**
-	 * Props accepted by {@link RangeCalendar}. Composing {@link RangeCalendar.Header}
-	 * and {@link RangeCalendar.Grid} (or either alone) as `children` renders the
-	 * visual month surface, its day cells carrying range position through
-	 * {@link RangeCalendar.Cell}; leaving `children` unset renders a bare pair
-	 * of native `<input type="date">` fields instead, using the fields below.
+	 * Props accepted by {@link RangeCalendar}. Composing
+	 * {@link RangeCalendar.Header} and {@link RangeCalendar.Grid} as `children`
+	 * renders the visual month surface; omitting `children` renders a bare native `<input type="date">` pair from the fields below.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/** Semantic color role for the bare fallback pair's focus rings. Defaults to {@link DEFAULT_COLOR}. */
@@ -130,37 +121,16 @@ export namespace RangeCalendar {
 
 	/**
 	 * Every prop {@link Calendar.CellProps} accepts, unchanged. Set
-	 * `data-selection-start` on the day beginning the range,
-	 * `data-selection-end` on the day ending it, and `aria-selected="true"`
-	 * alone — neither start nor end — on every day between them, alongside
-	 * every state {@link Calendar.CellProps} already documents. None of these
-	 * are computed by this module itself; every one is read straight off
-	 * whatever the rendering consumer sets on this instance.
+	 * `data-selection-start` on the range's first day, `data-selection-end`
+	 * on its last, and `aria-selected="true"` alone on the days between — each read straight off what the consumer sets on this instance.
 	 */
 	export interface CellProps extends Calendar.CellProps {}
 }
 
 /**
- * Renders {@link RangeCalendar}'s root by rendering straight through to
- * {@link Calendar}, so the surrounding box — its rounded corners, padding,
- * and tinted background — stays byte-for-byte identical to a plain
- * {@link Calendar}. Composing {@link RangeCalendar.Header} and
- * {@link RangeCalendar.Grid} (aliases of {@link Calendar}'s own parts) as
- * `children` renders the visual month surface, its day cells carrying range
- * position through {@link RangeCalendar.Cell}; leaving `children` unset
- * renders a bare pair of native `<input type="date">` fields instead — start
- * and end, grouped under a native `role="group"` — driven by this instance's
- * own `color`, `startName`/`endName`, `startValue`/`endValue`,
- * `startDefaultValue`/`endDefaultValue`, `min`/`max`, `step`, `required`,
- * `disabled`, `readOnly`, and `autoComplete`. A field whose value must keep
- * working with no script attached reads that value from this bare fallback
- * pair, since that's the one part of this module the platform itself
- * operates.
- *
- * In dev mode, the bare fallback pair — rendered whenever `children` is
- * unset — logs a `console.warn` for either input missing a `startLabel` or
- * `endLabel`, since neither native date picker otherwise has an accessible
- * name to announce.
+ * Renders {@link RangeCalendar}'s root through {@link Calendar}. Composing
+ * {@link RangeCalendar.Header} and {@link RangeCalendar.Grid} as `children`
+ * renders the visual month surface; omitting `children` renders a bare, script-free native `<input type="date">` pair from this instance's own fields.
  *
  * @param handle Runtime handle carrying the root element's props.
  * @returns The render function producing the range calendar's markup.
@@ -289,8 +259,8 @@ export function RangeCalendar(handle: Handle<RangeCalendar.Props>) {
 
 /**
  * Renders {@link RangeCalendar.HeaderProps.children} as the nav row: identical
- * to {@link Calendar.Header}, since {@link RangeCalendar} shares its grid
- * markup with {@link Calendar} rather than declaring its own header.
+ * to {@link Calendar.Header}, since {@link RangeCalendar} reuses
+ * {@link Calendar}'s grid markup for its own header.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the nav row's markup.
@@ -366,9 +336,8 @@ RangeCalendar.GridHeader = Calendar.GridHeader;
 
 /**
  * Renders a native `<tr>` host: identical to {@link Calendar.Row}. Composes
- * one row of {@link RangeCalendar.HeaderCell} inside
- * {@link RangeCalendar.GridHeader}, or one week's row of
- * {@link RangeCalendar.Cell} inside {@link RangeCalendar.GridBody}.
+ * a row of {@link RangeCalendar.HeaderCell} inside
+ * {@link RangeCalendar.GridHeader}, or a week's row of {@link RangeCalendar.Cell} inside {@link RangeCalendar.GridBody}.
  *
  * @param handle Runtime handle carrying the host `<tr>`'s props.
  * @returns The render function producing the row's markup.
@@ -405,21 +374,8 @@ RangeCalendar.GridBody = Calendar.GridBody;
 
 /**
  * Renders one calendar day for {@link RangeCalendar}, building on
- * {@link Calendar.Cell} for its pill shape and single-day states — hover,
- * `aria-selected`, `aria-disabled`, `data-unavailable`, `data-outside-month`,
- * focus-visible, and `aria-invalid` all carry over unchanged. On top of
- * that, `data-selection-start` squares off the cell's trailing corners so it
- * merges into the range running after it, `data-selection-end` squares off
- * its leading corners to merge into the range running before it, and a day
- * carrying `aria-selected="true"` alone — neither the start nor the end —
- * squares off every corner and fills with the primary tint rather than the
- * solid endpoint color, reading as one unbroken bar between the two dates it
- * connects.
- *
- * None of these states are computed by this module itself: every one is read
- * straight off whatever the rendering consumer sets on this instance, ready
- * for the `calendarKeys()`/`rangePreview()` mixins a consumer attaches to
- * turn a pointer drag or arrow-key extension into a live pending range.
+ * {@link Calendar.Cell}. `data-selection-start`/`data-selection-end`
+ * square off each end's outer corners so the range reads as one unbroken bar, driven by whatever state the consumer sets for the `calendarKeys()`/`rangePreview()` mixins.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the day's markup.

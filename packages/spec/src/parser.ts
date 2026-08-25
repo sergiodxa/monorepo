@@ -44,7 +44,6 @@ import { lex } from "./lexer";
 /** The three test phases, in the only order the grammar admits. */
 const PHASES = ["given", "when", "then"] as const;
 
-/** One of the three phase names. */
 type Phase = (typeof PHASES)[number];
 
 /** Token kinds that can begin an argument (plus the `true`/`false` keywords). */
@@ -87,18 +86,15 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		return token;
 	}
 
-	/** Whether the current token has the given kind. */
 	function check(kind: TokenKind): boolean {
 		return current().kind === kind;
 	}
 
-	/** Whether the current token is the given reserved word. */
 	function checkKeyword(word: Keyword): boolean {
 		let token = current();
 		return token.kind === "keyword" && token.keyword === word;
 	}
 
-	/** Abort with a `ParseError` at the given span. */
 	function fail(message: string, span: Span): never {
 		throw new ParseError(message, source.path, span);
 	}
@@ -109,13 +105,11 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		fail(`Expected ${what}, found ${describeToken(token)}.`, token.span);
 	}
 
-	/** Consume a token of the given kind or abort naming the expectation. */
 	function expectKind(kind: TokenKind, what: string): Token {
 		if (!check(kind)) expected(what);
 		return advance();
 	}
 
-	/** Consume the given reserved word or abort. */
 	function expectKeyword(word: Keyword): Token {
 		if (!checkKeyword(word)) expected(`the keyword "${word}"`);
 		return advance();
@@ -359,7 +353,6 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		return parseExpression();
 	}
 
-	/** Whether the current token can begin an argument. */
 	function atArgumentStart(): boolean {
 		let token = current();
 		if (token.kind === "keyword") return token.keyword === "true" || token.keyword === "false";

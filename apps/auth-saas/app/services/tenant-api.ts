@@ -14,7 +14,6 @@ import { createInternalToken } from "@pkg/oidc-provider";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
-/** Schema for tenant statistics. */
 const TenantStatsSchema = s.object({
 	total_users: s.number(),
 	total_clients: s.number(),
@@ -23,7 +22,6 @@ const TenantStatsSchema = s.object({
 	monthly_active_users: s.number(),
 });
 
-/** Schema for OAuth client. */
 const ClientSchema = s.object({
 	id: s.string(),
 	name: s.string(),
@@ -37,7 +35,6 @@ const ClientSchema = s.object({
 	updated_at: s.string(),
 });
 
-/** Schema for client secret metadata. */
 const ClientSecretSchema = s.object({
 	id: s.string(),
 	name: s.nullable(s.string()),
@@ -46,7 +43,6 @@ const ClientSecretSchema = s.object({
 	expiresAt: s.nullable(s.string()),
 });
 
-/** Schema for redirect URI. */
 const RedirectUriSchema = s.object({
 	id: s.string(),
 	client_id: s.string(),
@@ -55,7 +51,6 @@ const RedirectUriSchema = s.object({
 	created_at: s.string(),
 });
 
-/** Schema for logout URI. */
 const LogoutUriSchema = s.object({
 	id: s.string(),
 	client_id: s.string(),
@@ -66,7 +61,6 @@ const LogoutUriSchema = s.object({
 	created_at: s.string(),
 });
 
-/** Schema for user (subject). */
 const UserSchema = s.object({
 	id: s.string(),
 	email: s.string(),
@@ -79,7 +73,6 @@ const UserSchema = s.object({
 	updated_at: s.string(),
 });
 
-/** Schema for user session (from API response). */
 const SessionSchema = s.object({
 	id: s.string(),
 	client: s.nullable(
@@ -95,13 +88,11 @@ const SessionSchema = s.object({
 	updatedAt: s.string(),
 });
 
-/** Schema for resource scope. */
 const ScopeSchema = s.object({
 	name: s.string(),
 	description: s.optional(s.string()),
 });
 
-/** Schema for API resource. */
 const ResourceSchema = s.object({
 	id: s.string(),
 	identifier: s.string(),
@@ -112,7 +103,6 @@ const ResourceSchema = s.object({
 	updated_at: s.string(),
 });
 
-/** Schema for tenant branding configuration. */
 const BrandingSchema = s.object({
 	id: s.string(),
 	logo_url: s.nullable(s.string()),
@@ -123,7 +113,6 @@ const BrandingSchema = s.object({
 	updated_at: s.string(),
 });
 
-/** Schema for passkey credential (from API response). */
 const PasskeySchema = s.object({
 	id: s.string(),
 	name: s.nullable(s.string()),
@@ -134,7 +123,6 @@ const PasskeySchema = s.object({
 	createdAt: s.string(),
 });
 
-/** Schema for OAuth grant (from API response). */
 const GrantSchema = s.object({
 	id: s.string(),
 	client: s.nullable(
@@ -148,7 +136,6 @@ const GrantSchema = s.object({
 	updatedAt: s.string(),
 });
 
-/** Schema for social connection (from API response). */
 const ConnectionSchema = s.object({
 	id: s.string(),
 	provider: s.string(),
@@ -157,7 +144,6 @@ const ConnectionSchema = s.object({
 	updatedAt: s.string(),
 });
 
-/** Schema for JWT signing key (from API response - keys not exposed). */
 const SigningKeySchema = s.object({
 	id: s.string(),
 	algorithm: s.string(),
@@ -166,22 +152,16 @@ const SigningKeySchema = s.object({
 	expiresAt: s.nullable(s.string()),
 });
 
-/** Schema for ID response. */
 const IdResponseSchema = s.object({ id: s.string() });
 
-/** Schema for secret creation response. */
 const SecretResponseSchema = s.object({ id: s.string(), secret: s.string() });
 
-/** Schema for message response. */
 const MessageResponseSchema = s.object({ message: s.string() });
 
 /**
- * Builds the headers for one Management API call: the JSON content type plus the
- * signed internal token, over whatever the caller asked for. `HeadersInit` may be a
- * `Headers` or an array of pairs, so the caller's headers are merged through
- * `Headers` rather than spread — spreading either shape yields numeric index keys
- * and silently drops every header. The internal token is set last: it authenticates
- * the call and a caller must never be able to replace it.
+ * Builds the headers for one Management API call. Merging through `Headers`
+ * keeps every caller header intact, since spreading `HeadersInit` collapses it
+ * to numeric index keys; setting the internal token last keeps it authoritative.
  * @param internalToken Signed token proving the call came from the control plane.
  * @param headers Headers the caller passed alongside the request options.
  * @returns The merged header set to send.
@@ -255,7 +235,7 @@ export class TenantApiService {
 	}
 
 	/**
-	 * Makes an authenticated request that doesn't return a body.
+	 * Makes an authenticated request to an endpoint that replies with status only.
 	 * @param path - API path.
 	 * @param options - Fetch options.
 	 * @throws {TenantApiError} When the API returns an error.
@@ -280,11 +260,9 @@ export class TenantApiService {
 	}
 
 	/**
-	 * Provisions tenant metadata on the Durable Object.
-	 *
-	 * Writes the tenant id, OIDC issuer (hostname without scheme), and region into
-	 * the tenant's own storage. Call once at creation and again whenever the
-	 * canonical hostname changes so the issuer tracks the hostname clients use.
+	 * Provisions tenant metadata — id, OIDC issuer (hostname without scheme), and
+	 * region — into the Durable Object's own storage. Call at creation and again
+	 * whenever the canonical hostname changes, so the issuer tracks it.
 	 * @param data - Provisioning values.
 	 */
 	async setup(data: { issuer: string; region?: string }): Promise<void> {
@@ -295,13 +273,9 @@ export class TenantApiService {
 	}
 
 	/**
-	 * Pushes the tenant-runtime entitlement gate into the Durable Object.
-	 *
-	 * Sets or clears the DO's suspension flag so the tenant enforces it locally: a
-	 * suspended tenant blocks its OIDC/OAuth2 provider surface even for traffic that
-	 * reaches the DO directly via Cloudflare for SaaS `hostMetadata` (which bypasses the
-	 * control-plane database). Call whenever billing entitlement or tenant status changes.
-	 *
+	 * Pushes the tenant-runtime entitlement gate into the Durable Object so it
+	 * enforces suspension locally — traffic reaching it directly through
+	 * Cloudflare for SaaS `hostMetadata` bypasses the control-plane database.
 	 * @param suspended - `true` to suspend the tenant's provider surface, `false` to restore it.
 	 * @example
 	 * await new TenantApiService(tenantId).setSuspended(true);
@@ -532,9 +506,9 @@ export class TenantApiService {
 	}
 
 	/**
-	 * Checks whether a specific session still exists for a user (i.e. has not been
-	 * revoked or expired-and-cleaned-up). Used to validate a platform session token's
-	 * `sid` on privileged routes so logout/revocation takes effect server-side.
+	 * Checks whether a session for a user is still live, having survived any
+	 * revocation or expiry cleanup. Validates a platform session token's `sid`
+	 * on privileged routes so logout and revocation take effect server-side.
 	 *
 	 * @param userId - The user (subject) ID.
 	 * @param sessionId - The session ID (`sid`) to check.
@@ -749,7 +723,6 @@ export class TenantApiError extends Error {
 	 * @param message - Human-readable error message.
 	 */
 	constructor(
-		/** HTTP status code from the API response. */
 		public status: number,
 		message: string,
 	) {
@@ -764,7 +737,7 @@ export type TenantStats = s.InferOutput<typeof TenantStatsSchema>;
 /** OAuth client. */
 export type Client = s.InferOutput<typeof ClientSchema>;
 
-/** Client secret metadata (without the actual secret value). */
+/** Client secret metadata, limited to identity and timestamp fields. */
 export type ClientSecret = s.InferOutput<typeof ClientSecretSchema>;
 
 /** OAuth redirect URI. */
@@ -794,7 +767,7 @@ export type Grant = s.InferOutput<typeof GrantSchema>;
 /** Social identity provider connection. */
 export type Connection = s.InferOutput<typeof ConnectionSchema>;
 
-/** JWT signing key. */
+/** JWT signing key metadata, limited to identity and status fields. */
 export type SigningKey = s.InferOutput<typeof SigningKeySchema>;
 
 /** Input for creating a client. */

@@ -107,9 +107,8 @@ async function run(args: ToolArg[], context: ToolContext): Promise<Result<Value,
 
 /**
  * Run one program to completion inside the workspace and collect everything a
- * spec can assert on. Output is decoded as UTF-8 text, and a child terminated
- * by a signal reports a nonzero `exit_code` so `expect exit_code is 0` cannot
- * pass for a process that never finished.
+ * spec can assert on. A child terminated by a signal reports a nonzero
+ * `exit_code`, so `expect exit_code is 0` cannot pass for it.
  *
  * @param executable - The program to run.
  * @param args - Its arguments, already validated as strings.

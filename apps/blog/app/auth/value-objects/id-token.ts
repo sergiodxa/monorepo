@@ -65,7 +65,9 @@ export default class IdToken extends JWT {
 }
 
 /**
- * Verifies an ID token signature and expected audience/issuer.
+ * Verifies an ID token's signature, audience, and issuer. Verification is
+ * pinned to ES256, the one algorithm the auth server publishes, so a token
+ * naming a different algorithm never matches a JWKS key.
  * @param token Raw JWT string from the auth callback.
  * @param verificationKey Resolver for the auth server's published keys.
  * @param clientId OAuth client id expected in the `aud` claim.
@@ -81,9 +83,6 @@ export async function verifyIdToken(
 	return await IdToken.verify(token, verificationKey, {
 		audience: clientId,
 		issuer: "auth.sergiodxa.com",
-		// Pinned rather than inferred from the key: the auth server publishes one
-		// algorithm today, and this is what keeps a token that names another from being
-		// verified with whatever key the JWKS happens to offer for it.
 		algorithms: [JWK.Algorithm.ES256],
 	});
 }

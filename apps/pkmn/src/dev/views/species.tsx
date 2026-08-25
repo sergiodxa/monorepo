@@ -1,30 +1,9 @@
 /**
- * Species tool view — a content-authoring form built on the canonical tool-view
- * pattern. The component either EDITS an existing roster species or CREATES a
- * brand-new one, seeds a {@link SpeciesEditor} with it, and drives every control
- * through it: dex number/size, base stats, primary/secondary types, growth rate,
- * catch rate and base experience, gender ratio, EV yield, the level-up learnset
- * (add/remove/sort level → move rows), evolutions (method + target + level/item),
- * and the sprite association (an atlas region or a manifest image). There are no
- * framework hooks: local state lives in setup-scope variables and the component
- * re-renders through `handle.update()` when a control changes it.
- *
- * The form is grouped into labeled, collapsible sections — Identity, Base stats,
- * Training, Learnset, Evolutions, and Sprite — so an author can scan and edit one
- * concern at a time. The header carries an explicit mode switch between "edit
- * existing" (a species picker) and "new species" (an id + name + dex form). The
- * new-species form validates the id against the shared id pattern and flags a
- * collision with any existing roster id BEFORE loading it, so creating a species
- * can never silently overwrite an existing entry; on confirm it seeds the editor
- * with {@link SpeciesEditor.createNew}'s complete valid defaults.
- *
- * The type/growth-rate/egg-group option lists come from the game data enums; the
- * move and species option lists come from the real content roster (`MOVES` /
- * `SPECIES`) so an author can only pick ids that exist; the sprite options come
- * from the asset manifest's atlases and images. Export serializes the edited
- * record and POSTs `{ id, species }` to the species export action, which
- * validates it, adds or replaces that one entry in `src/content/species.json`
- * behind the shared path-safety guard, and reports where the file landed inline.
+ * Species tool view for authoring content. Local state lives in setup-scope
+ * variables and re-renders through `handle.update()`. Creating a species
+ * requires an id that matches the shared pattern and is still free in the
+ * roster, so an export into `src/content/species.json` only ever adds or
+ * replaces the one entry it names.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,53 +29,37 @@ import { expandAtlasRegions, type AtlasManifestEntry } from "~/presentation/core
 import { SpeciesEditor } from "../editors/species-editor";
 import { SPECIES_ID_PATTERN, validateSpeciesId } from "../species-id";
 
-/** The raw parameter type of the `css()` mixin, narrowed by {@link Styles}. */
 type CssMixinStyles = Parameters<typeof css>[0];
 
 /**
- * The style-object shape the `css()` mixin accepts, used for shared base styles.
- *
- * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
- * carries that interface's `Symbol.iterator` member and reads as an iterable.
- * Dropping the symbol keys leaves the same plain property bag the base styles
- * actually are, so they can be spread into an override object.
+ * The `css()` mixin's parameter type with its symbol keys dropped, leaving the
+ * plain property bag that shared base styles can be spread into an override.
  */
 type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
-/** Which flow the header is in: editing an existing species or creating a new one. */
 type Mode = "edit" | "new";
 
 /** Sentinel `<option>` value meaning "no secondary type" / "no sprite". */
 const NONE = "";
 
-/** Sorted list of real species ids the picker and evolution targets offer. */
 const SPECIES_IDS = Object.keys(SPECIES).sort();
 
-/** Sorted list of real move ids the learnset move pickers offer. */
 const MOVE_IDS = Object.keys(MOVES).sort();
 
-/** Every elemental type value, for the type pickers. */
 const TYPE_VALUES = Object.values(Type);
 
-/** Every growth-rate value, for the growth-rate picker. */
 const GROWTH_RATE_VALUES = Object.values(GrowthRate);
 
-/** Every egg-group value, shown read-only for context. */
 const EGG_GROUP_VALUES = Object.values(EggGroup);
 
-/** Every evolution method value, for the method picker. */
 const EVOLUTION_METHODS = Object.values(EvolutionMethod);
 
-/** Sorted list of manifest image ids the image-sprite picker offers. */
 const IMAGE_IDS = Object.keys(manifest.images).sort();
 
-/** Sorted list of manifest atlas ids the atlas-sprite picker offers. */
 const ATLAS_IDS = Object.keys(manifest.atlases).sort();
 
-/** The six base stats in display order. */
 const STAT_VALUES = Object.values(Stat);
 
-/** Shared base style for text/number inputs and selectors. */
 const FIELD: Styles = {
 	padding: "0.35rem 0.5rem",
 	fontFamily: "inherit",
@@ -106,10 +69,8 @@ const FIELD: Styles = {
 	borderRadius: "0.375rem",
 };
 
-/** Shared style for the small labels above each control group. */
 const LABEL = css({ display: "grid", gap: "0.25rem", fontSize: "0.8rem", color: "#9ca3af" });
 
-/** Shared style for a horizontal, wrapping row of controls. */
 const CONTROL_ROW = css({
 	display: "flex",
 	flexWrap: "wrap",
@@ -117,7 +78,6 @@ const CONTROL_ROW = css({
 	alignItems: "flex-end",
 });
 
-/** Shared base style for the small control buttons (add/remove). */
 const CONTROL_BUTTON: Styles = {
 	padding: "0.35rem 0.6rem",
 	fontFamily: "inherit",
@@ -128,7 +88,6 @@ const CONTROL_BUTTON: Styles = {
 	cursor: "pointer",
 };
 
-/** Style for a destructive (remove) variant of the small control button. */
 const REMOVE_BUTTON: Styles = { ...CONTROL_BUTTON, color: "#fca5a5", borderColor: "#7f1d1d" };
 
 /** Regions available inside a given atlas id, sorted; empty for an unknown atlas. */
@@ -139,10 +98,8 @@ function atlasRegions(atlasId: string): string[] {
 }
 
 /**
- * Derives a candidate species id from a free-text name: uppercased, non
- * id-safe characters collapsed to single underscores, and any leading/trailing
- * underscores trimmed (e.g. `"Mr. Mime"` → `"MR_MIME"`). Returns `""` when the
- * name yields nothing usable.
+ * Derives a candidate species id from a free-text name (`"Mr. Mime"` →
+ * `"MR_MIME"`), yielding `""` when the name holds nothing id-safe.
  */
 function idFromName(name: string): string {
 	return name
@@ -152,43 +109,37 @@ function idFromName(name: string): string {
 }
 
 /**
- * Species-content authoring tool. Edits an existing roster species or creates a
- * brand-new one, loads it into a {@link SpeciesEditor}, renders sectioned controls
- * for every editable field around it, and exports the edited record back into
- * `src/content/species.json` on demand.
+ * Species-content authoring tool. Seeds a {@link SpeciesEditor} with the first
+ * roster species so the form opens populated, drives every control through that
+ * editor, and exports the result on demand.
  *
  * @param handle Component handle used to schedule re-renders on control changes.
  * @returns The render function for the species tool.
  */
 export function SpeciesTool(handle: Handle<Record<string, never>>) {
-	// Start on the first roster species so the form is populated immediately.
 	let currentId = SPECIES_IDS[0] ?? "";
 	let editor = new SpeciesEditor(currentId, SPECIES[currentId]!);
 	let species: Species = editor.toSpecies();
 	let status = "";
 	let statusIsError = false;
 
-	// New-species form state (only meaningful while `mode === "new"`).
 	let mode: Mode = "edit";
 	let newName = "";
 	let newId = "";
 	let newDex = SPECIES_IDS.length + 1;
 	let newError = "";
 
-	/** Adopts a fresh editor snapshot and re-renders. */
 	function apply(next: Species) {
 		species = next;
 		void handle.update();
 	}
 
-	/** Reports an export outcome inline and re-renders. */
 	function report(message: string, isError: boolean) {
 		status = message;
 		statusIsError = isError;
 		void handle.update();
 	}
 
-	/** Loads a different species from the roster into a fresh editor. */
 	function loadSpecies(id: string) {
 		let loaded = SPECIES[id];
 		if (!loaded) return;
@@ -210,7 +161,7 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 		void handle.update();
 	}
 
-	/** Leaves the new-species flow, returning to the picker without changes. */
+	/** Leaves the new-species flow, returning to the picker with the editor intact. */
 	function cancelNew() {
 		mode = "edit";
 		newError = "";
@@ -218,9 +169,9 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 	}
 
 	/**
-	 * Validates the new-species form (id pattern + no collision with an existing
-	 * roster id) and, on success, loads a fresh default species into the editor.
-	 * Surfaces a clear inline error on an invalid or colliding id.
+	 * Accepts the new-species form once the id matches the shared pattern and is
+	 * still free in the roster, then loads fresh defaults into the editor; a
+	 * rejected id surfaces its reason inline.
 	 */
 	function confirmNew() {
 		let validated = validateSpeciesId(newId);
@@ -328,7 +279,6 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 								css({ ...FIELD, width: "12rem" }),
 								on<HTMLInputElement, "input">("input", (event) => {
 									newName = (event.target as HTMLInputElement).value;
-									// Auto-suggest the id from the name until the author edits it directly.
 									newId = idFromName(newName);
 									newError = "";
 									void handle.update();
@@ -702,9 +652,12 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 		);
 	}
 
-	/** Renders one level-up learnset row (level + move + remove). */
+	/**
+	 * Renders one learnset row. Level-up rows carry editable level and move
+	 * controls; TM/HM, tutor, and egg rows render read-only beside their remove
+	 * button.
+	 */
 	function renderLearnsetRow(entry: Species["learnset"][number], index: number) {
-		// Only level-up rows are editable here; other methods are shown read-only.
 		if (!("level" in entry)) {
 			let moveId = "moveId" in entry ? entry.moveId : `TM/HM ${entry.tmhm}`;
 			return (

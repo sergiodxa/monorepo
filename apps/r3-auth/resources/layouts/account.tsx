@@ -67,11 +67,9 @@ export namespace AccountLayout {
 }
 
 /**
- * One navigation tab.
- *
- * The current one is given a filled pill of its own on top of the component library's
- * `aria-current` treatment, which is a foreground change alone: against the toolbar's
- * tinted panel in a dark scheme that reads as *muted* rather than as selected.
+ * One navigation tab. The filled pill sits on top of the library's own
+ * `aria-current` styling, which is only a foreground-color change and reads
+ * as muted on the toolbar's tinted panel in a dark scheme.
  */
 function AccountNavLink(handle: Handle<{ href: string; label: string; isCurrent: boolean }>) {
 	return () => {
@@ -95,7 +93,11 @@ function AccountNavLink(handle: Handle<{ href: string; label: string; isCurrent:
 	};
 }
 
-/** Renders the header, navigation and page frame around an account page's content. */
+/**
+ * Renders the header, navigation and page frame around an account page's
+ * content. Nav links read `aria-current` from the server, and the sign-out
+ * button submits to the logout endpoint, which owns session cleanup.
+ */
 export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 	return () => {
 		let { documentTitle, heading, breadcrumbsLabel, breadcrumbs, current, isAdmin, nav, children } =
@@ -103,8 +105,6 @@ export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 
 		return (
 			<DocumentLayout title={documentTitle}>
-				{/* Sticky rather than fixed, so the heading stays readable while a long
-				session list scrolls without the content having to reserve room for it. */}
 				<header
 					mix={[
 						sticky(),
@@ -115,8 +115,6 @@ export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 						gap(2),
 						bs("4rem"),
 						p(0, 4),
-						// Translucent over the page surface, which is what lets content
-						// scrolling underneath stay faintly visible instead of being clipped.
 						translucent(),
 						bg("neutral.tint"),
 						borderEdge("block-end", { color: "neutral.border", width: 1 }),
@@ -126,8 +124,6 @@ export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 						{breadcrumbs.length > 0 && (
 							<Breadcrumbs aria-label={breadcrumbsLabel}>
 								<Breadcrumbs.List>
-									{/* No segment carries `aria-current`: the trail holds the page's
-									ancestors, and the heading below it is the current page. */}
 									{breadcrumbs.map((crumb) => (
 										<Breadcrumbs.Item key={crumb.label}>
 											<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
@@ -145,8 +141,6 @@ export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 
 				<main mix={[mi("auto"), maxIs("64rem"), p(6), at(WIDE_WIDTH, p(10))]}>
 					<Toolbar aria-label={nav.label} mix={[mbe(6), flexWrap("wrap"), items("center"), gap(2)]}>
-						{/* Plain links styled through `aria-current`: the server already knows which
-						page it is rendering, so nothing here needs to track a route. */}
 						<AccountNavLink
 							href={routes.account.profile.href()}
 							label={nav.profile}
@@ -176,8 +170,6 @@ export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 							</LinkButton>
 						)}
 
-						{/* The whole sign-out — back-channel notifications, session row, cookie
-						— is the logout endpoint's job, so this is only the button that asks. */}
 						<Form method="post" action={routes.oidc.logout.action.href()}>
 							<Button type="submit" color="neutral" variant="outline" size="sm">
 								{nav.logout}

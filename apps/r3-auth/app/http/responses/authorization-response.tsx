@@ -19,8 +19,8 @@ import type { ResponseMode } from "~/app/http/middleware/session";
 import FormPostView from "~/resources/views/form-post";
 
 /**
- * Headers a form-post response carries. The page holds an authorization code, so no
- * cache anywhere on the path may keep a copy of it.
+ * Headers a form-post response carries. The page holds an authorization code, so it must
+ * reach only the browser that asked for it.
  */
 const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
 
@@ -32,6 +32,9 @@ export interface AuthorizationResponseContext {
 
 /**
  * Sends the authorization response parameters back to a relying party.
+ *
+ * In `fragment` mode the parameters are merged into whatever hash the registered redirect
+ * URI already carries, since the client may route its callback on that hash.
  *
  * @param ctx - Request context, used to render the form-post page.
  * @param redirectUri - The client's registered redirect URI, already validated.
@@ -61,9 +64,6 @@ export async function authorizationResponse(
 	let url = new URL(redirectUri);
 
 	if (responseMode === "fragment") {
-		// Appended to whatever fragment the registered URI already carries, rather than
-		// replacing it: the client registered that URI and the hash may be part of how
-		// it routes the callback.
 		let fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
 		for (let [key, value] of Object.entries(params)) fragment.set(key, value);
 		url.hash = fragment.toString();
@@ -72,10 +72,9 @@ export async function authorizationResponse(
 	}
 
 	/**
-	 * `303`, not `302`: this same function answers the `POST` sign-in form, and a
-	 * method-preserving redirect there would make the browser re-POST the credentials
-	 * to the relying party's callback. See Other is the one status that guarantees the
-	 * callback is fetched with `GET` whichever request produced the response.
+	 * See Other guarantees the callback is fetched with `GET` whichever request produced
+	 * this response, which matters because this same function answers the `POST` sign-in
+	 * form, where a method-preserving redirect would re-POST the credentials to a client.
 	 */
 	return redirect(url.toString(), {
 		status: redirect.Status.SeeOther,

@@ -1,6 +1,6 @@
 /**
- * Tests for the SQL script splitter, which must never split on a semicolon that belongs to
- * a string literal, quoted identifier, or comment — the D1 mock uses it to decide what is
+ * Tests for the SQL script splitter, which splits only on semicolons outside string
+ * literals, quoted identifiers, and comments — the D1 mock uses it to decide what is
  * one statement.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

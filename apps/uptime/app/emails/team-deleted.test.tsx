@@ -1,10 +1,8 @@
 /**
  * Tests the team-deleted notice as a value: it addresses the former member it was constructed
- * with, takes its copy from the locale files rather than from literals, and names the team in
- * both body parts.
- *
- * The privacy assertion is the one that would be easy to regress: the notice must say the owner
- * deleted their account without carrying that person's address, which is being erased.
+ * with, takes its copy from the locale files, and names the team in both body parts. The privacy
+ * assertion matters most: the notice states that the owner deleted their account while keeping
+ * that person's own address out of the copy, since it is being erased.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,17 +62,17 @@ describe("TeamDeletedEmail", () => {
 		expect(text).toContain("none of it can be recovered");
 	});
 
+	/** The deleted team's page is gone, so the notice invites a fresh start. */
 	test("offers starting over as the only next step, with no link into the deleted team", async () => {
 		let email = await makeEmail({ team: "Acme" });
 
 		let { html, text } = await render(email.body());
 
 		expect(text).toContain("create a team of your own");
-		// Nothing to open: a link to the team would lead to a page that no longer exists.
 		expect(html).not.toContain("<a ");
 	});
 
-	/** The deleted account's own data must not travel into somebody else's mailbox. */
+	/** Guards the deleted account's privacy while its address is being erased elsewhere. */
 	test("never carries the deleted owner's address or name", async () => {
 		let email = await makeEmail();
 

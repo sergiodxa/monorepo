@@ -31,17 +31,14 @@ const BLOCKED_STATUSES = new Set(["canceled", "unpaid", "incomplete"]);
 declare module "remix/router" {
 	interface RequestContext {
 		subscription: {
-			/** The unique subscription identifier */
 			id: string;
-			/** The current subscription status */
 			status: string;
 			/** Whether the subscription has full access (active or trialing) */
 			isActive: boolean;
 			/** Whether the subscription is past due (access with warning) */
 			isPastDue: boolean;
-			/** Whether access is blocked due to subscription status */
+			/** Whether access is blocked (canceled, unpaid, or incomplete) */
 			isBlocked: boolean;
-			/** The Polar customer ID for billing operations */
 			polarCustomerId: string | null;
 		};
 	}
@@ -51,16 +48,9 @@ declare module "remix/router" {
 const PLATFORM_TENANT_ID = "platform";
 
 /**
- * Middleware that checks subscription status for the current tenant.
- *
- * Must be used after the tenant-owner middleware to ensure tenant context exists.
- *
- * Access levels by status:
- * - active/trialing: Full access
- * - past_due: Access with warning (isPastDue flag set in context)
- * - canceled/unpaid/incomplete: Blocked with redirect to billing page
- *
- * Note: The platform tenant is exempt from subscription checks.
+ * Gates the current tenant's access by subscription status: past-due passes with a
+ * warning, canceled/unpaid/incomplete redirects to billing. The platform tenant and
+ * internal tenants pass through without a database lookup.
  *
  * @returns The downstream response when access is allowed, a `302` redirect to billing
  * when blocked, or a `500` response when used without tenant context.
@@ -75,8 +65,6 @@ export default middleware(async (context, next) => {
 		return new Response("Internal error", { status: 500 });
 	}
 
-	// The platform tenant and internal tenants (the owner's own tenants, e.g.
-	// sso.sergiodxa.com) are exempt from subscription checks.
 	if (context.tenant.id === PLATFORM_TENANT_ID || context.tenant.internal) {
 		context.subscription = {
 			id: context.tenant.id,

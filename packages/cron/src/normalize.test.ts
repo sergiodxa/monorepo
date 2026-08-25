@@ -1,7 +1,8 @@
 /**
- * Tests for normalization: names and macros resolve to numbers, lists collapse to
- * ranges, and a day field that names every day keeps its range rather than becoming
- * a star, because that star is what would silently change the either-or rule.
+ * Tests for normalization: names and macros resolve to numbers, an evenly spaced
+ * list collapses to the step it equals, and a day field that names every day keeps
+ * its range rather than becoming a star, because that star would silently change
+ * the either-or rule.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,8 +45,6 @@ describe("normalizeExpression", () => {
 	});
 
 	test("writes an evenly spaced field as a step, however it was typed", () => {
-		// A list that happens to be a step is the same schedule, so it prints as one:
-		// months 1 and 7 are every sixth month, and weekdays 0 and 6 every sixth day.
 		expect(normalized("0 0 * jan,jul *")).toBe("0 0 * */6 *");
 		expect(normalized("0 0 * * 6,7")).toBe("0 0 * * */6");
 	});
@@ -79,8 +78,6 @@ describe("normalizeExpression", () => {
 	});
 
 	test("keeps a full day field as a range, so the either-or rule survives", () => {
-		// "*" in either day field switches the rule from either-or back to both, so a
-		// field covering every day must not print as one.
 		expect(normalized("0 0 1-31 * 1")).toBe("0 0 1-31 * 1");
 		expect(normalized("0 0 15 * 0-6")).toBe("0 0 15 * 0-6");
 		expect(normalized("0 0 15 * */1")).toBe("0 0 15 * 0-6");

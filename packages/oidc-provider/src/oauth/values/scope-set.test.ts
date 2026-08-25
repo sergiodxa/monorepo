@@ -1,3 +1,10 @@
+/**
+ * Unit tests for ScopeSet parsing, validation, and serialization behavior.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import ScopeSet from "./scope-set";

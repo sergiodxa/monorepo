@@ -25,12 +25,10 @@ describe(Typeset.name, () => {
 		let css = await typesetCss();
 
 		expect(css).toContain("@keyframes ui-typeset-table-fade");
-		// Each stop opens a block of its own; a stop serialized as a declaration
-		// would read `0%: [object Object];` instead.
 		expect(css).toMatch(/\b0%\s*\{/);
 		expect(css).toMatch(/\b100%\s*\{/);
 		expect(css).toMatch(/\b10%,\s*90%\s*\{/);
-		// The stops are only worth emitting if they actually carry the mask.
+		/** The stops are only worth emitting if they actually carry the mask. */
 		expect(css).toContain("mask-image");
 	});
 

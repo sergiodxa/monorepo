@@ -93,15 +93,9 @@ export default createController(apiKeysRoutes, {
 				}
 
 				/**
-				 * A key may only hand out authority it already holds. Without this, the
-				 * `api-keys:write` scope is not one permission among the others but a way to
-				 * obtain all of them: mint a second key carrying every scope, then use it. That
-				 * makes narrow-scoping a key pointless the moment it can also write keys, and
-				 * since `ping:trigger` spends money it is an escalation with a bill attached.
-				 *
-				 * The team's own members are not bound by this — the create-key form is
-				 * admin-only and an admin already holds every authority a key could be given, so
-				 * there is nothing to escalate to. This is about one key minting another.
+				 * A key may only grant scopes it already holds; otherwise `api-keys:write`
+				 * could mint a broader copy of itself, escalating into every other scope
+				 * including the billable `ping:trigger`.
 				 */
 				let held = new Set<string>(ctx.apiKey.scopes);
 				let ungranted = result.data.scopes.filter((scope) => !held.has(scope));

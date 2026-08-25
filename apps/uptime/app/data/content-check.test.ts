@@ -1,10 +1,8 @@
 /**
- * Unit tests for the `ContentCheck` data-access model: monitor-scoped listing/lookup,
- * and the response-body evaluation logic (`contains`/`not_contains`/`regex`, ANDed
- * across every enabled check) that decides whether a monitor's content check passes.
- *
- * Evaluation takes the structural `ContentCheckRule`, so both callers are covered: a
- * stored row, and a rule that was never persisted at all.
+ * Unit tests for the `ContentCheck` data-access model: monitor-scoped listing and lookup,
+ * and the response-body evaluation (`contains`/`not_contains`/`regex`, ANDed across every
+ * enabled check). Evaluation takes the structural `ContentCheckRule`, so both a stored row
+ * and an ad-hoc rule are covered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,9 +26,8 @@ beforeEach(() => {
 });
 
 /**
- * Inserts a content-check row directly — `ContentCheck` exposes no `create` method
- * (checks are written as part of monitor creation elsewhere), so seeding fixtures for
- * `listByMonitor`/`findByIdForMonitor` requires writing straight to the table.
+ * Seeds a content-check row straight into the table, so `listByMonitor` and
+ * `findByIdForMonitor` have fixtures independent of the monitor-creation path.
  */
 async function createCheck(monitorId: string, overrides: Partial<SelectMonitorContentCheck> = {}) {
 	return await db.create(
@@ -80,7 +77,7 @@ describe("ContentCheck.findByIdForMonitor", () => {
 	});
 });
 
-/** Builds an in-memory check without touching the database, for `evaluate()` tests. */
+/** Builds a fully shaped check in memory, for the `evaluate()` tests. */
 function check(overrides: Partial<SelectMonitorContentCheck>): SelectMonitorContentCheck {
 	return {
 		id: "check-1",
@@ -171,10 +168,9 @@ describe("ContentCheck.evaluate", () => {
 
 	test("a rule that was never persisted evaluates exactly like the stored row would", () => {
 		/**
-		 * No `id`, no `monitor_id`, no timestamps: the shape an ad-hoc ping supplies in its
-		 * request body, which never becomes a row. It has to reach the same verdict as the
-		 * stored check beside it, or the endpoint and the monitor would disagree about the
-		 * same response body.
+		 * The bare shape an ad-hoc ping supplies in its request body, which stays in memory. It
+		 * has to reach the same verdict as the stored check beside it, or the endpoint and the
+		 * monitor would disagree about the same response body.
 		 */
 		let rule: ContentCheckRule = {
 			type: "contains",

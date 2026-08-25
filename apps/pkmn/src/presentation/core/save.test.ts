@@ -1,11 +1,8 @@
 /**
  * Tests for the local save-slot store.
  *
- * Covers the `SaveStore` round-trip through a Map-backed `localStorage` stub:
- * `save`/`load`/`has`/`clear`, and `load` returning null for a missing slot,
- * unparseable JSON, and a wrong-version envelope. The stored world is a minimal
- * fixture that survives `migrateWorld` — save internals, not world shape, are
- * under test.
+ * Covers the `SaveStore` round-trip through a Map-backed `localStorage` stub,
+ * including null results for a missing slot, bad JSON, and a wrong version.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,7 +83,6 @@ test("save then load round-trips the presentation payload and metadata", () => {
 	expect(loaded!.version).toBe(1);
 	expect(loaded!.savedAt).toBe("2026-07-06T00:00:00.000Z");
 	expect(loaded!.presentation).toEqual(PRESENTATION);
-	// The world came back migrated with its entities intact.
 	expect(loaded!.world.entities).toContain("hero");
 	expect(loaded!.world.playerId).toBe("hero");
 });
@@ -114,7 +110,6 @@ test("load returns null for a wrong-version envelope", () => {
 	);
 	let store = new SaveStore("slot-1");
 	expect(store.load()).toBeNull();
-	// `has` only checks the slot parses, so a stored-but-unloadable envelope still reads present.
 	expect(store.has()).toBe(true);
 });
 

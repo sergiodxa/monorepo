@@ -4,10 +4,8 @@
  * middleware falls back to the `Accept-Language` header.
  *
  * Exercises the schema directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but this is an `f.object(...)`
- * form-data schema that only accepts the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * `FormData`, since this `f.object(...)` form-data schema requires a raw `FormData`
+ * or `URLSearchParams` instance for its field-level rules to run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

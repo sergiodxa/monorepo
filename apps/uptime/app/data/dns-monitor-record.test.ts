@@ -1,8 +1,8 @@
 /**
  * Unit tests for the `DnsMonitorRecord` data-access model, and above all for the
  * classification: a record that vanished, one that appeared, the single attributable
- * one-to-one change, an RRset that grew, one that shrank, an unchanged sweep, and the two
- * cases that must produce no finding at all — a declined record, and a query that failed.
+ * one-to-one change, an RRset that grew, one that shrank, an unchanged sweep, and the
+ * two cases the classification stays silent on — a declined record, and a failed query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,7 +44,7 @@ function watched(overrides: Partial<DnsRecordImport> = {}): DnsRecordImport {
 	};
 }
 
-/** One answered query. Absence from a sweep is a failed query, never an empty answer. */
+/** One answered query. A `(name, type)` a sweep omits stands for a query that failed. */
 function answer(recordType: DnsQueryAnswer["record_type"], values: string[]): DnsQueryAnswer {
 	return { name: "example.com", record_type: recordType, values };
 }
@@ -82,9 +82,9 @@ describe("DnsMonitorRecord.importMany", () => {
 	});
 
 	/**
-	 * A real exported zone can carry the same `(name, type, value)` on two lines — DNS itself
-	 * dedupes, so the two are one record — and the import must absorb that rather than fail
-	 * the whole paste on a valid customer zone.
+	 * A real exported zone can carry the same `(name, type, value)` on two lines — DNS
+	 * itself dedupes, so the two are one record — and the import absorbs that so a valid
+	 * customer zone pastes cleanly.
 	 */
 	test("absorbs a duplicate identity inside one import", async () => {
 		let line = watched({
@@ -101,8 +101,8 @@ describe("DnsMonitorRecord.importMany", () => {
 	});
 
 	/**
-	 * Re-pasting a zone file must not undo the user's review. Re-enabling a record they
-	 * declined would turn "I chose not to watch this" into a setting with an expiry date.
+	 * Re-pasting a zone file preserves the user's review: a record they declined stays
+	 * declined, so the choice outlives every later import.
 	 */
 	test("never overwrites the state of a record it already has", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [watched({ is_enabled: false })]);
@@ -182,9 +182,9 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	/**
-	 * The one edit a diff can attribute without guessing: one stored record, one resolved
-	 * value, both differing. Nothing else pairs, because a DNS record has no identity of its
-	 * own to pair on.
+	 * The one edit a diff attributes without guessing: one stored record, one resolved
+	 * value, both differing. Larger sets read as missing-plus-new, because a record's
+	 * value is the only identity it has.
 	 */
 	test("pairs a lone stored record with a lone resolved value as changed", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
@@ -199,9 +199,9 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	/**
-	 * An RRset growing from five values to six is the case record-level identity exists for:
-	 * the sixth is one addition and the other five are untouched, rather than "the MX records
-	 * at example.com changed" and two comma-joined strings to compare by eye.
+	 * An RRset growing from five values to six is the case record-level identity exists
+	 * for: the sixth reads as one addition and the other five stay untouched, so the
+	 * finding names the record that appeared.
 	 */
 	test("attributes a grown RRset to the record that appeared", async () => {
 		let values = ["10 a.example.com", "20 b.example.com", "30 c.example.com"];
@@ -279,9 +279,9 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	/**
-	 * The rule that keeps a resolver's bad minute from alerting a whole zone: a query that
-	 * failed is left out of the sweep, and a `(name, type)` the sweep does not mention is not
-	 * classified at all.
+	 * Guards a whole zone against a resolver's bad minute: a failed query stays out of
+	 * the sweep, and classification covers exactly the `(name, type)` pairs the sweep
+	 * answered.
 	 */
 	test("classifies nothing for a name and type the sweep never answered", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [
@@ -309,6 +309,10 @@ describe("DnsMonitorRecord.diff", () => {
 		});
 	});
 
+	/**
+	 * A declined record stays out of the findings, and the value that replaced it is
+	 * still an appearance worth announcing.
+	 */
 	test("never reports a declined record as missing or changed", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [
 			watched({ record_type: "A", value: "1.2.3.4", is_enabled: false, status: "new" }),
@@ -324,7 +328,6 @@ describe("DnsMonitorRecord.diff", () => {
 		expect(diff.absent.map((record) => record.value)).toEqual(["ns1.example.com"]);
 		expect(diff.missing).toEqual([]);
 		expect(diff.changed).toEqual([]);
-		// The value that replaced a declined one is still an appearance, and is announced.
 		expect(diff.created.map((record) => record.value)).toEqual(["ns9.example.com"]);
 		expect(DnsMonitorRecord.summarize(diff)).toEqual({
 			recordsChecked: 3,
@@ -335,9 +338,9 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	/**
-	 * A zone file and a resolver answer are allowed to disagree for reasons that are nobody's
-	 * fault — a proxied record is not in the export, a retired name is still in it — so the
-	 * classification is a pure function of the two sets and assumes no agreement between them.
+	 * A zone file and a resolver answer disagree for blameless reasons — a proxied record
+	 * lives only in DNS, a retired name lives only in the export — so classification is a
+	 * pure function of the two sets, and a declined record stays declined.
 	 */
 	test("classifies an imported zone against a first sweep that shares nothing with it", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [
@@ -355,7 +358,6 @@ describe("DnsMonitorRecord.diff", () => {
 			answer("A", ["104.16.0.1", "104.16.0.2"]),
 		]);
 
-		// Declared but not resolving: still declined, so still not a finding.
 		expect(diff.absent.map((record) => record.value)).toEqual(["203.0.113.10"]);
 		expect(diff.missing).toEqual([]);
 		expect(diff.created.map((record) => record.value)).toEqual(["104.16.0.1", "104.16.0.2"]);
@@ -381,6 +383,7 @@ describe("DnsMonitorRecord.diff", () => {
 });
 
 describe("DnsMonitorRecord.applyDiff", () => {
+	/** A missing record advances `last_checked_at`, and `last_seen_at` holds. */
 	test("stamps a record that resolved and marks one that did not", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [
 			watched({ value: "10 a.example.com", last_seen_at: 1000 }),
@@ -395,7 +398,6 @@ describe("DnsMonitorRecord.applyDiff", () => {
 			last_seen_at: 5000,
 			last_checked_at: 5000,
 		});
-		// Missing moves "we looked", never "we saw it".
 		expect(await stored("20 b.example.com")).toMatchObject({
 			status: "missing",
 			last_seen_at: 1000,
@@ -418,9 +420,9 @@ describe("DnsMonitorRecord.applyDiff", () => {
 	});
 
 	/**
-	 * `new` is a state of a record, not of a check: it stands until the user enables or
-	 * deletes the row. A second check finding the same unwanted record must not settle it to
-	 * `ok`, or it would quietly drop off the list of what needs attention.
+	 * `new` is a state of the record itself: it stands until the user enables or deletes
+	 * the row, so a later check finding the same unwanted record leaves it on the list
+	 * of what needs attention.
 	 */
 	test("leaves a declined record's status alone on a later check", async () => {
 		let first = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
@@ -492,8 +494,8 @@ describe("DnsMonitorRecord.setEnabled", () => {
 	});
 
 	/**
-	 * Enabling a zone-file record that has never resolved leaves it `missing`, which is true
-	 * and is the reason the user enabled it in the first place.
+	 * Enabling a zone-file record still awaiting its first sighting leaves it `missing`,
+	 * which is true and is the reason the user enabled it.
 	 */
 	test("keeps every status other than new when enabling", async () => {
 		await DnsMonitorRecord.importMany(db, monitorId, [

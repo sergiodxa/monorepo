@@ -1,12 +1,8 @@
 /**
- * Unit tests for `zstack()`'s grid-overlay CSS: the `"& > *"` cell assignment
- * must always be present in the emitted stylesheet regardless of options, and
- * `justify` must map straight to `justify-items` using the self-alignment
- * keyword set shared with `u.items()`/`u.self()` — NOT the
- * `between`/`around`/`evenly` distribution keywords
- * `u.justify()`/`u.hstack()`/`u.vstack()` use, since `justify-items` positions
- * a grid item within its own cell rather than distributing space along a
- * track.
+ * Verifies `zstack()` always emits the `"& > *"` cell assignment regardless
+ * of options, and that `justify` maps to `justify-items` using the same
+ * self-alignment keywords `align-items` takes, since `justify-items`
+ * positions each grid item within its own cell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,10 +16,9 @@ import { declarations, serialize } from "../internal/serialize";
 import { zstack } from "./zstack";
 
 /**
- * The serialized stylesheet with its indentation collapsed, so the nested
- * `& > *` block can be matched as a single string. The nested selector is the
- * point of this mixin, so it has to be asserted on the full text rather than
- * on the flattened declaration list.
+ * Collapses indentation so the nested `& > *` block matches as a single
+ * string. The full serialized stylesheet preserves this mixin's nested
+ * selector, so tests assert against it directly.
  */
 async function stylesheet(mixin: UtilityMixin): Promise<string> {
 	return (await serialize(mixin)).replace(/\s+/g, " ");

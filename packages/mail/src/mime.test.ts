@@ -2,8 +2,8 @@
  * Tests the MIME builder by taking its output apart again: the message is parsed
  * back into headers and parts, encoded words and transfer encodings are decoded, and
  * the result is compared with what went in. Structure, folding, encoding choice, and
- * CRLF line endings are all asserted, because a MIME bug shows up as broken mail
- * rather than as an exception.
+ * CRLF line endings are all asserted, since a MIME bug surfaces as malformed mail
+ * that these assertions catch directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

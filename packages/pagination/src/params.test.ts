@@ -2,7 +2,7 @@
  * Tests for parameter parsing and the `createPaging()` factory.
  *
  * Page parameters are untrusted text, so every way they can be wrong is asserted to
- * be a failure rather than a surprising offset. The factory is tested by round-trip:
+ * be a failure with a clear reason. The factory is tested by round-trip:
  * a `Link` URL it advertises is fed back through its own `parse`, which is the only
  * check that actually proves the two halves cannot drift apart.
  *

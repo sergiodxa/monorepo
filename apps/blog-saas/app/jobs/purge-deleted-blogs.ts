@@ -12,7 +12,6 @@ import { Database } from "remix/data-table";
 import Blog from "~/app/models/blog";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
 
-/** Retention window before a soft-deleted blog is hard-purged. */
 const RETENTION_DAYS = 30;
 
 /**

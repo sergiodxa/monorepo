@@ -18,7 +18,6 @@ import { RateLimitError } from "./rate-limit-error";
 /** An instant aligned to a 10 second window, so a case starts at a boundary. */
 const WINDOW_START = 1_700_000_000_000;
 
-/** A binding double that counts calls and answers from a fixed script of outcomes. */
 function createBinding(outcomes: boolean[]): RateLimiterBinding & { keys: string[] } {
 	let keys: string[] = [];
 	return {

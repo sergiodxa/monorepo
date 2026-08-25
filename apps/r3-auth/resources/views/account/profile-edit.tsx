@@ -1,8 +1,7 @@
 /**
  * The profile edit form. Three fields, posted to the same URL that rendered them, and
  * re-rendered server-side with the submitted values and the validator's own messages
- * when something is wrong — so a rejected submission never loses what was typed and
- * the page still ships no JavaScript.
+ * when something is wrong, so a rejected submission never loses what was typed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

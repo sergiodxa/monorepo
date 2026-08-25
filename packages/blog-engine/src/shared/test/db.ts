@@ -191,8 +191,6 @@ export function createSqliteDatabaseAdapter(
 	};
 }
 
-// SQL Compilation (copied from sql-storage-adapter.ts)
-
 type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
 type UpsertStatement = Extract<DataManipulationOperation, { kind: "upsert" }>;
 type StatementTable = Extract<DataManipulationOperation, { kind: "select" }>["table"];
@@ -717,8 +715,6 @@ function collectColumns(rows: Record<string, unknown>[]): string[] {
 	return columns;
 }
 
-// Result normalization
-
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 	return rows.map((row) => {
 		if (typeof row !== "object" || row === null) {
@@ -820,9 +816,9 @@ function shouldReadStatement(operation: DataManipulationRequest["operation"]): b
 }
 
 /**
- * Mirrors the production D1 adapter's fix for the same gap: a `"raw"` operation
- * (`db.exec(sqlText, values)`) carries no structural read/write signal, so this
- * sniffs the leading keyword to decide whether it needs the row-reading path.
+ * A `"raw"` operation (`db.exec(sqlText, values)`) carries no structural
+ * read/write signal, so this sniffs the leading keyword to decide whether it
+ * needs the row-reading path.
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);

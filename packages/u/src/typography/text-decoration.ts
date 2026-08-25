@@ -18,9 +18,8 @@ export interface TextDecorationOptions {
 	line?: TextDecorationLineValue;
 	/**
 	 * Sets `text-decoration-color`, resolved through the token layer with a
-	 * default property of `fg` — so a bare tone works and a decoration can be
-	 * tinted away from the text's own color without dropping to a raw
-	 * declaration.
+	 * default property of `fg`, so a bare tone works and a decoration can be
+	 * tinted independently of the text's own color.
 	 */
 	color?: ColorValue | (string & {});
 	/** Sets `text-decoration-style`. */
@@ -40,22 +39,9 @@ export interface TextDecorationOptions {
 }
 
 /**
- * Applies `text-decoration-line`, or a full set of text-decoration properties
- * when given an options object instead of a bare line value. Called with a
- * bare value (or none, defaulting to `"underline"`) it only ever sets
- * `text-decoration-line`; called with an options object, only the given keys
- * are set.
- *
- * `offset` is worth reaching for on any underlined text: at the default
- * offset an underline runs straight through the descenders of letters like
- * `g`, `j`, and `p`, which both looks wrong and costs legibility.
- * `text-underline-offset` is the standard fix — push the line down far enough
- * to clear them.
- *
- * `thickness` and `offset` are the two properties `text-decoration`'s
- * shorthand does *not* include, which is why they are separate keys here
- * rather than folded into a single declaration: setting the shorthand
- * elsewhere will not reset them, and they cannot be set through it.
+ * Applies `text-decoration-line` from a bare value, or sets only the given
+ * keys from a text-decoration options object. `thickness` and `offset` are
+ * kept separate because `text-decoration`'s shorthand cannot set or reset them.
  *
  * @example u.textDecoration()
  * @example css({ textDecorationLine: "underline" })

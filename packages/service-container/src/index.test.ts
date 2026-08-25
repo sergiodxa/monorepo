@@ -1,3 +1,10 @@
+/**
+ * Verifies ServiceContainer's singleton, scoped, and instance registrations
+ * resolve correctly across parent/child scopes, and that `inject()` binds
+ * dependencies for Remix controller actions.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { ContextEntries, RequestContext } from "remix/router";
 
 import { asyncContext } from "remix/middleware/async-context";
@@ -111,9 +118,11 @@ describe(ServiceContainer.name, () => {
 	});
 
 	test("resolves parent instance registrations from child scopes", () => {
-		// The application-container pattern for per-request dependencies: register
-		// a pre-constructed value with `instance()`, then wrap request work in
-		// `scope()` so it resolves via `inject()` / `getServiceContainer()`.
+		/**
+		 * Registers a pre-constructed value with `instance()` on the container,
+		 * then wraps request work in `scope()` so it resolves via `inject()` or
+		 * `getServiceContainer()` — the pattern for per-request dependencies.
+		 */
 		let container = new ServiceContainer();
 		let database = new Database(7);
 

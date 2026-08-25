@@ -1,13 +1,9 @@
 /**
- * Defines the per-tenant Durable Object that hosts an isolated OIDC provider instance.
- * Each tenant gets its own SqlStorage-backed database, signing keys, and cleanup alarm;
- * this class wires those up and forwards HTTP requests to `@pkg/oidc-provider`.
- *
- * The DO also enforces the tenant-runtime entitlement gate: when the control plane
- * suspends a tenant (billing lapse or operator action) it pushes a `suspended` flag in
- * here, and the DO blocks its OIDC/OAuth2 provider surface itself — independent of the
- * control-plane database — so traffic that reaches the DO directly via Cloudflare for
- * SaaS `hostMetadata` is stopped too.
+ * Per-tenant Durable Object hosting an isolated OIDC provider instance with its
+ * own SqlStorage-backed database, signing keys, and cleanup alarm. A suspension
+ * flag set by the control plane blocks the OIDC/OAuth2 surface in the DO itself,
+ * stopping traffic that reaches it directly via Cloudflare for SaaS
+ * `hostMetadata`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,9 +19,9 @@ import { shouldBlockWhileSuspended, suspendedResponse } from "~/app/lib/entitlem
 import AnalyticsService from "~/app/services/analytics";
 
 /**
- * Durable Object storage key holding the tenant's suspension flag. Stored in the DO's
- * key-value storage (not the provider's SQL database) so the entitlement gate never
- * depends on the provider engine or its migrations.
+ * Durable Object storage key holding the tenant's suspension flag, kept in the
+ * DO's own key-value storage so the entitlement gate stays independent of the
+ * provider engine and its migrations.
  */
 const SUSPENDED_STORAGE_KEY = "entitlement:suspended";
 
@@ -33,12 +29,9 @@ const SUSPENDED_STORAGE_KEY = "entitlement:suspended";
 const SUSPEND_CONTROL_PATH = "/__control/suspend";
 
 /**
- * Per-tenant Durable Object hosting the OIDC provider.
- *
- * A thin wrapper: it builds the SqlStorage-backed database adapter and forwards
- * everything to `@pkg/oidc-provider`, injecting the internal-token secret and an
- * analytics sink that forwards to the platform's Analytics Engine service. It also
- * owns the tenant's suspension flag and blocks provider traffic while suspended.
+ * Wraps `@pkg/oidc-provider` over the DO's SqlStorage, injecting the
+ * internal-token secret and an analytics sink for the platform's Analytics
+ * Engine.
  */
 export default class Tenant extends DurableObject<Cloudflare.Env> {
 	#provider: OidcProvider;
@@ -70,8 +63,6 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				trackRegistration: (tenantId, subjectId) =>
 					AnalyticsService.trackRegistration(tenantId, subjectId),
 			},
-			// Run migrations inside blockConcurrencyWhile so the DO never serves a request
-			// against an unmigrated schema.
 			migrations: "manual",
 		});
 
@@ -90,9 +81,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Handles an incoming HTTP request. Serves the internal suspension-control endpoint,
-	 * enforces the entitlement gate (blocking the OIDC/OAuth2 provider surface while the
-	 * tenant is suspended), and otherwise delegates to the tenant's OIDC provider.
+	 * Checks the control endpoint first, unconditionally, so a suspended tenant can
+	 * always be un-suspended, then blocks the OIDC/OAuth2 surface while suspended —
+	 * the Management API stays reachable so the control plane can still manage it.
 	 *
 	 * @param request - The request forwarded to this tenant DO.
 	 * @returns The control-endpoint response, a `402` when suspended, or the provider's response.
@@ -100,12 +91,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	override async fetch(request: Request) {
 		let pathname = new URL(request.url).pathname;
 
-		// The internal control endpoint toggles the suspension flag and never reaches the
-		// provider; it is always available so a suspended tenant can be un-suspended.
 		if (pathname === SUSPEND_CONTROL_PATH) return await this.handleSuspendControl(request);
 
-		// Block the public provider surface while suspended; the Management API stays
-		// reachable so the control plane can still manage and re-provision the tenant.
 		if (this.#suspended && shouldBlockWhileSuspended(pathname)) return suspendedResponse();
 
 		return this.#provider.fetch(request);
@@ -113,9 +100,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Internal control endpoint (`POST /__control/suspend`) that sets or clears the
-	 * tenant's suspension flag. Authenticated with the shared internal token (the same
-	 * secret and `X-Internal-Token` header the Management API uses), so only the control
-	 * plane can toggle entitlement.
+	 * tenant's suspension flag, authenticated with the shared internal token so only
+	 * the control plane can toggle entitlement.
 	 *
 	 * @param request - The control request carrying `{ suspended: boolean }` as JSON.
 	 * @returns `200` on success, `401` for a missing/invalid token, `400` for a bad body.

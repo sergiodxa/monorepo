@@ -22,9 +22,6 @@ describe("opacity", () => {
 	});
 
 	test("the ratio carries no unit, so the declaration survives the serializer", async () => {
-		// `opacity` is one of the properties the serializer leaves unitless; a
-		// bare `0.5` on a property outside that list would come out as `0.5px`,
-		// which browsers drop.
 		expect(await declarations(opacity(50))).not.toContain("opacity: 0.5px");
 	});
 });

@@ -4,7 +4,7 @@
  * The class holds every piece of page arithmetic a list or an API needs, clamped
  * once in the constructor so no derived value can disagree with the page it came
  * from. The static strategies add paging to a query the caller already composed,
- * and return a `Result` so a database failure is a value rather than an exception.
+ * and return a `Result`, so a database failure surfaces as a value the caller checks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -122,9 +122,8 @@ export interface KeysetPage<T> {
 /**
  * The part of a `remix/data-table` query `byOffset()` uses.
  *
- * Structural rather than the concrete `Query`, so the strategy stays independent of
- * the builder's generic parameters; a bound query from `db.query(table)` satisfies
- * it directly.
+ * A structural type, independent of the builder's generic parameters, so any
+ * bound query satisfies it directly.
  */
 export interface OffsetQuery<Row> {
 	/** Counts rows matching the composed predicate, ignoring any limit or offset. */
@@ -155,9 +154,8 @@ export interface OffsetOptions {
 /**
  * The part of a `remix/data-table` query `byKeyset()` uses.
  *
- * `WhereArg` and `ColumnArg` are inferred from the query handed in, which is what
- * lets the seek predicate and the ordering be applied to a builder whose column
- * names are a narrow literal union.
+ * `WhereArg` and `ColumnArg` are inferred from the query handed in, so the seek
+ * predicate and ordering apply to a builder whose columns are a narrow literal union.
  */
 export interface KeysetQuery<Row, WhereArg = Predicate, ColumnArg = string> {
 	/** Returns a new query with an additional predicate. */
@@ -205,7 +203,7 @@ export interface KeysetOptions {
  * Coerces an untrusted number into a whole number at or above `minimum`.
  *
  * Page parameters reach the constructor from query strings and stored values, so
- * `NaN`, fractions, and negatives are normalized rather than trusted.
+ * `NaN`, fractions, and negatives are all normalized to a value at or above `minimum`.
  */
 function toWholeNumber(value: number, minimum: number): number {
 	if (!Number.isFinite(value)) return minimum;
@@ -213,11 +211,10 @@ function toWholeNumber(value: number, minimum: number): number {
 }
 
 /**
- * Page arithmetic for one page of one query.
+ * Page arithmetic for one page of one query, immutable once constructed.
  *
- * Immutable: there is no setter, and changing a page means constructing another
- * instance. Every value beyond the three inputs is a getter, so a controller that
- * only needs `offset` and `limit` never computes a page series.
+ * Every value beyond the three inputs is a getter, computed on read, so a
+ * controller needing only `offset` and `limit` never computes a page series.
  *
  * @example
  * let pagination = new Pagination({ page: 3, perPage: 25, total: 892 });
@@ -315,15 +312,9 @@ export class Pagination {
 	}
 
 	/**
-	 * Builds the pager range, with gap markers where page numbers are elided.
-	 *
-	 * The first and last pages are always present, along with `window` numbers either
-	 * side of the current page. A gap is emitted only where numbers are actually
-	 * left out, so a marker never sits between two consecutive numbers.
-	 *
-	 * A method rather than a getter because the window is the caller's decision, and
-	 * the only place windows are computed: a component wanting a different one passes
-	 * it here instead of slicing the result, which would leave the markers stranded.
+	 * Builds the pager range, with gap markers only where page numbers are elided,
+	 * so a marker never sits between two consecutive numbers. Takes `window` as an
+	 * argument, so a caller wanting a different one passes it directly here.
 	 *
 	 * @param options Window size; defaults to one page either side.
 	 * @returns The range in render order.
@@ -384,12 +375,9 @@ export class Pagination {
 	}
 
 	/**
-	 * Pages a composed query by offset, counting it and then fetching one page.
-	 *
-	 * The query is executed twice, once to count and once to fetch. That is safe
-	 * because the builder's chaining returns new query values rather than mutating in
-	 * place, and its count terminal ignores any limit and offset. Pass `total` when
-	 * the count is already known and the second query is not worth paying for.
+	 * Pages a composed query by offset, executing it twice: once to count, once to
+	 * fetch — safe since the builder's chaining returns new query values instead of
+	 * mutating in place. Pass `total` when already known to skip the count query.
 	 *
 	 * @param query A bound query from `db.query(table)`, already carrying joins, predicates, and ordering.
 	 * @param options Requested page, page size, and optionally a known total.
@@ -413,12 +401,9 @@ export class Pagination {
 	}
 
 	/**
-	 * Pages a composed query by keyset, seeking from an opaque cursor.
-	 *
-	 * Owns the ordering, since the sort keys build both the seek predicate and the
-	 * cursor, and reads one row beyond the limit to learn whether a further page
-	 * exists rather than counting. Paging backward runs the query reversed and
-	 * reverses the rows again, so a page always reads in the requested order.
+	 * Pages a composed query by keyset, seeking from an opaque cursor. Owns the
+	 * ordering, since the sort keys build both the seek predicate and the cursor;
+	 * paging backward reverses the query and the rows so pages read in order.
 	 *
 	 * @param query A bound query from `db.query(table)`, carrying joins and predicates but no ordering.
 	 * @param options Ordering, page size, and at most one of `after`, `before`, or `cursor`.
@@ -464,7 +449,6 @@ export class Pagination {
 				seeked = seeked.orderBy(column as ColumnArg, direction);
 			}
 
-			// One extra row answers "is there another page?" without a second query.
 			rows = await seeked.limit(limit + 1).all();
 		} catch (error) {
 			return failure(new QueryFailedError(error));
@@ -474,10 +458,6 @@ export class Pagination {
 		let items = hasMore ? rows.slice(0, limit) : rows;
 		if (backward) items.reverse();
 
-		// Forward traversal learns about a following page from the extra row, and knows
-		// a preceding one exists only because it was seeked from a cursor. Backward
-		// traversal is the mirror image: the extra row is evidence of a preceding page,
-		// and a following one exists by definition, since the cursor came from it.
 		let hasNext = backward ? true : hasMore;
 		let hasPrev = backward ? hasMore : seek.data.cursor !== null;
 
@@ -499,8 +479,8 @@ interface ResolvedSeek {
 /**
  * Reduces `after`, `before`, and `cursor` to one cursor and one direction.
  *
- * Supplying more than one is refused rather than silently preferring one, because
- * the two would page in opposite directions and the caller cannot tell which won.
+ * Supplying more than one fails clearly, since the two would page in opposite
+ * directions and the caller cannot tell which won.
  */
 function resolveSeek(options: KeysetOptions): Result<ResolvedSeek, InvalidCursorError> {
 	let after = emptyToNull(options.after);
@@ -524,7 +504,7 @@ function resolveSeek(options: KeysetOptions): Result<ResolvedSeek, InvalidCursor
 	return success({ cursor: null, direction: "after" });
 }
 
-/** Treats a blank cursor parameter as absent, since `?cursor=` is not a cursor. */
+/** Treats a blank cursor parameter as absent, since `?cursor=` carries no value. */
 function emptyToNull(value: string | null | undefined): string | null {
 	if (value === undefined || value === null) return null;
 	return value.trim().length === 0 ? null : value;
@@ -541,9 +521,8 @@ interface CursorNeighbours {
 /**
  * Mints the cursors for the edges of a page.
  *
- * The `next` cursor comes from the last row and the `prev` cursor from the first,
- * each tagged with the direction it seeks, so one query parameter can carry either.
- * An empty page has no boundary rows and therefore no cursors.
+ * The `next` cursor comes from the last row and `prev` from the first, each
+ * tagged with the direction it seeks so one query parameter can carry either.
  */
 function buildCursors<Row>(
 	items: readonly Row[],

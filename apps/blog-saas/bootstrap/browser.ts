@@ -1,10 +1,8 @@
 /**
  * Client-side entrypoint that boots the `remix/ui` runtime so server-rendered
- * pages hydrate in the browser. The client-safe view components live under
- * `app/views`, so the module glob targets those plus `routes`. The
- * `app/http/controllers` modules are intentionally excluded — they are server
- * route handlers that pull in worker-only imports (e.g. `cloudflare:workers`)
- * and must never reach the client bundle.
+ * pages hydrate in the browser. The module glob loads client modules from
+ * `app/views` and `routes`, so the client bundle carries only browser-safe
+ * view and route code.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,10 +10,9 @@
 import { run } from "remix/ui";
 
 /**
- * Lazily-loadable client modules keyed by their source path (relative to this
- * file). Each entry is an import thunk; nothing loads until {@link run} resolves
- * a hydration target through `loadModule`. Server-only modules (`*.server.*`)
- * are excluded so they never reach the client bundle.
+ * Lazily-loadable client modules keyed by their source path relative to this
+ * file. Each entry is an import thunk; nothing loads until {@link run}
+ * resolves a hydration target through `loadModule`.
  */
 let clientModules = import.meta.glob([
 	"!../**/*.server.*",
@@ -54,9 +51,8 @@ run({
 
 	/**
 	 * Fetches frame content for the `remix/ui` runtime, forwarding the frame
-	 * target so the server can render the requested sub-frame, and the submission
-	 * that triggered a reload so a form inside a frame reaches the server as the
-	 * form it was.
+	 * target so the server renders the requested sub-frame for the submission
+	 * that triggered the reload.
 	 *
 	 * @param src URL of the frame to resolve.
 	 * @param options Frame target, abort signal, and submission for this load.
@@ -68,11 +64,11 @@ run({
 		let headers = new Headers({ accept: "text/html" });
 		if (target) headers.set("x-remix-target", target);
 
-		// A form that declares the default encoding is sent as one, so the server reads
-		// the body under the type the form asked for rather than the multipart type
-		// `fetch` picks for `FormData`.
-		// A file part carries no text, so it is sent as its filename — what a browser
-		// itself puts on the wire for a file input inside a urlencoded form.
+		/**
+		 * A form declaring the default encoding sends its body under that type,
+		 * matching what the server reads. A file part carries no text, so it
+		 * goes across as its filename, matching a urlencoded file input.
+		 */
 		let body =
 			formData && encType === "application/x-www-form-urlencoded"
 				? new URLSearchParams(
@@ -83,8 +79,10 @@ run({
 					)
 				: formData;
 
-		// The response itself carries the URL it was redirected to, which the frame
-		// reads to update its own source after a submission.
+		/**
+		 * The response carries the URL it was redirected to, which the frame
+		 * reads to update its own source after a submission.
+		 */
 		return await fetch(src, { credentials: "same-origin", headers, signal, method, body });
 	},
 });

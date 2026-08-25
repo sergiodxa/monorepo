@@ -619,8 +619,10 @@ describe(executeTest, () => {
 			),
 		);
 		expect(error.code).toBe("unknown-name");
-		// The span is an offset into the defining file's text; stamping the
-		// calling test's path would map it onto the wrong source.
+		/**
+		 * The span is an offset into the defining file's text, so it must pair
+		 * with that file's path rather than the calling test's.
+		 */
 		expect(error.file).toBe("spec/commands/helper.spec");
 		expect(error.span).toEqual({ start: 60, end: 75 });
 	});
@@ -677,9 +679,11 @@ describe(executeTest, () => {
 		expect(attempts).toBe(3);
 	});
 
-	// A bare-path `let`/`return` right-hand side normally reads a binding, but
-	// when its head is not bound it may name a zero-argument tool — the change
-	// that lets `let current = browser.url` capture the current URL as a value.
+	/**
+	 * An unbound bare-path head may name a zero-argument tool, the mechanism
+	 * that lets `let current = browser.url` capture the current URL as a
+	 * value.
+	 */
 	describe("a bare-path RHS that names a zero-arg tool", () => {
 		test("a qualified zero-arg tool is invoked and its value captured", async () => {
 			let recorded = makePlugin("ns", () => success("captured-value"));
@@ -746,8 +750,11 @@ describe(executeTest, () => {
 					},
 				],
 			});
-			// `thing` is both a binding and an imported tool name; the binding wins
-			// because a reference requires a bound head, so the two never collide.
+			/**
+			 * `thing` is both a binding and an imported tool name; a reference
+			 * always requires a bound head, so the binding wins and the two
+			 * never collide.
+			 */
 			let node = makeTest({
 				given: [letStmt("thing", str("bound-value"))],
 				when: [letStmt("y", ref("thing"))],

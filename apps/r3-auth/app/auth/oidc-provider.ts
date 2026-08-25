@@ -31,32 +31,16 @@ const SESSION_STATE_SALT_BYTES = 16;
 const OP_BROWSER_STATE_BYTES = 32;
 
 /**
- * Clock tolerance applied when checking an `id_token_hint`, wide enough that no
- * time-based claim in it can ever fail.
- *
- * Expiry is deliberately not checked there. OpenID Connect RP-Initiated Logout 1.0
- * defines `id_token_hint` as a hint about which session is ending, not as a credential
- * that authenticates the request, and says the OP SHOULD accept an ID token whose `exp`
- * has passed. Somebody signing out long after their token aged out is the ordinary case,
- * and refusing it makes the end-session endpoint unusable for exactly the relying parties
- * that behave correctly.
- *
- * What makes the hint trustworthy is the signature, the issuer and the algorithm, all of
- * which stay checked. This tolerance is for the logout hint alone: every other ID token
- * this server verifies is authenticating somebody, and its expiry is enforced.
+ * Clock tolerance for an `id_token_hint`. RP-Initiated Logout 1.0 treats the hint as a
+ * pointer to the ending session, so a sign-out long after the token aged out still
+ * works; signature, issuer and algorithm are what keep the hint trustworthy.
  */
 const ID_TOKEN_HINT_CLOCK_TOLERANCE = Number.MAX_SAFE_INTEGER;
 
-// =============================================================================
-// Errors
-// =============================================================================
-
 /**
  * Base class for every protocol failure, carrying the RFC 6749 error code and the
- * human-readable description an endpoint puts into its error envelope.
- *
- * Reached through `OIDC.Error` and its named subclasses rather than imported, so a
- * caller matches on the same objects the engine throws.
+ * human-readable description an endpoint puts into its error envelope. Callers reach it
+ * through `OIDC.Error`, so they match on the same objects the engine throws.
  */
 class OAuth2Error extends globalThis.Error {
 	override readonly name: string = "OAuth2Error";
@@ -100,7 +84,7 @@ class InvalidRequestError extends OAuth2Error {
 	}
 }
 
-/** A requested scope is unknown or not allowed for this client. */
+/** A requested scope is unknown or outside what this client may request. */
 class InvalidScopeError extends OAuth2Error {
 	override readonly name = "InvalidScopeError";
 
@@ -109,7 +93,7 @@ class InvalidScopeError extends OAuth2Error {
 	}
 }
 
-/** The client is known but not allowed to perform this operation. */
+/** The client is known, and this operation is outside what it may do. */
 class UnauthorizedClientError extends OAuth2Error {
 	override readonly name = "UnauthorizedClientError";
 
@@ -118,7 +102,7 @@ class UnauthorizedClientError extends OAuth2Error {
 	}
 }
 
-/** The requested `grant_type` is not one this server implements. */
+/** A `grant_type` outside the set this server implements. */
 class UnsupportedGrantTypeError extends OAuth2Error {
 	override readonly name = "UnsupportedGrantTypeError";
 
@@ -127,7 +111,7 @@ class UnsupportedGrantTypeError extends OAuth2Error {
 	}
 }
 
-/** The requested `response_type` is not one this server implements. */
+/** A `response_type` outside the set this server implements. */
 class UnsupportedResponseTypeError extends OAuth2Error {
 	override readonly name = "UnsupportedResponseTypeError";
 
@@ -145,7 +129,7 @@ class AccessDeniedError extends OAuth2Error {
 	}
 }
 
-/** The engine failed for a reason that is not the caller's fault. */
+/** The engine itself failed while handling a well-formed request. */
 class InternalServerError extends OAuth2Error {
 	override readonly name = "InternalServerError";
 
@@ -176,16 +160,12 @@ class InvalidTokenError extends OAuth2Error {
 	}
 }
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/** A value the storage layer may legitimately not have, kept explicit at every boundary. */
+/** Absence is a legitimate answer from storage, so every boundary states it in the type. */
 type Nullable<T> = T | null;
 
 /** Data shapes the engine exchanges with its storage layer and its callers. */
 export namespace OIDC {
-	/** A person who can sign in, as the engine needs them: identity claims and nothing else. */
+	/** A person who can sign in, reduced to the identity claims the engine needs. */
 	export interface Subject {
 		id: string;
 		avatar: string;
@@ -223,8 +203,8 @@ export namespace OIDC {
 	}
 
 	/**
-	 * Everything the engine needs from storage. Implementations own the database and
-	 * key access; the engine owns the protocol rules and never sees either.
+	 * Everything the engine needs from storage. Implementations own the database and the
+	 * key access; the engine keeps to the protocol rules.
 	 */
 	export interface Repository {
 		getSigningKey(): Promise<JWK.KeyPair[]>;
@@ -240,13 +220,9 @@ export namespace OIDC {
 		>;
 
 		/**
-		 * Resolves a registered post-logout address to the client that registered it, by
-		 * exact equality on the stored logout URI, or `null` when nobody registered it.
-		 *
-		 * It answers one question — is this address registered — so an address more than
-		 * one client registered is answered with any one of them, as long as the same one
-		 * is returned every time. The answer is never treated as the client that started
-		 * the logout, so an ambiguous match cannot drop a relying party from the fan-out.
+		 * Resolves a registered post-logout address to a client by exact equality on the
+		 * stored logout URI, or `null` when nobody registered it. It answers only whether
+		 * the address is registered, so a shared one resolves to any single stable client.
 		 */
 		findClientByLogoutUri(logoutUri: string): Promise<
 			Nullable<{
@@ -286,7 +262,6 @@ export namespace OIDC {
 
 		findSubjectById(subjectId: string): Promise<Nullable<Subject>>;
 
-		// Login flow methods
 		findSubjectByEmail(email: string): Promise<Nullable<Subject>>;
 		createSubject(data: {
 			emailAddress: string;
@@ -310,11 +285,9 @@ export namespace OIDC {
 			verifiedAt: Nullable<Date>,
 		): Promise<void>;
 		/**
-		 * Replaces the stored hash for a subject that already has a credential.
-		 *
-		 * Called only after a password verified, to retire a hash written under an
-		 * older scheme; it must never create a row, since a missing credential means
-		 * the subject has no password rather than an outdated one.
+		 * Replaces the stored hash for a subject that already has a credential. Called
+		 * after a password verified, to retire a hash written under an older scheme; it
+		 * updates an existing row only, since a missing credential means no password yet.
 		 */
 		updateCredentialPasswordHash(subjectId: string, passwordHash: string): Promise<void>;
 
@@ -340,7 +313,6 @@ export namespace OIDC {
 			},
 		): Promise<void>;
 
-		// Logout flow methods
 		findSessionsForBackchannelLogout(
 			subjectId: string,
 			excludeClientId?: string,
@@ -371,10 +343,9 @@ export namespace OIDC {
 		opBrowserState?: string;
 		responseMode?: "query" | "fragment" | "form_post";
 		/**
-		 * The challenge the client committed to on the authorization request, stored
-		 * with the code so redeeming it requires the matching verifier. Absent or
-		 * `null` for a client that does not use PKCE, whose code then redeems without
-		 * a verifier exactly as before.
+		 * The challenge the client committed to on the authorization request, stored with
+		 * the code so redeeming it requires the matching verifier. `null` or absent leaves
+		 * the code redeemable on its own, for clients that skip PKCE.
 		 */
 		pkce?: Pkce | null;
 	}
@@ -413,10 +384,6 @@ export namespace OIDC {
 	}
 }
 
-// =============================================================================
-// OIDC Provider Class
-// =============================================================================
-
 /**
  * The authorization server's protocol engine. One instance is built per issuer over a
  * repository; every endpoint delegates its rules here.
@@ -433,17 +400,17 @@ export class OIDC {
 	static InvalidGrantError = InvalidGrantError;
 	/** Missing or contradictory request parameters. */
 	static InvalidRequestError = InvalidRequestError;
-	/** A scope this server does not grant. */
+	/** A scope outside what this server grants. */
 	static InvalidScopeError = InvalidScopeError;
-	/** A known client attempting something it may not do. */
+	/** A known client attempting something outside its permissions. */
 	static UnauthorizedClientError = UnauthorizedClientError;
-	/** A `grant_type` this server does not implement. */
+	/** A `grant_type` outside what this server implements. */
 	static UnsupportedGrantTypeError = UnsupportedGrantTypeError;
-	/** A `response_type` this server does not implement. */
+	/** A `response_type` outside what this server implements. */
 	static UnsupportedResponseTypeError = UnsupportedResponseTypeError;
 	/** Authentication was refused, typically wrong credentials. */
 	static AccessDeniedError = AccessDeniedError;
-	/** The engine itself failed; the caller did nothing wrong. */
+	/** The engine itself failed while handling a well-formed request. */
 	static InternalServerError = InternalServerError;
 	/** Sign-in blocked pending email verification. */
 	static MissingValidationError = MissingValidationError;
@@ -465,16 +432,10 @@ export class OIDC {
 		private repository: OIDC.Repository,
 	) {}
 
-	// =========================================================================
-	// Token Endpoint
-	// =========================================================================
-
 	/**
-	 * Runs one of the three supported grants and returns its token response.
-	 *
-	 * Throws rather than returning a `Result`: every failure here is a protocol error a
-	 * controller turns into an OAuth error envelope, and the thrown class carries the
-	 * exact `error` code to report.
+	 * Runs one of the three supported grants and returns its token response. Failures
+	 * are thrown: each is a protocol error a controller turns into an OAuth error
+	 * envelope, and the thrown class carries the exact `error` code to report.
 	 *
 	 * @param args - The grant to run, discriminated by `type`.
 	 * @throws {OAuth2Error} For any protocol failure, including an unknown grant type.
@@ -516,11 +477,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Revokes a refresh token, which means deleting the session it names (RFC 7009).
-	 *
-	 * An unknown token succeeds silently, as the specification requires, so a client
-	 * cannot probe which tokens exist. An access-token hint is accepted and ignored:
-	 * access tokens are self-contained and expire on their own.
+	 * Revokes a refresh token by deleting the session it names (RFC 7009). An unknown
+	 * token succeeds silently, as the specification requires, so a client cannot probe
+	 * which tokens exist; an access-token hint is ignored, as those expire on their own.
 	 *
 	 * @throws {InvalidClientError} When the client credentials do not check out.
 	 * @throws {UnauthorizedClientError} When the token belongs to a different client.
@@ -554,9 +513,8 @@ export class OIDC {
 
 	/**
 	 * Reports whether a token is currently usable, and its claims when it is (RFC 7662).
-	 *
-	 * A token that cannot be resolved is reported inactive rather than raised as an
-	 * error, so introspection never becomes an oracle for why a token failed.
+	 * An unresolvable token is reported inactive, so introspection stays silent about the
+	 * reason a token failed.
 	 *
 	 * @throws {InvalidClientError} When the client credentials do not check out.
 	 */
@@ -621,16 +579,10 @@ export class OIDC {
 		}
 	}
 
-	// =========================================================================
-	// OIDC Endpoints
-	// =========================================================================
-
 	/**
-	 * Resolves a bearer access token to its subject and the scopes it was granted.
-	 *
-	 * Returns the scopes rather than filtered claims: the caller decides which claims a
-	 * scope entitles the client to, since that mapping belongs to the endpoint's response
-	 * shape.
+	 * Resolves a bearer access token to its subject and the scopes it was granted, so
+	 * the caller decides which claims each scope entitles the client to. Requiring
+	 * `openid` limits the answer to tokens issued on behalf of an end user.
 	 *
 	 * @throws When the token fails signature, issuer or expiry verification.
 	 * @throws {InvalidTokenError} When the token was not issued with the `openid` scope.
@@ -642,12 +594,6 @@ export class OIDC {
 			{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
 		);
 
-		// UserInfo speaks for an end user, which OIDC marks with the `openid` scope. Reading
-		// the scopes through the presence-checked accessor keeps a scope-less token from
-		// crashing the endpoint; requiring `openid` then refuses one that has no end user to
-		// speak for. A `client_credentials` token — whose subject is the client itself and
-		// which carries no scope — is exactly that, and must not be answered with a person's
-		// claims. The scope is not defaulted to `openid`, since that would readmit it.
 		let scope = accessToken.scopes;
 		if (!scope.includes("openid")) {
 			throw new InvalidTokenError("The access token was not issued with the openid scope");
@@ -659,24 +605,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Ends a person's session at this server, from either an `id_token_hint` or the
-	 * signed-in session's subject.
-	 *
-	 * Deletes every session the subject holds — logout here is global, not per client —
-	 * and honors `post_logout_redirect_uri` only when a registered client nominated
-	 * exactly that address, so the browser can never be sent somewhere unregistered.
-	 * An address that cannot be shown to be registered is dropped, not refused: the
-	 * returned `redirectUri` is then absent and the sign-out has still happened.
-	 *
-	 * The relying parties to notify are collected **before** the sessions are deleted
-	 * and returned alongside the result. They are derived from those very session rows,
-	 * so reading them afterwards would find nothing and the logout fan-out would
-	 * silently reach nobody.
-	 *
-	 * An `id_token_hint` is accepted even once it has expired, per
-	 * {@link ID_TOKEN_HINT_CLOCK_TOLERANCE}, and a hint that fails any of the checks that
-	 * do apply is refused rather than raised: an unusable hint is a bad request, not a
-	 * fault, and it is refused before a single session is deleted.
+	 * Ends every session the subject holds, so sign-out is global across relying parties.
+	 * `post_logout_redirect_uri` is honored on an exact match with a registered logout URI
+	 * and dropped otherwise; the parties to notify are read while their rows still exist.
 	 *
 	 * @returns The subject logged out, the initiating client, the verified redirect to honor if any, and whom to notify.
 	 * @throws {InvalidRequestError} When the hint is unusable, neither hint nor session is given, or a parameter contradicts the hint.
@@ -703,10 +634,6 @@ export class OIDC {
 					clockTolerance: ID_TOKEN_HINT_CLOCK_TOLERANCE,
 				});
 			} catch {
-				// Every way a hint can be unusable — unparseable, signed by somebody else,
-				// naming another issuer — is the request's mistake and is answered as one.
-				// The reason is not carried out: it would describe a token, and a token is
-				// not something this server writes down. Nothing has been deleted yet.
 				throw new InvalidRequestError("Invalid id_token_hint");
 			}
 
@@ -736,12 +663,6 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(subjectId);
 		if (!subject) throw new InvalidRequestError("Invalid subject");
 
-		// A redirect target is honored only when some registered client nominated exactly
-		// that address as its logout URI. Being registered is a property of the address
-		// itself, so when nothing identified a client the same question is answered by
-		// looking the address up among the registrations. The comparison stays an exact
-		// equality either way: that is what stops anybody handing a signed-in browser a
-		// logout link that lands on their own page wearing this server's flow.
 		let redirectUri: string | undefined;
 
 		if (args.postLogoutRedirectUri) {
@@ -750,9 +671,6 @@ export class OIDC {
 					? client
 					: await this.repository.findClientByLogoutUri(args.postLogoutRedirectUri);
 
-			// An address nobody registered is dropped rather than refused. Ending the
-			// session is what was asked for and only the redirect is unsafe, so the logout
-			// goes ahead and the caller is left on a page this server controls.
 			if (registrant) redirectUri = args.postLogoutRedirectUri;
 		}
 
@@ -776,17 +694,10 @@ export class OIDC {
 		};
 	}
 
-	// =========================================================================
-	// Login Methods
-	// =========================================================================
-
 	/**
 	 * Opens a session, records consent, and issues a single-use authorization code for
-	 * the relying party to redeem.
-	 *
-	 * Returns a `Result` rather than throwing because its callers are browser redirects:
-	 * a failure has to become an `error=` parameter on the client's redirect URI, not an
-	 * exception page.
+	 * the relying party to redeem. Returns a `Result` because its callers are browser
+	 * redirects: a failure becomes an `error=` parameter on the client's redirect URI.
 	 *
 	 * @param input - The subject, client, and authorization request being answered.
 	 */
@@ -839,21 +750,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Signs a subject in with an email and password, issuing an authorization code
-	 * on success.
-	 *
-	 * An unknown email registers the subject, stores the password as a verified
-	 * credential and issues a code, so signing up ends signed in: nothing else in this
-	 * server can ever set `verified_at`, and a credential stored `null` is refused
-	 * forever. Verification here means "this password belongs to whoever holds this
-	 * account", which for an address nobody had registered is whoever chose it; the
-	 * address itself stays unverified in `subjects.email_verified_at`.
-	 *
-	 * A known address with no credential is the one case that still stores the hash
-	 * unverified and fails with `MissingValidationError`: the account belongs to
-	 * somebody who signs in another way, and a stranger who knows their address must
-	 * not be able to attach a working password to it. A correct password against a hash
-	 * written under an older scheme is upgraded in place before the code is issued.
+	 * Signs a subject in with an email and password, issuing an authorization code. An
+	 * unknown address registers with a verified credential, so signing up ends signed in;
+	 * a known address without one stores an unverified hash, so a stranger cannot claim it.
 	 *
 	 * @param input - Credentials plus the authorization request to resume.
 	 * @returns The authorization code result, or why the sign-in was refused.
@@ -895,9 +794,6 @@ export class OIDC {
 			let passwordHash = await password.hash(input.password);
 			if (isFailure(passwordHash)) return failure(new InternalServerError());
 
-			// Verified at creation: the person chose this password for an address nobody
-			// had registered, so there is no other owner to protect it from, and this
-			// server has no channel with which to ask them to confirm anything later.
 			await this.repository.createCredential(subject.id, passwordHash.data, new Date());
 		}
 
@@ -926,16 +822,10 @@ export class OIDC {
 		return await this.generateAuthzCode(input);
 	}
 
-	// =========================================================================
-	// Logout Notification Methods
-	// =========================================================================
-
 	/**
 	 * Notifies every relying party with a back-channel logout URI that a subject signed
-	 * out, excluding the client that initiated the logout.
-	 *
-	 * Delivery is best effort and settled in parallel: one unreachable relying party must
-	 * not hold up or fail the logout the person asked for.
+	 * out, skipping the client that initiated the logout. Delivery is best effort and
+	 * settled in parallel, so the logout the person asked for completes regardless.
 	 */
 	async sendBackchannelLogoutTokens(subjectId: string, excludeClientId?: string): Promise<void> {
 		let sessions = await this.repository.findSessionsForBackchannelLogout(
@@ -947,14 +837,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Delivers back-channel logout tokens to an already-collected set of sessions.
-	 *
-	 * Separate from {@link sendBackchannelLogoutTokens} because the RP-initiated flow has
-	 * to read the sessions before it deletes them: once they are gone there is nothing
-	 * left to derive the recipient list from.
-	 *
-	 * Delivery is best effort and settled in parallel: one unreachable relying party must
-	 * not hold up or fail the logout the person asked for.
+	 * Delivers back-channel logout tokens to an already-collected set of sessions, since
+	 * the RP-initiated flow reads them before deleting them. Delivery is best effort: the
+	 * sign-out is already a fact, so an unreachable relying party or key store stays quiet.
 	 *
 	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
 	 */
@@ -968,10 +853,6 @@ export class OIDC {
 			return;
 		}
 
-		// Reading the keys is outside the per-recipient work that `allSettled` contains, so
-		// it is the one step whose failure would otherwise reach the caller — and by the
-		// time this runs the sessions are already gone, which makes the sign-out a fact
-		// rather than something an unreachable key store may still take back.
 		try {
 			let signingKeys = await this.repository.getSigningKey();
 
@@ -996,18 +877,13 @@ export class OIDC {
 					return { clientId: client.clientId, status: "success" };
 				}),
 			);
-		} catch {
-			// Swallowed for the same reason the settled results are: this is a notification,
-			// and no relying party's problem may become the person's.
-		}
+		} catch {}
 	}
 
 	/**
 	 * Builds the front-channel logout URLs to load in hidden iframes, one per relying
-	 * party that registered one, excluding the initiating client.
-	 *
-	 * `sid` is added only for clients that asked for session-specific logout, so no other
-	 * client learns a session id.
+	 * party that registered one, skipping the initiating client. `sid` rides along for
+	 * clients that asked for session-specific logout, keeping ids with their own client.
 	 */
 	async getFrontchannelLogoutUrls(
 		subjectId: string,
@@ -1022,10 +898,8 @@ export class OIDC {
 	}
 
 	/**
-	 * Turns already-collected sessions into the iframe URLs the browser loads.
-	 *
-	 * Pure: it issues no query, which is what lets the RP-initiated flow build the list
-	 * from sessions it read before deleting them.
+	 * Turns already-collected sessions into the iframe URLs the browser loads. Pure, so
+	 * the RP-initiated flow can build the list from sessions it read before deleting them.
 	 *
 	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
 	 */
@@ -1056,10 +930,6 @@ export class OIDC {
 
 		return urls;
 	}
-
-	// =========================================================================
-	// Session State Methods
-	// =========================================================================
 
 	/**
 	 * Builds the OIDC Session Management `session_state` value: the hex SHA-256 of
@@ -1095,10 +965,6 @@ export class OIDC {
 		return Hex.encode(randomBytes(OP_BROWSER_STATE_BYTES));
 	}
 
-	// =========================================================================
-	// Discovery
-	// =========================================================================
-
 	/** The engine's share of the discovery document: what this instance can actually do. */
 	get wellKnown() {
 		return {
@@ -1116,10 +982,6 @@ export class OIDC {
 	get jwks() {
 		return this.repository.getSigningKey().then(JWK.toJSON);
 	}
-
-	// =========================================================================
-	// Grant Type Implementations
-	// =========================================================================
 
 	private async authorizationCodeGrant(args: {
 		code: string;
@@ -1229,6 +1091,11 @@ export class OIDC {
 		};
 	}
 
+	/**
+	 * Stamps the refreshed access token with the baseline `openid` scope so /userinfo
+	 * will serve it. A session records no scope of its own, so the token stays as narrow
+	 * as the id_token issued alongside it.
+	 */
 	private async refreshTokenGrant(args: { refreshToken: string }) {
 		let session = await this.repository.findSessionById(args.refreshToken);
 		if (!session) {
@@ -1247,11 +1114,6 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(session.subjectId);
 		if (!subject) throw new InvalidGrantError("Subject not found");
 
-		// Stamp the baseline `openid` scope so the refreshed token is one /userinfo will
-		// serve — it answers only tokens that carry `openid`. This matches the id_token this
-		// grant issues below, which is itself `openid`-scoped by default. A session does not
-		// persist the wider scope its original grant may have held, so email/profile are not
-		// re-derived here; the token stays as narrow as the id_token it is paired with.
 		let accessToken = await this.signJWT(
 			AccessToken.generate(session.clientId, session.subjectId, ["openid"]),
 		);
@@ -1282,23 +1144,14 @@ export class OIDC {
 		};
 	}
 
-	// =========================================================================
-	// Private Helper Methods
-	// =========================================================================
-
 	private async signJWT(jwt: JWT) {
 		return await jwt.sign(JWK.Algorithm.ES256, await this.repository.getSigningKey());
 	}
 
 	/**
-	 * Replaces a stored hash that is behind current policy, right after the only
-	 * moment the plaintext exists: a successful sign-in.
-	 *
-	 * A hash cannot be strengthened without the password, so a sign-in is the one
-	 * chance to rewrite one written under a weaker cost. The upgrade is best
-	 * effort — a failed re-hash or a failed write leaves the old hash in place and
-	 * the next sign-in tries again, because refusing a correct password would be
-	 * far worse than a late upgrade.
+	 * Replaces a stored hash that is behind current policy, at the one moment the
+	 * plaintext exists: a successful sign-in. Best effort — a failed re-hash or write
+	 * leaves the verified hash in place and the next sign-in retries the upgrade.
 	 *
 	 * @param subjectId - Owner of the credential being upgraded.
 	 * @param stored - The hash that was just verified.
@@ -1316,19 +1169,11 @@ export class OIDC {
 
 		try {
 			await this.repository.updateCredentialPasswordHash(subjectId, rehashed.data);
-		} catch {
-			// Keep the verified hash; the next successful sign-in retries the upgrade.
-		}
+		} catch {}
 	}
 }
 
-// =============================================================================
-// Helper Classes
-// =============================================================================
-
-/**
- * PKCE code challenge derivation and checking (RFC 7636).
- */
+/** PKCE code challenge derivation and checking (RFC 7636). */
 class CodeChallenge {
 	/**
 	 * Derives the challenge a verifier produces under a method: the unpadded
@@ -1351,10 +1196,8 @@ class CodeChallenge {
 	}
 
 	/**
-	 * Checks a verifier against the stored challenge.
-	 *
-	 * Fails closed: a digest the runtime refuses is reported as a mismatch rather
-	 * than letting the grant through unchecked.
+	 * Checks a verifier against the stored challenge. Fails closed: a digest the runtime
+	 * refuses is reported as a mismatch, so a grant passes only on a proven match.
 	 *
 	 * @param verifier - The `code_verifier` presented at the token endpoint.
 	 * @param challenge - The `code_challenge` stored with the authorization code.

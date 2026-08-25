@@ -1,9 +1,9 @@
 /**
- * Unit tests for the Polar webhook helpers: `normalizeStatus` (which fails closed to
- * `past_due` for unknown Polar statuses), `entitlesActivation` (the product-match gate
- * that only lets the configured product activate an account's blogs), and
- * `webhookBlogStatus` (the create/update decision that suspends the account's blogs on
- * any non-entitling status rather than leaving them serving).
+ * Unit tests for the Polar webhook helpers: `normalizeStatus` (fails closed to
+ * `past_due` for unknown statuses), `entitlesActivation` (the product-match gate),
+ * and `webhookBlogStatus` (suspends blogs immediately on any non-entitling status).
+ * The controller module reads `env` at import time, so `cloudflare:workers` is
+ * mocked with `vi.doMock` before the dynamic import below.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,9 +11,6 @@
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
-// The controller module reads `env` at import time, and the mock only reaches imports that
-// run after it; supply only the billing configuration, so the dynamic import below loads
-// without touching the Workers runtime.
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({
 		POLAR_PRODUCT_ID: "prod_configured",
@@ -40,7 +37,6 @@ describe("normalizeStatus", () => {
 	});
 
 	test("does not treat the Polar-only 'incomplete' string as entitling", () => {
-		// `incomplete` is not in the mapped set, so it fails closed to past_due.
 		expect(normalizeStatus("incomplete")).toBe("past_due");
 	});
 });
@@ -76,8 +72,6 @@ describe("webhookBlogStatus", () => {
 	});
 
 	test("suspends when a matching product moves to a non-entitling status on update", () => {
-		// This is the finding: an active→past_due/unpaid/canceled transition delivered as
-		// subscription.updated must suspend the account's blogs immediately.
 		for (let status of ["past_due", "unpaid", "canceled", "incomplete"] as const) {
 			expect(webhookBlogStatus("prod_configured", status, "prod_configured")).toBe("suspended");
 		}

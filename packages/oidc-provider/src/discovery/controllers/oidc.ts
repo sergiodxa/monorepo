@@ -20,7 +20,6 @@ import routes from "../../routes";
 
 /**
  * OpenID Connect Discovery endpoint (OIDC Discovery 1.0).
- * Provides discovery information about the OpenID Provider.
  * @returns A JSON `Response` with the OpenID Provider configuration.
  */
 export default createAction(

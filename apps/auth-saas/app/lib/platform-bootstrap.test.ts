@@ -1,8 +1,8 @@
 /**
- * Behavioural tests for the platform-tenant bootstrap guard: it provisions the dogfooded
- * platform tenant (`/api/setup`) exactly once per isolate, passes the platform domain as
- * the issuer, does not cache a failed attempt (so the next request retries), and can be
- * reset between tests. The setup callback is injected, so no Durable Object is exercised.
+ * Behavioural tests for the platform-tenant bootstrap guard: it provisions the
+ * dogfooded platform tenant (`/api/setup`) exactly once per isolate, passes the
+ * platform domain as the issuer, retries after a failed attempt, and resets
+ * between tests. The injected setup callback stands in for a Durable Object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,7 +63,6 @@ describe("ensurePlatformProvisioned", () => {
 			"DO unavailable",
 		);
 
-		// The failed attempt must not be memoized: the next call re-runs setup.
 		await ensurePlatformProvisioned(failingThenOk, "auth.example.test");
 		expect(calls).toBe(2);
 	});

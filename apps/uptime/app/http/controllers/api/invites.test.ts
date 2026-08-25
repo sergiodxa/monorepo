@@ -1,11 +1,9 @@
 /**
- * Tests the `/api/v1/invites` collection endpoints: listing every invite (pending and
- * accepted) for a team and creating a pending one, both gated by a real
- * `requireApiKey` bearer-token check baked into the controller. This endpoint only
- * inserts a row and never sends an email (unlike the web invite flow), so no mail
- * service needs stubbing here. Covers the happy paths, validation failure,
- * missing/garbage auth, missing scope, and that a list never leaks another team's
- * invites.
+ * Tests the `/api/v1/invites` collection endpoints: listing invites for a
+ * team and creating a pending one, both gated by a real `requireApiKey`
+ * bearer-token check. Creating an invite only inserts a row. Covers the
+ * happy paths, validation failures, auth failures, and that a list stays
+ * scoped to the calling team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

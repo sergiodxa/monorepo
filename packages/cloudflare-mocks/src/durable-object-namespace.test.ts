@@ -29,8 +29,10 @@ describe("createDurableObjectNamespace", () => {
 
 		let stub = namespace.getByName("acme");
 
-		// Reached through a cast because the namespace was not parameterized with a branded
-		// Durable Object type; a binding taken from a generated `Env` types these directly.
+		/**
+		 * Reached through a cast because the namespace was not parameterized with a branded
+		 * Durable Object type; a binding taken from a generated `Env` types these directly.
+		 */
 		let rpc = stub as unknown as { publish(slug: string): Promise<string> };
 
 		expect(await rpc.publish("hello")).toBe("published:hello");

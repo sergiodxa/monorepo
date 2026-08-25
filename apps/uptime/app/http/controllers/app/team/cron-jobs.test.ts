@@ -1,12 +1,10 @@
 /**
- * Tests for the cron-job monitors list page controller. Doesn't import
- * `~/app/data/monitor`, so no `cloudflare:workers` mock is needed here (unlike
- * `alerts.tsx`/`maintenance-windows.tsx`, which list HTTP monitors for scoping). This
- * page has no per-row ping URL — that only appears on the detail page
- * (`cron-job-show.tsx`) — so status/schedule rendering is what's covered here.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
- * matching the template in `app/http/controllers/app/team/http-monitors.test.ts`.
+ * Tests for the cron-job monitors list page controller, exercising only
+ * `~/app/data/cron-job` so it needs no `cloudflare:workers` mock. Status and
+ * schedule rendering is what's covered here, since per-row ping URLs are
+ * exercised on the detail page (`cron-job-show.tsx`). `getViewer()`,
+ * `ctx.team`, `ctx.membership`, and `ctx.teams` are seeded directly by a fake
+ * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

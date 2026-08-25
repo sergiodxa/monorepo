@@ -43,11 +43,9 @@ describe(resolveFieldWiring.name, () => {
 	});
 
 	/**
-	 * The resolved state is rendered straight into an attribute, and `aria-invalid`
-	 * takes a token rather than a flag: a boolean reaching it is serialized as the
-	 * bare attribute name, which is an empty value ARIA resolves to its default of
-	 * valid — so an invalid field would be announced as fine. Every accepted input
-	 * has to leave here as text or as nothing.
+	 * `aria-invalid` takes a token: a boolean serializes as the bare attribute
+	 * name — an empty value ARIA resolves to valid — so an invalid field would
+	 * be announced as fine. Every accepted input leaves here as text or nothing.
 	 */
 	test("resolves every accepted input to an aria-invalid token or to nothing", () => {
 		let states = [true, "true", "grammar", "spelling", false, "false", undefined] as const;

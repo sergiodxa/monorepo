@@ -1,3 +1,14 @@
+/**
+ * Tests for `IntlProvider`, `setIntl`, and `intl`. The default Vitest
+ * environment has no browser globals, so tests here exercise the
+ * server-render path for free and call `handle.queueTask`'s callback and
+ * `handle.signal`'s abort listener directly to cover the client-only
+ * subscription without a DOM-mounting reconciler.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { i18n as I18n } from "i18next";
 import type { Handle } from "remix/ui";
 
@@ -14,8 +25,6 @@ function Greeting(handle: Handle) {
 	};
 }
 
-// Runs while `globalThis.document` is still undefined — the default Vitest
-// environment has no browser globals, so this is the "server" case for free.
 describe(setIntl, () => {
 	test("throws when called outside of a browser", () => {
 		expect(() => setIntl(createInstance())).toThrow();
@@ -49,10 +58,6 @@ describe(IntlProvider, () => {
 		expect(html).toBe("<span>child</span>");
 	});
 
-	// `handle.queueTask` is a no-op in the server renderer, so its callback
-	// never runs there — exercising it directly is the only way to unit test
-	// the client-only subscription without a DOM-mounting reconciler, which
-	// this repo has no test-time setup for.
 	test("subscribes to languageChanged/loaded via queueTask and calls handle.update()", async () => {
 		let i18n = createInstance();
 		await i18n.init({ lng: "en", resources: { en: { translation: {} } } });
@@ -121,8 +126,6 @@ describe(intl, () => {
 		delete (globalThis as { document?: unknown }).document;
 	});
 
-	// Must run before any test below calls `setIntl` — its default stays
-	// registered at module scope for the rest of this file's run.
 	test("throws when there is no ancestor IntlProvider and no default registered", () => {
 		let handle = { context: { get: () => undefined } } as unknown as Handle<unknown, any>;
 

@@ -1,7 +1,7 @@
 /**
- * Tenant resource scopes controller: renders the add-scope form and appends a scope,
- * then redirects. Scope edit/update are unsupported (redirect no-ops) and destroy
- * removes a scope by index. Rendering uses `remix/ui` JSX via `ctx.render`.
+ * Tenant resource scopes controller: renders the add-scope form and appends a
+ * scope, then redirects. Edit and update redirect back to the resource,
+ * leaving scopes unchanged; destroy removes a scope by index.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -118,7 +118,6 @@ export default {
 				return new Response("Validation error", { status: 400 });
 			}
 
-			// Add scope to existing scopes
 			let newScopes = [
 				...resource.scopes,
 				{ name: result.data.name, description: result.data.description },
@@ -198,7 +197,6 @@ export default {
 				return new Response("Resource not found", { status: 404 });
 			}
 
-			// Remove scope by index (id is the index in this case)
 			let scopeIndex = parseInt(params.id, 10);
 			let newScopes = resource.scopes.filter((_, i) => i !== scopeIndex);
 

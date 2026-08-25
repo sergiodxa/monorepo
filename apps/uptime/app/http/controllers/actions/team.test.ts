@@ -28,15 +28,8 @@ import routes from "~/routes/web";
 
 /**
  * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * object, but this app's schemas validate raw form data directly and reject a
+ * flattened one — a known bug this mock works around so tests exercise real branching.
  */
 let { changeRole, deleteTeam, removeMember, updateTeam } = await import("./team");
 
@@ -63,7 +56,7 @@ async function createFixture() {
 	return { db, team, ownerMembership, memberMembership };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`/`requireRole`. */
+/** Middleware that seeds `ctx.team`/`ctx.membership` for tests; production resolves them via `requireTeam`/`requireRole`. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
@@ -72,7 +65,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** A fake `PolarClient`, registered on the container in place of the real class. */
+/** A fake `PolarClient` with mocked `listActiveSubscriptions`/`revokeSubscription`, registered on the container so assertions can inspect the calls made during the test. */
 function createFakePolar() {
 	return {
 		listActiveSubscriptions: vi.fn(async () => [

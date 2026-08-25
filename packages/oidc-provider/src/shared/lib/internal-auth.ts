@@ -1,9 +1,9 @@
 /**
  * Internal authentication for platform-to-tenant DO communication.
- * Uses HMAC-signed JWTs to securely identify internal requests.
  *
- * This contract is shared verbatim with the control plane (re-exported from
- * `index.ts`) so both sides agree on the HS256 algorithm and required claims.
+ * Uses HMAC-signed JWTs to identify internal requests. The HS256 algorithm
+ * and required claims (`iss`, `purpose`) are a fixed contract that signing
+ * and verification must agree on byte-for-byte.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +17,6 @@ import * as s from "remix/data-schema";
 
 import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils";
 
-/**
- * Schema for validating internal token payloads.
- */
 const InternalTokenPayloadSchema = s.object({
 	iss: s.string(),
 	iat: s.number(),
@@ -28,7 +25,6 @@ const InternalTokenPayloadSchema = s.object({
 });
 
 /**
- * Creates a signed internal auth token for platform-to-DO communication.
  * Token is short-lived (5 minutes) to minimize exposure window if compromised.
  * @param secret - The secret key for signing the token
  * @returns A signed JWT token string
@@ -55,8 +51,6 @@ export async function createInternalToken(secret: string): Promise<string> {
 }
 
 /**
- * Verifies an internal auth token.
- *
  * Uses constant-time comparison for signature verification to prevent timing attacks.
  *
  * @param token - The JWT token to verify

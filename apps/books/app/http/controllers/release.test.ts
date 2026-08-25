@@ -37,7 +37,6 @@ function campaign(id: Discounts) {
 	});
 }
 
-/** Loads the sales page against a scripted billing client. */
 function load(polar: FakePolarClient) {
 	return fetchApp("/release", { services: [[PolarClient, polar]] });
 }
@@ -50,7 +49,6 @@ describe("GET /release", () => {
 		expect(response.status).toBe(200);
 		expect(body).toContain("$99");
 		expect(body).toContain("$49");
-		// The failure this guards is dividing by nothing, which renders a hundredfold price.
 		expect(body).not.toContain("$9,900");
 		expect(body).not.toContain("$4,900");
 	});
@@ -65,7 +63,6 @@ describe("GET /release", () => {
 
 		expect(body).toContain("<s>$99</s>");
 		expect(body).toContain("$69");
-		// Only Complete is discounted: the campaigns are scoped to it.
 		expect(body).not.toContain("<s>$49</s>");
 	});
 
@@ -109,8 +106,6 @@ describe("GET /release", () => {
 
 		let body = await load(polar).then((response) => response.text());
 
-		// Early access is already the deepest discount Complete will carry, so parity pricing
-		// is deliberately off. Flipping this flag silently withdraws it the rest of the time.
 		expect(body).not.toContain("cdn.paritydeals.com");
 	});
 
@@ -124,7 +119,6 @@ describe("GET /release", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		// List prices are a worse offer; a blank sales page is no offer at all.
 		expect(body).toContain("$99");
 		expect(body).toContain("$49");
 		expect(body).not.toContain("<s>$99</s>");
@@ -138,7 +132,6 @@ describe("GET /release", () => {
 		expect(body).toContain('"@type":"Book"');
 		expect(body).toContain('"price":"99"');
 		expect(body).toContain('"price":"49"');
-		// One node for one book: a second would advertise a second book.
 		expect(body.match(/"@type":"Book"/g)).toHaveLength(1);
 	});
 

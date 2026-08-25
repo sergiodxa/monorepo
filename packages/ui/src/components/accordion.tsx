@@ -1,10 +1,9 @@
 /**
  * A set of expand/collapse sections built on {@link Disclosure}, stacked into
- * one divider-separated list. Every section keeps its own show/hide state on
- * its native `<details>` element exactly as {@link Disclosure} does; giving
- * sibling {@link Accordion.Item}s the same `name` turns the set exclusive
- * through the platform's own `<details name>` behavior, closing whichever
- * section was open the moment another one opens.
+ * one divider-separated list. Each section holds its state on its native
+ * `<details>` element; giving sibling {@link Accordion.Item}s the same `name`
+ * makes the set exclusive through the platform's `<details name>` behavior,
+ * closing whichever section was open as another opens.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,9 +50,8 @@ export namespace Accordion {
 
 /**
  * Renders the list's root host: a plain `<div>` that stacks
- * {@link Accordion.Item} sections in normal block flow, each one drawing its
- * own divider so the whole list reads as one continuous group instead of
- * separate bordered cards.
+ * {@link Accordion.Item} sections in normal block flow, each drawing its own
+ * divider so the whole list reads as one continuous group.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the list's markup.
@@ -113,19 +111,9 @@ export function Accordion(handle: Handle<Accordion.Props>) {
 }
 
 /**
- * Renders one section as {@link Disclosure}, restyled from a rounded,
- * fully-bordered box into a flush list row: rounding and the inline/block-start
- * borders are stripped so only a shared block-end divider remains, with that
- * divider restored on the block-start side for the list's first section so the
- * whole group is framed top and bottom. Every other detail — the `open`
- * attribute driving the state, the `::details-content` reveal transition, and
- * `name` grouping sibling sections into an exclusive set — rides along
- * unchanged from {@link Disclosure}, since this component composes it
- * directly instead of duplicating its markup or styling.
- *
- * Disabling a section is done by setting `aria-disabled="true"` on its
- * {@link Accordion.Trigger}; this host dims to match through a `:has()`
- * selector reading that state, without tracking it itself.
+ * Renders one section as {@link Disclosure} restyled into a flush list row:
+ * only a shared block-end divider survives, restored block-start on the first
+ * section. A trigger marked `aria-disabled="true"` dims the whole section.
  *
  * @param handle Runtime handle carrying the host `<details>`'s props.
  * @returns The render function producing the section's markup.
@@ -173,15 +161,9 @@ Accordion.Item = function AccordionItem(handle: Handle<Accordion.ItemProps>) {
 };
 
 /**
- * Renders {@link Accordion.TriggerProps.children} as the section's label row:
- * {@link Disclosure.Trigger} restyled with its label and trailing content
- * spread to opposite ends and underlined on hover in place of
- * {@link Disclosure.Trigger}'s tinted background. Nest an icon element
- * carrying `data-slot="icon"` in `children`, after the label text, to get a
- * trailing indicator that rotates 180 degrees while the enclosing
- * {@link Accordion.Item} is open; the color, focus-visible ring, and
- * `aria-disabled="true"` handling all carry over unchanged from
- * {@link Disclosure.Trigger}.
+ * Renders {@link Accordion.TriggerProps.children} as the section's label row,
+ * spread to opposite ends and underlined on hover. An icon element carrying
+ * `data-slot="icon"` rotates 180 degrees while its section is open.
  *
  * @param handle Runtime handle carrying the host `<summary>`'s props.
  * @returns The render function producing the label row's markup.
@@ -229,9 +211,7 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 /**
  * Renders {@link Accordion.ContentProps.children} as the section's revealed
  * body: {@link Disclosure.Panel} restyled with block-end padding and small,
- * muted text sized for supporting copy rather than a heading. The reveal
- * itself keeps riding on {@link Disclosure}'s `::details-content` transition,
- * unchanged.
+ * muted text sized for supporting copy.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the body's markup.

@@ -29,7 +29,11 @@ import MarketingPageView, {
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
-/** GET /features/:slug — a feature marketing page. */
+/**
+ * GET /features/:slug — a feature marketing page. The schema `name` strips
+ * the meta title's "| Uptime …" suffix: a schema name just names the
+ * capability, where the page `<title>` also has to place it in the site.
+ */
 export default createAction(routes.marketing.feature, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let isSignedIn = getViewer() !== null;
@@ -49,9 +53,6 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 		);
 	}
 
-	// The capability this page is about, taken from its meta title without the
-	// "| Uptime …" half — a schema `name` names the thing, where a `<title>` also
-	// has to place it inside the site.
 	let schemaName = content.metaTitle.split("|")[0]?.trim() || content.metaTitle;
 
 	return ctx.render(
@@ -65,7 +66,6 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 					getSoftwareApplicationSchema({
 						name: schemaName,
 						description: content.metaDescription,
-						// The very bullets the feature grid renders below the hero.
 						featureList: content.features.map((feature) => feature.title),
 					}),
 					...(content.faqs.length > 0 ? [SEO.schema.faq(content.faqs)] : []),

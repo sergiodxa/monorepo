@@ -22,11 +22,10 @@ const cronJobFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	description: f.field(s.optional(s.string())),
 	cron_expression: f.field(s.string().pipe(checks.minLength(1))),
-	/*
-	 * The zone is checked against the list rather than taken as free text: it decides
-	 * when a job is considered late, so a typo that never matches a real zone would
-	 * silently schedule against the wrong wall clock. `.refine()` runs at parse time,
-	 * which also keeps the enumeration out of this module's own evaluation.
+	/**
+	 * Checked against the accepted list rather than treated as free text: an
+	 * unmatched zone would silently schedule the job against the wrong wall
+	 * clock, so `.refine()` validates it explicitly at parse time.
 	 */
 	timezone: f.field(
 		s.defaulted(s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE), DEFAULT_TIMEZONE),

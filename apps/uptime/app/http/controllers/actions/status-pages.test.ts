@@ -25,16 +25,9 @@ import { memberships, monitors, statusPageMonitors, statusPages, teams } from "~
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * `@pkg/validate`'s `validate()` flattens `FormData`, but this app's schemas
+ * (`remix/data-schema/form-data`'s `f.object()`) require the raw container — a
+ * bug in the shared package. This mock forwards it unflattened until that's fixed.
  */
 let { createStatusPage, deleteStatusPage, updateStatusPage } = await import("./status-pages");
 

@@ -1,16 +1,12 @@
 /**
- * Hover-and-focus range preview for a RangeCalendar grid: while a
- * `CalendarModel` has an anchor day set, extends the pending range toward
- * whichever day cell is currently under the pointer or keyboard focus, then
- * mirrors the resulting range back onto the grid's day cells so the grid's
- * styles can render it.
+ * Hover-and-focus range preview for a RangeCalendar grid: extends a
+ * `CalendarModel`'s pending range toward whichever day cell is under the
+ * pointer or focus, and mirrors the result onto the grid's day cells.
  *
- * Why JS: which day cells fall between the range anchor and the day
- * currently under the pointer or focus changes on every hover/focus move —
- * a set CSS has no way to compute on its own.
- * No-JS baseline: the grid still renders a range calendar and every day cell
- * stays clickable and reachable one `Tab` stop at a time; only the live band
- * previewing the pending range between the two picks is unavailable.
+ * Why JS: which cells fall between the anchor and the hovered/focused day
+ * changes on every move — no static CSS selector can compute that.
+ * No-JS baseline: the grid stays fully usable by click and `Tab`; only the
+ * live preview band between the two picks is unavailable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,10 +20,9 @@ import { CALENDAR_DAY_DATE_ATTRIBUTE } from "./calendar-keys";
 import { trackHostNode } from "./track-host-node";
 
 /**
- * Parses a day cell's {@link CALENDAR_DAY_DATE_ATTRIBUTE} value back into a
- * local-midnight `Date`. Never uses `new Date(string)` directly, since that
- * parses `YYYY-MM-DD` as UTC midnight and would shift the day in
- * negative-UTC-offset time zones.
+ * Parses a day cell's {@link CALENDAR_DAY_DATE_ATTRIBUTE} value into a
+ * `Date` built from its numeric year/month/day components, keeping the
+ * parsed day at local midnight in every time zone, negative offsets included.
  *
  * @param key Attribute value in `YYYY-MM-DD` form, or `null` when absent.
  * @returns The parsed day, or `null` when `key` is missing or malformed.
@@ -44,9 +39,8 @@ function parseDateKey(key: string | null): Date | null {
 
 /**
  * Classifies where `date` falls within a resolved preview range, matching
- * the `data-range-preview` values the grid's styles key off: a rounded
- * leading edge, a flat fill through the middle, a rounded trailing edge, or
- * a single unstretched day carrying both edges at once.
+ * the `data-range-preview` values the grid's styles key off: a leading
+ * edge, a middle fill, a trailing edge, or a single day carrying both.
  *
  * @param date Day to classify, at local midnight.
  * @param range Normalized preview range to classify against.
@@ -67,19 +61,9 @@ function classifyRangePosition(
 }
 
 /**
- * Adds hover/focus range-preview behavior to a RangeCalendar grid. Hovering
- * or focusing any day cell beneath the host — identified by
- * {@link CALENDAR_DAY_DATE_ATTRIBUTE}, the same attribute `calendarKeys()`
- * reads — extends `model`'s pending range toward that day whenever an
- * anchor is already set (a no-op otherwise). Every resulting `"change"` on
- * `model` re-scans the grid's day cells and mirrors the current anchor and
- * preview range onto them as `data-range-anchor`/`data-range-preview`
- * attributes, so one mixin application covers the whole grid instead of one
- * per cell.
- *
- * Picking the anchor day and committing the second endpoint are out of this
- * mixin's scope — it only extends and renders the preview once
- * `model.anchorDate` is set by whatever handles that pick.
+ * Adds hover/focus range-preview behavior to a RangeCalendar grid, extending
+ * `model`'s pending range toward the hovered or focused day cell once an
+ * anchor is set, and mirroring the result onto every day cell as attributes.
  *
  * @param model Calendar model already constructed by the consumer, shared
  * with any `calendarKeys()` mixin applied to the same grid.

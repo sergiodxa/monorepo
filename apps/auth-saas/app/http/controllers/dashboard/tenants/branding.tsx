@@ -26,7 +26,6 @@ let UpdateBrandingSchema = ds.object({
 	customCss: ds.optional(ds.nullable(ds.string())),
 });
 
-/** Inline script syncing the native color pickers to their paired text inputs. */
 let COLOR_PICKER_SCRIPT =
 	"document.getElementById('primaryColorPicker').addEventListener('input',function(e){" +
 	"document.getElementById('primaryColor').value=e.target.value;});" +

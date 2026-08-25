@@ -1,13 +1,8 @@
 /**
- * Verifies the pure {@link PixelGrid} model that backs the sprite editor: pixels
- * default to transparent, set/get/clear round-trip RGBA values, channels are
- * clamped, out-of-bounds access is ignored/transparent, resize preserves the
- * overlapping region while filling new pixels with transparency, and serialize
- * returns an independent row-major RGBA copy. Also covers the whole-grid
- * operations the editor's tools build on: flood-fill (4-connected, seed-color
- * matching, no-op guards), snapshot/restore (undo/redo, independent copies,
- * dimension changes), and loadPixels (PNG-import buffer adoption with
- * validation). No canvas is involved.
+ * Covers the pure {@link PixelGrid} model behind the sprite editor: transparent
+ * defaults, clamped RGBA round-trips, bounds handling, resize, 4-connected
+ * flood-fill, snapshot/restore, PNG-import buffer adoption, and serialize — each
+ * pinning the independent-copy guarantees the editor's tools rely on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,7 +59,6 @@ describe("PixelGrid set/get", () => {
 		grid.set(-1, 0, { r: 1, g: 2, b: 3 });
 		grid.set(4, 0, { r: 1, g: 2, b: 3 });
 		grid.set(0, 4, { r: 1, g: 2, b: 3 });
-		// Nothing painted, buffer stays all-transparent.
 		expect(grid.serialize().every((byte) => byte === 0)).toBe(true);
 	});
 
@@ -111,7 +105,6 @@ describe("PixelGrid resize", () => {
 		expect(grid.height).toBe(4);
 		expect(grid.get(0, 0)).toEqual({ r: 100, g: 0, b: 0, a: 255 });
 		expect(grid.get(1, 1)).toEqual({ r: 0, g: 0, b: 200, a: 255 });
-		// Newly exposed pixels are transparent.
 		expect(grid.get(3, 3)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
 	});
 
@@ -124,7 +117,6 @@ describe("PixelGrid resize", () => {
 		expect(grid.width).toBe(2);
 		expect(grid.height).toBe(2);
 		expect(grid.get(0, 0)).toEqual({ r: 100, g: 0, b: 0, a: 255 });
-		// The (3,3) pixel is gone; reading it is out of bounds → transparent.
 		expect(grid.get(3, 3)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
 	});
 
@@ -145,7 +137,6 @@ describe("PixelGrid resize", () => {
 describe("PixelGrid floodFill", () => {
 	test("fills a contiguous transparent region and reports the count", () => {
 		let grid = new PixelGrid(3, 3);
-		// Fill the whole 3×3 transparent grid from the corner.
 		let filled = grid.floodFill(0, 0, { r: 10, g: 20, b: 30 });
 		expect(filled).toBe(9);
 		for (let y = 0; y < 3; y++) {
@@ -157,13 +148,11 @@ describe("PixelGrid floodFill", () => {
 
 	test("stops at a differently-colored 4-neighbour boundary", () => {
 		let grid = new PixelGrid(3, 1);
-		// A vertical-less row: [empty, wall, empty]. Fill from the left cell only.
 		grid.set(1, 0, { r: 0, g: 0, b: 0 });
 		let filled = grid.floodFill(0, 0, { r: 5, g: 5, b: 5 });
 		expect(filled).toBe(1);
 		expect(grid.get(0, 0)).toEqual({ r: 5, g: 5, b: 5, a: 255 });
 		expect(grid.get(1, 0)).toEqual({ r: 0, g: 0, b: 0, a: 255 });
-		// The far cell is unreached because the wall breaks contiguity.
 		expect(grid.get(2, 0)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
 	});
 
@@ -172,7 +161,6 @@ describe("PixelGrid floodFill", () => {
 		grid.set(0, 0, { r: 100, g: 0, b: 0 });
 		grid.set(1, 0, { r: 100, g: 0, b: 0 });
 		grid.set(0, 1, { r: 0, g: 0, b: 100 });
-		// Seed the red region; the blue pixel must stay untouched.
 		let filled = grid.floodFill(0, 0, { r: 0, g: 200, b: 0 });
 		expect(filled).toBe(2);
 		expect(grid.get(0, 0)).toEqual({ r: 0, g: 200, b: 0, a: 255 });
@@ -223,7 +211,6 @@ describe("PixelGrid snapshot/restore", () => {
 		let grid = new PixelGrid(2, 2);
 		let snapshot = grid.snapshot();
 		grid.set(0, 0, { r: 255, g: 255, b: 255 });
-		// The snapshot taken before the edit still reads transparent.
 		expect(Array.from(snapshot.data.subarray(0, 4))).toEqual([0, 0, 0, 0]);
 	});
 
@@ -239,7 +226,6 @@ describe("PixelGrid loadPixels", () => {
 	test("adopts a decoded buffer and its dimensions", () => {
 		let grid = new PixelGrid(2, 2);
 		let pixels = new Uint8ClampedArray(3 * 1 * 4);
-		// Middle pixel red.
 		pixels.set([200, 0, 0, 255], 4);
 		grid.loadPixels(3, 1, pixels);
 		expect(grid.width).toBe(3);
@@ -278,7 +264,6 @@ describe("PixelGrid serialize", () => {
 		let grid = new PixelGrid(2, 2);
 		grid.set(1, 0, { r: 11, g: 22, b: 33 });
 		let bytes = grid.serialize();
-		// Pixel (1,0) is the second pixel → byte offset 4.
 		expect(Array.from(bytes.subarray(4, 8))).toEqual([11, 22, 33, 255]);
 	});
 

@@ -1,3 +1,10 @@
+/**
+ * Type guard for narrowing a `Result` to its Failure branch.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result, Failure } from "./types.js";
 
 /**

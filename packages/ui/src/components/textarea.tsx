@@ -31,19 +31,14 @@ export namespace TextArea {
 	/**
 	 * Semantic color role for the focus-visible ring, each mapped to its
 	 * matching `--ui-*` variables. A field marked invalid always reads the
-	 * danger tone for its ring instead, regardless of `color` — see
-	 * {@link TextArea}'s own description.
+	 * danger tone for its ring instead, regardless of `color`.
 	 */
 	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Every native `<textarea>` attribute, unchanged, plus the `mix`
-	 * passthrough. `placeholder` renders in a muted tone, and
-	 * `aria-invalid` together with the platform's own post-interaction
-	 * validity state drives the invalid styling. `aria-label`,
-	 * `aria-labelledby`, and `aria-describedby` wire the field to a paired
-	 * label, hint, or validation message the same way they would on a bare
-	 * textarea.
+	 * passthrough. `aria-invalid` together with the platform's own
+	 * post-interaction validity state drives the invalid styling.
 	 */
 	export type Props = TagProps<"textarea"> & {
 		/** Semantic color role for the focus-visible ring. Defaults to {@link DEFAULT_COLOR}. */
@@ -54,30 +49,7 @@ export namespace TextArea {
 /**
  * Renders a native `<textarea>` host styled as a bordered, rounded field,
  * colored through the `data-color` attribute contract — the same visual
- * language as {@link Input}. Hover, focus, and disabled states are driven
- * entirely by this host's own native `:hover`, `:focus`/`:focus-visible`, and
- * `:disabled` pseudo-classes, so the field's interactive behavior stays fully
- * native and keeps working the same way with the platform's own baseline.
- *
- * The host starts at a minimum block size of six lines and sets
- * `field-sizing: content`, so it grows in the block direction to fit
- * whatever the reader has typed rather than scrolling internally. A manual
- * resize handle rides the block axis on top of that automatic growth for a
- * reader who wants more room than the content alone would claim.
- *
- * A keyboard focus-visible ring reads `color`, defaulting to
- * {@link DEFAULT_COLOR}. `[aria-invalid="true"]` (set directly, or mirrored
- * in by a validation script) together with `:user-invalid` (the platform's
- * own post-interaction validity signal) colors the border and ring in the
- * semantic danger tone regardless of `color`. A disabled field dims to half
- * opacity, swaps its cursor to "not-allowed", and tints its background, and
- * its placeholder text reads in the muted neutral foreground.
- *
- * Pair the field with a label through `htmlFor`/`id` (or by nesting the
- * field inside the label), a hint through `aria-describedby`, and a
- * validation message through that same `aria-describedby` list — this
- * component renders only the field itself, leaving the label, hint, and
- * validation message to those separate compositions.
+ * language as {@link Input}, rendering only the field itself.
  *
  * @param handle Runtime handle carrying the host `<textarea>`'s props.
  * @returns The render function producing the field's markup.

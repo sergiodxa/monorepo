@@ -2,11 +2,10 @@
  * A trail of links marking the page's position within a hierarchy of parent
  * sections, composing a `<nav>` root, an `<ol>` list, and `<li>` items around
  * {@link Breadcrumbs.Link}, a restyled {@link Link}. Every item but the last
- * draws its separator through a CSS `::after` pseudo-element, so the divider
- * between segments needs no markup of its own, and the trail's current
- * segment reads straight from the native `aria-current` attribute a consumer
- * sets while rendering the page it currently occupies, with no client-tracked
- * route state anywhere in this module.
+ * draws its separator through a CSS `::after` pseudo-element, keeping it
+ * purely presentational, and the trail's current segment reads straight from
+ * the native `aria-current` attribute a consumer sets while rendering the
+ * page it currently occupies.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,23 +47,17 @@ export namespace Breadcrumbs {
 	export interface ItemProps extends TagProps<"li"> {}
 
 	/**
-	 * Every prop {@link Link.Props} accepts, unchanged. A type alias rather
-	 * than an interface, since {@link Link.Props} itself resolves through a
-	 * conditional type that an `interface extends` clause can't statically
-	 * extend. Set `aria-current="page"` on the segment representing the page
-	 * currently rendered, and `aria-disabled="true"` to mute a segment that
-	 * shouldn't be followed — both states ride straight through to the
-	 * underlying {@link Link}.
+	 * Every prop {@link Link.Props} accepts, unchanged. A type alias rather than
+	 * an interface, since {@link Link.Props} resolves through a conditional type
+	 * that an `interface extends` clause can't statically extend.
 	 */
 	export type LinkProps = Link.Props;
 }
 
 /**
- * Renders the trail's `<nav>` root, laying its single {@link Breadcrumbs.List}
- * child out as a row. In dev mode, a root rendered without an `aria-label` or
- * `aria-labelledby` logs a `console.warn`, since assistive technology
- * otherwise has no way to distinguish this navigation landmark from any other
- * on the page.
+ * Renders the trail's `<nav>` root, laying {@link Breadcrumbs.List} as a row.
+ * A root missing `aria-label` or `aria-labelledby` logs a dev-mode
+ * `console.warn`, since assistive technology needs one to identify this landmark.
  *
  * @param handle Runtime handle carrying the host `<nav>`'s props.
  * @returns The render function producing the trail's markup.
@@ -125,9 +118,8 @@ Breadcrumbs.List = function BreadcrumbsList(handle: Handle<Breadcrumbs.ListProps
 
 /**
  * Renders a single `<li>` wrapping one {@link Breadcrumbs.Link}. Every item
- * but the last draws a `›` separator glyph after itself through a CSS
- * `::after` pseudo-element, so the visual divider between segments never
- * needs its own markup or its own entry in the accessibility tree.
+ * but the last draws a `›` separator glyph via a CSS `::after`
+ * pseudo-element, keeping the divider purely presentational.
  *
  * @param handle Runtime handle carrying the host `<li>`'s props.
  * @returns The render function producing the item's markup.
@@ -162,17 +154,9 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
 };
 
 /**
- * Renders one trail segment as a restyled {@link Link}: sized down to
- * `0.875rem`, its underline dropped entirely so the trail reads as compact
- * labels rather than inline prose, and defaulting to the neutral color role
- * rather than {@link Link}'s own primary default so an ordinary trail stays
- * quiet supporting navigation instead of a set of prominent calls to action.
- * The neutral role starts muted and brightens to the full neutral foreground
- * on hover. Setting `aria-current="page"` (server-rendered for whichever
- * segment the consumer is currently showing) reads through to bold,
- * emphasized text, with no client-side route tracking involved.
- * {@link Link}'s own focus-visible ring and `aria-disabled="true"` handling
- * carry over unchanged.
+ * Renders one trail segment as a restyled {@link Link}: sized to `0.875rem`
+ * with its underline dropped, defaulting to a quiet neutral color role that
+ * brightens on hover and bolds when `aria-current="page"` is set.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the segment's markup.

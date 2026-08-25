@@ -1,11 +1,8 @@
 /**
  * Tests for the pure battle-event and engine-event sound-effect mappings.
  *
- * Covers `sfxForBattleEvent` (a damaging hit → `hit`, a faint → `faint`, a
- * healing/reviving item → `heal`, and every silent case → null) and
- * `sfxForGameEvent` (a level-crossing experience grant → `level-up`, otherwise
- * null). Both are pure lookups, so the tests build plain event literals and
- * assert the returned name with no audio context involved.
+ * Covers hit/faint/heal mappings and the level-up crossing check, all pure
+ * lookups exercised via plain event literals with no audio context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

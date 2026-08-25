@@ -1,3 +1,10 @@
+/**
+ * Tests for the JSON response helpers, covering the status, body, and
+ * custom-header behavior of each status-code function.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import {

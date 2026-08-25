@@ -166,7 +166,6 @@ describe("TeamDailyDigestEmail", () => {
 
 			expect(html).toContain(".uptime-ink-down{color:#f87171 !important;}");
 			expect(html).toContain('class="uptime-ink-down mail-rule"');
-			// An unchecked row is muted copy, which the kit's own dark rules already cover.
 			expect(html).toContain('class="mail-muted mail-rule"');
 		});
 

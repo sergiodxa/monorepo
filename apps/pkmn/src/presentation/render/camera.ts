@@ -1,10 +1,9 @@
 /**
  * The overworld camera.
  *
- * Tracks a top-left scroll offset in internal pixels and centers on a target
- * (the player), clamped to the map bounds so the view never scrolls past an
- * edge. Scenes subtract the camera offset when drawing world-space sprites and
- * tiles; anything drawn in screen space (HUD, windows) ignores it.
+ * Tracks a top-left scroll offset in internal pixels, centered on a target and
+ * clamped to the map bounds so the view never scrolls past an edge. Scenes
+ * subtract the offset for world-space sprites and tiles; screen-space UI ignores it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

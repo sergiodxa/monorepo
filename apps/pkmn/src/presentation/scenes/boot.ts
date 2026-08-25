@@ -1,17 +1,15 @@
-import type { Scene } from "../core/scene";
-
 /**
  * The boot scene: load assets, then hand off to the title.
  *
- * It kicks off the eager asset load on enter, drawing a progress bar while files
- * settle. Once loading finishes it waits for the first button press — which both
- * satisfies the browser's audio-autoplay gesture requirement (so `audio.unlock`
- * can resume the context) and gives the player a clear "press to start" — then
- * replaces itself with the title scene.
+ * It loads assets while drawing a progress bar, then waits for a button press
+ * before replacing itself with the title scene — satisfying the browser's
+ * audio-autoplay gesture so `audio.unlock` can resume the context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Scene } from "../core/scene";
+
 import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";

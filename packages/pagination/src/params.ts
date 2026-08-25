@@ -3,7 +3,7 @@
  *
  * A page number and a page size arrive as untrusted text, so they are validated in
  * one place: non-numeric, fractional, negative, and oversized values all become a
- * `Result` failure rather than a surprising offset. `createPaging()` hands back the
+ * `Result` failure the caller can act on. `createPaging()` hands back the
  * same parsing and the same header annotation with the names already applied, so an
  * API cannot accept `?per_page=50` while advertising `?perPage=50`.
  *
@@ -91,9 +91,8 @@ function readParam(searchParams: URLSearchParams, name: string): string | undefi
 /**
  * Builds the schema for one call's defaults and limits.
  *
- * Built per call rather than once, because `perPage` and `maxPerPage` are decided by
- * the route (or by the factory that bound them) and belong in the schema itself, so
- * an oversized page size fails with the limit named in the issue.
+ * Built per call, since `perPage` and `maxPerPage` are decided by the route and
+ * belong in the schema itself, so an oversized page size names its own limit.
  */
 function pageParamsSchema(perPage: number, maxPerPage: number) {
 	return s.object({
@@ -118,10 +117,8 @@ function pageParamsSchema(perPage: number, maxPerPage: number) {
 /**
  * Validates the paging parameters on a request URL.
  *
- * Failure is the answer for a page that is not a whole number at or above 1, and for
- * a page size above `maxPerPage`, which is what stops a client asking for every row.
- * A page past the end is not a failure: clamping belongs to `Pagination`, which needs
- * the total to know where the end is.
+ * Fails for a page below 1, a non-whole page, or a page size above `maxPerPage`;
+ * a page past the end succeeds, since clamping belongs to `Pagination`.
  *
  * @param searchParams The request URL's search parameters.
  * @param options Page-size default and ceiling.
@@ -168,9 +165,8 @@ function parseWithNames(
 /**
  * Binds parameter names and page-size limits to the two functions that need them.
  *
- * The returned `parse` and `paginate` take the same arguments and behave the same as
- * the standalone functions. Reaching both through one factory is what guarantees a
- * route reads the same spelling it advertises.
+ * Reaching both `parse` and `paginate` through one factory guarantees a route
+ * reads the same spelling it advertises.
  *
  * @param options Parameter names, page-size default, and page-size ceiling.
  * @returns Parsing and header annotation with those names and limits applied.

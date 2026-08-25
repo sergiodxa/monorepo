@@ -1,6 +1,4 @@
 /**
- * Unit tests for `at-max.ts`, the max-width container-query wrapper.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

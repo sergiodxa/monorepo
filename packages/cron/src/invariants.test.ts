@@ -36,10 +36,9 @@ import { offsetAt } from "./time-zone";
 const CORPUS = randomExpressions({ seed: CORPUS_SEED, count: CORPUS_SIZE });
 
 /**
- * How many of the corpus the full occurrence bundle runs over. The bundle asks a
- * schedule roughly a hundred questions, so it takes a fifth of the corpus while the
- * cheaper properties take all of it, keeping the package's suite a few seconds. Raising
- * `CRON_FUZZ_ITERATIONS` grows both.
+ * How many of the corpus the full occurrence bundle runs over: a fifth, since each
+ * schedule costs roughly a hundred questions and running all of it would slow the
+ * suite. Raising `CRON_FUZZ_ITERATIONS` grows both this sample and the corpus.
  */
 const OCCURRENCE_SAMPLE = Math.max(400, Math.floor(CORPUS.length / 5));
 
@@ -65,8 +64,6 @@ describe(`properties over ${CORPUS.length} generated expressions`, () => {
 	});
 
 	test("every one finds something to fire on inside the search horizon", () => {
-		// A parsed schedule that can never occur would be a validation failure that got
-		// through, and it would read as a monitor that is never late rather than as a bug.
 		for (let [index, expression] of CORPUS.entries()) {
 			let from = new Date(ANCHORS[index % ANCHORS.length] ?? "");
 			let next = unwrap(Schedule.parse(expression)).next({ from, timeZone: "UTC" });
@@ -92,8 +89,6 @@ describe.each(ZONE_CASES.map((zone) => [zone.timeZone, zone] as const))(
 		});
 
 		test("finds the same occurrences walking a window backward as forward", () => {
-			// The window straddles whatever the zone does at its anchor, which for the zones
-			// that transition is a jump forward, a repeated hour, or both within three days.
 			let start = new Date(zone.anchor).getTime();
 			for (let expression of ZONE_SWEEP_EXPRESSIONS) {
 				expectWalksAgree(expression, {
@@ -105,10 +100,6 @@ describe.each(ZONE_CASES.map((zone) => [zone.timeZone, zone] as const))(
 		});
 
 		test("keeps an hourly schedule on the hour, an hour apart except where the clock moved", () => {
-			// An interval is followed on absolute time, and every run still has to read as
-			// minute zero locally. Two runs are an hour apart unless the offset moved between
-			// them, which is the only thing that can put the wall clock's zero minute
-			// elsewhere: Lord Howe shifts by thirty minutes, so its gap is ninety.
 			let { timeZone } = zone;
 			let schedule = unwrap(Schedule.parse("0 * * * *"));
 			let format = new Intl.DateTimeFormat("en-GB", { timeZone, minute: "2-digit" });
@@ -130,7 +121,6 @@ describe.each(ZONE_CASES.map((zone) => [zone.timeZone, zone] as const))(
 				cursor = occurrence;
 			}
 
-			// A week holds at most one transition, so at most one gap can be off an hour.
 			expect({ timeZone, wrongMinute, unexplained, tooMany: offHour > 1 }).toEqual({
 				timeZone,
 				wrongMinute: [],
@@ -143,10 +133,6 @@ describe.each(ZONE_CASES.map((zone) => [zone.timeZone, zone] as const))(
 
 describe("a whole year, in every zone", () => {
 	test("gives a daily schedule exactly one run on every local calendar day", () => {
-		// The property a zone that transitions at midnight breaks in other libraries: a day
-		// with no 00:00 loses its run, and a day with two keeps only one. Counted off the
-		// local date of each run, so a duplicate and a gap are both failures. A year covers
-		// every transition each zone has, including the four Casablanca makes.
 		for (let { timeZone, note } of ZONE_CASES) {
 			let schedule = unwrap(Schedule.parse("@daily"));
 			let format = new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" });
@@ -197,8 +183,6 @@ describe("a zone the runtime cannot use", () => {
 	});
 
 	test("reads a zone name whatever case it is written in", () => {
-		// The runtime canonicalizes a zone name, so a stored zone that changed case still
-		// resolves; only a name that is not a zone at all fails.
 		let schedule = unwrap(Schedule.parse("0 9 * * *"));
 		let from = new Date("2026-06-15T00:00:00Z");
 		let expected = schedule.next({ from, timeZone: "America/New_York" }).toISOString();

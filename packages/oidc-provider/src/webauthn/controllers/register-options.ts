@@ -1,10 +1,9 @@
 /**
  * WebAuthn registration options endpoint controller.
  *
- * Validates and rate-limits the email and ensures it has no existing passkey, then
- * issues a single-use challenge plus the creation options for the browser's WebAuthn
- * `create` ceremony. The subject itself is not persisted here — it is created during
- * verification, only after the attestation is cryptographically verified.
+ * Validates and rate-limits the email, then issues a single-use challenge and
+ * creation options for the WebAuthn `create` ceremony; the subject is created
+ * only once verification confirms the attestation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,9 +57,9 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
- * WebAuthn registration options endpoint.
- * Generates a challenge for passkey registration.
- * Rate-limited per email to prevent registration abuse.
+ * Rejects an email that already holds a passkey, directing that account to
+ * sign in, and rate-limits attempts per email to guard against registration
+ * abuse.
  * @returns A JSON `Response` with `{ challengeId, options }`, or an error `Response`.
  */
 export default createAction(
@@ -91,12 +90,11 @@ export default createAction(
 			});
 		}
 
-		// Look up any existing subject only to reject when it already has a passkey
-		// (that account should sign in, not register). Crucially, do NOT persist a new
-		// subject here: registration is completed by /webauthn/register/verify, which
-		// creates the subject only after the attestation is cryptographically verified.
-		// Persisting during options generation made the normal options->verify flow fail
-		// because verify rejects when a subject with this email already exists.
+		/**
+		 * Existing subjects are looked up only to catch an email that already has
+		 * a passkey; the subject record is created during verification, since
+		 * verify rejects an email that already resolves to a subject.
+		 */
 		let existingSubject = await Subject.findByEmail(db, email);
 		if (existingSubject) {
 			let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
@@ -110,9 +108,11 @@ export default createAction(
 		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 		let rpName = rpId;
 
-		// `userId` is a fresh random WebAuthn user handle bound to this challenge; it is
-		// uncorrelated with the email/PII (per WebAuthn guidance) and is what the
-		// authenticator stores for a discoverable credential.
+		/**
+		 * A fresh random WebAuthn user handle bound to this challenge, uncorrelated
+		 * with the email per WebAuthn guidance; the authenticator stores it for a
+		 * discoverable credential.
+		 */
 		let {
 			id: challengeId,
 			challenge,
@@ -139,8 +139,10 @@ export default createAction(
 				residentKey: "preferred",
 				userVerification: "preferred",
 			},
-			// Copy into a Uint8Array backed by a plain ArrayBuffer to satisfy the
-			// current @simplewebauthn BufferSource typing.
+			/**
+			 * Copied into a Uint8Array backed by a plain ArrayBuffer to satisfy
+			 * the `@simplewebauthn/server` `BufferSource` typing.
+			 */
 			challenge: new Uint8Array(base64UrlDecode(challenge)),
 		} satisfies GenerateRegistrationOptionsOpts);
 

@@ -1,11 +1,9 @@
 /**
- * Verifies world migration backfills per-instance creature state and that the
+ * Verifies world migration backfills per-instance creature state and that
  * held-item accessors read and write it correctly.
  *
- * Older saves predate the instance store, so migration must materialize a default
- * instance (genderless, no held item) for every creature and keep it in the
- * persistent snapshot. The held-item helpers then get and set that state without
- * disturbing the rest of the instance record.
+ * Older saves predate the instance store, so migration must materialize a
+ * default instance for every creature and keep it in the persistent snapshot.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,7 +57,6 @@ test("migrateWorld backfills the default instance state for saves without one", 
 
 test("getCreatureInstance returns the default when the store has no entry", () => {
 	let world = migrateWorld(legacyWorld());
-	// Remove the store entry to simulate an accessor call against an unmigrated store.
 	delete world.creatureInstance[CREATURE_ID];
 	expect(getCreatureInstance(world, CREATURE_ID)).toEqual(DEFAULT_CREATURE_INSTANCE);
 	expect(getCreatureHeldItem(world, CREATURE_ID)).toBeNull();

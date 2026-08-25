@@ -18,10 +18,9 @@ import { parseTrans } from "./lib/parse-trans";
 export namespace Trans {
 	export interface Props {
 		/**
-		 * i18next instance to translate through. Defaults to the nearest
-		 * ancestor `IntlProvider`'s instance (via `intl`); pass it explicitly
-		 * to translate through a different instance, e.g. a namespace-scoped
-		 * one only a parent has locally.
+		 * i18next instance to translate through. Defaults to the nearest ancestor
+		 * `IntlProvider`'s instance (via `intl`); pass it explicitly to translate
+		 * through a different instance, e.g. a namespace-scoped one a parent holds.
 		 */
 		i18n?: I18n;
 		/**

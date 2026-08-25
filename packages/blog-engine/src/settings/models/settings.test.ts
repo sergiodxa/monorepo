@@ -23,7 +23,6 @@ describe("Settings.theme", () => {
 	});
 
 	test("returns an empty object for the seeded (unconfigured) theme", async () => {
-		// The seed stores `theme` as `{}`, meaning: apply engine defaults everywhere.
 		expect(await Settings.theme(db)).toEqual({});
 	});
 
@@ -37,7 +36,6 @@ describe("Settings.theme", () => {
 	});
 
 	test("falls back to {} when the stored theme value is malformed JSON", async () => {
-		// Settings.get swallows JSON.parse errors and returns the fallback.
 		await db.update(Settings.table, { key: "theme" }, { value: "{ not json" });
 		expect(await Settings.theme(db)).toEqual({});
 	});
@@ -55,19 +53,14 @@ describe("theme derivation from stored settings", () => {
 		let css = renderThemeStyle(await Settings.theme(db));
 
 		expect(css.startsWith(":root {")).toBe(true);
-		// The stored non-color knobs pass through verbatim.
 		expect(css).toContain("--blog-measure: 72ch");
-		// Compact spacing resolves to its preset (not the "comfortable" default of 1rem).
 		expect(css).not.toContain("--blog-spacing: 1rem");
-		// The accent color drives an OKLCH accent ladder.
 		expect(css).toContain("--color-accent-500:");
 		expect(css).toContain("oklch(");
-		// Semantic --ui-* tokens are wired to the derived palette.
 		expect(css).toContain("--ui-accent: var(--blog-accent)");
 	});
 
 	test("unset knobs derive from the engine defaults", async () => {
-		// Empty stored settings -> every knob comes from DEFAULT_THEME.
 		let css = renderThemeStyle(await Settings.theme(db));
 		expect(css).toContain("--blog-measure: 65ch");
 		expect(css).toContain("--blog-spacing: 1rem");

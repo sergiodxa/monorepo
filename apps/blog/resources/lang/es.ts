@@ -1,7 +1,5 @@
 /**
- * Spanish translation dictionary for blog. Holds the localized UI copy for the
- * public site (nav, home, articles, tutorials, bookmarks, glossary, RSS) and the
- * CMS, typed against the English catalog so both locales stay structurally in sync.
+ * Spanish UI copy for the public blog site and the CMS.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +8,7 @@
 import type en from "./en";
 
 /**
- * Spanish translation strings for the blog UI and CMS interface.
+ * Typed against the English catalog so both locales stay structurally in sync.
  */
 export default {
 	header: { title: "Sergio Xalambrí" },

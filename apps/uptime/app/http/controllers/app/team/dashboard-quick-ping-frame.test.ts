@@ -1,26 +1,9 @@
 /**
- * Tests the no-JavaScript path of the dashboard's quick check, end to end: the header
- * bar's form posts to `POST /actions/:team/run-ping`, which redirects to
- * `GET /app/:team/dashboard`, and that document request server-side-resolves its
- * quick-check `<Frame>` by dispatching `GET /app/:team/dashboard/quick-ping` back through
- * the same router with the request's cookie forwarded. Two requests, one session — which
- * is the whole reason this file exists.
- *
- * The result used to travel as a session flash. A delivered flash marks the session dirty
- * the moment it is read, and the session middleware saves as soon as the handler returns —
- * which, for a streamed HTML response, is before the body's frames have resolved. The
- * dashboard document request therefore cleared the flash before the fragment that renders
- * it ever ran, and the answer never reached the page on any unscripted submit. Nothing caught it:
- * the page tests stub `resolveFrame` to an empty string, and the fragment tests seed the
- * session themselves, so no test ever had one session cross both requests. Here the frame
- * resolution is the real one, mirroring `bootstrap/app.tsx`, and the result is carried
- * from the action to the rendered card by nothing but the session and the cookie.
- *
- * `requireUser`/`requireTeam`/`i18n` need a real sign-in and a locale lookup, so
- * `ctx.team`/`ctx.membership`/`ctx.i18next` are seeded and the three handlers are mapped
- * directly. Everything the bug lived in — the session, its storage, the redirect, the
- * cookie a browser carries back, the frame dispatch — is real. `cloudflare:workers` is
- * mocked so the probe's outcome is this file's to decide.
+ * Tests the no-JavaScript path of the dashboard's quick check end to end: the header
+ * form posts to `run-ping`, which redirects to the dashboard document, and that
+ * document server-side-resolves its quick-check `<Frame>` through the same router
+ * with the cookie forwarded — two requests, one session, since a session flash used
+ * to carry the result was cleared before the frame read it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

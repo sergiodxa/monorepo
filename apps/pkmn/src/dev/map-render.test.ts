@@ -1,9 +1,8 @@
 /**
- * Verifies the pure map-render geometry and event-marker classification without a
- * canvas: the tile→screen size/rect math scales with zoom off {@link BASE_TILE_PX},
- * {@link canvasSize} sizes the whole bitmap, {@link screenToTile} inverts the mapping
- * and rejects off-map offsets, and {@link eventMarkerStyle} picks the right glyph,
- * color, and "invisible" flag from the event's first page trigger and graphic.
+ * Verifies map-render's pure geometry and event-marker classification as plain
+ * math: tile→screen sizes and rects scaling off {@link BASE_TILE_PX},
+ * {@link canvasSize}, the bounds {@link screenToTile} enforces, and the
+ * glyph/color/"invisible" flag {@link eventMarkerStyle} derives from a first page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,7 +77,6 @@ describe("screenToTile", () => {
 	test("inverts tileScreenRect for an in-bounds offset", () => {
 		let zoom = 3;
 		let rect = tileScreenRect(4, 5, zoom);
-		// A point anywhere inside the tile maps back to that tile.
 		expect(screenToTile(rect.x + 2, rect.y + 2, 10, 10, zoom)).toEqual({ x: 4, y: 5 });
 	});
 

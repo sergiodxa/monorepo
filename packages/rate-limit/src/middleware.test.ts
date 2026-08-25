@@ -1,7 +1,8 @@
 /**
  * Tests the registration contract: the request is counted before the handler runs,
- * the response says what the quota was, a denied request never reaches the handler,
- * two registrations never share a counter, and an outage does not lock clients out.
+ * the response says what the quota was, a denied request stops before reaching the
+ * handler, each registration keeps its own counter, and traffic keeps flowing through
+ * an outage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

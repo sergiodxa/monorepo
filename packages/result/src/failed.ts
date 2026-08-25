@@ -1,3 +1,11 @@
+/**
+ * Provides `failed`, an assertion that narrows a Result to Failure and
+ * throws when given a Success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result, Failure } from "./types.js";
 
 import { isSuccess } from "./is-success.js";

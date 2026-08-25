@@ -2,8 +2,8 @@
  * Management API controller for a subject's passkeys
  * (`/api/subjects/:id/passkeys`).
  *
- * Lists a subject's passkeys, renames one, and deletes one — refusing to remove a
- * subject's last remaining passkey so they never get locked out.
+ * Lists a subject's passkeys, renames one, and deletes one — always keeping
+ * at least one passkey on the subject's account.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +27,6 @@ import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
 import Passkey from "../../webauthn/models/passkey";
 import Subject from "../models/subject";
 
-/** Validation schema for the update-passkey (rename) request body. */
 let UpdatePasskeySchema = s.object({
 	name: s.string().pipe(maxLength(LIMITS.name.max)),
 });
@@ -141,7 +140,7 @@ export const update = createAction(
 
 /**
  * `DELETE /api/subjects/:id/passkeys/:passkeyId` — deletes one of a subject's passkeys.
- * Refuses to delete the subject's only remaining passkey.
+ * Guarantees the subject keeps at least one passkey.
  * @returns A `204 No Content` `Response`, or an error `Response`.
  */
 export const destroy = createAction(

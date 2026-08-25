@@ -1,7 +1,7 @@
 /**
  * Declares the relational graph between the blog schema tables. Wires users to
  * their authored posts, posts to their author and metadata rows, and metadata
- * back to its owning post so repositories can traverse joins without manual SQL.
+ * back to its owning post so repositories can traverse joins declaratively.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ import { users } from "./users";
 
 /**
  * Connects a user to the posts they authored via `author_id`.
- * Used to fetch author pages and post lists without manual join wiring.
+ * Backs author pages and per-author post lists.
  */
 export const userRelations = {
 	posts: hasMany(users, posts, {

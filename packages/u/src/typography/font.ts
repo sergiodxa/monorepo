@@ -8,13 +8,9 @@ import { utility } from "../internal/descriptor";
 import { font as fontToken } from "../internal/tokens";
 
 /**
- * Applies `font-family` from the named font-family scale
- * (`sans`, `serif`, `mono`, or an app-extended name), resolving through
- * `var(--ui-font-{name}, fallback)` so the family works before an app ever
- * defines the variable. The literal keywords `"inherit"` and `"unset"` pass
- * through unchanged instead of being mistaken for an app-extensible token
- * name and `var()`-wrapped — mirrors the same literal-passthrough escape
- * `radius()`/`text()`/`container()`/`blur()` already have for a raw length.
+ * Applies `font-family` from the named font scale (`sans`, `serif`, `mono`,
+ * or an app-extended name) via `var(--ui-font-{name}, fallback)`.
+ * `"inherit"` and `"unset"` pass through unchanged as literal CSS keywords.
  *
  * @example u.font("serif")
  * @example css({ fontFamily: "var(--ui-font-serif, ui-serif, Georgia, serif)" })

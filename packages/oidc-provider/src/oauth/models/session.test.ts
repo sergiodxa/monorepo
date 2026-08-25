@@ -1,3 +1,11 @@
+/**
+ * Tests for the Session model covering creation, retrieval, listing,
+ * activity touch, and expiration cleanup against a real SQLite database.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
@@ -38,7 +46,7 @@ describe("Session", () => {
 			});
 
 			expect(sessionId).toBeTypeOf("string");
-			expect(sessionId).toHaveLength(36); // UUID length
+			expect(sessionId).toHaveLength(36);
 
 			let session = await Session.show(db, sessionId);
 			expect(session).not.toBeNull();
@@ -76,7 +84,6 @@ describe("Session", () => {
 			let session = await Session.show(db, sessionId);
 			let expiresAt = new Date(session!.expires_at);
 
-			// Should be roughly 30 days from now
 			let thirtyDays = 30 * 24 * 60 * 60 * 1000;
 			expect(expiresAt.getTime()).toBeGreaterThanOrEqual(before.getTime() + thirtyDays - 1000);
 			expect(expiresAt.getTime()).toBeLessThanOrEqual(after.getTime() + thirtyDays + 1000);
@@ -138,7 +145,6 @@ describe("Session", () => {
 			let before = await Session.show(db, sessionId);
 			let originalUpdatedAt = before!.updated_at;
 
-			// Wait a bit to ensure timestamp changes
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			await Session.touch(db, sessionId);
@@ -193,10 +199,8 @@ describe("Session", () => {
 			let subject = await createSubject(db, { verified: true });
 			let client = await createClient(db);
 
-			// Create a session
 			let sessionId = await createSession(db, { subjectId: subject.id, clientId: client.id });
 
-			// Simulate time passing - 31 days in the future
 			let futureTime = Date.now() + 31 * 24 * 60 * 60 * 1000;
 
 			let deletedCount = await Session.cleanupExpired(db, futureTime);
@@ -212,7 +216,6 @@ describe("Session", () => {
 
 			await createSession(db, { subjectId: subject.id, clientId: client.id });
 
-			// Current time - sessions should not be expired
 			let deletedCount = await Session.cleanupExpired(db, Date.now());
 			expect(deletedCount).toBe(0);
 

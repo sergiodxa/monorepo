@@ -17,8 +17,8 @@ import routes from "~/routes/web";
  */
 export namespace PostRelatedViewModel {
 	/**
-	 * A single related post card shown in the list.
-	 * `reason` is preformatted display text, not a raw tag value.
+	 * A single related post card shown in the list. `reason` holds preformatted
+	 * display text ready to render.
 	 */
 	export interface Item {
 		href: string;
@@ -40,8 +40,7 @@ export namespace PostRelatedViewModel {
  */
 export class PostRelatedViewModel {
 	/**
-	 * Builds link-ready related items for rendering without additional formatting.
-	 * This mapper currently links every related item through the tutorials route.
+	 * Builds related items that render as-is, linked through the tutorials route.
 	 * @param items Related posts already filtered and ordered by tag matching.
 	 * @returns A page payload; returns an empty `items` array when no matches exist.
 	 */

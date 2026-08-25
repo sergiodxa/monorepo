@@ -40,16 +40,11 @@ function normalizeClient(client: ClientRow) {
 	};
 }
 
-/** Reusable check for the client `name` field. */
 let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
-/** Reusable check for the client `description` field. */
 let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
-/** Reusable check for the client `logoUrl` field (HTTPS, bounded length). */
 let logoUrlSchema = s.string().pipe(maxLength(LIMITS.url.max), httpsUrl());
-/** Reusable check for a single scope name. */
 let scopeSchema = s.string().pipe(minLength(LIMITS.scope.min), maxLength(LIMITS.scope.max));
 
-/** Validation schema for the create-client request body. */
 let CreateClientSchema = s.object({
 	name: nameSchema,
 	type: s.enum_(["public", "confidential", "m2m"]),
@@ -60,7 +55,6 @@ let CreateClientSchema = s.object({
 	isManagementClient: s.optional(s.boolean()),
 });
 
-/** Validation schema for the update-client request body (all fields optional). */
 let UpdateClientSchema = s.object({
 	name: s.optional(nameSchema),
 	type: s.optional(s.enum_(["public", "confidential", "m2m"])),

@@ -12,36 +12,13 @@
 import type { Middleware } from "remix/router";
 
 /**
- * Creates a middleware that dispatches `HEAD` requests as `GET` and strips the
- * response body.
- *
- * It rewrites `context.method`, the same mutable field the method-override
- * middleware writes, rather than re-entering the router with a synthetic request.
- * Nothing is short-circuited: the request keeps travelling the very chain a `GET`
- * would, so authentication, authorization, rate limiting and cross-origin
- * protection all still run, and a route with no `GET` — a form's `POST` half, a
- * webhook — matches nothing and still gets the default handler's 404.
- *
- * Install it first in the router's global chain. Everything after it then sees a
- * plain `GET`, which is what makes the two methods provably indistinguishable to
- * the guards; and because `GET` and `HEAD` are both safe methods, no middleware
- * that keys off method safety changes its mind about the request.
- *
- * The response body is dropped rather than drained: a `HEAD` must not send
- * content, and the caller never subscribes to the stream. Headers are carried over
- * untouched, so `Content-Type` and any `Content-Length` the handler set survive.
+ * Creates a middleware that dispatches `HEAD` requests as `GET`, strips the
+ * response body, and keeps `HEAD` on the same chain as `GET` so auth, rate
+ * limiting, and other guards behave identically; install it first in the chain.
  *
  * @returns The middleware to place at the head of the router's global chain.
  */
 export function headRequests(): Middleware {
-	/**
-	 * Rewrites a `HEAD` into a `GET`, runs the rest of the chain, and returns the
-	 * result without its body.
-	 *
-	 * @param context - The request context whose method is rewritten in place.
-	 * @param next - Runs the remaining middleware and the matched handler.
-	 * @returns The bodyless response for a `HEAD`, or the untouched response otherwise.
-	 */
 	return async function headRequestsMiddleware(context, next) {
 		if (context.method !== "HEAD") return next();
 

@@ -1,7 +1,7 @@
 /**
  * Tests for the Secrets Store secret mock: the value is only reachable through an awaited
  * `get()`, a missing or failed secret rejects the way the platform does, and the read
- * count is what lets a test prove the secret was not read eagerly.
+ * count lets a test confirm each read happens lazily, at the point of use.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

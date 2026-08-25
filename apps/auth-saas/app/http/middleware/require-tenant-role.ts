@@ -20,12 +20,10 @@ type AllowedRole = "owner" | TenantMemberRole;
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
- * Requires the current user's tenant role to be one of `allowed` for mutating
- * (non-safe) requests. Read-only requests pass through so `viewer` members keep read
- * access. Must run after `tenantOwner`, which resolves `context.tenant.role`.
+ * Enforces `allowed` roles on mutating (non-safe) requests; read-only requests pass
+ * through unchecked. A `POST` carrying a `_method` override is still treated as
+ * non-safe, so the role check applies before the override takes effect.
  *
- * Mutations sent as `POST` with a `_method` override are still non-safe, so they are
- * enforced regardless of whether the override has been applied yet.
  * @param allowed - Roles permitted to perform the mutation.
  * @returns Middleware enforcing the role for mutating requests.
  * @example

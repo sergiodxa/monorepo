@@ -1,14 +1,9 @@
 /**
  * Tests for the bag's pure item classification and teach helpers.
  *
- * Covers `bagItemAction`, which decides how a confirmed bag item is used on a
- * creature: evolution items open the stone flow, recovery medicines open the
- * medicine flow, move-teaching machines open the teach flow, and everything else
- * (held items, capture balls, PP/EV items, an unknown record) stays browse-only.
- * Also covers `movesetFromSummary`, which rebuilds the four-slot moveset the teach
- * flow feeds the replace prompt, and `machineConsumedOnTeach`, which decides
- * whether a taught machine is spent. The scene wiring and canvas drawing are not
- * exercised here; only the pure routing and teach rules are asserted.
+ * Covers `bagItemAction`'s routing, `movesetFromSummary`'s four-slot rebuild,
+ * and `machineConsumedOnTeach`'s consume decision, exercising the pure routing
+ * and teach rules the scene dispatches through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,8 +78,8 @@ test("bagItemAction returns null for an unknown (missing) item", () => {
 	expect(bagItemAction(undefined)).toBeNull();
 });
 
+/** Regression: machines used to classify as null, so selecting one did nothing. */
 test("bagItemAction routes a move-teaching machine to the teach flow", () => {
-	// Regression: machines used to classify as null, so selecting one did nothing.
 	expect(bagItemAction(machine("CUT"))).toBe("teach");
 	expect(bagItemAction(machine("SURF", true))).toBe("teach");
 });
@@ -99,8 +94,8 @@ test("movesetFromSummary rebuilds the four-slot tuple, padding empty slots with 
 	expect(movesetFromSummary(creatureWithMoves(["A", "B", "C", "D"]))).toEqual(["A", "B", "C", "D"]);
 });
 
+/** A TM-style machine is marked Consumable; an HM-style machine omits the flag. */
 test("machineConsumedOnTeach spends a single-use machine but not a reusable one", () => {
-	// A TM-style machine is marked Consumable; an HM-style machine omits the flag.
 	expect(machineConsumedOnTeach(machine("SURF", true))).toBe(true);
 	expect(machineConsumedOnTeach(machine("CUT"))).toBe(false);
 });
@@ -109,12 +104,9 @@ let SPECIES_ID = Object.keys(SPECIES)[0]!;
 let NATURE_ID = Object.keys(NATURES)[0]!;
 
 /**
- * Builds an engine holding one party creature with the given moveset plus a bag of
- * machine copies, so the bag's teach dispatches can be exercised end to end.
- *
- * `HM01` teaches CUT and omits `Consumable` (reusable, HM-style); `HM01` is the
- * only machine authored today, so a single-use case reuses it with a Consumable
- * override injected at the content layer to model a TM.
+ * Builds an engine with one party creature and a bag of machine copies so the
+ * teach dispatches can run end to end; `HM01` teaches CUT and, being the only
+ * machine authored today, gets a `Consumable` override to model a single-use TM.
  */
 function createTeachEngine(
 	moveset: [string, string | null, string | null, string | null],
@@ -162,7 +154,7 @@ function createTeachEngine(
 
 test("teaching a machine move appends it when the creature has a free slot", () => {
 	let { engine, creatureId } = createTeachEngine(["TACKLE", "GROWL", null, null], { HM01: 1 });
-	let moveId = ITEMS.HM01.teachesMoveId; // CUT
+	let moveId = ITEMS.HM01.teachesMoveId;
 
 	let events = engine.dispatch({ type: "learn-move", creatureId, moveId });
 
@@ -175,7 +167,7 @@ test("teaching a machine move to a full moveset replaces the chosen slot", () =>
 	let { engine, creatureId } = createTeachEngine(["TACKLE", "GROWL", "SURF", "STRENGTH"], {
 		HM01: 1,
 	});
-	let moveId = ITEMS.HM01.teachesMoveId; // CUT
+	let moveId = ITEMS.HM01.teachesMoveId;
 
 	let events = engine.dispatch({ type: "learn-move", creatureId, moveId, replaceSlotIndex: 1 });
 
@@ -186,7 +178,7 @@ test("teaching a machine move to a full moveset replaces the chosen slot", () =>
 });
 
 test("teaching a machine move the creature already knows is a no-op", () => {
-	let moveId = ITEMS.HM01.teachesMoveId; // CUT
+	let moveId = ITEMS.HM01.teachesMoveId;
 	let { engine, creatureId } = createTeachEngine([moveId, "GROWL", null, null], { HM01: 1 });
 
 	let events = engine.dispatch({ type: "learn-move", creatureId, moveId });
@@ -196,8 +188,12 @@ test("teaching a machine move the creature already knows is a no-op", () => {
 	expect(summary.moves.map((slot) => slot.id)).toEqual([moveId, "GROWL", null, null]);
 });
 
+/**
+ * HM01 is reusable, so its bag count stays the same after teaching; the TM01
+ * override adds the Consumable flag to model a single-use machine, and
+ * teaching it removes exactly one copy.
+ */
 test("a single-use machine decrements after teaching, while a reusable HM does not", () => {
-	// HM01 is reusable: teaching it never removes it from the bag.
 	let hm = createTeachEngine(["TACKLE", "GROWL", null, null], { HM01: 2 });
 	if (machineConsumedOnTeach(ITEMS.HM01 as unknown as Item)) {
 		hm.engine.dispatch({
@@ -211,7 +207,6 @@ test("a single-use machine decrements after teaching, while a reusable HM does n
 		hm.engine.selectInventory(hm.playerId).entries.find((entry) => entry.id === "HM01")?.count,
 	).toBe(2);
 
-	// A TM-style consumable machine: teaching it removes exactly one copy.
 	let tmItems = {
 		...ITEMS,
 		TM01: { ...ITEMS.HM01, attributes: [...ITEMS.HM01.attributes, ItemAttribute.Consumable] },

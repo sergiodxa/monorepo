@@ -22,7 +22,7 @@ import ConfirmAction from "~/resources/views/admin/confirm-action";
 import ListPagination from "~/resources/views/admin/pagination";
 
 namespace ClientsView {
-	/** Every string this page shows, so no copy is decided inside the view. */
+	/** Every string this page shows, supplied by the caller. */
 	export interface Labels {
 		description: string;
 		empty: string;
@@ -36,7 +36,6 @@ namespace ClientsView {
 	export interface Props {
 		chrome: AdminView.Chrome;
 		labels: Labels;
-		/** Where the "new client" control in the header goes. */
 		createHref: string;
 		clients: AdminView.ClientRow[];
 		pagination: AdminView.Pagination;

@@ -1,22 +1,9 @@
 /**
  * Generic long-press detection for any host element: a `pointerdown` starts
- * a timer, and once the pointer has held its position for a configurable
- * duration, the host dispatches a namespaced `ui:long-press` event carrying
- * the pointer's position — the same `x`/`y` pair `contextMenu()` anchors its
- * own point-based surface to — so a consumer can anchor a menu, tooltip, or
- * preview to the exact spot the press held. The pointer lifting,
- * cancelling, leaving the host, or drifting past a small movement tolerance
- * before the duration elapses all clear the pending timer first, so only a
- * held, mostly-still press ever fires.
- *
- * Why JS: no HTML attribute or CSS selector recognizes "the pointer has
- * remained pressed in roughly the same spot for N milliseconds" — only a
- * timer started on `pointerdown` and cleared on release, cancellation, or
- * movement can measure that duration and confirm the press held still long
- * enough.
- * No-JS baseline: none, mirroring `contextMenu()`'s own baseline — a tap or
- * click still reaches the host and fires its ordinary behavior; without
- * this mixin, holding the pointer down simply does nothing extra.
+ * a timer, and once the pointer has held still for a configurable duration,
+ * the host dispatches a namespaced `ui:long-press` event carrying the
+ * pointer's position, so a consumer can anchor a menu, tooltip, or preview
+ * to the exact spot the press held.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,8 +22,7 @@ const DEFAULT_DURATION = 500;
 /**
  * Distance, in pixels, the pointer may drift from its `pointerdown` position
  * before {@link longPress} clears the pending timer instead of letting it
- * fire — a fixed tolerance for the small, involuntary movement a held press
- * naturally carries, not a deliberate drag.
+ * fire, tolerating the small, involuntary movement a held press carries.
  */
 const MOVE_TOLERANCE = 10;
 
@@ -67,11 +53,9 @@ export namespace LongPress {
 }
 
 /**
- * Dispatched on a host by {@link longPress} once a pointer press has held its
- * position for the configured duration, carrying the pointer's position as
- * an `AnchorPoint` so a consumer can anchor a point-based surface — a menu,
- * a tooltip, a preview — to the exact spot the press held, the same
- * technique `contextMenu()` uses for its own point-anchored surface.
+ * Dispatched on a host by {@link longPress} once a pointer press has held
+ * its position for the configured duration, carrying that position as an
+ * `AnchorPoint` so a consumer can anchor a menu, tooltip, or preview to it.
  */
 export class LongPressEvent extends Event {
 	/** Pointer position the press held, in viewport coordinates, ready to pass straight into `remix/ui/anchor`'s point-based anchoring. */
@@ -87,22 +71,13 @@ export class LongPressEvent extends Event {
 }
 
 /**
- * Detects a long press on any host element. A `pointerdown` from the primary
- * pointer, pressed with the primary button, records the pointer's position
- * and starts a timer for `options.duration` milliseconds; only one press is
- * tracked at a time, so a second `pointerdown` while one is already pending
- * is ignored.
- *
- * `pointerup`, `pointercancel`, `pointerleave`, or the pointer drifting past
- * a small movement tolerance from where it first pressed all clear the
- * pending timer before it fires, so a dragged, released, or otherwise
- * interrupted press never dispatches an event — an ordinary tap or click
- * still reaches the host and behaves exactly as it would without this
- * mixin. A press that holds still for the full duration dispatches
- * {@link LongPressEvent} on the host, carrying the position the pointer
- * pressed at.
+ * Detects a long press on any host element: a primary-pointer `pointerdown`
+ * starts a timer, tracking only one press at a time, and dispatches
+ * {@link LongPressEvent} once the pointer holds still for the full duration.
  *
  * @param options Duration configuration; see {@link LongPress.Options}.
+ * Reset to an empty object when the mixin runtime passes its trailing
+ * current-props argument in its place.
  * @returns A mixin descriptor for a host element's `mix` prop.
  * @example
  * <li
@@ -147,10 +122,6 @@ export const longPress: MixinFactory<HTMLElement, [options?: LongPress.Options],
 		}
 
 		return (options = {}, props = options as ElementProps) => {
-			// `options` is optional, so a call site that omits it
-			// (`longPress()`) gets the runtime's trailing current-props argument
-			// in its place — reset it back to an empty options object when that
-			// happens.
 			if (props === options) {
 				options = {};
 			}

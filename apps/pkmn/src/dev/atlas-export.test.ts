@@ -1,10 +1,8 @@
 /**
- * Verifies the atlas-export flow: the pure payload shaping ({@link deriveAtlasTarget}
- * validates the image name, atlas id, region name, and rect; {@link registerAtlasRegion}
- * adds the image AND the atlas region to a manifest without mutating the input or
- * clobbering unrelated entries), and a real {@link runAtlasExport} round-trip that
- * writes a PNG and persists the manifest, snapshotting and restoring the real
- * manifest so the test leaves no trace.
+ * Verifies the atlas-export flow: {@link deriveAtlasTarget} validates the image
+ * name, atlas id, region, and rect; {@link registerAtlasRegion} shapes a fresh
+ * manifest; and a real {@link runAtlasExport} round-trip writes a PNG, then
+ * restores the real manifest so the tree ends as it started.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,7 +24,6 @@ import {
 import { APP_ROOT, MANIFEST_PATH } from "./export";
 import { SpriteNameError } from "./sprite-export";
 
-// A 1×1 transparent PNG, base64-encoded, used as the atlas export body.
 let ONE_PX_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
@@ -157,7 +154,6 @@ describe("registerAtlasRegion", () => {
 		let next = registerAtlasRegion(manifest, target);
 		expect(next.images.other).toBe("/assets/other.png");
 		expect(next.audio).toEqual({ theme: { url: "/audio/theme.ogg" } });
-		// The pre-existing `animations` field survives the region add.
 		expect(next.atlases.characters!.animations).toEqual({ walk: { frames: [], frameMs: 100 } });
 	});
 
@@ -216,11 +212,9 @@ describe("runAtlasExport", () => {
 				expect(result.data.rect).toEqual({ x: 0, y: 0, w: 1, h: 1 });
 				expect(result.data.bytesWritten).toBeGreaterThan(0);
 
-				// The PNG landed on disk with the expected magic bytes.
 				let pngBytes = new Uint8Array(await readFile(resolve(APP_ROOT, SPRITE_ASSET_PATH)));
 				expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
 
-				// The manifest now holds both the flat image and the atlas region.
 				let manifestText = await readFile(resolve(APP_ROOT, MANIFEST_PATH), "utf8");
 				let manifest = JSON.parse(manifestText) as ManifestAtlases;
 				expect(manifest.images[SPRITE_NAME]).toBe(`/assets/${SPRITE_NAME}.png`);
@@ -230,7 +224,6 @@ describe("runAtlasExport", () => {
 				});
 			}
 		} finally {
-			// Restore the manifest and delete the scratch PNG — leave no trace.
 			if (original !== null) await writeFile(resolve(APP_ROOT, MANIFEST_PATH), original);
 			await rm(resolve(APP_ROOT, SPRITE_ASSET_PATH), { force: true });
 		}

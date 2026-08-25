@@ -72,8 +72,8 @@ export class Hex {
 	/**
 	 * Decodes a hex string, accepting either letter case.
 	 *
-	 * An odd length or a non-hex character is a failure rather than a partial
-	 * decode, so a truncated signature can never verify against a prefix.
+	 * An odd length or a non-hex character rejects the whole input up front, so a
+	 * truncated signature always fails verification against a prefix.
 	 *
 	 * @param text Hex string to decode.
 	 * @returns Decoded bytes, or `InvalidEncodingError` when the input is not hex.

@@ -1,9 +1,9 @@
 /**
- * Tests for the TCP monitors list page controller. `~/app/data/tcp-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the
- * template in `app/http/controllers/actions/monitors.test.ts`.
+ * Tests for the TCP monitors list page controller. `~/app/data/tcp-monitor` only
+ * touches the database, so these tests run directly against `createTestDatabase`.
+ * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
+ * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching
+ * the template in `app/http/controllers/actions/monitors.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

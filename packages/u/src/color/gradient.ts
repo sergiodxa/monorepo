@@ -4,11 +4,9 @@
  */
 
 /**
- * A gradient stop's color. The `(string & {})` member keeps the type a
- * plain string for any other CSS color (a hex code, `rgb(...)`, or one of
- * this package's own resolved tokens via `u.color()`), so `"transparent"`
- * and `"currentColor"` — the two color keywords that show up in gradients
- * far more than in flat fills — just get autocomplete, not a narrower type.
+ * A gradient stop's color. The `(string & {})` member keeps any CSS color
+ * accepted, so `"transparent"` and `"currentColor"` add autocomplete while the
+ * type stays a plain string.
  */
 export type GradientColor = "transparent" | "currentColor" | (string & {});
 
@@ -16,9 +14,8 @@ export type GradientStop = GradientColor | { color: GradientColor; position?: st
 
 /**
  * CSS's `linear-gradient()` side-or-corner keywords. The `(string & {})`
- * member keeps the type a plain string for anything else (a raw angle like
- * `"45deg"` or `"0.25turn"`), so it only adds autocomplete for the named
- * directions rather than narrowing what's accepted.
+ * member keeps a raw angle such as `"45deg"` or `"0.25turn"` accepted, so the
+ * named directions only add autocomplete.
  */
 export type GradientDirection =
 	| "to top"
@@ -49,12 +46,9 @@ export type GradientPosition =
 type GradientExtent = "closest-side" | "closest-corner" | "farthest-side" | "farthest-corner";
 
 /**
- * `radial-gradient()`'s shape and extent keywords, plus the template shapes
- * of its compound shape/extent/position clause (`"circle at top left"`,
- * `"ellipse closest-side"`, `"circle closest-side at top left"`). The
- * `(string & {})` member keeps the type a plain string for anything else
- * (a position given as a percentage rather than a keyword), so it only adds
- * autocomplete rather than narrowing what's accepted.
+ * `radial-gradient()`'s shape and extent keywords, plus the compound
+ * shape/extent/position clauses. The `(string & {})` member keeps a position
+ * given as a percentage accepted, so the keywords only add autocomplete.
  */
 export type GradientShape =
 	| "circle"
@@ -71,12 +65,9 @@ function formatStop(stop: GradientStop): string {
 }
 
 /**
- * Builds a `linear-gradient(...)` value string for `u.bg({ image })` or any
- * other `background-image` use. A numeric `angle` is treated as degrees; a
- * string passes through unchanged, so CSS's own side/corner keywords work
- * too (`"to right"`, `"to top left"`) and get autocomplete via
- * `GradientDirection`. Each stop is either a raw color string or a
- * `{ color, position }` pair.
+ * Builds a `linear-gradient(...)` value string for any `background-image` use.
+ * A numeric `angle` is treated as degrees; a string passes through unchanged,
+ * so CSS's own side/corner keywords work too.
  *
  * @example u.linearGradient(45, "red", "blue")
  * @example "linear-gradient(45deg, red, blue)"
@@ -92,12 +83,9 @@ export function linearGradient(
 }
 
 /**
- * Builds a `radial-gradient(...)` value string for `u.bg({ image })` or any
- * other `background-image` use. `shape` is the raw shape/size/position
- * clause CSS expects — a bare keyword (`"circle"`, `"closest-side"`) gets
- * autocomplete via `GradientShape`, and a compound clause with a position
- * (`"ellipse at top left"`) still passes through unchanged. Each stop is
- * either a raw color string or a `{ color, position }` pair.
+ * Builds a `radial-gradient(...)` value string for any `background-image` use.
+ * `shape` is the raw shape/size/position clause CSS expects, so a compound
+ * clause such as `"ellipse at top left"` passes through unchanged.
  *
  * @example u.radialGradient("circle", "red", "blue")
  * @example "radial-gradient(circle, red, blue)"
@@ -109,15 +97,9 @@ export function radialGradient(shape: GradientShape, ...stops: GradientStop[]): 
 }
 
 /**
- * Builds a `conic-gradient(...)` value string for `u.bg({ image })` or any
- * other `background-image` use. A numeric `angle` is treated as degrees and
- * wrapped in the `from` keyword CSS requires; a string passes through
- * unchanged, so the full `from <angle> at <position>` clause can be given
- * directly — typed as a template literal against `GradientPosition`, so
- * `` `from ${number}deg at ${GradientPosition}` `` gets real structure
- * instead of a bare `string`. The `(string & {})` member still keeps a
- * position given as a percentage rather than a keyword accepted. Each stop
- * is either a raw color string or a `{ color, position }` pair.
+ * Builds a `conic-gradient(...)` value string for any `background-image` use.
+ * A numeric `angle` is treated as degrees and wrapped in the `from` keyword
+ * CSS requires; a string passes through as the full `from ... at ...` clause.
  *
  * @example u.conicGradient(45, "red", "blue")
  * @example "conic-gradient(from 45deg, red, blue)"

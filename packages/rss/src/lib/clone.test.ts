@@ -1,3 +1,9 @@
+/**
+ * Tests for the RSS channel and item deep-clone helpers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { cloneChannel, cloneItem } from "./clone";

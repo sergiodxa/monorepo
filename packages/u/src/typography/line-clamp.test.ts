@@ -19,16 +19,11 @@ describe("lineClamp", () => {
 	});
 
 	test("the line count keeps no unit, so the declaration survives the serializer", async () => {
-		// Regression: the count used to be emitted as a bare number, and the
-		// serializer's px-appending turned it into `-webkit-line-clamp: 2px`,
-		// an invalid declaration browsers drop — nothing was ever clamped.
 		expect(await declarations(lineClamp(2))).toContain("-webkit-line-clamp: 2");
 		expect(await declarations(lineClamp(2))).not.toContain("-webkit-line-clamp: 2px");
 	});
 
 	test("the vendor prefix keeps its leading dash, which a camelCase key would lose", async () => {
-		// `webkitBoxOrient` would kebab-case to `webkit-box-orient`, a property
-		// no browser knows; only the capital-W spelling yields `-webkit-…`.
 		let css = await declarations(lineClamp(2));
 
 		expect(css.filter((line) => line.startsWith("-webkit"))).toEqual([

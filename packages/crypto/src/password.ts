@@ -25,9 +25,8 @@ import { timingSafeEqual } from "./timing-safe-equal";
 /**
  * Current iteration count for new hashes.
  *
- * PBKDF2 is not memory-hard, so this number carries the entire cost budget.
- * Raising it here is the whole upgrade: existing hashes keep verifying with the
- * count they recorded, and `needsRehash` starts reporting them as outdated.
+ * PBKDF2 is not memory-hard, so this number carries the entire cost budget;
+ * raising it is the whole upgrade, since `needsRehash` reports the change.
  */
 const PBKDF2_ITERATIONS = 600_000;
 
@@ -187,9 +186,8 @@ async function verify(stored: string, secret: string): Promise<Result<boolean, C
 /**
  * Reports whether a stored hash is behind current policy.
  *
- * True for anything this module would write differently today: a lower iteration
- * count, a shorter salt or key, and also a value it cannot parse at all, since a
- * foreign hash (bcrypt, for example) is exactly what upgrade-on-login replaces.
+ * True for a lower iteration count, a shorter salt or key, or a value this
+ * module cannot parse, matching how upgrade-on-login replaces foreign hashes.
  *
  * @param stored Encoded hash to inspect.
  * @returns Whether the value should be replaced after the next successful login.

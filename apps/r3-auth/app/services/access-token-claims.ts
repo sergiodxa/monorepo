@@ -1,11 +1,8 @@
 /**
- * Reads the claims of an access token this server itself issued and kept in its own
- * cookie session. The signature is not checked, and deliberately so: the token never
- * left the signed, httpOnly session record, so verifying it would only re-prove the
- * cookie signature at the cost of an R2 read on every request.
- *
- * Never use this on a token that arrived from a client — those go through
- * `AccessToken.verify` in the engine, which checks the signature, issuer and expiry.
+ * Reads the claims of an access token this server issued into its own cookie
+ * session, trusting them because the token never left the signed, httpOnly
+ * session record. Client-issued tokens route through `AccessToken.verify` in
+ * the engine instead, which checks the signature, issuer, and expiry.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,11 +65,9 @@ export function getSubjectFromAccessToken(accessToken: string): string | null {
 }
 
 /**
- * Whether a token has expired or is close enough to expiry to be worth refreshing
- * now rather than mid-request.
- *
- * An unreadable token counts as expiring, so the caller refreshes or signs out
- * instead of carrying a value it cannot reason about.
+ * Whether a token has expired or is within the refresh threshold. An
+ * unreadable token counts as expiring too, so the caller refreshes or signs
+ * out instead of reasoning about a value it cannot read.
  */
 export function isAccessTokenExpiringSoon(accessToken: string): boolean {
 	let claims = decodeAccessToken(accessToken);

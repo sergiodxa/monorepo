@@ -1,13 +1,9 @@
 /**
  * Tests for the in-battle Bag menu and its item classifier.
  *
- * The key regression: selecting a ball routes to the capture flow and a medicine
- * routes to the use-item turn, so choosing "Bag" no longer auto-captures. Covers
- * the pure `battleItemUse` classifier (ball vs medicine vs unusable) and the
- * `BattleBag` component confirming a ball, opening the target picker for a medicine
- * then returning its target, and cancelling out of both the list and the picker. A
- * scripted fake `InputManager` supplies the button edges; `render` needs a canvas
- * and is not tested.
+ * The key regression: selecting a ball routes to the capture flow and a
+ * medicine routes to the use-item turn, leaving the decision with the
+ * player after selecting "Bag".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,25 +69,20 @@ const ITEMS: BattleBagItem[] = [
 
 test("confirming a ball routes to the capture flow, not an auto-capture", () => {
 	let bag = new BattleBag();
-	// The ball is the first item; a plain confirm selects it.
 	let result = bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]);
 	expect(result).toEqual({ kind: "ball", itemId: "poke-ball" });
 });
 
 test("confirming a medicine opens the target picker, then returns the target", () => {
 	let bag = new BattleBag();
-	// Move down to the medicine and confirm; this opens the picker, not a turn.
 	bag.update(fakeInput({ repeating: [Button.Down] }), ITEMS, ["Bulba"]);
 	let opening = bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]);
 	expect(opening).toBe(null);
-	// Confirming a target returns the medicine plus the chosen target index.
 	let chosen = bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]);
 	expect(chosen).toEqual({ kind: "medicine", itemId: "potion", target: 0 });
 });
 
 test("selecting Bag never returns a capture on its own", () => {
-	// The first frame in the bag (no button) resolves to nothing: opening the bag
-	// does not itself throw a ball, which is the bug being guarded against.
 	let bag = new BattleBag();
 	expect(bag.update(fakeInput({}), ITEMS, ["Bulba"])).toBe(null);
 });
@@ -105,12 +96,10 @@ test("cancelling the item list returns to the action menu", () => {
 
 test("cancelling the target picker steps back to the item list, not the menu", () => {
 	let bag = new BattleBag();
-	bag.update(fakeInput({ repeating: [Button.Down] }), ITEMS, ["Bulba"]); // -> Potion
-	bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]); // open picker
+	bag.update(fakeInput({ repeating: [Button.Down] }), ITEMS, ["Bulba"]);
+	bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]);
 	let back = bag.update(fakeInput({ pressed: [Button.B] }), ITEMS, ["Bulba"]);
-	expect(back).toBe(null); // returned to the item list, no decision yet
-	// The list cursor is preserved on Potion, so confirming re-opens its picker
-	// (a decision only comes after picking a target) rather than acting immediately.
+	expect(back).toBe(null);
 	let reopened = bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]);
 	expect(reopened).toBe(null);
 	let chosen = bag.update(fakeInput({ pressed: [Button.A] }), ITEMS, ["Bulba"]);

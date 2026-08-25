@@ -1,8 +1,7 @@
 /**
- * HTTP action for public article and tutorial post pages. It validates route params,
- * negotiates the response format (HTML or Markdown) from the URL extension and Accept
- * header, loads the post, enforces publish/admin visibility rules, and renders the post
- * view or a typed 404/403. It exists to serve single posts across both content formats.
+ * HTTP action for public article and tutorial post pages. Route params are validated
+ * before any lookup, the response format is negotiated from the URL extension and the
+ * `Accept` header, and unpublished posts stay admin-only behind a 403.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,52 +23,34 @@ import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
 
-/**
- * Canonical public post type segments accepted by this controller.
- */
 type PostType = Post.PublicTypePath;
 
-/**
- * Normalized route params used after runtime validation succeeds.
- */
 interface ValidPostRequestParams {
 	postType: PostType;
 	postSlug: string;
 	contentType: "html" | "md" | undefined;
 }
 
-/**
- * Validation outcome for incoming post route params.
- */
 type ValidatePostRequestParamsResult =
 	| { kind: "valid"; params: ValidPostRequestParams }
 	| { kind: "invalid-route" }
 	| { kind: "unsupported-content-type"; contentType: string }
 	| { kind: "unsupported-post-type" };
 
-/**
- * Public post collections that can be resolved from URL segments.
- */
 let SUPPORTED_POST_TYPES = new Set<string>(["articles", "tutorials"]);
-/**
- * Optional route extensions this controller can render explicitly.
- */
 let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md"]);
 
 /**
- * Handles public post requests for articles and tutorials.
- *
- * The handler validates route params first, negotiates response format from
- * URL extension and request headers, then returns markdown or HTML views.
+ * Handles public post requests for articles and tutorials, rejecting unknown collections
+ * and extensions before the lookup runs.
  */
 export default createAction(
 	routeMap.post,
 	/**
 	 * Serves one post resource in HTML or Markdown.
-	 * @param ctx Route action context with params, request, and model access.
-	 * @returns A success response for an existing post, otherwise a typed 404 response.
+	 * @returns The post response, or a typed 404 when nothing matches.
 	 * @example URL `/articles/hello-world.md` returns raw markdown when the post exists.
-	 * @example Header `Accept: text/markdown` can negotiate markdown when no extension is provided.
+	 * @example Header `Accept: text/markdown` negotiates markdown for an extensionless URL.
 	 */
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -177,12 +158,9 @@ export default createAction(
 );
 
 /**
- * Validates route params and converts them into a safe controller contract.
- *
- * This function is the guardrail that enforces supported post collections and
- * optional extension values before the database lookup runs.
- * @param params Raw route params from the matched URL.
- * @returns A discriminated result describing either normalized params or a rejection reason.
+ * Enforces supported post collections and extension values before the database lookup
+ * runs, so downstream code works with normalized params.
+ * @returns A discriminated result with normalized params or a rejection reason.
  */
 function validatePostRequestParams(params: {
 	postType: string | undefined;
@@ -210,13 +188,10 @@ function validatePostRequestParams(params: {
 }
 
 /**
- * Creates a plain Markdown `Response` with a fixed markdown content type.
- *
- * This bypasses HTML view rendering for explicit markdown responses and
- * keeps response construction consistent for both success and 404 bodies.
+ * Builds a Markdown response with the charset-tagged Markdown content type, keeping
+ * success and error bodies identical in shape.
  * @param status HTTP status for the response.
  * @param body Markdown response body text.
- * @returns Markdown response with the Markdown content type header.
  */
 function markdown(status: number, body: string): Response {
 	return new Response(body, {
@@ -226,12 +201,9 @@ function markdown(status: number, body: string): Response {
 }
 
 /**
- * Renders the canonical HTML not-found page for this controller.
- *
- * The input is mapped through `NotFoundViewModel` so callers can provide a
- * small semantic payload while preserving shared not-found page behavior.
- * @param input View model input used to build the not-found UI.
- * @returns HTML 404 response for missing or unsupported content.
+ * Maps a small semantic payload through `NotFoundViewModel` so every miss in this
+ * controller shares one not-found page.
+ * @returns HTML 404 response.
  */
 async function renderNotFoundPage(
 	render: import("~/app/http/context").BlogRenderer,
@@ -242,12 +214,9 @@ async function renderNotFoundPage(
 }
 
 /**
- * Renders the shared error page with HTTP 403 status for preview-only posts.
- *
- * This keeps the public post route explicit about access denial instead of
- * pretending the resource does not exist.
- * @param input View model input used to build the forbidden UI.
- * @returns HTML 403 response for unpublished content.
+ * Reports preview-only posts as denied, marking them as existing but withheld from the
+ * public.
+ * @returns HTML 403 response.
  */
 async function renderForbiddenPage(
 	render: import("~/app/http/context").BlogRenderer,

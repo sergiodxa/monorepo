@@ -83,11 +83,9 @@ describe("GET /features/:slug", () => {
 		let response = await getFeature(slug);
 
 		let body = await response.text();
-		// Canonical on the production origin, not the `uptime.test` host that served it.
 		expect(body).toContain(
 			`<link rel="canonical" href="https://uptime.sergiodxa.com/features/${slug}"`,
 		);
-		// A feature page's subject is a capability of the product.
 		expect(body).toContain('"@type":"SoftwareApplication"');
 		if (content.faqs.length > 0) expect(body).toContain('"@type":"FAQPage"');
 	});

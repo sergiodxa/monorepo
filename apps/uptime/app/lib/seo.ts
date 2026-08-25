@@ -14,13 +14,9 @@ import type { SchemaOrg } from "@pkg/seo";
 import { createSeo } from "@pkg/seo";
 
 /**
- * The site's one configured SEO instance, shared by every controller and layout: it
- * resolves canonical URLs onto the product's origin regardless of which host served the
- * request (custom domain, `workers.dev` subdomain, preview deployment) and binds the
- * schema.org builders to the same identity.
- *
- * No `twitter.site`/`creator` handle: the product has no account there, and an empty
- * handle is worse metadata than none — the card layout is all these pages advertise.
+ * The site's one configured SEO instance: resolves canonical URLs onto the product's
+ * origin regardless of which host served the request, and binds the schema.org builders
+ * to the same identity. No `twitter.site`/`creator` handle, since there's no account.
  *
  * @example SEO.canonical(ctx.url) // "https://uptime.sergiodxa.com/features/monitors"
  */

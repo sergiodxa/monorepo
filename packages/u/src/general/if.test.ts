@@ -1,6 +1,4 @@
 /**
- * Unit tests for `if.ts`'s conditional passthrough.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

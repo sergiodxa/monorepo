@@ -521,8 +521,6 @@ describe(executeEventually, () => {
 		let error = expectFailure(await executeEventually(node, host));
 		expect(error.code).toBe("unknown-name");
 		expect(toolCalls).toHaveLength(0);
-		// The head can never resolve (let is banned inside eventually, so the
-		// scope is frozen); the failure must not burn the deadline retrying.
 		expect(performance.now() - started).toBeLessThan(1000);
 	});
 

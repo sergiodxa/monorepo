@@ -20,11 +20,11 @@ import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**
- * Groups type contracts for the articles list page.
+ * Type contracts for the articles list page.
  */
 export namespace ArticlesView {
 	/**
-	 * Represents one article link rendered in the list.
+	 * One article row in the list.
 	 */
 	export interface Item {
 		href: string;
@@ -34,7 +34,7 @@ export namespace ArticlesView {
 	}
 
 	/**
-	 * Supplies all data needed to render the articles page.
+	 * Everything the articles page renders.
 	 */
 	export interface Model {
 		items: Array<Item>;
@@ -85,11 +85,6 @@ export function ArticlesView() {
 				) : (
 					<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
 						{model.items.map((item) => (
-							/* The shared list-row treatment used by every public index page: a
-							tinted, hairline-bordered card on the `lg` radius, one padding step
-							on all sides, with the title claiming the free track and the date
-							sitting in an auto track beside it. Baseline alignment replaces the
-							old hand-tuned nudge that pushed the date down to meet the title. */
 							<li
 								key={item.href}
 								mix={[

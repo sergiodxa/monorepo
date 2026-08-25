@@ -1,18 +1,9 @@
 /**
  * Tests for the flow monitor create/update/delete/run actions.
  *
- * Two properties carry most of the weight here.
- *
- * **A flow may only be pointed at a verified domain.** Create and update refuse a source naming
- * anything else, and they refuse it *before storing it* — a monitor saved that way could never run,
- * so it would be an hourly `error` result and a customer wondering why. The refusal is asserted by
- * the absence of a row, not only by the redirect.
- *
- * **A run is billed for the requests it made.** `cloudflare:workers` supplies a `waitUntil` that
- * collects the meter events the response deliberately doesn't wait for instead of dropping them: a
- * run that made three requests is exactly three `ping` events keyed on the result row it wrote, and
- * every request that returned without running — rejected form, another team's monitor, a lapsed
- * owner, a source no verified domain covers — is none.
+ * A flow may only be pointed at a verified domain, refused before storage and asserted by the
+ * absence of a row. A run bills one meter event per request actually made, keyed on the result
+ * row via `cloudflare:workers`' deferred `waitUntil`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,10 +49,9 @@ const ORIGIN = `https://app.${DOMAIN}`;
 let deferred: Promise<unknown>[] = [];
 
 /**
- * The dataset `writePingResult` reports to. Module scope because the actions capture `env`
- * on import, so `beforeEach` empties it rather than re-creating it. It enforces the
- * platform's cardinality and size limits, so an over-budget point fails here instead of
- * being lost the way production loses it.
+ * The dataset `writePingResult` reports to, module-scoped because the actions capture `env` on
+ * import so `beforeEach` empties it instead of re-creating it. It enforces the platform's
+ * cardinality and size limits, so an over-budget point fails the test immediately.
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
@@ -182,7 +172,7 @@ async function send(
 	container.instance(Database, db);
 	container.instance(PolarClient, polar);
 
-	/** `i18n` because the entitlement refusal's message is a locale key, not a literal. */
+	/** `i18n` because the entitlement refusal's message resolves from a locale key. */
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
@@ -220,7 +210,6 @@ describe("createFlowMonitor", () => {
 		let created = await db.findOne(flowMonitors, { where: { team_id: team.id } });
 		expect(created?.name).toBe("Sign in");
 		expect(created?.interval_seconds).toBe(900);
-		// The detail page, not the list: it is where somebody wants to be having just made one.
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.flowMonitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
@@ -249,7 +238,6 @@ describe("createFlowMonitor", () => {
 		);
 
 		expect(response.status).toBe(303);
-		// The row's absence is the assertion: a monitor saved this way could never run.
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
 	});
 
@@ -463,7 +451,6 @@ describe("checkFlowMonitor", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as Record<string, unknown>;
-		// The hydrated page renders these into a toast, so all of them travel.
 		expect(body.status).toBe("up");
 		expect(body.requestsMade).toBe(2);
 		expect(body.testsPassed).toBe(1);
@@ -493,7 +480,6 @@ describe("checkFlowMonitor", () => {
 		expect(
 			events.map((event) => event.externalId ?? "").sort((a, b) => a.localeCompare(b)),
 		).toEqual([`ping:${stored!.id}:0`, `ping:${stored!.id}:1`, `ping:${stored!.id}:2`]);
-		// One data point for the run, not one per request: the series is "how long did it take".
 		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 
@@ -515,8 +501,6 @@ describe("checkFlowMonitor", () => {
 		let body = (await response.json()) as Record<string, unknown>;
 		expect(body.status).toBe("error");
 		expect(body.requestsMade).toBe(0);
-		// Recorded, not only reported: somebody who asked to run a broken monitor gets a result
-		// row explaining why.
 		let stored = await db.findOne(flowMonitorResults, { where: { flow_monitor_id: monitor.id } });
 		expect(stored?.status).toBe("error");
 		expect(await ingestedEvents()).toHaveLength(0);

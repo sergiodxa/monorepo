@@ -155,7 +155,6 @@ describe(retry, () => {
 			{ times: 5, delay: 50, backoff: "constant" },
 		);
 
-		// Check delays are roughly constant (50ms each)
 		for (let diff of deltas(timestamps)) {
 			expect(diff).toBeGreaterThanOrEqual(40);
 			expect(diff).toBeLessThan(100);
@@ -175,9 +174,7 @@ describe(retry, () => {
 			{ times: 5, delay: 50, backoff: "linear" },
 		);
 
-		// Delays should be: 50, 100, 150 (delay * attempt)
 		let delays = deltas(timestamps);
-		// Check delays are in expected ranges with tolerance for timing jitter
 		expect(delays[0]).toBeGreaterThanOrEqual(40);
 		expect(delays[0]).toBeLessThan(80);
 		expect(delays[1]).toBeGreaterThanOrEqual(90);
@@ -199,9 +196,7 @@ describe(retry, () => {
 			{ times: 5, delay: 50 },
 		);
 
-		// Delays should be: 50, 100, 200 (delay * 2^(attempt-1))
 		let delays = deltas(timestamps);
-		// Check delays are in expected ranges with tolerance for timing jitter
 		expect(delays[0]).toBeGreaterThanOrEqual(40);
 		expect(delays[0]).toBeLessThan(80);
 		expect(delays[1]).toBeGreaterThanOrEqual(90);
@@ -245,8 +240,10 @@ describe(retry, () => {
 	});
 
 	test("rejects a delay that is not a number", async () => {
-		// The cast bypasses the compile-time type on purpose: the guard exists for
-		// untyped callers, and a duration string is no longer accepted.
+		/**
+		 * Bypasses the compile-time type to simulate an untyped caller, verifying
+		 * the runtime guard rejects a non-numeric delay with a TypeError.
+		 */
 		let delay = "100ms" as unknown as number;
 
 		await expect(retry(async () => success("done"), { times: 3, delay })).rejects.toThrow(

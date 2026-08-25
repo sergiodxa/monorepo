@@ -10,12 +10,9 @@
 import type { DurationUnit, DurationUnitShort } from "./units";
 
 /**
- * A duration written as text: a whole amount plus a unit, either spelled out
- * after a single space or abbreviated with no space. The amount placeholder is
- * `${bigint}` rather than `${number}` because `${number}` also admits `1.5`,
- * `5e3` and `0x10`, and only whole amounts are supported. A template built from a
- * variable widens to `${number} minutes` and is rejected too: compute those as a
- * number of milliseconds instead of assembling text.
+ * A duration written as text: a whole amount plus a unit, spelled out after a
+ * space or abbreviated with none. The amount is `${bigint}`, so only whole,
+ * canonical amounts such as `30` type-check.
  *
  * @example
  * let lifetime: DurationString = "30 days";

@@ -1,25 +1,9 @@
 /**
- * Switches a theme switch control's page-wide color scheme — forced light,
- * forced dark, or following the operating system — and remembers the choice
- * so a returning visit starts already in the same scheme. Answers three
- * invoker commands from separate trigger buttons, and reacts the same way to
- * a native `change` bubbling up from a descendant radio input or `<select>`,
- * so either markup shape drives the same switch.
- *
- * Why JS: the mode a visitor picks has to reach `<html>` — an element
- * outside the control's own subtree — and a cookie the next full
- * navigation's server render can read back before any markup arrives; it
- * also has to answer the `--ui-theme-light`/`--ui-theme-dark`/
- * `--ui-theme-system` commands dispatched by a separate trigger button.
- * Neither a class change on a different element nor a cookie write nor the
- * Command Invoker API's `command` event has an HTML attribute or CSS
- * selector standing in for it.
- * No-JS baseline: the light/dark/system options still render as an
- * ordinary, mutually exclusive set of native controls inside a form, and
- * submitting that form still reaches the server, which is just as capable
- * of writing the same cookie and rendering the next page with the right
- * class already on `<html>`. Only the instant, submit-free retheme is
- * unavailable without this mixin.
+ * Switches a theme switch control's page-wide scheme — light, dark, or
+ * system — and persists it in a cookie so a return visit's server render
+ * starts in the same mode. The mode must reach `<html>`, outside the
+ * control, and answer Invoker Commands, neither of which CSS expresses alone.
+ * Without JS the same options still work as a plain form writing the cookie.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,9 +18,8 @@ import { writeCookie } from "../utils/write-cookie";
 
 /**
  * Cookie {@link themeToggle} persists the active mode under by default, so
- * an app's server-side render can read the same name back. Override via
- * {@link ThemeToggle.Options.cookieName} only if the server reads the
- * cookie back under a different name.
+ * an app's server-side render can read the same name back; override via
+ * {@link ThemeToggle.Options.cookieName} for a different name.
  */
 const THEME_COOKIE_NAME = "ui:theme";
 
@@ -64,10 +47,9 @@ declare global {
  */
 export namespace ThemeToggle {
 	/**
-	 * A color scheme {@link themeToggle} can switch `<html>` to. `"light"`
-	 * removes both `.dark` and `.system`, forcing the light palette;
-	 * `"dark"` adds `.dark`, forcing the dark palette; `"system"` adds
-	 * `.system`, following the operating system's `prefers-color-scheme`.
+	 * A color scheme {@link themeToggle} can switch `<html>` to: `"light"`
+	 * removes `.dark`/`.system` for the light palette, `"dark"` adds `.dark`,
+	 * and `"system"` adds `.system` to follow `prefers-color-scheme`.
 	 */
 	export type Mode = "light" | "dark" | "system";
 
@@ -85,12 +67,9 @@ export namespace ThemeToggle {
 }
 
 /**
- * Dispatched on a theme switch control by {@link themeToggle} right after it
- * switches `<html>`'s active mode — from either the invoker command or the
- * native `change` path — carrying the mode it switched to, so a consumer
- * can react (resyncing another switch instance rendered elsewhere on the
- * page, updating a `<meta name="theme-color">` tag) without reading
- * `<html>`'s class list back off the DOM itself.
+ * Dispatched on a theme switch control by {@link themeToggle} right after a
+ * switch, carrying the new mode so a consumer can resync another instance or
+ * update `<meta name="theme-color">` without reading `<html>`'s class list.
  */
 export class ThemeChangeEvent extends Event {
 	/** The mode {@link themeToggle} just switched `<html>` to. */
@@ -107,9 +86,8 @@ export class ThemeChangeEvent extends Event {
 
 /**
  * Maps an invoker command {@link themeToggle} answers to the mode it
- * switches `<html>` to, or `undefined` for any other command — the guard
- * that lets an unrelated `command` event bubbling through the same host
- * pass through untouched.
+ * switches `<html>` to, or `undefined` for any other command, letting an
+ * unrelated `command` event on the same host pass through untouched.
  *
  * @param command `CommandEvent.command` read off a `command` event.
  */
@@ -128,9 +106,8 @@ function commandToMode(command: string): ThemeToggle.Mode | undefined {
 
 /**
  * Reads `value` back as a {@link ThemeToggle.Mode}, or `undefined` when it
- * names none of the three modes {@link themeToggle} recognizes — the guard
- * that keeps an unrelated control's `change` event, one that happens to
- * bubble through the same host, from ever reaching {@link applyMode}.
+ * names none of the three modes {@link themeToggle} recognizes, keeping an
+ * unrelated control's `change` event from ever reaching {@link applyMode}.
  *
  * @param value Raw `value` read off a native radio input or `<select>`.
  */
@@ -140,10 +117,9 @@ function parseMode(value: string): ThemeToggle.Mode | undefined {
 }
 
 /**
- * Reads the `value` a `change` event's target carries, when that target is
- * a radio input or a `<select>` — the two native controls whose `value`
- * can name a mode — or `undefined` for anything else, so a `change`
- * bubbling from an unrelated descendant never reaches {@link parseMode}.
+ * Reads the `value` a `change` event's target carries when that target
+ * is a radio input or `<select>`, or `undefined` otherwise, so a `change`
+ * from an unrelated descendant never reaches {@link parseMode}.
  *
  * @param target `EventTarget` a `change` event fired on.
  */
@@ -154,10 +130,9 @@ function readControlValue(target: EventTarget | null): string | undefined {
 }
 
 /**
- * Switches `<html>` to `mode`, following `theme.css`'s own contract for
- * which class each mode expects: `.dark` for a forced dark palette,
- * `.system` for the operating system's `prefers-color-scheme`, or neither
- * class for a forced light palette.
+ * Switches `<html>` to `mode`, following `theme.css`'s contract: `.dark`
+ * for a forced dark palette, `.system` for `prefers-color-scheme`, or
+ * neither class for a forced light palette.
  *
  * @param mode Mode to switch `<html>` to.
  */
@@ -169,25 +144,13 @@ function applyMode(mode: ThemeToggle.Mode): void {
 
 /**
  * Turns a theme switch control into the source of a page-wide color-scheme
- * change: switches `<html>` to light, dark, or system, and persists the
- * choice into a cookie, so the next full navigation's server render starts
- * `<html>` in the same mode ahead of hydration. `<html>`'s own class list
- * stays the single source of truth for the mode currently active — this
- * mixin never keeps a copy of its own; it only ever computes the next mode
- * and writes both `<html>` and the cookie together, every time.
+ * change, switching `<html>` and persisting the mode to a cookie together,
+ * every time, so `<html>`'s class list stays the only source of truth.
  *
- * Answers three invoker commands from any trigger targeting the host —
- * `--ui-theme-light`, `--ui-theme-dark`, `--ui-theme-system` — so three
- * plain buttons can drive the switch without the host itself carrying a
- * value. Also reacts to a native `change` bubbling up from a descendant
- * radio input or `<select>` whose `value` already names a mode, so a
- * form-native set of options switches the scheme the same way, with no
- * invoker commands involved at all.
- *
- * Dispatches {@link ThemeChangeEvent} on the host after every switch, from
- * either path.
- *
- * @param options Cookie name to persist the mode under; see {@link ThemeToggle.Options}.
+ * @param options Cookie name to persist the mode under; see
+ * {@link ThemeToggle.Options}. Optional — when a call site omits it
+ * (`themeToggle()`), the runtime passes its trailing current-props argument
+ * in its place, so that value is reset back to an empty options object.
  * @returns A mixin descriptor for a theme switch control's `mix` prop.
  * @example
  * <div id="theme-switch" mix={[themeToggle()]}>
@@ -208,9 +171,6 @@ function applyMode(mode: ThemeToggle.Mode): void {
 export const themeToggle: MixinFactory<HTMLElement, [options?: ThemeToggle.Options], ElementProps> =
 	createMixin<HTMLElement, [options?: ThemeToggle.Options], ElementProps>((handle) => {
 		return (options = {}, props = options as ElementProps) => {
-			// `options` is optional, so a call site that omits it (`themeToggle()`)
-			// gets the runtime's trailing current-props argument in its place —
-			// reset it back to an empty options object when that happens.
 			if (props === options) {
 				options = {};
 			}

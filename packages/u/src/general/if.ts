@@ -7,8 +7,7 @@ import type { UtilityInput } from "../internal/descriptor";
 /**
  * Conditionally returns `input`, or a falsy value when `condition` is falsy.
  * `mix` already accepts falsy values directly (`mix={[cond && u.bg()]}`), so
- * this exists purely for call sites that prefer a utility-shaped
- * conditional over a bare `&&`.
+ * this serves call sites that prefer a utility-shaped conditional.
  *
  * @example u.if(isActive, u.bg("brand.tint"))
  * @example isActive ? u.bg("brand.tint") : false

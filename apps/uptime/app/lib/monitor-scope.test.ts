@@ -80,7 +80,7 @@ describe("encodeMonitorScope / parseMonitorScope", () => {
 		}
 	});
 
-	/** Rejected rather than defaulted: a fallback to team-wide would widen an alert silently. */
+	/** Rejected outright, since a fallback to team-wide would silently widen an alert. */
 	test("rejects values no form of ours produces", () => {
 		for (let value of [
 			"type:pigeon",

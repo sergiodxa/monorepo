@@ -37,9 +37,8 @@ const DEFAULT_ROLE = "tree";
 
 /**
  * `role="group"` applied to {@link Tree.Item} through {@link attrs} unless a
- * consumer supplies its own `role` — the only role the native `<details>`
- * element accepts, and a fitting one besides: each item's own `<details>`
- * is exactly what groups its nested {@link Tree.Item} nodes.
+ * consumer supplies its own `role` — the only role a native `<details>`
+ * accepts, and a fitting one since each item's own `<details>` groups its nodes.
  */
 const DEFAULT_ITEM_ROLE = "group";
 
@@ -56,9 +55,7 @@ const DEFAULT_DEPTH = 0;
 /**
  * Marker {@link Tree.ExpandButton} always carries as its `data-slot`
  * attribute, applied through {@link attrs} unless a consumer supplies its
- * own value. {@link Tree.Item}'s own rotate-on-open styling reads this
- * attribute to find the chevron nested inside its row without also
- * matching a nested subtree's own chevron.
+ * own value, letting {@link Tree.Item}'s styling target just this chevron.
  */
 const DEFAULT_EXPAND_BUTTON_SLOT = "expand-button";
 
@@ -83,16 +80,13 @@ export namespace Tree {
 	/**
 	 * Props accepted by {@link Tree.Item}. Every native `<details>` attribute
 	 * still applies, so `open` sets a branch's initial and current expanded
-	 * state declaratively, exactly as it does on {@link Tree}'s own `<details>`
-	 * siblings elsewhere in this library.
+	 * state declaratively, exactly as on any native `<details>` element.
 	 */
 	export interface ItemProps extends TagProps<"details"> {
 		/**
-		 * Stable identifier for this node, mirrored onto both the rendered
-		 * element's own `id` and a `data-key` attribute so a paired
-		 * selection, keyboard-navigation, or reorder behavior can correlate
-		 * the node with its own tracked state without parsing its rendered
-		 * content.
+		 * Stable identifier for this node, mirrored onto the rendered element's
+		 * own `id` and a `data-key` attribute so a paired selection, navigation, or
+		 * reorder behavior can correlate the node with its own tracked state.
 		 */
 		id: string;
 		/** The node's {@link Tree.ItemContent} row, followed by zero or more nested {@link Tree.Item} nodes describing its subtree. */
@@ -112,8 +106,7 @@ export namespace Tree {
 	/**
 	 * Props accepted by {@link Tree.ExpandButton}: every native `<button>`
 	 * attribute except `type` (fixed to `"button"` so it never submits an
-	 * enclosing form), plus a required `aria-label` since the control is
-	 * icon-only.
+	 * enclosing form), plus a required `aria-label` for the icon-only control.
 	 */
 	export interface ExpandButtonProps extends Omit<TagProps<"button">, "type"> {
 		/** Accessible name for the icon-only control, e.g. "Expand" or "Collapse". */
@@ -123,8 +116,7 @@ export namespace Tree {
 
 /**
  * Reads the nesting depth published by the nearest ancestor {@link Tree.Item},
- * guarded so a lookup finding no ancestor item at all resolves to
- * `undefined` rather than reaching the caller as a thrown error.
+ * resolving to `undefined` when the lookup finds no ancestor item at all.
  *
  * @param handle Runtime handle of the component performing the lookup.
  * @returns The nearest ancestor item's depth, or `undefined` where nothing wraps the caller.
@@ -142,14 +134,9 @@ function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
 }
 
 /**
- * Renders the tree's root host: a bordered, rounded `<div>` carrying
- * `role="tree"`, stacking {@link Tree.Item} nodes in normal block flow.
- * Setting `data-empty` centers a fallback message in place of the list, for
- * a tree with no nodes to show.
- *
- * In dev mode, a tree rendered without an `aria-label` or `aria-labelledby`
- * logs a `console.warn`, since assistive technology otherwise has no
- * accessible name to announce for it.
+ * Renders the tree's root host: a bordered `<div>` carrying `role="tree"`,
+ * stacking {@link Tree.Item} nodes in block flow, with `data-empty`
+ * centering a fallback message; an unlabeled tree logs a dev `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the tree's markup.
@@ -201,23 +188,9 @@ export function Tree(handle: Handle<Tree.Props>) {
 }
 
 /**
- * Renders a single node as a native `<details>`, so a subtree's reveal and
- * its own `[open]` state come from the platform with no script involved.
- * Nest {@link Tree.ItemContent} first, as this node's always-visible row,
- * followed by zero or more further {@link Tree.Item} nodes describing its
- * children — the browser hides everything after that first `<summary>`
- * automatically while the details is closed, and reveals it once opened, so
- * a subtree's whole visibility rides on the native disclosure mechanism
- * rather than a class or attribute this library tracks. A node with no
- * further {@link Tree.Item} children still renders as a `<details>` for a
- * uniform structure; leave {@link Tree.ExpandButton} out of its content and
- * activating it is indistinguishable from a no-op, since there is nothing
- * to reveal.
- *
- * Reveals its subtree through the same `::details-content` `block-size`
- * transition every `<details>`-based component in this library shares,
- * animating only as progressive enhancement on top of the platform's own
- * instant show/hide.
+ * Renders a node as a native `<details>`, so a subtree's reveal and `[open]`
+ * state come from the platform. Nest {@link Tree.ItemContent} first as the
+ * row, then nested {@link Tree.Item} children; reveal animates via `::details-content`.
  *
  * @param handle Runtime handle carrying the host `<details>`'s props and providing {@link Tree.ItemContext} to nodes nested inside it.
  * @returns The render function producing the node's markup.
@@ -278,20 +251,9 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 Tree.Item = TreeItem;
 
 /**
- * Renders {@link Tree.ItemContentProps.children} inside a native `<summary>`,
- * the enclosing {@link Tree.Item}'s always-visible, always-focusable row.
- * Indented to match the nesting depth of its own {@link Tree.Item} — read
- * automatically through context rather than a prop, so composing nodes
- * keeps every row correctly indented purely by nesting — and carries an
- * `aria-level` computed from that same depth. Its default disclosure
- * triangle is suppressed in favor of a plain row layout, so nest
- * {@link Tree.ExpandButton} in `children` for a chevron that rotates on
- * `[open]`, and any leading icon or trailing content a node's row wants.
- * Setting `aria-selected="true"` reads a row as selected and
- * `aria-disabled="true"` mutes it, mirroring a row list's own row contract;
- * the browser still toggles the enclosing `<details>` on activation
- * regardless, since preventing that natively requires script a consumer
- * attaches itself.
+ * Renders {@link Tree.ItemContentProps.children} inside a native
+ * `<summary>` — the enclosing {@link Tree.Item}'s always-visible row —
+ * indented from its ambient depth, with `aria-selected`/`aria-disabled` styling.
  *
  * @param handle Runtime handle carrying the host `<summary>`'s props.
  * @returns The render function producing the row's markup.
@@ -347,10 +309,8 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 
 /**
  * Renders a decorative sentinel node: a `<div>` styled as centered, muted
- * small text, sized to match {@link Tree.ItemContent}'s own vertical
- * rhythm. Carries no loading or fetching behavior of its own — it's styling
- * only, ready to hold whatever loading indicator a paired enhancement
- * supplies as `children`.
+ * small text sized to match {@link Tree.ItemContent}'s vertical rhythm,
+ * ready to hold whatever loading indicator a paired enhancement supplies.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the sentinel node's markup.
@@ -360,21 +320,9 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 Tree.LoadMoreItem = SentinelRow;
 
 /**
- * Renders the chevron a node's row shows when it has a subtree to reveal: a
- * native `<button type="button">` carrying a fixed grip-free glyph, rotated
- * 90 degrees while the enclosing {@link Tree.Item}'s `<details>` carries
- * `[open]`. Carries no independent expand/collapse behavior of its own in
- * this baseline — nested inside {@link Tree.ItemContent}, activating it
- * toggles the same `<details>` that clicking anywhere else in the row does,
- * since telling the two apart needs script a paired behavior attaches
- * later, reading the button's `data-slot` marker to bind its own handling
- * to just this control.
- *
- * `type="button"` is written before the consumer's own attributes, so a chevron
- * carrying `command`/`commandfor` can still run its command inside a `<form>`:
- * the platform judges whether an invoker is ambiguous while it parses the
- * command attributes and never revisits that decision for a later `type`. A
- * consumer passing an explicit `type` still overrides the default.
+ * Renders the chevron a node's row shows for a subtree, rotated 90 degrees
+ * while the enclosing {@link Tree.Item}'s `<details>` carries `[open]`.
+ * `type="button"` precedes the consumer's attributes so a `command`/`commandfor` invoker still runs inside a `<form>`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the chevron's markup.
@@ -389,11 +337,6 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type="button"
 				{...rest}

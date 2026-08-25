@@ -65,8 +65,7 @@ export namespace Dialog {
 	/**
 	 * Every native `<dialog>` attribute, plus the `mix` passthrough. `role`
 	 * stays the platform's implicit `"dialog"` unless set to `"alertdialog"`,
-	 * and `open`/`closedby` stay the platform's own state and light-dismiss
-	 * controls rather than anything this component tracks itself.
+	 * and `open`/`closedby` stay the platform's own native state and light-dismiss controls.
 	 */
 	export interface Props extends TagProps<"dialog"> {
 		/** The panel's compound parts: {@link Dialog.Header}, {@link Dialog.Footer}, {@link Dialog.Close}, or any other content. */
@@ -81,8 +80,7 @@ export namespace Dialog {
 	/**
 	 * Props accepted by {@link Dialog.Title}. Every native heading-element
 	 * attribute still applies, since the rendered tag depends on the nearest
-	 * ambient heading level, falling back to `<h1>` where nothing supplies
-	 * one.
+	 * ambient heading level, falling back to `<h1>` where none is set.
 	 */
 	export interface TitleProps extends TagProps<"h1"> {}
 
@@ -117,21 +115,9 @@ export namespace Dialog {
 }
 
 /**
- * Renders the dialog panel as a native `<dialog>` host, its own `::backdrop`
- * tinted to dim the page behind it and, where the platform supports it and
- * the user hasn't asked for reduced transparency, softly blurred as well.
- * The panel declares the `ui-dialog` named container so {@link Dialog.Header}
- * and {@link Dialog.Footer} can adapt to the panel's own width rather than
- * the page's. The panel itself holds still — compose the `zoom()` factory
- * from the animation layer through `mix` for its pop-in and pop-out motion.
- *
- * Invoker Commands open and close the panel declaratively: a trigger
- * elsewhere on the page points `commandfor` at this element's `id` with
- * `command="show-modal"`, and any control inside the panel — including
- * {@link Dialog.Close} — points `commandfor` at that same `id` with
- * `command="close"`. In dev mode, a Dialog rendered without an `id` logs a
- * `console.warn`, since nothing outside it would then have anything to
- * target.
+ * Renders the dialog panel as a native `<dialog>` host, its `::backdrop`
+ * tinted and, where supported, blurred to dim the page behind it. The panel
+ * declares the `ui-dialog` named container so {@link Dialog.Header} and {@link Dialog.Footer} can size against the panel's own width; Invoker Commands open and close it declaratively — a trigger elsewhere points `commandfor` at this element's `id` with `command="show-modal"`, and any control inside, including {@link Dialog.Close}, points `commandfor` at that same `id` with `command="close"`.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props.
  * @returns The render function producing the panel's markup.
@@ -220,9 +206,7 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 /**
  * Renders {@link Dialog.HeaderProps.children} as the panel's header slot: a
  * column stacking {@link Dialog.Title} and {@link Dialog.Description},
- * centered while the panel is narrow and start-aligned (so it flips under
- * `dir="rtl"`) once the panel's own `ui-dialog` container grows past the
- * `40rem` mark.
+ * centered while narrow and start-aligned (flipping under `dir="rtl"`) once the panel's own `ui-dialog` container grows past `40rem`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the header slot's markup.
@@ -256,8 +240,7 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 /**
  * Renders {@link Dialog.TitleProps.children} as the panel's heading, inside
  * the native heading element matching the nearest ambient heading level —
- * `<h1>` where nothing supplies one — sized and weighted as the panel's most
- * prominent line of text regardless of which level it renders.
+ * `<h1>` by default — sized and weighted as the panel's most prominent line of text at every level.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the heading's markup.
@@ -314,8 +297,7 @@ Dialog.Description = function DialogDescription(handle: Handle<Dialog.Descriptio
 /**
  * Renders {@link Dialog.FooterProps.children} as the panel's action row: a
  * column of stacked, full-width controls while the panel is narrow,
- * switching to a single end-aligned row once the panel's own `ui-dialog`
- * container grows past the `40rem` mark.
+ * switching to a single end-aligned row past the panel's own `40rem` container mark.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action row's markup.
@@ -347,10 +329,8 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 
 /**
  * Renders a dismiss control for the ancestor {@link Dialog} named by
- * `commandfor`: a small, ghost-styled {@link Button} carrying a fixed "X"
- * glyph, pinned to the panel's block-start/inline-end corner. `command`
- * defaults to `"close"`, so passing only `commandfor` and `aria-label` is
- * enough to wire it up.
+ * `commandfor`: a small, ghost-styled {@link Button} with a fixed "X" glyph,
+ * pinned to the panel's corner. `command` defaults to `"close"`, so passing only `commandfor` and `aria-label` wires it up.
  *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the dismiss control's markup.

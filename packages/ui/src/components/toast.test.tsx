@@ -28,9 +28,6 @@ describe("Toast.Action", () => {
 			</Toast.Action>,
 		);
 
-		// Presence is not enough: the ambiguity check runs while `command`/`commandfor`
-		// are parsed, so a `type` serialized after them is not seen and the command is
-		// refused. Both attributes have to come after it.
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
 	});

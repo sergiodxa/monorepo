@@ -20,10 +20,8 @@ const TRACKING_FALLBACKS: Record<NamedTrackingValue, string> = {
 
 /**
  * Applies `letter-spacing` from the named tracking scale, resolving through
- * `var(--ui-tracking-{name}, fallback)` so the scale works before an app
- * ever defines the variable. Any other string (a raw `letter-spacing` value
- * like `"0.18em"` or `"-0.04em"`) passes through unchanged instead of being
- * mistaken for a named scale step.
+ * `var(--ui-tracking-{name}, fallback)` so the scale works before an app defines
+ * the variable; any other string is treated as a raw `letter-spacing` value.
  *
  * @example u.tracking("wide")
  * @example css({ letterSpacing: "var(--ui-tracking-wide, 0.025em)" })

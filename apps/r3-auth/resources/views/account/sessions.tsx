@@ -1,11 +1,9 @@
 /**
- * The active-sessions page: one table row per device holding a live refresh token, with
- * the session the page is being read on marked, and a revoke control per row plus one
- * for every other session at once.
+ * The active-sessions page: one row per device holding a live refresh token, the
+ * current session marked, with revoke controls per row and for every other session.
  *
- * Each destructive control opens a native `<dialog>` through an invoker command, and the
- * dialog holds the real form that posts the intent — so the confirmation is the browser's
- * own modal and the action still works with no script on the page.
+ * Each control opens a native `<dialog>` holding the real form that posts the
+ * intent, so the confirmation runs as the browser's own modal via a plain HTTP post.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,9 +26,8 @@ const REVOKE_ALL_DIALOG_ID = "revoke-all-sessions";
 /**
  * Prefix for each row's confirmation dialog id, completed with the row's position.
  *
- * The position rather than the session id: the id is the refresh token, and it has no
- * business being in an attribute that any stylesheet or extension on the page can
- * select on. The hidden input the form posts is the only place it appears.
+ * The position keeps the refresh token out of the DOM entirely, since only the
+ * hidden input inside the form ever carries it.
  */
 const REVOKE_DIALOG_ID_PREFIX = "revoke-session-";
 
@@ -85,9 +82,8 @@ namespace SessionsView {
 /**
  * The confirmation dialog for one destructive submission.
  *
- * The confirming control is a real submit button inside a real form, rather than the
- * component library's `Confirm`, whose action button carries `command="close"` and so
- * dismisses the dialog without submitting anything.
+ * The confirming control is a real submit button inside a real form, so accepting
+ * the dialog posts the intent straight to the server.
  */
 function RevokeDialog(
 	handle: Handle<{

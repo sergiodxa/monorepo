@@ -1,20 +1,8 @@
 /**
- * Map export flow: a pure payload-shaper plus a server-side write handler.
- *
- * The shaper ({@link shapeMapExport}) turns a validated {@link MapData} into a
- * `{ path, contents }` pair — the relative write path `src/content/maps/<id>.json`
- * and the pretty-printed JSON body — with no disk, canvas, or network concerns, so
- * the mapping can be unit-tested directly. A single {@link MAP_ID_PATTERN} governs
- * which ids are acceptable (a conservative slug) so the derived path can never
- * smuggle a traversal, extension, or separator past the path-safety guard.
- *
- * The handler ({@link runMapExport}) validates an untrusted payload with the map
- * loader (schema shape plus the cross-field invariants — layer lengths, tile refs),
- * shapes it, re-checks the target through the shared path-safety guard (defense in
- * depth), writes the JSON scoped to the app root, and registers
- * the map id → served URL in `src/content/manifest.json` (read/update/write,
- * tolerant of an absent or partial manifest). It reuses the same guard every other
- * dev-tools export uses so no write can escape the allow-list.
+ * Map export: shapes a validated map into a `{ path, contents }` pair under
+ * `src/content/maps`, writes it, and registers its id → served URL in
+ * `src/content/manifest.json`. A conservative id slug keeps the derived path a
+ * single safe segment, and the path-safety guard re-checks every write target.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,9 +28,8 @@ export const MAP_URL_PREFIX = "/content/maps";
 
 /**
  * Allowed shape for a map id: a lowercase slug of letters, digits, and single
- * hyphens, no leading/trailing hyphen. Deliberately stricter than the path-safety
- * guard so an invalid id is rejected with a clear message before any path is
- * constructed and the derived filename is always a single safe segment.
+ * hyphens. Stricter than the path-safety guard so an invalid id is rejected with a
+ * clear message and the derived filename is always a single safe segment.
  */
 export const MAP_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
@@ -71,7 +58,6 @@ export interface MapExportResult {
 	url: string;
 	/** The resolved on-disk location of the map JSON. */
 	absolutePath: string;
-	/** Byte count written for the map JSON. */
 	bytesWritten: number;
 }
 
@@ -85,11 +71,9 @@ export class MapIdError extends Error {
 }
 
 /**
- * Validates a map id and shapes the export payload (write path, served URL, JSON
- * body). The id is validated against {@link MAP_ID_PATTERN} so the derived path is
- * always a single safe segment under {@link MAP_CONTENT_DIR}; the JSON body is the
- * map serialized tab-indented with a trailing newline (matching the repo's JSON
- * style), with the trimmed id so the filename and contents agree.
+ * Validates a map id against {@link MAP_ID_PATTERN} and shapes the export payload,
+ * so the derived path is always a single safe segment under {@link MAP_CONTENT_DIR}
+ * and the body carries the trimmed id, keeping filename and contents in agreement.
  *
  * @param map The validated map to write.
  * @returns Success with a {@link MapExportPayload}, or failure with a {@link MapIdError}.
@@ -118,10 +102,9 @@ export function shapeMapExport(map: MapData): Result<MapExportPayload, MapIdErro
 }
 
 /**
- * The minimal manifest slice the map export reads and writes: only `maps` is
- * required for registering a map; other kinds are carried through untouched. Kept
- * structural (not importing the presentation type) so this module has no
- * cross-layer dependency.
+ * The minimal manifest slice the map export reads and writes: `maps` is required
+ * for registering a map, and every other kind carries through untouched. The shape
+ * is structural, keeping this module independent of the presentation layer.
  */
 export interface ManifestMaps {
 	maps: Record<string, string>;
@@ -130,8 +113,8 @@ export interface ManifestMaps {
 
 /**
  * Returns a copy of the manifest with the map registered under `maps`
- * (id → served URL), leaving every other entry untouched. Pure: it never mutates
- * the input, so the caller decides when to persist the result.
+ * (id → served URL), leaving every other entry untouched. Pure: the input stays as
+ * it was, so the caller decides when to persist the result.
  *
  * @param manifest The current manifest contents.
  * @param payload The shaped export payload whose id/url is registered.
@@ -145,10 +128,9 @@ export function registerMap(manifest: ManifestMaps, payload: MapExportPayload): 
 }
 
 /**
- * Reads the manifest from disk, tolerating an absent file (treated as an empty
- * manifest) so the first export bootstraps it, and coercing a missing `maps` map
- * to an empty object. A present-but-invalid manifest is a hard error rather than
- * being silently overwritten.
+ * Reads the manifest from disk, treating an absent file as empty so the first
+ * export bootstraps it and coercing a missing `maps` to an empty object. A present
+ * but invalid manifest fails hard, preserving whatever is already on disk.
  *
  * @returns Success with the parsed manifest, or failure describing the problem.
  */
@@ -173,18 +155,9 @@ async function readManifest(): Promise<Result<ManifestMaps, ExportValidationErro
 }
 
 /**
- * Validates an untrusted map export payload and writes it to disk under
- * {@link APP_ROOT}, then registers it in `src/content/manifest.json`.
- *
- * The value is first validated with {@link loadMap} (schema shape plus the loader's
- * cross-field invariants: every layer and the collision grid is exactly
- * `width * height` cells and every tile ref names a declared tileset); the map is
- * then shaped by {@link shapeMapExport} and the destination re-validated with
- * {@link validateWritePath} (defense in depth) before the write. The map JSON write
- * path is resolved against {@link APP_ROOT}, never the process cwd, so the write
- * cannot escape the app. The manifest write path is the fixed {@link MANIFEST_PATH},
- * itself re-checked by the guard. Any step failing surfaces as a failure result
- * rather than a partial export.
+ * Validates an untrusted map export payload with {@link loadMap}, writes it
+ * under {@link APP_ROOT}, and registers it in `src/content/manifest.json`,
+ * with every write target checked by {@link validateWritePath}.
  *
  * @param payload The parsed JSON body from the export request (untrusted).
  * @returns Success with a {@link MapExportResult}, or failure with a validation,
@@ -203,7 +176,6 @@ export async function runMapExport(payload: unknown): Promise<Result<MapExportRe
 	let absolutePath = resolve(APP_ROOT, safePath.data);
 	let bytesWritten = writeExportFile(absolutePath, shaped.data.contents);
 
-	// Register the map id → served URL in the manifest, tolerating an absent one.
 	let manifest = await readManifest();
 	if (isFailure(manifest)) return failure(manifest.error);
 

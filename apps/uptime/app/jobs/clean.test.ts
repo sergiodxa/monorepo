@@ -1,14 +1,8 @@
 /**
- * Unit tests for `CleanJob.perform`: verifies each of the four result tables is swept
- * with its own retention window and its own date column, that recent rows and — per the
- * module doc — rows whose date column is still `NULL` are left alone, and that the
- * completion log carries both the total and the per-table breakdown the first large run
- * is observed through.
- *
- * The free-watch pass has its own suite, because the thing worth testing there is not a
- * window per table but the order the three sweeps run in: a watch survives its week of
- * checking, a lead survives as long as one of its watches does, and both fall over
- * together once the last conversion window has closed.
+ * Unit tests for `CleanJob.perform`: each of the four result tables sweeps on its own
+ * retention window and date column, recent and still-`NULL`-dated rows survive, and the
+ * completion log carries the total and per-table breakdown. The free-watch suite below
+ * tests order instead of a window, since its three sweeps run in sequence.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -215,8 +209,8 @@ describe("CleanJob.perform", () => {
 });
 
 /**
- * The free-watch pass. Its three sweeps are a sequence, not three independent windows, so
- * these cases are about what each one is allowed to remove given what ran before it.
+ * The free-watch pass: its three sweeps run as a sequence, so each case below is about
+ * what a sweep may remove given what already ran before it.
  */
 describe("CleanJob.perform trial cleanup", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
@@ -248,7 +242,11 @@ describe("CleanJob.perform trial cleanup", () => {
 		});
 	}
 
-	/** A watch dated from `createdAt`, with both of its deadlines derived the way it is created. */
+	/**
+	 * A watch dated from `createdAt`, with both of its deadlines derived the way it is
+	 * created. Seeds `report_token` directly since this helper bypasses `TrialWatch.create`,
+	 * the path that normally issues one for a real watch.
+	 */
 	async function seedWatch(
 		id: string,
 		leadId: string,
@@ -262,9 +260,6 @@ describe("CleanJob.perform trial cleanup", () => {
 			lead_id: leadId,
 			url,
 			normalized_url: url,
-			// Seeded rather than left out: `report_token` is `NOT NULL` and unique, and this
-			// helper writes the row directly instead of going through `TrialWatch.create`, which
-			// is where a real watch gets its token.
 			report_token: `report-${id}`,
 			next_due_at: null,
 			expires_at: createdAt + 7 * MS_PER_DAY,
@@ -283,9 +278,8 @@ describe("CleanJob.perform trial cleanup", () => {
 	}
 
 	/**
-	 * The two sweeps that used to run on unrelated clocks now run on one, and the ordering
-	 * inside `sweepTrial` is what makes that safe: the results are identified by joining to
-	 * the watch, so they have to go while it still exists.
+	 * The ordering inside `sweepTrial` is what keeps this safe: results are identified by
+	 * joining to their watch, so they must be swept before the watch that identifies them.
 	 */
 	test("takes a watch and every one of its results in the same run", async () => {
 		let now = Date.now();
@@ -340,6 +334,10 @@ describe("CleanJob.perform trial cleanup", () => {
 		expect(results.every((row) => watchIds.has(row.trial_watch_id))).toBe(true);
 	});
 
+	/**
+	 * Ten days old is past `expires_at` (7 days) but nowhere near `converts_until` (30
+	 * days), so the watch is still mid-conversion-window.
+	 */
 	test("keeps a watch whose week of checking is over but whose offer is still open", async () => {
 		let now = Date.now();
 		await seedLead("lead-1", now - 10 * MS_PER_DAY);
@@ -347,7 +345,6 @@ describe("CleanJob.perform trial cleanup", () => {
 
 		await run();
 
-		// Ten days old: past `expires_at`, nowhere near `converts_until`.
 		expect(await db.findMany(trialWatches, {})).toHaveLength(1);
 		expect(await db.findMany(leads, {})).toHaveLength(1);
 	});
@@ -362,6 +359,10 @@ describe("CleanJob.perform trial cleanup", () => {
 		expect(await db.findMany(trialWatches, {})).toHaveLength(0);
 	});
 
+	/**
+	 * Watches sweep before leads, so "no watches left" is already true by the time the
+	 * lead sweep asks.
+	 */
 	test("deletes the lead in the same run its last watch goes, and not before", async () => {
 		let now = Date.now();
 		await seedLead("lead-1", now - 31 * MS_PER_DAY);
@@ -369,8 +370,6 @@ describe("CleanJob.perform trial cleanup", () => {
 
 		await run();
 
-		// Watches are swept before leads, so "no watches left" is already true by the time the
-		// lead sweep asks.
 		expect(await db.findMany(leads, {})).toHaveLength(0);
 	});
 
@@ -394,6 +393,10 @@ describe("CleanJob.perform trial cleanup", () => {
 		expect(await db.findMany(leads, {})).toHaveLength(1);
 	});
 
+	/**
+	 * Every email this feature sends is driven by a watch, so consent is scoped to that
+	 * watch: once the last one is gone there is nothing left for it to authorise.
+	 */
 	test("takes an orphaned lead even when they gave marketing consent", async () => {
 		let now = Date.now();
 		await seedLead("lead-1", now - 31 * MS_PER_DAY);
@@ -401,16 +404,13 @@ describe("CleanJob.perform trial cleanup", () => {
 
 		await run();
 
-		// Consent is not an exemption while every email this feature sends is driven by a
-		// watch: with the last watch gone there is nothing left for the consent to authorise.
 		expect(await db.findMany(leads, {})).toHaveLength(0);
 	});
 
 	/**
-	 * The entire reason `trial_conversions` is a table and not a join. The lead, the watches
-	 * and their results are all gone by design; the record of what they cost and what they
-	 * became has to still be here, or nothing can answer "how long did that customer take" a
-	 * month after they converted.
+	 * The reason `trial_conversions` is a table and not a join: the lead, watches, and
+	 * results are gone by design, but this record must survive to answer "how long did
+	 * that customer take" after they converted.
 	 */
 	test("leaves a conversion record standing after every row it was copied from is swept", async () => {
 		let now = Date.now();

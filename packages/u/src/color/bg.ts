@@ -31,41 +31,20 @@ export interface BgOptions {
 	size?: "auto" | "cover" | "contain" | (string & {});
 	/** Sets `background-position` (e.g. `"center"`, `"top left"`, `"50% 50%"`). */
 	position?: string;
-	/** Sets `background-repeat`. */
 	repeat?: BackgroundRepeatValue;
-	/** Sets `background-attachment`. */
 	attachment?: BackgroundAttachmentValue;
 	/**
-	 * Sets `background-clip`, the area the background is actually painted in:
-	 *
-	 * - `"border-box"` — out to the outer edge of the border, the initial value,
-	 *   so a translucent or dashed border shows the background through its gaps.
-	 * - `"padding-box"` — stops at the outer edge of the padding, so the border
-	 *   sits over the page instead of over the background.
-	 * - `"content-box"` — stops at the content edge, leaving the padding
-	 *   unpainted.
-	 * - `"text"` — clips the background to the shape of the element's glyphs.
-	 *
-	 * Two of these carry real weight. `"content-box"` is how a background is
-	 * kept from painting under the padding, which is what draws an inset
-	 * scrollbar thumb: a thumb with padding and a content-box background reads
-	 * as a narrow pill floating inside its track rather than filling it.
-	 * `"text"` is how a gradient fills text — it needs a transparent text color
-	 * for the clipped background to be visible at all, and the text underneath
-	 * must stay real, selectable text rather than becoming an image, so it is
-	 * still readable to assistive technology, searchable, and translatable.
+	 * Sets `background-clip`. `"content-box"` keeps the paint off the padding,
+	 * which makes an inset scrollbar thumb read as a pill inside its track;
+	 * `"text"` clips to the glyphs, so the text color must be transparent.
 	 */
 	clip?: BackgroundClipValue;
 }
 
 /**
- * Applies `background-color`, or a full set of background properties when
- * given an options object instead of a bare color. Called with no argument
- * it resolves the tiny system default (`var(--ui-bg, Canvas)`); called with
- * a semantic tone it requires the `tint`/`solid` suffix so the call site
- * states which background weight it means (`u.bg("brand.tint")`,
- * `u.bg("brand.solid")`). Called with an options object, only the given
- * keys are set — `color` alone still requires the same explicit suffix.
+ * Applies `background-color`, or the full set of background properties when
+ * given an options object, of which only the given keys are set. A semantic
+ * tone requires a `tint`/`solid` suffix so the call site states its weight.
  *
  * @example u.bg()
  * @example css({ backgroundColor: "var(--ui-bg, Canvas)" })

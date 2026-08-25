@@ -1,31 +1,9 @@
 /**
- * Enforces the "ARIA values are tokens, not flags" rule from this package's
- * `AGENTS.md` over this package: no module under `src/` may hand a boolean to an
- * ARIA attribute whose value is a token, and the states that were found broken here
- * render the token they should.
- *
- * The scanner itself, its own fixture cases, and the repo-wide run of it live at
- * `test/aria-tokens.ts` and `test/aria-tokens.test.ts` — apps write JSX too, and most
- * of this mistake turned out to be outside the component library. This file keeps a
- * package-scoped run of the same scanner so the rule still fails the suite while
- * somebody is working inside this package alone.
- *
- * The rule exists because the failure is silent in both directions. The
- * renderer writes a `true` prop the way HTML wants a boolean attribute
- * written — as the bare name — so `aria-hidden={true}` reaches the document as
- * `aria-hidden=""`, an empty value that is none of the tokens ARIA defines, and
- * every one of these attributes resolves an unrecognized value to its own
- * default. `false` is worse than wrong: the attribute is dropped from the
- * markup entirely, which for `aria-pressed` stops a toggle button being a
- * toggle at all. Nothing crashes, no test that only counts elements notices,
- * and the component keeps looking right on screen while announcing the
- * opposite of the truth.
- *
- * Scanning source rather than rendered output is what makes the coverage total:
- * most components here have no render test of their own, and the ones that do would
- * each need a case per attribute. The rendered-output cases below cover the four
- * states this defect was actually found in, since an attribute can also be right in
- * the source and missing from the output.
+ * Guards the "ARIA values are tokens, not flags" rule across this package. A
+ * boolean handed to a token-valued ARIA attribute reaches the document as an
+ * empty value or vanishes, leaving the state silent to assistive technology and
+ * unstyled, since these components select on those same attributes. The scan
+ * covers every module; the render cases pin the four states it was found in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,8 +27,8 @@ import { TextField } from "./text-field";
 import { ToggleButton } from "./toggle-button";
 
 /**
- * The rendered elements alone, with the `<head>` full of generated `<style>`
- * rules dropped — those name the same attributes in their selectors.
+ * Generated `<style>` rules select on the same ARIA attributes under test, so
+ * dropping the `<head>` keeps an assertion from passing on selector text alone.
  *
  * @param html A full `renderToString` result.
  * @returns Just the markup that follows the emitted stylesheet.
@@ -76,18 +54,8 @@ describe("ARIA token attributes", () => {
 	});
 
 	/**
-	 * The other direction: what the source says is only half the rule, since an
-	 * attribute can also be correct in the source and absent from the output. These
-	 * pin the four states this defect was actually found in, one component each.
-	 *
-	 * Each assertion reads {@link markup} rather than the whole render, because these
-	 * components style themselves off the very attributes under test — a field's
-	 * danger border is `&[aria-invalid="true"]`, a toggle's pressed look is
-	 * `&[aria-pressed="true"]` — so the emitted stylesheet names them too and an
-	 * assertion over the whole document would pass on the selector alone. (That
-	 * overlap is the other half of what this defect broke: an attribute rendered as
-	 * an empty value matches neither ARIA nor the selector, so those states went
-	 * unannounced *and* undrawn.)
+	 * An attribute can be correct in the source and still absent from the output,
+	 * so these pin the four states the defect was found in, one component each.
 	 */
 	describe("rendered output", () => {
 		test("hides a decorative placeholder with the token, not an empty value", async () => {
@@ -99,7 +67,6 @@ describe("ARIA token attributes", () => {
 		test("hides an icon slot's glyph with the token", async () => {
 			let html = markup(await renderToString(<Checkbox name="terms">Accept</Checkbox>));
 
-			// Every `aria-hidden` in the output carries the token; none is valueless.
 			expect(html.match(/aria-hidden(="true")?/g)?.every((match) => match.includes("true"))).toBe(
 				true,
 			);
@@ -124,10 +91,9 @@ describe("ARIA token attributes", () => {
 		});
 
 		/**
-		 * A toggle keeps `aria-pressed="false"` rather than dropping the attribute:
-		 * absence is what tells assistive technology the button is not a toggle at
-		 * all, and this component's styling matches `&[aria-pressed="true"]`, so the
-		 * token is what draws the pressed state too.
+		 * A toggle keeps `aria-pressed="false"`: the attribute's presence is what
+		 * marks the button as a toggle, and the pressed look matches
+		 * `&[aria-pressed="true"]`, so the token draws the state too.
 		 */
 		test("renders a pressed state as a token whether the consumer passed a boolean or a string", async () => {
 			let pressed = markup(

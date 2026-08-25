@@ -1,7 +1,8 @@
 /**
  * Router-level tests for the admin dashboard and for the boundary around the whole
  * area: the counts it renders, and the guard that sends a signed-in non-admin to their
- * own account instead of showing them anything.
+ * own account. The guard reads the role from the database on every request, so a
+ * demotion takes effect on the next one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +28,7 @@ async function signInAsAdmin(): Promise<void> {
 	await signIn(app, fixtures);
 }
 
-/** Fetches an admin URL without following redirects, so a guard's answer is visible. */
+/** Fetches an admin URL, returning a guard's redirect as the response. */
 async function get(path: string): Promise<Response> {
 	return await app.fetch(new Request(`${ORIGIN}${path}`, { redirect: "manual" }));
 }
@@ -48,7 +49,6 @@ describe("GET /admin", () => {
 		expect(html).toContain("Total Clients");
 		expect(html).toContain("Total Users");
 		expect(html).toContain("Active Sessions");
-		// One client and one subject were seeded, and signing in opened one session.
 		expect(html).toContain(">1<");
 	});
 
@@ -79,8 +79,6 @@ describe("GET /admin", () => {
 
 describe("requireAdmin", () => {
 	test("redirects a signed-in non-admin subject to /account/sessions", async () => {
-		// Seeded subjects hold the default `user` role, which is exactly the case this
-		// guard exists for: authenticating again would not help them.
 		await signIn(app, fixtures);
 
 		let response = await get(routes.admin.dashboard.href());
@@ -118,8 +116,6 @@ describe("requireAdmin", () => {
 		await signInAsAdmin();
 		expect((await get(routes.admin.dashboard.href())).status).toBe(200);
 
-		// The role is read from the database per request rather than from the token, so a
-		// demotion takes effect immediately instead of when the session expires.
 		await Subject.update(app.db, fixtures.subjectId, { role: "user" });
 
 		expect((await get(routes.admin.dashboard.href())).status).toBe(303);

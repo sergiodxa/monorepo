@@ -37,7 +37,6 @@ export default createController(routes.dashboard.tenants.billing, {
 
 			let subscription = await Subscription.findByTenant(db, tenant.id);
 
-			// Get current month's MAU
 			let month = AnalyticsService.getCurrentMonth();
 			let mau = 0;
 			try {
@@ -55,7 +54,6 @@ export default createController(routes.dashboard.tenants.billing, {
 				mau,
 			});
 
-			// Format period dates
 			let periodStart = subscription?.current_period_start
 				? new Date(subscription.current_period_start).toLocaleDateString()
 				: null;
@@ -63,7 +61,6 @@ export default createController(routes.dashboard.tenants.billing, {
 				? new Date(subscription.current_period_end).toLocaleDateString()
 				: null;
 
-			// Calculate estimated cost
 			let includedMau = 1000;
 			let additionalMau = Math.max(0, mau - includedMau);
 			let estimatedCost = 5 + additionalMau * 0.01;
@@ -231,7 +228,6 @@ export default createController(routes.dashboard.tenants.billing, {
 
 			if (actionType === "checkout") {
 				try {
-					// Use env variable for product ID or fall back to placeholder
 					let productId = env.POLAR_PRODUCT_ID ?? "placeholder-product-id";
 					let successPath = String(
 						new Location({

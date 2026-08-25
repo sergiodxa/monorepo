@@ -35,9 +35,8 @@ import { fontSize, weight } from "@pkg/u/typography";
 
 /**
  * Named container {@link Message} declares on its own host, so
- * {@link Message.Header} can query the row's own width instead of the page's
- * — the same width a message keeps whether it renders at the full page
- * measure or inside a narrower embedded panel.
+ * {@link Message.Header} can query the row's own width instead of the
+ * page's, matching whether it renders full-page or in a narrower panel.
  */
 const CONTAINER_NAME = "ui-message";
 
@@ -95,24 +94,9 @@ export namespace Message {
 }
 
 /**
- * Renders the message row: a native `<article>` laid out as a two-column
- * grid — an `"avatar"` column sized to its content, and a `"content"` column
- * filling the rest of the row's width. Three named grid areas stack in the
- * content column (`"header"`, `"content"`, `"footer"`), while the `"avatar"`
- * area spans only the header and content rows, never the footer row.
- * {@link Message.Avatar} aligns to the block-end edge of that spanned area,
- * so it always anchors to the bottom of {@link Message.Content} — when
- * {@link Message.Footer} renders below, the avatar stays put rather than
- * dropping to the footer's own bottom edge, reading as shifted up relative to
- * the row's full height.
- *
- * A part absent from a given row (no {@link Message.Header} on a row grouped
- * under a shared sender, no {@link Message.Footer} on a row with no actions)
- * simply leaves its named area empty; an empty row contributes no height, so
- * the remaining parts stack with no visible gap left behind.
- *
- * Declares the `ui-message` named container so {@link Message.Header} can
- * adapt its own layout to the row's width.
+ * Renders the message row as a two-column grid whose `"avatar"` area spans only the
+ * header and content rows, anchoring {@link Message.Avatar} to the bottom edge
+ * of {@link Message.Content}, regardless of whether {@link Message.Footer} renders.
  *
  * @param handle Runtime handle carrying the host `<article>`'s props.
  * @returns The render function producing the row's markup.
@@ -177,11 +161,9 @@ export function Message(handle: Handle<Message.Props>) {
 }
 
 /**
- * Renders {@link Message.AvatarProps.children} as the row's avatar slot: a
- * `<div>` occupying the grid's `"avatar"` area, aligned to that area's
- * block-end edge so it anchors to the bottom of {@link Message.Content}
- * rather than stretching to fill the header and content rows combined.
- * Nest an Avatar instance inside it.
+ * Renders {@link Message.AvatarProps.children} as the row's avatar slot,
+ * aligned to the `"avatar"` area's block-end edge so it tracks the bottom
+ * edge of {@link Message.Content}. Nest an Avatar instance inside it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the avatar slot's markup.
@@ -206,15 +188,9 @@ Message.Avatar = function MessageAvatar(handle: Handle<Message.AvatarProps>) {
 };
 
 /**
- * Renders {@link Message.HeaderProps.children} as the row's identity line: a
- * native `<header>` wrapping its children onto as many lines as they need,
- * baseline-aligned, while the row's own `ui-message` container is narrow. Once
- * that container grows past `26rem`, the children settle onto a single row
- * with the last child pushed to the inline-end edge — the layout a sender
- * name followed by a trailing timestamp reads best in. The first child reads
- * as the sender's name (emphasized, in the strong foreground color); every
- * later child reads as secondary metadata (smaller, muted), so a timestamp or
- * a role badge trailing the name never competes with it for attention.
+ * Renders {@link Message.HeaderProps.children} as the row's identity line,
+ * wrapping until the `ui-message` container passes `26rem`, then settling
+ * onto one row with the sender's name first and later children as secondary metadata.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the identity line's markup.
@@ -250,11 +226,9 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 };
 
 /**
- * Renders {@link Message.ContentProps.children} as the row's content slot: a
- * `<div>` stacking its children in a column with a small gap, capped to a
- * comfortable reading measure and never shrinking narrower than its grid
- * area. Nest a Bubble, an attachment card, or any other rendered turn content
- * inside it.
+ * Renders {@link Message.ContentProps.children} as the row's content slot,
+ * capped to a comfortable reading measure and never narrower than its grid
+ * area. Nest a Bubble, attachment card, or other turn content inside it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the content slot's markup.
@@ -285,13 +259,9 @@ Message.Content = function MessageContent(handle: Handle<Message.ContentProps>) 
 };
 
 /**
- * Renders {@link Message.FooterProps.children} as the row's action slot: a
- * native `<footer>` laying its children out in a single row with a small gap,
+ * Renders {@link Message.FooterProps.children} as the row's action slot,
  * occupying the grid's `"footer"` area beneath {@link Message.Content} and
- * never reached by {@link Message.Avatar}'s bottom anchor. Compose plain
- * Button elements for its actions — a copy action paired with the
- * `copyToClipboard()` mixin, a like action wired to the consuming app's own
- * handler.
+ * never reached by {@link Message.Avatar}'s bottom anchor.
  *
  * @param handle Runtime handle carrying the host `<footer>`'s props.
  * @returns The render function producing the action slot's markup.
@@ -324,10 +294,8 @@ Message.Footer = function MessageFooter(handle: Handle<Message.FooterProps>) {
 
 /**
  * Renders {@link Message.GroupProps.children} as a run of consecutive
- * {@link Message} rows sharing the same sender: a `<div>` stacking them in a
- * column with a hairline gap, collapsing the larger spacing a message log
- * otherwise keeps between separate senders down to the tight rhythm of one
- * continuous turn.
+ * {@link Message} rows sharing the same sender, stacked with a hairline gap
+ * that reads as one continuous turn.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.

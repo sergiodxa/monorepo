@@ -2,15 +2,13 @@
  * Unit tests for `SendFunnelReportJob.perform()`: what it counts, when it stays quiet, and
  * the one thing it must do on every single run whether it sends or not.
  *
- * The two silences are the cases most likely to regress into noise. An unconfigured
- * deployment — local dev, preview, this test suite — has no recipient and must send nothing
- * at all, and a day on which nobody touched the trial page must not produce an email saying
- * so every morning. Both still write the day's row, because that row is the only version of
- * the day that survives the thirty-day sweep, and a gap in it can never be filled in later.
+ * The two silences are the cases most likely to regress into noise: an unconfigured
+ * deployment — local dev, preview, this suite — has no configured recipient, and a
+ * quiet day at the trial page produces no email. Both still write the day's row, since
+ * that row is the only version of the day the thirty-day sweep leaves behind.
  *
- * The recipient is read structurally off `env`, so `cloudflare:workers` is mocked and the
- * subject imported dynamically — the default preload answers every binding with a
- * `test-<KEY>` string, which would otherwise look like a configured address.
+ * The recipient is read structurally off `env`, with `cloudflare:workers` mocked and the
+ * subject imported dynamically, since the default preload's `test-<KEY>` strings look configured.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,19 +34,17 @@ import { leads, trialWatches } from "~/database/schema";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * The app's bindings plus the recipient, which is not a generated binding: the job reads it
- * structurally off `env` precisely so a deployment that never declared it is a supported
- * state rather than a crash.
+ * The app's bindings plus the recipient, read structurally off `env` so a deployment
+ * that never declared it is a supported, quiet state.
  */
 interface FunnelEnv extends Env {
 	FUNNEL_REPORT_TO?: string;
 }
 
 /**
- * The bindings the job runs against. It lives at module scope because the module under test
- * captures `env` on import, so each case writes the recipient it is about onto it rather
- * than re-creating it, and every other binding stays unsupplied — a read of one would fail
- * by name instead of quietly answering with a `test-<KEY>` string that looks configured.
+ * The bindings the job runs against, held at module scope so tests mutate the recipient
+ * on it directly. Every other binding stays unsupplied, so an unexpected read fails by
+ * name instead of quietly answering with a `test-<KEY>` string that looks configured.
  */
 let env: FunnelEnv = createEnv<FunnelEnv>({ FUNNEL_REPORT_TO: "ops@example.com" });
 
@@ -175,7 +171,6 @@ describe("what the day counts", () => {
 
 		await runJob();
 
-		// The confirmation, the digest, the change email and the wrap-up.
 		expect((await TrialDailyStats.findByDate(db, yesterday()))?.emails_sent).toBe(4);
 	});
 
@@ -218,7 +213,7 @@ describe("the report itself", () => {
 		expect(message?.subject).toContain("1 lead, 0 signups, 0 paid");
 	});
 
-	/** Internal mail: the unsubscribe machinery every other trial email carries has no place here. */
+	/** Internal mail to ops: the unsubscribe machinery belongs to outward-facing trial email. */
 	test("carries no unsubscribe headers and no unsubscribe link", async () => {
 		await seedSubmission("ada@example.com");
 
@@ -264,7 +259,6 @@ describe("the report itself", () => {
 
 		let [message] = reports();
 		expect(message?.text).toContain("Last 30 days");
-		// Nine from the earlier day plus the one counted just now.
 		expect(message?.text).toContain("10");
 	});
 });

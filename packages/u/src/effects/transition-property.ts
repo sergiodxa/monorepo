@@ -5,9 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies the `transition-property` property on its own — for overriding
- * just which properties animate on a transition already declared elsewhere,
- * without re-declaring `transition-duration`/`transition-timing-function`.
+ * Applies `transition-property` on its own, so a variant can change which
+ * properties animate while the duration and timing function declared
+ * elsewhere stay in place.
  *
  * @example u.transitionProperty("transform")
  * @example css({ transitionProperty: "transform" })

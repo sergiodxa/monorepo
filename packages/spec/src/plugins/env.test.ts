@@ -26,17 +26,15 @@ import { createEnvPlugin } from "./env";
 /** The variable name every test reads; removed again in `afterEach`. */
 const NAME = "SPEC_ENV_PLUGIN_TEST";
 
-/** Wrap a runtime value as a positional value argument. */
 function value(data: Value): ToolArg {
 	return { kind: "value", value: data };
 }
 
-/** Wrap a bare identifier as a word argument. */
 function word(name: string): ToolArg {
 	return { kind: "word", word: name };
 }
 
-/** A workspace stub; the env plugin never touches it. */
+/** A workspace stub satisfying the tool context's shape; these tests exercise permission checks only. */
 function stubWorkspace(): Workspace {
 	return {
 		root: "/tmp/spec-env-unit",
@@ -45,7 +43,7 @@ function stubWorkspace(): Workspace {
 	};
 }
 
-/** A permission set granting the named variables and nothing else. */
+/** A permission set granting only the named variables. */
 function grantEnv(...granted: string[]): PermissionSet {
 	return {
 		checkRun: () => success(undefined),
@@ -59,7 +57,6 @@ function grantEnv(...granted: string[]): PermissionSet {
 	};
 }
 
-/** Build a tool context over a permission set. */
 function buildContext(permissions: PermissionSet): ToolContext {
 	return { workspace: stubWorkspace(), permissions };
 }

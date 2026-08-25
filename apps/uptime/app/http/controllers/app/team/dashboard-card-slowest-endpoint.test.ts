@@ -41,10 +41,9 @@ import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * The bindings the page reads, real enough to answer for themselves: an empty KV is a
- * cache miss, so every test starts uncached without arranging one. They live at module
- * scope because the modules under test capture `env` on import; each test's team id is
- * fresh, so the cache keys derived from it never collide across tests.
+ * Live at module scope because the modules under test capture `env` on import. An
+ * empty KV is a cache miss, so every test starts uncached; each test's fresh team id
+ * keeps its cache keys from colliding with other tests'.
  */
 let kv = createKVNamespace();
 let queue = createQueue();
@@ -212,10 +211,12 @@ describe("dashboard-card-slowest-endpoint", () => {
 		expect(body).toContain("N/A");
 	});
 
+	/**
+	 * A simulated transport failure exercises the branch where `queryAnalytics` never
+	 * gets a response at all.
+	 */
 	test("renders the analytics-unavailable fallback when the query fails", async () => {
 		let { db, team, membership } = await createFixture();
-		// A transport failure, not a non-2xx body: the card's fallback covers the branch
-		// where `queryAnalytics` never gets a response at all.
 		server.use(http.post(SQL_URL, () => HttpResponse.error()));
 
 		let response = await send(db, team, membership);

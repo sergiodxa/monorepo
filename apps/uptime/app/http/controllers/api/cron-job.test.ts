@@ -2,8 +2,8 @@
  * Tests the `/api/v1/cron-jobs/:cronJobId` item endpoints: get/update/delete a single
  * cron-job monitor, all gated by a real `requireApiKey` bearer-token check baked into
  * the controller. Covers the happy paths, validation failure, an invalid cron
- * expression on update, missing/garbage auth, missing scope, and that a monitor
- * belonging to another team always 404s rather than 403ing or leaking the row.
+ * expression on update, missing/garbage auth, missing scope, and a monitor
+ * belonging to another team always 404ing, keeping its existence hidden.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

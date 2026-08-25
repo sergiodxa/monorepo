@@ -1,32 +1,9 @@
 /**
- * Tests `/try`, both methods, because they are now one page.
+ * Tests `/try`, both methods, since a `GET` and a `POST` share one page.
  *
- * The `GET` half has one job and one prohibition: render an empty form, and never reach the
- * prober. The whole no-crawler-can-spend-a-probe story rests on that, so every `GET` here
- * asserts the guard was not consulted. It also has to stay empty when a probe is sitting in
- * the session — that value belongs to the email form, not to this method, and a `GET` that
- * rendered it would bring back the stale-result bug this page was collapsed to remove.
- *
- * The `POST` half is asserted on what comes back in the response rather than on what it
- * left behind, since there is no second request to leave anything for. Three properties are
- * the reason it is allowed to exist at all: a refused submission never reaches the network,
- * the probe does not follow redirects — the header that switches following off is asserted
- * on the outgoing request, so removing it fails a test rather than quietly reopening the
- * hole `trial-guard.ts` describes — and an anonymous check is billed nothing. Each refusal
- * code must still produce its own sentence, because the page's job is to let a visitor tell
- * "we stopped for today" apart from "your site is down"; the one that means "you have not
- * finished the form" is also asserted to render on the field rather than in the Alert.
- *
- * What the page *offers* is asserted structurally rather than by quoting its sentences: the
- * terms of the free run are asserted to sit ahead of the field that accepts them, and the
- * closing pitch to carry the price as `~/app/lib/pricing` formats it. Copy gets rewritten;
- * where the terms sit and whether the price is stated are the parts that must not.
- *
- * The signed-in half is a different page from the same handler, so it gets its own block at
- * the bottom: a real team row, a real entitlement projection, and assertions on all three
- * of who is charged, which budgets are asked for, and what the card offers. The anonymous
- * expectations are re-asserted there rather than assumed, since the one thing this change
- * could not be allowed to do is alter what a stranger sees.
+ * `GET` only ever renders the empty form; probing the URL and billing the
+ * check are `POST`'s job alone, asserted on its response, the only evidence
+ * a single request leaves behind. A signed-in viewer gets its own block below.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,7 +60,7 @@ let doFetch = vi.fn(async (url: string, init?: RequestInit) => {
 	return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
 });
 
-/** The dataset a billed check reports to; a trial probe must write nothing to it. */
+/** The dataset a billed check reports to; a trial probe leaves it untouched. */
 let pingResults = createAnalyticsEngine();
 
 /** The prober's namespace, routing every object it hands out to {@link doFetch}. */
@@ -141,7 +118,7 @@ let { TRIAL_PROBE, TRIAL_WATCH_REPEATED, TRIAL_WATCH_STARTED } =
 let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
 let { default: trialCheck } = await import("./index");
 
-/** Renders through `renderToString` — this page renders no `<Frame>`. */
+/** Renders through `renderToString`, sufficient for a page that outputs plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);
@@ -188,11 +165,9 @@ interface Actor {
 }
 
 /**
- * Seeds a viewer's team and its owner's entitlement.
- *
- * `subscription` is the state the projection is left in, and the three values are three
- * different answers from the gate: a recorded active row, a recorded revoked one, and no
- * row at all — which reads as `unknown` and must still be billed.
+ * Seeds a viewer's team and its owner's entitlement. `subscription` picks
+ * one of the projection's three answers — a recorded active row, a recorded
+ * revoked one, or no row at all, which must still be billed as `unknown`.
  */
 async function signIn(subscription: "active" | "revoked" | "unknown"): Promise<Actor> {
 	let { db } = createTestDatabase();
@@ -220,7 +195,11 @@ async function signIn(subscription: "active" | "revoked" | "unknown"): Promise<A
 	return { db, team };
 }
 
-/** Both methods run through the same router; only the request and the actor differ. */
+/**
+ * Both methods run through the same router; only the request and the actor differ.
+ * Draining `deferred` mimics the platform settling background work after the
+ * response, so the meter-event assertion always runs after that work has settled.
+ */
 async function dispatch(request: Request, session: Session, actor?: Actor) {
 	let db = actor?.db ?? createTestDatabase().db;
 	let container = new ServiceContainer();
@@ -247,16 +226,14 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 	router.map(routes.trial.check, trialCheck);
 
 	let response = await container.scope(() => router.fetch(request));
-	// The platform settles deferred work after the response; this stands in for that, so
-	// asserting on the meter event doesn't race it.
 	await Promise.all(deferred.splice(0));
 
 	return { response, session, body: await response.text() };
 }
 
 /**
- * The subscription price as the page states it, built from `~/app/lib/pricing` rather than
- * written out, so a price change moves the assertion with the product instead of failing it.
+ * The subscription price as the page states it, computed from `~/app/lib/pricing`
+ * so a price change moves the assertion together with the product.
  */
 const PRICE = BASE_PRICE_USD.toLocaleString("en", {
 	style: "currency",
@@ -324,10 +301,9 @@ describe("GET /try", () => {
 	});
 
 	/**
-	 * The page offers a run of checks rather than a single one, which is exactly the framing
-	 * that would make a crawler's `GET` expensive if the method ever started one. So the
-	 * prohibition is asserted on the bare `GET` and on the pre-filled one separately: neither
-	 * consults the guard, neither reaches the network, and neither bills anything.
+	 * The page frames itself as a run of checks, so a crawler's `GET` would be
+	 * expensive if the method ever started one. The bare `GET` and the pre-filled
+	 * one are asserted separately, each confined to rendering the form alone.
 	 */
 	test("a bare GET starts nothing, whatever the page is offering", async () => {
 		let { response, body } = await getTry();
@@ -370,9 +346,9 @@ describe("GET /try", () => {
 	});
 
 	/**
-	 * Each section is identified by a line that names the thing it sells rather than by its
-	 * own heading, so a rewrite of the pitch cannot quietly delete a section's coverage by
-	 * renaming it.
+	 * Each section is identified by the line that names the thing it sells, so a
+	 * rewrite of the pitch cannot quietly delete a section's coverage by renaming
+	 * its heading.
 	 */
 	test("sells nothing before a check has run", async () => {
 		let { body } = await getTry();
@@ -411,8 +387,9 @@ describe("GET /try", () => {
 	});
 
 	/**
-	 * The capped submission's own receipt, and it must not read as the other one: nothing was
-	 * started, and saying otherwise is the one claim on this page a visitor cannot check.
+	 * The capped submission's own receipt. It reads differently from the started
+	 * one because a visitor has only this page's wording to judge whether a
+	 * check truly started.
 	 */
 	test("renders the capped receipt once and then forgets it", async () => {
 		let session = new Session();
@@ -587,10 +564,9 @@ describe("POST /try", () => {
 	});
 
 	/**
-	 * The closing pitch is about carrying on rather than starting over, and what it costs to
-	 * carry on has to be on it. The price is asserted as `pricing.ts` formats it and the two
-	 * destinations are asserted beside it, so the section cannot lose its price or its links
-	 * to a rewrite of the copy around them.
+	 * The closing pitch is about carrying on, so what it costs must be on it: the
+	 * price is asserted as `pricing.ts` formats it, alongside the two destinations,
+	 * so a rewrite of the copy cannot drop the price or its links.
 	 */
 	test("closes on the price the subscription actually costs", async () => {
 		let { body } = await runTry({ url: "example.com" });
@@ -601,9 +577,9 @@ describe("POST /try", () => {
 	});
 
 	/**
-	 * The terms sit above the field that accepts them, never below the button that submits it.
-	 * Asserted by position rather than by wording so the copy can be rewritten without the
-	 * guarantee moving: the list is inside the result card and ahead of the email form.
+	 * The terms — what will be checked, how often, which emails arrive, and
+	 * what's optional — sit above the field that accepts them, asserted by
+	 * position so the copy can be rewritten without moving the guarantee.
 	 */
 	test("sets out what is being asked for before the email field", async () => {
 		let { body } = await runTry({ url: "example.com" });
@@ -615,16 +591,15 @@ describe("POST /try", () => {
 		expect(cardAt).toBeGreaterThan(-1);
 		expect(listAt).toBeGreaterThan(cardAt);
 		expect(formAt).toBeGreaterThan(listAt);
-		// What will be checked, how often, which emails arrive, and what is not required.
 		expect(body.slice(listAt, formAt).match(/<li/g) ?? []).toHaveLength(4);
 	});
 });
 
 describe("POST /try refusals", () => {
 	/**
-	 * The sentence each code must produce, and a word no other code's sentence contains.
-	 * `unavailable` is the one the guard never issues — it comes from the prober throwing,
-	 * which has its own test above — so it is listed here only for the distinctness check.
+	 * The sentence each code must produce, and a word no other code's sentence
+	 * contains. `unavailable` comes only from the prober throwing, tested above,
+	 * so it appears here solely for the distinctness check.
 	 */
 	let cases: Array<{ code: TrialRefusalReason; contains: string }> = [
 		{ code: "blocked-target", contains: "not an address we will check on your behalf" },
@@ -636,9 +611,9 @@ describe("POST /try refusals", () => {
 	];
 
 	/**
-	 * The reasons that render in the Alert. `challenge-incomplete` is left out because it
-	 * renders on the field instead, and `unavailable` because the guard's own version of it
-	 * has no test target here — the prober throwing does, above.
+	 * The reasons that render in the Alert. `challenge-incomplete` renders on
+	 * the field, and the prober-throwing test above already covers
+	 * `unavailable`'s only reachable path here.
 	 */
 	let guardReasons: Array<{ code: TrialRefusalReason; contains: string }> = [
 		{ code: "blocked-target", contains: "not an address we will check on your behalf" },
@@ -714,6 +689,11 @@ describe("POST /try refusals", () => {
 		expect(body).toContain("not an address we will check on your behalf");
 	});
 
+	/**
+	 * The submit control is located by its `type`, a stable anchor independent
+	 * of its label, since the guarantee under test is the alert's position
+	 * relative to the control that produced it.
+	 */
 	test("renders the alert inside the form card rather than adrift below it", async () => {
 		guardResult = failure(new TestRefusal("budget-exhausted"));
 
@@ -721,8 +701,6 @@ describe("POST /try refusals", () => {
 
 		let formStart = body.indexOf(`action="${routes.trial.check.action.href()}"`);
 		let alertAt = body.indexOf("every free check we run in a day");
-		// The button, found by its type rather than its label: where the alert lands relative
-		// to the control that produced it is the guarantee, not what the control says.
 		let submitAt = body.lastIndexOf('type="submit"');
 
 		expect(formStart).toBeGreaterThan(-1);
@@ -737,7 +715,6 @@ describe("POST /try refusals", () => {
 
 		expect(body).toContain("Complete the verification");
 		expect(body).toContain("data-field-error");
-		// The Alert's title is the tell: an incomplete form is not a check that failed.
 		expect(body).not.toContain("The check did not run");
 	});
 
@@ -751,6 +728,10 @@ describe("POST /try refusals", () => {
 });
 
 describe("POST /try for a signed-in viewer", () => {
+	/**
+	 * The data point carries the team's id as its only index, with no monitor
+	 * id, so an ad hoc check counts toward the team's total alone.
+	 */
 	test("bills the check to their team and spends neither free budget", async () => {
 		let actor = await signIn("active");
 
@@ -758,12 +739,10 @@ describe("POST /try for a signed-in viewer", () => {
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(true);
 		expect(pingResults.dataPoints).toHaveLength(1);
-		// Indexed by the team, which is what makes the check countable against them.
 		expect(pingResults.dataPoints[0]?.indexes).toEqual([actor.team.id]);
 		expect(ingested).toHaveLength(1);
 		expect(ingested[0]?.[0]?.externalCustomerId).toBe(actor.team.owner_id);
 		expect(ingested[0]?.[0]?.metadata).toMatchObject({ teamId: actor.team.id, type: "adhoc" });
-		// No monitor id: the ping counts toward the team's total and against no monitor.
 		expect(ingested[0]?.[0]?.metadata).not.toHaveProperty("monitorId");
 	});
 
@@ -800,18 +779,18 @@ describe("POST /try for a signed-in viewer", () => {
 		expect(body).not.toContain("Also email me occasionally about Uptime itself.");
 	});
 
+	/**
+	 * Sliced past `</head>`, since the page's own meta description quotes "no
+	 * card, no account" for every visitor already; the pitch section that
+	 * follows belongs only to a visitor who still lacks both.
+	 */
 	test("drops the free-week pitch, which describes an offer they were not made", async () => {
 		let actor = await signIn("active");
 
 		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
 
-		// Scoped past `</head>`: the page's own meta description quotes "no card, no account"
-		// for search results and social previews, which every visitor's document carries
-		// whoever they are. What must not appear is the *section*, in the body.
 		let rendered = body.slice(body.indexOf("</head>"));
 
-		// "No account, no card" is the closing argument of that section, and it is the line
-		// that reads worst to somebody who has both.
 		expect(rendered).not.toContain("A check every hour");
 		expect(rendered).not.toContain("No account, no card");
 	});

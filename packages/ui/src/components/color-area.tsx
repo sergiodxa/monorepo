@@ -1,14 +1,8 @@
 /**
  * A two-dimensional saturation/brightness picking square for a given hue,
- * built from two native `<input type="range">` elements absolutely overlaid
- * on the same rectangle — one plain and horizontal for the saturation axis,
- * one rotated vertical for the brightness axis, exactly the way a vertical
- * orientation is achieved elsewhere in this catalog. Each axis input paints
- * its own native thumb as a thin line spanning the full length of the
- * opposite axis; where the horizontal input's vertical line and the vertical
- * input's horizontal line cross is the picked point, so the two native
- * thumbs together already form the two-dimensional indicator with no further
- * decorative element layered on top.
+ * built from two overlaid native `<input type="range">` elements — one
+ * horizontal for saturation, one rotated vertical for brightness — whose
+ * native thumbs, each reshaped into a thin line, cross at the picked point.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,16 +47,14 @@ const DEFAULT_SATURATION = 100;
 /**
  * Brightness (y-axis) {@link ColorArea} falls back to when neither `value`
  * nor `defaultValue` is set — full brightness, pairing with
- * {@link DEFAULT_SATURATION} so the default picked point starts at the
- * pure-hue corner of the square.
+ * {@link DEFAULT_SATURATION} for a default picked point at the pure-hue corner.
  */
 const DEFAULT_VALUE = 100;
 
 /**
  * `role="group"` applied through {@link attrs} unless a consumer supplies
- * its own `role`, announcing the root as a single grouped control to
- * assistive technology even though its two axes ride two separate native
- * inputs.
+ * its own `role`, announcing the root as one grouped control to assistive
+ * technology despite its two axes riding two separate native inputs.
  */
 const DEFAULT_ROLE = "group";
 
@@ -72,9 +64,8 @@ const DEFAULT_ROLE = "group";
 export namespace ColorArea {
 	/**
 	 * Value {@link ColorArea} stores in component context so its
-	 * {@link ColorArea.SaturationThumb} and {@link ColorArea.ValueThumb}
-	 * nested inside share the same resolved hue, current position, and a
-	 * pair of stable ids without a consumer repeating them on each part.
+	 * {@link ColorArea.SaturationThumb} and {@link ColorArea.ValueThumb} share
+	 * the same resolved hue, position, and stable ids without repeating them.
 	 */
 	export interface Context {
 		/** Resolved hue, in degrees, the square's background paints for. */
@@ -94,10 +85,9 @@ export namespace ColorArea {
 	 */
 	export interface Props extends TagProps<"div"> {
 		/**
-		 * Hue, in degrees `0`–`360`, the square's background renders every
-		 * reachable saturation/brightness combination for. Defaults to
-		 * {@link DEFAULT_HUE}. Typically driven by whatever hue control sits
-		 * alongside this one, re-rendering this square each time hue changes.
+		 * Hue, in degrees `0`–`360`, the square's background renders every reachable
+		 * saturation/brightness combination for. Defaults to {@link DEFAULT_HUE}.
+		 * Typically driven by a hue control alongside this one, re-rendering on change.
 		 */
 		hue?: number;
 		/** Current saturation (x-axis position), `0`–`100`, for a square whose position the consumer tracks itself. */
@@ -111,45 +101,24 @@ export namespace ColorArea {
 	}
 
 	/**
-	 * Every native `<input>` attribute except `type` and `role`, which the
-	 * host fixes to `"range"` and the platform's own implicit `"slider"` role
-	 * respectively, plus the `mix` passthrough. Use `value`/`defaultValue` to
-	 * override the saturation this thumb starts at, `min`/`max`/`step` to
-	 * change its precision, `disabled` to disable it, `name` for form
-	 * submission, and `aria-label`/`aria-labelledby` for its accessible name.
+	 * Every native `<input>` attribute except `type` (fixed to `"range"`) and
+	 * `role` (the platform's implicit `"slider"`), plus `mix`. Use
+	 * `value`/`defaultValue`, `min`/`max`/`step`, and `aria-label` as usual.
 	 */
 	export interface SaturationThumbProps extends Omit<TagProps<"input">, "type" | "role"> {}
 
 	/**
-	 * Every native `<input>` attribute except `type` and `role`, which the
-	 * host fixes to `"range"` and the platform's own implicit `"slider"` role
-	 * respectively, plus the `mix` passthrough. Use `value`/`defaultValue` to
-	 * override the brightness this thumb starts at, `min`/`max`/`step` to
-	 * change its precision, `disabled` to disable it, `name` for form
-	 * submission, and `aria-label`/`aria-labelledby` for its accessible name.
+	 * Every native `<input>` attribute except `type` (fixed to `"range"`) and
+	 * `role` (the platform's implicit `"slider"`), plus `mix`. Use
+	 * `value`/`defaultValue`, `min`/`max`/`step`, and `aria-label` as usual.
 	 */
 	export interface ValueThumbProps extends Omit<TagProps<"input">, "type" | "role"> {}
 }
 
 /**
- * Renders the root host: a `position: relative` `<div>` sized to a square
- * through the `--ui-color-area-size` custom property, painting the full
- * range of saturation/brightness combinations reachable at the resolved hue
- * as its own background. The background stacks a brightness gradient
- * (opaque black fading to transparent from the block-end edge toward the
- * block-start edge) over a saturation gradient (opaque white fading to
- * transparent from the inline-start edge toward the inline-end edge) over a
- * solid fill of the pure hue — literal black and white here are the fixed
- * primaries the brightness/saturation math itself is defined against, not a
- * themed choice, so they stay literal rather than reading from a `--ui-*`
- * variable. Resolves the current hue, saturation, and brightness, plus a
- * pair of stable ids, into component context, so a nested
- * {@link ColorArea.SaturationThumb} and {@link ColorArea.ValueThumb} read
- * the same numbers without a consumer repeating them.
- *
- * In dev mode, a root with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name for the group its two axis inputs are announced under.
+ * Renders the root `<div>`'s picking-square background: literal `black`/`white`
+ * gradient stops are the fixed brightness/saturation math primaries, and the
+ * hue's `hsl()` composes through `bg()`, since it passes `(`-values unchanged.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link ColorArea.Context}.
  * @returns The render function producing the root's markup.
@@ -195,16 +164,9 @@ export function ColorArea(handle: Handle<ColorArea.Props, ColorArea.Context>) {
 					rounded("md"),
 					border({ width: 1, color: "neutral" }),
 					overflow(),
-					// Black/white here are the fixed brightness/saturation primaries
-					// the picking math is defined against, not a themed surface
-					// color — see the doc comment above.
 					bg({
 						image: `${linearGradient("to top", "black", "transparent")}, ${linearGradient("to right", "white", "transparent")}`,
 					}),
-					// The hue itself is a computed `hsl()` value read off a custom
-					// property — `bg()`'s token resolver now passes through any value
-					// containing "(" unchanged, so this composes directly instead of
-					// needing `raw()`.
 					bg("hsl(var(--ui-color-area-hue, 0) 100% 50%)"),
 					mix,
 				]}
@@ -214,29 +176,9 @@ export function ColorArea(handle: Handle<ColorArea.Props, ColorArea.Context>) {
 }
 
 /**
- * Renders the saturation (x-axis) thumb: a native `<input type="range">`
- * reset to cover its enclosing {@link ColorArea}'s entire box, plain and
- * horizontal so its value travels from the inline-start edge (fully
- * desaturated) toward the inline-end edge (fully saturated at the resolved
- * hue). Its own runnable track stays fully transparent and inert — the root
- * already paints the visible square — and only its own native thumb paints,
- * reshaped into a thin line spanning the full block size of the square so it
- * reads as a vertical position marker rather than a small dot. That line's
- * `direction` is fixed to left-to-right regardless of the surrounding page's
- * own `dir`, so its travel always matches the root's background gradient,
- * whose axes are painted in physical directions no CSS gradient can express
- * logically.
- *
- * The thumb line itself is the only part of this input left interactive —
- * everywhere else on the input has pointer interaction turned off — so a
- * pointer starting anywhere else in the square instead reaches whichever
- * other part sits beneath it, most often {@link ColorArea.ValueThumb}'s own
- * line. Both thumbs stay reachable by keyboard regardless: tabbing between
- * them and pressing an arrow key adjusts that thumb's own axis by one step.
- *
- * In dev mode, a thumb with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name for this axis.
+ * `direction` stays fixed left-to-right regardless of the page's own `dir`,
+ * matching the root gradient's physical axes; only this thumb's own line
+ * accepts pointer input, so elsewhere a click reaches the axis line beneath it.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the thumb's markup.
@@ -297,18 +239,11 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 					inset("0"),
 					m("0"),
 					bg("transparent"),
-					// Host-level native chrome reset, narrowed to the standard and
-					// WebKit-prefixed properties only — Firefox's own range input
-					// needs a real (not inert) `MozAppearance: "none"` reset instead,
-					// applied per-pseudo-element below, so this host-level reset
-					// disables the Firefox mirror. `direction` has no matching
-					// utility at all.
 					appearance("none", { moz: false }),
 					raw({ direction: "ltr" }),
 					pointerEvents(),
 					outlineStyle("none"),
 
-					// Runnable track: fully transparent and inert, sized to the square.
 					when("&::-webkit-slider-runnable-track", [
 						is("full"),
 						bs("full"),
@@ -323,9 +258,6 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 						border({ style: "none" }),
 					]),
 
-					// The native thumb itself, reshaped into a thin line spanning the
-					// square via a literal size — pointer-events/box-shadow compose
-					// through `pointerEvents()`/`ringShadow()`.
 					when("&::-webkit-slider-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
@@ -355,31 +287,9 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 };
 
 /**
- * Renders the brightness (y-axis) thumb: a native `<input type="range">`
- * reset to cover its enclosing {@link ColorArea}'s entire box, rotated
- * vertical through `writing-mode` exactly the way a vertical orientation is
- * achieved elsewhere in this catalog, so its value travels from the
- * block-end edge (black) toward the block-start edge (full brightness at the
- * resolved hue) — a typical picking square's low-at-the-bottom convention.
- * Its own runnable track stays fully transparent and inert — the root
- * already paints the visible square — and only its own native thumb paints,
- * reshaped into a thin line spanning the full inline size of the square so
- * it reads as a horizontal position marker rather than a small dot. Where
- * that line crosses {@link ColorArea.SaturationThumb}'s own line is the
- * picked point, the two native thumbs' lines together already forming this
- * control's two-dimensional indicator.
- *
- * The thumb line itself is the only part of this input left interactive —
- * everywhere else on the input has pointer interaction turned off — so a
- * pointer starting anywhere else in the square instead reaches whichever
- * other part sits beneath it, most often {@link ColorArea.SaturationThumb}'s
- * own line. Both thumbs stay reachable by keyboard regardless: tabbing
- * between them and pressing an arrow key adjusts that thumb's own axis by
- * one step.
- *
- * In dev mode, a thumb with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name for this axis.
+ * `writing-mode`/`direction` stay fixed regardless of the page's own `dir`,
+ * so this line travels block-end (black) to block-start, the low-at-the-
+ * bottom convention; pointer layering matches {@link ColorArea.SaturationThumb}.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the thumb's markup.
@@ -439,10 +349,6 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 					inset("0"),
 					m("0"),
 					bg("transparent"),
-					// Host-level native chrome reset, narrowed to the standard and
-					// WebKit-prefixed properties only — see the matching comment in
-					// {@link ColorArea.SaturationThumb}. `writingMode`/`direction`
-					// have no matching utility.
 					appearance("none", { moz: false }),
 					raw({ writingMode: "vertical-lr", direction: "rtl" }),
 					pointerEvents(),

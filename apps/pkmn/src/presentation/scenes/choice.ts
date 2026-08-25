@@ -1,13 +1,9 @@
 /**
  * The choice picker: present a list of labelled options over the scene below.
  *
- * An event's `show-choices` command pushes this over the overworld: it shows an
- * optional prompt and a vertical list of choice labels, and confirming one hands its
- * index back through `onChoose` before the scene pops so the caller can run that
- * branch. Backing out with B chooses the last option, matching the RPG-Maker
- * convention where cancel maps to the final ("...nothing", "No") choice. The scene
- * is translucent so the overworld stays visible beneath it and dispatches nothing
- * itself; the caller decides what a choice means.
+ * Confirming a choice or backing out with B (which picks the last option, the
+ * conventional "cancel" choice) reports the index through `onChoose` and pops.
+ * The scene stays translucent so the caller's own scene shows through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,7 +47,6 @@ export class ChoiceScene implements Scene {
 		let count = this.options.labels.length;
 		this.list.update(game.input, count);
 		if (this.list.cancelled(game.input)) {
-			// Cancel maps to the last choice (the conventional "back out" option).
 			this.options.onChoose(Math.max(0, count - 1));
 			game.scenes.pop();
 			return;
@@ -65,11 +60,9 @@ export class ChoiceScene implements Scene {
 	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
 		let prompt = this.options.prompt;
 		if (prompt) {
-			// The prompt sits in the standard bottom message window.
 			Window.frame(ctx, 4, 112, 232, 44);
 			drawText(ctx, prompt, 12, 120, { color: theme.TEXT.default });
 		}
-		// The choice list floats above the message window, right-aligned like the games.
 		let height = this.options.labels.length * 14 + 8;
 		this.list.render(ctx, this.options.labels, 132, 108 - height, 104);
 	}

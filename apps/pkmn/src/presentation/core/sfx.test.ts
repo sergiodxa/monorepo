@@ -1,12 +1,9 @@
 /**
  * Tests for the procedural sound-effect synth.
  *
- * Verifies the SFX definition data is well-formed (all required names exist,
- * durations and gains sit in sane ranges, frequencies are positive), and that
- * `playSfx` is a safe no-op for unknown names and when no `AudioContext` is
- * available. A stub context records every oscillator/gain it creates so a known
- * effect can be checked to schedule the expected number of oscillators, and a
- * zero-gain option can be shown to schedule nothing without throwing.
+ * Verifies the SFX definitions are well-formed and that `playSfx` is a safe
+ * no-op for unknown names and missing `AudioContext`s. A stub context records
+ * scheduled oscillators and gains for asserting on real effects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +24,7 @@ interface RecordedOscillator {
 	connected: boolean;
 }
 
-/** A stub `AudioContext` that records the nodes it creates without making sound. */
+/** A stub `AudioContext` that records the nodes it creates, standing in for real playback. */
 class StubAudioContext {
 	currentTime = 0;
 	readonly destination = { kind: "destination" } as unknown as AudioNode;
@@ -148,7 +145,6 @@ test("playSfx schedules the expected oscillators for a known effect", () => {
 	let stub = new StubAudioContext();
 	playSfx("menu-confirm", { context: asContext(stub) });
 
-	// menu-confirm is a two-note blip: one oscillator per note.
 	expect(stub.oscillators.length).toBe(SFX_DEFINITIONS["menu-confirm"].length);
 	for (let oscillator of stub.oscillators) {
 		expect(oscillator.started).toBe(true);
@@ -163,7 +159,6 @@ test("playSfx schedules a frequency ramp for a swept effect", () => {
 	let stub = new StubAudioContext();
 	playSfx("faint", { context: asContext(stub) });
 
-	// faint is a single downward sweep: start point set, then ramp to the end.
 	expect(stub.oscillators.length).toBe(1);
 	expect(stub.oscillators[0]!.frequencyRampCalls).toBeGreaterThan(0);
 });

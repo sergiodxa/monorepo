@@ -5,28 +5,23 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Every standard CSS `cursor` keyword, grouped the way the spec does. Any
- * other string still type-checks — a `url(...)` custom-image cursor (with an
- * optional trailing keyword fallback, e.g. `"url(cursor.png), pointer"`)
- * isn't a fixed keyword, so it can't be enumerated here.
+ * Every standard CSS `cursor` keyword. Any other string still type-checks,
+ * keeping a `url(...)` custom-image cursor available, optionally with a
+ * trailing keyword fallback, e.g. `"url(cursor.png), pointer"`.
  */
 export type CursorValue =
-	// General
 	| "auto"
 	| "default"
 	| "none"
-	// Links & status
 	| "context-menu"
 	| "help"
 	| "pointer"
 	| "progress"
 	| "wait"
-	// Selection
 	| "cell"
 	| "crosshair"
 	| "text"
 	| "vertical-text"
-	// Drag & drop
 	| "alias"
 	| "copy"
 	| "move"
@@ -34,7 +29,6 @@ export type CursorValue =
 	| "not-allowed"
 	| "grab"
 	| "grabbing"
-	// Resizing & scrolling
 	| "all-scroll"
 	| "col-resize"
 	| "row-resize"
@@ -50,16 +44,13 @@ export type CursorValue =
 	| "ns-resize"
 	| "nesw-resize"
 	| "nwse-resize"
-	// Zooming
 	| "zoom-in"
 	| "zoom-out";
 
 /**
- * Applies `cursor`. Accepts any {@link CursorValue} keyword — most commonly
- * `"pointer"` for an interactive control, `"not-allowed"` for a disabled
- * one, and `"default"` to opt a host back out of the platform's own
- * pointer-affordance guess — or an arbitrary string for a `url(...)`
- * custom-image cursor.
+ * Applies `cursor`. Accepts any {@link CursorValue} keyword — `"pointer"` for
+ * an interactive control, `"not-allowed"` for a disabled one, `"default"` to
+ * force the plain arrow — or an arbitrary string for a `url(...)` cursor.
  *
  * @example u.cursor("pointer")
  * @example css({ cursor: "pointer" })

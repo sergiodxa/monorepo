@@ -1,7 +1,7 @@
 /**
  * Tests of the session row mapper: the user-agent token matching, the current-session
- * flag, and the staleness threshold — including the invariant that the session a request
- * arrived on is never called stale, since that request itself just touched it.
+ * flag, and the staleness threshold — including the guarantee that the session a
+ * request arrived on stays marked active, since that request itself just touched it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -16,15 +16,13 @@ import type { SchemaOrg } from "../lib/schema";
 
 import { serializeJsonLd } from "../lib/json-ld";
 
-/** `og:type` for a page that isn't explicitly something else. */
 const DEFAULT_OG_TYPE = "website";
 
-/** `twitter:card` layout used unless the site configures another one. */
 const DEFAULT_TWITTER_CARD = "summary_large_image";
 
 /** Props for {@link Seo} and its parts. */
 export namespace Seo {
-	/** The Open Graph facts about a page that aren't already in its title or description. */
+	/** Open Graph facts for a page, beyond its title and description. */
 	export interface OpenGraph {
 		/** `og:type`. Defaults to `"website"`. */
 		type?: "website" | "article";
@@ -67,10 +65,8 @@ export namespace Seo {
 
 /**
  * Emits a page's title, description, canonical link, robots directives, and the Open
- * Graph and Twitter tag sets. Both social namespaces restate the title and description
- * rather than reading the tags above them, because every consumer of these cards reads
- * its own namespace and ignores the other's. Tags whose input is missing are skipped
- * entirely, so a page never advertises an empty title or description.
+ * Graph and Twitter tag sets. Namespaces repeat the title and description for their own
+ * consumers, and tags with no input are skipped so nothing is ever advertised empty.
  *
  * @param handle Runtime handle carrying the page's metadata input.
  * @returns The render function producing the head tags.
@@ -108,10 +104,9 @@ function SeoMeta(handle: Handle<Seo.MetaProps>) {
 }
 
 /**
- * Emits structured data as one `application/ld+json` script. The serialized JSON is set
- * through `innerHTML` rather than as children, since JSX escapes text nodes and would
- * turn the JSON's own quotes into entities and leave the data unparseable; the
- * serializer escapes `<` first so no string value can close the script element early.
+ * Emits structured data as one `application/ld+json` script, set through
+ * `innerHTML` since JSX would escape the JSON into unparseable entities; the
+ * serializer escapes `<` first so no string value can close the script early.
  *
  * @param handle Runtime handle carrying the nodes to serialize.
  * @returns The render function producing the script element.

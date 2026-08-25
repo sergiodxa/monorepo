@@ -1,14 +1,8 @@
 /**
- * Unit tests for the `Monitor` data-access model: CRUD scoped to a team, the SSL
- * cross-team listing, and — most importantly — the raw-SQL `findDue` claim the
- * scheduler runs every minute. Its SQL can't be typo-checked by the type system and it
- * mutates the rows it returns, so it gets dedicated coverage of the claim semantics:
- * one claim per due monitor per minute, a due time that advances from the schedule
- * rather than from the claim, no catch-up storm after an outage, and a disabled monitor
- * that is never claimed. `getStats*` gets the same treatment for its two-store split: the D1
- * aggregates against a real database, the Analytics Engine p99 against a stubbed service
- * so the scope and the failure degradation are both observable. The `QUEUE` binding is an
- * in-memory queue, so `ping`'s assertions are about the messages that really landed on it.
+ * Unit tests for the `Monitor` data-access model. The raw-SQL `findDue` claim the
+ * scheduler runs every minute mutates the rows it returns, so the claim semantics get
+ * dedicated coverage; `getStats*` splits across D1 and a stubbed Analytics Engine so the
+ * scope it passes and its failure degradation stay observable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,18 +51,17 @@ interface PingQueueMessage {
 
 /**
  * The queue `Monitor.ping` sends to. It lives at module scope because the module under
- * test captures `env` on import, so `beforeEach` resets it rather than rebuilding it, and
- * the recorded messages are what the `ping` cases assert on.
+ * test captures `env` on import, so `beforeEach` resets this same instance, and its
+ * recorded messages are what the `ping` cases assert on.
  */
 let queue: QueueMock<PingQueueMessage> = createQueue<PingQueueMessage>({ name: "uptime" });
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 /**
- * `Monitor.getStats*` now reads its p99 from Analytics Engine (see the method's
- * docblock). Stub the service so the D1 half of the card can be asserted without an HTTP
- * round trip, and so the scope each entry point passes is observable; the SQL text itself
- * is covered in `app/services/analytics.test.ts`.
+ * `Monitor.getStats*` reads its p99 from Analytics Engine, so stubbing the service keeps
+ * the D1 half of the card assertable in process and makes the scope each entry point
+ * passes observable; `app/services/analytics.test.ts` covers the SQL text.
  */
 let p99Query = vi.fn(async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> =>
 	success(null),
@@ -82,13 +75,9 @@ beforeEach(() => {
 });
 
 /**
- * Builds a test database that records the query plan SQLite chose for every statement
- * executed through it, so a test can assert how a query is resolved rather than only
- * what it returns.
- *
- * The adapter is wrapped rather than replaced, so the SQL and bindings explained are the
- * real ones the production adapter would send to D1 — both compile identical SQLite
- * statements from the same operations.
+ * Records the query plan SQLite chose for every statement, so a test can assert how a
+ * query is resolved. Wrapping the real adapter keeps the SQL and bindings explained
+ * identical to the ones production compiles and sends to D1.
  * @returns The `db` handle and the array of per-statement plan step lists.
  */
 function createPlanRecordingDatabase() {
@@ -112,8 +101,8 @@ function createPlanRecordingDatabase() {
 
 /**
  * Asks SQLite how it intends to run a statement, returning one string per plan step
- * (e.g. `SEARCH monitors USING INDEX ...`). Returns nothing for a statement SQLite
- * won't explain, rather than failing the test that asked.
+ * (e.g. `SEARCH monitors USING INDEX ...`). A statement SQLite declines to explain
+ * yields an empty list, so the calling test stands on its own assertions.
  */
 function explain(sqliteDb: SqliteDatabase, sql: string, values: unknown[]): string[] {
 	try {
@@ -126,7 +115,11 @@ function explain(sqliteDb: SqliteDatabase, sql: string, values: unknown[]): stri
 	}
 }
 
-/** Narrows a compiled binding to something the SQLite driver accepts. */
+/**
+ * Narrows a compiled binding to something the SQLite driver accepts. An unexpected type
+ * throws, since binding its default stringification would silently run the query
+ * against nonsense.
+ */
 function toBinding(value: unknown): unknown {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "string") return value;
@@ -134,8 +127,6 @@ function toBinding(value: unknown): unknown {
 	if (typeof value === "bigint") return value;
 	if (typeof value === "boolean") return value ? 1 : 0;
 	if (value instanceof Uint8Array) return value;
-	// Anything else is not a value the driver ever compiles into a binding, and binding
-	// its default stringification would silently run the query against nonsense.
 	throw new TypeError(`Unsupported SQL binding of type ${typeof value}`);
 }
 
@@ -165,6 +156,7 @@ async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> 
 }
 
 describe("Monitor.create", () => {
+	/** Due on creation, so the first check runs on the next scheduler tick. */
 	test("creates a monitor for a team, enabled immediately", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
@@ -180,8 +172,6 @@ describe("Monitor.create", () => {
 		expect(monitor.url).toBe("https://example.com");
 		expect(monitor.enabled_at).not.toBeNull();
 		expect(monitor.id).toMatch(/^[0-9a-f-]{36}$/);
-		// Due immediately, so the first check runs on the next tick rather than a whole
-		// interval later.
 		expect(monitor.next_due_at).not.toBeNull();
 		expect(monitor.next_due_at).toBeLessThanOrEqual(Date.now());
 	});
@@ -348,9 +338,9 @@ describe("Monitor.ping", () => {
 	});
 
 	/**
-	 * Fails open, which is the behaviour ADR-005 inverted: a missed webhook leaves the
-	 * projection empty, and refusing on that basis would be the read-time subscription gate
-	 * the ADR removed.
+	 * Fails open, as ADR-005 requires: a missed webhook leaves the projection empty, so an
+	 * unknown state counts as subscribed and the subscription gate stays out of the read
+	 * path.
 	 */
 	test("enqueues when the owner's subscription state is unknown", async () => {
 		let { db } = createTestDatabase();
@@ -362,7 +352,6 @@ describe("Monitor.ping", () => {
 
 	test("gives two cron deliveries in the same minute one shared job id", async () => {
 		let monitorId = crypto.randomUUID();
-		// The two deliveries this cron really produces: same minute, ~7s apart.
 		let first = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 		let second = Date.UTC(2026, 6, 28, 12, 34, 15, 0);
 
@@ -404,7 +393,6 @@ describe("Monitor.ping", () => {
 
 		let manualId = queue.sent[0]?.body.id;
 		expect(manualId).not.toBe(Monitor.scheduledJobId(monitorId, scheduledAt));
-		// The segment a scheduled id cannot contain, since its second segment is a number.
 		expect(manualId).toContain(":manual:");
 		expect(Monitor.scheduledJobId(monitorId, scheduledAt)).not.toContain(":manual:");
 	});
@@ -424,14 +412,9 @@ describe("Monitor.ping", () => {
 });
 
 /**
- * `findDue` is a claim, not a query: it takes the monitors whose `next_due_at` has
- * arrived and advances that column in the same call, so what matters is the state it
- * leaves behind. Every case below therefore calls it more than once, or inspects
- * `next_due_at` afterwards, rather than asserting on a single return value.
- *
- * `monitor_results` is deliberately absent from this suite. Completion times no longer
- * take part in scheduling at all, which is the point of the change: a check's own
- * latency can't push the next one out.
+ * `findDue` is a claim: it takes the monitors whose `next_due_at` has arrived and advances
+ * that column in the same call, so every case below asserts on the state it leaves behind.
+ * Scheduling reads only that column, so the cadence holds however long a check takes.
  */
 describe("Monitor.findDue", () => {
 	/** The `next_due_at` currently stored for a monitor, which is what a claim moves. */
@@ -453,6 +436,7 @@ describe("Monitor.findDue", () => {
 		expect(due).toEqual([monitor.id]);
 	});
 
+	/** A cron fires more than once a minute, so the second delivery finds nothing due. */
 	test("never claims the same monitor twice in the same minute", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
@@ -462,7 +446,6 @@ describe("Monitor.findDue", () => {
 			interval_seconds: 60,
 		});
 
-		// The two deliveries this cron really produces: same minute, ~7s apart.
 		let first = Date.now() + 1000;
 		expect(await dueIds(db, first)).toHaveLength(1);
 		expect(await dueIds(db, first + 7000)).toEqual([]);
@@ -494,8 +477,6 @@ describe("Monitor.findDue", () => {
 		let anchor = Date.now();
 		await db.update(monitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
-		// Claimed 1.5s late, as a real delivery is. The next due time is still the
-		// anchor plus exactly one interval, not the claim time plus one.
 		await dueIds(db, anchor + 1500);
 
 		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 60_000);
@@ -512,8 +493,6 @@ describe("Monitor.findDue", () => {
 		let anchor = Date.now();
 		await db.update(monitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
-		// An hour of missed ticks: the due time skips to the first interval boundary
-		// strictly after now rather than replaying the sixty it slept through.
 		let scheduledAt = anchor + 60 * 60_000;
 		expect(await dueIds(db, scheduledAt)).toHaveLength(1);
 		expect(await nextDueAt(db, monitor.id)).toBe(scheduledAt + 60_000);
@@ -531,8 +510,6 @@ describe("Monitor.findDue", () => {
 		let anchor = Date.now();
 		await db.update(monitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
-		// 7 minutes late on a 5-minute monitor: two whole intervals have passed, so the
-		// next due time is the anchor plus two, which is 3 minutes out.
 		await dueIds(db, anchor + 7 * 60_000);
 
 		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 10 * 60_000);
@@ -567,10 +544,9 @@ describe("Monitor.findDue", () => {
 	});
 
 	/**
-	 * The claim's whole justification is its query plan (ADR-003): the query it replaced
-	 * had to read every row of `monitor_results` to answer a question about a handful of
-	 * monitors, which was 97% of the app's D1 rows read. Rows returned can't see that —
-	 * only the plan can — so this asserts the plan directly.
+	 * The claim exists for its query plan (ADR-003): the query it replaced read every row
+	 * of `monitor_results` to answer a question about a handful of monitors, 97% of the
+	 * app's D1 rows read. Only the plan shows that, so the plan is what this asserts.
 	 */
 	test("claims through the next_due_at index instead of scanning a table", async () => {
 		let { db, plans } = createPlanRecordingDatabase();
@@ -617,7 +593,6 @@ describe("Monitor.updateById scheduling", () => {
 			url: "https://example.com",
 			interval_seconds: 3600,
 		});
-		// Pushed an hour out by a claim, so a shorter interval must bring it back.
 		await db.update(
 			monitors,
 			monitor.id,
@@ -630,6 +605,10 @@ describe("Monitor.updateById scheduling", () => {
 		expect(await dueIds(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
 
+	/**
+	 * The web form resubmits the interval on every edit, so a rename carrying the same
+	 * interval keeps the existing cadence.
+	 */
 	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
@@ -641,8 +620,6 @@ describe("Monitor.updateById scheduling", () => {
 		let scheduled = Date.now() + 3_600_000;
 		await db.update(monitors, monitor.id, { next_due_at: scheduled }, { touch: false });
 
-		// The web form resubmits the unchanged interval on every edit, so neither a rename
-		// nor a same-value interval may restart the cadence.
 		let renamed = await Monitor.updateById(db, monitor.id, {
 			name: "Renamed",
 			interval_seconds: 60,
@@ -669,16 +646,19 @@ describe("Monitor.updateById scheduling", () => {
 });
 
 /**
- * Every case below reads the month as of 2026-07-15, which puts the raw-counting
- * window at July 14–15 and the rollup window at July 1–13. `monitor_results` rows
- * dated before the 14th therefore never count on their own — after `CleanJob`'s
- * retention they wouldn't exist anyway, and the rollup is what stands in for them.
+ * Every case below reads the month as of 2026-07-15, which puts the raw-counting window
+ * at July 14–15 and the rollup window at July 1–13. The rollup stands in for anything
+ * older, since `CleanJob`'s retention removes those raw rows.
  */
 describe("Monitor.countConsumedPingsByTeam", () => {
 	let date = new Date("2026-07-15T12:00:00.000Z");
 	let insideRawWindow = Date.UTC(2026, 6, 14, 8, 0, 0);
 
-	/** A completed HTTP check recorded at `createdAt`, the row one consumed ping produces. */
+	/**
+	 * A completed HTTP check recorded at `createdAt`, the row one consumed ping produces.
+	 * `touch` stamps `created_at` with the current time, so the row is backdated after the
+	 * insert.
+	 */
 	async function createHttpResult(db: Database, monitorId: string, createdAt: number) {
 		let result = await db.create(
 			monitorResults,
@@ -691,7 +671,6 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		// `touch` stamps `created_at` with the current time, so backdate it afterwards.
 		await db.update(monitorResults, result.id, { created_at: createdAt }, { touch: false });
 	}
 
@@ -752,18 +731,17 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		return { http, dns, tcp, cron };
 	}
 
+	/** 1111 rolled-up checks before the raw window, plus 5 raw ones inside it. */
 	test("sums the rollup and the raw window across every monitor type", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let { http, dns, tcp, cron } = await createMonitors(db, team.id);
 
-		// Rolled-up days, inside the month and before the raw window: 1000 + 100 + 10 + 1.
 		await createDailyStats(db, http.id, "http", "2026-07-02", 1000);
 		await createDailyStats(db, dns.id, "dns", "2026-07-02", 100);
 		await createDailyStats(db, tcp.id, "tcp", "2026-07-13", 10);
 		await createDailyStats(db, cron.id, "cron", "2026-07-13", 1);
 
-		// Raw results the rollup hasn't reached yet: 2 HTTP + 1 DNS + 1 TCP + 1 cron.
 		await createHttpResult(db, http.id, insideRawWindow);
 		await createHttpResult(db, http.id, insideRawWindow + 60_000);
 		await db.create(dnsMonitorResults, {
@@ -797,7 +775,6 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		let team = await createTeam(db);
 		let { http } = await createMonitors(db, team.id);
 
-		// The 13th is rolled up, and its raw rows are still inside the 7-day retention.
 		await createDailyStats(db, http.id, "http", "2026-07-13", 5);
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 13, 6, 0, 0));
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 13, 7, 0, 0));
@@ -810,7 +787,6 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		let team = await createTeam(db);
 		let { http } = await createMonitors(db, team.id);
 
-		// On the 1st the raw window is clamped to the month, leaving no rolled-up days.
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1, 0, 30, 0));
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1, 1, 30, 0));
 
@@ -819,19 +795,20 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		).toBe(2);
 	});
 
+	/**
+	 * A rollup row whose `monitor_type` disagrees with its `monitor_id` resolves to no
+	 * monitor, so the team join drops it.
+	 */
 	test("never counts another month or another team", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let otherTeam = await createTeam(db);
 		let { http, dns, tcp, cron } = await createMonitors(db, team.id);
 
-		// Rolled-up days on either side of July.
 		await createDailyStats(db, http.id, "http", "2026-06-30", 1000);
 		await createDailyStats(db, dns.id, "dns", "2026-08-01", 1000);
-		// Raw checks the millisecond before July starts and the millisecond after it ends.
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1) - 1);
 		await createHttpResult(db, http.id, Date.UTC(2026, 7, 1));
-		// A rollup row for the right day, but keyed to the wrong monitor type.
 		await createDailyStats(db, tcp.id, "cron", "2026-07-02", 1000);
 		await createDailyStats(db, cron.id, "tcp", "2026-07-02", 1000);
 
@@ -859,7 +836,11 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 	let date = new Date("2026-07-15T12:00:00.000Z");
 	let insideRawWindow = Date.UTC(2026, 6, 14, 8, 0, 0);
 
-	/** A completed HTTP check recorded at `createdAt`, the row one consumed ping produces. */
+	/**
+	 * A completed HTTP check recorded at `createdAt`, the row one consumed ping produces.
+	 * `touch` stamps `created_at` with the current time, so the row is backdated after the
+	 * insert.
+	 */
 	async function createHttpResult(db: Database, monitorId: string, createdAt: number) {
 		let result = await db.create(
 			monitorResults,
@@ -872,7 +853,6 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		// `touch` stamps `created_at` with the current time, so backdate it afterwards.
 		await db.update(monitorResults, result.id, { created_at: createdAt }, { touch: false });
 	}
 
@@ -926,7 +906,6 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 			url: "https://example.com",
 		});
 
-		// The 13th is rolled up, and its raw rows are still inside the 7-day retention.
 		await createDailyStats(db, monitor.id, "2026-07-13", 5);
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 13, 6, 0, 0));
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 13, 7, 0, 0));
@@ -942,7 +921,6 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 			url: "https://example.com",
 		});
 
-		// On the 1st the raw window is clamped to the month, leaving no rolled-up days.
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1, 0, 30, 0));
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1, 1, 30, 0));
 
@@ -967,14 +945,11 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 			url: "https://other.example.com",
 		});
 
-		// Rolled-up days on either side of July.
 		await createDailyStats(db, monitor.id, "2026-06-30", 1000);
 		await createDailyStats(db, monitor.id, "2026-08-01", 1000);
-		// Raw checks the millisecond before July starts and the millisecond after it ends.
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1) - 1);
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 7, 1));
 
-		// The other monitor on the same team is fully checked, and counts for none of it.
 		await createDailyStats(db, sibling.id, "2026-07-02", 1000);
 		await createHttpResult(db, sibling.id, insideRawWindow);
 
@@ -994,12 +969,15 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 });
 
 describe("Monitor.estimateConsumedPingsByTeam", () => {
+	/**
+	 * 744 hourly checks each for the HTTP, DNS and TCP monitors across a 31-day July, plus
+	 * the 30 midnight cron occurrences strictly after the 1st, giving 2262.
+	 */
 	test("projects HTTP/DNS/TCP monitors from their interval and sums cron occurrences", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let date = new Date("2026-07-15T12:00:00.000Z");
 
-		// 31-day month, checking every 3600s -> 24 checks/day * 31 = 744.
 		await Monitor.create(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
@@ -1022,7 +1000,6 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 			interval_seconds: 3600,
 			is_enabled: true,
 		});
-		// Runs once a day at midnight -> 31 occurrences in July.
 		await db.create(cronJobMonitors, {
 			id: crypto.randomUUID(),
 			team_id: team.id,
@@ -1033,8 +1010,6 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 		});
 
 		let estimate = await Monitor.estimateConsumedPingsByTeam(db, team.id, date);
-		// 744 (http) + 744 (dns) + 744 (tcp) = 2232, plus cron occurrences strictly
-		// after the 1st at midnight through the 31st: 30.
 		expect(estimate).toBe(2262);
 	});
 

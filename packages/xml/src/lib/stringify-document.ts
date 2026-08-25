@@ -1,3 +1,11 @@
+/**
+ * Serializes plain XML document data into a string, resolving namespace
+ * prefixes and rejecting elements or attributes with no matching declaration.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { failure, success } from "@pkg/result";

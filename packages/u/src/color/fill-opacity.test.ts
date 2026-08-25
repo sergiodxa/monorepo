@@ -28,9 +28,6 @@ describe("fillOpacity", () => {
 	});
 
 	test("the ratio carries no unit, so the declaration survives the serializer", async () => {
-		// Regression: the ratio used to be emitted as a bare number, and the
-		// serializer's px-appending turned it into `fill-opacity: 0.5px`, an
-		// invalid declaration browsers drop — the shape stayed fully opaque.
 		expect(await declarations(fillOpacity(50))).not.toContain("fill-opacity: 0.5px");
 	});
 });

@@ -83,7 +83,10 @@ namespace ClientEditView {
 	}
 }
 
-/** Renders the client edit form, or the rotated secret's one-time reveal. */
+/**
+ * Renders the client edit form, or the rotated secret's one-time reveal. The
+ * session-required checkboxes reflect the stored "true"/"false" string columns.
+ */
 export default function ClientEditView(handle: Handle<ClientEditView.Props>) {
 	return () => {
 		let { chrome, labels, client, detailHref, newSecret, issues } = handle.props;
@@ -189,8 +192,6 @@ export default function ClientEditView(handle: Handle<ClientEditView.Props>) {
 								placeholder={labels.fields.backchannelLogoutUri.placeholder}
 							/>
 
-							{/* The stored column is the text "true"/"false", so the checked state has to
-							be derived from that string and posts back as the same one. */}
 							<Checkbox
 								name="backchannelLogoutSessionRequired"
 								defaultChecked={client.backchannelLogoutSessionRequired}

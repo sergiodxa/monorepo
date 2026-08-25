@@ -72,11 +72,12 @@ describe("animation", () => {
 			]);
 		});
 
+		/**
+		 * Regression: the serializer's px-appending turned a bare numeric count
+		 * into `animation-iteration-count: 2px`, a declaration browsers drop,
+		 * leaving the animation to run once.
+		 */
 		test("accepts a numeric iterationCount and emits it without a unit", async () => {
-			// Regression: the count used to be emitted as a bare number, and the
-			// serializer's px-appending turned it into
-			// `animation-iteration-count: 2px`, an invalid declaration browsers
-			// drop — the animation silently ran once.
 			let mixin = animation("bounce", {
 				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
 				duration: "300ms",

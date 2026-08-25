@@ -30,11 +30,9 @@ import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
 /**
- * The scope a request asks for, from the two fields that express it.
- *
- * A `monitorId` with no `monitorType` is read as HTTP rather than rejected: that pair
- * shipped as the only scoping the API had, when an id could not mean anything else, and
- * every client sending one today means the same thing it always did.
+ * The monitor scope a request asks for, resolved from `monitorType`/`monitorId`.
+ * A `monitorId` alone resolves to HTTP: that pairing was the API's only scoping
+ * before `monitorType` existed, and every client sending one still means that.
  */
 export function apiScopeFrom(input: {
 	monitorType?: MonitorScopeType;
@@ -85,23 +83,18 @@ const commonAlertFields = {
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	notifyOnRecovery: s.defaulted(s.boolean(), true),
 	/**
-	 * Defaulted to the same {@link DEFAULT_COOLDOWN_MINUTES} the form applies, not to `0`.
-	 *
-	 * It was `0`, which made an alert created through the API repeat as fast as dispatch allows
-	 * while one created through the form waited — the same resource behaving differently
-	 * depending on which surface made it, and the noisier of the two being the one nobody
-	 * chose. A caller who wants that can still send `0` explicitly.
+	 * Defaults to {@link DEFAULT_COOLDOWN_MINUTES}, matching the dashboard form's
+	 * cadence, so alerts behave consistently regardless of the creating surface.
+	 * Callers wanting immediate repeats can still send `0` explicitly.
 	 */
 	cooldownMinutes: s.defaulted(
 		s.number().pipe(checks.min(0), checks.max(1440)),
 		DEFAULT_COOLDOWN_MINUTES,
 	),
 	/**
-	 * Which monitor table `monitorId` names, or — on its own — the whole type to watch.
-	 *
-	 * Optional beside an id purely for compatibility: `monitorId` shipped before this
-	 * field existed and could only ever mean an HTTP monitor, so a request that still
-	 * sends one alone keeps meaning exactly that (see {@link resolveApiScope}).
+	 * Which monitor table `monitorId` names, or the whole type to watch on its own.
+	 * Optional for compatibility: `monitorId` shipped first and always meant an
+	 * HTTP monitor, so an id sent alone still resolves that way (see {@link apiScopeFrom}).
 	 */
 	monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
 	monitorId: s.optional(s.string()),
@@ -142,11 +135,9 @@ const CreateAlertSchema = s.variant("strategy", {
 });
 
 /**
- * `s.variant()`'s inferred output loses the per-branch literal discriminant when the
- * branches are combined into a union (the merged `strategy` field widens to `string`),
- * so `buildConfig` below can't narrow via a plain `switch`. The runtime validation via
- * `CreateAlertSchema` already guarantees one of these four shapes; this type restates
- * that guarantee by hand so the exhaustive switch narrows correctly.
+ * Restates `CreateAlertSchema`'s guaranteed shape by hand: `s.variant()`'s inferred
+ * output widens the merged `strategy` field to `string`, so this type gives
+ * `buildConfig`'s switch back the literal discriminant it needs to narrow.
  */
 type CreateAlertValues =
 	| { strategy: "email"; email: string; subjectPrefix?: string; monitorId?: string }

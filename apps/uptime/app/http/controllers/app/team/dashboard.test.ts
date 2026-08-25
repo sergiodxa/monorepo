@@ -1,14 +1,9 @@
 /**
- * Tests for the team dashboard shell. `requireUser`/`requireTeam`/`i18n` are bypassed
- * (they need a real session cookie / real `auth` global middleware, or a DB/cookie-
- * based locale lookup); `ctx.team`/`ctx.membership`/`ctx.i18next` are seeded directly
- * instead. `ctx.render` is stood in for with a minimal renderer mirroring
- * `bootstrap/app.tsx`'s own `createHtmlRenderer`, since `<Frame>` resolution isn't
- * exercised by a single-request page test (its `resolveFrame` is a no-op).
- *
- * The dashboard itself doesn't query monitors/analytics — it only renders `<Frame>`
- * placeholders pointed at other fragment routes (dashboard-panel.tsx, the stat
- * cards), so no `cloudflare:workers` mock is needed here.
+ * Tests for the team dashboard shell. `requireUser`/`requireTeam`/`i18n` are bypassed by
+ * seeding `ctx.team`/`ctx.membership`/`ctx.i18next` directly, standing in for a real
+ * session cookie, `auth` middleware, and a DB-backed locale lookup. `ctx.render` uses a
+ * minimal renderer with a no-op `resolveFrame`, since the dashboard renders `<Frame>`
+ * placeholders for monitors and analytics.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,7 +32,7 @@ import routes from "~/routes/web";
 
 import * as dashboardModule from "./dashboard";
 
-/** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
+/** Stand-in for `renderWith(createHtmlRenderer)`, with `resolveFrame` returning an empty string for this single-request page test. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
@@ -79,9 +74,8 @@ function seedTeam(
 
 /**
  * Where each named `Frame` sits in the rendered document. A frame's name never reaches
- * the markup — it is emitted with the hydration data at the end of the response, and the
- * frame itself is a `<!-- rmx:f:id -->` comment around its content — so the name has to
- * be resolved to an id through that data before any position in the DOM can be read off.
+ * the markup — it is resolved to an id via the hydration data, and the frame itself is a
+ * `<!-- rmx:f:id -->` comment, so the id must be looked up before reading any DOM position.
  */
 function frameMarkers(body: string): Map<string, number> {
 	let data = body.match(/<script type="application\/json" id="rmx-data">(.*?)<\/script>/s);
@@ -140,6 +134,11 @@ describe("app/team/dashboard", () => {
 		expect(body).toContain(en.page.dashboard.header.title);
 	});
 
+	/**
+	 * The quick check sits outside `<main>` as the header's action, freeing the stat rows
+	 * below to take the full width the fixed column used to occupy. SSL exists as a flag on
+	 * an HTTP monitor, so its counting and `+` control belong to the HTTP monitor card.
+	 */
 	test("puts the quick check in the header, ahead of every stat card and the panel", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -165,22 +164,20 @@ describe("app/team/dashboard", () => {
 		let cron = markers.get("dashboard-card-count-cron-jobs");
 		let panel = markers.get("dashboard-panel");
 
-		// The quick check is the shell's header action now, which is the whole point of the
-		// move: it sits outside `<main>` entirely, so the stat rows below get the full width
-		// the fixed column beside them used to take.
 		expect(quickPing).toBeGreaterThan(-1);
 		expect(quickPing).toBeLessThan(body.indexOf("<main"));
 		expect(usage).toBeGreaterThan(body.indexOf("<main"));
 
-		// And the content is the two stat rows then the tab table, in that order.
 		expect(cron).toBeGreaterThan(usage!);
 		expect(panel).toBeGreaterThan(cron!);
 
-		// SSL is a flag on an HTTP monitor rather than a monitor of its own, so there is no
-		// card counting them and no form for its `+` to have pointed at.
 		expect(markers.has("dashboard-card-count-ssl")).toBe(false);
 	});
 
+	/**
+	 * The bar's two controls render at a fixed 2.5rem height, so that height appearing in
+	 * the body confirms the frame streamed behind its own fallback placeholder.
+	 */
 	test("streams the quick check behind a fallback instead of blocking the document on it", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -200,9 +197,6 @@ describe("app/team/dashboard", () => {
 		);
 		let body = await (await container.scope(() => router.fetch(request))).text();
 
-		// A frame with no `fallback` blocks the whole document on its fragment, and the quick
-		// check used to be that frame. The placeholder is the bar's own two controls at the
-		// height they render at, which is the proof it renders a fallback now and streams.
 		expect(body).toContain("block-size: 2.5rem");
 	});
 

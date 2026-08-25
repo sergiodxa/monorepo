@@ -4,11 +4,9 @@
  */
 
 /**
- * Resolves a custom property reference: `var(--{name})`, or
- * `var(--{name}, {fallback})` when a fallback is given. The leading `--` is
- * omitted from `name`, mirroring `u.vars()`'s convention for defining the
- * same custom properties. A plain string resolver, not a mixin — use it
- * anywhere a utility accepts a raw CSS value, such as `u.p(u.var("gap"))`.
+ * Resolves a custom property reference: `var(--{name})`, or with a fallback,
+ * `var(--{name}, {fallback})`. `name` omits the leading `--`, matching
+ * `u.vars()`; the raw string fits anywhere a utility takes a CSS value.
  *
  * @example u.var("sidebar-width")
  * @example "var(--sidebar-width)"

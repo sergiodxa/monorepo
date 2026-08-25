@@ -1,7 +1,7 @@
 /**
  * Tests for the normalization both record channels share. They pin the folding rules directly,
- * because a rule that drifts on one side turns every record into a change on the next check
- * rather than failing anything visibly.
+ * because a rule that drifts on one side turns every record into a silent change on the next
+ * check.
  *
  * The load-bearing block is the last one: the same record written the way a zone file writes it
  * and the way the resolver answers it must fold to one string, or every imported record reads
@@ -203,18 +203,17 @@ describe("normalizeDnsRecordValue", () => {
 	});
 
 	/**
-	 * The whole point of the total reading. A value that cannot be parsed is still the record's
-	 * identity, and dropping it would make a record the customer still publishes read as
-	 * `missing` on the next sweep — a false alert, where carrying it through is at worst a
-	 * record that never appears to change.
+	 * The whole point of the total reading: a value that fails to parse is still the record's
+	 * identity, so dropping it would report a record the customer still publishes as `missing`
+	 * — a false alert — where carrying it through at worst leaves a record that never changes.
 	 */
 	test.each([
 		["A", "not-an-address", "not-an-address"],
 		["AAAA", "NOT:AN:ADDRESS:::1", "not:an:address:::1"],
-		/** A hand-typed expected MX value is a bare host; it is carried, not given a preference. */
+		/** A hand-typed expected MX value is a bare host, carried through as one. */
 		["MX", "MX.Example.com.", "mx.example.com"],
 		["MX", "aspmx.l.google.com.", "aspmx.l.google.com"],
-		/** Kept as written rather than folded to `NaN`. */
+		/** A non-numeric preference like `high` is kept exactly as written. */
 		["MX", "high mx.example.com.", "high mx.example.com"],
 		["TXT", '"open', "open"],
 	] as const)("carries an unparseable %s of %j through as %j", (type, data, expected) => {

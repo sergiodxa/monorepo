@@ -1,27 +1,8 @@
 /**
- * Cron-job monitor detail page controller. Requires `requireUser` + `requireTeam`;
- * 404s when the monitor doesn't belong to the current team.
- *
- * The page is ordered by what a reader needs first. Status is the one fact that
- * decides whether anything else on the page matters, so it rides in the shell's
- * header row rather than as one card among many — `AppShell` types `heading` as a
- * plain string, so the badge goes at the start of `actions`, which is the same
- * fixed-height header row the monitor's name sits in.
- *
- * Timezone and grace period are settings chosen once on the edit page, not health
- * readings, so they collapse into the schedule card's secondary line instead of
- * competing with the four metrics that do change: last ping, next expected, on-time
- * rate and total pings.
- *
- * Every instant reads as a relative distance ("in 4 hours", "2 minutes ago") with the
- * absolute timestamp on `title`, because the question a monitoring page answers is
- * "how long ago", not "on what date". `@pkg/dates` renders both, in the viewer's
- * locale and in the job's own timezone — the zone the schedule is written against, so
- * a timestamp and the cron expression above it describe the same clock.
- *
- * `cron-jobs:ping` is enforced, and a request missing the header fails silently as a
- * 401 that later surfaces as a false "missed" alert. The ping section therefore
- * carries only runnable, authenticated snippets and a route to creating a scoped key.
+ * Cron-job monitor detail page. Requires `requireUser` and `requireTeam`,
+ * and 404s when the monitor doesn't belong to the current team. Every
+ * timestamp shows as a relative distance from now, in the job's own
+ * timezone, matching the clock the cron expression is written against.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,7 +51,13 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	new: "neutral",
 };
 
-/** GET /app/:team/cron-jobs/:monitorId — a cron-job monitor's detail page. */
+/**
+ * GET /app/:team/cron-jobs/:monitorId — a cron-job monitor's detail page.
+ * The ping snippets sit inside an `IntlProvider` so `CopyButton`'s
+ * `clientEntry` island can resolve `intl(handle)` during server rendering.
+ * The uptime history bar scrolls in its own box, since 90 bars need more
+ * width than a phone screen offers.
+ */
 export default createAction(routes.app.team.cronJobs.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -97,8 +84,10 @@ export default createAction(routes.app.team.cronJobs.show, {
 		let curlSnippet = `curl -X POST ${pingUrl} ${authHeader}`;
 		let crontabSnippet = `0 * * * * your-job.sh && curl -fsS -X POST ${pingUrl} ${authHeader}`;
 
-		// The bar's copy is the same copy a viewer reads on a public status page, so it
-		// reuses those keys rather than growing a second set that could drift from them.
+		/**
+		 * Reuses the public status page's translation keys instead of a
+		 * second set, so wording can't drift between the two surfaces.
+		 */
 		let uptimeBarLabels = {
 			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
 			today: ctx.i18next.t("statusPage.uptimeBar.today"),
@@ -228,11 +217,6 @@ export default createAction(routes.app.team.cronJobs.show, {
 							<p mix={[m("0"), mbe("16px"), fontSize("0.8125rem"), fg("neutral.muted")]}>
 								{ctx.i18next.t("page.cronJobDetail.ping.description")}
 							</p>
-							{/* CopyButton is a `clientEntry` island: its render function runs
-							server-side too (for the initial HTML), where `intl(handle)` has no
-							module-scoped `setIntl()` fallback to read (that's only ever
-							registered client-side in bootstrap/browser.ts) — it needs an
-							`IntlProvider` ancestor for `intl(handle)` to resolve at all. */}
 							<IntlProvider i18n={ctx.i18next}>
 								<Snippet
 									label={ctx.i18next.t("page.cronJobDetail.ping.snippet.curl")}
@@ -254,9 +238,6 @@ export default createAction(routes.app.team.cronJobs.show, {
 						</Section>
 
 						<Section title={ctx.i18next.t("page.cronJobDetail.uptimeHistory")}>
-							{/* 90 bars at a 2px floor plus their gaps need ~358px, more than this
-							column offers on a phone, so the bar gets its own scroll box rather than
-							pushing the whole content area sideways. */}
 							<div mix={[overflowX("auto")]}>
 								<UptimeBar
 									days={dailyStats}

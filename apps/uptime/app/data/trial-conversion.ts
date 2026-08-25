@@ -1,20 +1,9 @@
 /**
- * Data-access model for `trial_conversions`: one durable row per account that arrived
- * through the public trial, carrying what the trial cost to produce it and the two instants
- * that make the funnel measurable — when they signed up, and when they first paid.
- *
- * **This is the table that outlives everything else in the trial.** Leads, watches and their
- * results are all swept, and an unsubscribe deletes a lead's entire history the moment it is
- * clicked, so by the time anyone asks how long a customer took to convert there is nothing
- * left to derive it from. A row here is written by *copying* those facts out at sign-up, not
- * by pointing at them, which is why it holds a URL list and an email count instead of a
- * lead id. Nothing may sweep it.
- *
- * **It is keyed on the OIDC subject.** That is deliberate and it is what lets the unsubscribe
- * promise keep holding: no address is stored here, so deleting a lead really does delete
- * every trace of the lead. Somebody who signed up is a customer rather than a lead in any
- * case, and the subject is `teams.owner_id`, which is what a Polar subscription carries as
- * its external customer id — so this joins to billing with no expiring hop in between.
+ * Data-access model for `trial_conversions`: one durable row per account that arrived through
+ * the public trial, holding what the trial cost and the two instants that make the funnel
+ * measurable. Leads and watches are swept and an unsubscribe erases a lead's whole history, so
+ * every fact is copied in at sign-up and this row is kept forever. It is keyed on the OIDC
+ * subject, which stores no address and is the external customer id billing carries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,7 +18,7 @@ import type { SelectTrialConversion } from "~/database/schema";
 
 import { trialConversions } from "~/database/schema";
 
-/** Every column, so a `SELECT` hands back a whole row rather than a fragment. */
+/** Every column, so a `SELECT` hands back a whole row. */
 const COLUMNS = [
 	"id",
 	"created_at",
@@ -63,9 +52,8 @@ export interface TrialSignup {
 	/**
 	 * Where they first arrived, when the session still carried it.
 	 *
-	 * Absent is the expected case rather than a fault: first touch rides in a session cookie,
-	 * so anyone who blocks it or signs in from a new session has none, and it must be recorded
-	 * as unknown rather than defaulted to anything.
+	 * First touch rides in a session cookie, so a blocked cookie or a fresh session leaves it
+	 * absent, and absent is recorded as unknown.
 	 */
 	attribution?: TrialSignupAttribution;
 }
@@ -80,10 +68,8 @@ export interface TrialSignupAttribution {
 /**
  * The URLs a conversion recorded, back out of the JSON they are stored as.
  *
- * Tolerates anything that is not an array of strings by answering with an empty list. The
- * column is only ever written by {@link TrialConversion.recordSignup}, so a malformed value
- * should be impossible — and a report that throws while rendering one row would take the
- * whole day's email down over a field that is decoration.
+ * A malformed value answers with an empty list, so a report rendering one bad row still sends
+ * the whole day's email over a field that is decoration.
  *
  * @param row - The conversion row.
  * @returns The URLs, or an empty list when the column cannot be read.
@@ -102,19 +88,8 @@ export default class TrialConversion {
 	/**
 	 * Records that an account came through the trial, once and only once.
 	 *
-	 * **Insert-or-ignore, not insert-or-update, and the difference is the whole contract.**
-	 * Conversion runs on every sign-in, not only the first, so this is called repeatedly for
-	 * the same subject over months. Every field on the row is a measurement taken *at the
-	 * moment of first conversion* — how long they had been a lead, how many emails they had
-	 * received by then, what they had tried — and all of them keep moving afterwards: claiming
-	 * a target does not stop its hourly checks, so a converted lead goes on receiving digests
-	 * for the rest of their seven days. Updating on conflict would answer "emails received so
-	 * far" where the funnel asked "emails received before they converted", and would quietly
-	 * change the answer every time they signed in.
-	 *
-	 * Ignoring the conflict also settles the two rules that matter on their own: `signed_up_at`
-	 * cannot be moved later because it is never rewritten, and `paid_at` cannot be clobbered
-	 * because it never appears in a statement this method issues.
+	 * Every field measures the moment of first conversion while the underlying counts keep
+	 * moving, so the insert ignores a conflict and the first answer is the one that stands.
 	 *
 	 * @param db - Database handle.
 	 * @param signup - The snapshot to record; see {@link TrialSignup}.
@@ -152,14 +127,8 @@ export default class TrialConversion {
 	/**
 	 * Stamps the first payment for an account, if it has one to stamp.
 	 *
-	 * `WHERE paid_at IS NULL` is what makes the first payment the recorded one: entitlement is
-	 * re-asserted on every renewal, every plan change and every repair of a missed webhook, and
-	 * a stamp that moved with them would report a conversion time that grew for as long as the
-	 * customer stayed. The predicate is in the statement rather than in a read-then-write so two
-	 * events arriving together cannot both find it null.
-	 *
-	 * A subject with no row here never came through the trial, which is the ordinary case and
-	 * not an error: this answers `false` and the caller carries on.
+	 * Entitlement is re-asserted on every renewal, plan change and repair, so `WHERE paid_at IS
+	 * NULL` lives in the statement and keeps the first payment the recorded one.
 	 *
 	 * @param db - Database handle.
 	 * @param ownerId - The OIDC subject that just became entitled.
@@ -217,9 +186,8 @@ export default class TrialConversion {
 	}
 
 	/**
-	 * Rows whose `column` falls in a window. Private and given a column name rather than
-	 * exposed, because the only two callers are the pair above and the column is theirs to
-	 * choose — a `NULL` `paid_at` is excluded by the range comparison itself.
+	 * Rows whose `column` falls in a window, shared by the two public ranges that pick it. The
+	 * range comparison excludes a `NULL` `paid_at` on its own.
 	 */
 	private static async listBetween(
 		db: Database,

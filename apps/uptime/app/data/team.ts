@@ -1,15 +1,9 @@
 /**
- * Data-access model for teams. Finds a team by id or slug, resolves a subject's
- * membership in a team, lists the teams a subject belongs to (with their role),
- * auto-joins a subject to teams whose verified domain matches their email, and
- * provisions teams — the personal one on first sign-in and additional ones from the
- * account page — with an owning admin membership. Also owns team update/delete and
- * membership add/remove/role-change, and the full delete cascade: deleting a team
- * removes every DNS/TCP/HTTP/cron-job monitor it owns along with their result and
- * content-check history, alerts and their events, maintenance windows, status pages
- * and their attachment rows, API keys, domains, invites, and memberships, so nothing
- * is left orphaned. Billing (canceling the owner's Polar subscriptions) is the
- * caller's responsibility, not this class's — it has no Polar dependency.
+ * Data-access model for teams: lookup by id or slug, membership resolution and
+ * changes, provisioning with an owning admin membership, auto-join by verified
+ * domain, and update/delete. Deleting a team cascades to every row it owns —
+ * monitors and their history, alerts, maintenance windows, status pages, API keys,
+ * domains, invites, memberships. Canceling the owner's billing stays with the caller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -62,15 +56,9 @@ export default class Team {
 	}
 
 	/**
-	 * How many monitors each team has, of every type, as one grouped query.
-	 *
-	 * This is the denominator for apportioning a platform-wide sweep's cost — a daily
-	 * roll-up, a retention pass — across the teams that caused it (ADR-007 §5). Those jobs
-	 * do work that is genuinely proportional to monitor count and genuinely impossible to
-	 * split after the fact: a single bulk `DELETE` cannot say whose rows it removed.
-	 *
-	 * A team with no monitors is absent rather than present with zero, which is what the
-	 * apportionment wants — it caused none of the work.
+	 * How many monitors each team has, of every type, as one grouped query. The
+	 * denominator for apportioning a platform-wide sweep's cost across the teams that
+	 * caused it (ADR-007 §5); a team with no monitors is absent, having caused none.
 	 */
 	static async countMonitorsByTeam(db: Database): Promise<Map<string, number>> {
 		let result = await db.exec(
@@ -87,16 +75,9 @@ export default class Team {
 	}
 
 	/**
-	 * Maps each of `teamIds` to its owner's subject id, in one query.
-	 *
-	 * Exists for the ping meter: a Polar event is billed to a customer, and the customer's
-	 * external id is the team owner's subject id, but the sweeps that perform checks hold
-	 * only `team_id` — the claim projections deliberately read the few columns a check
-	 * needs and nothing else. One lookup per sweep is what keeps that true instead of
-	 * widening every claim to carry a column only billing reads.
-	 *
-	 * A team id that names no team is absent from the map rather than mapped to a
-	 * placeholder, so a caller has to decide what an unbillable ping means.
+	 * Maps each of `teamIds` to its owner's subject id in one query: a metered event is
+	 * billed to the owner, while sweeps that perform checks carry only `team_id` — one
+	 * lookup per sweep resolves it. An id that names no team is absent from the map.
 	 */
 	static async ownerIdsByTeamIds(db: Database, teamIds: string[]): Promise<Map<string, string>> {
 		if (teamIds.length === 0) return new Map();
@@ -106,14 +87,9 @@ export default class Team {
 	}
 
 	/**
-	 * The listed teams themselves, keyed by id, in one query.
-	 *
-	 * For the callers that start from a set of team ids rather than from one team — the digest
-	 * job, which groups its recipients by team and then needs every one of those teams' names and
-	 * slugs. A lookup per team would be one query per group to read two columns.
-	 *
-	 * A team id that names no team is absent from the map, so a caller decides what a team that
-	 * disappeared between two queries means.
+	 * The listed teams themselves, keyed by id, in one query, for callers that start from
+	 * a set of team ids. An id that names no team is absent from the map, leaving the
+	 * caller to decide what a team that disappeared between two queries means.
 	 */
 	static async findByIds(db: Database, teamIds: string[]): Promise<Map<string, SelectTeam>> {
 		if (teamIds.length === 0) return new Map();
@@ -267,11 +243,9 @@ export default class Team {
 	}
 
 	/**
-	 * Deletes a team and every row it owns, directly or transitively (monitors of
-	 * every type and their result/content-check history, alerts and their events,
-	 * maintenance windows, status pages and their attachment rows, API keys, domains,
-	 * invites, and memberships). Does not touch Polar — cancel the owner's
-	 * subscriptions separately before calling this.
+	 * Deletes a team and every row it owns, directly or transitively: monitors of every
+	 * type and their history, alerts and events, maintenance windows, status pages and
+	 * their attachments, API keys, domains, invites, and memberships. Cancel billing first.
 	 */
 	static async deleteById(db: Database, teamId: string) {
 		let [httpMonitors, dnsMonitorRows, tcpMonitorRows, cronJobRows, alertRows, statusPageRows] =
@@ -356,7 +330,10 @@ export default class Team {
 	}
 }
 
-/** Derives a URL-safe slug from a team name: lowercased, non-alphanumeric characters stripped, whitespace hyphenated, and capped at 50 characters. */
+/**
+ * Derives a URL-safe slug from a team name: lowercased, non-alphanumeric characters
+ * stripped, whitespace hyphenated, and capped at 50 characters.
+ */
 export function generateTeamSlug(name: string): string {
 	return name
 		.toLowerCase()

@@ -1,14 +1,11 @@
 /**
- * Tests the `/healthcheck/analytics-engine` controller's "degraded" branch: the
- * `PING_RESULTS` binding is a real in-memory Analytics Engine dataset, so writes
- * genuinely work, but the Analytics Engine read-API probe fails: MSW answers the SQL
- * API with a transport error, so the `fetch` inside `queryAnalytics` rejects and it
- * returns a `failure()` Result. The controller must still respond 200, since writes
- * keep working even though the read API is down — see the source's docblock. Split into
- * its own file (rather than a second `describe` in
- * `healthcheck-analytics-engine.test.ts`) because a second dynamic import of the
- * controller resolves to the instance already in Vitest's module registry, so
- * re-mocking `cloudflare:workers` with `vi.doMock` there would never reach it.
+ * Tests the `/healthcheck/analytics-engine` controller's degraded branch: the
+ * `PING_RESULTS` binding writes to a real in-memory Analytics Engine dataset,
+ * but MSW fails the SQL read API at the transport level, so `queryAnalytics`
+ * returns `failure()` and the controller responds 200 degraded. Split from
+ * `healthcheck-analytics-engine.test.ts` because Vitest caches the
+ * dynamically imported controller per file, so a dedicated file guarantees
+ * `vi.doMock("cloudflare:workers")` mocks the instance under test.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -76,8 +73,6 @@ describe("GET /healthcheck/analytics-engine", () => {
 		expect(body.binding).toBe(true);
 		expect(body.apiConnected).toBe(false);
 		expect(body.eventCount).toBeNull();
-		// The rejection's own message is surfaced, so an operator reading the healthcheck
-		// sees why the read API is unreachable rather than a generic "degraded".
 		expect(body.message).toContain("Failed to fetch");
 	});
 });

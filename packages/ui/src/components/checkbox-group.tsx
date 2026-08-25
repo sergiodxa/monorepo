@@ -1,11 +1,9 @@
 /**
- * A landmark grouping a run of independently toggled checkbox controls into
- * one related set: a `role="group"` host laying its children out in a
- * column by default, switching to a row when `orientation` is
- * `"horizontal"`. Each nested checkbox keeps its own checked state, its own
- * `name`, and its own `value` — this host contributes only the shared
- * accessible grouping, the layout, and an invalid-state color for any plain
- * text composed alongside the checkboxes.
+ * A landmark grouping independently toggled checkbox controls into one
+ * related set: a `role="group"` host laying children out in a column, or a
+ * row when `orientation` is `"horizontal"`. Each nested checkbox keeps its
+ * own checked state, `name`, and `value`; the host contributes the shared
+ * grouping, the layout, and an invalid-state color for composed text.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,16 +19,11 @@ import { attrs } from "remix/ui";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
 /**
- * `role="group"` applied through {@link attrs} unless a consumer supplies
- * its own `role`, announcing the host as a related set of controls to
- * assistive technology.
+ * Announces the host as a related set of controls to assistive technology;
+ * {@link attrs} lets a consumer's own `role` win.
  */
 const DEFAULT_ROLE = "group";
 
-/**
- * Default {@link CheckboxGroup.Props} orientation, applied when
- * `orientation` is omitted, laying options out in a single column.
- */
 const DEFAULT_ORIENTATION: CheckboxGroup.Orientation = "vertical";
 
 /**
@@ -44,10 +37,9 @@ export namespace CheckboxGroup {
 	export type Orientation = "horizontal" | "vertical";
 
 	/**
-	 * Props accepted by {@link CheckboxGroup}. Every native `<div>` attribute
-	 * is available unchanged, so `aria-label`, `aria-labelledby`,
-	 * `aria-describedby`, and `aria-invalid` all work exactly as they would on
-	 * a bare grouping `<div>`, and `mix` styles that same host.
+	 * Props accepted by {@link CheckboxGroup}. Native `<div>` attributes and
+	 * `mix` pass through to the grouping host, so `aria-label`,
+	 * `aria-labelledby`, `aria-describedby`, and `aria-invalid` behave natively.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/** Layout axis. Defaults to {@link DEFAULT_ORIENTATION}. */
@@ -56,21 +48,9 @@ export namespace CheckboxGroup {
 }
 
 /**
- * Renders a `role="group"` `<div>` laying a run of independently toggled
- * checkbox children out in a column, switching to a row when `orientation`
- * is `"horizontal"`. Every checkbox nested inside keeps tracking its own
- * checked state and carries its own `name`/`value` entirely on its own —
- * there is no shared selection state anywhere in this module, only shared
- * layout and grouping semantics.
- *
- * Setting `aria-invalid="true"` on the host — directly, or mirrored in by a
- * validation script — recolors any plain text composed alongside the
- * checkboxes (a caption, a validation message) in the semantic danger tone,
- * leaving each checkbox's own coloring untouched.
- *
- * In dev mode, a group with no `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name to announce for the set.
+ * Lays checkbox children out in a column, or a row when `orientation` is
+ * `"horizontal"`; each nested checkbox keeps its own checked state, `name`,
+ * and `value`. `aria-invalid="true"` recolors plain text composed alongside.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.

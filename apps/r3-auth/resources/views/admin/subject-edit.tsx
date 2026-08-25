@@ -49,7 +49,11 @@ namespace SubjectEditView {
 	}
 }
 
-/** Renders the subject edit form. */
+/**
+ * Renders the subject edit form. The role select marks the current value with
+ * `selected` on the option, since the browser resolves the initial control state
+ * from server-rendered HTML.
+ */
 export default function SubjectEditView(handle: Handle<SubjectEditView.Props>) {
 	return () => {
 		let { chrome, labels, subject, detailHref, issues } = handle.props;
@@ -99,9 +103,6 @@ export default function SubjectEditView(handle: Handle<SubjectEditView.Props>) {
 
 							<div mix={[flex(), flexCol(), gap(1)]}>
 								<Label htmlFor="subject-role">{labels.role}</Label>
-								{/* The current role is marked on the option itself rather than through a
-								`defaultValue` on the host: this is server-rendered HTML, and `selected`
-								is what the browser reads when it first parses the control. */}
 								<Select id="subject-role" name="role">
 									<Select.Option value="user" selected={subject.role === "user"}>
 										{labels.roles.user}
@@ -112,7 +113,6 @@ export default function SubjectEditView(handle: Handle<SubjectEditView.Props>) {
 								</Select>
 							</div>
 
-							{/* Read-only and unnamed, so the form cannot carry a new address at all. */}
 							<TextField
 								readOnly
 								defaultValue={subject.emailAddress}

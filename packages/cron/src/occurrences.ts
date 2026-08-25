@@ -57,11 +57,9 @@ export function matchesDate(fields: CronFieldSet, wall: WallClock): boolean {
 }
 
 /**
- * Whether the minute an instant falls in is one the schedule fires in.
- *
- * Seconds are ignored, because cron resolves to minutes. This reads the fields
- * against the wall clock, so on the day a clock is set back it holds for both passes
- * of the repeated hour, while a wall time a clock skipped never holds.
+ * Whether the minute an instant falls in is one the schedule fires in. Seconds are
+ * ignored because cron resolves to minutes, and reading against the wall clock
+ * means a repeated hour matches twice and a skipped one never matches.
  *
  * @param fields - The parsed schedule.
  * @param instant - Milliseconds since the epoch.
@@ -77,10 +75,9 @@ export function matchesInstant(fields: CronFieldSet, instant: number, timeZone: 
 }
 
 /**
- * Whether the schedule fires in every hour of the day, which is what makes it an
- * interval rather than an appointment. Such a schedule is followed on absolute time:
- * it runs through both passes of a repeated hour and simply loses a skipped one,
- * keeping its spacing, whereas an hour-pinned schedule keeps its wall-clock time.
+ * Whether the schedule fires in every hour of the day, the interval case that is
+ * followed on absolute time: it runs through both passes of a repeated hour, loses
+ * a skipped one, and keeps its spacing that way.
  *
  * @param fields - The parsed schedule.
  * @returns `true` when the hour field admits all 24 hours.
@@ -258,10 +255,9 @@ function endOfPreviousMatchingDay(
 }
 
 /**
- * The last instant a date covers in a zone, read as one minute before the next date
- * starts rather than as that date's 23:59. When a clock is set back at midnight the
- * final hour of the day happens twice, and 23:59 on its own names the first pass;
- * resuming a backward walk there would skip every occurrence in the second.
+ * The last instant a date covers in a zone, taken as the next date's start minus
+ * one minute. That reaches past both passes of a midnight clock set-back's doubled
+ * final hour, so a backward walk resumed here picks up after the second pass.
  *
  * @param day - Wall-clock fields of the date; its time of day is ignored.
  * @param timeZone - IANA time zone name.
@@ -276,9 +272,9 @@ function lastInstantOfDay(day: WallClock, timeZone: string): number | null {
 }
 
 /**
- * Walk the zone's wall clock forward until every field lines up, then read the
- * instant that wall time names. Keeping the walk on the wall clock is what holds an
- * appointment at its local time when the offset changes underneath it.
+ * Walk the zone's wall clock forward until every field lines up, treating the
+ * minute `from` falls in as a candidate. A wall time a jump skipped is carried
+ * forward, so a day that had one restarts the walk at midnight.
  *
  * @param fields - The parsed schedule.
  * @param from - Milliseconds since the epoch, exclusive.
@@ -289,16 +285,8 @@ function nextByWallClock(fields: CronFieldSet, from: number, timeZone: string): 
 	let parts = zonedPartsOf(from, timeZone);
 	if (parts === null) return null;
 
-	// The minute `from` falls in is a candidate: an occurrence inside it is still before
-	// or after `from` once the seconds are taken into account, and the instant
-	// comparisons below are what decide. Stepping off it here would drop it instead.
 	let cursor = cursorFrom(parts);
 	if (offsetMovedEarlierInDay(parts, from, timeZone)) {
-		// A wall time the clock skipped is carried past the jump, so it names an instant
-		// later than the wall times that follow it. Walking on from `from` alone would
-		// step over that carried run for anyone asking between the jump and the run
-		// itself, while `prev` still reports it, so the day is re-read from the top. The
-		// candidates that precede `from` cost a turn each and are rejected below.
 		cursor.hour = 0;
 		cursor.minute = 0;
 	}
@@ -338,8 +326,6 @@ function nextByWallClock(fields: CronFieldSet, from: number, timeZone: string): 
 		if (instant === null) return null;
 		if (instant > from) return instant;
 
-		// The clock was set back, so this wall time already happened once and its
-		// first pass is the occurrence. Keep walking rather than fire twice.
 		addMinute(cursor);
 	}
 
@@ -347,7 +333,9 @@ function nextByWallClock(fields: CronFieldSet, from: number, timeZone: string): 
 }
 
 /**
- * Walk the zone's wall clock backward until every field lines up.
+ * Walk the zone's wall clock backward until every field lines up. The minute `from`
+ * falls in is itself a candidate, accepted by the instant comparison below only
+ * once it precedes `from`.
  *
  * @param fields - The parsed schedule.
  * @param from - Milliseconds since the epoch, exclusive.
@@ -358,8 +346,6 @@ function previousByWallClock(fields: CronFieldSet, from: number, timeZone: strin
 	let parts = zonedPartsOf(from, timeZone);
 	if (parts === null) return null;
 
-	// As going forward, the minute `from` falls in is a candidate and the instant
-	// comparison below is what rules it out.
 	let cursor = cursorFrom(parts);
 	let horizon = parts.year - MAX_SEARCH_YEARS;
 
@@ -404,14 +390,9 @@ function previousByWallClock(fields: CronFieldSet, from: number, timeZone: strin
 }
 
 /**
- * Whether the zone's offset changed between the start of an instant's local day and
- * the instant itself. That is the only way an earlier wall time can name a later
- * instant, so it is the only case in which a forward walk has to reconsider the part
- * of the day already behind it.
- *
- * The day's start is taken as the elapsed wall-clock minutes back from `from`, which
- * lands a transition's worth early on a day that had one. Being early only answers
- * `true` more readily, and the thorough walk that answer selects is always correct.
+ * Whether the zone's offset changed between an instant's local midnight and the
+ * instant itself. The midnight is approximated from elapsed minutes, which can
+ * only make this answer `true` too readily, and that answer is always correct.
  *
  * @param parts - Zoned fields of `from`, for the minutes elapsed since midnight.
  * @param from - Milliseconds since the epoch.

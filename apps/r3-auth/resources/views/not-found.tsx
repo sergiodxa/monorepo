@@ -1,7 +1,6 @@
 /**
- * The 404 page shown for any URL this server does not serve. It is a centered card
- * carrying the localized heading and explanation, so a mistyped endpoint reads as part of
- * this application rather than as an unstyled browser default.
+ * The 404 page for unmatched routes. A centered card carries the localized heading
+ * and explanation, so a mistyped endpoint stays styled as part of this application.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

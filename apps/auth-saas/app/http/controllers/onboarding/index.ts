@@ -12,15 +12,12 @@ import { createAction } from "remix/router";
 import { base64UrlEncode } from "~/app/lib/crypto-utils";
 import routes from "~/routes/web";
 
-/** Well-known client ID for the dashboard OAuth client. */
 const DASHBOARD_CLIENT_ID = "dashboard";
 
 /**
- * Onboarding entry point - redirects to platform tenant OAuth flow.
- * This dogfoods the authentication by using the platform tenant's OAuth endpoint.
- *
- * Generates a PKCE verifier/challenge and CSRF `state`, stashes them in a short-lived
- * `__oauth_state` cookie, then redirects the browser to `/authorize`.
+ * Generates a PKCE verifier/challenge and a nonce that the callback checks
+ * against the ID token to reject replayed or injected tokens, stashing them
+ * in a short-lived `__oauth_state` cookie before redirecting to `/authorize`.
  *
  * @returns A `302` redirect to the authorization URL with the PKCE state cookie set.
  * @example
@@ -29,22 +26,16 @@ const DASHBOARD_CLIENT_ID = "dashboard";
 export default createAction(routes.onboarding.index, async ({ request, logger }) => {
 	let log = logger.loader("/onboarding");
 
-	// Generate PKCE code verifier and challenge
 	let codeVerifier = generateCodeVerifier();
 	let codeChallenge = await generateCodeChallenge(codeVerifier);
 
-	// Generate state for CSRF protection
 	let state = crypto.randomUUID();
 
-	// Generate a nonce bound to this authorization request. It is echoed back in the ID
-	// token and checked in the callback so a replayed/injected ID token is rejected.
 	let nonce = crypto.randomUUID();
 
-	// Build the OAuth authorization URL
 	let url = new URL(request.url);
 	let baseUrl = `${url.protocol}//${url.host}`;
 
-	// In dev, we use the same host. In prod, we'd use the platform domain.
 	let authorizeUrl = new URL("/authorize", baseUrl);
 	authorizeUrl.searchParams.set("response_type", "code");
 	authorizeUrl.searchParams.set("client_id", DASHBOARD_CLIENT_ID);
@@ -57,7 +48,6 @@ export default createAction(routes.onboarding.index, async ({ request, logger })
 
 	log.info("Redirecting to OAuth authorization", { clientId: DASHBOARD_CLIENT_ID });
 
-	// Store PKCE verifier, state, and nonce in a short-lived cookie
 	let oauthStateCookie = JSON.stringify({ codeVerifier, state, nonce });
 	let cookieValue = base64UrlEncode(oauthStateCookie);
 

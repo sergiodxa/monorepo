@@ -1,7 +1,7 @@
 /**
- * Health check controller. Answers plain-text `OK` without touching Buttondown or Polar,
- * so an external monitor is measuring whether this worker is serving rather than whether
- * a third-party API is up.
+ * Health check controller. Answers plain-text `OK` without touching
+ * Buttondown or Polar, so an external monitor measures this worker's own
+ * uptime, independent of any third-party API's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

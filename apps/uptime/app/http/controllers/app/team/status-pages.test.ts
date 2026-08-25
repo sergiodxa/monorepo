@@ -34,10 +34,9 @@ import routes from "~/routes/web";
 let { default: statusPagesAction } = await import("./status-pages");
 
 /**
- * `createAction`'s return type is `Action<route, context, middleware>`, a union of
- * a bare handler function and `{ middleware, handler }` — TypeScript can't narrow
- * to the object arm statically, even though this controller is always defined as an
- * object at runtime. This asserts the shape so `.handler` is accessible below.
+ * `createAction` returns a union TypeScript can't narrow to the object arm
+ * statically, even though this controller is always defined that way at
+ * runtime, so this assertion makes `.handler` accessible below.
  */
 let statusPagesModule = statusPagesAction as unknown as { handler: RequestHandler<any> };
 

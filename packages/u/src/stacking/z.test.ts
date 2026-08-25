@@ -18,9 +18,6 @@ describe("z", () => {
 	});
 
 	test("the count keeps no unit, since z-index is unitless", async () => {
-		// `z-index` is one of the properties the CSS serializer knows is
-		// unitless; a number on a property outside that allow-list would come
-		// out as `10px`, which browsers drop.
 		expect(await declarations(z(10))).not.toContain("z-index: 10px");
 	});
 });

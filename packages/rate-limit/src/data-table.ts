@@ -1,7 +1,7 @@
 /**
  * Sliding-window counters stored through `remix/data-table`, one row per counted
- * attempt. Because it talks to the query layer rather than a driver, the same
- * limiter runs on D1 and on Durable Object SQLite with no change at the call site.
+ * attempt. Talking to the query layer keeps the same limiter portable across D1
+ * and Durable Object SQLite.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,11 +22,8 @@ import { retryAfterSeconds, windowLengthMs } from "./window";
 
 /**
  * One counted attempt: which bucket it belongs to, what it cost, and when it
- * happened. `created_at` is epoch milliseconds rather than a timestamp type so the
- * sliding window is plain integer arithmetic on every dialect.
- *
- * The host app owns the migration that creates this table; the package owns the
- * column contract and the queries. See {@link RATE_LIMIT_HITS_SCHEMA_SQL}.
+ * happened. `created_at` is epoch milliseconds so the sliding window is plain
+ * integer arithmetic on every dialect. See {@link RATE_LIMIT_HITS_SCHEMA_SQL}.
  */
 export const rateLimitHits = table({
 	name: "rate_limit_hits",
@@ -68,17 +65,9 @@ export interface DataTableAdapterOptions {
 }
 
 /**
- * Counts attempts as rows and limits over a window that slides with the clock.
- *
- * A sliding window has no shared boundary for clients to stampede, and the rows
- * are inspectable: an admin screen can show who is being limited and why, which no
- * counter-only backend can answer. The cost is a write per counted attempt, so
- * this is the accurate option rather than the cheap one.
- *
- * Reads and writes are separate statements, never a transaction, because D1 has no
- * interactive transactions. Two concurrent attempts can therefore both observe the
- * same usage and both land, so the effective limit can exceed the configured one
- * by the number of in-flight requests.
+ * Counts attempts as rows over a window that slides with the clock, keeping
+ * per-bucket rows inspectable with no shared boundary to stampede. D1 has no
+ * interactive transactions, so concurrent attempts can push the limit over.
  */
 export class DataTableAdapter implements Adapter {
 	/** Requests permitted per window, as configured. */
@@ -103,15 +92,9 @@ export class DataTableAdapter implements Adapter {
 	}
 
 	/**
-	 * Spends budget for a key over the window ending now.
-	 *
-	 * Attempts that have aged out of the window are deleted before the usage is
-	 * read, so the table stays proportional to live traffic. Rows for a bucket that
-	 * stops being consumed are never visited again and need a periodic sweep.
-	 *
-	 * A denied attempt writes nothing, so `reset` reports when the oldest counted
-	 * attempt ages out — the moment budget actually frees up — rather than a fixed
-	 * boundary.
+	 * Spends budget for a key, deleting rows aged out of the window before
+	 * reading so the table stays proportional to traffic. A denial writes
+	 * nothing, so reset reflects when the oldest attempt actually ages out.
 	 *
 	 * @param key - Namespaced identifier being limited.
 	 * @param cost - Units to spend, at least 1; defaults to 1.

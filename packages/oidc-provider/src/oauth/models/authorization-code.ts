@@ -13,10 +13,6 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-/**
- * Model for OAuth 2.0 authorization codes.
- * Handles creation, consumption, and cleanup of single-use authorization codes.
- */
 export default class AuthorizationCode {
 	/**
 	 * Time-to-live for authorization codes (10 minutes in milliseconds).
@@ -34,7 +30,6 @@ export default class AuthorizationCode {
 		override name = "AlreadyConsumedError";
 	};
 
-	/** Database table schema for authorization codes. */
 	static table = table({
 		name: "authorization_codes",
 		primaryKey: ["code"],

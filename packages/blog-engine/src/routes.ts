@@ -38,7 +38,6 @@ export const routes = route({
 		appearance: form("/appearance"),
 	}),
 
-	// Dynamic public routes registered last so fixed routes win.
 	typeIndex: get("/:typePath"),
 	post: get("/:typePath/:slug"),
 });

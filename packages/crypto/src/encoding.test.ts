@@ -2,8 +2,8 @@
  * Tests for the hex and base64url codecs.
  *
  * Round-trip cases pin the canonical output shape (lowercase hex, unpadded
- * base64url) and the rejection cases pin that a malformed string never decodes
- * partially, since a partial decode would let a truncated signature compare equal.
+ * base64url) and the rejection cases pin that a malformed string is rejected as
+ * a whole, since a partial decode would let a truncated signature compare equal.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

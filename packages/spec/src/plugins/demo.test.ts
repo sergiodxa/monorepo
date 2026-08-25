@@ -14,7 +14,7 @@ import type { Value } from "../values";
 
 import { createDemoPlugin } from "./demo";
 
-/** A minimal context; the demo plugin never touches workspace or grants. */
+/** A minimal context: the demo plugin's tools run the same regardless of workspace or grants. */
 function stubContext(): ToolContext {
 	return {
 		workspace: {

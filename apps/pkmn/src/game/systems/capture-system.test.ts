@@ -2,10 +2,9 @@ import { unwrap } from "@pkg/result";
 /**
  * Verifies the capture system's status bonus, catch-value roll, and placement rules.
  *
- * The tests pin `captureStatusBonus` to the Gen 3 multipliers, drive `computeCaptureAttempt` with a
- * seeded RNG so guaranteed catches, deterministic shake counts, and failures are reproducible, and
- * confirm `captureCreature` claims ownership and places the creature into the party when room exists or
- * the first storage box when the party is full, always recording the resulting location.
+ * The tests pin `captureStatusBonus` to the Gen 3 multipliers, drive `computeCaptureAttempt` with
+ * a seeded RNG for reproducible catches and shake counts, and confirm `captureCreature` claims
+ * ownership and places creatures into the party or first storage box, recording the location.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,9 +77,11 @@ test("captureStatusBonus is 1 with no status", () => {
 	expect(captureStatusBonus(null)).toBe(1);
 });
 
+/**
+ * A low-HP target with a strong ball pushes a to 506, past the guaranteed threshold, so
+ * the RNG is never consulted (random() === 1 would fail every shake if it were).
+ */
 test("computeCaptureAttempt guarantees a catch when a >= 255", () => {
-	// A low-HP target with a strong ball pushes a to 506, well past the guaranteed threshold,
-	// so the RNG is never consulted (random() === 1 would fail every shake if it were).
 	let result = computeCaptureAttempt({
 		maxHP: 100,
 		currentHP: 1,
@@ -92,8 +93,8 @@ test("computeCaptureAttempt guarantees a catch when a >= 255", () => {
 	expect(result).toEqual({ shakes: 3, success: true });
 });
 
+/** catchRate 0 zeroes out a, so no shakes can pass. */
 test("computeCaptureAttempt fails immediately when a is below 1", () => {
-	// catchRate 0 zeroes out a, so no shakes can pass.
 	let result = computeCaptureAttempt({
 		maxHP: 100,
 		currentHP: 100,
@@ -105,8 +106,8 @@ test("computeCaptureAttempt fails immediately when a is below 1", () => {
 	expect(result).toEqual({ shakes: 0, success: false });
 });
 
+/** random() === 0 makes floor(0 * 65536) === 0 < b for all four checks. */
 test("computeCaptureAttempt catches when every shake check passes", () => {
-	// random() === 0 makes floor(0 * 65536) === 0 < b for all four checks.
 	let result = computeCaptureAttempt({
 		maxHP: 100,
 		currentHP: 1,
@@ -118,8 +119,11 @@ test("computeCaptureAttempt catches when every shake check passes", () => {
 	expect(result).toEqual({ shakes: 3, success: true });
 });
 
+/**
+ * random() === 1 makes floor(1 * 65536) === 65536, never less than b, so it breaks
+ * immediately.
+ */
 test("computeCaptureAttempt reports zero shakes when the first check fails", () => {
-	// random() === 1 makes floor(1 * 65536) === 65536, never less than b, so it breaks immediately.
 	let result = computeCaptureAttempt({
 		maxHP: 100,
 		currentHP: 1,
@@ -131,8 +135,11 @@ test("computeCaptureAttempt reports zero shakes when the first check fails", () 
 	expect(result).toEqual({ shakes: 0, success: false });
 });
 
+/**
+ * First two checks pass (0 < b), the third fails and breaks the loop, so exactly two
+ * shakes.
+ */
 test("computeCaptureAttempt reports a partial shake count from a scripted RNG", () => {
-	// First two checks pass (0 < b), the third fails and breaks the loop, so exactly two shakes.
 	let rolls = [0, 0, 1, 0];
 	let index = 0;
 	let result = computeCaptureAttempt({
@@ -178,22 +185,23 @@ function createGameData(): GameData {
 	return unwrap(GameData.create(source));
 }
 
+/**
+ * Simulates a wild that reached capture without instance state, as if it predates the
+ * store; the 100%-female species still rolls female deterministically under any draw.
+ */
 test("captureCreature rolls a gender when the instance state is missing", () => {
 	let wild = createCreatureId("wild");
 	let { world, playerId } = createWorld([], wild);
-	// Simulate a wild that reached capture without instance state (predates the store).
 	delete world.creatureInstance[wild];
 
 	captureCreature(world, playerId, wild, createGameData(), () => 0.5);
 
-	// The 100%-female species always rolls female, deterministically under any draw.
 	expect(world.creatureInstance[wild]?.gender).toBe(Gender.Female);
 });
 
 test("captureCreature preserves an already-rolled gender instead of re-rolling", () => {
 	let wild = createCreatureId("wild");
 	let { world, playerId } = createWorld([], wild);
-	// The wild already carries a male gender from its spawn roll.
 	world.creatureInstance[wild] = { gender: Gender.Male, heldItemId: null, friendship: 0 };
 
 	captureCreature(world, playerId, wild, createGameData(), () => 0.5);
@@ -234,7 +242,6 @@ test("captureCreature falls back to the first storage box when the party is full
 
 	expect(result).toEqual({ placement: "storage", boxId: "box-1" });
 	expect(world.ownership[wild]).toEqual({ ownerId: playerId });
-	// Party stays full and unchanged.
 	expect(getPlayerParty(world).creatureIds).toEqual(full);
 	let box = getPlayerStorageBoxes(world).boxes[0];
 	expect(box?.id).toBe("box-1");

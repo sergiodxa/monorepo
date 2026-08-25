@@ -1,19 +1,16 @@
-import { if as ifUtility } from "../general/if";
-import { compose, utility } from "../internal/descriptor";
-import { when } from "../state/when";
-
 /**
- * A CSS Grid overlay pattern rather than absolute positioning: every direct
- * child is placed in the same single grid cell (`grid-area: 1 / 1`) instead
- * of being taken out of flow. Overlapping children this way still
- * participate in the grid's intrinsic sizing — the host element sizes to
- * its largest child the same way it would with only one child present —
- * where `position: absolute` children collapse the parent to zero size
- * unless a height is set by hand.
+ * Every direct child shares one grid cell (`grid-area: 1 / 1`), so they
+ * overlap while still counting toward the grid's intrinsic sizing — the
+ * host sizes to its largest child just as it would with only one child
+ * present.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { if as ifUtility } from "../general/if";
+import { compose, utility } from "../internal/descriptor";
+import { when } from "../state/when";
+
 import type { AlignItemsValue } from "./items";
 
 import { grid } from "./grid";
@@ -23,21 +20,16 @@ export interface ZStackOptions {
 	/** Sets `align-items`. */
 	align?: AlignItemsValue;
 	/**
-	 * Sets `justify-items`. Takes the same self-alignment keywords as
-	 * `align`, not `u.justify()`'s `between`/`around`/`evenly` distribution
-	 * keywords — `justify-items` positions a grid item within its own cell
-	 * rather than distributing space along a track, so those keywords aren't
-	 * valid here.
+	 * Sets `justify-items` using the same self-alignment keywords as `align`,
+	 * since `justify-items` positions a grid item within its own cell.
 	 */
 	justify?: AlignItemsValue;
 }
 
 /**
  * A grid-overlay stack for layering children on top of each other. Composes
- * `u.grid()` and — when given — `u.items()` for `align-items`;
- * `justify-items` has no dedicated utility of its own to compose, so it's
- * set directly. Every direct child is stacked into the same grid cell so
- * they overlap instead of flowing.
+ * `u.grid()` and, when given, `u.items()` for `align-items`; `justify-items`
+ * has no dedicated utility, so it's set directly.
  *
  * @example u.zstack({ align: "center", justify: "center" })
  * @example css({ display: "grid", alignItems: "center", justifyItems: "center", "& > *": { gridArea: "1 / 1" } })

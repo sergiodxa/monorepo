@@ -1,7 +1,7 @@
 /**
  * `D1Database` binding backed by an in-memory `bun:sqlite` database, so SQL genuinely
  * executes: a malformed statement, a constraint violation, or a bad binding fails the
- * way it would in production instead of returning canned rows.
+ * way it would in production.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ type SqliteBinding = string | number | null | Uint8Array;
 
 /** Rows, column names, and D1 metadata produced by one executed statement. */
 interface D1ExecuteResult {
-	/** Rows the statement returned; empty for statements without a result set. */
+	/** Rows the statement returned, present when the statement produces a result set. */
 	rows: Record<string, unknown>[];
 	/** Result column names in declaration order, used by `raw({ columnNames: true })`. */
 	columnNames: string[];
@@ -40,9 +40,8 @@ export interface D1DatabaseMock extends D1Database {
 	/**
 	 * Drops every table, index, view, and trigger, as if the database were new.
 	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets an empty database without re-creating the `env` the code
-	 * under test already captured.
+	 * A binding installed once at module scope outlives the test that used it;
+	 * `reset` empties it for a `beforeEach` while keeping the `env` already captured.
 	 */
 	reset(): void;
 }
@@ -59,10 +58,8 @@ export interface D1DatabaseMockOptions {
 /**
  * Creates a `D1Database` binding over a fresh in-memory SQLite database.
  *
- * Statements execute immediately and autocommit, exactly as D1 does: there is no
- * `BEGIN`/`COMMIT`, and the only atomic primitive is `batch()`. Bindings are validated
- * against D1's accepted types, so passing an object where the caller should have
- * JSON-encoded it throws instead of silently succeeding.
+ * Statements execute immediately and autocommit, exactly as D1 does, with `batch()`
+ * as D1's only atomic primitive, and an unencoded binding throws right away.
  * @param options Optional SQLite filename override.
  * @returns A `D1Database` binding whose SQL really runs.
  * @example let db = createD1Database(); await db.exec("CREATE TABLE t (id INTEGER)");
@@ -81,9 +78,8 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 	/**
 	 * Runs one statement and reports D1-shaped metadata.
 	 *
-	 * `changes` is measured as the delta of SQLite's `total_changes()` rather than
-	 * `changes()`, because `changes()` reports the previous write's count when the
-	 * statement read rows instead of writing them.
+	 * `changes` is measured from SQLite's `total_changes()`, since `changes()` reports
+	 * the previous write's count when a statement only reads rows.
 	 */
 	function execute(text: string, values: unknown[]): D1ExecuteResult {
 		if (splitSqlStatements(text).length > 1) {
@@ -134,7 +130,7 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 	/**
 	 * Prepares a statement. Nothing is validated here, matching D1, where `prepare` is
 	 * local and a bad statement only fails once it executes. The returned statement is
-	 * immutable: `bind` yields a new statement rather than mutating this one.
+	 * immutable: `bind` always returns a new statement, leaving this one unchanged.
 	 * @param query SQL text with `?` placeholders.
 	 * @returns A prepared statement ready to bind and execute.
 	 */
@@ -171,7 +167,7 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 	}
 
 	/**
-	 * Runs a script of one or more `;`-separated statements without bindings.
+	 * Runs a script of one or more `;`-separated SQL statements.
 	 * @param query SQL script.
 	 * @returns The statement count and elapsed duration.
 	 */
@@ -185,8 +181,8 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 	}
 
 	/**
-	 * Opens a session. Sessions exist for read replication, which an in-memory database
-	 * has none of, so this is a pass-through that still advances a bookmark.
+	 * Opens a session. Every statement runs directly against this single in-memory
+	 * database, advancing a bookmark on each query.
 	 * @returns A session whose statements run against the same database.
 	 */
 	function withSession(): D1DatabaseSession {
@@ -208,9 +204,8 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 	/**
 	 * Drops every schema object so a module-scoped binding can start a test clean.
 	 *
-	 * Dropping a table takes its indexes and triggers with it, so each statement is
-	 * guarded with `IF EXISTS` rather than ordered; foreign keys are suspended for the
-	 * duration so a reference cycle cannot block the teardown.
+	 * Each drop is guarded with `IF EXISTS`, since a dropped table also drops its
+	 * indexes and triggers; foreign keys stay suspended so a reference cycle clears safely.
 	 */
 	function reset(): void {
 		sqlite.exec("PRAGMA foreign_keys = OFF");
@@ -278,7 +273,7 @@ function createPreparedStatement(context: D1StatementContext): D1PreparedStateme
 	}
 
 	/**
-	 * Runs the statement and returns rows as positional arrays instead of objects.
+	 * Runs the statement and returns each row as a positional array of column values.
 	 * @param options Set `columnNames: true` to prepend the column-name row.
 	 */
 	function raw<T = unknown[]>(options: { columnNames: true }): Promise<[string[], ...T[]]>;
@@ -325,9 +320,8 @@ function toRow(row: unknown): Record<string, unknown> {
 /**
  * Validates and converts one bound value.
  *
- * D1 accepts only `null`, numbers, strings, booleans, and byte buffers. Rejecting
- * anything else here is the point: it is how a missing JSON encode surfaces as a test
- * failure instead of as a production error.
+ * D1 accepts only `null`, numbers, strings, booleans, and byte buffers, so a
+ * missing JSON encode surfaces immediately as a test failure.
  */
 function toBinding(value: unknown): SqliteBinding {
 	if (value === null) return null;
@@ -343,9 +337,9 @@ function toBinding(value: unknown): SqliteBinding {
 }
 
 /**
- * Renders a rejected binding for the type error message. Objects are serialized instead of
- * stringified so the message names the value that was missing a JSON encode, rather than
- * reading `[object Object]` and leaving the caller to guess which argument was wrong.
+ * Renders a rejected binding for the type error message, serializing objects to
+ * JSON so the message names the value that needed encoding, pointing the caller at
+ * exactly which argument was wrong.
  */
 function describeBinding(value: unknown): string {
 	switch (typeof value) {

@@ -9,8 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-// Re-exported so consumers type a translator or an instance without depending on
-// i18next themselves; translation is this package's contract, not theirs.
+/** Re-exported so consumers can type a translator or i18n instance without adding i18next as a dependency. */
 export type { i18n, TFunction } from "i18next";
 
 export type { DetectionMethod, LanguageDetectorOptions } from "./lib/language-detector";

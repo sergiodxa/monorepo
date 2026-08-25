@@ -18,8 +18,10 @@ import type { LanguageDetectorOptions } from "./lib/language-detector";
 
 import { LanguageDetector } from "./lib/language-detector";
 
-// Declared here (an imported module, not an ambient .d.ts) so the augmentation
-// is applied in consuming projects that import the middleware.
+/**
+ * Declared in an imported module, not an ambient .d.ts, so the augmentation
+ * applies in consuming projects that import the middleware.
+ */
 declare module "remix/router" {
 	interface RequestContext {
 		/** Language detected for the current request, always a supported language. */
@@ -35,9 +37,8 @@ export interface I18nextMiddlewareOptions {
 	detection: LanguageDetectorOptions;
 	/**
 	 * i18next init options for the per-request instance. `supportedLngs` and
-	 * `fallbackLng` default to the detection configuration so both layers stay
-	 * in sync, `lng` is always overridden with the detected language, and
-	 * `resources` is narrowed to the bundles that language can resolve through.
+	 * `fallbackLng` default from the detection config, `lng` is always the
+	 * detected language, and `resources` narrows to the bundles it resolves through.
 	 */
 	i18next?: Omit<InitOptions, "detection">;
 	/**
@@ -48,20 +49,9 @@ export interface I18nextMiddlewareOptions {
 }
 
 /**
- * Creates a middleware that detects the request language and initializes a
- * dedicated i18next instance for the request, exposing both as
- * `context.locale` and `context.i18next`.
- *
- * The language is resolved before the instance exists, so the instance is built
- * over only the bundles that language can resolve through — its own and the
- * fallback's — instead of every supported language. Nothing is shared between
- * requests: one instance per request is what keeps a concurrent request in
- * another language from ever seeing this one's.
- *
- * When the session middleware runs earlier in the chain, the detector reads the
- * language from the live request session instead of loading it from storage a
- * second time. Initialization awaits the instance's initial namespace load, so
- * backend-plugin translations are ready when handlers run.
+ * Creates a middleware that detects the request language and initializes an
+ * isolated i18next instance per request, exposing `context.locale` and
+ * `context.i18next` with backend-plugin translations ready before handlers run.
  *
  * @param options - Middleware configuration; see {@link I18nextMiddlewareOptions}.
  * @returns A middleware that populates `context.locale` and `context.i18next`.
@@ -99,12 +89,8 @@ export default function i18next(options: I18nextMiddlewareOptions): Middleware {
 
 /**
  * Narrows inline resources to the bundles `locale` can resolve through: itself,
- * the fallback language, and each one's primary subtag (an `en-US` request
- * resolves through an `en` bundle). Every other language is dropped, so a
- * request never pays to attach bundles it cannot serve.
- *
- * Returns `undefined` when no resources were configured, since i18next only
- * consults a backend plugin while `resources` is unset.
+ * the fallback, and each one's primary subtag, dropping every other language so
+ * a request only carries bundles it can serve, or `undefined` with none configured.
  *
  * @param resources - Inline resources from the middleware configuration, if any.
  * @param locale - The language detected for the request.

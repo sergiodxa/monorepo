@@ -28,11 +28,9 @@ export type CacheTags<Vocabulary extends TagVocabulary> = {
 };
 
 /**
- * Wraps each builder in a validating one, so a tag that violates the platform's
- * rules throws where it is built instead of being dropped at the edge.
- *
- * The returned builders are the only supported way to obtain a `CacheTag`, which
- * is what makes a renamed or mistyped tag a compile error at the purge call.
+ * Wraps each builder in a validating one, so an invalid tag throws where it is
+ * built rather than at the edge. The returned builders are the only way to get
+ * a `CacheTag`, so a renamed or mistyped tag becomes a compile error at purge.
  *
  * @param vocabulary - Named builders returning the raw tag string.
  * @returns The same vocabulary, returning validated tags.

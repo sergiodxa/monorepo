@@ -1,20 +1,9 @@
 /**
  * The runtime map shape and its tile renderer.
  *
- * The authored JSON contract lives in `map-schema.ts`; this module re-exports its
- * validated `MapData` as `TileMap` (the runtime alias the overworld, loader, and
- * encounter code speak) and owns turning that data into pixels. `TileMapRenderer`
- * pre-renders the static `ground` and `decor` layers to one offscreen canvas and
- * blits the camera view each frame; the `overhead` layer draws above actors and is
- * exposed separately. Each non-empty layer cell is a packed tile ref (see
- * `map-schema`) naming a tileset and a tile within it — the renderer resolves the
- * tileset image and blits the tile's source rect. When a tileset image is missing
- * it falls back to procedural colored tiles keyed off the collision grid, so a map
- * always renders before real art exists.
- *
- * The tile-to-source-rect math (`tileSourceRect`) and the layer-order split
- * (`LAYERS_UNDER_ACTORS` / `LAYER_OVER_ACTORS`) are pure and exported so they can
- * be unit-tested without a canvas.
+ * `TileMapRenderer` pre-renders `ground`/`decor` to an offscreen canvas per
+ * frame; a missing tileset image falls back to procedural tiles keyed off
+ * the collision grid, so every map renders before real art exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,12 +35,9 @@ export const LAYERS_UNDER_ACTORS = ["ground", "decor"] as const;
 export const LAYER_OVER_ACTORS = "overhead" as const;
 
 /**
- * The source rect of one tile within its tileset image.
- *
- * Pure: maps a tile index to its `x,y` in the sheet from the tileset's column
- * count and tile size, so the renderer and its tests agree on the blit math. Tiles
- * are laid out left-to-right, top-to-bottom, so column is `index % columns` and row
- * is `index / columns`.
+ * The source rect of one tile within its tileset image, computed from the
+ * tileset's column count and tile size so the renderer and its tests agree
+ * on the blit math.
  *
  * @param tileset - The tileset the tile belongs to (its `columns` and tile size).
  * @param tileIndex - The zero-based tile index within the tileset grid.
@@ -139,10 +125,8 @@ export class TileMapRenderer {
 
 	/**
 	 * Draws one tile layer, blitting each non-empty cell from its tileset image.
-	 *
-	 * A cell of {@link EMPTY_CELL} (`-1`) draws nothing. A cell whose tileset lacks a
-	 * resolved image is skipped (that tileset's tiles simply do not appear rather
-	 * than crashing the frame).
+	 * A cell of {@link EMPTY_CELL} (`-1`) draws nothing, and a cell whose tileset
+	 * lacks a resolved image is skipped, keeping the frame rendering.
 	 */
 	private drawLayer(
 		ctx: CanvasRenderingContext2D,
@@ -175,12 +159,9 @@ export class TileMapRenderer {
 	}
 
 	/**
-	 * Draws each cell from an atlas tile region, falling back to a flat color.
-	 *
-	 * Per cell it prefers the atlas region for that cell's collision/encounter kind
-	 * (so a dropped-in tile pack shows through); when the atlas or the region is
-	 * absent it fills the flat placeholder color and strokes the debug grid line, so
-	 * a map is always visible even with no tileset image.
+	 * Draws each cell from its atlas region when present, so a dropped-in tile
+	 * pack shows through; otherwise fills a flat placeholder color and strokes
+	 * the debug grid line, keeping the map visible without a tileset image.
 	 */
 	private drawProcedural(ctx: CanvasRenderingContext2D) {
 		for (let index = 0; index < this.map.collision.length; index++) {

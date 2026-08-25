@@ -13,7 +13,6 @@ import { createAction } from "remix/router";
 import routes from "../../routes";
 import { PRISM_CSS } from "../prism-css";
 
-/** Static assets self-served by the engine (currently just prism syntax CSS). */
 const ASSETS: Record<string, string> = {
 	"prism.css": PRISM_CSS,
 };

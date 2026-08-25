@@ -1,23 +1,8 @@
 /**
- * Edit status page page controller. Requires `requireUser` + `requireTeam`; 404s
- * when the page doesn't belong to the current team.
- *
- * The settings are split across three bordered cards — branding, visibility and the
- * attached monitors — so the page reads as distinct settings groups rather than one
- * continuous column, with the destructive action in a fourth, danger-toned card at
- * the foot. All three settings cards sit inside a single `<form>` posting to
- * `update-status-page`, exactly as before: the attachments are part of that same
- * submission, so splitting them onto their own form would change what the action
- * receives. Only the delete flow is a separate `<form>`, posting to its own action.
- *
- * The field markup is written out here rather than pulled from the shared status-page
- * field block, because that block renders every field as one flat run and is drawn by
- * the create page too — grouping it into cards would have to happen at the call site
- * regardless.
- *
- * The delete confirmation is `@pkg/ui`'s `AlertDialog` composed directly rather than
- * through the `Confirm` convenience wrapper, since the confirming control is a real
- * `<form method="post">` submit button rather than a `command="close"` action.
+ * Edit status page controller. All settings, including monitor attachments,
+ * post through one `<form>` to `update-status-page`; only the delete flow
+ * uses its own `<form>`. Fields are inlined here since the shared
+ * status-page field block always renders the complete set of fields as one flat run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,8 +52,9 @@ import routes from "~/routes/web";
 const DELETE_DIALOG_ID = "delete-status-page";
 
 /**
- * The page renders once per request, so the checkbox groups can label themselves through
- * fixed ids instead of generated ones — there is never a second instance to collide with.
+ * The page renders once per request, so the checkbox groups label themselves
+ * through fixed ids: each id stays unique since only one instance of the page
+ * ever exists at a time.
  */
 const MONITORS_LABEL_ID = "status-page-monitors-label";
 const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
@@ -97,10 +83,9 @@ export default createAction(routes.app.team.statusPages.edit, {
 			StatusPage.getAttachedIds(db, statusPageId),
 		]);
 
-		/*
-		 * HTTP, DNS and TCP monitors render as one flat checkbox list, but each keeps the
-		 * `name` of the table it belongs to so the update action can still tell them apart.
-		 * SSL monitors are absent on purpose — see `app/data/status-page.ts`'s docblock.
+		/**
+		 * HTTP, DNS, and TCP monitors render as one flat checkbox list; each keeps the
+		 * `name` of its source table so the update action can tell them apart.
 		 */
 		let selectableMonitors = [
 			...monitors.map((monitor) => ({
@@ -224,8 +209,10 @@ export default createAction(routes.app.team.statusPages.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* Both toggles answer "who sees this page", so they read as one group on
-											    the tighter within-group rhythm rather than as two separate fields. */}
+											{/**
+											 * Both toggles answer "who sees this page," so they share the tighter
+											 * within-group rhythm as a single group.
+											 */}
 											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 												<div mix={[fieldStackLayout()]}>
 													<Switch name="is_public" value="true" defaultChecked={page.is_public}>
@@ -260,10 +247,9 @@ export default createAction(routes.app.team.statusPages.edit, {
 										<SettingsSection.Body>
 											{selectableMonitors.length > 0 && (
 												<div mix={[vstack({ gap: "8px" })]}>
-													{/*
-													 * The group's caption reads as a heading over the list rather than as
-													 * another row in it, with its description directly beneath — the same
-													 * order every single field on this page puts the two in.
+													{/**
+													 * The group's caption stands as a heading above the list, with its
+													 * description directly beneath, matching every other field on this page.
 													 */}
 													<div mix={[fieldStackLayout()]}>
 														<Label
@@ -275,9 +261,11 @@ export default createAction(routes.app.team.statusPages.edit, {
 														<Description>{t("monitors.description")}</Description>
 													</div>
 
-													{/* The island reads its copy through `intl(handle)`, which server-side has no
-													    module-scoped `setIntl()` default to fall back on, so it needs an
-													    `IntlProvider` ancestor to resolve against at all. */}
+													{/**
+													 * The island resolves copy through `intl(handle)`, which has no
+													 * module-scoped `setIntl()` default on the server, so it needs an
+													 * `IntlProvider` ancestor to resolve against.
+													 */}
 													<IntlProvider i18n={ctx.i18next}>
 														<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
 													</IntlProvider>
@@ -331,7 +319,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 												</div>
 											)}
 
-											{/* The card still carries the form's action row, so it needs a body even with nothing to attach. */}
+											{/** The empty-state message keeps the card body non-empty, so the action row still has a place to sit. */}
 											{selectableMonitors.length === 0 && cronJobs.length === 0 && (
 												<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
 													{ctx.i18next.t("page.editStatusPage.form.sections.services.empty")}
@@ -390,14 +378,14 @@ export default createAction(routes.app.team.statusPages.edit, {
 										{ctx.i18next.t("page.editStatusPage.dangerZone.deleteDescription")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
-								{/*
-								 * The confirming control is a plain `Button`, not `AlertDialog.Action`:
-								 * that compound part always carries `command="close"`, which — per the
-								 * Invoker Commands spec — replaces a button's native type-based
-								 * activation, so a `type="submit"` button wired to it would stop
-								 * submitting its form. This delete flow is a real `<form method="post">`
-								 * POST (progressive enhancement, no client JS required), so the actual
-								 * submit control must stay a plain button outside that command wiring.
+								{/**
+								 * The confirming control is a plain `Button` so `type="submit"` still drives
+								 * it: `AlertDialog.Action` always sets `command="close"`, and per the Invoker
+								 * Commands spec that command replaces a button's native type-based activation,
+								 * which would stop it from submitting the form. This delete flow depends on a
+								 * real `<form method="post">` POST that plain HTML delivers on its own, so
+								 * the submit control has to stay a plain button outside that command
+								 * wiring.
 								 */}
 								<form
 									method="post"

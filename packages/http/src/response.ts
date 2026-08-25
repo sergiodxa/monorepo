@@ -1,3 +1,10 @@
+/**
+ * Response builders that pair a body with its matching Content-Type
+ * header, covering the common content kinds a server returns.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 
 import * as ContentType from "./content-type";

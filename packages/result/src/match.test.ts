@@ -1,3 +1,11 @@
+/**
+ * Unit tests for `match`, covering sync and async Results, handlers that
+ * return a type different from their input, and side-effect-only usage.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";
@@ -16,11 +24,14 @@ describe(match, () => {
 		expect(value).toBe("Got: 42");
 	});
 
+	/**
+	 * The literal failure narrows `result` to `Failure`, so the success
+	 * branch never runs; the annotation on `data` pins the type TypeScript
+	 * cannot infer from a branch that never executes.
+	 */
 	test("calls failure handler for failure result", () => {
 		let result = failure(new Error("Oops"));
 		let value = match(result, {
-			// The literal narrows to a failure, so the success branch is only
-			// reachable through the annotation that pins the success type.
 			success: (data: number) => `Got: ${data}`,
 			failure: (error) => `Error: ${error.message}`,
 		});

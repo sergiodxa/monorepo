@@ -1,10 +1,8 @@
 /**
  * Tests for the summary screen's pure stat-value table derivation.
  *
- * Covers `statValueRows`, which maps a creature's current stat values into
- * ordered, labeled rows for display. The canvas drawing itself is not exercised
- * here; only the ordering, value mapping, and the regression that effort values
- * are never surfaced are asserted.
+ * Covers `statValueRows`: stat ordering, value mapping, and the guarantee
+ * that only current stat values reach the table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,8 +53,6 @@ test("statValueRows maps each stat's current value in order", () => {
 test("statValueRows shows current stat values and never effort values", () => {
 	let rows = statValueRows(STATS);
 
-	// Regression: the STATS page must show current stat values, not EVs. Every
-	// row carries a `value` (never an `ev`) and none of the EV numbers leak in.
 	for (let row of rows) {
 		expect(row).not.toHaveProperty("ev");
 		expect(Object.values(EVS)).not.toContain(row.value);

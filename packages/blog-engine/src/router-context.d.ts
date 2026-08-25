@@ -10,12 +10,8 @@
 import type {} from "remix/router";
 
 /**
- * The `formData` context value from the `formData()` middleware's
- * `property: "formData"` transform (installed globally in `engine.ts`).
- *
- * `db`, `logger`, and `oidc` augmentations live in their own middleware modules so
- * they are applied by consumers that compile the engine's source (an ambient
- * `.d.ts` is not pulled in transitively).
+ * The `formData` context value the `formData()` middleware's `property: "formData"`
+ * transform attaches, installed globally in `engine.ts`.
  */
 declare module "remix/router" {
 	interface RequestContext {

@@ -1,40 +1,10 @@
 /**
  * Scheduled jobs behind both team digests: for every member of every team owed one, a single
  * email covering that team's monitors over the window their schedule reports.
- *
- * **One sweep, two scheduled jobs.** The daily and the weekly digest differ in three things —
- * how many days they read, which stamp they honour, and which email class they construct — and
- * agree on everything else: who is owed one, how an address and a language are resolved for
- * them, how a team's rows become a report, and what happens when a send fails. All of that
- * lives once, on the abstract class; what the two subclasses add is a period and a cron-job
- * monitor.
- *
- * The monitor is why they are two classes rather than one with the period in its message. A
- * monitor watches one schedule — it holds a single cron expression and reports a run late
- * against it — and `Job.run` reads `monitorId` off the class it was handed, so one class
- * could only ever ping one of the two. Two schedules that can fail independently are two
- * things to watch, and the type is where that distinction belongs.
- *
- * **The unit is the membership.** A person in three teams gets three emails, because a monitor
- * list only means something beside the name of the team that owns it. That is why the schedule
- * lives on `memberships.last_*_digest_at` and not on the subject or the team, and why the
- * recipients are grouped by team here: each team's report is built once and mailed to everyone
- * who wants it.
- *
- * **Idempotence is the stamp.** `TeamDigest.listDue` selects only memberships whose stamp
- * predates today's UTC midnight and `TeamDigest.markSent` moves it, so a cron trigger delivered
- * twice, or a queue message redelivered after a failure, finds the work already done. The stamp
- * is written only after a send the transport accepted: a digest that failed to render or to
- * deliver leaves that membership due, and the next delivery of the same day's trigger retries
- * it. The cron expression, not the stamp, is what makes the weekly digest weekly — the stamp's
- * only job is to stop a second copy on the same day.
- *
- * **Nothing is re-derived from the result streams.** Both windows are read out of
- * `monitor_daily_stats`, which the 01:00 roll-up has already written for every monitor of every
- * type, so the digests report the same numbers the dashboard's uptime bars do and cost one range
- * scan per team (see `TeamDigest`). Both triggers therefore have to run after that roll-up, and
- * do.
- *
+ * The daily and weekly digests differ only in window length, stamp, and email class; each
+ * subclass names its own cron-job monitor, since a monitor watches one schedule. The
+ * membership, not the subject, is the unit of delivery, and the per-period stamp on
+ * `memberships` keeps a redelivered run from sending the same digest twice.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -73,12 +43,9 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const BOUND_ZONE = "UTC";
 
 /**
- * How many whole UTC days each digest reports, ending yesterday.
- *
- * Whole days, and never a rolling window, because the rows being read are keyed on the UTC
- * calendar day: `monitor_daily_stats` is what the digests are drawn from, so the finest window
- * either of them can honestly describe is one of its rows. Seven for the weekly matches the
- * seven segments its bar draws.
+ * How many whole UTC days each digest reports, ending yesterday. Whole days only, since
+ * `monitor_daily_stats` rows are keyed by UTC calendar day — the finest window either digest
+ * can honestly describe; seven for the weekly matches the seven segments its bar draws.
  */
 const WINDOW_DAYS: Record<DigestPeriod, number> = { daily: 1, weekly: 7 };
 
@@ -89,11 +56,9 @@ const PREFERENCE: Record<DigestPeriod, OptionalEmail> = {
 };
 
 /**
- * The cron-job monitors each schedule reports itself to, one per trigger because a monitor
- * holds one cron expression: `0 8 * * *` for the daily and `0 9 * * 1` for the weekly.
- *
- * A monitor that does not exist would make every run fail its ping, so these are the ids
- * of monitors created in the operator's own team, exactly as every other job's are.
+ * The cron-job monitors each schedule reports itself to, one per trigger since a monitor
+ * holds one cron expression: `0 8 * * *` for the daily, `0 9 * * 1` for the weekly. A missing
+ * id fails the run's ping, so these are ids of monitors already created in the operator's team.
  */
 const DAILY_MONITOR_ID = "03acb710-cd5b-4c8a-8242-c2a2a9dae201";
 const WEEKLY_MONITOR_ID = "4715a9ac-7fe6-4423-816c-b4a711b00dda";
@@ -102,7 +67,6 @@ const WEEKLY_MONITOR_ID = "4715a9ac-7fe6-4423-816c-b4a711b00dda";
 interface DigestWindow {
 	/** Every reported UTC day, oldest first, which fixes the bar's segment order. */
 	days: string[];
-	/** The first of them. */
 	since: string;
 	/** The last of them, which is always yesterday. */
 	until: string;
@@ -110,7 +74,6 @@ interface DigestWindow {
 
 /** Everything one team's members need, resolved once for the whole team. */
 interface TeamDigestContext {
-	/** The team being reported on. */
 	team: SelectTeam;
 	/** Its monitors' windows, sorted by name. */
 	monitors: MonitorReport[];
@@ -121,14 +84,9 @@ interface TeamDigestContext {
 }
 
 /**
- * The sweep both digests run, with the period left to the subclass.
- *
- * Abstract because a cron-job monitor watches one schedule: it holds one cron expression
- * and one expected cadence, and `Job.run` reads `monitorId` off the class it is given. A
- * single class serving both periods could therefore report to only one of the two
- * monitors, leaving the other digest to fail unwatched — and the weekly is the one whose
- * silence would last longest. So the period moves from the message body into the type,
- * each subclass names the monitor for its own schedule, and everything below stays shared.
+ * The sweep both digests run, with the period left to the subclass. Abstract because a
+ * cron-job monitor watches one schedule and `Job.run` reads `monitorId` off the class it is
+ * given, so the period lives in the type and each subclass names its own schedule's monitor.
  */
 abstract class SendTeamDigestsJob extends Job {
 	/** Which digest this subclass sends, and therefore which window and which stamp. */
@@ -151,7 +109,7 @@ abstract class SendTeamDigestsJob extends Job {
 		/**
 		 * The opt-out is applied before anything else is loaded, and that ordering is the point:
 		 * a member's address comes from the auth server one request at a time, so filtering here
-		 * turns a team of ten with two subscribers into two requests rather than ten.
+		 * turns a team of ten with two subscribers into just two requests.
 		 */
 		let preferences = await UserPreferences.findBySubjectIds(
 			db,
@@ -207,10 +165,9 @@ abstract class SendTeamDigestsJob extends Job {
 		}
 
 		/**
-		 * Split by emails delivered per team (ADR-007 §5): every query this run made and every
-		 * message it sent was on behalf of one of these teams, and the number of members who
-		 * wanted the digest is exactly the share each of them caused. Declared after the fact
-		 * because that is when the number is known; the ledger prices it at flush time either way.
+		 * Split by emails delivered per team (ADR-007 §5): the number of members who wanted the
+		 * digest is exactly the share of this run's cost each team caused. Declared after the fact,
+		 * since that is when the number is known — the ledger prices it at flush time either way.
 		 */
 		apportionCostByTeam(
 			settled.flatMap((outcome) =>
@@ -228,11 +185,9 @@ abstract class SendTeamDigestsJob extends Job {
 	}
 
 	/**
-	 * Builds one team's report and mails it to each of its due members.
-	 *
-	 * Members are mailed one after another rather than in their own concurrent batch: the teams
-	 * above already run ten at a time, and nesting a second fan-out inside that would put a
-	 * hundred sends in flight at once against a per-invocation subrequest ceiling.
+	 * Builds one team's report and mails it to each of its due members, one after another: the
+	 * teams above already run ten at a time, so a second fan-out here would put a hundred sends
+	 * in flight at once against a per-invocation subrequest ceiling.
 	 *
 	 * @returns How many digests went out and how many members were passed over.
 	 */
@@ -260,18 +215,9 @@ abstract class SendTeamDigestsJob extends Job {
 		let monitors = await TeamDigest.listMonitors(db, team.id, reported.since, reported.until);
 
 		/**
-		 * Nothing was checked, so there is nothing to report — and no stamp is written, so a team
-		 * that becomes reportable tomorrow is mailed tomorrow.
-		 *
-		 * This is the branch a lapsed subscription falls into: revoking one unschedules every
-		 * monitor the team owns (ADR-005), so no checks run and every row of the digest would read
-		 * "not checked" — every morning, indefinitely. A digest reports on monitoring that
-		 * happened; when none did, the dashboard's own paused-monitors banner is the honest place
-		 * to say so, and it already does.
-		 *
-		 * It also covers the race that `TeamDigest.listDue`'s `EXISTS` cannot: the team's last
-		 * enabled monitor being disabled between that query and this one leaves no monitors at all,
-		 * and a team with no monitors trivially has no days. The logged count tells the two apart.
+		 * Nothing was checked, so nothing is reported and no stamp is written, leaving the team
+		 * reportable again tomorrow. Covers both a lapsed subscription, which unschedules every
+		 * monitor (ADR-005), and a monitor disabled mid-run, which `TeamDigest.listDue`'s `EXISTS` misses.
 		 */
 		if (monitors.every((monitor) => monitor.days.length === 0)) {
 			this.logger.info("job.send_team_digests.nothing_to_report", {
@@ -313,7 +259,7 @@ abstract class SendTeamDigestsJob extends Job {
 				preferences.get(member.subjectId)?.preferred_language ?? undefined,
 			);
 
-			// Counted before the send, because a rejected send is still a billed one.
+			/** Counted before the send, because a rejected send is still a billed one. */
 			recordCost("emailSent");
 			let result = await mailer.send(
 				this.email({ period, context, to: profile.emailAddress, window: reported, locale, t }),
@@ -386,8 +332,7 @@ export class SendTeamDailyDigestsJob extends SendTeamDigestsJob {
 /**
  * The Monday 09:00 UTC run: the seven days that just ended.
  *
- * Its own class rather than a flag on the one above, so it reports to its own monitor —
- * see {@link SendTeamDigestsJob}.
+ * Its own class, so it reports to its own cron-job monitor — see {@link SendTeamDigestsJob}.
  *
  * @example waitUntil(SendTeamWeeklyDigestsJob.run({ message, uptime }));
  */
@@ -405,11 +350,9 @@ function startOfUtcDay(now: number): number {
 }
 
 /**
- * The UTC days one period reports, oldest first and ending yesterday.
- *
- * Yesterday and not today, because today is the day that is still happening: the roll-up runs
- * once, at 01:00, for the day that just closed, so a window reaching into today would report a
- * day with no row at all as a gap in the bar.
+ * The UTC days one period reports, oldest first and ending yesterday. Yesterday and not
+ * today, since the roll-up runs once, at 01:00, for the day that just closed — a window
+ * reaching into today would report a day with no row at all as a gap in the bar.
  *
  * @param period - Which digest is being sent.
  * @param now - The run's single instant.
@@ -443,17 +386,9 @@ function groupByTeam(recipients: DigestRecipient[]): Map<string, DigestRecipient
 }
 
 /**
- * One monitor's window as its row in the email: where it ended up, and its uptime.
- *
- * The status is the worst day it had, not its last one. A monitor that went down on Tuesday and
- * recovered is reported as down for the week, because the row is a verdict on the window and a
- * reader scanning for what to look at would otherwise be told the week was clean. Over a
- * one-day window the two readings are the same thing.
- *
- * Uptime is summed across the window's days rather than averaged over them, so a day with four
- * checks does not weigh as much as a day with fourteen hundred. A monitor with no checks at all
- * has no percentage rather than a zero: nothing measured it, which is not the same as it having
- * failed.
+ * One monitor's window as its row in the email: where it ended up, and its uptime. Status
+ * is the worst day it had, since the row is a verdict on the whole window. Uptime sums
+ * checks across the window's days, so a busier day counts for more; `null` means unmeasured.
  */
 function toReport(monitor: TeamDigestMonitor): MonitorReport {
 	let checks = 0;
@@ -477,12 +412,8 @@ function toReport(monitor: TeamDigestMonitor): MonitorReport {
 
 /**
  * The team's window as one bar: per day, the worst status any of its monitors reported, and
- * `null` for a day none of them was checked on.
- *
- * The worst wins for the same reason it wins inside a single monitor's day — a bar that averaged
- * one outage across twenty healthy monitors would be a bar with nothing in it — and it means the
- * segments answer "which days were bad for us", which is the question the per-monitor rows
- * underneath cannot.
+ * `null` for a day none of them was checked on. The worst wins for the same reason it does
+ * inside a single monitor's day, so the segments answer which days were bad for the team.
  *
  * @param monitors - The team's monitors with their days.
  * @param days - The window's days, oldest first, which fixes the segments' order.
@@ -502,10 +433,8 @@ function teamSegments(monitors: TeamDigestMonitor[], days: string[]): UptimeBar.
 
 /**
  * The team's uptime over the window: every check every monitor ran, and how many passed.
- *
- * Checks and not monitors, because that is the figure the same numbers produce on the dashboard,
- * and averaging per-monitor percentages would let a monitor checked once an hour count as much
- * as one checked every minute.
+ * Summed by check and not by monitor, since that matches the dashboard's own figure and
+ * keeps a monitor checked once an hour from counting as much as one checked every minute.
  *
  * @param monitors - The team's monitors with their days.
  * @returns The formatted percentage, or `null` when nothing was checked at all.

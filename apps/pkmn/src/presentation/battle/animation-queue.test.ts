@@ -32,9 +32,9 @@ test("AnimationQueue runs tasks one at a time in enqueue order", () => {
 	);
 
 	expect(queue.idle).toBe(false);
-	queue.update(16); // completes "a", drops it
+	queue.update(16);
 	expect(order).toEqual(["a"]);
-	queue.update(16); // completes "b", drops it
+	queue.update(16);
 	expect(order).toEqual(["a", "b"]);
 	expect(queue.idle).toBe(true);
 });
@@ -42,7 +42,6 @@ test("AnimationQueue runs tasks one at a time in enqueue order", () => {
 test("AnimationQueue advances only the current task, not later ones", () => {
 	let ran: string[] = [];
 	let queue = new AnimationQueue();
-	// A two-tick task followed by a one-tick task.
 	let ticks = 0;
 	let slow: AnimationTask = {
 		update() {
@@ -56,10 +55,10 @@ test("AnimationQueue advances only the current task, not later ones", () => {
 		callbackTask(() => ran.push("fast")),
 	);
 
-	queue.update(16); // slow tick 1, not done
-	queue.update(16); // slow tick 2, done
+	queue.update(16);
+	queue.update(16);
 	expect(ran).toEqual(["slow", "slow"]);
-	queue.update(16); // now fast runs
+	queue.update(16);
 	expect(ran).toEqual(["slow", "slow", "fast"]);
 });
 

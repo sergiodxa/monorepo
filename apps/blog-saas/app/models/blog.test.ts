@@ -246,7 +246,6 @@ describe("Blog.findDeletedBefore", () => {
 		});
 		await Blog.softDelete(harness.db, old.id);
 		await Blog.softDelete(harness.db, recent.id);
-		// Backdate the "old" blog's deletion so it falls before the cutoff.
 		await harness.db.update(
 			Blog.table,
 			{ id: old.id },

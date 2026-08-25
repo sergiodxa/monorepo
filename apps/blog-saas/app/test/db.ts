@@ -1,11 +1,8 @@
 /**
- * In-memory {@link Database} harness for blog-saas unit tests. Applies the control-plane
- * D1 migration to a fresh database and wraps it with the shared SQLite `DatabaseDriver`
- * from `@pkg/blog-engine`, so models and services run against a real SQL engine
- * mirroring the production D1/SqlStorage adapters.
- *
- * The database is opened through `@pkg/cloudflare-mocks/sqlite`, which resolves to
- * whichever built-in SQLite module the running test runtime has.
+ * In-memory {@link Database} harness for blog-saas unit tests. Applies the
+ * control-plane D1 migration to a fresh database and wraps it with the shared
+ * SQLite `DatabaseDriver` from `@pkg/blog-engine`, mirroring the production
+ * D1/SqlStorage adapters. Opened through `@pkg/cloudflare-mocks/sqlite`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +12,6 @@ import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 
-// Raw SQL of the control-plane schema; run verbatim to match production D1.
 import migration from "~/database/migrations/0001-init.sql?raw";
 
 import { createSqliteDatabaseAdapter } from "../../../../packages/blog-engine/src/shared/test/db";

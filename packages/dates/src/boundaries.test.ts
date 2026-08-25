@@ -64,7 +64,6 @@ describe("endOfDay", () => {
 
 describe("startOfWeek", () => {
 	test("opens the week on the weekday the caller asked for", () => {
-		// 2026-07-29 is a Wednesday.
 		let wednesday = new Date("2026-07-29T12:00:00Z");
 		expect(startOfWeek(wednesday, "UTC", { weekStartsOn: 0 }).toISOString()).toBe(
 			"2026-07-26T00:00:00.000Z",
@@ -85,7 +84,6 @@ describe("startOfWeek", () => {
 	});
 
 	test("resolves the week in the zone asked for", () => {
-		// Sunday 00:30 UTC is still Saturday in New York, so the week there began earlier.
 		let sunday = new Date("2026-07-26T00:30:00Z");
 		expect(startOfWeek(sunday, "UTC", { weekStartsOn: 0 }).toISOString()).toBe(
 			"2026-07-26T00:00:00.000Z",

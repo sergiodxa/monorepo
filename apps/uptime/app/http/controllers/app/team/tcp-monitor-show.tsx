@@ -2,14 +2,12 @@
  * TCP monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s
  * when the monitor doesn't belong to the current team.
  *
- * The controller reads the monitor row and nothing else, so the shell reaches the
- * browser on one query. The cards it does render — endpoint, status, interval,
- * timeout — are all fields of that row, so they cost nothing extra. The two things
- * that cost a query each, the 90-day uptime bar and the result history (with the
- * uptime/response-time/total-checks cards derived from it), load into their own named
- * `Frame`s over a skeleton fallback, so neither delays the page nor the other. The bar
- * sits above the table for the same reason it does everywhere: the summary is read
- * first, the rows only when it prompts a question.
+ * The main row loads in a single query, so the shell reaches the browser fast. The
+ * 90-day uptime bar and the result history each cost a query of their own — with the
+ * uptime/response-time/total-checks cards derived from the history — so both resolve
+ * into their own named `Frame`s over a skeleton fallback, independent of each other.
+ * The bar sits above the table because the summary is read first, the rows only when
+ * it prompts a question.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -134,13 +132,6 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							/>
 						</div>
 
-						{/*
-						 * `StatCardSkeleton` renders bare cards with no row of its own, so several
-						 * frames can share one row a caller lays out. Neither frame here shares a
-						 * row with anything, so each supplies the row its own placeholders sit in —
-						 * otherwise the cards stack flush while the page loads, which is not the
-						 * shape either fragment resolves to. The gap matches the stat row above.
-						 */}
 						<Frame
 							name="tcp-monitor-card-uptime-history"
 							src={routes.app.team.tcpMonitors.cards.uptimeHistory.href({
@@ -154,11 +145,6 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							}
 						/>
 
-						{/*
-						 * A `Frame` is a region rather than an element, so the space between the two
-						 * belongs to a wrapper here — and it has to survive the swap, since the
-						 * resolved sections need it just as much as the skeletons do.
-						 */}
 						<div mix={[mbs("24px")]}>
 							<Frame
 								name="tcp-monitor-card-results"

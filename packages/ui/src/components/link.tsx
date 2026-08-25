@@ -44,15 +44,8 @@ export namespace Link {
 
 /**
  * Renders a native `<a>` host, colored through the `data-color` attribute
- * contract and underlined unconditionally, so the link reads as interactive
- * text even where color perception, grayscale rendering, or a
- * `prefers-contrast` override can't be relied on. The underline itself
- * starts as a muted tint of the link's own foreground color and solidifies
- * to the full foreground on hover, and a keyboard focus-visible ring reads
- * in that same semantic color. Set `aria-disabled="true"` to mute a link
- * that shouldn't be followed — the underline lifts and the label dims —
- * keeping in mind that only omitting or neutralizing `href` actually stops
- * the navigation, since a plain anchor has no native disabled state.
+ * contract and underlined unconditionally. `aria-disabled="true"` mutes the
+ * link, but only removing or neutralizing `href` actually stops navigation.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
@@ -91,10 +84,11 @@ export function Link(handle: Handle<Link.Props>) {
 					textDecoration("underline"),
 					cursor("pointer"),
 					data("color", "brand", [
-						// `color-mix()`'s color argument (`var(--ui-brand-fg)`) isn't
-						// a tone string `u.fg()`/`u.color()` can resolve, so the
-						// property itself stays raw() — only the literal string
-						// becomes a builder call.
+						/**
+						 * `color-mix()`'s color argument needs the raw CSS variable
+						 * (`var(--ui-brand-fg)`), so the property stays `raw()` while
+						 * the literal string becomes a builder call.
+						 */
 						raw({
 							textDecorationColor: colorMix(
 								"srgb",

@@ -1,18 +1,9 @@
 /**
- * `filter` is a single CSS property, so two independent utilities that each
- * set it outright (`filter: blur(...)`, `filter: grayscale(...)`) would
- * silently overwrite each other when composed on the same element instead of
- * combining — the exact same problem `internal/transform.ts` solves for
- * `transform` and `internal/backdrop-filter.ts` for `backdrop-filter`. Every
- * filter utility instead sets its own CSS custom property (`--ui-filter-blur`,
- * `--ui-filter-grayscale`, ...) and the exact same fixed `filter` declaration,
- * one composite expression referencing every filter function's variable with
- * an identity fallback (`0px`, `1`, `0`, ...). Custom properties from separate
- * classes on the same element all apply simultaneously — only the *value* text
- * of `filter` matters for the cascade, and since that text is identical across
- * every filter utility, it doesn't matter which one's copy of it "wins"; the
- * resolved `filter` always reads every variable any applied utility set, and
- * identity defaults for every variable none of them touched.
+ * `filter` is a single CSS property, so each utility sets its own
+ * `--ui-filter-*` custom property plus one identical composite `filter`
+ * declaration reading every variable with an identity fallback. Custom
+ * properties from separate classes all apply, so the resolved value carries
+ * every function any applied utility set, and identity defaults elsewhere.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,10 +33,8 @@ export type FilterFunctionName = keyof typeof FILTER_VARS;
 
 /**
  * The fixed, identical-everywhere `filter` value every filter utility emits.
- * The function order is the one CSS applies them in, so a `grayscale` always
- * lands after a `brightness` regardless of which utility a call site listed
- * first — filter functions are not commutative, and pinning the order here is
- * what makes the composition predictable.
+ * Filter functions apply in sequence, so pinning the CSS-defined order here
+ * makes composition predictable whatever order a call site lists utilities in.
  */
 export const COMPOSITE_FILTER = [
 	`blur(${varUtility(FILTER_VARS.blur, "0px")})`,
@@ -61,11 +50,9 @@ export const COMPOSITE_FILTER = [
 ].join(" ");
 
 /**
- * Builds a composable filter-function utility: sets the specific
- * `--ui-filter-{name}` custom property (or properties) given, plus the shared
- * composite `filter` declaration, so calling more than one filter utility on
- * the same element combines every function instead of the last one
- * overwriting the rest.
+ * Builds a composable filter-function utility: sets the given
+ * `--ui-filter-{name}` custom properties plus the shared composite `filter`
+ * declaration, so filter utilities on one element combine every function.
  */
 export function filterFunction<Node extends Element = Element>(
 	values: Partial<Record<FilterFunctionName, string>>,

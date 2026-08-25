@@ -1,12 +1,7 @@
 /**
- * Party-wide creature operations that are not tied to storage or battle.
- *
- * Right now this covers full restoration — the "creature center" behavior — which
- * clears every party member's damage and major status and refills the PP of each
- * known move from its authored maximum. It reads move PP maxima from the loaded
- * `GameData` and mutates only the persistent health, status, and moves components,
- * so the result survives saves and mirrors what the presentation offers outside
- * battle.
+ * Party-wide creature operations, currently full restoration — clearing
+ * every party member's damage and status and refilling PP from the loaded
+ * `GameData`'s move maxima, so the result persists across saves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

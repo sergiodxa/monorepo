@@ -1,3 +1,10 @@
+/**
+ * Exercises `buildDocument` against the RSS XML document shape.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { buildDocument } from "./build-document";

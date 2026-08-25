@@ -35,9 +35,8 @@ export interface RateLimiterBinding {
 
 /**
  * How a {@link CloudflareAdapter} is configured. Both fields are declared
- * metadata: the binding never reports them, so they must be kept in step with the
- * `simple: { limit, period }` block in `wrangler.jsonc`. When they drift, the
- * limiting stays correct and only the response headers are wrong.
+ * metadata kept in step with `wrangler.jsonc`'s `simple: { limit, period }`
+ * block; drift leaves limiting correct but the response headers wrong.
  */
 export interface CloudflareAdapterOptions {
 	/** The binding's declared `limit`. */
@@ -47,12 +46,9 @@ export interface CloudflareAdapterOptions {
 }
 
 /**
- * Limits through a Cloudflare rate limiter binding.
- *
- * The binding owns the counting, which makes this the cheapest backend and the
- * right default on Workers. It reports no quota state, so `remaining` is always
- * `null`; `reset` is derived from the declared window aligned to the epoch, which
- * is an estimate of the binding's own boundary rather than a reading of it.
+ * Limits through a Cloudflare rate limiter binding — the cheapest backend and
+ * the default choice on Workers. It reports no quota state, so `remaining`
+ * stays `null`, and `reset` is derived from the declared window, epoch-aligned.
  */
 export class CloudflareAdapter implements Adapter {
 	/** Requests permitted per window, as declared for the binding. */
@@ -61,7 +57,6 @@ export class CloudflareAdapter implements Adapter {
 	/** Length of the counting window, as declared for the binding. */
 	readonly window: DurationInput;
 
-	/** The binding doing the counting. */
 	#binding: RateLimiterBinding;
 
 	/**
@@ -77,11 +72,9 @@ export class CloudflareAdapter implements Adapter {
 	}
 
 	/**
-	 * Counts an attempt against the binding.
-	 *
-	 * The binding counts exactly one request per call, so a cost above 1 issues
-	 * that many calls and stops at the first refusal — keep costs small on this
-	 * backend, or pick one that stores counts itself.
+	 * Counts an attempt against the binding. It counts exactly one request per
+	 * call, so a cost above 1 issues that many calls and stops at the first
+	 * refusal — keep costs small here, or pick a backend that stores counts itself.
 	 *
 	 * @param key - Namespaced identifier being limited.
 	 * @param cost - Units to spend, at least 1; defaults to 1.

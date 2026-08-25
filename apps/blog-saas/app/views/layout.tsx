@@ -12,9 +12,8 @@ import * as s from "./styles";
 
 /**
  * URL of the client hydration bundle emitted by the Vite `client` build
- * environment (`bootstrap/browser.ts` → `dist/client/assets/clientEntry.js`,
- * served by the `ASSETS` binding). Matches r3-blog's `/assets/[name].js`
- * asset-path convention.
+ * environment (`bootstrap/browser.ts` → `dist/client/assets/clientEntry.js`),
+ * served by the `ASSETS` binding.
  */
 let CLIENT_ENTRY_SRC = "/assets/clientEntry.js";
 

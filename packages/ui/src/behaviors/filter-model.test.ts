@@ -1,6 +1,7 @@
 /**
  * Unit tests for {@link FilterModel}: construct instances, call methods, and
- * assert on state and dispatched `"change"` events, with no DOM involved.
+ * assert on state and dispatched `"change"` events, driving the model
+ * directly in plain script.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +17,6 @@ const CHERRY: FilterModel.Option = { id: "cherry", value: "Cherry", keywords: ["
 
 const OPTIONS: FilterModel.Option[] = [APPLE, BANANA, CHERRY];
 
-/** Collects `"change"` event dispatch counts for assertions. */
 function countChanges(model: FilterModel): { count(): number } {
 	let calls = 0;
 

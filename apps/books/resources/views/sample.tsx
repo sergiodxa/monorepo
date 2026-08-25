@@ -1,10 +1,8 @@
 /**
- * Sample-chapter view. Before the address is given it is the offer and its email field;
- * once the visitor is on the list it is the chapter itself, set as an article of prose.
- *
- * The chapter is deliberately not persisted: it is rendered as the response to the POST and
- * nowhere else, so reloading the page shows the offer again. That is the gate working, not
- * a bug — there is no session or cookie behind it.
+ * Sample-chapter view. Before the address is given it is the offer and its
+ * email field; once on the list it is the chapter itself, rendered as an
+ * article of prose. The chapter renders only as the POST response, so
+ * reloading the page always shows the offer again.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,19 +33,16 @@ export namespace SampleView {
 	}
 }
 
-/** Renders either the sample-chapter offer or the unlocked chapter. */
+/**
+ * Renders either the sample-chapter offer or the unlocked chapter. Its
+ * `prose` class reaches the markdown renderer's own elements, and the div
+ * wraps the article the renderer already emits.
+ */
 export default function SampleView(handle: Handle<SampleView.Props>) {
 	return () => {
 		let { action, attribution, chapter, error } = handle.props;
 
 		if (chapter) {
-			/* `prose` carries the chapter's typographic rhythm — measure, leading, and the
-			space between blocks — which a Markdown body needs and no other page here does. It
-			is a stylesheet rather than mixins because the elements being styled are produced
-			by the Markdown renderer, not written at this call site.
-
-			A plain wrapper, not an `<article>`: the renderer already emits one around the
-			document, and nesting a second would claim the chapter is two articles. */
 			return (
 				<div class="prose" mix={[mi("auto"), maxIs("65ch"), pi(5), pb(10), media(LARGE, pb(20))]}>
 					{chapter}

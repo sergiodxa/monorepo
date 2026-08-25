@@ -48,7 +48,8 @@ function slugify(value: string): string {
 
 /**
  * Renders one CMS form input for a field, choosing the control by field kind
- * (textarea/markdown, checkbox, tags, or a typed text input).
+ * (textarea/markdown, checkbox, tags, or a typed text input). Repeats the
+ * url/date/text cases because `<input>`'s JSX `type` prop is a literal union.
  * @param handle - Component handle exposing the `field` and its current `value`.
  * @returns A render function producing the labeled input.
  */
@@ -97,9 +98,6 @@ function FieldInput(handle: Handle<{ field: FieldDefinition; value: unknown }>) 
 				</>
 			);
 		}
-		// `<input>`'s JSX props are a discriminated union on `type`, so `type` must be a
-		// literal (a union value matches no member). All three are text-like, so only the
-		// literal differs.
 		let attrs = { id: name, name, defaultValue: typeof value === "string" ? value : "" };
 		let input =
 			field.kind === "url" ? (
@@ -457,7 +455,6 @@ export default createController(routes.cms.posts, {
 			let meta = readMeta(formData, type);
 			if (!meta.title) return badRequest("Title is required");
 			let slug = fieldText(formData, "slug").trim() || existing.slug;
-			// Publishing is a permission: writers cannot change published_at.
 			let publishedAt = permissions.has("posts.publish")
 				? parsePublishedAt(formData)
 				: existing.published_at;

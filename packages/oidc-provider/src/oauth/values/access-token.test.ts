@@ -1,3 +1,11 @@
+/**
+ * Tests for the AccessToken value object covering claim generation,
+ * signing and verification, audience handling, and payload parsing.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK, JWT } from "@pkg/jwt";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -111,7 +119,6 @@ describe(AccessToken.name, () => {
 
 			let expiresIn = token.expiresIn - now;
 
-			// Allow 1 second tolerance for test execution time
 			expect(expiresIn).toBeGreaterThanOrEqual(AccessToken.ttl - 1);
 			expect(expiresIn).toBeLessThanOrEqual(AccessToken.ttl);
 		});
@@ -148,7 +155,6 @@ describe(AccessToken.name, () => {
 
 			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 
-			// Create a different key pair for verification
 			let differentRawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 			let differentKeyPair = [await JWK.importKeyPair(differentRawKeyPair)];
 
@@ -156,12 +162,11 @@ describe(AccessToken.name, () => {
 		});
 
 		test("throws for expired token", async () => {
-			// Create an already-expired token by manipulating the payload directly
 			let now = Math.floor(Date.now() / 1000);
 			let expiredToken = new AccessToken({
 				aud: "client-123",
-				exp: now - 3600, // Expired 1 hour ago
-				iat: now - 7200, // Issued 2 hours ago
+				exp: now - 3600,
+				iat: now - 7200,
 				iss: "https://auth.example.com",
 				jti: crypto.randomUUID(),
 				nbf: now - 7200,
@@ -181,7 +186,7 @@ describe(AccessToken.name, () => {
 				iat: now,
 				iss: "https://auth.example.com",
 				jti: crypto.randomUUID(),
-				nbf: now + 3600, // Not valid for another hour
+				nbf: now + 3600,
 				sub: "subject-456",
 			});
 
@@ -256,7 +261,6 @@ describe(AccessToken.name, () => {
 
 			expect(verified).not.toBeNull();
 
-			// Create AccessToken from verified payload
 			let parsedToken = new AccessToken(verified!.payload);
 
 			expect(parsedToken.subject).toBe("subject-456");

@@ -1,7 +1,7 @@
 /**
- * The health check. Probes the two dependencies this server cannot serve a single
- * request without — the database and the KV namespace holding sessions and codes —
- * and names the one that failed, so a monitor's alert already says where to look.
+ * The health check. Probes the two dependencies every request relies on — the database
+ * and the KV namespace holding sessions and codes — and names the one that failed, so
+ * a monitor's alert already says where to look.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,12 +17,13 @@ import { createAction } from "remix/router";
 import { clients } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** GET /healthcheck — verifies database and KV connectivity. */
+/**
+ * GET /healthcheck — verifies database and KV connectivity. Every probe settles, so
+ * one call always reports the first broken dependency in a fixed order.
+ */
 export default createAction(
 	routes.healthcheck,
 	inject([Database] as const, async (db) => {
-		// Settled rather than raced, so a single call reports the first broken dependency
-		// instead of whichever one happened to fail fastest.
 		let results = await Promise.allSettled([
 			db.count(clients).catch(() => {
 				throw new Error("Database connection error");

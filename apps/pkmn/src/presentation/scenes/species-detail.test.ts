@@ -1,11 +1,9 @@
 /**
  * Tests for the species-detail screen's pure content-row builder.
  *
- * Covers `speciesDetailRows`: the dex number is zero-padded, one or two types are
- * joined into a single line, the seen/caught status resolves to the right label,
- * every base stat becomes its own row, and the "Where to catch" section lists each
- * habitat zone — collapsing to a single "Unknown" line when the habitat is empty.
- * The canvas drawing and the scene's input routing are not exercised here.
+ * Covers `speciesDetailRows`: dex-number padding, type-list joining, the
+ * seen/caught status label, per-stat rows, and the habitat listing that
+ * collapses to "Unknown" when empty.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,7 +73,6 @@ test("speciesDetailRows lists each habitat zone under a single WHERE label", () 
 	let whereIndex = rows.findIndex((row) => row.label === "WHERE");
 	expect(whereIndex).toBeGreaterThanOrEqual(0);
 	expect(rows[whereIndex]!.value).toBe("route-1");
-	// The second zone continues under a blank label, not a repeated "WHERE".
 	expect(rows[whereIndex + 1]).toEqual({ label: "", value: "cave-2" });
 });
 

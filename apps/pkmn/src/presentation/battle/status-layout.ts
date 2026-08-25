@@ -1,14 +1,9 @@
 /**
  * Pure geometry and fit checks for the battle creature status box.
  *
- * The status window packs a name, a level, an HP bar, and (for the player's
- * creature) an HP fraction into one small panel, and the root action menu packs
- * four labels into a two-column grid. Both must fit inside a fixed pixel width at
- * the presentation's bitmap metrics, so this module keeps the width math out of
- * the drawing code where it cannot be unit-tested. Callers ask whether a string
- * fits a given inner width, or for the exact box height needed to stack the status
- * rows without the HP number spilling below the frame; the drawing code then just
- * places text at the returned coordinates.
+ * Keeps status-box and action-menu width/height math out of the drawing code
+ * so it can be unit-tested: callers ask whether a string fits a width, or the
+ * box height needed to keep every stacked row inside the frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,10 +28,8 @@ export function hpText(current: number, max: number): string {
 /**
  * Smallest even column width that fits the widest of `labels` with padding.
  *
- * The root action menu draws labels in fixed columns; a column narrower than its
- * longest label makes adjacent labels collide ("CreaturesRun"). Given the labels
- * and the horizontal padding a column reserves around its text, this returns the
- * column width wide enough for the longest label so no two ever overlap.
+ * Keeps adjacent action-menu columns clear of each other's labels, such as
+ * "Creatures" and "Run".
  */
 export function columnWidthFor(labels: readonly string[], padding: number): number {
 	let widest = 0;
@@ -46,23 +39,18 @@ export function columnWidthFor(labels: readonly string[], padding: number): numb
 
 /** Vertical layout of the status box rows, all offsets relative to the box top. */
 export interface StatusBoxLayout {
-	/** Total box height in pixels. */
 	height: number;
-	/** Y offset of the name/level row. */
 	nameY: number;
 	/** Y offset of the HP fraction row (only drawn when numbers are shown). */
 	hpTextY: number;
-	/** Y offset of the HP bar. */
 	barY: number;
 }
 
 /**
  * Stacks the status-box rows so the HP number always sits inside the frame.
  *
- * Rows are name, then (when numbers are shown) the HP fraction, then the HP bar,
- * each `GLYPH_HEIGHT` tall with a little leading, plus top and bottom padding. The
- * returned `height` is exactly enough to contain the last row's descent, so the HP
- * text can never overflow below the box the way a fixed short height caused.
+ * `height` is sized to the last row's descent, so the box always contains the
+ * full stack regardless of whether the HP-fraction row is shown.
  */
 export function statusBoxLayout(showNumbers: boolean, barHeight: number): StatusBoxLayout {
 	let padTop = 3;

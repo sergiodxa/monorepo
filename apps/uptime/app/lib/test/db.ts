@@ -1,8 +1,8 @@
 /**
  * Test-only Bun SQLite database adapter that compiles the same SQL statements as
  * production, plus a helper that applies every migration in `database/migrations/`
- * to a fresh in-memory database. Lets models, jobs, and controllers run against a
- * real SQL engine in unit tests instead of hand-rolled mocks.
+ * to a fresh in-memory database, letting models, jobs, and controllers run against
+ * a real SQL engine in unit tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,9 +38,9 @@ interface SqliteAdapterOptions {
 }
 
 /**
- * Creates a database adapter for Bun's SQLite that mirrors the D1 adapter used in
- * production. This allows models, jobs, and controllers to be tested against an
- * in-memory SQLite database instead of a mock.
+ * Creates a `DatabaseDriver` for Bun's SQLite, compiling the same data-table
+ * operations production runs so models, jobs, and controllers execute against
+ * a real SQL engine in tests.
  * @param db - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
  * @param options - Optional capability overrides for the adapter.
  * @returns A `DatabaseDriver` backed by the given SQLite database.
@@ -84,9 +84,8 @@ export function createSqliteDatabaseAdapter(
 
 			/**
 			 * `c.json()` columns hold JS objects/arrays at the model layer, but neither
-			 * the SQLite driver nor D1's binder accepts anything but strings/numbers/booleans/
-			 * null — encode them to JSON text before binding. `decodeColumns` undoes
-			 * this, and the boolean-to-integer narrowing SQLite forces, on rows read back.
+			 * the SQLite driver nor D1's binder accepts anything but strings, numbers,
+			 * booleans, or null, so this encodes them to JSON text before binding.
 			 */
 			operation = encodeJsonColumns(operation);
 
@@ -211,18 +210,9 @@ export function createSqliteDatabaseAdapter(
 }
 
 /**
- * Neither the SQLite driver nor D1's binder accepts a plain object/array as a bound
- * value, but `c.json()` columns (e.g. `alerts.config`, `alert_events.snapshot`,
- * `api_keys.scopes`) are always given real JS values at the model layer, so every
- * adapter has to encode on the way in and decode on the way out.
- *
- * The production adapters do exactly the same thing, with the same helpers under the
- * same names. This is therefore a faithful copy of production behaviour, not a
- * test-only workaround papering over a gap — a JSON column that round-trips here
- * round-trips there. Keep the three copies in step: a change to the encoding rules
- * belongs in all of them at once, or in one shared helper they all call.
- *
- * Column names declared `c.json()` on `table`, resolved from its metadata.
+ * Neither the SQLite driver nor D1's binder accepts a plain object or array as a
+ * bound value, so every `c.json()` column needs encoding going in and decoding
+ * coming back out. Column names declared `c.json()` on `table`, from its metadata.
  */
 function getJsonColumnNames(table: StatementTable): Set<string> {
 	let definitions = getTableColumnDefinitions(table);
@@ -296,10 +286,9 @@ interface DecodableColumns {
 }
 
 /**
- * Collects a table's `c.json()` and `c.boolean()` column names in a single pass.
- *
- * One pass rather than two because this runs per read statement: the read path needs
- * both sets together, while the write path only ever needs the JSON one.
+ * Collects a table's `c.json()` and `c.boolean()` column names in a single pass,
+ * since this runs per read statement and the read path needs both sets together
+ * while the write path only ever needs the JSON one.
  */
 function getDecodableColumnNames(table: StatementTable): DecodableColumns {
 	let definitions = getTableColumnDefinitions(table);
@@ -315,17 +304,9 @@ function getDecodableColumnNames(table: StatementTable): DecodableColumns {
 }
 
 /**
- * Restores, on every row read back, the JS types SQLite cannot store natively.
- *
- * `c.json()` columns go in as JSON text and must come back as the objects the model
- * layer works with. `c.boolean()` columns are the same problem with a quieter failure:
- * SQLite has no boolean storage class, so `normalizeBoundValue` writes `true`/`false`
- * as `1`/`0` and, without this decode, the column reads back as a number while the
- * generated row type still claims `boolean` — which rendered a stored `false` as a
- * ticked checkbox and served `1` from JSON APIs that promise `boolean`.
- *
- * `null` is left alone: a nullable boolean column's `null` is a third state, and the
- * `?? true` defaults callers write over it depend on telling it apart from `false`.
+ * Restores the JS types SQLite cannot store natively: `c.json()` text back into
+ * objects, and `c.boolean()` integers back into `true`/`false`. `null` is left as
+ * `null`, so `?? true` defaults can still tell an unset value from a stored `false`.
  */
 function decodeColumns(
 	operation: DataManipulationOperation,
@@ -997,9 +978,8 @@ function isReadOnlyRawSql(sql: string): boolean {
 
 /**
  * Whether a raw statement carries a `RETURNING` clause, and so yields rows despite
- * starting with a write keyword. Mirrors `@pkg/data-table-d1` exactly — the two must
- * agree, or an atomic `UPDATE … RETURNING` claim would return rows in one engine and
- * nothing in the other, which is a difference tests could never catch.
+ * starting with a write keyword. Must agree with the production detection rule, or
+ * an atomic `UPDATE … RETURNING` claim would return rows in one engine and not the other.
  */
 function hasRawReturningClause(sql: string): boolean {
 	return /\breturning\b/i.test(sql);
@@ -1031,13 +1011,9 @@ function isInsertOperation(
 }
 
 /**
- * Applies every `.sql` migration in `database/migrations/` (filename-sorted, the same
- * order `wrangler d1 migrations apply` uses) to the given in-memory database.
- *
- * `before` stops short of one migration, which is the only way to test a migration that has
- * data to convert: seed the rows it will find against the schema as it stood, then apply the
- * one file with {@link applyMigration}. Without it every test starts from a database the
- * migration has already run against and has nothing left to do.
+ * Applies every `.sql` migration in `database/migrations/`, filename-sorted, to the
+ * given in-memory database. `before` stops short of one file so a test can seed
+ * data against the prior schema, then apply that file alone via {@link applyMigration}.
  *
  * @param sqliteDb - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
  * @param before - Filename to stop before, exclusive. Applies everything when omitted.
@@ -1060,7 +1036,7 @@ export function applyMigration(sqliteDb: SqliteDatabase, file: string): void {
 	sqliteDb.exec(readFileSync(join(migrationsDirectory(), file), "utf8"));
 }
 
-/** Absolute path of `database/migrations/`, resolved from this module rather than the cwd. */
+/** Absolute path of `database/migrations/`, always resolved from this module's own location. */
 function migrationsDirectory(): string {
 	return join(dirname(fileURLToPath(import.meta.url)), "../../../database/migrations");
 }

@@ -25,7 +25,6 @@ interface HostMetadata {
 	region?: string;
 }
 
-/** Slugs never routed to a tenant DO (reserved subdomains). */
 const RESERVED_SLUGS = new Set([
 	"sso",
 	"www",
@@ -149,9 +148,8 @@ function trackPageView(request: Request, response: Response, blogId: string): vo
 export default {
 	/**
 	 * Main request handler. Dispatches by hostname in priority order: CF for SaaS
-	 * custom domains (via `hostMetadata`), the platform domain (static assets then the
-	 * dashboard router), wildcard tenant subdomains, and finally same-zone custom
-	 * domains resolved from D1; anything unmatched returns 404.
+	 * custom domains, the platform domain (assets then dashboard), wildcard tenant
+	 * subdomains, then same-zone custom domains from D1; unmatched hosts return 404.
 	 *
 	 * @param request The incoming request.
 	 * @returns The response from the resolved destination, or a 404.
@@ -160,11 +158,9 @@ export default {
 		let url = new URL(request.url);
 		let hostname = url.hostname;
 
-		// 1. Custom domain via CF for SaaS custom metadata.
 		let metadata = request.cf?.hostMetadata as HostMetadata | undefined;
 		if (metadata?.blog_id) return forwardToBlog(request, metadata.blog_id, metadata.region);
 
-		// 2. Platform domain -> static assets, then dashboard/marketing router.
 		if (hostname === env.PLATFORM_DOMAIN) {
 			let asset = await env.ASSETS.fetch(
 				new Request(request.url, { method: request.method, headers: request.headers }),
@@ -181,7 +177,6 @@ export default {
 			}
 		}
 
-		// 3. Wildcard subdomain {slug}.blog.sergiodxa.com.
 		if (hostname.endsWith(`.${env.PLATFORM_DOMAIN}`)) {
 			let slug = hostname.slice(0, -(env.PLATFORM_DOMAIN.length + 1));
 			if (slug.includes(".") || RESERVED_SLUGS.has(slug)) return notFound();
@@ -190,7 +185,6 @@ export default {
 			return forwardToBlog(request, entry.blogId, entry.region);
 		}
 
-		// 4. Unknown host: same-zone/explicit-route custom domains (no hostMetadata).
 		let custom = await resolveCustomHostname(hostname);
 		if (custom) return forwardToBlog(request, custom.blogId, custom.region);
 

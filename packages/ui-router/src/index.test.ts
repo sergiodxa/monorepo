@@ -1,3 +1,10 @@
+/**
+ * Tests for the client-side router: route matching, params, fetchers,
+ * middleware ordering, mounted navigation, and Navigation API integration.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { RemixElement, RemixNode, VirtualRoot, VirtualRootOptions } from "remix/ui";
 
 import { route } from "remix/routes";

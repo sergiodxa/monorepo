@@ -1,16 +1,9 @@
 /**
  * Search-as-you-type filtering for a Command root: reads the query typed
  * into the marked search input, hands it to a `FilterModel` instance, and
- * mirrors the model's matched set back onto the pre-rendered item list as
- * `hidden`, toggling the empty-state element alongside it.
- *
- * Why JS: matching a typed query against a rendered item list, and hiding
- * everything that doesn't match, requires reading input as it changes and
- * reconciling matches against the DOM — no CSS selector or HTML attribute
- * expresses "descendant text contains this typed value".
- * No-JS baseline: every item and the empty-state element render at once;
- * the full, unfiltered list stays reachable in Tab order and by browser
- * find-in-page.
+ * mirrors the matched set onto the pre-rendered items as `hidden`,
+ * toggling the empty-state element. Without JS every item and the
+ * empty-state element render at once, reachable in Tab order and find-in-page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,38 +15,29 @@ import type { FilterModel } from "../behaviors/filter-model";
 
 /**
  * Attribute the search input exposes itself on — `Command.Input`'s own
- * `<input>` carries this automatically. `commandFilter()` listens for
- * `input` events bubbling from the element carrying this attribute and
- * forwards the typed value into {@link FilterModel.setQuery}.
+ * `<input>` carries this automatically, and `commandFilter()` forwards its
+ * typed value into {@link FilterModel.setQuery}.
  */
 export const COMMAND_INPUT_ATTRIBUTE = "data-command-input";
 
 /**
  * Attribute every filterable item exposes itself on — the same `data-value`
- * attribute `Command.Item` already sets from its own `value` prop, so no
- * extra wiring is needed to make a `Command` root's pre-rendered items
- * filterable. Its value doubles as the text compared against the query;
- * `commandFilter()` reads every element carrying this attribute into a
- * {@link FilterModel.Option} and later toggles the same elements' `hidden`
- * property as matches change.
+ * attribute `Command.Item` already sets, so pre-rendered items need no
+ * extra wiring to become filterable; its value is matched against the query.
  */
 export const COMMAND_ITEM_ATTRIBUTE = "data-value";
 
 /**
  * Attribute the empty-state element exposes itself on — `Command.Empty`
  * carries this automatically. `commandFilter()` toggles its `hidden`
- * property opposite {@link FilterModel.isEmpty}, so it shows only while the
- * current query has no matches.
+ * property opposite {@link FilterModel.isEmpty}.
  */
 export const COMMAND_EMPTY_ATTRIBUTE = "data-command-empty";
 
 /**
- * Resolves the id a DOM item correlates to a {@link FilterModel.Option} by:
- * the item's own `id` attribute when set, so it stays usable as an
- * `aria-activedescendant` target for whatever else reads the same model,
- * falling back to its position among the other items otherwise. Exported so
- * a paired mixin — `commandKeys()`, in particular — resolves the exact same
- * id for a given item that `commandFilter()` already put in the model.
+ * Resolves the id a DOM item correlates to a {@link FilterModel.Option}:
+ * its own `id` attribute when set, doubling as an `aria-activedescendant`
+ * target, otherwise its position among the other items.
  *
  * @param item Item element read from the DOM.
  * @param index Item's position among the other items carrying {@link COMMAND_ITEM_ATTRIBUTE}.
@@ -106,15 +90,6 @@ function syncMatches(root: HTMLElement, model: FilterModel): void {
  * Filters a Command root's pre-rendered items as the user types, hiding
  * everything that doesn't match the current query and toggling the
  * empty-state element when nothing does.
- *
- * On mount, every item beneath the host carrying {@link COMMAND_ITEM_ATTRIBUTE}
- * is read into `model`'s option set. From then on, every `input` event
- * bubbling from the element carrying {@link COMMAND_INPUT_ATTRIBUTE} updates
- * `model`'s query, and every resulting `"change"` from `model` — from that
- * input, or from anything else that calls a mutating method on the same
- * instance — re-reads the item list and mirrors matches onto it as `hidden`,
- * using the same attribute contract the item and empty-state elements are
- * found by.
  *
  * @param model Behavior class instance owning the query, matched option set, and active option.
  * @example

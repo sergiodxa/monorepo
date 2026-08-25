@@ -48,7 +48,6 @@ let { i18n: i18nextInstance } = await createTranslator({
 	fallbackLanguage: "en",
 })();
 
-/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.i18next + Auth. */
 function seedTeam(
 	team: SelectTeam,
 	membership: SelectMembership,
@@ -97,18 +96,15 @@ function switchTag(body: string, email: OptionalEmail): string {
 }
 
 /**
- * Whether one email's switch arrives on.
- *
- * Read off the native `checked` attribute, which is the one a browser submits from. Not off
- * `aria-checked`: the renderer serializes a true boolean as a bare attribute and drops a false
- * one, so there is no `"true"`/`"false"` to compare — the lookbehind is only there to keep
- * `aria-checked` from being mistaken for it.
+ * Whether one email's switch arrives on, read off the native `checked` attribute — the
+ * one a browser submits, since a true boolean serializes as a bare attribute and a false
+ * one drops it entirely; the lookbehind keeps the match off `aria-checked`.
  */
 function isSwitchOn(body: string, email: OptionalEmail): boolean {
 	return /(?<!aria-)\bchecked\b/.test(switchTag(body, email));
 }
 
-/** The inner markup of one named `<select>`, so option assertions can't match another field's options. */
+/** The inner markup of one named `<select>`, so option assertions match only this field's options. */
 function optionsOf(body: string, name: string): string {
 	let match = new RegExp(`<select[^>]*\\bname="${name}"[^>]*>([\\s\\S]*?)</select>`).exec(body);
 	if (match?.[1] === undefined) throw new Error(`The page rendered no <select name="${name}">`);
@@ -116,11 +112,9 @@ function optionsOf(body: string, name: string): string {
 }
 
 /**
- * Every `value` whose `<option>` carries the bare `selected` attribute.
- *
- * Read off `selected` and nothing else: a `defaultValue` on the `<select>` host is not an
- * HTML attribute, so markup that only names the value there leaves the browser on the
- * first option — which is exactly how the saved language used to get overwritten.
+ * Every `value` whose `<option>` carries the bare `selected` attribute — the one a
+ * browser actually honors, since a `defaultValue` prop only sets the DOM property and
+ * leaves the browser on the first option, which is how the saved language used to be lost.
  */
 function selectedValues(body: string, name: string): string[] {
 	return [...optionsOf(body, name).matchAll(/<option\b[^>]*>/g)]
@@ -176,7 +170,6 @@ describe("account page", () => {
 		expect(body.match(/name="emails"/g)).toHaveLength(optionalEmails.length);
 
 		for (let email of optionalEmails) {
-			// Checked is subscribed, and the absence of a stored refusal is consent.
 			expect(isSwitchOn(body, email)).toBe(true);
 			expect(body).toContain(en.page.account.emails.list[email].name);
 		}
@@ -201,10 +194,13 @@ describe("account page", () => {
 		expect(isSwitchOn(body, "teamWeeklyDigest")).toBe(true);
 	});
 
+	/**
+	 * A leavable row renders the label twice — once in its row menu, once in its
+	 * confirmation dialog's submit button — so the occurrence count doubles per row.
+	 */
 	test("shows the Leave button only for a membership where the viewer is a plain member, not the owner", async () => {
 		let { db, team, membership } = await createFixture();
 
-		// A second team where the same viewer (owner-1) is a plain member, not the owner.
 		let otherTeam = await db.create(
 			teams,
 			{ id: crypto.randomUUID(), owner_id: "someone-else", name: "Beta", slug: "beta", logo: null },
@@ -230,10 +226,6 @@ describe("account page", () => {
 
 		let leaveLabel = en.page.account.teams.table.actions.leave;
 		let occurrences = body.split(leaveLabel).length - 1;
-		// Only the "Beta" row (where the viewer is a plain member) should render the
-		// Leave action; the "Acme" row (where the viewer is the owner) should not. A
-		// leavable row renders the label twice — once in its row menu, once in its
-		// confirmation dialog's submit button.
 		expect(occurrences).toBe(2);
 	});
 });
@@ -270,6 +262,10 @@ describe("account page — Language", () => {
 });
 
 describe("account page — Your Data", () => {
+	/**
+	 * A GET that returned the whole export would be a URL any other site could link to,
+	 * so the request only succeeds as a POST, which keeps it unforgeable from outside.
+	 */
 	test("offers the export as a POST form rather than a link, and says what it leaves out", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -278,7 +274,6 @@ describe("account page — Your Data", () => {
 
 		expect(body).toContain(en.page.account.dataExport.title);
 		expect(body).toContain(en.page.account.dataExport.form.cta);
-		// A GET that returned a whole account would be a URL another site could point at.
 		expect(body).toContain(`action="${routes.accountActions.exportData.href()}"`);
 		expect(body).toContain("API key hashes");
 	});
@@ -308,8 +303,8 @@ describe("account page — Delete Account", () => {
 	});
 
 	/**
-	 * The honesty requirement. Each of these four is a retention this app genuinely cannot
-	 * avoid, and the confirmation must not imply a clean wipe by omitting them.
+	 * Each of these four is a retention this app genuinely cannot avoid, so the confirmation
+	 * lists all of them to keep its deletion promise accurate.
 	 */
 	test("lists what cannot be deleted", async () => {
 		let { db, team, membership } = await createFixture();
@@ -322,16 +317,22 @@ describe("account page — Delete Account", () => {
 		expect(body).toContain(en.page.account.deleteAccount.card.retained.identity);
 	});
 
+	/**
+	 * A personal team is most accounts, so a warning that fires even with no one to lose
+	 * access would train viewers to ignore it.
+	 */
 	test("warns about no one when the owned team has no other members", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await renderAccount(db, team, membership)).text();
 
-		// The personal-team case is most accounts, and a warning here would cry wolf.
 		expect(body).toContain(team.name);
 		expect(body).not.toContain("will lose access");
 	});
 
+	/**
+	 * The warning reports a count so a viewer never sees who else uses the product.
+	 */
 	test("names the owned team and counts exactly the other members who lose access", async () => {
 		let { db, team, membership } = await createFixture();
 		for (let subjectId of ["colleague-1", "colleague-2"]) {
@@ -346,13 +347,12 @@ describe("account page — Delete Account", () => {
 
 		expect(body).toContain(`${team.name} — 2 other members lose access.`);
 		expect(body).toContain("2 other people will lose access");
-		// A count, not a roster: the warning must not name other people.
 		expect(body).not.toContain("colleague-1");
 	});
 
 	/**
-	 * There is no owner transfer in this app — `teams.owner_id` is written at creation and by
-	 * nothing else — so the copy must not send anybody to a page that cannot do it.
+	 * `teams.owner_id` is fixed at creation, so the copy states that directly instead of
+	 * pointing anywhere else to change it.
 	 */
 	test("does not suggest handing the team over first", async () => {
 		let { db, team, membership } = await createFixture();
@@ -363,6 +363,10 @@ describe("account page — Delete Account", () => {
 		expect(body).not.toContain("change the owner");
 	});
 
+	/**
+	 * The queued view drops the confirmation field entirely, so nothing suggests the
+	 * first request needs redoing.
+	 */
 	test("shows a viewer who is already queued that state plus a cancel button, and not the form", async () => {
 		let { db, team, membership } = await createFixture();
 		await AccountDeletion.enqueue(db, membership.subject_id, "viewer@example.com");
@@ -372,7 +376,6 @@ describe("account page — Delete Account", () => {
 		expect(body).toContain(en.page.account.deleteAccount.queued.title);
 		expect(body).toContain(en.page.account.deleteAccount.queued.cta);
 		expect(body).toContain(`action="${routes.accountActions.cancelDeletion.href()}"`);
-		// Offering the confirmation again would suggest the first request did not take.
 		expect(body).not.toContain('pattern="DELETE"');
 	});
 });

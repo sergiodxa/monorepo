@@ -2,7 +2,7 @@
  * Route table for the books funnel. Declares the four pages, the two form endpoints,
  * the checkout redirect, and the Polar webhook. Every pattern here is a published
  * contract — the checkout URL is linked from the pricing page, the webhook URL is
- * registered in Polar's dashboard — so patterns are not renamed or reshaped.
+ * registered in Polar's dashboard — so patterns stay fixed once published.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,8 +28,8 @@ export default route({
 		subscribe: post("/api/subscribe"),
 
 		/**
-		 * GET, not POST: this URL is linked from the pricing page and from the upgrade
-		 * flow's redirects, and it is shareable, so it stays a GET that 302s to Polar.
+		 * This URL is linked from the pricing page and from the upgrade flow's
+		 * redirects, and it is shareable, so it stays a GET that 302s to Polar.
 		 */
 		checkout: get("/api/checkout/:type"),
 	}),

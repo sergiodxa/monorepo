@@ -23,23 +23,17 @@ import type { KeyStorage } from "./key-storage";
 const SIGNING_KEY_PREFIX = "signing:key";
 
 /**
- * Page size used while walking the stored keys.
- *
- * A bucket accumulates one key file per rotation, so a set of this size is the whole
- * listing in practice and paging never runs a second time. It is kept well under the
- * 1000 an object store typically caps a listing at, so a store is free to return a
- * shorter page than asked for — `scan` follows the cursor either way.
+ * Page size used while walking the stored keys, well under the 1000-item cap
+ * an object store typically enforces, so a page is rarely followed by a second.
  */
 const SCAN_PAGE_SIZE = 100;
 
 /**
  * The public parameters a JWKS entry carries, one key type at a time.
  *
- * Each entry is rebuilt out of the fields its key type names here, which is what keeps
- * a private component from reaching a published key set through a field nobody thought
- * about: `d` on every key type, and `p`, `q`, `dp`, `dq` and `qi` on an RSA one
- * besides. A key type this map leaves out is one whose private components have never
- * been enumerated, which is why `toJSON` refuses it rather than publishing it unvetted.
+ * Each entry is rebuilt only from the fields listed here, which keeps private
+ * components — `d`, and an RSA key's `p`, `q`, `dp`, `dq`, `qi` — out of a
+ * published key set; `toJSON` throws for any key type missing from this map.
  */
 const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undefined> = {
 	EC: ({ crv, x, y }) => ({ crv, x, y }),
@@ -55,17 +49,9 @@ const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undef
  */
 export namespace JWK {
 	/**
-	 * Signature algorithms this package supports.
-	 *
-	 * ES256 is what an issuer here signs with, and stays the algorithm a bootstrapped
-	 * key is minted for. RS256 is what upstream identity providers commonly sign with,
-	 * so it is here for the verifying side above all. EdDSA derives each signature's
-	 * nonce from the key and the message rather than drawing a fresh one, which is what
-	 * puts the nonce reuse that leaks an ECDSA private key out of reach.
-	 *
-	 * All three coexist in one key set: verification picks a key by the `kid` and the
-	 * algorithm a token names, so a set publishing several resolves the same way a set
-	 * of one does.
+	 * ES256 is issued here; RS256 verifies tokens from upstream identity
+	 * providers; EdDSA derives its nonce from the key and message, keeping the
+	 * ECDSA nonce-reuse leak that exposes a private key out of reach.
 	 */
 	export const Algorithm = { ES256: "ES256", RS256: "RS256", EdDSA: "EdDSA" } as const;
 
@@ -129,9 +115,8 @@ export namespace JWK {
 	/**
 	 * The half of a key pair `JWT.verify` needs when the keys are already in hand.
 	 *
-	 * One field rather than two, because the published JWK carries both the material
-	 * and the `kid` a token's header is matched against, which is everything selecting
-	 * a key out of a set takes.
+	 * A single `jwk` field carries both the key material and the `kid` a token's
+	 * header is matched against — everything selecting a key from a set takes.
 	 */
 	export interface VerificationKey {
 		jwk: jose.JWK;
@@ -154,9 +139,8 @@ export namespace JWK {
 	/**
 	 * Generates a new key pair in serialized form.
 	 *
-	 * The keys are generated extractable on purpose: a pair that cannot be exported
-	 * cannot be written to storage, and a signing key that only exists in one isolate
-	 * signs tokens no other isolate can verify.
+	 * Generated extractable so the pair can be written to storage; a key held
+	 * only within one isolate would sign tokens no other isolate could verify.
 	 *
 	 * @param alg - Algorithm to generate for.
 	 * @returns The pair as PEM strings, ready to store.
@@ -179,9 +163,9 @@ export namespace JWK {
 	/**
 	 * Imports a stored key pair back into usable `CryptoKey` objects.
 	 *
-	 * The public half is re-exported as a JWK and stamped with `kid` and `use: "sig"`
-	 * here rather than at publish time, so the identifier a token header carries and
-	 * the identifier the JWKS advertises can never drift apart.
+	 * The public half is imported extractable, ready to be re-exported as a JWK,
+	 * while the private half imports non-extractable since it never needs to
+	 * leave the runtime again.
 	 *
 	 * @param value - A pair previously produced by `generateKeyPair`.
 	 * @returns The pair with both halves imported and the public JWK attached.
@@ -189,8 +173,6 @@ export namespace JWK {
 	 * let keyPair = await JWK.importKeyPair({ id, alg, publicKey, privateKey, created });
 	 */
 	export async function importKeyPair(value: SerializedKeyPair): Promise<KeyPair> {
-		// Extractable so the public half can be re-exported as a JWK below; the private
-		// half never needs to leave the runtime again, so it is imported non-extractable.
 		let publicKey = await jose.importSPKI(value.publicKey, value.alg, { extractable: true });
 		let privateKey = await jose.importPKCS8(value.privateKey, value.alg);
 
@@ -212,19 +194,9 @@ export namespace JWK {
 	/**
 	 * Loads the signing keys out of storage, generating one on first use.
 	 *
-	 * Every stored key comes back, newest first — which is the order `JWT.sign` relies
-	 * on to pick what to sign with, and the order `toJSON` publishes them in. A set
-	 * holding several is the normal state during a rotation: the newest signs, and the
-	 * older ones stay published so tokens they signed keep verifying. A new ES256 key
-	 * is minted when nothing usable is stored at all.
-	 *
-	 * Generation time is the whole ordering, so a set mixing algorithms comes back as
-	 * one sequence and `JWT.sign` takes the newest key generated for the algorithm it
-	 * was asked for.
-	 *
-	 * Point this at the bucket the issuer already keeps its keys in. Against an empty
-	 * one it bootstraps a key, and only tokens signed after every relying party has
-	 * refreshed its copy of the published set will verify.
+	 * Every stored key comes back newest first, the order `JWT.sign` picks by and
+	 * `toJSON` publishes in; finding none usable mints an ES256 key and re-reads
+	 * storage, so every isolate ends up with the identical result.
 	 *
 	 * @param storage - Where key files live.
 	 * @returns The usable key pairs, newest first.
@@ -245,25 +217,15 @@ export namespace JWK {
 
 		if (results.some((item) => !item.expired)) return results;
 
-		// Nothing usable came back, so mint one and re-read rather than returning the
-		// new pair directly — the re-read is what makes the result identical to what
-		// the next isolate will see, instead of racing it. ES256 because that is what
-		// this package issues; a key for another algorithm is stored deliberately.
 		await storeKeyPair(storage, SIGNING_KEY_PREFIX, await generateKeyPair(Algorithm.ES256));
 
 		return await signingKeys(storage);
 	}
 
 	/**
-	 * Turns a key set that is already in hand into a resolver `JWT.verify` can use.
-	 *
-	 * The set is consulted per token, with that token's header in hand: the entry whose
-	 * `kid` the header names is the one used, narrowed further by the key type, curve,
-	 * algorithm and intended use each entry declares. Deciding per token is what lets a
-	 * set publish several keys at once, since the token itself says which is meant.
-	 *
-	 * A set that offers exactly one key for what a token asks for verifies it. A set
-	 * that offers none, or several a token gives no way to choose between, is an error.
+	 * Resolves a token's key by matching its header's `kid`, key type, curve,
+	 * algorithm, and use against the set; anything but exactly one match is an
+	 * error. Kept async so callers await it the same way as `importRemote`.
 	 *
 	 * @param jwks - The key set, as served by a JWKS endpoint.
 	 * @returns A resolver that answers with the key a given token names.
@@ -271,24 +233,15 @@ export namespace JWK {
 	 * let keys = await JWK.importLocal(jwks);
 	 * let token = await IdToken.verify(raw, keys, { issuer, audience, algorithms });
 	 */
-	// Async despite reading nothing, so that a caller holding the result for the life of
-	// an isolate — the way `importRemote` is meant to be held — awaits the same way for
-	// both, and so either can start doing I/O without a breaking change.
 	// biome-ignore lint/suspicious/useAwait: symmetry with `importRemote`, see above.
 	export async function importLocal(jwks: jose.JSONWebKeySet): Promise<KeyResolver> {
 		return jose.createLocalJWKSet(jwks);
 	}
 
 	/**
-	 * Points a resolver at a JWKS endpoint, fetched when a token first needs it.
-	 *
-	 * The document is fetched on first use and then held, and fetched again — at most
-	 * once per cooldown window — when a token names a `kid` the held copy does not
-	 * carry. That is what carries a relying party across a rotation between deploys:
-	 * the first token signed by a newly published key is what pulls that key in.
-	 *
-	 * Hold the result for the life of the isolate, so that every verification shares
-	 * one fetched key set.
+	 * Points a resolver at a JWKS endpoint, fetched on first use and re-fetched
+	 * at most once per cooldown window when a token names an unseen `kid` —
+	 * carrying a relying party across a key rotation between deploys.
 	 *
 	 * @param url - The JWKS endpoint.
 	 * @param options - Request headers, timeouts, and cache windows.
@@ -304,11 +257,9 @@ export namespace JWK {
 	/**
 	 * Renders key pairs as the JSON a `/.well-known/jwks.json` endpoint serves.
 	 *
-	 * Every entry is built out of the parameters its key type publishes, drawn only
-	 * from the public half, alongside the `kid` and `alg` a relying party selects on.
-	 * The shape of the output is what guarantees a private key cannot reach this
-	 * endpoint through a field nobody thought about, so a pair whose key type has no
-	 * published shape on record stops the whole document rather than going out unvetted.
+	 * Each entry keeps only the public parameters its key type publishes here,
+	 * plus `kid` and `alg`; an unrecognized key type raises an error, keeping
+	 * unvetted private material out of the published set.
 	 *
 	 * @param keys - The key pairs to publish.
 	 * @returns The JWKS document.
@@ -331,13 +282,8 @@ export namespace JWK {
 	/**
 	 * Walks every stored key under a prefix, page by page.
 	 *
-	 * The first request is made with no cursor and its entries are yielded like every
-	 * other page's, which is what puts the lexicographically first key file in the set
-	 * `signingKeys` returns. An earlier version took that page's cursor and dropped its
-	 * entries, and the resulting blind spot is what held the published JWKS at one key.
-	 *
-	 * A page is followed by another whenever the store hands back a cursor, so a store
-	 * that answers with fewer entries than the requested limit is walked correctly.
+	 * Every page's entries are yielded, including the first, so the earliest key
+	 * file is never dropped, and any returned cursor is followed to the next page.
 	 *
 	 * @param storage - Where key files live.
 	 * @param prefix - Key prefix to walk.

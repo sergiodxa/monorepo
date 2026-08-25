@@ -1,15 +1,8 @@
 /**
- * Tests the `/auth` controller: the POST action starts the OIDC flow (delegated to
- * `startExternalAuth`, mocked here) and clears the `returnTo` cookie; the GET callback
- * completes the flow (delegated to `finishExternalAuth`/`verifyIdToken`, both mocked so
- * no real network call is made), provisions the Polar customer, resolves or creates the
- * subject's team, converts any trial targets the signed-in address is still owed, writes
- * the session, seeds the `language` cookie from any stored preference, and redirects — with
- * dedicated cases for a provider callback failure and a missing id token.
- *
- * The conversion cases run the real service against the test database rather than mocking
- * it, because what they are for is the ordering: the monitors have to land in the team this
- * very request provisioned, and a mocked service could be handed any team id and still pass.
+ * Tests the `/auth` controller: POST starts the OIDC flow and clears the
+ * `returnTo` cookie; GET completes it, provisions the Polar customer, resolves
+ * or creates the subject's team, converts any owed trial targets, writes the
+ * session, seeds the `language` cookie, and redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,10 +49,12 @@ let startExternalAuthMock = vi.fn(
 		}),
 );
 
+/**
+ * The real provider's internals are never exercised — `finishExternalAuth`/
+ * `startExternalAuth` are fully replaced below — so a bare stub is enough to
+ * satisfy `createAuthProvider`'s call to it.
+ */
 vi.doMock("remix/auth", () => ({
-	// The real provider's internals are never exercised — `finishExternalAuth`/
-	// `startExternalAuth` are fully replaced below — so a bare stub is enough to
-	// satisfy `createAuthProvider`'s call to it.
 	createOIDCAuthProvider: () => ({ name: "sergiodxa" }),
 	finishExternalAuth: finishExternalAuthMock,
 	startExternalAuth: startExternalAuthMock,
@@ -202,7 +197,6 @@ describe("GET /auth", () => {
 
 	test("creates a personal team when the subject has none and no domain matches", async () => {
 		let { db } = createTestDatabase();
-		// No team, no membership, and no verified `teamDomains` row for "example.com".
 		expect(await db.findMany(teamDomains, { where: { hostname: "example.com" } })).toHaveLength(0);
 
 		finishExternalAuthImpl = async () => ({
@@ -327,10 +321,9 @@ describe("GET /auth", () => {
 });
 
 /**
- * The trial-conversion half of the callback. What these pin is placement rather than the
- * conversion rule itself, which `~/app/services/trial-conversion.test.ts` covers: the claim
- * has to run after a team exists and put its monitors in the right one, and it has to be
- * unable to cost anyone their sign-in.
+ * Pins the trial-conversion claim's placement relative to team creation — the
+ * conversion rule lives in `~/app/services/trial-conversion.test.ts`. The claim
+ * lands in the team this request provisions, and sign-in still succeeds when it fails.
  */
 describe("GET /auth trial conversion", () => {
 	afterEach(() => {

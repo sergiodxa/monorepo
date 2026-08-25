@@ -1,14 +1,8 @@
 /**
- * Pure helpers for level-up move learning in the game systems layer.
- *
- * This module answers two content-agnostic questions without touching world
- * state: which moves a learnset grants across a level range, and what a moveset
- * becomes once a chosen move is learned into it. Keeping the rules pure lets the
- * engine decide when to auto-learn versus prompt, and lets the presentation apply
- * a player's replace/skip choice through the same logic the engine uses.
- *
- * The helpers work in terms of opaque move identifier strings and a fixed
- * four-slot moveset, so no franchise-specific move knowledge lives here.
+ * Pure, content-agnostic helpers for level-up move learning: which moves a
+ * learnset grants across a level range, and what a moveset becomes once a
+ * move is learned. Purity lets the engine auto-learn or prompt through the
+ * same logic, using opaque move ids and a fixed four-slot moveset.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,13 +21,9 @@ import { getCreatureComponentSet } from "../world/world";
 const MAX_MOVES = 4;
 
 /**
- * Returns the level-up move ids a learnset grants across `(fromLevel, toLevel]`.
- *
- * Only levels strictly above `fromLevel` and at most `toLevel` count, so a
- * creature that just crossed from one level to the next learns exactly the moves
- * pinned to the newly reached level(s). Entries are returned in ascending level
- * order (ties keep authoring order), and a move id repeated across levels appears
- * only once. Non level-up entries (machine, tutor, egg) are ignored.
+ * Uses `(fromLevel, toLevel]` so a creature that just leveled up learns
+ * exactly the moves newly reached; duplicate move ids across levels appear
+ * once, and non-level-up entries (machine, tutor, egg) are ignored.
  */
 export function movesLearnedBetween(
 	learnset: LearnsetEntry[],
@@ -56,15 +46,9 @@ export function movesLearnedBetween(
 }
 
 /**
- * Returns the moveset that results from learning `moveId`, or the unchanged
- * moveset when the move cannot or should not be learned.
- *
- * The move is a no-op when it is already known (no relearning). With fewer than
- * four moves and no `replaceSlotIndex`, it is appended to the first free slot.
- * When the moveset is full, `replaceSlotIndex` names the slot to overwrite; an
- * out-of-range or negative index is treated as the player declining, so the
- * moveset is returned unchanged. Passing a valid `replaceSlotIndex` while a free
- * slot exists still honors the requested slot.
+ * No-ops for an already-known move. Fills a free slot when one exists unless
+ * `replaceSlotIndex` is given, in which case that slot is always honored; an
+ * out-of-range index is treated as the player declining and returns unchanged.
  */
 export function applyLearnedMove(
 	moveset: MoveSet,
@@ -104,14 +88,9 @@ export interface LearnMoveResult {
 }
 
 /**
- * Applies a learned move to one creature's stored moveset and refreshes its PP.
- *
- * Delegates the slot decision to {@link applyLearnedMove}: appends into a free
- * slot when one exists, overwrites `replaceSlotIndex` when full, and leaves the
- * moveset untouched for an already-known move or a declined (out-of-range) slot.
- * When a move is learned, the affected slot's PP is set to that move's full PP so
- * the new move enters battle ready to use. Reports whether anything changed, the
- * slot used, and the move it displaced.
+ * Delegates the slot decision to {@link applyLearnedMove} and, when a move is
+ * learned, refreshes that slot's PP to the move's full value so it enters
+ * battle ready to use.
  */
 export function learnMove(
 	gameData: GameData,

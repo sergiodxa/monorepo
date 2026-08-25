@@ -1,15 +1,9 @@
 /**
- * Parity against `cron-parser` 5.10.0, the library this package replaces. The
- * comparison is executed rather than recorded: the other library is a devDependency
- * and is called here, so a change to either side shows up as a failure instead of
- * agreeing with a stale transcript.
- *
- * The load-bearing case is the first block. Every cron expression a consumer has
- * actually stored is evaluated in `UTC`, and the two libraries must agree exactly,
- * because a difference there changes which monitor alerts the day the library is
- * swapped.
- *
- * This file is temporary: delete it once no application depends on `cron-parser`.
+ * Parity against `cron-parser`, executed live so a change on either side
+ * is caught immediately. Expressions the product stores are checked in
+ * `UTC` first, since agreement there decides which monitor alerts the day
+ * the library is swapped. Delete this file once nothing depends on
+ * `cron-parser`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,9 +30,9 @@ const STORED_IN_PRODUCTION = [
 ] as const;
 
 /**
- * Expressions the product's own tests, docs and locale files use. They are not stored
- * anywhere yet, but they are the shapes a user is being shown and told to type, so
- * they are the next thing that will be.
+ * Expressions the product's own tests, docs, and locale files use today,
+ * ahead of being stored: they are the shapes a user is shown and told to
+ * type, making them the next candidates to land in production.
  */
 const EXERCISED_BY_THE_APP = [
 	"0 9 * * *",
@@ -87,7 +81,6 @@ function theirOccurrences(
 	return runs;
 }
 
-/** The occurrences this package computes, in the same shape. */
 function ourOccurrences(
 	expression: string,
 	timeZone: string,
@@ -125,8 +118,11 @@ describe("parity for what the product has stored", () => {
 	});
 
 	test("agrees in America/New_York away from a transition", () => {
-		// The other zone the product names. June and December are both far enough from a
-		// transition that 25 occurrences of a daily schedule stay inside one offset.
+		/**
+		 * The other zone the product names; June and December sit far enough from
+		 * a transition that 25 occurrences of a daily schedule stay inside one
+		 * offset.
+		 */
 		for (let expression of [...STORED_IN_PRODUCTION, ...EXERCISED_BY_THE_APP]) {
 			for (let from of ["2026-06-15T12:00:00Z", "2026-12-01T12:00:00Z"]) {
 				let ours = ourOccurrences(expression, "America/New_York", from, 10);
@@ -139,11 +135,15 @@ describe("parity for what the product has stored", () => {
 		}
 	});
 
-	// Four expressions × 9,000 occurrences each, cross-checked one by one, needs more than
-	// the 5s default.
+	/**
+	 * Four expressions × 9,000 occurrences each, cross-checked one by one, needs
+	 * more than the 5s default.
+	 */
 	test("computes a whole month of occurrences the same way, which is what billing counts", () => {
-		// The product estimates consumed pings by walking a month of occurrences, so the
-		// count and not only the instants has to match.
+		/**
+		 * The product estimates consumed pings by walking a month of occurrences,
+		 * so the count and not only the instants has to match.
+		 */
 		let start = "2026-06-01T00:00:00Z";
 		let end = new Date("2026-07-01T00:00:00Z");
 
@@ -164,7 +164,7 @@ describe("parity for what the product has stored", () => {
 });
 
 describe("parity through a daylight saving transition", () => {
-	// Anchored two hours before each transition so the first occurrences straddle it.
+	/** Anchored two hours before each transition so the first occurrences straddle it. */
 	const SPRING_FORWARD = [
 		{ timeZone: "America/New_York", from: "2026-03-08T05:00:00Z" },
 		{ timeZone: "Europe/Madrid", from: "2026-03-29T00:00:00Z" },
@@ -214,9 +214,11 @@ describe("parity through a daylight saving transition", () => {
 	});
 
 	test("agrees on the app's other expressions across both transitions", () => {
-		// Every expression the app uses, including `0 2 * * *` and `0 2 * * 0` whose wall
-		// time is the hour New York skips: looking forward, both libraries carry the run
-		// past the jump. Only looking back do they disagree, which is pinned below.
+		/**
+		 * Every expression the app uses, including `0 2 * * *` and `0 2 * * 0`
+		 * whose wall time is the hour New York skips. Both libraries carry the
+		 * run past the jump looking forward; only looking back do they disagree.
+		 */
 		for (let { timeZone, from } of [...SPRING_FORWARD, ...FALL_BACK]) {
 			for (let expression of EXERCISED_BY_THE_APP) {
 				expect({
@@ -234,19 +236,21 @@ describe("parity through a daylight saving transition", () => {
 });
 
 describe("deliberate differences from cron-parser", () => {
-	// Each of these is a case where the two libraries disagree and this package is the
-	// one to keep. They are asserted with the other library's answer named, so the
-	// choice stays visible rather than becoming folklore.
+	/**
+	 * Each of these is a case where the two libraries disagree and this package
+	 * keeps its own answer. Every case names the other library's answer too, so
+	 * the choice stays visible and documented.
+	 */
 
 	test("looks back and still finds the run carried out of a skipped hour", () => {
-		// 02:00 does not exist in New York on 2026-03-08, and both libraries carry that
-		// day's run forward to 03:00 EDT. Asked what the previous run was, though, the
-		// other library no longer reports the instant it just produced and hands back the
-		// day before. A monitor whose last expected run cannot be found again is a monitor
-		// that computes lateness from the wrong baseline.
+		/**
+		 * 02:00 does not exist in New York on 2026-03-08, so both libraries carry
+		 * that run forward to 03:00 EDT. Walking back from a later instant, the
+		 * other library returns a time a full day earlier than that carried run.
+		 */
 		let schedule = unwrap(Schedule.parse("0 2 * * *"));
 		let timeZone = "America/New_York";
-		let carried = "2026-03-08T07:00:00.000Z"; // 03:00 EDT
+		let carried = "2026-03-08T07:00:00.000Z"; /** 03:00 EDT */
 
 		expect(ourOccurrences("0 2 * * *", timeZone, "2026-03-07T12:00:00Z", 1)).toEqual([carried]);
 		expect(theirOccurrences("0 2 * * *", timeZone, "2026-03-07T12:00:00Z", 1)).toEqual([carried]);
@@ -278,28 +282,32 @@ describe("deliberate differences from cron-parser", () => {
 	});
 
 	test("carries a midnight run out of a skipped midnight, where cron-parser loses a day", () => {
-		// Cairo starts daylight saving at 00:00, so `@daily` has no wall time to fire at on
-		// 2026-04-24. This is the same rule as above and the case a UTC-only product would
-		// never notice, because it only appears in a zone that transitions at midnight.
+		/**
+		 * Cairo starts daylight saving at 00:00, so `@daily` has no wall time to
+		 * fire on 2026-04-24 — the same midnight-transition case as above, visible
+		 * only in a zone whose transition lands exactly at midnight.
+		 */
 		let timeZone = "Africa/Cairo";
 		let from = "2026-04-22T20:00:00Z";
 
 		expect(ourOccurrences("@daily", timeZone, from, 3)).toEqual([
-			"2026-04-22T22:00:00.000Z", // 00:00 on the 23rd
-			"2026-04-23T22:00:00.000Z", // 01:00 on the 24th, carried out of the gap
-			"2026-04-24T21:00:00.000Z", // 00:00 on the 25th
+			"2026-04-22T22:00:00.000Z" /** 00:00 on the 23rd */,
+			"2026-04-23T22:00:00.000Z" /** 01:00 on the 24th, carried out of the gap */,
+			"2026-04-24T21:00:00.000Z" /** 00:00 on the 25th */,
 		]);
 		expect(theirOccurrences("@daily", timeZone, from, 3)).toEqual([
 			"2026-04-22T22:00:00.000Z",
-			"2026-04-24T21:00:00.000Z", // the 24th is missing
+			"2026-04-24T21:00:00.000Z" /** the 24th is missing */,
 			"2026-04-25T21:00:00.000Z",
 		]);
 	});
 
 	test("looks back to the same pass of a repeated hour that it looks forward to", () => {
-		// 01:00 happens twice in New York on 2026-11-01. An appointment is kept once, so
-		// the first pass is the occurrence in both directions. cron-parser reports the
-		// first pass going forward and the second going back, contradicting itself.
+		/**
+		 * 01:00 happens twice in New York on 2026-11-01. An appointment is kept
+		 * once, so the first pass is the occurrence in both directions —
+		 * cron-parser reports the first pass forward but the second pass back.
+		 */
 		let schedule = unwrap(Schedule.parse("0 1 * * *"));
 		let timeZone = "America/New_York";
 
@@ -312,18 +320,18 @@ describe("deliberate differences from cron-parser", () => {
 		});
 		expect(interval.prev().toDate().toISOString()).toBe("2026-11-01T06:00:00.000Z");
 
-		// Ours is the instant `next` also reports, which is the property that matters.
+		/** Ours is the instant `next` also reports, which is the property that matters. */
 		expect(schedule.next({ from: new Date("2026-11-01T04:00:00Z"), timeZone }).toISOString()).toBe(
 			"2026-11-01T05:00:00.000Z",
 		);
 	});
 
 	test("keeps advancing where cron-parser gives up", () => {
-		// Lord Howe shifts by 30 minutes, and cron-parser cannot walk across it. Before
-		// 5.10.0 it stopped advancing silently, handing back the same instant from every
-		// further next(); it now exhausts an internal step limit and throws instead. The
-		// failure is louder but it is the same failure, and it is why parity is not a
-		// reason to keep it.
+		/**
+		 * Lord Howe shifts by 30 minutes; cron-parser cannot walk across it.
+		 * Before 5.10.0 it silently repeated the same instant from every
+		 * further next(); now it throws once its step limit runs out.
+		 */
 		let timeZone = "Australia/Lord_Howe";
 		let interval = CronExpressionParser.parse("0 * * * *", {
 			currentDate: new Date("2026-04-04T13:00:00Z"),
@@ -332,8 +340,10 @@ describe("deliberate differences from cron-parser", () => {
 		expect(interval.next().toDate().toISOString()).toBe("2026-04-04T14:00:00.000Z");
 		expect(() => interval.next()).toThrow("loop limit exceeded");
 
-		// Ours advances, and every instant it reports reads as minute zero on the zone's
-		// wall clock: 01:00 at +11, then 02:00 and 03:00 at +10:30.
+		/**
+		 * Ours advances, and every instant it reports reads as minute zero on the
+		 * zone's wall clock: 01:00 at +11, then 02:00 and 03:00 at +10:30.
+		 */
 		let schedule = unwrap(Schedule.parse("0 * * * *"));
 		let ours = schedule.next({ from: new Date("2026-04-04T13:00:00Z"), timeZone, count: 3 });
 		expect(ours.map((date) => date.toISOString())).toEqual([
@@ -345,11 +355,11 @@ describe("deliberate differences from cron-parser", () => {
 	});
 
 	test("keeps walking back where cron-parser gives up", () => {
-		// Chatham's offset is 45 minutes off the hour. Walking back across its transition,
-		// the other library used to return an instant at :59 seconds and then repeat a
-		// value it had already given — cron resolves to minutes, so neither could be right.
-		// Since 5.10.0 it stops before producing either, and throws once its step limit
-		// runs out. It agrees on what it does manage to report.
+		/**
+		 * Chatham's offset is 45 minutes off the hour. The other library used to
+		 * return a :59-second instant walking back, then repeat an earlier one;
+		 * since 5.10.0 it throws once its step limit runs out.
+		 */
 		let timeZone = "Pacific/Chatham";
 		let interval = CronExpressionParser.parse("0 * * * *", {
 			currentDate: new Date("2026-09-26T16:00:00Z"),
@@ -361,7 +371,10 @@ describe("deliberate differences from cron-parser", () => {
 		]).toEqual(["2026-09-26T15:15:00.000Z", "2026-09-26T14:15:00.000Z"]);
 		expect(() => interval.prev()).toThrow("loop limit exceeded");
 
-		// Ours walks back a minute-aligned hour at a time, and never repeats itself.
+		/**
+		 * Ours walks back a minute-aligned hour at a time, landing on a distinct
+		 * instant every step.
+		 */
 		let schedule = unwrap(Schedule.parse("0 * * * *"));
 		let ours: Date[] = [];
 		let cursor = new Date("2026-09-26T16:00:00Z");
@@ -381,9 +394,11 @@ describe("deliberate differences from cron-parser", () => {
 
 describe("differences in what is accepted rather than computed", () => {
 	test("rejects the syntax outside the standard five fields that cron-parser accepts", () => {
-		// Accepting the syntax without honoring the semantics is the failure mode worth
-		// avoiding, so these stay rejected on purpose. `W` is not in the list because the
-		// other library rejects it too.
+		/**
+		 * Accepting the syntax without honoring the semantics is the failure mode
+		 * worth avoiding, so these stay rejected on purpose. `W` is left out here
+		 * since the other library rejects it too.
+		 */
 		for (let expression of [
 			"* * * * * *",
 			"*/5 * * * * *",
@@ -408,9 +423,11 @@ describe("differences in what is accepted rather than computed", () => {
 	});
 
 	test("accepts @midnight, which cron-parser rejects, as a spelling of @daily", () => {
-		// The crontab specification lists it, and the product's own schedule descriptions
-		// already name it. Accepting it only widens what parses, so nothing stored can
-		// stop being readable.
+		/**
+		 * The crontab specification lists it, and the product's own schedule
+		 * descriptions already name it. Accepting it only widens what parses, so
+		 * anything already stored stays readable.
+		 */
 		expect(unwrap(Schedule.parse("@midnight")).toString()).toBe("0 0 * * *");
 		expect(() => CronExpressionParser.parse("@midnight", { tz: "UTC" })).toThrow();
 	});

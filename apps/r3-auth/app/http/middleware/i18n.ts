@@ -1,10 +1,7 @@
 /**
- * Language-resolution middleware. Thin configuration over `@pkg/i18n/middleware`:
- * reads the language from the `sdx:i18n` cookie, then `Accept-Language`, falling back
- * to English, and publishes `ctx.locale` and `ctx.i18next` for the rendered pages.
- *
- * Only the HTML surface needs it. The OAuth, API and discovery endpoints answer with
- * machine-read JSON that is never translated.
+ * Language-resolution middleware over `@pkg/i18n/middleware`: reads the language from
+ * the `sdx:i18n` cookie, then `Accept-Language`, falling back to English, and publishes
+ * `ctx.locale` and `ctx.i18next` for the rendered HTML pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

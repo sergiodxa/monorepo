@@ -1,9 +1,8 @@
 /**
  * An interactive control for a single, immediate action — submitting a form,
  * triggering a command, opening a dialog. Its host renders as a native
- * `<button>`, colored and shaped through a semantic color role, a visual
- * weight variant, and a size, and can render a busy, non-interactive pending
- * state without losing its footprint or reflowing the page around it.
+ * `<button>` shaped by a semantic color role, a visual weight variant, and a
+ * size, and holds its footprint while rendering a busy pending state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,23 +34,16 @@ import type { SemanticColor } from "../utils/semantic-color";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
-/** Semantic color role {@link Button} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Button.Color = "neutral";
 
-/** Visual weight {@link Button} falls back to when `variant` is omitted. */
 const DEFAULT_VARIANT: Button.Variant = "solid";
 
-/** Size variant {@link Button} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: Button.Size = "md";
 
 /**
- * Native `type` {@link Button} falls back to when it carries a `command` or
- * `commandfor` and no `type` of its own. A button inside a `<form>` otherwise
- * defaults to `"submit"`, and the platform refuses to run an Invoker Command
- * on a button that could also submit — it calls the pairing ambiguous and
- * takes no action at all — so an invoker left untyped inside a form silently
- * does nothing. A button carrying no command keeps no `type` of its own, so a
- * plain submit button still submits.
+ * Native `type` given to a button carrying `command`/`commandfor` and no
+ * `type` of its own: the platform treats a button that could also submit as an
+ * ambiguous invoker and skips its command, so an invoker needs this type.
  */
 const INVOKER_TYPE = "button";
 
@@ -102,10 +94,9 @@ export namespace Button {
 		/** Size variant. Defaults to {@link DEFAULT_SIZE}. */
 		size?: Size;
 		/**
-		 * Marks the button as busy: merges into the native `disabled` attribute
-		 * so the button stops accepting input, and swaps its visible content for
-		 * a decorative spinner glyph while keeping the button's rendered
-		 * footprint unchanged, so a page mid-request never reflows around it.
+		 * Marks the button busy: merges into the native `disabled` attribute and
+		 * swaps the visible content for a spinner glyph while holding the rendered
+		 * footprint, so a page mid-request keeps its layout.
 		 */
 		isPending?: boolean;
 		/** Per-part styling for the pending state's internal elements. */
@@ -114,33 +105,9 @@ export namespace Button {
 }
 
 /**
- * Renders a native `<button>` host, colored and shaped through the
- * `data-color`, `data-variant`, and `data-size` attribute contract:
- * `"solid"` fills the button with the color's solid background and
- * on-solid foreground, `"outline"` renders a strong colored border over a
- * transparent fill, and `"ghost"` renders just the colored label over a
- * transparent fill until hovered or pressed. Hover and pressed states ride
- * the native `:hover` and `:active` pseudo-classes, and a keyboard
- * focus-visible ring reads in the button's own semantic color.
- *
- * Setting `isPending` merges into the native `disabled` attribute — a
- * pending button stops accepting input the same way a genuinely disabled
- * one does — and swaps the button's visible content for a decorative
- * rotating glyph, while an invisible copy of the original content keeps the
- * button's rendered footprint unchanged. The glyph holds still on its own;
- * pair the `spin()` mixin from the animation layer through `parts.spinner`
- * for the rotating loop.
- *
- * A button carrying `command` or `commandfor` renders `type="button"` unless
- * it's given a `type` of its own: inside a `<form>` an untyped button would
- * default to `"submit"`, and the platform then refuses to run its command at
- * all, calling the pairing ambiguous — the button would look wired up and do
- * nothing. A button with no command is left untyped, so a plain submit button
- * inside a form still submits.
- *
- * In dev mode, a button whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * Visual state lives in `data-color`/`data-variant`/`data-size` on the host, so
+ * hover, pressed, and focus-visible stay on native pseudo-classes. `type` precedes
+ * the spread so the platform sees it while parsing `command`/`commandfor`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the button's markup.
@@ -169,11 +136,6 @@ export function Button(handle: Handle<Button.Props>) {
 		);
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type={resolvedType}
 				{...rest}
@@ -196,11 +158,9 @@ export function Button(handle: Handle<Button.Props>) {
 					justify("center"),
 					gap(2),
 					/**
-					 * An icon inside a button never shrinks. It is a flex item beside a text label, so
-					 * when the row is squeezed — a narrow header, a long label — the default
-					 * `flex-shrink: 1` lets the browser compress the glyph rather than the words, and a
-					 * squashed icon reads as a rendering fault. The label is what may wrap or ellipsize;
-					 * the glyph keeps the size it was asked for.
+					 * An icon keeps the size it was asked for when a narrow row squeezes the
+					 * button: the label is what wraps or ellipsizes, since a compressed glyph
+					 * reads as a rendering fault.
 					 */
 					when("& > svg", shrink()),
 					rounded("md"),
@@ -211,9 +171,11 @@ export function Button(handle: Handle<Button.Props>) {
 					pi(4),
 					pb(2),
 					text("sm"),
-					// Every variant carries the same border width, colored to match its
-					// own fill (transparent for ghost) — so solid/ghost render exactly
-					// the same footprint as outline instead of shrinking by the border.
+					/**
+					 * Every variant carries the same border width, colored to match its own
+					 * fill (transparent for ghost), so solid and ghost render the exact
+					 * footprint outline does.
+					 */
 					border({ width: 2, noStyleDefault: true }),
 
 					when('&[data-size="sm"]', [pi(3), pb(1.5), text("xs")]),

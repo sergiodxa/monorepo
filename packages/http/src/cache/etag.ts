@@ -1,7 +1,7 @@
 /**
  * Entity tag generation: a validator derived from the bytes of a response, so a
  * client holding a current copy is answered with a `304` instead of the body.
- * The digest comes from the shared crypto package, never from a local hash.
+ * The digest comes from `@pkg/crypto`, keeping the hash implementation shared.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,21 +19,15 @@ import { isFailure, success } from "@pkg/result";
 export interface EtagOptions {
 	/**
 	 * Mark the tag weak (`W/"…"`), meaning it identifies content that is
-	 * semantically equivalent rather than byte-identical.
+	 * semantically equivalent, tolerating minor representation differences.
 	 */
 	weak?: boolean;
 }
 
 /**
- * Derives an entity tag from a payload by hashing it with SHA-256.
- *
- * The tag is base64url of the digest, quoted, so it is a valid entity tag with no
- * characters that need escaping in a header. Because it is derived from the
- * bytes, it changes whenever the content does, which is the property that makes
- * an `ETag` safe; a tag that outlives a content change is worse than none.
- *
- * Hashing costs CPU proportional to the payload, so this belongs on HTML and
- * JSON payloads rather than on large bodies that are never revalidated.
+ * Derives an entity tag from a payload by hashing it with SHA-256. The tag is
+ * base64url of the digest, quoted, so it changes whenever the bytes do — the
+ * property that makes an `ETag` a safe cache validator.
  *
  * @param body - The bytes the tag must identify; text is read as UTF-8.
  * @param options - Set `weak: true` for content that varies insignificantly

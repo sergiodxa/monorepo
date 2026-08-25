@@ -3,8 +3,8 @@
  * asked for has actually happened. It is sent by the daily sweep just before the queued
  * request row — the only place this app ever held the address — is itself deleted.
  *
- * It carries no link and no call to action on purpose. There is nothing left to sign in to,
- * and the honest note about what could not be deleted is the substance of the message.
+ * The body carries only that confirmation and an honest account of what is retained, since
+ * there is nothing left for the reader to sign in to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +34,7 @@ export namespace AccountDeletedEmail {
  * @example await mailer.send(new AccountDeletedEmail({ email, locale, t }));
  */
 export class AccountDeletedEmail implements Email {
-	/** The request this confirmation was built from; nothing is loaded while rendering. */
+	/** The request this confirmation was built from, fully resolved before render. */
 	#request: AccountDeletedEmail.Data;
 
 	/**
@@ -59,9 +59,8 @@ export class AccountDeletedEmail implements Email {
 	/**
 	 * Body tree the mailer renders into both parts.
 	 *
-	 * The four retention notes are one `Text` each rather than a bulleted list, because the
-	 * plain-text alternative is what a lot of people will read this in and four paragraphs
-	 * survive that conversion as four statements — a marked-up list collapses into a run-on one.
+	 * The four retention notes are one `Text` each so each one survives the plain-text
+	 * conversion as its own paragraph, since that part is where many readers see the message.
 	 */
 	body(): RemixElement {
 		let { t, locale } = this.#request;

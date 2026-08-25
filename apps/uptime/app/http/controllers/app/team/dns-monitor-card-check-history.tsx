@@ -1,18 +1,8 @@
 /**
  * DNS monitor detail page check-history fragment controller. GET
- * /app/:team/dns/:monitorId/cards/check-history — renders one row per check of the whole
- * domain, with no document shell, so the detail page's history `Frame` can swap it in at
- * the very bottom of the page without the shell waiting on the result query.
- *
- * It re-reads the same rows the results fragment reduces into its stat cards. That is a
- * deliberate duplicate: each `Frame` is fetched and rendered on its own, so a shared read
- * would have to be a cache spanning two independent sub-requests, and the summary and the
- * log sit in different places on the page precisely because one is scanned and the other
- * is not. Requires `requireUser` + `requireTeam`.
- *
- * A result carries counters rather than a resolved value, so the findings cell reads them
- * as two separate claims: what moved, and how much of the sweep never answered — a check
- * that lost queries is not a check that found nothing.
+ * /app/:team/dns/:monitorId/cards/check-history — renders the monitor's result log with
+ * no document shell, so the detail page's history `Frame` loads independently of the
+ * results summary `Frame`. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,15 +35,19 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 };
 
 /**
- * How many records a check found something to say about. Deliberately excludes
- * `queries_failed`, which is not a finding about a record but the count of records the
- * check has nothing to say about at all.
+ * Sums the record-level outcomes a check found something to say about. A record with a
+ * failed query was never evaluated, so it carries no finding and stays out of this
+ * total.
  */
 function findings(result: SelectDnsMonitorResult): number {
 	return result.records_changed + result.records_missing + result.records_new;
 }
 
-/** GET /app/:team/dns/:monitorId/cards/check-history — the monitor's result log, fragment-only. */
+/**
+ * GET /app/:team/dns/:monitorId/cards/check-history — the monitor's result log,
+ * fragment-only. Failed queries are surfaced separately from findings, and each row
+ * reports that check's own resolver latency, scoped to explain that single row.
+ */
 export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -117,12 +111,6 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 														</span>
 													)
 												)}
-												{/*
-												 * A query that did not answer is never diffed, so a sweep that lost
-												 * some of its queries knows less than a whole one did. Saying so is
-												 * the difference between "nothing moved" and "we did not find out
-												 * about part of your zone", and only the second is true here.
-												 */}
 												{result.queries_failed > 0 && (
 													<span mix={[fg("neutral.muted"), fontSize("sm")]}>
 														{ctx.i18next.t("page.dnsMonitorDetail.results.queriesFailed", {
@@ -136,12 +124,6 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 													ctx.i18next.t("page.dnsMonitorDetail.results.noFindings")}
 											</div>
 										</Table.Cell>
-										{/*
-										 * Per-check resolution time is our resolver's latency rather than a
-										 * property of the domain, so it is reported here on the individual check
-										 * — where it helps explain one odd row — and never averaged into a
-										 * headline figure that would read as a fact about the visitor's DNS.
-										 */}
 										<Table.Cell>
 											{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
 										</Table.Cell>

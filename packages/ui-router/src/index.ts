@@ -1,3 +1,11 @@
+/**
+ * Client-side router that matches URLs against Remix route definitions and
+ * renders Remix UI view handlers, with fetchers, middleware, and DOM
+ * mounting for client-side navigation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle, MixinDescriptor, RemixNode, VirtualRoot, VirtualRootOptions } from "remix/ui";
 
 import { createMultiMatcher, type MatchParams } from "remix/route-pattern/match";

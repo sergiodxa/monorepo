@@ -24,12 +24,9 @@ const UPTIME_URL = new URL("https://uptime.sergiodxa.com");
 let usageTracker: Job.UsageTracker | undefined;
 
 /**
- * Registers the tracker `Job.run` wraps every job in, enabling the `usage` field on
- * `job.completed`. Call it once while the app boots; call it with `undefined` to turn
- * the instrumentation back off.
- *
- * Jobs run untracked by default, and a tracker that throws or misbehaves can only
- * affect the job it wraps, so this stays opt-in per app.
+ * Registers the tracker `Job.run` wraps every job in, enabling the `usage`
+ * field on `job.completed`; pass `undefined` to turn it back off. Jobs run
+ * untracked by default, and a misbehaving tracker only affects the job it wraps.
  * @param tracker Tracker that scopes an accumulator to one job's execution.
  * @example setJobUsageTracker((usage, body) => storage.run(usage, body));
  */
@@ -38,10 +35,9 @@ export function setJobUsageTracker(tracker: Job.UsageTracker | undefined): void 
 }
 
 /**
- * Renders a thrown `cause` that is not an `Error` as log text. An object is
- * serialized rather than coerced, so a structured cause reaches the log with its
- * fields intact instead of collapsing to `[object Object]`. Serialization is
- * guarded because a cause that cycles must not take down the failure handler.
+ * Renders a thrown `cause` that is not an `Error` as log text, serializing an
+ * object so its fields reach the log intact instead of collapsing to
+ * `[object Object]`, with the serialization guarded against a cause that cycles.
  * @param cause Value found on `error.cause`, of any shape.
  * @returns Text safe to place in the `message` field of a log entry.
  */
@@ -62,13 +58,8 @@ export namespace Job {
 
 	/**
 	 * Database work one job did, accumulated while it ran and reported on its
-	 * `job.completed` event.
-	 *
-	 * Counters are mutated in place by whatever the host app registered through
-	 * {@link setJobUsageTracker}, so reading them is always reading the live totals for
-	 * that job — which is what makes per-job-type attribution possible from the one
-	 * batched log line a job already emits, with no extra query and no extra billable
-	 * operation.
+	 * `job.completed` event. Counters are mutated in place by the tracker
+	 * registered through {@link setJobUsageTracker}, giving per-job-type attribution at no extra cost.
 	 */
 	export interface Usage {
 		/** Statements executed. */
@@ -82,11 +73,9 @@ export namespace Job {
 	}
 
 	/**
-	 * Runs `body` with `usage` as the active accumulator, so statements issued anywhere
-	 * inside it are attributed to this job and not to a sibling job from the same queue
-	 * batch. The host app owns the accumulation mechanism (an async-local store over
-	 * its database adapter's statement observer); this package only asks to be told
-	 * when a job starts and stops, and which job it is.
+	 * Runs `body` with `usage` as the active accumulator, so statements issued
+	 * anywhere inside it attribute to this job, not a sibling job from the same
+	 * queue batch; the host app owns the accumulation mechanism behind it.
 	 */
 	export type UsageTracker = <T>(
 		usage: Usage,
@@ -95,11 +84,9 @@ export namespace Job {
 	) => Promise<T>;
 
 	/**
-	 * Which job a {@link UsageTracker} has been handed.
-	 *
-	 * An accumulator that only counts needs nothing from this; one that attributes what it
-	 * counted has to be able to say what the work was, and the job's own identifier is the
-	 * answer a caller would otherwise have to thread through every `run()` call.
+	 * Which job a {@link UsageTracker} has been handed. An accumulator that only
+	 * counts needs nothing from this; one that attributes needs the job's own
+	 * identifier, sparing a caller from threading it through every `run()` call.
 	 */
 	export interface UsageContext {
 		/** Stable kebab-case identifier for the job class, e.g. `check-http-job`. */
@@ -122,17 +109,8 @@ export abstract class Job {
 
 	/**
 	 * Runs one queued message through the job lifecycle: log start, `perform()`,
-	 * uptime ping, then ack. `RetryError` retries the message, `NonRetriableError`
-	 * and uptime failures ack it, and anything else is re-thrown for the platform.
-	 *
-	 * The log identifier is `job:<kebab-case subclass name>:<message id>`, derived
-	 * from the class name rather than written by hand so it stays stable across
-	 * deploys; renaming a subclass therefore renames it in logs and dashboards.
-	 *
-	 * When a tracker is registered with {@link setJobUsageTracker}, the whole
-	 * lifecycle runs inside it and `job.completed` carries a `usage` field with the
-	 * statements and rows this one job's database work cost — per-job-type cost
-	 * attribution out of a log line the job already emitted.
+	 * uptime ping, then ack. `RetryError` retries, `NonRetriableError` and uptime
+	 * failures ack, and anything else re-throws for the platform to retry.
 	 *
 	 * @param options - The queue message plus the optional uptime token
 	 */
@@ -150,9 +128,9 @@ export abstract class Job {
 	}
 
 	/**
-	 * The job lifecycle itself, split out of {@link Job.run} so the whole of it —
-	 * `perform()`, the uptime ping, ack/retry, and the log flush — runs inside the
-	 * registered usage tracker's scope rather than only part of it.
+	 * The job lifecycle itself, split out of {@link Job.run} so it all runs inside
+	 * the registered usage tracker's scope. Uptime ping failures log at info level
+	 * and ack, treating the service's own hiccups as separate from the job's own outcome.
 	 * @param constructor The `Job` subclass being run.
 	 * @param identifier The subclass's kebab-case identifier, derived once by
 	 * {@link Job.run} so the log id and the usage context cannot spell it two ways.
@@ -189,7 +167,7 @@ export abstract class Job {
 			logger.info("job.completed", {
 				id: options.message.id,
 				attempts: options.message.attempts,
-				/** Copied, not referenced, so the logged totals can't drift afterwards. */
+				/** A snapshot copy, so the logged totals stay fixed once this event is written. */
 				usage: usage ? { ...usage } : undefined,
 			});
 		} catch (error) {
@@ -231,7 +209,6 @@ export abstract class Job {
 			}
 
 			if (error instanceof Job.FetchError || error instanceof Job.NetworkError) {
-				// use info level as this can be transient, we only want to know about it
 				logger.info("job.uptime-failed", {
 					error: {
 						name: error instanceof Error ? error.name : "UnknownError",
@@ -241,7 +218,6 @@ export abstract class Job {
 					attempts: options.message.attempts,
 				});
 
-				// Don't retry on fetch errors, as they are likely to be transient issues with the uptime service
 				return options.message.ack();
 			}
 
@@ -254,7 +230,7 @@ export abstract class Job {
 				},
 			});
 
-			throw error; // Let Cloudflare handle retries for unexpected errors
+			throw error;
 		} finally {
 			logger.flush();
 		}

@@ -78,8 +78,10 @@ describe("describeSchedule", () => {
 		expect(describeIn("en", "0 0 1 1 *")).toBe("Every year on January 1 at 00:00");
 	});
 
+	/**
+	 * Both day fields restricted: the either-or rule has no one-sentence shape.
+	 */
 	test("falls back to the expression when no concise shape fits", () => {
-		// Both day fields restricted: the either-or rule has no one-sentence shape.
 		expect(describeIn("en", "0 0 1 1 1")).toBe("Custom schedule (0 0 1 1 1)");
 	});
 
@@ -115,8 +117,10 @@ describe("describeSchedule", () => {
 		}
 	});
 
+	/**
+	 * A descriptor kind with no key would surface the key itself.
+	 */
 	test("every expression the parser accepts reaches a translated sentence", () => {
-		// A descriptor kind with no key would surface the key itself.
 		for (let expression of ["* * * * *", "0 * * * *", "0 0 * * *", "0 0 * * 0", "0 0 1 1 *"]) {
 			for (let language of Object.keys(LOCALES)) {
 				expect(describeIn(language, expression)).not.toContain("schedule.");

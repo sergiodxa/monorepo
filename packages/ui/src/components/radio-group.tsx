@@ -63,9 +63,8 @@ export namespace RadioGroup {
 	export interface Props extends TagProps<"div"> {
 		/**
 		 * Native grouping name shared by every {@link RadioGroup.Radio} nested
-		 * inside, provided through component context. Defaults to the group's
-		 * own {@link Handle.id | stable instance id} when omitted, so options
-		 * always group correctly even when a consumer never sets a name.
+		 * inside. Defaults to the group's own {@link Handle.id | stable
+		 * instance id} so options group correctly without a consumer setting one.
 		 */
 		name?: string;
 		/** Layout axis. Defaults to {@link DEFAULT_ORIENTATION}. */
@@ -84,7 +83,7 @@ export namespace RadioGroup {
 		 * this only to opt a single option out of its group's shared name.
 		 */
 		name?: string;
-		/** Whether this option starts selected, for a form that never tracks selection itself. */
+		/** Whether this option starts selected, for a form that leaves selection tracking to the browser. */
 		defaultChecked?: boolean;
 		/** Whether this option is selected, for a form that tracks selection itself. */
 		checked?: boolean;
@@ -96,9 +95,8 @@ export namespace RadioGroup {
 		children?: RemixNode;
 		/**
 		 * Per-part styling for the option's hidden `input` and visible
-		 * `indicator` elements, layered after each part's own built-in
-		 * styling. Use the `mix` prop instead to style the option's outer
-		 * `<label>` host.
+		 * `indicator` elements, layered after each part's own built-in styling.
+		 * Use the `mix` prop instead to style the option's outer `<label>` host.
 		 */
 		parts?: {
 			/** Additional mixin(s) applied to the hidden native `<input type="radio">`. */
@@ -111,11 +109,8 @@ export namespace RadioGroup {
 
 /**
  * Renders the group host: a `role="radiogroup"` `<div>` laying its
- * {@link RadioGroup.Radio} options out in a column by default, switching to
- * a row when `orientation` is `"horizontal"`. Every option nested inside
- * reads its shared native `name` from component context, defaulting to the
- * group's own stable identifier so grouping always works correctly even
- * when a consumer never sets `name` explicitly.
+ * {@link RadioGroup.Radio} options in a column, or a row when
+ * `orientation` is `"horizontal"`, giving every option a shared, stable `name`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link RadioGroup.Context}.
  * @returns The render function producing the group's markup.
@@ -159,20 +154,9 @@ export function RadioGroup(handle: Handle<RadioGroup.Props, RadioGroup.Context>)
 }
 
 /**
- * Renders a single option: a native `<label>` pairing a visually hidden
- * `<input type="radio">` with a styled visual indicator and the option's
- * label text. The hidden input carries every accessibility and form
- * semantic natively — focus, keyboard selection, native validation, form
- * submission — while the indicator reads the input's own `:checked` and
- * `:focus-visible` states through sibling selectors to render its filled
- * dot and focus ring, and the label reads the input's `:disabled` state
- * through `:has()` to dim itself, with no tracked state of its own.
- *
- * The input carries no `aria-checked` of its own, since its native
- * checkedness is what assistive technology reports; a hydrated island that
- * needs the attribute composes the `ariaChecked()` mixin through
- * `parts.input` on every option in the group, which keeps each one's token
- * rewritten from the live control as the selection moves between them.
+ * Renders a single option: a `<label>` pairing a hidden native `<input
+ * type="radio">` with a styled indicator driven by its checked, focus, and
+ * disabled state; add `ariaChecked()` via `parts.input` for `aria-checked`.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the option's markup.
@@ -248,13 +232,6 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 						border({ color: "neutral.strong", width: 2 }),
 						bg("neutral.tint"),
 						transition("background-color, border-color"),
-						// `precededBy()` rather than a bare `when("input:checked ~ &", …)`:
-						// the style serializer only recognizes a key as a nested selector
-						// when it starts with `&`, `@`, `:`, `[` or `.`, so an element-first
-						// selector is emitted as a *declaration* and the whole checked and
-						// focus state silently never reaches the browser. `precededBy()`
-						// leads with `:is(...)`, which is recognized, and `:is()` carries
-						// its argument's specificity so matching is unchanged.
 						precededBy("input:checked", after(scale(1))),
 						precededBy("input:checked", [border("brand.solid"), bg("brand.solid")]),
 						precededBy("input:focus-visible", outline({ color: "brand.ring", offset: 2 })),

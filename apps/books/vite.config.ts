@@ -1,9 +1,8 @@
 /**
- * Vite build configuration for the books app. Registers the Cloudflare plugin so
- * the worker runs in the SSR environment, and declares a client bundle entry with
- * stable asset file-naming even though no page loads it today: the app ships zero
- * first-party JavaScript, and the entry stays wired so an island can be added
- * without reshaping the build.
+ * Vite build configuration for the books app. Registers the Cloudflare plugin
+ * so the worker runs in the SSR environment, and declares a client bundle
+ * entry with stable asset file-naming, keeping the entry ready for a future
+ * island to reuse as-is.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

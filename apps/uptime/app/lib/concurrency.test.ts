@@ -1,8 +1,8 @@
 /**
  * Unit tests for the sweep concurrency helpers: how `chunk` groups items, and the two
  * guarantees `mapWithConcurrency` gives its callers — that no more than `concurrency`
- * items are ever in flight at once, and that one item throwing neither abandons the rest
- * of its batch nor stops the batches after it.
+ * items are ever in flight at once, and that every other item keeps running to
+ * completion when one throws.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

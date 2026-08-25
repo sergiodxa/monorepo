@@ -12,12 +12,10 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-/** Time-to-live for email verification tokens (24 hours in milliseconds). */
 const TOKEN_TTL = 24 * 60 * 60 * 1000;
 
 /**
  * Model for email verification tokens.
- * Handles creation, consumption, and cleanup of single-use verification tokens.
  */
 export default class EmailVerificationToken {
 	/** Error thrown when attempting to consume an expired token. */
@@ -67,7 +65,8 @@ export default class EmailVerificationToken {
 
 	/**
 	 * Consumes an email verification token.
-	 * Tokens are deleted immediately (single-use).
+	 * Deletion happens before the expiry check, so an expired token is still
+	 * consumed and cannot be reused.
 	 * @param db - Database instance
 	 * @param token - The token to consume
 	 * @returns Object containing the associated subject ID

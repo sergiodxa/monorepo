@@ -16,7 +16,6 @@ import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 
-/** Schema validating the array of scope objects stored on a resource. */
 const ScopesSchema = s.array(
 	s.object({
 		name: s.string(),

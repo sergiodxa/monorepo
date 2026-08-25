@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 /**
- * Property names that must resolve to `undefined` rather than throw, because runtimes and
- * test matchers probe for them on arbitrary objects.
+ * Property names that resolve to `undefined`, because runtimes and test matchers
+ * probe for them on arbitrary objects.
  */
 const PROBED_PROPERTIES = new Set([
 	"then",
@@ -47,8 +47,10 @@ export function createEnv<Env extends object = Record<string, unknown>>(
 	bindings: Partial<Env> & Record<string, unknown>,
 	options?: EnvMockOptions,
 ): Env {
-	// Descriptors rather than a spread: a spread reads every getter once, so a test that
-	// varies a binding per case through one would be pinned to the first value forever.
+	/**
+	 * Property descriptors keep each binding's getter live, so a test that swaps a
+	 * value between cases through the same getter sees the replacement on every read.
+	 */
 	let target = Object.defineProperties({}, Object.getOwnPropertyDescriptors(bindings)) as Record<
 		string,
 		unknown
@@ -56,8 +58,10 @@ export function createEnv<Env extends object = Record<string, unknown>>(
 
 	if (options?.strict === false) return target as Env;
 
-	// A Proxy is the only way to fail on the *read* of a missing binding; a plain object
-	// would hand back `undefined` and defer the error to somewhere unrelated.
+	/**
+	 * A Proxy is the only way to fail on the *read* of a missing binding; a plain object
+	 * would hand back `undefined` and defer the error to somewhere unrelated.
+	 */
 	return new Proxy(target, {
 		/**
 		 * Reads a binding, failing by name when it was never supplied.

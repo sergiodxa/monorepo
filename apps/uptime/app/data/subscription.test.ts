@@ -1,12 +1,9 @@
 /**
  * Unit tests for the `Subscription` projection model: the upsert's idempotency and its
- * out-of-order guard, the three-state entitlement read, and the scheduling write that
- * replaces the every-minute subscription check. Runs against the in-memory SQLite
- * database with every migration applied, so the raw upsert and the cross-table
- * `next_due_at` writes are exercised as real SQL.
- *
- * The last test is the behaviour ADR-005 inverts: an owner nothing is known about keeps
- * being claimed by the sweep, instead of being silently dropped from it.
+ * out-of-order guard, the three-state entitlement read, the scheduling write, and the
+ * sweep still claiming an owner nothing is known about. Runs against in-memory SQLite
+ * with every migration applied, so the raw upsert and the cross-table `next_due_at`
+ * writes are exercised as real SQL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -243,8 +240,6 @@ describe("the sweep and unknown subscription state", () => {
 		let team = await createTeam(db, "owner-1");
 		let monitor = await createMonitor(db, team.id, { next_due_at: Date.now() - 1000 });
 
-		// Nothing was ever recorded for this owner, which is the state that used to make the
-		// scheduler skip them: `filterActiveSubscribers` failed closed on it.
 		expect(await Subscription.stateFor(db, "owner-1")).toBe("unknown");
 		expect(await Subscription.listAll(db)).toHaveLength(0);
 

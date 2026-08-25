@@ -5,23 +5,12 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies the CSS Anchor Positioning `position-anchor` property, pointing the
- * host element at the anchor it should be positioned against. This is the
- * *referencing* half of anchor positioning — it goes on the absolutely
- * positioned element (the tooltip, the popover, the menu), and the name it
- * references is the one {@link anchorName} declared on the element being
- * anchored to.
+ * Points an absolutely or fixed positioned element (a tooltip, popover, or
+ * menu) at the anchor name {@link anchorName} declared on its target. Pass
+ * `name` bare; the `--` custom-property prefix is added here.
  *
- * The host element needs `position: absolute` or `position: fixed` for this
- * to do anything at all — see `u.absolute()` and `u.fixed()`. Once both are
- * in place, this is the anchor {@link positionArea} resolves its placement
- * against, and the one {@link positionTryFallbacks} re-resolves against when
- * the preferred placement overflows.
- *
- * The leading `--` is omitted from `name`, mirroring the convention
- * `u.vars()` and `u.var()` already use for custom properties, and matching
- * {@link anchorName} on the other side.
- *
+ * @see {@link positionArea} and {@link positionTryFallbacks}, which resolve
+ * placement against this anchor.
  * @example u.positionAnchor("tooltip-trigger")
  * @example css({ positionAnchor: "--tooltip-trigger" })
  * @example u.positionAnchor("menu-button")

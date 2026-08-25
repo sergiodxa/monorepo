@@ -32,11 +32,9 @@ async function makeEmail(overrides: Partial<TrialChangeEmail.Data> = {}) {
 }
 
 /**
- * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
- * The runner's ICU differs between a developer machine and CI, so the separator is
- * normalised here rather than asserted. What these tests are about is the email's
- * content — the host's Unicode data is not the subject, and production renders on
- * the Workers runtime's own ICU regardless of what built it.
+ * ICU 72 (CLDR 42) joins a date to a time with " at "; older builds use ", ". The runner's
+ * ICU differs between a developer machine and CI, so the separator is normalised here, since
+ * these tests check the email's content and production always renders on the Workers runtime's own ICU.
  */
 function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
@@ -90,7 +88,6 @@ describe("TrialChangeEmail", () => {
 
 		expect(html).not.toContain("table-layout:fixed");
 		expect(html).not.toContain("#107f04");
-		// The URL row and the unsubscribe link, and nothing else — no call to action.
 		expect(html.split("<a ").length - 1).toBe(2);
 	});
 

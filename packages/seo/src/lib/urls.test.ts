@@ -58,8 +58,6 @@ describe("canonicalUrl", () => {
 	});
 
 	test("keeps a trailing slash that sits before the query string", () => {
-		// The slash is only dropped when it is the resolved URL's last character, so a
-		// query string leaves the path exactly as the request had it.
 		expect(canonicalUrl(BASE_URL, "https://preview.workers.dev/docs/?section=alerts")).toBe(
 			"https://example.com/docs/?section=alerts",
 		);

@@ -1,8 +1,6 @@
 /**
- * Data-schema for validating CMS glossary form submissions. `GlossarySchema`
- * requires a term and definition (defaulting to placeholders when missing) and
- * treats title and slug as optional. Exists to normalize and validate glossary
- * input before it reaches the repository layer.
+ * Normalizes CMS glossary form submissions so the repository layer receives
+ * validated input.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +9,8 @@
 import { defaulted, object, optional, string } from "remix/data-schema";
 
 /**
- * Validates glossary form payloads and fills defaults for term and definition fields.
+ * A parsed entry always carries a term and a definition, so a partially filled
+ * form still yields a persistable record.
  */
 export const GlossarySchema = object({
 	term: defaulted(string(), "Untitled term"),

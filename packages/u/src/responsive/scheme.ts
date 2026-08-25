@@ -10,14 +10,9 @@ import { when } from "../state/when";
 import { media } from "./media";
 
 /**
- * The color-scheme wrapper for light and dark mode rules — not a direct
- * `color-scheme` property utility. Applies the given utilities under both
- * halves of the theme's dark-mode contract: a forced `.dark`/`.light`
- * ancestor class, and system preference through a `.system` ancestor class
- * gated behind the matching `prefers-color-scheme` media query. Both halves
- * stay in sync so forced and system modes render identically. Composes
- * `u.when()` for the class selectors and `u.media()` for the system-
- * preference gate — no hand-built selector or at-rule of its own.
+ * Applies the given utilities under both the forced `.dark`/`.light` class
+ * and the system-preference `.system` class behind `prefers-color-scheme`,
+ * so both stay in sync. Composed from `u.when()` and `u.media()`.
  *
  * @example u.scheme("dark", u.bg("neutral.solid"))
  * @example css({ ".dark &": { backgroundColor: "..." }, "@media (prefers-color-scheme: dark)": { ".system &": { backgroundColor: "..." } } })

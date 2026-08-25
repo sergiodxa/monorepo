@@ -12,8 +12,6 @@ import { describe, expect, test } from "vitest";
 import { shouldBlockWhileSuspended, suspendedResponse } from "./entitlement";
 
 describe("shouldBlockWhileSuspended", () => {
-	// The provider surface must be blocked while suspended: these are exactly the paths
-	// the review flagged as still forwarding to a suspended tenant DO.
 	for (let path of [
 		"/authorize",
 		"/oauth/token",
@@ -34,9 +32,6 @@ describe("shouldBlockWhileSuspended", () => {
 		});
 	}
 
-	// The Management API stays reachable so the control plane can still inspect/manage
-	// the tenant and re-run /api/setup, and the control endpoint stays reachable so the
-	// suspension can be lifted.
 	for (let path of [
 		"/api/setup",
 		"/api/stats",

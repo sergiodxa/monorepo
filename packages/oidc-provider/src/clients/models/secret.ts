@@ -105,16 +105,9 @@ export default class Secret {
 	}
 
 	/**
-	 * Verifies a client secret.
-	 * All valid secrets are compared in parallel to prevent timing attacks
-	 * that could reveal which position the valid secret is in.
-	 * An equivalent hashing operation is performed when no secrets exist, to
-	 * prevent timing attacks that could detect the absence of secrets.
-	 * A secret still stored in the superseded hash format is rewritten in the
-	 * current one as part of the same write that records its use, since a match
-	 * is the only moment the plaintext is available to hash again.
-	 * A hash that cannot be checked at all counts as a mismatch, so an unreadable
-	 * stored value denies the client instead of authenticating it.
+	 * Verifies a client secret in constant time, hashing even when no secrets
+	 * exist, so a mismatch never reveals which secret matched or whether any
+	 * exist. A match rewrites a superseded hash format in the same update.
 	 * @param db - Database instance
 	 * @param clientId - Client ID
 	 * @param plainSecret - Plain secret to verify

@@ -1,17 +1,9 @@
 /**
  * The learn-move scene: replace a move or skip when a full moveset can learn one.
  *
- * Shown after the engine reports a `can-learn-move` event (a creature reached a
- * level whose move it could learn, but its four slots are full) and reused by the
- * bag when teaching a machine's move to a creature with no free slot. It lists the
- * four current moves plus the new move, lets the player pick a slot to overwrite or
- * cancel to skip, and dispatches `learn-move` with the chosen slot (a cancel maps
- * to an out-of-range slot the engine treats as declined). The scene is
- * self-contained — it takes the creature, the offered move, and the current
- * moveset — so whatever surface offers the move only has to push it. An optional
- * `onResolve` callback fires after the dispatch with the resolved slot (or a
- * negative index when declined) so a caller can react — the bag uses it to consume
- * a single-use machine only once a move is actually learned.
+ * Shown when a full moveset blocks a new move, and reused by the bag when
+ * teaching a machine move. It dispatches `learn-move` with the chosen slot,
+ * mapping a cancel to an out-of-range slot the engine treats as declined.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,7 +64,6 @@ export class LearnMoveScene implements Scene {
 			return;
 		}
 
-		// Rows 0-3 replace a slot; the last row (index 4) skips.
 		let rowCount = this.currentMoveset.length + 1;
 		this.menu.update(game.input, rowCount);
 

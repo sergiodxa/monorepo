@@ -1,7 +1,7 @@
 /**
  * Typed error classes for common database failure modes (missing record, unique
  * constraint violation, foreign-key violation). Models throw these so controllers can
- * map them to appropriate HTTP responses instead of leaking raw D1 error strings.
+ * map them to appropriate HTTP responses with stable, application-level messages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

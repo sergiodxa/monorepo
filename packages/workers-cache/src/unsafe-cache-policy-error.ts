@@ -29,8 +29,8 @@ export class UnsafeCachePolicyError extends Error {
 	readonly policy: string;
 
 	/**
-	 * Builds an error that explains the refusal in terms of the response, not the
-	 * middleware, so the fix is obvious from the message alone.
+	 * Builds an error that explains the refusal in terms of the response, so
+	 * the fix is obvious from the message alone.
 	 *
 	 * @param reason - Which refusal rule matched.
 	 * @param policy - The declared `Cache-Control` value.

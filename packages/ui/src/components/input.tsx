@@ -32,22 +32,14 @@ export namespace Input {
 	/**
 	 * Semantic color role for the focus-visible ring, each mapped to its
 	 * matching `--ui-*` variables. A field marked invalid always reads the
-	 * danger tone for its ring instead, regardless of `color` — see
-	 * {@link Input}'s own description.
+	 * danger tone for its ring regardless of `color`.
 	 */
 	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
-	 * Every native `<input>` attribute, unchanged, plus the `mix` passthrough.
-	 * `type` stays open to every value the platform supports (`"text"`,
-	 * `"email"`, `"password"`, `"tel"`, `"url"`, `"search"`, and the rest),
-	 * with `role` narrowed to match whichever `type` is set, the same
-	 * correlation the platform itself defines between the two. `placeholder`
-	 * renders in a muted tone, and `aria-invalid` together with the
-	 * platform's own post-interaction validity state drives the invalid
-	 * styling. `aria-label`, `aria-labelledby`, and `aria-describedby` wire
-	 * the field to a paired label, hint, or validation message the same way
-	 * they would on a bare input.
+	 * Every native `<input>` attribute, unchanged, plus the `mix`
+	 * passthrough. `role` narrows to match whichever `type` is set, the
+	 * same correlation the platform itself defines between the two.
 	 */
 	export type Props = TagProps<"input"> & {
 		/** Semantic color role for the focus-visible ring. Defaults to {@link DEFAULT_COLOR}. */
@@ -56,27 +48,9 @@ export namespace Input {
 }
 
 /**
- * Renders a native `<input>` host styled as a bordered, rounded field at the
- * library's default control height, colored through the `data-color`
- * attribute contract. Hover, focus, and disabled states are driven entirely
- * by this host's own native `:hover`, `:focus`/`:focus-visible`, and
- * `:disabled` pseudo-classes, so the field's interactive behavior stays
- * fully native and keeps working the same way with the platform's own
- * baseline.
- *
- * A keyboard focus-visible ring reads `color`, defaulting to
- * {@link DEFAULT_COLOR}. `[aria-invalid="true"]` (set directly, or mirrored
- * in by a validation script) together with `:user-invalid` (the platform's
- * own post-interaction validity signal) colors the border and ring in the
- * semantic danger tone regardless of `color`. A disabled field dims to half
- * opacity, swaps its cursor to "not-allowed", and tints its background, and
- * its placeholder text reads in the muted neutral foreground.
- *
- * Pair the field with a label through `htmlFor`/`id` (or by nesting the
- * field inside the label), a hint through `aria-describedby`, and a
- * validation message through that same `aria-describedby` list — this
- * component renders only the field itself, leaving the label, hint, and
- * validation message to those separate compositions.
+ * Renders a native `<input>` host colored via `data-color`, with hover,
+ * focus, and disabled states driven by native pseudo-classes; `[aria-invalid="true"]`
+ * together with `:user-invalid` forces the danger tone regardless of `color`.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the field's markup.

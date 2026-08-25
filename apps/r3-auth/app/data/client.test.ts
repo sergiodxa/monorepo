@@ -65,8 +65,6 @@ describe("Client.findAll", () => {
 		let second = await createClient({ name: "Second", redirect_uri: "https://b.example.com/cb" });
 		let third = await createClient({ name: "Third", redirect_uri: "https://c.example.com/cb" });
 
-		// Registrations made in the same millisecond order arbitrarily, so the test
-		// separates them explicitly rather than depending on insertion order.
 		await db.update(clients, first.id, { created_at: 1_000 });
 		await db.update(clients, second.id, { created_at: 2_000 });
 		await db.update(clients, third.id, { created_at: 3_000 });

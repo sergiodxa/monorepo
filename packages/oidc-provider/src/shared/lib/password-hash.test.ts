@@ -17,10 +17,8 @@ import { describe, expect, test } from "vitest";
 
 import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash";
 
-/** Cost factor every stored bcrypt hash was written with. */
 const LEGACY_BCRYPT_COST = 10;
 
-/** Prefix identifying the format written for new hashes. */
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
 describe("hashSecret", () => {

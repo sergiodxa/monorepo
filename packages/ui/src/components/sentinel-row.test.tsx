@@ -35,9 +35,6 @@ describe(SentinelRow.name, () => {
 		);
 
 		expect(html).toContain("color: red;");
-		// Two distinct generated classes land on the same host: the sentinel
-		// row's own styling and the consumer's extra mix, neither replacing
-		// the other.
 		expect(html.match(/class="[^"]*\s[^"]*"/)).not.toBeNull();
 	});
 

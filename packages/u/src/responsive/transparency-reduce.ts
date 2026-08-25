@@ -9,10 +9,8 @@ import { media } from "./media";
 /**
  * Sugar over `media("(prefers-reduced-transparency: reduce)", input)`.
  *
- * The inverse of `u.transparencySafe()`, for supplying a solid fallback
- * explicitly — an opaque background, a stronger border — when the styles
- * that would have carried the surface are only declared inside the
- * no-preference branch.
+ * Supplies an explicit solid fallback — an opaque background, a stronger
+ * border — for a surface styled only inside the no-preference branch.
  *
  * @example u.transparencyReduce(u.bg())
  * @example css({ "@media (prefers-reduced-transparency: reduce)": { backgroundColor: "var(--ui-bg, Canvas)" } })

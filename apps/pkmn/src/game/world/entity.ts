@@ -1,11 +1,6 @@
 /**
- * Centralizes the world-level entity identifier contract used by the runtime.
- * This module defines the stable id shapes, the supported entity buckets, and
- * the helpers that serialize, parse, and register entity references.
- *
- * By keeping these primitives in one place, the rest of the engine can depend
- * on a single, predictable strategy for addressing entities across systems and
- * world state collections without coupling to any specific gameplay content.
+ * Stable entity identifier contract for the runtime, giving every system a
+ * single predictable strategy for addressing entities across world state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +20,6 @@ export type EntityKind =
 
 /** Parsed entity identifier that preserves the original opaque string. */
 export interface EntityReference {
-	/** Names the domain bucket for this entity id. */
 	kind: EntityKind;
 	/** Opaque key within that bucket. */
 	key: string;

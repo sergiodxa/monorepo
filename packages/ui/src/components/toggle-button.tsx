@@ -44,18 +44,8 @@ const DEFAULT_GROUP_ORIENTATION: ToggleButtonGroup.Orientation = "horizontal";
 
 /**
  * Folds the pressed state a consumer passed into the token the host renders.
- *
- * `aria-pressed` takes a boolean in the prop type because `aria-pressed={isMuted}`
- * is how a consumer holds that state, and text in the attribute because that is
- * what ARIA reads — a `true` would be serialized the way HTML wants booleans
- * written, as the bare name, and a `false` would vanish. Both break more than the
- * announcement: this component's own styling matches `&[aria-pressed="true"]`, and
- * {@link pressToggle} reads the attribute back at click time, so an unpressed
- * toggle would render with no toggle semantics at all and a pressed one would
- * render looking unpressed.
- *
- * `"false"` is kept rather than dropped, unlike a valid field's `aria-invalid`:
- * absence there means valid, but absence here means the button is not a toggle.
+ * ARIA reads text, so a boolean `true`/`false` would serialize as the bare
+ * name or vanish; `"false"` stays explicit since its absence would leave the button with no toggle semantics at all.
  *
  * @param pressed The state as the consumer expressed it.
  * @returns The token to render.
@@ -78,11 +68,9 @@ export namespace ToggleButton {
 	export type Color = SemanticColor;
 
 	/**
-	 * Visual weight the button renders with: a solid fill with an on-solid
-	 * foreground, a transparent fill with a strong colored border, or a fully
-	 * transparent fill with just a colored label. Pressing layers a tinted
-	 * background on top of `"outline"` and `"ghost"`; `"solid"` already reads
-	 * as filled and renders the same whether pressed or not.
+	 * Visual weight: a solid fill with an on-solid foreground, a transparent
+	 * fill with a strong colored border, or a fully transparent fill with
+	 * just a colored label. Pressing tints `"outline"`/`"ghost"`; `"solid"` already reads filled.
 	 */
 	export type Variant = "solid" | "outline" | "ghost";
 
@@ -92,12 +80,9 @@ export namespace ToggleButton {
 	export type Size = "sm" | "md" | "lg";
 
 	/**
-	 * Props accepted by {@link ToggleButton}. Every native `<button>`
-	 * attribute is available unchanged except `aria-pressed`, which becomes
-	 * required: it carries the control's entire pressed/unpressed state, read
-	 * straight off the rendered attribute by both this component's own
-	 * styling and the `pressToggle()` mixin, with no separate tracked prop
-	 * that could drift out of sync with it.
+	 * Props accepted by {@link ToggleButton}, with `aria-pressed` made
+	 * required: it carries the entire pressed state, read straight off the
+	 * rendered attribute by this component's styling and the `pressToggle()` mixin.
 	 */
 	export interface Props extends Omit<TagProps<"button">, "aria-pressed"> {
 		/** The button's pressed state, reflected directly onto the host's own `aria-pressed` attribute. */
@@ -112,22 +97,9 @@ export namespace ToggleButton {
 }
 
 /**
- * Renders a native `<button aria-pressed>` host, colored and shaped through
- * the same `data-color`, `data-variant`, and `data-size` attribute contract
- * as {@link Button}. Once `aria-pressed="true"`, the `"outline"` and
- * `"ghost"` variants gain a tinted background matching the button's semantic
- * color, so a pressed toggle reads as active at a glance; `"solid"` needs no
- * such treatment since it already renders fully filled either way.
- *
- * Clicking the button submits its enclosing form by default — the baseline
- * this component ships with, requiring no script at all: a server round-trip
- * flips the state and re-renders the button with `aria-pressed` already
- * updated. Pair the `pressToggle()` mixin through `mix` in a hydrated island
- * for a client-side toggle that skips the round-trip.
- *
- * In dev mode, a toggle whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * Renders a native `<button aria-pressed>` host clicking which submits its
+ * enclosing form by default, flipping the state through a server round-trip
+ * with no script required; pair `pressToggle()` through `mix` in a hydrated island to skip the round-trip.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the toggle button's markup.
@@ -329,11 +301,9 @@ export namespace ToggleButtonGroup {
 	export type Orientation = "horizontal" | "vertical";
 
 	/**
-	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * Each {@link ToggleButton} nested inside keeps its own `aria-pressed`
-	 * state and its own `name`/`value` for form submission entirely on its
-	 * own — this host contributes only the shared grouping semantics and
-	 * layout.
+	 * Every native `<div>` attribute, unchanged, plus `mix`. Each nested
+	 * {@link ToggleButton} tracks its own `aria-pressed` and `name`/`value`
+	 * independently; this host only contributes shared grouping and layout.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/** Layout axis. Defaults to {@link DEFAULT_GROUP_ORIENTATION}. */
@@ -343,11 +313,8 @@ export namespace ToggleButtonGroup {
 
 /**
  * Renders a `role="toolbar"` `<div>` laying a run of independently pressed
- * {@link ToggleButton} children out in a row, switching to a column when
- * `orientation` is `"vertical"`. Every toggle button nested inside keeps
- * tracking its own `aria-pressed` state entirely on its own — there is no
- * shared selection state anywhere in this module, only shared layout and
- * grouping semantics.
+ * {@link ToggleButton} children out in a row, or a column when `orientation`
+ * is `"vertical"`; each toggle button owns its own `aria-pressed` state, and this host contributes only shared layout and grouping.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.

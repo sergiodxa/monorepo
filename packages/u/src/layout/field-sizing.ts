@@ -12,18 +12,8 @@ export type FieldSizingValue = "content" | "fixed";
 
 /**
  * Applies `field-sizing` to an `<input>`, `<textarea>`, or `<select>`.
- * Defaults to `"content"`, which makes the control size itself to the value
- * it currently holds instead of the fixed default width the platform picks —
- * the native answer to an auto-growing textarea or a select that hugs its
- * chosen option, replacing the JavaScript resize observer (or mirrored
- * hidden-element trick) that pattern used to require.
- *
- * Content sizing is unbounded on its own, so pair it with `u.maxBs()` to cap
- * how tall a textarea grows and `u.maxIs()` to cap how wide an input grows,
- * letting the control's own overflow take over past that point.
- *
- * Sits alongside `u.appearance()` as a form-control primitive: that one clears
- * the platform's native chrome, this one hands sizing over to the value.
+ * Defaults to `"content"`, sizing the control to the value it holds; cap that
+ * growth with `u.maxBs()` or `u.maxIs()` so overflow takes over past the cap.
  *
  * @example u.fieldSizing()
  * @example css({ fieldSizing: "content" })

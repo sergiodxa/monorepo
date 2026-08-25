@@ -139,10 +139,6 @@ export function CMSTutorialsIndexView() {
 															</div>
 														) : null}
 													</Table.Cell>
-													{/* A future `published_at` reads as a draft still being worked
-													on, so it takes the warning tone, while anything already public
-													takes success — the same publish-state contract the public pages
-													use, spelled out in words instead of an emoji. */}
 													<Table.Cell mix={[textAlign("center")]}>
 														<Badge color={item.preview ? "warning" : "success"} variant="secondary">
 															{item.preview ? "Preview" : "Published"}
@@ -209,7 +205,9 @@ export function CMSTutorialsIndexView() {
 }
 
 /**
- * Builds the CMS tutorial form page for create and edit flows.
+ * Builds the CMS tutorial form page for create and edit flows. The content
+ * field carries Markdown source, so it renders monospaced with room for many
+ * lines.
  */
 export function CMSTutorialsActionView() {
 	return ({ model }: { model: CMSTutorialsActionView.Props }) => {
@@ -252,9 +250,6 @@ export function CMSTutorialsActionView() {
 
 							<Label mix={[grid(), gap(1)]}>
 								<span>Content</span>
-								{/* The Markdown body is the one field worth many lines of room, so it
-								keeps a monospaced face and a tall floor on top of the control's own
-								content-driven sizing. */}
 								<TextArea
 									name="content"
 									rows={16}

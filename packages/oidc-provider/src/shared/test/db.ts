@@ -1,9 +1,9 @@
 /**
- * Test-only SQLite database adapter mirroring the production SqlStorage adapter.
+ * Test-only SQLite adapter implementing `DatabaseDriver`, letting models
+ * and controllers run against an in-memory database in unit tests.
  *
- * Lets models and controllers run against an in-memory SQLite database in unit
- * tests. The SQL-compilation helpers are ported from the SqlStorage adapter so the
- * generated statements match production behavior.
+ * The SQL-compilation helpers reproduce production statement-generation
+ * rules, so tests exercise the exact SQL shapes that run at runtime.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,9 +29,8 @@ interface SqliteAdapterOptions {
 }
 
 /**
- * Creates a SQLite database adapter that mirrors the SqlStorage adapter used in
- * production. This allows us to test models and controllers with an in-memory
- * SQLite database.
+ * Creates a SQLite-backed `DatabaseDriver` for exercising models and
+ * controllers against an in-memory database in tests.
  * @param db - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
  * @param options - Optional capability overrides for the adapter.
  * @returns A `DatabaseDriver` backed by the given SQLite database.
@@ -191,8 +190,6 @@ export function createSqliteDatabaseAdapter(
 		close(): void {},
 	};
 }
-
-// SQL Compilation (copied from sql-storage-adapter.ts)
 
 type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
 type UpsertStatement = Extract<DataManipulationOperation, { kind: "upsert" }>;
@@ -718,8 +715,6 @@ function collectColumns(rows: Record<string, unknown>[]): string[] {
 	return columns;
 }
 
-// Result normalization
-
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 	return rows.map((row) => {
 		if (typeof row !== "object" || row === null) {
@@ -821,9 +816,9 @@ function shouldReadStatement(operation: DataManipulationRequest["operation"]): b
 }
 
 /**
- * Mirrors the production D1 adapter's fix for the same gap: a `"raw"` operation
- * (`db.exec(sqlText, values)`) carries no structural read/write signal, so this
- * sniffs the leading keyword to decide whether it needs the row-reading path.
+ * A `"raw"` operation (`db.exec(sqlText, values)`) carries no structural
+ * read/write signal, so this sniffs the leading keyword to decide whether
+ * it needs the row-reading path.
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);
@@ -863,11 +858,9 @@ function isInsertOperation(
 export async function createTestDatabase() {
 	let sqliteDb = openDatabase(":memory:");
 
-	// Load and apply migration
 	let { default: migration } = await import("../../migrations/0001-init.sql?raw");
 	sqliteDb.exec(migration);
 
-	// Create the database adapter and remix/data-table database
 	let adapter = createSqliteDatabaseAdapter(sqliteDb);
 	let db = new Database(adapter);
 

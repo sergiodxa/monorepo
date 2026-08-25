@@ -36,8 +36,8 @@ export interface GroupByWeekOptions {
 }
 
 /**
- * Build the descriptor for one calendar day in a zone, resolving its start instant,
- * key and weekday once so a grid renderer never recomputes zone-dependent fields.
+ * Build the descriptor for one calendar day in a zone, resolving its start instant, key
+ * and weekday once so a grid renderer reuses the same zone-dependent fields throughout.
  *
  * @param day - Calendar day to describe.
  * @param timeZone - IANA zone the day belongs to.
@@ -55,8 +55,8 @@ function describeDay(day: CalendarDay, timeZone: TimeZone): Day {
 }
 
 /**
- * Every day of a calendar year, January 1st through December 31st, in a zone. Leap
- * years produce 366 entries; the count is never assumed.
+ * Every day of a calendar year, January 1st through December 31st, in a zone. Leap years
+ * produce 366 entries, since the day count comes from the calendar's actual dates.
  *
  * @param year - Four-digit calendar year, e.g. `2026`.
  * @param timeZone - IANA zone whose calendar days to enumerate.
@@ -77,9 +77,9 @@ export function daysOfYear(year: number, timeZone: TimeZone): Day[] {
 }
 
 /**
- * A rolling window of the last `count` calendar days, ending on the day `from`
- * falls on and including it. Counting calendar days rather than 24-hour spans keeps
- * the window exactly `count` entries long across a DST transition.
+ * A rolling window of the last `count` calendar days, ending on the day `from` falls on
+ * and including it. Each day is counted as one calendar date, keeping the window exactly
+ * `count` entries long across a DST transition.
  *
  * @param count - Days the window covers, including its last day.
  * @param options - Where the window ends, and the zone to count days in.
@@ -102,10 +102,9 @@ export function lastNDays(count: number, options: LastNDaysOptions): Day[] {
 }
 
 /**
- * Bucket a chronological day list into weeks, one array per week, for a grid that
- * lays weeks out as columns. Partial weeks are kept as they are at both ends, so the
- * first and last buckets are short whenever the range does not start or end on a
- * week boundary; nothing is padded and no day is dropped.
+ * Bucket a chronological day list into weeks, one array per week, for a grid that lays
+ * weeks out as columns. The first and last buckets stay short whenever the range starts
+ * or ends mid-week, keeping every day in exactly one bucket.
  *
  * @param days - Days to bucket, in chronological order.
  * @param options - Which weekday starts a week, and the zone to compute it in.

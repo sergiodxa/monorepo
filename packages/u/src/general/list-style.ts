@@ -5,18 +5,15 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * The common `list-style` keywords. The `(string & {})` member keeps the
- * type a plain string for the shorthand's many other valid forms — a custom
- * `<counter-style>` name, a `url(...)` image marker, or a combination of
- * type/position/image — so it only adds autocomplete for the common cases
- * rather than narrowing what's accepted.
+ * The common `list-style` keywords. The `(string & {})` member keeps the type
+ * a plain string, so the shorthand's other forms stay valid: a custom
+ * `<counter-style>` name, a `url(...)` marker, or a type/position/image mix.
  */
 export type ListStyleValue = "none" | "disc" | "decimal" | (string & {});
 
 /**
  * Applies `list-style`. Defaults to `"none"`, the common case of a `<ul>` or
- * `<ol>` used as a layout container rather than an actual bulleted/numbered
- * list.
+ * `<ol>` serving as a plain layout container.
  *
  * @example u.listStyle()
  * @example css({ listStyle: "none" })

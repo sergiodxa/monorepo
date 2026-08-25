@@ -1,7 +1,8 @@
 /**
- * Structured descriptions of a schedule: the shapes an app maps to i18n keys and
- * interpolates numbers into, so no wording ships from here. Coverage is partial by
- * design, and anything without a concise shape falls back to the raw expression.
+ * Structured descriptions of a schedule: the shapes an app maps to i18n keys
+ * and interpolates numbers into, keeping all wording owned by the app that
+ * renders it. Coverage is partial by design, and anything without a concise
+ * shape falls back to the raw expression.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

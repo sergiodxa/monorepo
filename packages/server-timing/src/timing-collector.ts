@@ -18,27 +18,22 @@ const ENTRY_SEPARATOR = ", ";
 /**
  * A request-scoped set of measurements.
  *
- * One collector belongs to one request: construct it where the request begins, hand it to
- * whatever does the timed work, and write it onto the response on the way out. Sharing a
- * collector across requests would mix one caller's timings into another's header.
+ * Construct one per request, hand it to whatever does the timed work, and write it onto
+ * the response; sharing a collector across requests would mix callers' timings together.
  */
 export class TimingCollector {
 	/**
 	 * Measurements taken so far, in insertion order.
 	 *
-	 * A `Set` rather than an array only because a measurement is added exactly once, by
-	 * `measure`, and the set makes an accidental double-add a no-op instead of a duplicate
-	 * entry in the header.
+	 * A `Set` guarantees each timing appears exactly once in the header, no matter how many
+	 * times `measure` records it.
 	 */
 	#collection = new Set<Timing>();
 
 	/**
-	 * Times an async operation and records the result.
-	 *
-	 * The measurement is recorded whether the operation resolves or rejects, and the
-	 * rejection is re-thrown untouched: a call that failed slowly is exactly the one worth
-	 * seeing in the header, and swallowing its error to keep the timing would be a far
-	 * worse trade.
+	 * Times an async operation and records the result whether it resolves or rejects,
+	 * re-throwing any rejection untouched — a call that failed slowly is exactly the one
+	 * worth seeing in the header.
 	 *
 	 * @param name Metric name, grouping the measurement (`db`, `cache`, `auth`).
 	 * @param description Detail about this particular measurement, usually the operation.
@@ -70,12 +65,9 @@ export class TimingCollector {
 	}
 
 	/**
-	 * Writes the measurements onto a `Headers` object as a single `Server-Timing` header.
-	 *
-	 * It sets rather than appends, so calling it twice on the same headers replaces the
-	 * previous value instead of emitting the measurements twice. That also means the
-	 * collector owns the header on whatever response it is given: a `Server-Timing` set by
-	 * something upstream is overwritten, not merged.
+	 * Writes the measurements onto a `Headers` object as a single `Server-Timing` header,
+	 * replacing any value already set so the collector owns the header on whatever response
+	 * it is given.
 	 *
 	 * @param headers Headers to write to. A fresh `Headers` is created when omitted.
 	 * @returns The same `Headers` object, so the call can be used as an expression.

@@ -1,14 +1,9 @@
 /**
  * Tests the `/` controller: it renders the public marketing homepage inside the
- * shared document/marketing chrome for both anonymous and signed-in viewers, with the
- * hero CTA switching between a sign-in form and a dashboard link, its full head
- * metadata set and `WebSite` structured data, and every section of the page — hero
- * screenshot, trust indicators, benefit rows, feature/use-case grids, the pricing
- * calculator's server-rendered baseline, and the FAQ — present in the markup.
- *
- * Two assertions here are about copy the page must *not* carry: an alert-latency figure,
- * which is a claim about mail and chat infrastructure we don't run, and a price typed into
- * the controller rather than read from `app/lib/pricing`.
+ * shared document/marketing chrome for anonymous and signed-in viewers, with the
+ * hero CTA switching between a sign-in form and a dashboard link, full head
+ * metadata and `WebSite` structured data, and every marketing section from the
+ * hero screenshot through the FAQ.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,10 +34,9 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
 /**
- * Whether this deployment has a Turnstile site key, which is what decides whether the
- * try-it box carries a challenge at all. Mocked because the default `cloudflare:workers`
- * stub answers every binding read with a non-empty placeholder, so the unconfigured case —
- * the one where the widget and its loader must both be absent — is unreachable otherwise.
+ * Whether this deployment has a Turnstile site key, deciding whether the try-it
+ * box carries a challenge. Mocked since the `cloudflare:workers` stub always
+ * returns a placeholder, the only way to reach the unconfigured case.
  */
 let trialTurnstileSiteKey = vi.fn((): string | null => null);
 
@@ -50,7 +44,7 @@ vi.doMock("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
 
 let { default: home } = await import("./home");
 
-/** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
+/** Renders through `renderToString`, sufficient since this page emits a plain node tree. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);
@@ -70,10 +64,9 @@ function seedAuth(viewer: Viewer | null): Middleware {
 }
 
 /**
- * Dispatches a real GET request to `/` with the given signed-in state. Includes the
- * real `i18n` middleware — `home.tsx` renders its copy through `ctx.i18next.t()` —
- * backed by an empty test database (only consulted for a signed-in viewer's saved
- * language preference, which none of these tests set, so it falls back to English).
+ * Dispatches a real GET request to `/` with the given signed-in state. Uses the
+ * real `i18n` middleware since `home.tsx` renders through `ctx.i18next.t()`, and
+ * an empty database whose only bearing is a saved locale, defaulting to English.
  */
 async function getHome(viewer: Viewer | null) {
 	let { db } = createTestDatabase();
@@ -111,12 +104,14 @@ describe("GET /", () => {
 		expect(body).toContain("Start Monitoring");
 	});
 
+	/**
+	 * Pinned in full because a regression in the canonical host or a dropped
+	 * `og:url` is invisible to any narrower assertion.
+	 */
 	test("emits the whole head metadata set and the WebSite structured data", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		// The tag set is pinned in full because a regression here — a canonical on the
-		// serving host, a dropped `og:url` — is invisible to every other assertion.
 		expect(body).toContain(
 			[
 				"<title>Uptime by Sergio Xalambrí</title>",
@@ -132,7 +127,6 @@ describe("GET /", () => {
 				'<meta name="twitter:description" content="Simple &amp; reliable uptime monitoring for developers" />',
 			].join(""),
 		);
-		// The root is the one URL that keeps its trailing slash.
 		expect(body).toContain(`"@type":"WebSite","name":"Uptime","url":"${SEO.baseUrl}"`);
 	});
 
@@ -147,11 +141,14 @@ describe("GET /", () => {
 			'<link rel="preload" href="/screenshot-dark.webp" as="image" media="(prefers-color-scheme: dark)" />',
 		);
 		expect(body).toContain('srcset="/screenshot-dark.webp"');
-		// The `<img>` fallback for engines that don't pick a `<source>`.
 		expect(body).toContain('src="/screenshot-light.webp"');
 		expect(body).toContain("Screenshot of the Uptime dashboard");
 	});
 
+	/**
+	 * The trust strip states only capabilities Uptime controls end to end: monitor
+	 * types, data retention, and the check-interval floor its validator enforces.
+	 */
 	test("renders the trust indicators, feature grid, and use-case grid", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
@@ -159,26 +156,18 @@ describe("GET /", () => {
 		expect(body).toContain("Monitor Types");
 		expect(body).toContain("365");
 
-		// The strip states product facts only. An availability figure here would be a
-		// reliability claim about ourselves, which the Terms explicitly decline to make.
 		expect(body).not.toContain("99.9%");
 		expect(body).not.toContain("SLA");
 
-		// Same rule, one step further: an alert-latency figure is a claim about how fast
-		// somebody else's inbox, webhook endpoint or chat provider accepts a message, so
-		// it can't be true end to end no matter what we measure. What replaced it is the
-		// check-interval floor the monitor validator actually enforces.
 		expect(body).not.toContain("&lt;1s");
 		expect(body).not.toContain("<1s");
 		expect(body).not.toContain("Alert Latency");
 		expect(body).toContain("1min");
 		expect(body).toContain("Min Check Interval");
 
-		// Feature cards link to their own page and carry the "learn more" affordance.
 		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);
 		expect(body).toContain("Learn more");
 
-		// The secondary capability rows, which have no destination of their own.
 		expect(body).toContain("Maintenance Windows");
 		expect(body).toContain("Cron Job Monitoring");
 
@@ -189,10 +178,9 @@ describe("GET /", () => {
 	});
 
 	/**
-	 * Three audience pills, not all six `/for/:slug` pages. Six of equal weight say nothing
-	 * about who the product is for, and they hand the audiences it fits least the same
-	 * prominence as the ones it fits best. The rest stay in the footer's solutions column
-	 * and in the sitemap — narrowing this row must never cost a page its links.
+	 * Three audience pills carry the row, chosen over all six `/for/:slug` pages
+	 * so the ones the product fits best keep more prominence than the ones it fits
+	 * least. Every page still links from the footer and the sitemap.
 	 */
 	test("gives three audiences the prominent row and leaves the rest to the chrome", async () => {
 		let response = await getHome(null);
@@ -202,33 +190,30 @@ describe("GET /", () => {
 			expect(body).toContain(`href="${routes.marketing.audience.href({ slug })}"`);
 		}
 
-		// Present exactly once each — the footer's own link — rather than absent, which is
-		// what tells the two cases apart: a deleted page would be missing from both.
 		for (let slug of ["indie-hackers", "enterprises", "devops"]) {
 			let href = `href="${routes.marketing.audience.href({ slug })}"`;
 			expect(body.split(href)).toHaveLength(2);
 		}
 	});
 
+	/**
+	 * Assembled against the rendered headings, so a section whose copy was never
+	 * written cannot pass on a key name alone, and the benefits sit ahead of the
+	 * capability grid so a visitor judges fit before reading which checks run.
+	 */
 	test("renders the three benefit rows between the hero and the feature grid", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
 		expect(body).toContain('id="benefits"');
 
-		// The rendered headings, not the key names: a key-name assertion would have gone on
-		// passing for a section whose copy was never written.
 		for (let title of ["Everything included", "No monitor math", "Pay for actual usage"]) {
 			expect(body).toContain(title);
 		}
 
-		// And the one benefit that quotes the pricing model, with the figures interpolated.
 		expect(body).toContain(`${formatUsd(BASE_PRICE_USD)} a month includes`);
 		expect(body).toContain(formatPings(INCLUDED_PINGS));
 
-		// Ahead of the capability grid, which is the ordering the section exists for: a
-		// visitor decides whether the product is for them before they read which checks it
-		// runs.
 		expect(body.indexOf('id="benefits"')).toBeLessThan(body.indexOf('id="features"'));
 	});
 
@@ -245,11 +230,9 @@ describe("GET /", () => {
 	});
 
 	/**
-	 * The cost benefit quotes the pricing model, and the one way that copy goes stale is a
-	 * figure typed into this controller instead of interpolated from `app/lib/pricing`.
-	 * Asserted against the source, since at runtime `$5` and `{{price}}` render the same
-	 * characters — the same reason `public-claims.test.ts` scans source for the locale and
-	 * marketing-content modules.
+	 * The cost benefit quotes the pricing model, so a hard-coded figure instead of
+	 * one interpolated from `app/lib/pricing` is the one way it drifts. Checked
+	 * against the source, since `$5` and `{{price}}` render identically at runtime.
 	 */
 	test("states no price of its own", () => {
 		let source = readFileSync(new URL("./home.tsx", import.meta.url), "utf8");
@@ -258,19 +241,9 @@ describe("GET /", () => {
 	});
 
 	/**
-	 * This page is the densest decorative-icon surface in the app — a glyph per trust
-	 * indicator, feature card, capability row and use case — and every one of them was
-	 * being announced.
-	 *
-	 * `aria-hidden` takes a token, not a flag, and the renderer writes a `true` prop the
-	 * way HTML wants a boolean attribute written: as the bare name. So the JSX shorthand
-	 * these icons carried reached the document as `aria-hidden=""`, which is not a token
-	 * ARIA recognizes, leaving the glyph exposed. Worse, passing it at all suppressed the
-	 * correct `aria-hidden="true"` the icon component adds for itself, so the shorthand
-	 * replaced a right value with a wrong one.
-	 *
-	 * Asserted on the served HTML rather than on the source, because the fix is a deletion
-	 * and the thing that has to be true is what the icon renders in its place.
+	 * Every decorative glyph — across the trust, feature, capability and use-case
+	 * icons — must serve `aria-hidden="true"`: the bare JSX shorthand renders as
+	 * `aria-hidden=""`, an empty value that overrides the icon's own correct default.
 	 */
 	test("hides every decorative icon with the token, never with an empty value", async () => {
 		let response = await getHome(null);
@@ -282,16 +255,18 @@ describe("GET /", () => {
 		expect([...new Set(hidden)]).toEqual(['aria-hidden="true"']);
 	});
 
+	/**
+	 * 4,032 is 28 days of checks at a 10-minute interval, the default the pricing
+	 * calculator opens with, fully covered by the base subscription.
+	 */
 	test("server-renders the pricing calculator's initial estimate", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
 		expect(body).toContain("Pricing Calculator");
-		// One monitor's slider, bounded at 1 and 60 minutes.
 		expect(body).toContain('type="range"');
 		expect(body).toContain('min="1"');
 		expect(body).toContain('max="60"');
-		// 28 days × 24 h × 60 min ÷ 10 min, which the base subscription fully covers.
 		expect(body).toContain("4,032");
 		expect(body).toContain("Total monthly cost:");
 		expect(body).toContain("How pricing works");
@@ -301,19 +276,20 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		// One `<details>` per entry, all nineteen of them.
 		expect(body.match(/<details/g)).toHaveLength(19);
 		expect(body).toContain("How does Uptime monitor my services?");
 		expect(body).toContain("From which regions can I monitor my services?");
 	});
 
+	/**
+	 * Only a real submission fires the `POST` that spends a free check — link
+	 * previews, crawlers, and a pasted `/try?url=…` all stay at a `GET`, so
+	 * they never touch the check budget.
+	 */
 	test("renders the try-it box as a POST that runs the check on the first click", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		// The method is the security property, not a style choice: only a `POST` runs a
-		// probe, and neither a link preview, a crawler, nor a pasted `/try?url=…` issues one,
-		// so none of them can spend one of the free checks.
 		expect(body).toContain(`<form method="post" action="${routes.trial.check.action.href()}"`);
 		expect(body).toContain('name="url"');
 		expect(body).toContain("Run a check");
@@ -327,10 +303,12 @@ describe("GET /", () => {
 		expect(body).not.toContain("challenges.cloudflare.com");
 	});
 
+	/**
+	 * Both halves are asserted together: the widget markup alone is inert, and
+	 * only the loader turns the container into a challenge and writes the token
+	 * a submission needs to be trusted as coming from a browser.
+	 */
 	test("renders the Turnstile widget and its loader when a site key is configured", async () => {
-		// Both halves, because the widget alone is inert: without the loader the container
-		// never becomes a challenge, no token is written into the form, and every submission
-		// from this page is refused as one that could not be confirmed to come from a browser.
 		trialTurnstileSiteKey.mockImplementation(() => "0x-site-key");
 
 		let response = await getHome(null);

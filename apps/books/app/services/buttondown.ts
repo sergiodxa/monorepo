@@ -13,21 +13,19 @@ import { Json } from "@pkg/http/content-type";
 import { logger } from "@pkg/logger";
 import * as s from "remix/data-schema";
 
-/** Base URL every request is resolved against. */
 const API_URL = "https://api.buttondown.com";
 
 /**
- * Header Buttondown reads to pick the API version for a request. Without it the account's
- * pinned version applies, and with no pin the *latest* version does — so an unsent header
- * means a provider release can change the response shapes this client parses without any
- * change here. Sending it pins the contract to the version this client was written for.
+ * Header Buttondown reads to pick the API version for a request. Omitting it lets
+ * the account's pinned version — or Buttondown's latest — decide, letting a provider
+ * release change response shapes; sending it pins the contract this client expects.
  */
 const VERSION_HEADER = "x-api-version";
 
 /**
- * Buttondown's error envelope. Validated rather than trusted because the `code` is
- * what decides which message a visitor sees (`subscriber_blocked` and `email_invalid`
- * get their own copy, `email_already_exists` is a success path).
+ * Buttondown's error envelope, validated because the `code` decides which message
+ * a visitor sees (`subscriber_blocked` and `email_invalid` get their own copy,
+ * `email_already_exists` is a success path).
  */
 const ErrorBodySchema = s.object({ code: s.string(), detail: s.string() });
 
@@ -46,8 +44,8 @@ export interface SubscribeAttribution {
 
 /**
  * An error returned by the Buttondown API, carrying its machine-readable `code`
- * alongside the human-readable detail. The code is the part controllers branch on;
- * the detail comes from an upstream provider and is not shown to visitors verbatim.
+ * alongside the human-readable detail. Controllers branch on the code to choose
+ * visitor-facing copy; the detail is upstream text kept for logs.
  */
 export class ButtondownError extends Error {
 	override name = "ButtondownError";
@@ -80,8 +78,8 @@ export interface ButtondownOptions {
 /**
  * Typed client for the subset of Buttondown's API the funnel uses.
  *
- * Calls the global `fetch` directly — there is no injectable `fetch` option, so
- * tests intercept at the network layer with MSW instead of substituting a transport.
+ * Calls the global `fetch` directly; tests intercept requests at the network
+ * layer with MSW.
  *
  * @example
  * ```ts
@@ -90,16 +88,14 @@ export interface ButtondownOptions {
  * ```
  */
 export class Buttondown {
-	/** Buttondown API key used to authorize every request. */
 	private readonly apiKey: string;
 
-	/** API version pinned onto every request, when one was configured. */
 	private readonly apiVersion?: string;
 
 	/**
 	 * @param options - Client configuration.
-	 * @throws {Error} When the API key is missing, so a missing secret fails inside the
-	 * request that needed it instead of at module load.
+	 * @throws {Error} When the API key is missing, so a missing secret fails inside
+	 * the request that needed it.
 	 */
 	constructor(options: ButtondownOptions) {
 		if (!options.apiKey) throw new Error("BUTTONDOWN_API_KEY is required");
@@ -175,8 +171,8 @@ export class Buttondown {
 	}
 
 	/**
-	 * Sends one authorized request and fails closed on 403, which means the API key
-	 * itself is no longer usable rather than the request being wrong.
+	 * Sends one authorized request and fails closed on 403, treating it as a
+	 * revoked API key.
 	 *
 	 * @param method - HTTP method to use.
 	 * @param path - API path, resolved against Buttondown's base URL.

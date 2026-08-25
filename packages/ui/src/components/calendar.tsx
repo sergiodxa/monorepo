@@ -1,10 +1,8 @@
 /**
- * A month-grid calendar surface, composed from a navigable header and a
- * native `<table>` of day cells, styled entirely through the platform's own
- * semantics. Used bare, with no composed children, it renders a native
- * `<input type="date">` instead — a complete, keyboard-operable date control
- * on its own, and the foundation later waves build RangeCalendar and
- * DatePicker's richer, mixin-driven interaction on top of.
+ * A month-grid calendar surface composed from a navigable header and a native
+ * `<table>` of day cells, styled through the platform's own semantics. Used
+ * bare, it renders a native `<input type="date">` — a complete,
+ * keyboard-operable date control on its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,14 +40,12 @@ import {
 import { Heading } from "./heading";
 import { Input } from "./input";
 
-/** Semantic color role {@link Calendar}'s bare `<input type="date">` fallback falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Calendar.Color = "neutral";
 
 /**
- * `type` {@link Calendar.PreviousButton} and {@link Calendar.NextButton} fall
- * back to when a consumer doesn't supply one, keeping a click on either
- * control from submitting a surrounding `<form>` the way a bare `<button>`'s
- * default type otherwise would.
+ * `type` for {@link Calendar.PreviousButton} and {@link Calendar.NextButton}
+ * when a consumer supplies none, keeping a click on either control a plain
+ * month change inside a surrounding `<form>`.
  */
 const DEFAULT_NAV_BUTTON_TYPE: NonNullable<Calendar.PreviousButtonProps["type"]> = "button";
 
@@ -58,19 +54,16 @@ const DEFAULT_NAV_BUTTON_TYPE: NonNullable<Calendar.PreviousButtonProps["type"]>
  */
 export namespace Calendar {
 	/**
-	 * Semantic color role for the bare `<input type="date">` fallback's
-	 * keyboard focus ring, each mapped to its matching `--ui-*` variables. The
-	 * composed grid's own colors — hover, selection, and the rest — read fixed
-	 * semantic roles instead, matching every rendered month regardless of this
-	 * value.
+	 * Semantic color role for the bare `<input type="date">` fallback's keyboard
+	 * focus ring, each mapped to its matching `--ui-*` variables. The composed
+	 * grid reads fixed semantic roles, identical across every rendered month.
 	 */
 	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Props accepted by {@link Calendar}. Composing {@link Calendar.Header} and
-	 * {@link Calendar.Grid} (or either alone) as `children` renders the visual
-	 * month surface; leaving `children` unset renders the native
-	 * `<input type="date">` fallback instead, using the fields below.
+	 * {@link Calendar.Grid} as `children` renders the visual month surface;
+	 * `children` left unset renders the native `<input type="date">` fallback.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/** Semantic color role for the bare fallback control's focus ring. Defaults to {@link DEFAULT_COLOR}. */
@@ -103,11 +96,9 @@ export namespace Calendar {
 	export interface HeaderProps extends TagProps<"header"> {}
 
 	/**
-	 * Every native `<button>` attribute, unchanged, plus the `mix`
-	 * passthrough. `type` defaults to {@link DEFAULT_NAV_BUTTON_TYPE}. Left
-	 * without `children`, the control renders its own leading chevron glyph;
-	 * it needs an `aria-label` (e.g. `"Previous month"`) either way, since a
-	 * bare directional glyph gives assistive technology no accessible name.
+	 * Every native `<button>` attribute, unchanged, plus the `mix` passthrough.
+	 * `type` defaults to {@link DEFAULT_NAV_BUTTON_TYPE}. Needs an `aria-label`
+	 * (e.g. `"Previous month"`) as the control's only accessible name.
 	 */
 	export interface PreviousButtonProps extends TagProps<"button"> {}
 
@@ -136,10 +127,9 @@ export namespace Calendar {
 	export interface GridHeaderProps extends TagProps<"thead"> {}
 
 	/**
-	 * Every native `<tr>` attribute, unchanged, plus the `mix` passthrough.
-	 * Composes one row of {@link Calendar.HeaderCell} inside
-	 * {@link Calendar.GridHeader}, or one row of {@link Calendar.Cell} — a
-	 * week — inside {@link Calendar.GridBody}.
+	 * Every native `<tr>` attribute, unchanged, plus the `mix` passthrough. Holds
+	 * one row of {@link Calendar.HeaderCell} in {@link Calendar.GridHeader}, or
+	 * one week of {@link Calendar.Cell} in {@link Calendar.GridBody}.
 	 */
 	export interface RowProps extends TagProps<"tr"> {}
 
@@ -154,40 +144,17 @@ export namespace Calendar {
 	export interface GridBodyProps extends TagProps<"tbody"> {}
 
 	/**
-	 * Every native `<td>` attribute, unchanged, plus the `mix` passthrough.
-	 * Set `aria-selected="true"` directly on a chosen day, `aria-disabled="true"`
-	 * on one outside `min`/`max`, `data-unavailable` on one a consumer's own
-	 * rule excludes, and `data-outside-month` on one belonging to the month
-	 * before or after the one shown — all read straight off the rendered
-	 * element, with no date arithmetic carried out by this module itself.
+	 * Every native `<td>` attribute, unchanged, plus the `mix` passthrough. Day
+	 * state is read straight off the rendered element: the consumer sets
+	 * `aria-selected`, `aria-disabled`, `data-unavailable`, `data-outside-month`.
 	 */
 	export interface CellProps extends TagProps<"td"> {}
 }
 
 /**
- * Renders {@link Calendar}'s root: a rounded, padded surface holding whichever
- * children a consumer composes. Composing {@link Calendar.Header} and
- * {@link Calendar.Grid} renders the visual month surface described by every
- * other compound part below; leaving `children` unset renders a native
- * `<input type="date">` instead, styled through {@link Input} and driven by
- * this instance's own `color`, `name`, `value`/`defaultValue`, `min`/`max`,
- * `step`, `required`, `disabled`, `readOnly`, and `autoComplete` — a complete,
- * keyboard-operable date control with no composed grid at all.
- *
- * The composed grid renders every day's state exactly as a consumer sets
- * it — `aria-selected`, `aria-disabled`, `data-unavailable`,
- * `data-outside-month` — with no click or key handling of its own, ready for
- * a `calendarKeys()` mixin a consumer attaches later to turn its cells and
- * {@link Calendar.PreviousButton}/{@link Calendar.NextButton} into an
- * in-place, arrow-key-driven picker. A field whose value must keep working
- * with no script attached reads that value from the bare fallback control
- * above instead, since that's the one part of this module the platform
- * itself operates.
- *
- * In dev mode, the bare fallback control — rendered whenever `children` is
- * unset — logs a `console.warn` if neither `aria-label` nor
- * `aria-labelledby` is present, since the platform's own date-picker
- * affordance otherwise has no accessible name to announce.
+ * Renders a rounded, padded surface around whichever children a consumer
+ * composes; `children` left unset renders a native `<input type="date">`
+ * through {@link Input}, the one part the platform itself operates.
  *
  * @param handle Runtime handle carrying the root element's props.
  * @returns The render function producing the calendar's markup.
@@ -286,8 +253,7 @@ export function Calendar(handle: Handle<Calendar.Props>) {
 /**
  * Renders {@link Calendar}'s nav row: a flex row spacing
  * {@link Calendar.PreviousButton}, {@link Calendar.Heading}, and
- * {@link Calendar.NextButton} apart, with the heading centered between the
- * two controls.
+ * {@link Calendar.NextButton} apart, the heading centered between the controls.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the nav row's markup.
@@ -313,21 +279,9 @@ Calendar.Header = function CalendarHeader(handle: Handle<Calendar.HeaderProps>) 
 };
 
 /**
- * Renders a round icon control sized to match {@link Calendar.NextButton},
- * standing for "show the previous month." Hover and disabled states ride the
- * native `:hover` and `:disabled` pseudo-classes, and a keyboard
- * focus-visible ring reads in the primary color. Left without `children`, it
- * renders a leading chevron that a `dir="rtl"` ancestor mirrors automatically
- * through CSS, with no locale lookup of its own — the same glyph, flipped,
- * rather than a second icon swapped in by script.
- *
- * The control carries no click behavior of its own: it renders the markup
- * and states a `calendarKeys()` mixin drives once a consumer attaches it in
- * their own hydrated island.
- *
- * In dev mode, a control whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since a directional
- * icon alone gives assistive technology no accessible name to announce.
+ * Renders a round icon control standing for "show the previous month", sized
+ * to match {@link Calendar.NextButton}. Its default chevron flips under
+ * `dir="rtl"` through CSS. A `calendarKeys()` mixin drives the behavior.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the control's markup.
@@ -375,11 +329,9 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 };
 
 /**
- * Renders a round icon control sized to match
- * {@link Calendar.PreviousButton}, standing for "show the following month"
- * instead — see {@link Calendar.PreviousButton} for the shared rendering,
- * focus, and disabled-state contract. Left without `children`, it renders a
- * trailing chevron, mirrored the same way under `dir="rtl"`.
+ * Renders a round icon control standing for "show the following month", with
+ * the rendering, focus, and disabled-state contract of
+ * {@link Calendar.PreviousButton} and a trailing chevron by default.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the control's markup.
@@ -425,17 +377,9 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 };
 
 /**
- * Renders the calendar's visible month/year caption through {@link Heading},
- * centered in the space between {@link Calendar.PreviousButton} and
- * {@link Calendar.NextButton} and set at a small, semibold emphasis size —
- * layered after {@link Heading}'s own default styling, so this size and
- * alignment always win over it. `level` still chooses the underlying native
- * heading element, defaulting the same way {@link Heading} does, so the
- * caption keeps a correct depth in the surrounding document outline.
- *
- * The caption's text is a consumer-formatted string — built from the
- * platform's own `Intl.DateTimeFormat` against whichever locale applies —
- * rather than anything this module formats itself.
+ * Renders the consumer-formatted month/year caption through {@link Heading},
+ * centered between the nav controls at a small semibold size layered after
+ * {@link Heading}'s own defaults, so this size and alignment win over them.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the caption's markup.
@@ -466,14 +410,9 @@ Calendar.Heading = function CalendarHeading(handle: Handle<Calendar.HeadingProps
 };
 
 /**
- * Renders the day grid's native `<table>` host, its rows and cells set apart
- * by a small gap on every side instead of touching borders. Holds
- * {@link Calendar.GridHeader} and {@link Calendar.GridBody}.
- *
- * In dev mode, a grid rendered without an `aria-label` or `aria-labelledby`
- * logs a `console.warn`, since assistive technology otherwise has no
- * accessible name for the grid as a whole — typically the same visible month
- * label {@link Calendar.Heading} already renders.
+ * Renders the day grid's native `<table>` host, rows and cells set apart by a
+ * small gap on every side. Its `aria-label`/`aria-labelledby` — typically the
+ * visible month label — names the whole grid; dev mode warns when it is absent.
  *
  * @param handle Runtime handle carrying the host `<table>`'s props.
  * @returns The render function producing the grid's markup.
@@ -524,10 +463,9 @@ Calendar.GridHeader = function CalendarGridHeader(handle: Handle<Calendar.GridHe
 };
 
 /**
- * Renders a native `<tr>` host with no styling of its own beyond what a table
- * row needs structurally — composes one row of {@link Calendar.HeaderCell}
- * inside {@link Calendar.GridHeader}, or one week's row of
- * {@link Calendar.Cell} inside {@link Calendar.GridBody}.
+ * Renders a native `<tr>` host: one row of {@link Calendar.HeaderCell} inside
+ * {@link Calendar.GridHeader}, or one week of {@link Calendar.Cell} inside
+ * {@link Calendar.GridBody}.
  *
  * @param handle Runtime handle carrying the host `<tr>`'s props.
  * @returns The render function producing the row's markup.
@@ -596,22 +534,9 @@ Calendar.GridBody = function CalendarGridBody(handle: Handle<Calendar.GridBodyPr
 };
 
 /**
- * Renders one calendar day inside a native `<td>`, sized as a fixed round
- * pill and centering its number. A selected day (`aria-selected="true"`)
- * fills with the primary solid background; a disabled one
- * (`aria-disabled="true"`, e.g. outside `min`/`max`) dims and blocks the
- * pointer; an unavailable one (`data-unavailable` — a consumer's own
- * exclusion rule, a fully booked date, say) strikes through and mutes; a day
- * belonging to the month before or after the one shown (`data-outside-month`)
- * mutes without striking through; an invalid one (`aria-invalid="true"`, set
- * alongside a validation message elsewhere in the field) fills with the
- * danger solid background. None of these states are computed by this module
- * itself — every one is read straight off whatever the rendering consumer
- * sets on this instance.
- *
- * The cell carries no click or focus behavior of its own: it renders the
- * markup and states a `calendarKeys()` mixin drives once a consumer attaches
- * it in their own hydrated island.
+ * Renders one calendar day inside a native `<td>`, a fixed round pill around
+ * its number. `aria-selected`, `aria-disabled`, `data-unavailable`,
+ * `data-outside-month`, and `aria-invalid` each drive their own visual state.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the day's markup.

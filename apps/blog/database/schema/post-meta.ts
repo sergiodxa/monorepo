@@ -18,8 +18,7 @@ import { validateTimestamps } from "./validations/timestamps";
 /**
  * Stores extensible key-value metadata for posts.
  *
- * Child rows are removed when their parent post is deleted, and timestamp
- * fields are validated as required audit columns.
+ * Child rows are removed when their parent post is deleted.
  */
 export const postMeta = table({
 	name: "post_meta",

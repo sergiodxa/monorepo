@@ -1,8 +1,8 @@
 /**
- * Tests the translator factory the background send paths use: it resolves a shipped
- * language, reports back the language it actually produced rather than the one it was
- * asked for, and hands out the same instance twice so an outage fanning out to a
- * team's alerts does not rebuild i18next per email.
+ * Tests the translator factory the background send paths use: it resolves a
+ * shipped language, reports the language it actually resolved to, and reuses
+ * one instance across repeated calls so an outage fanning out to a team's
+ * alerts builds i18next only once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

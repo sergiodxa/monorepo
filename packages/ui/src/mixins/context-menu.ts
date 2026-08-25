@@ -1,16 +1,9 @@
 /**
- * Mixin that opens a ContextMenu's popover surface at the pointer position
- * when its host — the ContextMenu trigger area — receives a right-click,
- * anchoring that surface to the pointer with `remix/ui/anchor`'s point-based
- * positioning instead of anchoring it to an element.
- *
- * Why JS: the `contextmenu` event has no HTML equivalent, and nothing in
- * markup can anchor a floating surface to the pointer position that produced
- * it.
- * No-JS baseline: none — a context menu opened by right-click, at the
- * pointer position, cannot be expressed without JavaScript. Without this
- * mixin the host's native browser context menu shows instead, and the
- * element `id` refers to never opens.
+ * Opens a ContextMenu's popover surface at the pointer position when its
+ * host receives a right-click, anchoring it with `remix/ui/anchor`'s
+ * point-based positioning since no markup can anchor a floating surface to
+ * a pointer position. Without this mixin the host falls back to the
+ * platform's native right-click menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,18 +17,11 @@ const DEFAULT_PLACEMENT = "bottom-start";
 
 /**
  * Opens the popover surface identified by `id` at the pointer position on a
- * `contextmenu` event, or at the host's own bounding box when opened from the
- * keyboard — the Context Menu key, or Shift+F10. Prevents the platform's
- * native context menu in both cases.
- *
- * The referenced surface owns its own dismissal: a `popover="auto"` surface
- * already closes itself on `Escape` and on an outside click, no further
- * JavaScript required. This mixin only ever opens the surface, so apply it to
- * the trigger area a consumer right-clicks — a row, a card, a canvas — never
- * to the surface itself.
+ * `contextmenu` event, or the host's bounding box from the keyboard, since a
+ * `popover="auto"` surface already handles its own Escape/outside-click dismissal.
  *
  * @param id `id` of the popover surface to open.
- * @param options Anchor placement and offsets forwarded to `remix/ui/anchor`; placement defaults to `"bottom-start"`.
+ * @param options Anchor placement and offsets forwarded to `remix/ui/anchor`; placement defaults to `"bottom-start"`. Safe to omit — `contextMenu(id)` resets the runtime's trailing current-props argument back to an empty options object.
  * @example
  * <div id="row-1" mix={contextMenu("row-1-menu")}>Row 1</div>
  * <div id="row-1-menu" popover="auto" role="menu">...</div>
@@ -68,9 +54,6 @@ export const contextMenu = createMixin<HTMLElement, [id: string, options?: Ancho
 			options: AnchorOptions = {},
 			props: ElementProps = options as ElementProps,
 		) => {
-			// `options` is optional, so a call site that omits it (`contextMenu(id)`)
-			// gets the runtime's trailing current-props argument in its place —
-			// reset it back to an empty options object when that happens.
 			if (props === options) {
 				options = {};
 			}

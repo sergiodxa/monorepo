@@ -1,23 +1,12 @@
 /**
  * The NDJSON-over-stdio plugin transport: how an external executable becomes
- * a `Plugin`. This module is the protocol's reference documentation.
+ * a `Plugin`, one JSON document per line over the child's stdio, with
+ * strictly increasing request ids and in-order replies. The child inherits
+ * no environment beyond PATH.
  *
- * Wire protocol: one JSON document per line over the child process's stdio.
- * Host→plugin requests are `{"id":1,"method":"describe"}` and
- * `{"id":2,"method":"call","tool":"say","args":[…ToolArg…],"workspaceRoot":"/abs/path"}`.
- * Plugin→host replies are `{"id":n,"result":…}` or
- * `{"id":n,"error":{"code":DiagnosticCode,"message":string}}`. Request ids
- * are strictly increasing, and the plugin must reply in the order it received
- * the requests. The child inherits NO environment beyond PATH.
- *
- * Honesty note: v1 external plugins receive `workspaceRoot` and perform their
- * own filesystem work — central *scoped* enforcement over the wire is an open
- * question tracked in the design suite; the runtime's coarse `requires` gate
- * still applies host-side before any call crosses the wire.
- *
- * A connected plugin exposes `dispose()`, which the runner calls after a run:
- * it kills the child process and fails anything still in flight, so a launched
- * plugin never outlives the suite that launched it.
+ * `workspaceRoot` crosses the wire so a plugin can resolve its own paths, but
+ * scoped permission enforcement over the wire is still an open design
+ * question — the host's coarse `requires` gate runs before every call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,13 +50,11 @@ interface PluginProcess {
 	stdin: { write(chunk: string): unknown };
 	/** The pipe the plugin writes replies into, read as newline-delimited bytes. */
 	stdout: AsyncIterable<Uint8Array>;
-	/** Terminate the child process. */
 	kill(): void;
 }
 
 /** The body of a host→plugin request, before an id is assigned. */
 interface WireRequestBody {
-	/** Which operation the host wants: `describe` or `call`. */
 	method: "describe" | "call";
 	/** The tool name, for `call` requests. */
 	tool?: string;
@@ -111,11 +98,9 @@ interface Connection {
 }
 
 /**
- * Spawn an external plugin process and connect it as a `Plugin`. Sends the
- * describe handshake (5s timeout), caches the returned descriptors, and
- * returns a plugin whose `call()` round-trips over the child's stdio. The
- * child receives no environment beyond PATH; on any handshake failure the
- * child is killed before the error is returned.
+ * Spawn an external plugin process and connect it as a `Plugin`: send the
+ * describe handshake (5s timeout), cache the returned descriptors, and hand
+ * back a `call()` that round-trips over the child's stdio.
  *
  * @param command - The argv to spawn, e.g. `["bun", "plugins/demo.ts"]`.
  * @param namespace - The namespace the connected plugin's tools live under.
@@ -168,9 +153,11 @@ export async function connectStdioPlugin(
 			if (isFailure(reply)) return reply;
 			return success(reply.data as Value);
 		},
+		/**
+		 * Kills the child and fails any in-flight request. The runner calls this
+		 * once after the suite, so the launched process never lingers.
+		 */
 		async dispose() {
-			// Kill the child and fail any in-flight request; the runner calls this
-			// once after the whole suite, so the launched process never lingers.
 			connection.kill();
 		},
 	});
@@ -178,9 +165,8 @@ export async function connectStdioPlugin(
 
 /**
  * The plugin-side serve loop: read requests from stdin, dispatch each to the
- * given local plugin, and write replies to stdout in the order received. Any
- * Bun script becomes an external plugin by calling this with its plugin
- * implementation; the loop resolves when the host closes stdin.
+ * given plugin, and write matching replies to stdout, in order. A line that
+ * fails to parse carries no id, so parsing simply continues to the next one.
  *
  * @param plugin - The local plugin implementation to expose over the wire.
  */
@@ -188,8 +174,6 @@ export async function servePlugin(plugin: Plugin): Promise<undefined> {
 	for await (let line of readLines(process.stdin)) {
 		if (line.trim() === "") continue;
 		let request = parseWireRequest(line);
-		// A malformed line has no id to reply to; skipping it beats replying
-		// with a guessed id. Well-behaved hosts never send one.
 		if (request === null) continue;
 		if (request.method === "describe") {
 			writeReply({ id: request.id, result: plugin.describe() });
@@ -220,12 +204,9 @@ export async function servePlugin(plugin: Plugin): Promise<undefined> {
 }
 
 /**
- * Spawn a plugin command and resolve only once the OS confirms the child
- * started, so a missing executable rejects here as a spawn failure instead of
- * surfacing later as a closed connection. The child inherits nothing but PATH,
- * and its stdin swallows write errors: a plugin that exits mid-call leaves a
- * broken pipe behind, and that is reported through the pending request rather
- * than as an unhandled stream error.
+ * Spawn a plugin command, resolving only once the OS confirms it started, so
+ * a bad executable fails here instead of later. It inherits nothing but
+ * PATH; a mid-call exit's broken stdin pipe surfaces via the pending request.
  *
  * @param command - The argv to spawn, first element being the executable.
  * @returns The started child, narrowed to what the transport reads and writes.
@@ -236,9 +217,7 @@ async function spawnChild(command: string[]): Promise<PluginProcess> {
 		stdio: ["pipe", "pipe", "ignore"],
 		env: { PATH: process.env.PATH ?? "" },
 	});
-	child.stdin?.on("error", () => {
-		// A dead child's pipe is expected; the in-flight request reports it.
-	});
+	child.stdin?.on("error", () => {});
 	let failed = await new Promise<Error | undefined>((settle) => {
 		child.once("spawn", () => settle(undefined));
 		child.once("error", (error: Error) => settle(error));
@@ -344,24 +323,20 @@ function openConnection(child: PluginProcess): Connection {
 				}
 			});
 		},
+		/** An already-exited child counts as killed too, so the close below always runs. */
 		kill() {
 			try {
 				child.kill();
-			} catch {
-				// Killing an already-dead child is not a failure.
-			}
+			} catch {}
 			close(new ToolError("The plugin connection was closed"));
 		},
 	};
 }
 
 /**
- * Build the `ToolContext` the serving side hands its local plugin. The wire
- * carries only the workspace root: relative paths resolve inside it and
- * traversal out is refused, but the caller's actual grants never cross the
- * wire, so the permission checks answer permissively — the runtime's coarse
- * `requires` gate already ran host-side, and scoped enforcement over the wire
- * is an open question tracked in the design suite.
+ * Build the `ToolContext` the serving side hands its local plugin: relative
+ * paths resolve inside the forwarded workspace root and traversal out is
+ * refused, while permission checks stay permissive behind the host's gate.
  */
 function createWireContext(workspaceRoot: string): ToolContext {
 	let workspace: Workspace = {

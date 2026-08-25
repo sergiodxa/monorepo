@@ -23,8 +23,8 @@ export interface SqlStorageMockOptions {
 /**
  * Single-pass cursor over the rows one `exec` produced.
  *
- * Reading is destructive, matching the platform: rows already consumed by `next()` or
- * `toArray()` are gone, so a double read returns nothing rather than replaying.
+ * Reading is destructive, matching the platform: rows already consumed by
+ * `next()` or `toArray()` are gone, so a second read returns nothing.
  * @template T Row shape the cursor yields.
  */
 export class MockSqlStorageCursor<
@@ -114,7 +114,7 @@ export class MockSqlStorageCursor<
 	}
 }
 
-/** Placeholder for the `Statement` constructor the binding exposes but never needs here. */
+/** Stands in for the `Statement` constructor a real binding exposes, satisfying type checks only. */
 export class MockSqlStorageStatement {}
 
 /**
@@ -136,14 +136,9 @@ export function createSqlStorage(options?: SqlStorageMockOptions): SqlStorage {
 	}
 
 	/**
-	 * Runs one statement and returns a cursor over its rows.
-	 *
-	 * `rowsWritten` comes from the delta of SQLite's `total_changes()`, so a read-only
-	 * statement reports `0` instead of inheriting the previous write's count.
-	 *
-	 * A statement that returns no columns runs as a script when no bindings are given, so
-	 * a `;`-separated migration executes in full rather than silently dropping everything
-	 * after the first statement.
+	 * Runs one statement and returns a cursor over its rows. `rowsWritten` is the
+	 * delta of `total_changes()`, so a read-only statement reports `0`, and a
+	 * columnless statement with no bindings runs as a full `;`-separated script.
 	 * @param query One SQL statement, or a `;`-separated script when there are no bindings.
 	 * @param bindings Positional values for the statement's `?` placeholders.
 	 * @returns A single-pass cursor over the result rows.
@@ -180,8 +175,10 @@ export function createSqlStorage(options?: SqlStorageMockOptions): SqlStorage {
 			);
 		},
 
-		// The binding exposes both constructors purely so instances can be type-tested.
-		// They carry no behavior, so the mock's own classes stand in for them.
+		/**
+		 * Both constructors exist only so instances can be type-tested; the mock's
+		 * own placeholder classes stand in for them.
+		 */
 		Cursor: MockSqlStorageCursor as unknown as typeof SqlStorageCursor,
 		Statement: MockSqlStorageStatement as unknown as typeof SqlStorageStatement,
 	};
@@ -211,11 +208,9 @@ function toRow<T extends Record<string, SqlStorageValue>>(row: unknown): T {
 }
 
 /**
- * Validates and converts one bound value.
- *
- * Durable Object SQL accepts only `null`, numbers, strings, and byte buffers; booleans
- * are folded to `1`/`0` for convenience. Anything else throws, which is how a value that
- * should have been JSON-encoded surfaces in a test instead of in production.
+ * Validates and converts one bound value to what Durable Object SQL accepts:
+ * `null`, numbers, strings, and byte buffers, folding booleans to `1`/`0`.
+ * Anything else throws, so a value that needed JSON-encoding surfaces in a test.
  */
 function toBinding(value: unknown): SqliteBinding {
 	if (value === null || value === undefined) return null;

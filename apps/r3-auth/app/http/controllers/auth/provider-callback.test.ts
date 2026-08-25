@@ -1,12 +1,9 @@
 /**
  * Router-level tests of GitHub sign-in: the redirect that starts it, the first sign-in
  * that provisions a subject, connection and billing customer, the returning sign-in
- * that reuses them, the sign-in that completes anyway when the billing mirror fails,
- * the rollback when the connection cannot be written, and the errors that are reported
- * back to the relying party rather than rendered here.
- *
- * GitHub is intercepted with MSW, so what is under test is the real request the
- * provider makes — token exchange, profile fetch — and not a stand-in for it.
+ * that reuses them, the sign-in that completes when the billing mirror fails, the
+ * rollback when the connection cannot be written, and the errors reported back to the
+ * relying party. GitHub is intercepted with MSW, so the real provider requests run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,12 +24,10 @@ import { authorizeUrl, ORIGIN, REDIRECT_URI, seed } from "~/app/lib/test/seed";
 import { connections, subjects } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** GitHub's OAuth and REST endpoints, intercepted for every test in this file. */
 const TOKEN_ENDPOINT = "https://github.com/login/oauth/access_token";
 const USER_ENDPOINT = "https://api.github.com/user";
 const EMAILS_ENDPOINT = "https://api.github.com/user/emails";
 
-/** The identity GitHub authenticates in these tests. */
 const GITHUB_PROFILE = {
 	id: 4242,
 	node_id: "MDQ6VXNlcjQyNDI=",
@@ -44,23 +39,20 @@ const GITHUB_PROFILE = {
 
 let server = setupServer();
 
-/** One entry of GitHub's address list, as the endpoint returns it. */
 interface GitHubEmailEntry {
 	email: string;
 	primary: boolean;
 	verified: boolean;
 }
 
-/** The address list a test answers with unless it asks for another. */
 const VERIFIED_EMAILS: GitHubEmailEntry[] = [
 	{ email: GITHUB_PROFILE.email, primary: true, verified: true },
 ];
 
 /**
- * Answers the token exchange, the profile fetch and the address list.
- *
- * The address list is a parameter because it is the only place GitHub publishes whether it
- * has verified an address, and what this server records for a new subject follows from it.
+ * Answers the token exchange, the profile fetch and the address list. The list is a
+ * parameter because GitHub publishes there whether an address is verified, and what
+ * this server records for a new subject follows from it.
  *
  * @param emails - The list, or `null` to answer the endpoint with a server error.
  */
@@ -127,10 +119,8 @@ function recordingPolarClient(calls: PolarCalls): PolarClient {
 
 /**
  * Makes every insert into `connections` fail, so the compensation that removes the
- * subject behind an unwritable connection runs against the real database.
- *
- * A trigger rather than a stubbed model: reads still work, so the flow reaches the
- * insert exactly the way a request does and fails only where a failure is being tested.
+ * subject behind an unwritable connection runs against the real database. A trigger
+ * keeps reads working, so the flow reaches the insert exactly the way a request does.
  */
 async function refuseConnectionWrites(db: TestApp["db"]): Promise<void> {
 	await db.exec(
@@ -170,7 +160,6 @@ async function startFlow(extra: Record<string, string> = {}): Promise<string> {
 	return state;
 }
 
-/** Completes the GitHub callback with the given query parameters. */
 async function finishFlow(params: Record<string, string>): Promise<Response> {
 	let url = new URL(routes.auth.providerCallback.href({ provider: "github" }), ORIGIN);
 	for (let [key, value] of Object.entries(params)) url.searchParams.set(key, value);
@@ -226,6 +215,10 @@ describe("POST /auth/:provider", () => {
 });
 
 describe("GET /auth/:provider/callback", () => {
+	/**
+	 * The connection is keyed by GitHub's node id, the identifier every connection this
+	 * database already holds was written under.
+	 */
 	test("provisions the subject, the connection and the customer on a first sign-in", async () => {
 		respondWithProfile();
 		let state = await startFlow();
@@ -246,29 +239,26 @@ describe("GET /auth/:provider/callback", () => {
 		expect(subject?.username).toBe(GITHUB_PROFILE.login);
 		expect(subject?.display_name).toBe(GITHUB_PROFILE.name);
 		expect(subject?.avatar).toBe(GITHUB_PROFILE.avatar_url);
-		// GitHub's address list reported this address `verified`, which is the only thing
-		// that stamps the column.
 		expect(subject?.email_verified_at).not.toBeNull();
 
-		// The node id, not the numeric one: it is the identifier every connection this
-		// database already holds was written under.
 		let connection = await app.db.findOne(connections, {
 			where: { provider: "github", external_id: GITHUB_PROFILE.node_id },
 		});
 		expect(connection?.subject_id).toBe(subject!.id);
 	});
 
+	/**
+	 * GitHub releases unverified addresses too, and the column is published to every
+	 * relying party as `email_verified`, so the stamp follows GitHub's own report. An
+	 * unproven address still completes the sign-in.
+	 */
 	test("leaves the address unverified when GitHub reports it unverified", async () => {
-		// The regression this guards: the address used to be stamped verified unconditionally,
-		// on the assumption that GitHub only releases verified addresses. It does not, and the
-		// column is published to every relying party as `email_verified`.
 		respondWithProfile(GITHUB_PROFILE, [
 			{ email: GITHUB_PROFILE.email, primary: true, verified: false },
 		]);
 
 		let response = await finishFlow({ code: "gh-code", state: await startFlow() });
 
-		// Still signed in: an unproven address is not a refusal, it is an unproven address.
 		expect(response.status).toBe(303);
 		expect(new URL(response.headers.get("location")!).searchParams.get("code")).toBeTruthy();
 
@@ -292,12 +282,12 @@ describe("GET /auth/:provider/callback", () => {
 		expect(subject?.email_verified_at).toBeNull();
 	});
 
+	/** Fails closed: the stamp requires a positive answer from GitHub's address list. */
 	test("leaves the address unverified when the address list cannot be read", async () => {
 		respondWithProfile(GITHUB_PROFILE, null);
 
 		await finishFlow({ code: "gh-code", state: await startFlow() });
 
-		// Fails closed: a request that did not answer is not evidence the address is proven.
 		let subject = await app.db.findOne(subjects, {
 			where: { email_address: GITHUB_PROFILE.email },
 		});
@@ -317,6 +307,10 @@ describe("GET /auth/:provider/callback", () => {
 		expect(subject?.email_verified_at).not.toBeNull();
 	});
 
+	/**
+	 * Session management reads the cookie from a cross-origin iframe, so `SameSite=None`
+	 * is what lets it travel.
+	 */
 	test("sets the browser-state cookie with the attributes session management needs", async () => {
 		respondWithProfile();
 		let state = await startFlow();
@@ -330,7 +324,6 @@ describe("GET /auth/:provider/callback", () => {
 		expect(cookie).toBeDefined();
 		expect(cookie).toContain("Path=/");
 		expect(cookie).toContain("HttpOnly");
-		// Read from a cross-origin iframe, so `Lax` would keep it from ever being sent.
 		expect(cookie).toContain("SameSite=None");
 		expect(cookie).toContain("Secure");
 		expect(cookie).toContain("Max-Age=2592000");
@@ -400,7 +393,6 @@ describe("GET /auth/:provider/callback", () => {
 
 		let location = new URL(response.headers.get("location")!);
 		expect(location.searchParams.get("error")).toBe("access_denied");
-		// The seeded subject keeps its single identity: nothing was linked to it.
 		expect(await app.db.count(connections)).toBe(0);
 	});
 
@@ -420,6 +412,10 @@ describe("GET /auth/:provider/callback", () => {
 		expect(calls.linked).toEqual([["cus_recorded", subject!.id]]);
 	});
 
+	/**
+	 * Sign-up charges nothing, so an authentication outlives a billing outage and keeps
+	 * the account it provisioned, leaving a retry with the provisioning already done.
+	 */
 	test("signs the person in when the billing mirror fails, keeping the subject and the connection", async () => {
 		app = await createTestApp({ polar: failingPolarClient() });
 		fixtures = await seed(app);
@@ -429,9 +425,6 @@ describe("GET /auth/:provider/callback", () => {
 
 		let response = await finishFlow({ code: "gh-code", state });
 
-		// Nothing is charged at sign-up, so a billing outage is not a reason to refuse an
-		// authentication — and refusing it used to erase the account it refused, leaving a
-		// retry to run the whole provisioning again against the same outage.
 		let location = new URL(response.headers.get("location")!);
 		expect(location.searchParams.get("error")).toBeNull();
 		expect(location.searchParams.get("code")).toBeTruthy();
@@ -447,12 +440,15 @@ describe("GET /auth/:provider/callback", () => {
 		expect(connection?.subject_id).toBe(subject!.id);
 	});
 
+	/**
+	 * The request logger flushes through `console.error`, which this runner captures only
+	 * when the function itself is swapped. A log line is the one place an address could
+	 * travel outside the database.
+	 */
 	test("logs the failed billing mirror by subject id and never by address", async () => {
 		app = await createTestApp({ polar: failingPolarClient() });
 		fixtures = await seed(app);
 
-		// Swapped rather than spied: the request logger writes the flushed log with
-		// `console.error`, and a spy on `console` records nothing under this runner.
 		let calls: unknown[][] = [];
 		let original = console.error;
 		console.error = (...args: unknown[]) => void calls.push(args);
@@ -468,15 +464,17 @@ describe("GET /auth/:provider/callback", () => {
 			where: { email_address: GITHUB_PROFILE.email },
 		});
 
-		// The whole flushed request log, because the event is one entry inside it.
 		let logged = JSON.stringify(calls);
 
 		expect(logged).toContain("github_customer_create_failed");
 		expect(logged).toContain(subject!.id);
-		// A log line is the one place an address could leak without touching the database.
 		expect(logged).not.toContain(GITHUB_PROFILE.email);
 	});
 
+	/**
+	 * A subject whose connection write failed still holds the address on the unique
+	 * column, so removing it leaves that address free for the next attempt.
+	 */
 	test("deletes the subject when the connection cannot be written", async () => {
 		await refuseConnectionWrites(app.db);
 
@@ -488,8 +486,6 @@ describe("GET /auth/:provider/callback", () => {
 		let location = new URL(response.headers.get("location")!);
 		expect(location.searchParams.get("error")).toBe("server_error");
 
-		// A subject with no connection can never sign in and still holds the address on the
-		// unique column, so the next attempt would collide with a row nobody can reach.
 		expect(await app.db.count(subjects, { where: { email_address: GITHUB_PROFILE.email } })).toBe(
 			0,
 		);
@@ -535,7 +531,6 @@ describe("GET /auth/:provider/callback", () => {
 		expect(body).toContain('name="code"');
 		expect(body).toContain("<noscript>");
 		expect(body).toContain("document.forms[0].submit()");
-		// The hostile state is a value, never markup: nothing may reopen the document.
 		expect(body).not.toContain("<script>alert(1)</script>");
 		expect(body).toContain("&lt;script&gt;");
 	});

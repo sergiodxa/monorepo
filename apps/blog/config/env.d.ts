@@ -22,7 +22,4 @@ declare global {
 	}
 }
 
-/**
- * Re-exports module members.
- */
 export {};

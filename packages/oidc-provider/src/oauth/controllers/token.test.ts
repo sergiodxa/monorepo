@@ -37,9 +37,9 @@ import token from "./token";
 type Db = Database;
 
 /**
- * POSTs an application/x-www-form-urlencoded body to the token endpoint through a
- * minimal router that reuses the production middleware chain and resolves the
- * request `Database` from the service container, exactly as the provider does.
+ * POSTs a form-urlencoded body to the token endpoint through a minimal router
+ * that reuses the production middleware chain, registering `db` as a singleton
+ * so the request-scoped `inject([Database])` call inside the handler resolves it.
  */
 async function postToken(db: Db, params: Record<string, string>): Promise<Response> {
 	let request = new Request("https://auth.example.com/oauth/token", {
@@ -49,8 +49,6 @@ async function postToken(db: Db, params: Record<string, string>): Promise<Respon
 	});
 
 	let container = new ServiceContainer();
-	// Registered as a singleton (not `.instance`) so the request child-scope created
-	// by `container.scope` can resolve it via `inject([Database])`.
 	container.singleton(Database, () => db);
 
 	let middleware = [asyncContext(), loggerMiddleware(new Logger(request)), formData() as never];
@@ -100,7 +98,6 @@ describe("POST /oauth/token — allowed_resources enforcement", () => {
 	});
 
 	test("rejects an allow-listed resource that is not a registered resource", async () => {
-		// On the allow-list, but never registered via Resource.create -> unknown target.
 		let response = await postToken(db, {
 			grant_type: "client_credentials",
 			client_id: clientId,
@@ -165,7 +162,6 @@ describe("POST /oauth/token — refresh-token gating on offline_access", () => {
 		let subject = await createSubject(db, { verified: true });
 		subjectId = subject.id;
 
-		// A public client so a plain PKCE code_verifier suffices (no client secret).
 		await Client.create(db, { name: "SPA", type: "public" });
 		let client = (await Client.list(db)).find((c) => c.name === "SPA")!;
 		clientId = client.id;

@@ -26,9 +26,9 @@ const SEEN_MARKER = "1";
 /**
  * Records which delivery ids have already been accepted.
  *
- * Implementations only need presence and expiry, so a KV namespace, a cache, or a
- * table with a TTL column all fit. `seen()` must not report an id that was never
- * remembered, since a false positive rejects an authentic delivery.
+ * Implementations only need presence and expiry, so a KV namespace or a table
+ * with a TTL column both fit; a false positive from `seen()` would reject an
+ * authentic delivery.
  */
 export interface ReplayStore {
 	/**
@@ -51,9 +51,9 @@ export interface ReplayStore {
 /**
  * The part of a Workers KV binding this store uses.
  *
- * Declared as the subset actually called so a real `KVNamespace` binding
- * satisfies it with no cast, and a test can stand in a two-method fake without
- * implementing the rest of the binding.
+ * Declared as the subset actually called, so a real `KVNamespace` binding
+ * satisfies it with no cast and a test can stand in a two-method fake instead
+ * of the full binding.
  */
 export interface ReplayKVNamespace {
 	/** Reads a key as text, resolving `null` when it is absent or expired. */
@@ -79,13 +79,9 @@ export interface KVReplayStoreOptions {
 }
 
 /**
- * A `ReplayStore` backed by Workers KV.
- *
- * Only presence matters, so each id is stored as a one-byte value under its own
- * key and left to expire on its own. KV reads are eventually consistent: a
- * duplicate arriving within seconds of the original, in another location, can be
- * missed, which is why deduplication narrows the replay window rather than
- * guaranteeing exactly-once delivery.
+ * A `ReplayStore` backed by Workers KV, storing each id as a one-byte value
+ * that expires on its own. KV reads are eventually consistent, so a duplicate
+ * arriving within seconds, from another location, can still be missed.
  *
  * @example
  * let store = new Webhooks.KVReplayStore(env.WEBHOOKS);
@@ -118,11 +114,9 @@ export class KVReplayStore implements ReplayStore {
 	}
 
 	/**
-	 * Remembers an id until its expiry passes.
-	 *
-	 * The TTL is raised to KV's one-minute minimum when a shorter duration is
-	 * asked for, so a small tolerance still results in a usable window instead of
-	 * a rejected write.
+	 * Remembers an id until its expiry passes, raising the TTL to KV's
+	 * one-minute minimum when a shorter duration is asked for, so a small
+	 * tolerance still results in a write KV accepts.
 	 *
 	 * @param id Delivery id to remember.
 	 * @param ttl How long to remember it, raised to one minute when shorter.

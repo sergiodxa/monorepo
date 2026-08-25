@@ -1,3 +1,9 @@
+/**
+ * Converts between XML elements and the package's extension element shape.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { XML } from "@pkg/xml";
 
 import type { RSS } from "../index";

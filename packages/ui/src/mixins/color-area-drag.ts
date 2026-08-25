@@ -1,23 +1,8 @@
 /**
- * Drags a ColorArea root as a single two-dimensional gesture: a
- * `pointerdown` inside the root's own rectangle captures the pointer, and
- * every `pointermove` while that pointer stays captured measures its
- * position against the rectangle, maps it onto the paired horizontal- and
- * vertical-axis `<input type="range">` elements' own `min`–`max` ranges, and
- * writes both inputs' `valueAsNumber` together — the one update neither
- * input's own drag handling can produce alone, since each tracks only its
- * own single axis.
- *
- * Why JS: a native `<input type="range">` reports a pointer drag along its
- * own single axis only; nothing in HTML or CSS turns one pointer gesture
- * across a two-dimensional rectangle into a pair of range values moving
- * together, or reads a pointer position against an element's own rectangle
- * at all.
- * No-JS baseline: both axis inputs still render, each a real, independent
- * `<input type="range">` a screen reader announces and a keyboard drives with
- * its own arrow keys, and each still posts its own value with the form; only
- * dragging the rectangle as one combined gesture, and the combined change
- * notification, are unavailable.
+ * Drags a ColorArea root as one two-dimensional pointer gesture, mapping the
+ * pointer position onto paired horizontal- and vertical-axis range inputs
+ * and writing both together — the one update neither input's own drag
+ * handling can produce alone, since each tracks only its own axis.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,8 +20,7 @@ import { findPairedRangeInputs } from "../utils/paired-range-inputs";
 /**
  * `data-*` attribute a ColorArea's paired axis inputs carry so
  * {@link colorAreaDrag} can tell the horizontal-axis input from the
- * vertical-axis input. Set it alongside `type="range"` on both inputs the
- * mixin should coordinate.
+ * vertical-axis input.
  */
 export const COLOR_AREA_AXIS_ATTRIBUTE = "data-color-area-axis";
 
@@ -57,10 +41,8 @@ declare global {
 
 /**
  * Dispatched on a ColorArea's host by {@link colorAreaDrag} whenever a
- * pointer gesture writes both paired axis inputs to new values together, so
- * a consumer can react to the settled pair — recomputing a swatch preview,
- * writing a combined value into a hidden field — without reading the two
- * `<input>` elements itself.
+ * pointer gesture settles both paired axis inputs on new values, so a
+ * consumer can react to the pair without reading the two `<input>` elements itself.
  */
 export class ColorAreaChangeEvent extends Event {
 	/** Settled value of the horizontal-axis input, after mapping the pointer position through its own `min`–`max` range. */
@@ -81,8 +63,7 @@ export class ColorAreaChangeEvent extends Event {
 /**
  * Reads one bound (`min` or `max`) off an axis input's own attribute value,
  * falling back to `fallback` when the attribute is unset — mirroring the
- * native `<input type="range">` defaults (`0` and `100`) an author gets when
- * omitting it.
+ * native `<input type="range">` defaults an author gets when omitting it.
  *
  * @param raw The input's own `min` or `max` property value.
  * @param fallback Bound to use when `raw` is unset.
@@ -119,16 +100,10 @@ function mapToAxisValue(normalized: number, input: HTMLInputElement): number {
 }
 
 /**
- * Measures `point` against `host`'s own rectangle through
- * {@link normalizedPointerPosition}, maps the normalized position onto
- * `xInput`'s and `yInput`'s own ranges, writes both inputs' `valueAsNumber`
- * together, and dispatches {@link ColorAreaChangeEvent} on `host` with the
- * settled pair.
- *
- * The rectangle's vertical axis runs top-to-bottom, but a two-dimensional
- * picking surface's vertical channel conventionally increases toward the
- * top, so the normalized vertical position is inverted before it maps onto
- * `yInput`'s own range.
+ * Measures `point` against `host`'s own rectangle, maps the position onto
+ * `xInput`'s and `yInput`'s own ranges — inverting the vertical position
+ * since a picking surface's vertical channel increases upward while the
+ * rectangle's runs top-to-bottom — and dispatches {@link ColorAreaChangeEvent} on `host`.
  *
  * @param host ColorArea root element the pointer position measures against.
  * @param xInput Horizontal-axis input to write.
@@ -154,26 +129,9 @@ function applyPointerPosition(
 }
 
 /**
- * Adds pointer-driven, two-dimensional dragging to a ColorArea root. A
- * `pointerdown` from the primary pointer, pressed with the primary button,
- * captures the pointer against the root and immediately maps its position;
- * every subsequent `pointermove` while that pointer stays captured maps its
- * position again; `pointerup` and `pointercancel` release it. Only one
- * pointer is tracked at a time, so a second `pointerdown` while one is
- * already captured is ignored.
- *
- * Each mapped position is measured against the root's own rectangle through
- * {@link normalizedPointerPosition}, which clamps a pointer that has drifted
- * past the rectangle's edges to its border rather than losing the gesture,
- * then mapped onto the paired horizontal- and vertical-axis
- * `<input type="range">` elements' own `min`–`max` ranges — found under the
- * root through {@link COLOR_AREA_AXIS_ATTRIBUTE}, {@link COLOR_AREA_AXIS_X},
- * and {@link COLOR_AREA_AXIS_Y} — and written to both inputs'
- * `valueAsNumber` together, since one rectangle drag always moves both axes
- * at once and neither input can report the other's value on its own.
- *
- * Dispatches {@link ColorAreaChangeEvent} on the root every time a mapped
- * position settles both inputs.
+ * Adds pointer-driven, two-dimensional dragging to a ColorArea root,
+ * mapping each captured pointer's position onto the paired axis inputs
+ * found via {@link COLOR_AREA_AXIS_ATTRIBUTE} and dispatching {@link ColorAreaChangeEvent} on settled pairs.
  *
  * @returns A mixin descriptor for a ColorArea root's `mix` prop.
  * @example

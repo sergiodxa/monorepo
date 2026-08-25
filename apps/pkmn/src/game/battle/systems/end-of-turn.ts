@@ -1,11 +1,7 @@
 /**
- * Coordinates the end-of-turn battle systems for this module's portion of the combat engine.
- * It defines the shared context required by these systems and exposes the functions that resolve
- * delayed actions, residual effects, and the final reconciliation that prepares the next turn.
- *
- * This module focuses on between-turn state transitions rather than turn input or move selection.
- * Its responsibility is to keep end-of-turn processing ordered, deterministic, and isolated so the
- * wider battle flow can advance with a consistent view of combatant state and pending replacements.
+ * Resolves the shared context for end-of-turn battle systems: delayed attacks,
+ * residual damage and healing, and the reconciliation that clears one-turn
+ * flags before the next turn begins.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -151,7 +147,7 @@ export function scheduleDelayedAttacks(
 /**
  * Applies residual status, terrain, weather, and volatile effects to every active combatant.
  *
- * The walk happens over active slots rather than whole rosters because most residual effects only apply on
+ * The walk covers active slots because most residual effects only apply on
  * the field, and each slot needs immediate knockout cleanup before later effects continue.
  */
 export function applyEndOfTurnEffects(context: EndOfTurnContext): BattleEvent[] {
@@ -238,9 +234,6 @@ export function applyEndOfTurnEffects(context: EndOfTurnContext): BattleEvent[] 
 				}
 			}
 
-			// A held item's passive heal resolves after residual damage so it can
-			// recover HP the same turn poison/burn/weather chipped it, but only while
-			// the wielder is still standing.
 			if (context.isCombatantFainted(combatant) === false) {
 				applyHeldItemHealing(context, combatant, position, maxHP, events);
 			}
@@ -348,13 +341,9 @@ function applyFlatHealing(
 }
 
 /**
- * Restores HP from a held item's end-of-turn heal fraction, if the wielder has one.
- *
- * The amount is `floor(maxHP * fraction)`, clamped so HP never exceeds the maximum,
- * and the recovery reuses the residual HP-change event so the presentation animates
- * it like any other between-turn HP movement. A creature at full HP, holding nothing,
- * or holding an item without an `endOfTurnHealFraction` is left untouched and emits
- * no event.
+ * Restores HP from a held item's end-of-turn heal fraction. Called after
+ * residual damage resolves and only for a combatant still standing, so the
+ * recovery reflects damage the turn already dealt, clamped to `maxHP`.
  */
 function applyHeldItemHealing(
 	context: EndOfTurnContext,

@@ -2,10 +2,9 @@ import { unwrap } from "@pkg/result";
 /**
  * Verifies the evolution system's species swap and level-up evolution lookup.
  *
- * The tests confirm `evolveCreature` replaces the stored species id while preserving the nickname and any
- * other identity fields, and that `getLevelUpEvolution` returns the level-evolution target only once the
- * creature's level meets the threshold, returns null below it, ignores non-level methods, and picks the
- * first eligible level evolution. A tiny inline content source pins the growth curve and evolution data.
+ * The tests confirm `evolveCreature` replaces the stored species id while preserving the
+ * nickname, and that `getLevelUpEvolution` returns the level target only once the
+ * creature's level meets the threshold, ignoring non-level methods.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -153,17 +152,20 @@ test("evolveCreature preserves the nickname while swapping species", () => {
 	expect(identity).toEqual({ speciesId: EVOLVED_SPECIES, nickname: "Sparky" });
 });
 
+/**
+ * 1000 experience is exactly level 10 on the medium-fast curve, matching the evolution
+ * threshold.
+ */
 test("getLevelUpEvolution returns the target once the level threshold is met", () => {
 	let id = createCreatureId("one");
-	// 1000 experience is exactly level 10 on the medium-fast curve, matching the evolution threshold.
 	let { world } = createWorld(id, createCreature(1000));
 
 	expect(getLevelUpEvolution(createGameData(), world, id)).toBe(EVOLVED_SPECIES);
 });
 
+/** 125 experience is level 5, short of the level-10 evolution. */
 test("getLevelUpEvolution returns null below the level threshold", () => {
 	let id = createCreatureId("one");
-	// 125 experience is level 5, short of the level-10 evolution.
 	let { world } = createWorld(id, createCreature(125));
 
 	expect(getLevelUpEvolution(createGameData(), world, id)).toBeNull();
@@ -172,7 +174,6 @@ test("getLevelUpEvolution returns null below the level threshold", () => {
 test("getLevelUpEvolution returns null for a species with no level evolution", () => {
 	let id = createCreatureId("one");
 	let { world } = createWorld(id, createCreature(1000));
-	// Retarget the creature to the trade-only species, which has no level evolution at all.
 	world.creatureIdentity[id] = { speciesId: TRADE_SPECIES };
 
 	expect(getLevelUpEvolution(createGameData(), world, id)).toBeNull();
@@ -188,7 +189,6 @@ test("getLevelUpEvolution ignores non-level evolution methods", () => {
 		pp: 35,
 		effect: { kind: "none" },
 	};
-	// A species whose only evolution is by trade must never resolve through the level trigger.
 	let source: GameDataSource = {
 		species: {
 			[BASE_SPECIES]: species([{ method: EvolutionMethod.Trade, speciesId: TRADE_SPECIES }]),
@@ -222,7 +222,6 @@ test("getItemEvolution returns null for an item the species does not evolve with
 test("getItemEvolution returns null when the species has no item evolution", () => {
 	let id = createCreatureId("one");
 	let { world } = createWorld(id, createCreature(1000));
-	// The trade-only species carries no use-item evolution at all.
 	world.creatureIdentity[id] = { speciesId: TRADE_SPECIES };
 
 	expect(getItemEvolution(createGameData(), world, id, STONE_ITEM_ID)).toBeNull();

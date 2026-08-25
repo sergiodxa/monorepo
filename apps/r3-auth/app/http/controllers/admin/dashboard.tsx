@@ -22,7 +22,11 @@ import routes from "~/routes/web";
 
 export default createAction(routes.admin.dashboard, {
 	middleware: [requireAdmin],
-	/** Renders the three aggregate counts that describe the server's size and liveness. */
+	/**
+	 * Renders the three aggregate counts that describe the server's size and liveness.
+	 * The dashboard is the root of the admin area, so its breadcrumb trail is empty and
+	 * the heading stands alone.
+	 */
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 
@@ -36,8 +40,6 @@ export default createAction(routes.admin.dashboard, {
 			documentTitle: ctx.i18next.t("admin.dashboard.documentTitle"),
 			heading: ctx.i18next.t("admin.dashboard.title"),
 			section: "dashboard",
-			// No trail: the dashboard is the root of the area, and a one-segment
-			// breadcrumb would only repeat the heading directly under it.
 			breadcrumbs: [],
 		});
 

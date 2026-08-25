@@ -12,9 +12,10 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Region } from "~/app/models/blog";
 
-// The controller module reads `env` at import time, and the mock only reaches imports that
-// run after it; supply only the platform domain, so the dynamic import below loads without
-// the Workers runtime.
+/**
+ * Precedes the dynamic import below because the controller module reads `env`
+ * at import time; only `PLATFORM_DOMAIN` is needed for these tests.
+ */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ PLATFORM_DOMAIN: "blog.test" }),
 	DurableObject: class {},
@@ -60,7 +61,6 @@ describe("fieldText", () => {
 		let formData = new FormData();
 		formData.set("name", new File(["content"], "payload.txt"), "payload.txt");
 
-		// Stringifying the entry would store the literal "[object File]" as the name.
 		expect(fieldText(formData, "name")).toBe("");
 	});
 });

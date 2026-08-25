@@ -1,8 +1,8 @@
 /**
  * The OIDC ID token this server issues: a JWT with typed accessors for the standard
  * identity claims, plus the generator that builds one for a subject and a client.
- * Claims are gated by the granted scope per OIDC Core 1.0, so a relying party never
- * receives an attribute the person did not consent to share.
+ * Claims are gated by the granted scope per OIDC Core 1.0, so a relying party
+ * receives only the attributes the person consented to share.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -60,12 +60,9 @@ export default class IdToken extends JWT {
 	}
 
 	/**
-	 * Mints an ID token valid for {@link ID_TOKEN_TTL}.
-	 *
-	 * Only the claims the granted scope covers are written: `email` adds the address
-	 * and its verification flag, `profile` adds name, username and picture, and
-	 * everything else is always present. `nonce` and `auth_time` are written only when
-	 * the authorization request supplied them.
+	 * Mints an ID token valid for {@link ID_TOKEN_TTL}, timestamped in the seconds
+	 * RFC 7519 NumericDate defines. The granted scope decides which optional claims
+	 * are written, so a relying party sees only what the person consented to share.
 	 *
 	 * @param subject - The person being identified.
 	 * @param client - The relying party the token is addressed to.
@@ -84,7 +81,7 @@ export default class IdToken extends JWT {
 		options?: { nonce?: string | null; scope?: string[]; authTime?: number },
 	) {
 		let scope = options?.scope ?? ["openid"];
-		let now = Math.floor(Date.now() / 1000); // RFC 7519 NumericDate is in seconds
+		let now = Math.floor(Date.now() / 1000);
 		let expiresAt = now + Math.floor(ID_TOKEN_TTL / 1000);
 
 		return new IdToken({

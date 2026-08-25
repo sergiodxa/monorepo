@@ -26,26 +26,22 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
  */
 const SIGNING_KEY_CACHE_TTL_MS = 60_000;
 
-/** Cache structure for imported key pairs. */
 interface SigningKeyCache {
 	keys: JWK.KeyPair[];
 	expiresAt: number;
 }
 
-/** Algorithm names a stored row can be imported under. */
 const SUPPORTED_ALGORITHMS = new Set<string>(Object.values(JWK.Algorithm));
 
 /**
- * Model for JWT signing keys.
- * Manages cryptographic key pairs for signing and verifying tokens.
- * Keys are cached in-memory to avoid expensive imports on every token operation.
+ * Model for JWT signing keys, cached in-memory to avoid expensive imports on
+ * every token operation.
  */
 export default class SigningKey {
 	/**
-	 * In-memory cache of imported key pairs, keyed by the tenant's `Database` instance.
-	 * Multiple tenant Durable Objects can share one Worker isolate, so a single static
-	 * cache would let one tenant sign/verify tokens with another tenant's keys; keying
-	 * by `db` scopes the cache per tenant.
+	 * In-memory cache of imported key pairs, keyed by the tenant's `Database` instance,
+	 * since multiple tenant Durable Objects can share one Worker isolate and a single
+	 * static cache would let one tenant sign/verify tokens with another tenant's keys.
 	 */
 	static #cache = new WeakMap<Database, SigningKeyCache>();
 
@@ -102,13 +98,9 @@ export default class SigningKey {
 	}
 
 	/**
-	 * Reads a row's algorithm as one this package can import under.
-	 *
-	 * A row naming something else is reported rather than imported as the default: the
-	 * key would import under the wrong algorithm and then verify nothing, which reads
-	 * as a rejected token rather than as the stored value being wrong. Raising it takes
-	 * the whole set with it, so a set is never served with one key silently missing —
-	 * the tokens that key signed are the ones that would stop verifying.
+	 * Reads a row's algorithm as one this package can import under. A name it
+	 * doesn't recognize is reported rather than defaulted, since importing under
+	 * the wrong algorithm would silently verify nothing instead of surfacing the bad value.
 	 *
 	 * @param id - The row being read, named in the error.
 	 * @param value - The algorithm as stored.

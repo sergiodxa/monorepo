@@ -1,22 +1,9 @@
 /**
- * Daily background job that turns yesterday's recorded infrastructure cost into one Polar
- * event per team, carrying a `_cost` for Polar's Cost Insights (ADR-007 §6). It is the
- * reporting half of the cost ledger: the ledger measures operations as they happen, this
- * prices a day of them and hands the figure to the system that already knows what every
- * customer pays.
- *
- * Daily, not per check: per-check ingestion would be 179,000+ Polar calls a month for a
- * single account and Cost Insights can do nothing with the extra resolution. Idempotent by
- * construction: the event's `externalId` is `{team}:{day}`, which Polar deduplicates on, so
- * a retried delivery or a re-run of the same day creates no second event and this job needs
- * no "reported" flag in D1.
- *
- * It also carries the one quantity nothing else can observe — stored bytes — by estimating
- * each team's share of D1 storage from its retained result rows and recording it on its own
- * ledger. That lands the estimate in the dataset for the day this job runs rather than the
- * day it reports, so storage is reported a day later than the operations it accompanies;
- * for a quantity that moves by a fraction of a percent a day, that beats keeping a second
- * path into the dataset with a different notion of when a day is.
+ * Daily background job that turns yesterday's recorded infrastructure cost into one
+ * Polar event per team, carrying a `_cost` for Polar's Cost Insights (ADR-007 §6).
+ * Runs once a day: per-check ingestion would be 179,000+ Polar calls a month per
+ * account, far past that resolution. The event's `externalId` (`{team}:{day}`) makes
+ * a retried delivery or a re-run of the same day free of duplicate events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,7 +43,7 @@ import {
 } from "~/app/services/cost";
 import { teams } from "~/database/schema";
 
-/** The Polar event name cost rides on — its own name, never a revenue-bearing one. */
+/** The Polar event name cost rides on — a name reserved for cost, apart from revenue events. */
 const EVENT_NAME = "infra.cost.daily";
 
 /**
@@ -141,10 +128,9 @@ export class ReportCostsJob extends Job {
 		}
 
 		/**
-		 * The two totals that are not reported are logged at error level on purpose. Neither
-		 * is a failure of this job — but a growing unattributed or skipped figure means real
-		 * spend is landing on nobody, which is exactly the number that would otherwise stay
-		 * invisible while per-customer margin quietly stopped adding up.
+		 * Logged at error level on purpose: a growing unattributed or skipped figure means
+		 * real spend is landing on nobody, the number that would otherwise stay invisible
+		 * while per-customer margin quietly stopped adding up.
 		 */
 		if (unattributedCents > 0 || skippedCents > 0) {
 			this.logger.error("job.report_costs.unreported", { day, unattributedCents, skippedCents });
@@ -159,14 +145,9 @@ export class ReportCostsJob extends Job {
 	}
 
 	/**
-	 * Estimates how much stored data each team is responsible for and records it on this
-	 * job's own ledger, apportioned by that same estimate — so each team ends up charged for
-	 * its own bytes.
-	 *
-	 * Storage is modelled, not measured: nothing reports a per-team byte count, so this is
-	 * retained result rows × a mean row size. KV rides the same weights rather than being
-	 * split evenly, which is wrong by roughly 1e-8 cents a day and not worth a second
-	 * apportionment to fix.
+	 * Estimates each team's stored bytes as retained result rows × a mean row size, since
+	 * nothing reports a real per-team byte count, and apportions this job's own ledger by
+	 * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day.
 	 */
 	private async recordStorage(db: Database): Promise<void> {
 		let result = await db.exec(
@@ -201,14 +182,9 @@ export class ReportCostsJob extends Job {
 	}
 
 	/**
-	 * Maps each team to the owner whose Polar customer its cost is reported against, leaving
-	 * out any team whose owner Polar has never heard of.
-	 *
-	 * The subscription projection is the signal: a row exists for every owner billing has
-	 * ever touched, so an owner absent from it has no Polar customer to attach an event to
-	 * and one event naming a customer Polar cannot resolve would reject the whole batch. A
-	 * *lapsed* owner is still reported — they still cost money, and their customer record
-	 * still exists.
+	 * Maps each team to the owner its cost reports against, using the subscription
+	 * projection as the source of truth — a row exists for every owner billing has
+	 * touched, and one event naming a customer Polar cannot resolve rejects the batch.
 	 */
 	private async resolveOwners(db: Database, teamIds: string[]): Promise<Map<string, string>> {
 		if (teamIds.length === 0) return new Map();
@@ -226,11 +202,8 @@ export class ReportCostsJob extends Job {
 
 /**
  * Collapses the query's rows — one per team per rate card — into one entry per team.
- *
- * A group recorded under the current rate card is priced from its quantities, which is why
- * the dataset stores quantities at all: a rate correction re-prices the whole window. A
- * group recorded under an older card keeps the total it was priced at, because a price
- * change must not retroactively restate history.
+ * A current-rate-card group is re-priced from its stored quantities, so a rate
+ * correction can re-price the whole retained window without touching older totals.
  *
  * @param rows - Every row the daily query returned.
  * @returns One summed {@link TeamDay} per team id.
@@ -255,12 +228,9 @@ function summariseByTeam(rows: DailyTeamCost[]): Map<string, TeamDay> {
 }
 
 /**
- * The event metadata for one team's day: the drivers behind the amount, so Polar's own
- * dashboard can answer *why* a customer cost what they cost without a second system.
- *
- * Quantity keys are the rate card's resource names in `snake_case`, derived rather than
- * listed, so adding a resource adds it here too. Per-resource money is deliberately absent:
- * it is the quantity times a rate this event already names.
+ * The event metadata for one team's day — the drivers behind the amount, so Polar's
+ * own dashboard can answer *why* a customer cost what they cost. Quantity keys derive
+ * from the rate card's resource names, so a new resource is covered automatically.
  *
  * @param teamId - The team the day belongs to.
  * @param day - The reported UTC day, `YYYY-MM-DD`.

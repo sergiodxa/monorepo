@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { accent } from "./accent";
 export { autofill } from "./autofill";
 export { bg } from "./bg";

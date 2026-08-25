@@ -24,17 +24,15 @@ function stubHandle(get: () => unknown): Handle<unknown> {
 	return { context: { set: () => {}, get } } as unknown as Handle<unknown>;
 }
 
-/** Fixture whose ambient scope provides `level`. */
 function ambientHandle(level: HeadingLevel): Handle<unknown> {
 	return stubHandle(() => ({ level }));
 }
 
-/** Fixture with no ancestor scope at all — `context.get` resolves to `undefined`. */
 function unscopedHandle(): Handle<unknown> {
 	return stubHandle(() => undefined);
 }
 
-/** Fixture whose `context.get` throws instead of resolving, simulating a broken lookup. */
+/** Fixture whose `context.get` always throws, simulating a broken lookup. */
 function throwingHandle(): Handle<unknown> {
 	return stubHandle(() => {
 		throw new Error("lookup failed");
@@ -63,8 +61,6 @@ describe(resolveHeadingLevel.name, () => {
 	test("clamps a resolution past 6 down to 6", () => {
 		let handle = ambientHandle(6);
 
-		// Simulates the out-of-range intermediate a nested HeadingScope can
-		// compute (one past an already-maxed ambient) before clamping.
 		expect(resolveHeadingLevel(handle, 9 as unknown as HeadingLevel)).toBe(6);
 	});
 

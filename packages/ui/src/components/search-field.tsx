@@ -29,8 +29,7 @@ export namespace SearchField {
 	/**
 	 * Every native `<search>` attribute, unchanged, plus the `mix` passthrough.
 	 * `children` composes this field's parts — typically a caption, the
-	 * {@link SearchField.Input} control, and any supporting or validation
-	 * copy — in a single column with a small gap between them.
+	 * {@link SearchField.Input} control, and validation copy — in a single column.
 	 */
 	export interface Props extends TagProps<"search"> {
 		/** The field's compound parts: a caption, the control, and any supporting or validation copy. */
@@ -47,10 +46,8 @@ export namespace SearchField {
 
 /**
  * Renders a `<search>` landmark — the platform's own role for a search
- * region, needing no explicit `role` attribute — stacking its compound parts
- * in a single column with a small gap between them: typically a caption,
- * this component's own {@link SearchField.Input}, and any supporting or
- * validation copy.
+ * region, needing no explicit `role` attribute — stacking a caption,
+ * {@link SearchField.Input}, and validation copy in a single column.
  *
  * @param handle Runtime handle carrying the host `<search>`'s props.
  * @returns The render function producing the field's markup.
@@ -75,16 +72,7 @@ export function SearchField(handle: Handle<SearchField.Props>) {
 /**
  * Renders {@link SearchField}'s control: a positioning wrapper pairing a
  * muted, decorative {@link SearchIcon} with a native `<input type="search">`
- * that builds on {@link Input} for its box, color, and interaction-state
- * styling. The icon sits at the control's inline-start edge, vertically
- * centered by the wrapper's own flex alignment, and the input reserves
- * matching inline-start padding so typed text never runs beneath the glyph.
- *
- * Every {@link Input} state — hover, focus, focus-visible, invalid, disabled —
- * carries over unchanged, since this control renders an {@link Input}
- * underneath rather than a bare `<input>`. A WebKit-based browser shows its
- * own native search cancel affordance inside the control once it holds text,
- * entirely on its own.
+ * built on {@link Input}, inheriting its box, color, and state styling.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the control's markup.

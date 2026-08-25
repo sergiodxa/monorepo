@@ -14,7 +14,7 @@ import { relativeTimeFormatter } from "./intl-cache";
 /**
  * The unit ladder, each rung holding how many of that unit make up the next one.
  * A month is the average Gregorian month and a year is measured in months, so
- * "13 months" reads as "1 year" rather than being reported in weeks.
+ * "13 months" reads as "1 year".
  */
 const DIVISIONS = [
 	{ unit: "second", amount: 60 },
@@ -42,13 +42,9 @@ export interface FormatRelativeOptions {
 }
 
 /**
- * Word the distance from now to an instant, in the largest unit that still reads as
- * a whole number of that unit. Future instants read as "in ..." and past ones as
- * "... ago", both phrased by the locale.
- *
- * The unit is chosen by rounding: 90 minutes reads as "in 2 hours", and a distance
- * that rounds up to a full unit carries into the next one, so nothing reads as
- * "in 60 seconds".
+ * Words the distance from now to an instant, using "in ..." for the future and "... ago"
+ * for the past. It picks the largest unit that still rounds to a whole number, so 90
+ * minutes reads as "in 2 hours" and a rounded value carries into the next unit.
  *
  * @param date - Instant to describe.
  * @param options - Locale, the instant to measure against, and the wording.
@@ -69,7 +65,6 @@ export function formatRelative(date: Date, options: FormatRelativeOptions): stri
 	let value = (date.getTime() - now.getTime()) / 1000;
 
 	for (let index = 0; index < DIVISIONS.length; index++) {
-		// The ladder is a literal tuple, so every index in range holds a division.
 		let division = DIVISIONS[index] as (typeof DIVISIONS)[number];
 		let rounded = Math.round(value);
 		if (Math.abs(rounded) < division.amount || index === DIVISIONS.length - 1) {

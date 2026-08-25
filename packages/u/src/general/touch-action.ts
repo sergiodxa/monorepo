@@ -6,9 +6,8 @@ import { utility } from "../internal/descriptor";
 
 /**
  * The standard `touch-action` keywords. The `(string & {})` member keeps the
- * type a plain string for a space-separated combination of the `pan-*`
- * values (e.g. `"pan-x pan-y"`), which isn't a fixed keyword and so can't be
- * enumerated here.
+ * type a plain string, so space-separated `pan-*` combinations such as
+ * `"pan-x pan-y"` stay valid.
  */
 export type TouchActionValue =
 	| "auto"
@@ -25,8 +24,7 @@ export type TouchActionValue =
 
 /**
  * Applies `touch-action`. Defaults to `"none"`, the common case of a custom
- * drag handle or gesture surface that needs to handle its own touch input
- * instead of the browser's default panning/zooming.
+ * drag handle or gesture surface that handles its own touch input.
  *
  * @example u.touchAction()
  * @example css({ touchAction: "none" })

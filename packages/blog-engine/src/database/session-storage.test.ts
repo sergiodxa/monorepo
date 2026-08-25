@@ -1,5 +1,3 @@
-import { Database } from "remix/data-table";
-import { createSession } from "remix/session";
 /**
  * Covers the SQL-backed session store's server-side expiry: a fresh session round
  * trips its data, while a session presented at/after its stored `expires_at` (or
@@ -9,6 +7,8 @@ import { createSession } from "remix/session";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { Database } from "remix/data-table";
+import { createSession } from "remix/session";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { createTestDatabase } from "../shared/test/db";
@@ -36,19 +36,16 @@ describe("SqlSessionStorage expiry", () => {
 	});
 
 	test("an expired session is not returned and is deleted from the table", async () => {
-		// A negative TTL makes the persisted `expires_at` land in the past.
 		let expiredStorage = new SqlSessionStorage(db, { ttlSeconds: -60 });
 		let session = createSession();
 		session.set("userId", "user_2");
 		let cookie = await expiredStorage.save(session);
 		expect(cookie).toBeTypeOf("string");
 
-		// A normal reader must reject the stale id and start a clean session.
 		let reader = new SqlSessionStorage(db);
 		let restored = await reader.read(cookie);
 		expect(restored.get("userId")).toBeUndefined();
 
-		// The invalid row is purged as a side effect of the failed read.
 		let row = await db.findOne(sessions, { where: { id: cookie! } });
 		expect(row).toBeNull();
 	});
@@ -59,7 +56,6 @@ describe("SqlSessionStorage expiry", () => {
 		session.set("userId", "user_3");
 		let cookie = await storage.save(session);
 
-		// Corrupt the stored expiry so Date.parse yields NaN.
 		await db.update(
 			sessions,
 			{ id: cookie! },

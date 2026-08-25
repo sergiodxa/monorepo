@@ -37,7 +37,6 @@ interface SubjectEnvelope {
 	};
 }
 
-/** Runs a `client_credentials` grant and returns the access token it issued. */
 async function clientCredentialsToken(): Promise<string> {
 	let credentials = btoa(`${fixtures.clientId}:${fixtures.clientSecret}`);
 
@@ -58,12 +57,9 @@ async function clientCredentialsToken(): Promise<string> {
 }
 
 /**
- * Runs the grant exactly the way the published client library sends it: a multipart body
- * and an `Authorization: Basic` header encoded with base64url rather than base64.
- *
- * Both details are easy to break and neither fails visibly — the symptom is a client that
- * cannot authenticate and no message saying why — so this is the byte-level companion to
- * the library-driven test, which cannot post a multipart body through its interception.
+ * Runs the grant byte for byte the way the published client library sends it: a multipart
+ * body and an `Authorization: Basic` header encoded with base64url. Both details break
+ * silently, leaving a client that fails to authenticate with no message saying why.
  */
 async function clientCredentialsTokenAsTheLibrarySendsIt(): Promise<Response> {
 	let credentials = btoa(`${fixtures.clientId}:${fixtures.clientSecret}`)
@@ -83,7 +79,6 @@ async function clientCredentialsTokenAsTheLibrarySendsIt(): Promise<Response> {
 	);
 }
 
-/** Calls the endpoint for a subject id, optionally with a bearer token. */
 async function fetchSubject(subjectId: string, token?: string): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${routes.api.subject.href({ subjectId })}`, {
@@ -106,14 +101,12 @@ describe("GET /api/subjects/:subjectId", () => {
 
 		let body = (await response.json()) as SubjectEnvelope;
 
-		// Every field name and format here is parsed by deployed software.
 		expect(body.subject.id).toBe(fixtures.subjectId);
 		expect(body.subject.displayName).toBe("Jane Doe");
 		expect(body.subject.username).toBe("jane");
 		expect(body.subject.emailAddress).toBe("jane@example.com");
 		expect(body.subject.avatar).toBe("https://example.com/jane.png");
 		expect(body.subject.role).toBe("user");
-		// ISO-8601, not the epoch milliseconds the column holds: the envelope's own contract.
 		expect(body.subject.emailVerifiedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 		expect(new Date(body.subject.createdAt).getTime()).toBeGreaterThan(0);
 		expect(body.subject.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
@@ -143,14 +136,11 @@ describe("GET /api/subjects/:subjectId", () => {
 		let token = await clientCredentialsToken();
 		await fetchSubject(fixtures.subjectId, token);
 
-		// Let the background write settle: the put is handed to `waitUntil`.
 		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		let key = `clients:${fixtures.clientId}:subjects:${fixtures.subjectId}`;
 		let cached = await app.kv.get(key, "json");
 
-		// The stored JSON is the response payload verbatim, because the other worker
-		// serving this API reads this same entry and returns it as-is.
 		expect(cached).toMatchObject({
 			id: fixtures.subjectId,
 			displayName: "Jane Doe",
@@ -178,7 +168,6 @@ describe("GET /api/subjects/:subjectId", () => {
 			}),
 		);
 
-		// Deleting the row proves the answer came from the cache and not the database.
 		await Subject.delete(app.db, fixtures.subjectId);
 
 		let response = await fetchSubject(fixtures.subjectId, token);
@@ -193,7 +182,6 @@ describe("GET /api/subjects/:subjectId", () => {
 		let token = await clientCredentialsToken();
 		let key = `clients:${fixtures.clientId}:subjects:${fixtures.subjectId}`;
 
-		// An entry no schema can read must never be handed to a client as-is.
 		await app.kv.put(key, JSON.stringify({ id: fixtures.subjectId, displayName: 42 }));
 
 		let response = await fetchSubject(fixtures.subjectId, token);
@@ -279,8 +267,6 @@ describe("GET /api/subjects/:subjectId", () => {
 	test("accepts a client entry written in the other worker's shape", async () => {
 		let token = await clientCredentialsToken();
 
-		// The other worker caches its whole client row under this key. Reading it must
-		// work, and it must not be treated as unreadable.
 		await app.kv.put(
 			`clients:${fixtures.clientId}`,
 			JSON.stringify({

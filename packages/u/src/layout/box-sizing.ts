@@ -7,10 +7,9 @@ import { utility } from "../internal/descriptor";
 export type BoxSizingValue = "border-box" | "content-box";
 
 /**
- * Applies `box-sizing`, controlling whether `width`/`height` (and their
- * logical `inline-size`/`block-size` counterparts) include padding and
- * border (`"border-box"`) or exclude them (`"content-box"`, the CSS
- * default).
+ * Applies `box-sizing`, controlling whether `width`/`height` (and the logical
+ * `inline-size`/`block-size` pair) span padding and border (`"border-box"`) or
+ * the content area alone (`"content-box"`, the CSS default).
  *
  * @example u.boxSizing("border-box")
  * @example css({ boxSizing: "border-box" })

@@ -5,10 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies the `transition-duration` property on its own — for overriding
- * just the duration of a transition already declared elsewhere (e.g. a
- * `prefers-reduced-motion` media query that should shrink the duration to
- * zero without re-declaring `transition-property`/`transition-timing-function`).
+ * Applies `transition-duration` on its own, so a media query such as
+ * `prefers-reduced-motion` can shrink an already-declared transition to zero
+ * while its property list and timing function stay in place.
  *
  * @example u.media("(prefers-reduced-motion: reduce)", u.transitionDuration("0s"))
  * @example css({ "@media (prefers-reduced-motion: reduce)": { transitionDuration: "0s" } })

@@ -1,7 +1,7 @@
 /**
  * Public surface of the cron package: the `Schedule` value object, the failure
  * parsing returns, the descriptor shapes an app translates, and the option bags
- * every query takes. Nothing here formats text for a user.
+ * every query takes, leaving descriptor-to-text formatting to the caller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

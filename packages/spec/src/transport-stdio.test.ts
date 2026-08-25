@@ -25,18 +25,16 @@ import { connectStdioPlugin } from "./transport-stdio";
 const DEMO_PLUGIN_PATH = path.join(import.meta.dirname, "plugins", "demo.ts");
 
 /**
- * The Bun executable, found on PATH. Every child here is a Bun program — a
- * TypeScript plugin, or a `-e` script written against Bun APIs — so it is
- * spawned by name rather than through `process.execPath`, which names whichever
- * runtime happens to be running this file.
+ * The Bun executable, found on PATH. Every child here is a Bun program, so it
+ * is spawned by name rather than through `process.execPath`, which names
+ * whichever runtime happens to be running this file.
  */
 const BUN_EXECUTABLE = "bun";
 
 /**
  * A raw NDJSON plugin written against the wire protocol directly (no
  * servePlugin), so tests control every reply byte. The called tool's name
- * selects the behavior: echo the workspace root, dump the environment, reply
- * garbage, exit silently, or fail with the tool's name as the wire code.
+ * selects the behavior: echo, dump env, reply garbage, exit, or fail.
  */
 const RAW_PLUGIN_SCRIPT = `
 let buffer = "";
@@ -67,13 +65,13 @@ process.stdin.on("data", (chunk) => {
 });
 `;
 
-/** A child that reports its pid, then stays alive without ever replying. */
+/** A child that reports its pid, then idles indefinitely, well past the handshake timeout. */
 const SILENT_PLUGIN_SCRIPT = `
 await Bun.write(process.argv[1], String(process.pid));
 setTimeout(() => {}, 60000);
 `;
 
-/** A child that exits immediately, before replying to anything. */
+/** A child that exits before the handshake completes. */
 const EXITING_PLUGIN_SCRIPT = `process.exit(0);`;
 
 /** A minimal context whose workspace root the transport should forward. */
@@ -139,7 +137,6 @@ describe("connectStdioPlugin", () => {
 		expect(first.map((descriptor) => descriptor.name)).toEqual(["say", "upper"]);
 		expect(first[0]?.kind).toBe("action");
 		expect(first[1]?.kind).toBe("observable");
-		// Cached: the same array comes back without another round-trip.
 		expect(plugin.describe()).toBe(first);
 	});
 
@@ -295,7 +292,6 @@ describe("connectStdioPlugin", () => {
 			expect(dying.error.code).toBe("tool-error");
 			expect(dying.error.message).toContain("closed the connection");
 		}
-		// The connection is closed; later calls fail fast instead of hanging.
 		let afterwards = await plugin.call("workspace", [], context);
 		expect(isFailure(afterwards)).toBe(true);
 		if (isFailure(afterwards)) {

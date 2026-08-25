@@ -1,12 +1,9 @@
 /**
  * The shared utility mixin descriptor every public utility in this package is
- * built from. A utility mixin is a real `remix/ui` host-element mixin — it
- * works directly in a `mix` prop and dedupes through `css()`'s own class
- * cache — but it also carries a hidden style tree behind the {@link UTILITY}
- * symbol so wrapper utilities such as `hover()`, `at()`, and `media()` can
- * read what an atomic utility would render, nest it under a selector or
- * at-rule, and re-emit it as a new utility mixin of their own. Plain `css()`
- * mixins can't do this: once built, their generated class name is opaque.
+ * built from. A utility mixin works directly in a `mix` prop and dedupes
+ * through `css()`'s class cache, and it also carries a hidden style tree
+ * behind the {@link UTILITY} symbol so wrappers like `hover()` and `at()` can
+ * read what it renders, nest that under a selector, and re-emit it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,17 +16,14 @@ import type { CSSStyles } from "./css-styles";
 
 /**
  * Private symbol keying the style-tree metadata carried by every utility
- * mixin. Not exported outside `internal/` — call sites read a utility's
- * styles through {@link compose}, never by reaching for this symbol
- * themselves.
+ * mixin. Call sites read a utility's styles through {@link compose}.
  */
 const UTILITY = Symbol("utility");
 
 /**
  * The metadata a utility mixin carries behind {@link UTILITY}: a thunk that
- * rebuilds its style tree on demand, so wrapper utilities can pull it,
- * merge it with siblings, and nest the result under their own selector or
- * at-rule before handing it back to `css()`.
+ * rebuilds its style tree on demand, so wrappers can merge it with siblings
+ * and nest the result under their own selector before handing it to `css()`.
  */
 export interface UtilityNode {
 	toStyles(): CSSStyles;
@@ -49,11 +43,9 @@ export type UtilityMixin<Node extends Element = Element> = MixinDescriptor<
 };
 
 /**
- * Accepted input shape for any utility call site that composes other
- * utilities: a single utility mixin, a falsy value (dropped), or a
- * recursively nested array of the same — matching what `mix` itself accepts,
- * so `u.hover([u.bg("brand.tint"), false, [u.border("brand")]])` flattens the
- * same way a `mix` array would.
+ * Accepted input for any utility that composes other utilities: a single
+ * utility mixin, a falsy value (dropped), or a recursively nested array of the
+ * same, so it flattens exactly the way a `mix` array does.
  */
 export type UtilityInput<Node extends Element = Element> =
 	| UtilityMixin<Node>
@@ -66,8 +58,8 @@ export type UtilityInput<Node extends Element = Element> =
 
 /**
  * Builds a utility mixin from a style-tree thunk. Every atomic and semantic
- * utility in this package returns the result of this function — never a bare
- * `css()` mixin — so it stays inspectable by wrapper utilities.
+ * utility in this package returns the result of this function, which is what
+ * keeps them all inspectable by wrapper utilities.
  *
  * @example
  * export function p(...values: SpacingValue[]) {
@@ -102,12 +94,9 @@ function isPlainStyleObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Merges style trees left to right. A plain declaration is overwritten by
- * the same key in a later tree ("the later utility wins"); a nested selector
- * or at-rule block present in more than one tree is merged recursively
- * instead of replaced, so `u.hover([u.bg("brand.tint"), u.border("brand")])`
- * combines both utilities' `&:hover` blocks into one instead of the second
- * replacing the first.
+ * Merges style trees left to right: for a plain declaration the later tree
+ * wins, while a nested selector or at-rule block present in more than one tree
+ * merges recursively, combining sibling `&:hover` blocks into one.
  */
 export function merge(...trees: CSSStyles[]): CSSStyles {
 	let result: Record<string, unknown> = {};
@@ -124,10 +113,9 @@ export function merge(...trees: CSSStyles[]): CSSStyles {
 }
 
 /**
- * Nests `styles` under a single computed selector or at-rule key. A plain
- * `{ [key]: styles }` object literal doesn't satisfy `CSSStyles`'s index
- * signature when `key` is a runtime string rather than a literal, so every
- * wrapper builds its nested block through this helper instead.
+ * Nests `styles` under a single computed selector or at-rule key. Building the
+ * block through a `Record` keeps a runtime string key assignable to
+ * `CSSStyles`'s index signature, so every wrapper goes through this helper.
  */
 export function nest(key: string, styles: CSSStyles): CSSStyles {
 	let result: Record<string, CSSStyles> = {};
@@ -137,11 +125,8 @@ export function nest(key: string, styles: CSSStyles): CSSStyles {
 
 /**
  * The shared implementation behind every selector, media, container, and
- * feature-query wrapper: flattens `input`, merges the flattened utilities'
- * style trees, passes the merged tree through `wrap` to nest it under the
- * wrapper's own selector or at-rule, and returns the result as a new,
- * equally inspectable utility mixin — so wrappers compose with each other
- * (`u.at("md", [u.p(4), u.hover(u.p(6))])`).
+ * feature-query wrapper: flattens and merges `input`, nests the tree through
+ * `wrap`, and returns an equally inspectable mixin, so wrappers compose.
  *
  * @example
  * export function hover(input: UtilityInput) {

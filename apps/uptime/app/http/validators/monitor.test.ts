@@ -1,14 +1,11 @@
 /**
- * Unit tests for the HTTP monitor create/update web-form validators: the required
+ * Unit tests for the HTTP monitor create/update web-form validators: the
  * `url` format check, the `location_hint` enum and its default, and the
- * `interval_seconds`/`expected_status` numeric bounds. Method/timeout/degraded-threshold
- * aren't fields on these schemas — see `app/http/validators/monitor.ts`'s docstring.
+ * `interval_seconds`/`expected_status` numeric bounds.
  *
- * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but these are `f.object(...)`
- * form-data schemas that only accept the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()`
+ * with real `FormData`, since these `f.object(...)` form-data schemas parse
+ * the raw `FormData`/`URLSearchParams` instance directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

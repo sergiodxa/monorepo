@@ -1,15 +1,8 @@
 /**
- * Tests the `/api/v1/dns-monitors` collection endpoints: listing a team's DNS
- * monitors and creating one, both gated by a real `requireApiKey` bearer-token check
- * baked into the controller. Covers the happy paths, validation failure,
- * missing/garbage auth, missing scope, and that a list never leaks another team's
- * monitors.
- *
- * A create discovers, so the DoH endpoint is stubbed with MSW and the sweep runs its real
- * code against real-shaped answers. What that pins is the decision an API create makes with
- * no reviewer standing there: everything discovered is imported **and watched**, which is the
- * opposite of what the review screen's newly-seen records get, and the records sub-resource
- * is the only way a script narrows it afterwards.
+ * Tests `/api/v1/dns-monitors`: listing a team's monitors and creating one, gated by a real
+ * `requireApiKey` bearer-token check. Covers happy paths, validation failures, missing/garbage
+ * auth, missing scope, and that a list never leaks another team's monitors. Creation runs
+ * discovery for real against an MSW-stubbed DoH endpoint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -211,16 +204,15 @@ describe("POST /api/v1/dns-monitors", () => {
 		};
 		expect(body.data.dnsMonitor.name).toBe("Apex A record");
 		expect(body.data.dnsMonitor.domain).toBe("example.com");
-		// Nothing has been pasted, so the monitor covers the apex and says so.
 		expect(body.data.dnsMonitor.zoneFileImportedAt).toBeNull();
 
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
 	});
 
 	/**
-	 * ADR-026 §13: there is no reviewer on an API call, so everything discovered is watched.
-	 * The safer default would be the opposite, and this test is where that choice is visible
-	 * if it is ever revisited.
+	 * ADR-026 §13: an API create has no reviewer, so everything discovered is imported already
+	 * watched — the six queries below cover every supported record type for the one name. The
+	 * review-gated default lives only in the review screen.
 	 */
 	test("imports every discovered record already watched, since no review step exists", async () => {
 		stubResolver();
@@ -241,7 +233,6 @@ describe("POST /api/v1/dns-monitors", () => {
 		};
 
 		expect(body.data.discovery).toMatchObject({ names: 1, recordsImported: 1, queriesFailed: 0 });
-		// One name, every supported type: a domain monitor is not one query.
 		expect(queries).toBe(6);
 
 		let records = await db.findMany(dnsMonitorRecords, {
@@ -280,9 +271,8 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(body.data.dnsMonitor.zoneFileImportedAt).not.toBeNull();
 		expect(body.data.discovery.names).toBe(2);
 		/**
-		 * `$ORIGIN` is the dangerous one to ignore — every relative name after it would resolve
-		 * into the wrong zone — so a script is told about it rather than left to assume its
-		 * whole file was read.
+		 * `$ORIGIN` is the dangerous one to ignore: every relative name after it would resolve
+		 * into the wrong zone, so a script is told about the rejected line explicitly.
 		 */
 		expect(body.data.discovery.rejectedLines).toEqual([{ line: 1, reason: "originDirective" }]);
 
@@ -290,8 +280,8 @@ describe("POST /api/v1/dns-monitors", () => {
 	});
 
 	/**
-	 * The paste is a map of somebody's infrastructure: it is parsed and dropped, and neither
-	 * the monitor row nor the response may carry a byte of it that is not a record we monitor.
+	 * The paste is a map of somebody's infrastructure: it is parsed and dropped, so the monitor
+	 * row and the response carry only the records being watched, never a byte of the original text.
 	 */
 	test("stores and returns no trace of the pasted zone file itself", async () => {
 		stubResolver();
@@ -314,6 +304,10 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(JSON.stringify({ monitor, records })).not.toContain("secret-comment");
 	});
 
+	/**
+	 * The name-count check runs before the monitor row is created and before any DNS query is
+	 * sent, so a caller learns about an unsupported zone file with no partial monitor left behind.
+	 */
 	test("returns 400 for a zone file declaring more names than one monitor can sweep", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
@@ -332,7 +326,6 @@ describe("POST /api/v1/dns-monitors", () => {
 		);
 
 		expect(response.status).toBe(400);
-		// Refused before the monitor row exists, and before a single query is sent.
 		expect(queries).toBe(0);
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
 	});
@@ -439,6 +432,10 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(MAX_DNS_MONITORS_PER_TEAM);
 	});
 
+	/**
+	 * The cap check runs before the monitor row is written and before any DNS query is sent, so
+	 * hitting the limit costs nothing beyond the check itself.
+	 */
 	test("returns 400 once the team is at the per-team DNS monitor cap", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
@@ -465,7 +462,6 @@ describe("POST /api/v1/dns-monitors", () => {
 			`Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
 		);
 
-		// Refused before the row is written, and before a single query is sent.
 		expect(queries).toBe(0);
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(MAX_DNS_MONITORS_PER_TEAM);
 	});

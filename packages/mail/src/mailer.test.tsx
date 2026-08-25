@@ -1,8 +1,8 @@
 /**
- * Tests the mailer through the in-memory transport rather than a mocked SDK: what
- * normalization fills in, how the plain-text part is derived, that a failed send is
- * a value instead of an exception, and that an email object is discriminated from a
- * plain message and recorded on the delivery.
+ * Tests the mailer through the in-memory transport: what normalization fills in,
+ * how the plain-text part is derived, that a failed send reports as a `Result`,
+ * and that an email object is discriminated from a plain message and recorded
+ * on the delivery.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,7 +73,6 @@ class TeamInviteEmail implements Email {
 class WelcomeEmail implements Email {
 	constructor(private user: { email: string }) {}
 
-	/** Recipient derived from the user record. */
 	get to() {
 		return { email: this.user.email };
 	}
@@ -89,7 +88,7 @@ class WelcomeEmail implements Email {
 	}
 }
 
-/** Transport that throws instead of returning a failure, which callers must not see. */
+/** Transport whose `send()` throws, so `Mailer` must convert the throw into a `MailError` result. */
 class ThrowingTransport implements Transport {
 	/** Always throws, standing in for a provider client that rejects unexpectedly. */
 	async send(): Promise<Result<SentMessage, MailError>> {

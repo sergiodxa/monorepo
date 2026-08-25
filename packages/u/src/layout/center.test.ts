@@ -1,6 +1,4 @@
 /**
- * Unit tests for `center()`'s fixed three-property centering declaration.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

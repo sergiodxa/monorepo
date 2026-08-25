@@ -46,10 +46,9 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 }
 
 /**
- * No `zoneFile`: the text is never stored, so re-importing one is its own act rather than a
- * field carried along by every rename. `intervalSeconds` reads the same floor the create body
- * and the web form read, so a monitor cannot be edited below a limit it could not be created
- * below.
+ * `zoneFile` stays out of this schema: its text is never persisted, so re-importing runs as
+ * its own action. `intervalSeconds` enforces the same floor and ceiling as monitor creation,
+ * so an edited interval always stays one a fresh monitor could also be created with.
  */
 const UpdateDnsMonitorSchema = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),

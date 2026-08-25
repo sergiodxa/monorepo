@@ -2,8 +2,8 @@
  * Tests the `/api/v1/monitors/:monitorId` item endpoints: get/update/delete, the
  * per-monitor stats rollup, paginated check-result history, and alert-delivery
  * history. Covers happy paths, validation failures, missing/invalid API keys,
- * wrong-scope keys, and that a monitor belonging to another team always 404s rather
- * than leaking data.
+ * wrong-scope keys, and that a monitor belonging to another team always 404s, leaving
+ * its data untouched.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,10 +24,9 @@ import { alertEvents, monitorResults, monitors, teams } from "~/database/schema"
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` (imported by `./monitor`) reads `env` from `cloudflare:workers`
- * at module load time, so it has to resolve under the test runner. These endpoints touch no
- * binding, and the empty strict env proves it: any read would throw by the binding's name
- * instead of quietly answering `undefined`.
+ * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
+ * must resolve under the test runner. An empty strict env proves these endpoints touch no
+ * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 

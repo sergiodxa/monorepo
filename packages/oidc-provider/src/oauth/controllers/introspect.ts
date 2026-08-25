@@ -29,7 +29,6 @@ import SigningKey from "../../signing-keys/models/signing-key";
 import Session from "../models/session";
 import AccessToken from "../values/access-token";
 
-/** Validation schema for token introspection request bodies. */
 let IntrospectSchema = s.object({
 	token: s.string(),
 	token_type_hint: s.optional(s.enum_(["access_token", "refresh_token"])),

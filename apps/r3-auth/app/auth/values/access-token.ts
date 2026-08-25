@@ -1,8 +1,8 @@
 /**
  * The OAuth 2.0 access token this server issues: a JWT with typed accessors for the
  * claims RFC 9068 defines, plus the generator that mints one for an audience and
- * subject. Modelled as a value object so every endpoint reads and writes the bearer
- * token through one description of its claim set rather than raw JWT payloads.
+ * subject. A value object, so every endpoint reads and writes the bearer token
+ * through one description of its claim set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,7 +29,7 @@ export default class AccessToken extends JWT {
 		return this.parser.number("exp");
 	}
 
-	/** Required here, so the seconds are a `number` rather than `number | null`. */
+	/** Narrowed to always present, so callers read the seconds without a null check. */
 	override get expirationTime() {
 		return this.parser.number("exp");
 	}
@@ -50,13 +50,9 @@ export default class AccessToken extends JWT {
 	}
 
 	/**
-	 * Granted scopes as an array, empty when the token carries no `scope` claim.
-	 *
-	 * RFC 9068 writes `scope` only when scopes were granted and omits it otherwise, so this
-	 * reads through a presence check rather than the parser's throwing accessor: a
-	 * scope-less token — a `client_credentials` token, or a refresh token minted without
-	 * scope — yields an empty list instead of raising, leaving the caller to decide whether
-	 * that token is entitled to what it is asking for.
+	 * Granted scopes, empty when the token carries no `scope` claim: RFC 9068 writes
+	 * `scope` only when scopes were granted, so a `client_credentials` or scope-less
+	 * refresh token yields an empty list and the caller decides its entitlements.
 	 */
 	get scopes(): string[] {
 		if (!this.parser.has("scope")) return [];
@@ -64,15 +60,16 @@ export default class AccessToken extends JWT {
 	}
 
 	/**
-	 * Mints an access token valid for {@link ACCESS_TOKEN_TTL}. The `scope` claim is
-	 * written only when scopes were granted, since RFC 9068 leaves it out otherwise.
+	 * Mints an access token valid for {@link ACCESS_TOKEN_TTL}. Timestamps are seconds
+	 * since the epoch, the NumericDate form RFC 7519 defines, and `scope` is written
+	 * only when scopes were granted, as RFC 9068 requires.
 	 *
 	 * @param audience - Client id, or the client plus every requested resource.
 	 * @param subjectId - The person the token speaks for.
 	 * @param scope - Granted scopes, joined into the space-separated claim.
 	 */
 	static generate(audience: string | string[], subjectId: string, scope?: string[]) {
-		let now = Math.floor(Date.now() / 1000); // RFC 7519 NumericDate is in seconds
+		let now = Math.floor(Date.now() / 1000);
 		let expiresAt = now + Math.floor(ACCESS_TOKEN_TTL / 1000);
 
 		return new AccessToken({

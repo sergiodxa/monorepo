@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { balance } from "./balance";
 export { font } from "./font";
 export { fontSize } from "./font-size";

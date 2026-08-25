@@ -81,10 +81,8 @@ export interface SpeciesDetailSelector {
 	type: "species-detail";
 	speciesId: string;
 	/**
-	 * Zone names where the species can be found, resolved by the caller from the
-	 * available maps' encounter tables. The engine core holds no map data, so the
-	 * habitat is injected here rather than looked up inside the selector; an empty
-	 * list means no known habitat.
+	 * Zone names where the species can be found. The caller resolves this from
+	 * map data that lives outside the engine core; empty means no known habitat.
 	 */
 	habitat?: readonly string[];
 }
@@ -214,8 +212,8 @@ export type Selection =
 /**
  * Builds one UI-oriented selection from the current engine world state.
  *
- * This dispatcher is the selector boundary for presentation code: callers ask for the shape they need and
- * receive a derived read model instead of assembling component data themselves.
+ * Acts as the selector boundary for presentation code: callers ask for the
+ * shape they need and receive an assembled read model.
  */
 export function selectView(gameData: GameData, world: World, selector: Selector): Selection {
 	switch (selector.type) {
@@ -368,11 +366,8 @@ export function selectBestiaryView(
 /**
  * Builds one species-detail view from authored content and the player's record.
  *
- * Reads the authored species entry for its number, types, and base stats, and
- * the player's bestiary progress for the seen/caught flags. The habitat is not
- * looked up here — the engine core holds no map data — so the caller passes the
- * resolved zone names in; they are copied through unchanged (empty when none).
- * The base stats are cloned so the returned view never aliases content.
+ * Clones the base stats so the returned view never aliases content, and
+ * copies the caller-supplied habitat through unchanged.
  */
 export function selectSpeciesDetailView(
 	gameData: GameData,
@@ -450,8 +445,8 @@ export function selectBattleView(gameData: GameData, world: World, battleId: Bat
 /**
  * Builds one battle-aware creature summary that prefers transient battle mirrors.
  *
- * Outside battle the persistent creature components are authoritative. During battle, transient damage and
- * status mirrors must win so the UI reflects the live turn state instead of the last saved snapshot.
+ * Transient damage and status mirrors take priority during battle, keeping
+ * the UI in sync with the live turn state.
  */
 function selectBattleCreatureSummaryView(
 	gameData: GameData,

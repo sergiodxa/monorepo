@@ -14,14 +14,9 @@ import { failure, success } from "@pkg/result";
 import { InvalidDateError } from "./invalid-date-error";
 
 /**
- * Read text or a timestamp into a `Date`, failing instead of producing an
- * `Invalid Date`. Parsing itself is the platform's, so anything the runtime
- * accepts is accepted here; prefer full ISO 8601 input, since other formats are
- * implementation defined.
- *
- * A date-only string such as `"2026-07-29"` is read as UTC midnight by the
- * platform, which is a different instant in every other zone. Use `fromDayKey()`
- * when the input names a day on someone's calendar rather than an instant.
+ * Reads text or a timestamp into a `Date`, failing instead of producing an
+ * `Invalid Date`. A date-only string is read as UTC midnight; use
+ * `fromDayKey()` when the input names a calendar day rather than an instant.
  *
  * @param input - Text or a millisecond timestamp.
  * @returns The instant, or an `InvalidDateError` naming the rejected input.

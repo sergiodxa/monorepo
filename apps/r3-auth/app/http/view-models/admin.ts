@@ -41,7 +41,7 @@ export namespace AdminView {
 		logout: string;
 	}
 
-	/** Everything the admin layout needs that is not the page's own body. */
+	/** The chrome an admin page wears around its own body: title, heading, breadcrumbs, and nav. */
 	export interface Chrome {
 		/** `<title>` for the document. */
 		documentTitle: string;
@@ -73,7 +73,7 @@ export namespace AdminView {
 		visible: boolean;
 	}
 
-	/** A client as the list shows it. The secret is deliberately not part of this shape. */
+	/** A client as the list shows it, holding only fields safe to display to a viewer. */
 	export interface ClientRow {
 		id: string;
 		name: string;
@@ -83,7 +83,7 @@ export namespace AdminView {
 		editHref: string;
 	}
 
-	/** A client as the detail page shows it, again without the secret. */
+	/** A client as the detail page shows it, again limited to fields safe to display. */
 	export interface ClientDetail {
 		id: string;
 		name: string;
@@ -129,11 +129,8 @@ export namespace AdminView {
 	}
 
 	/**
-	 * A session as the subject detail page shows it.
-	 *
-	 * `id` is that session's refresh token. It is carried here only because revoking
-	 * needs something to name the row by, it is never rendered as text, and nothing
-	 * logs it.
+	 * A session as the subject detail page shows it. `id` is that session's refresh
+	 * token, carried here only because revoking needs a value to look the row up by.
 	 */
 	export interface SessionRow {
 		id: string;
@@ -157,8 +154,8 @@ export namespace AdminView {
 /**
  * Reads a listing's page number off the query string, clamped to at least 1.
  *
- * A missing, non-numeric or out-of-range value is page 1 rather than an error: a
- * hand-edited URL should show the first page, not a validation failure.
+ * A missing, non-numeric or out-of-range value resolves to page 1, so a hand-edited
+ * URL always renders the first page.
  */
 export function readPageNumber(url: URL): number {
 	let raw = Number(url.searchParams.get("page"));
@@ -176,8 +173,8 @@ function pageHref(url: URL, page: number): string {
 /**
  * Builds a listing's pagination links from the current URL and the total row count.
  *
- * Previous and next carry no `href` at the ends of the range, which is what makes the
- * view render them as inert rather than as links that go nowhere.
+ * The view renders previous and next as inert exactly where `href` is undefined, at
+ * the ends of the range.
  */
 export function toPagination(
 	url: URL,
@@ -269,7 +266,7 @@ function toInitials(displayName: string): string {
 	return displayName.slice(0, 2).toUpperCase();
 }
 
-/** Shapes a client row for the list, resolving its own links so the view holds no URLs. */
+/** Shapes a client row for the list, resolving its own links so the view renders ready-made hrefs. */
 export function toClientRow(client: SelectClient, locale: string): AdminView.ClientRow {
 	return {
 		id: client.id,
@@ -284,8 +281,8 @@ export function toClientRow(client: SelectClient, locale: string): AdminView.Cli
 /**
  * Shapes a client for the detail and edit pages.
  *
- * The `secret` column is not read: an existing client's secret is shown exactly once,
- * when it is generated, and this shape is what guarantees a page cannot leak it later.
+ * A generated secret is shown exactly once, at creation, so this shape keeps every
+ * later page free of it.
  */
 export function toClientDetail(client: SelectClient, locale: string): AdminView.ClientDetail {
 	return {
@@ -338,9 +335,8 @@ export function toSubjectDetail(subject: SelectSubject, locale: string): AdminVi
 /**
  * Turns a raw user-agent header into a short device label.
  *
- * Deliberately crude string matching: the label is a recognition aid for whoever is
- * looking at the list, not a fact anything acts on, so an unrecognized agent reading
- * "Unknown" is a better outcome than carrying a parsing library for it.
+ * The label is a recognition aid for whoever reads the list, so crude string matching
+ * is enough, and an unrecognized agent simply reads "Unknown".
  */
 export function toDeviceLabel(userAgent: string | null, unknownLabel: string): string {
 	if (!userAgent) return unknownLabel;
@@ -365,8 +361,8 @@ export function toDeviceLabel(userAgent: string | null, unknownLabel: string): s
 /**
  * Shapes a session for the subject detail page's device list.
  *
- * `updated_at` drives the staleness badge because it is touched on every refresh, so
- * it reflects real use rather than when the session was opened.
+ * `updated_at` drives the staleness badge because it is touched on every refresh,
+ * reflecting how recently the session was actually used.
  */
 export function toSessionRow(
 	session: SessionWithClient,

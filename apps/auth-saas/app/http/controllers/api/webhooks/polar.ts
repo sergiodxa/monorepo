@@ -25,7 +25,6 @@ import Subscription from "~/app/models/subscription";
 import { TenantApiService } from "~/app/services/tenant-api";
 import routes from "~/routes/web";
 
-/** Polar webhook event types we handle. */
 let HANDLED_EVENT_TYPES = [
 	"checkout.completed",
 	"subscription.active",
@@ -33,19 +32,12 @@ let HANDLED_EVENT_TYPES = [
 	"subscription.updated",
 ] as const;
 
-/** Union type of handled Polar webhook event types. */
 type HandledEventType = (typeof HANDLED_EVENT_TYPES)[number];
 
-/**
- * Type guard to check if event type is one we handle.
- * @param type - The event type string to check.
- * @returns True if the type is a handled event type.
- */
 function isHandledEventType(type: string): type is HandledEventType {
 	return HANDLED_EVENT_TYPES.includes(type as HandledEventType);
 }
 
-/** Base webhook payload schema for Polar webhooks. */
 let WebhookPayloadSchema = s.object({
 	type: s.string(),
 	data: s.object({
@@ -60,13 +52,9 @@ let WebhookPayloadSchema = s.object({
 });
 
 /**
- * Polar webhook handler for subscription lifecycle management.
- *
- * Events handled:
- * - checkout.completed: Link subscription to tenant after checkout
- * - subscription.active: Handle subscription activation
- * - subscription.canceled: Handle subscription cancellation
- * - subscription.updated: Sync subscription status changes
+ * Verifies the Standard Webhooks signature (failing closed on any bad or
+ * missing signature) before validating the payload and syncing subscription
+ * lifecycle changes for the handled event types.
  *
  * @returns A JSON acknowledgement (`{ received: true }`), or a `4xx`/`5xx` error for
  * an invalid signature, malformed payload, or a retryable processing failure.
@@ -88,10 +76,6 @@ export default createAction(
 				return json({ error: "Webhook secret not configured" }, { status: 500 });
 			}
 		} else {
-			// Polar signs webhooks with the Standard Webhooks scheme (webhook-id,
-			// webhook-timestamp, webhook-signature headers). `verifyWebhook` fails closed
-			// on a bad/missing signature and accepts an authentic-but-unmodeled event
-			// (whose payload our own schema validation below still handles).
 			let polar = new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN });
 			if (!(await polar.verifyWebhook(request, body, webhookSecret))) {
 				log.info("Invalid webhook signature");
@@ -148,9 +132,11 @@ export default createAction(
 
 					if (subscriptions.length > 0) {
 						let subscription = subscriptions[0]!;
-						// Map every Polar status through the canonical mapper so transitions
-						// to unpaid/incomplete/trialing (all valid enum values) are synced,
-						// not just active/canceled/past_due. Missing status keeps the current.
+						/**
+						 * Routes the reported status through the canonical mapper so every
+						 * valid transition (unpaid, incomplete, trialing, and more) stays
+						 * synced; a missing status leaves the current status unchanged.
+						 */
 						let newStatus = data.status
 							? Subscription.mapPolarStatus(data.status)
 							: subscription.status;
@@ -165,9 +151,6 @@ export default createAction(
 								updated_at: new Date().toISOString(),
 							},
 						);
-						// Propagate the runtime entitlement gate: a status that no longer
-						// entitles the tenant (e.g. active -> unpaid) must suspend its provider
-						// surface, and a recovery (e.g. past_due -> active) must lift it.
 						await syncTenantSuspension(subscription.tenant_id, newStatus);
 						log.info("Subscription status synced", {
 							subscriptionId: subscription.id,
@@ -192,8 +175,6 @@ export default createAction(
 								updated_at: new Date().toISOString(),
 							},
 						);
-						// A canceled subscription never entitles the tenant: suspend its
-						// provider surface so tenant OIDC traffic stops, not just dashboard access.
 						await syncTenantSuspension(subscription.tenant_id, "canceled");
 						log.info("Subscription canceled", { subscriptionId: subscription.id });
 					}
@@ -201,10 +182,6 @@ export default createAction(
 				}
 			}
 		} catch (error) {
-			/**
-			 * Database and network errors should be retried.
-			 * Validation errors should not be retried to prevent infinite loops.
-			 */
 			let isRetryable = isRetryableError(error);
 
 			log.error("Webhook processing failed", {
@@ -216,8 +193,6 @@ export default createAction(
 			if (isRetryable) {
 				return json({ error: "Processing failed, please retry" }, { status: 500 });
 			}
-
-			/** Non-retryable errors return 200 to prevent Polar from retrying indefinitely. */
 		}
 
 		return json({ received: true });
@@ -225,12 +200,9 @@ export default createAction(
 );
 
 /**
- * Pushes the tenant-runtime entitlement gate into the tenant Durable Object to match the
- * new subscription status, so a lapsed subscription stops the tenant's OIDC provider
- * surface (not just dashboard access) and a recovery restores it.
- *
- * Runs inside the webhook's try/catch, so a transient Durable Object failure propagates
- * and is classified as retryable, letting Polar redeliver until the gate is applied.
+ * Pushes the entitlement gate into the tenant Durable Object so a lapsed
+ * subscription suspends the tenant's OIDC provider surface, and a recovery
+ * restores it; a transient failure here propagates so Polar can redeliver.
  *
  * @param tenantId - The tenant whose Durable Object gate to update.
  * @param status - The tenant's new local subscription status.
@@ -240,11 +212,6 @@ async function syncTenantSuspension(tenantId: string, status: string): Promise<v
 	await new TenantApiService(tenantId).setSuspended(!Subscription.isEntitled(status));
 }
 
-/**
- * Determines if an error is retryable (transient) vs permanent.
- * @param error - The error to check.
- * @returns True if the error is retryable (network/database issues), false for permanent errors.
- */
 function isRetryableError(error: unknown): boolean {
 	if (!(error instanceof Error)) return false;
 

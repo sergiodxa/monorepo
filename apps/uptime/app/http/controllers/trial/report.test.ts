@@ -1,25 +1,8 @@
 /**
- * Tests `GET /try/report/:token`, whose whole job is to state what happened to one URL without
- * overstating any of it.
- *
- * Every figure asserted here is asserted against seeded rows rather than against a literal the
- * page was told to print: the fixtures set `checks_run`, `checks_ok` and the result history,
- * and the tests expect the numbers those imply. A page that hardcoded a plausible uptime would
- * fail every one of them.
- *
- * The two dishonesty regressions get their own tests, because both would look fine on screen.
- * A watch with no completed check must not render `0`, `0%` or "no incidents" — nothing has
- * answered yet, and all three of those read as measurements. A week that genuinely had no
- * failure must say so and must not render the incident list at all, so a reader cannot come
- * away thinking something went down.
- *
- * The watches are seeded at fixed instants with a `converts_until` far in the future or firmly
- * in the past, so nothing here depends on when the suite runs: the period the page prints ends
- * at `expires_at`, which is already behind every fixture.
- *
- * Assertions are on computed values and on the sentences the page is allowed to say, since
- * every figure has to come from the seeded rows and every "nothing to report" wording has to
- * be the one the data supports.
+ * Tests `GET /try/report/:token`: every figure comes from seeded rows, so a
+ * hardcoded number in the page fails the suite, and each dishonesty
+ * regression — a zero rendered as a measurement, an incident list on a clean
+ * week — gets its own test.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -144,7 +127,7 @@ describe("GET /try/report/:token", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("https://example.com/status");
-		// 166 of 168 healthy, printed as the locale writes a percentage — never a literal.
+		/** 166 of 168 healthy, formatted as a percentage by the locale. */
 		expect(body).toContain("98.8%");
 		expect(body).toContain("168");
 		expect(body).toContain("166");
@@ -166,8 +149,10 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		// The dates themselves are interpolated into copy that is not translated yet, so what is
-		// asserted here is that the line is rendered and rendered once.
+		/**
+		 * The dates are interpolated into copy still in English, so this only
+		 * checks that the line renders, and renders exactly once.
+		 */
 		expect(body.split("Monitored ").length - 1).toBe(1);
 	});
 
@@ -176,7 +161,7 @@ describe("GET /try/report/:token", () => {
 		let watch = await seedWatch(db);
 		await seedResult(db, watch.id, 1, "up", 120);
 		await seedResult(db, watch.id, 2, "up", 240);
-		// A check nothing answered carries no timing, and must not be folded in as a zero.
+		/** A check that never answered keeps a null timing, which the average simply skips. */
 		await seedResult(db, watch.id, 3, "down", null);
 
 		let { body } = await visit(db, watch.report_token);
@@ -184,7 +169,7 @@ describe("GET /try/report/:token", () => {
 		expect(body).toContain("Response times");
 		expect(body).toContain("120 ms");
 		expect(body).toContain("240 ms");
-		// The average is over the two that answered — 180 — and not over all three.
+		/** The average of 180 counts only the two checks that answered. */
 		expect(body).toContain("180 ms");
 	});
 
@@ -210,7 +195,7 @@ describe("GET /try/report/:token", () => {
 		let { body } = await visit(db, watch.report_token);
 
 		expect(body).toContain("2 incidents.");
-		// Two runs of consecutive failures, so two entries — not five, and not one.
+		/** Two runs of consecutive failures collapse into two entries, one per run. */
 		expect(body.split("First failure seen").length - 1).toBe(2);
 		expect(body).not.toContain("No incident");
 	});
@@ -253,11 +238,11 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		// An em dash in all three headline figures, and no percentage anywhere.
+		/** An em dash stands in for each headline figure until the watch completes its first check. */
 		expect(body.split("—").length - 1).toBeGreaterThanOrEqual(3);
 		expect(body).not.toContain("0.0%");
 		expect(body).not.toContain("100.0%");
-		// And nothing that reads as a verdict on a week nobody has observed.
+		/** The page withholds incident language until a week has actually been observed. */
 		expect(body).toContain("No check has completed yet");
 		expect(body).toContain("we cannot say whether");
 		expect(body).not.toContain("No incident");

@@ -1,41 +1,9 @@
 /**
- * Background job that runs one HTTP monitor check end to end: it loads the monitor and
- * its enabled content checks, runs the probe/evaluate/classify steps of `HttpCheck`,
- * records the result to both `monitor_results` and Analytics Engine, caches its outcome
- * on the monitor row, bills the team for the ping, and dispatches alerts on a
- * down/degraded result or a recovery back to up.
- *
- * The check itself — the region-hinted fetch through `GeoFetchDO`, the content-check
- * evaluation, the up/degraded/down classification — lives in `app/services/http-check.ts`
- * rather than here, because the ad-hoc `POST /api/v1/ping` endpoint performs the same
- * three steps against a target that has no monitor row. Everything this file still owns
- * is what makes a check a *monitor's* check: the deduplication, the stored history, the
- * cached status, the alerting, and the billing.
- *
- * Whether a result is a recovery depends on what the previous check said, which is read
- * off the monitor row's `last_status` rather than queried from Analytics Engine, and
- * written back once the result is committed.
- *
- * Nothing here decides when the next check happens: the scheduler advances a monitor's
- * next due time when it claims it, not when the check completes, so a slow probe can't
- * push its own cadence out.
- *
- * The queue delivers at least once, so the job id doubles as the `monitor_results`
- * primary key. That row is the commit point: everything before it is safe to redo, so a
- * redelivery short-circuits on the id before re-hitting the monitored endpoint and the
- * primary key itself rejects a delivery that raced another one. Everything after it —
- * the analytics data point, the cached status on the monitor row, the metered ping, and
- * alert dispatch — is best-effort, because a redelivery would short-circuit rather than
- * repeat it.
- *
- * Only infrastructure faults (D1, the Durable Object, an unexpected exception) ask the
- * queue to redeliver. A monitored endpoint that times out, refuses the connection, or
- * answers with the wrong status is a valid monitoring result: it gets stored, alerted
- * on, and acknowledged.
- *
- * Nothing here consults billing to decide *whether* to run. Entitlement is settled by
- * whoever enqueues the message, so a message reaching this job is always one to carry
- * out; the Polar call below reports the check that already happened and never gates it.
+ * Background job that runs one HTTP monitor check end to end: probes via
+ * `HttpCheck`, records the result, caches status on the monitor row, bills the
+ * team, and dispatches alerts. The probe steps live in
+ * `app/services/http-check.ts`, shared with the ad-hoc ping endpoint; this
+ * file owns dedup, history, alerting, and billing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -69,7 +37,7 @@ const CheckHttpJobSchema = s.object({
 	 */
 	id: s.string(),
 	monitorId: s.string(),
-	/** When the check was scheduled, which is not when it ends up running. */
+	/** When the check was scheduled; the run itself may happen later. */
 	scheduledAt: s.number(),
 });
 
@@ -90,10 +58,9 @@ export class CheckHttpJob extends Job {
 			await this.execute(job);
 		} catch (error) {
 			/**
-			 * Nothing reaching here is a statement about the monitored endpoint — those are
-			 * classified into a stored result instead. This is D1, the Durable Object
-			 * namespace, or an unexpected internal fault, all of which left the check
-			 * without a committed result, so the queue should redeliver it.
+			 * An infrastructure fault that left no committed result reaches here;
+			 * monitored-endpoint outcomes are classified into a stored result
+			 * before this point, so the queue should redeliver.
 			 */
 			this.logger.error("job.check_http.infrastructure_error", {
 				jobId: job.id,
@@ -119,10 +86,9 @@ export class CheckHttpJob extends Job {
 		}
 
 		/**
-		 * Everything this delivery costs belongs to this monitor's team, including the two
-		 * statements above that ran before the team was known — which is why attribution is
-		 * declared once here and settled at flush rather than passed to each recording site
-		 * (ADR-007 §5).
+		 * Everything this delivery costs belongs to this monitor's team, including
+		 * the two lookups above that ran before the team was known, so attribution
+		 * is declared once here and settled at flush (ADR-007 §5).
 		 */
 		apportionCostByTeam([monitor.team_id]);
 
@@ -131,11 +97,9 @@ export class CheckHttpJob extends Job {
 		});
 
 		/**
-		 * The probe, the content-check evaluation and the classification are the same three
-		 * steps the ad-hoc `POST /api/v1/ping` endpoint runs, so they live in `HttpCheck`
-		 * rather than here. They are stepped through one at a time instead of via
-		 * `HttpCheck.run` only because everything below reads `outcome` and `status`
-		 * separately; the composition is identical.
+		 * The probe, evaluation, and classification steps live in `HttpCheck`,
+		 * shared with the ad-hoc ping endpoint. They run individually here so
+		 * the code below can read `outcome` and `status` separately.
 		 */
 		let check = HttpCheck.forMonitor(monitor, contentChecks);
 		let outcome = await check.probe();
@@ -143,10 +107,9 @@ export class CheckHttpJob extends Job {
 		let status = check.classify(outcome, contentChecksPassed);
 
 		/**
-		 * The status this check is transitioning from, off the row already loaded above, and
-		 * read before the write below overwrites it — this check is about to become the last
-		 * one. `null` (never checked) is never a recovery. The column is declared as a plain
-		 * text enum, so its value set is asserted here.
+		 * The status this check is transitioning from, read off the monitor row
+		 * before the write below overwrites it. `null` marks a first-time check;
+		 * the column is a plain text enum, so its value set is asserted here.
 		 */
 		let previousStatus = monitor.last_status as MonitorStatus | null;
 
@@ -158,10 +121,9 @@ export class CheckHttpJob extends Job {
 
 		try {
 			/**
-			 * Swallowed for the same reason alert dispatch below is: past the commit point a
-			 * redelivery short-circuits on the job id instead of reaching here, so throwing
-			 * would ask for a retry that can only spin. The columns then keep the previous
-			 * check's status, which is at worst a recovery alerted one check late.
+			 * Swallowed for the same reason alert dispatch below is: past the commit
+			 * point a redelivery short-circuits on the job id, so throwing here would
+			 * only ask for a retry that can only spin.
 			 */
 			await Monitor.recordCheckStatus(db, job.monitorId, status, outcome.responseTimeMs);
 		} catch (error) {
@@ -185,11 +147,9 @@ export class CheckHttpJob extends Job {
 		await this.notify(db, monitor, previousStatus, outcome, status);
 
 		/**
-		 * `responseTimeMs` and `doWallTimeMs` are logged side by side rather than
-		 * conflated: the first is what the monitored site's users experience, the second is
-		 * what the Durable Object bills for — a lower bound on it, see
-		 * {@link DO_WALL_TIME_HEADER}. Content checks and large response bodies widen the
-		 * second without touching the first, which is currently invisible.
+		 * `responseTimeMs` and `doWallTimeMs` are logged separately: the first is
+		 * what the monitored site's users experience, the second is what the
+		 * Durable Object bills for — a lower bound on it, see {@link DO_WALL_TIME_HEADER}.
 		 */
 		this.logger.info("job.check_http.completed", {
 			jobId: job.id,
@@ -231,17 +191,9 @@ export class CheckHttpJob extends Job {
 	}
 
 	/**
-	 * Bills the team for the check this delivery performed.
-	 *
-	 * Placed after the commit for the same reason the alert dispatch is: the job id is the
-	 * `monitor_results` primary key, so a redelivery short-circuits on it long before
-	 * reaching here and can't bill the same check twice. The event's own `externalId` is
-	 * that same job id, which makes the guarantee Polar's as well as ours rather than
-	 * resting on the short-circuit alone.
-	 *
-	 * Best-effort, like everything past the commit point: a Polar outage must not fail a
-	 * check that already produced a durable result, and throwing would only ask the queue
-	 * for a retry that short-circuits. `ingestPings` logs a dropped event itself.
+	 * Bills the team for the check this delivery performed, deduped on
+	 * `externalId` (the job id) so a redelivery can't double-bill. Best-effort,
+	 * since a Polar outage must not fail an already-recorded check.
 	 */
 	private async meter(db: Database, job: CheckHttpJob.Input, teamId: string): Promise<void> {
 		let owners = await Team.ownerIdsByTeamIds(db, [teamId]);
@@ -250,7 +202,7 @@ export class CheckHttpJob extends Job {
 		/**
 		 * A check ran for a team whose row is gone — a delete that raced this delivery. There
 		 * is no customer to bill, and inventing one would be worse than losing the ping, so
-		 * this is recorded rather than resolved.
+		 * this is recorded for visibility.
 		 */
 		if (!ownerId) {
 			this.logger.error("job.check_http.unbillable_team", { monitorId: job.monitorId, teamId });
@@ -269,11 +221,9 @@ export class CheckHttpJob extends Job {
 	}
 
 	/**
-	 * Dispatches alerts for a committed result. Best-effort by design: the result is
-	 * already durable, so a redelivery would short-circuit on the job id instead of
-	 * reaching this point, which makes throwing here a retry that can only spin. Per-alert
-	 * delivery failures are already recorded to `alert_events` by the alert pipeline
-	 * itself; this only catches the lookups that decide which alerts apply.
+	 * Dispatches alerts for a committed result. Best-effort by design: the
+	 * result is already durable, so a redelivery would short-circuit on the job
+	 * id instead of reaching here; per-alert failures are already recorded to `alert_events`.
 	 */
 	private async notify(
 		db: Database,

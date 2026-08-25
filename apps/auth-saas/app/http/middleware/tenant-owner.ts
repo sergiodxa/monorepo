@@ -27,7 +27,6 @@ declare module "remix/router" {
 			status: string;
 			/** Whether this is an internal (non-billed) tenant. */
 			internal: boolean;
-			/** The current user's role for this tenant. */
 			role: "owner" | TenantMemberRole;
 		};
 		tenantApi: TenantApiService;

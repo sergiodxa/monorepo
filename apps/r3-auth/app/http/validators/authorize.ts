@@ -32,16 +32,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const MINIMUM_PASSWORD_LENGTH = 8;
 
 /**
- * An authorization request as it arrives on the query string.
- *
- * Unsupported scopes and unsupported prompt values are filtered out rather than
- * rejected, per OIDC Core: a client asking for something this server does not offer
- * gets what it does offer, not an error page.
- *
- * `code_challenge_method` is only shaped here, not constrained: an unknown method has
- * to become an `invalid_request` sent back to the client's redirect URI, and a schema
- * failure at this point cannot tell the difference between that and a request carrying
- * no OAuth parameters at all.
+ * An authorization request as it arrives on the query string. Unsupported scope or
+ * prompt values collapse to what this server offers (OIDC Core), and a bad
+ * `code_challenge_method` surfaces to the client as its own `invalid_request`.
  */
 export const AuthorizeQuerySchema = s.object({
 	response_type: s.literal("code"),

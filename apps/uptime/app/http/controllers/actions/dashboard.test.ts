@@ -33,7 +33,11 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership | 
 	};
 }
 
-/** Posts a `set-dashboard-tab` form body through the real action, DB, and service container. */
+/**
+ * Posts a `set-dashboard-tab` form body through the real action, DB, and
+ * service container, using `teamContextMiddleware` in place of
+ * `setDashboardTab`'s own `requireUser`/`requireTeam` chain.
+ */
 async function postSetDashboardTab(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	team: SelectTeam,
@@ -45,10 +49,6 @@ async function postSetDashboardTab(
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
 	router.map(routes.actions.setDashboardTab, {
 		middleware: [teamContextMiddleware(team, null) as never],
-		// `setDashboardTab` bakes its own `requireUser`/`requireTeam` chain in (see
-		// `app/http/controllers/actions/dashboard.ts`), so this test reaches past it to
-		// the bare handler and supplies `teamContextMiddleware` instead, standing in for
-		// that real chain the same way the rest of this file already does.
 		handler: (setDashboardTab as { handler: RequestHandler }).handler,
 	});
 

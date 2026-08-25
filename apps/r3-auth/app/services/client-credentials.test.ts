@@ -30,15 +30,11 @@ describe("credentialsFromHeader", () => {
 	});
 
 	test("reads a secret whose base64 encoding contains + and /", () => {
-		// "??>?" and "???" encode with `+` and `/`, which base64url decoding would reject.
 		expect(credentialsFromHeader(basic("client", "??>?"))?.clientSecret).toBe("??>?");
 		expect(credentialsFromHeader(basic("client", "???"))?.clientSecret).toBe("???");
 	});
 
 	test("reads credentials a client encoded with base64url", () => {
-		// What a JOSE `base64url.encode` produces: `+` and `/` substituted, padding
-		// dropped. `atob` refuses both outright, so a client encoding its Basic header
-		// this way could never authenticate — and one of this server's own clients does.
 		let secret = "??>?";
 		let token = btoa(`client:${secret}`).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 

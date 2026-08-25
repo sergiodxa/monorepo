@@ -1,11 +1,10 @@
 /**
  * Data-access model for maintenance windows: CRUD over `maintenance_windows`, the
  * "end early" lifecycle action, and `isSuppressing` — the single active/recurring-aware
- * check both the dashboard status badge and `app/services/alerts.ts` use, so a
- * recurring window's current occurrence is treated as active consistently everywhere
- * it's checked. Scoping is the `(monitor_type, monitor_id)` pair described in
- * `~/app/lib/monitor-scope`, the same one `alerts` carries, and it works the same way for
- * every monitor type: a window covers everything, or one type, or one monitor of one type.
+ * check the dashboard status badge and the alert pipeline share, so a recurring
+ * window's current occurrence counts as active everywhere. Scoping is the
+ * `(monitor_type, monitor_id)` pair from `~/app/lib/monitor-scope`: a window covers
+ * everything, one monitor type, or one monitor of one type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,7 +58,7 @@ export default class MaintenanceWindow {
 		});
 	}
 
-	/** Finds a single window scoped to a team, or `null` when it doesn't belong to it. */
+	/** Finds a window among a team's own rows; an id owned by another team yields `null`. */
 	static async findByIdForTeam(db: Database, teamId: string, windowId: string) {
 		return await db.findOne(maintenanceWindows, { where: { id: windowId, team_id: teamId } });
 	}
@@ -102,20 +101,9 @@ export default class MaintenanceWindow {
 	}
 
 	/**
-	 * Whether an active, alert-suppressing maintenance window covers a monitor right now:
-	 * one scoped to that exact monitor, one scoped to its whole type, or a team-wide one.
-	 *
-	 * Deliberately two statements instead of one `monitor_id = ? OR monitor_id IS NULL`
-	 * disjunction: SQLite cannot satisfy an `OR` across two different conditions on the
-	 * same column with one index scan, so the single-statement form falls back to seeking
-	 * `team_id` alone and reading every one of that team's windows. Split, each half is a
-	 * seek on `maintenance_windows_team_monitor_idx (team_id, monitor_id)`, and both run
-	 * concurrently so the extra statement costs no latency.
-	 *
-	 * The type is then matched in memory rather than by a third statement or a wider
-	 * index, as `Alert.listForMonitor` does: both seeks together return a team's windows
-	 * for one monitor plus its team-wide ones, which is a set small enough that filtering
-	 * it costs nothing measurable.
+	 * Whether an active, alert-suppressing window covers a monitor right now: one scoped
+	 * to it, to its whole type, or team-wide. Two concurrent statements each seek
+	 * `(team_id, monitor_id)`, returning a set small enough to match the type in memory.
 	 */
 	static async isSuppressing(
 		db: Database,

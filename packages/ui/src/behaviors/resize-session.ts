@@ -10,15 +10,13 @@
 
 import { TypedEventTarget } from "remix/ui";
 
-/** Default lower bound applied to a panel when its `min` is left unset. */
 const DEFAULT_PANEL_MIN_SIZE = 0;
 
-/** Default upper bound applied to a panel when its `max` is left unset. */
 const DEFAULT_PANEL_MAX_SIZE = 100;
 
 /**
  * Types describing the panel group a `ResizeSession` operates over, and the
- * events it dispatches. Grouped alongside the class under the same name.
+ * events it dispatches.
  */
 export namespace ResizeSession {
 	/**
@@ -39,7 +37,7 @@ export namespace ResizeSession {
 
 	/**
 	 * A panel's resolved state as read from an in-progress or finished session:
-	 * `min` and `max` are always concrete, defaulted values, never `undefined`.
+	 * `min` and `max` are always concrete, defaulted values.
 	 */
 	export interface Panel {
 		/** Stable identifier, carried over unchanged from the matching `PanelInput`. */
@@ -67,7 +65,7 @@ export namespace ResizeSession {
 		groupSize: number;
 	}
 
-	/** Events a `ResizeSession` dispatches. Both carry no payload; read the `panels` getter for current state. */
+	/** Events a `ResizeSession` dispatches; read the `panels` getter for the state behind each one. */
 	export interface Events {
 		/** Dispatched whenever constraint solving produces new panel sizes, from a pointer move or a cancelled session reverting. */
 		change: Event;
@@ -77,12 +75,9 @@ export namespace ResizeSession {
 }
 
 /**
- * Owns one resizable panel group's active pointer session: the handle being
- * dragged, the pointer's start position, and the panels' sizes and
- * constraints. `move()` re-solves every panel's size from the constraints
- * captured at `start()`, cascading a shrink or a grow into further panels
- * once the immediate neighbor across the handle bottoms out at its own min
- * or max, so a drag never requests more size than the group can actually give up.
+ * Owns one resizable panel group's active pointer session. `move()` re-solves
+ * every panel's size from the constraints captured at `start()`, cascading
+ * into further panels so a drag only takes what the group can give up.
  */
 export class ResizeSession extends TypedEventTarget<ResizeSession.Events> {
 	#panels: ResizeSession.Panel[] = [];
@@ -92,9 +87,7 @@ export class ResizeSession extends TypedEventTarget<ResizeSession.Events> {
 	#groupSize = 0;
 	#active = false;
 
-	/**
-	 * Whether a pointer session is currently in progress.
-	 */
+	/** Whether a pointer session is in progress between `start()` and `end()`. */
 	get isActive(): boolean {
 		return this.#active;
 	}
@@ -117,8 +110,8 @@ export class ResizeSession extends TypedEventTarget<ResizeSession.Events> {
 
 	/**
 	 * Begins a pointer session on one handle of a panel group, capturing the
-	 * panels' starting sizes and constraints as the baseline every subsequent
-	 * `move()` in this session solves from.
+	 * panels' sizes and constraints as the baseline every subsequent `move()`
+	 * in this session solves from.
 	 *
 	 * @param options Panel group snapshot and pointer-down position the session starts from.
 	 * @throws {Error} When a session is already active; call `end()` or `cancel()` first.
@@ -199,15 +192,9 @@ export class ResizeSession extends TypedEventTarget<ResizeSession.Events> {
 	}
 
 	/**
-	 * Solves every panel's size for a total size-unit delta applied at the
-	 * active handle, starting fresh from the session's baseline each call so
-	 * repeated moves never accumulate rounding drift.
-	 *
-	 * Growing the panel on one side of the handle draws its growth from the
-	 * panels on the other side, taking from the immediate neighbor first and
-	 * cascading into further panels only once a neighbor bottoms out at its
-	 * own `min`. The amount actually applied is clamped by both the growing
-	 * panel's headroom to its `max` and the total the donor panels can give up.
+	 * Solves fresh from the session's baseline each call, keeping repeated
+	 * moves free of accumulated rounding drift. Growth is drawn from the
+	 * nearest panels across the handle, clamped by headroom and donor supply.
 	 */
 	#solve(delta: number): ResizeSession.Panel[] {
 		let panels = this.#startPanels.map((panel) => ({ ...panel }));

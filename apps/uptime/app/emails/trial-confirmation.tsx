@@ -1,11 +1,8 @@
 /**
  * The email that answers the address a visitor typed into the try-it page: the check
- * they just watched run, repeated back as a record, and a plain statement of what the
- * service is about to do with their URL for the next seven days.
- *
- * It is the first thing this sender ever puts in their inbox, so it is written as a
- * receipt rather than as a welcome: no pitch, no product tour, and the way to stop it
- * in the same message that starts it (ADR-030).
+ * they just watched run, repeated back as a record, and what the service does with
+ * their URL for the next seven days. It states plainly what already happened and
+ * carries the way to stop watching in the same message that starts it (ADR-030).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

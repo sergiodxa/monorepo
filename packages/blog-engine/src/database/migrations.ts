@@ -17,7 +17,7 @@ interface EngineMigration {
 }
 
 /** First migration: creates every engine table and its indexes/foreign keys. */
-const CREATE_TABLES = /* sql */ `
+const CREATE_TABLES = `
 CREATE TABLE posts (
 	id TEXT PRIMARY KEY,
 	slug TEXT NOT NULL,
@@ -100,7 +100,7 @@ CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 `;
 
 /** Second migration: seeds the built-in article type, the four roles, and defaults. */
-const SEED_DEFAULTS = /* sql */ `
+const SEED_DEFAULTS = `
 INSERT INTO post_types (id, name, path, label, description, fields, builtin, visible, created_at, updated_at)
 VALUES (
 	'pt_article', 'article', 'articles', 'Articles', 'Long-form posts.',
@@ -152,8 +152,7 @@ const journal = table({
 /**
  * Applies pending migrations against the adapter, tracked in a
  * `blog_engine_migrations` journal table. Idempotent: already-applied ids are
- * skipped, so it is safe to run on every cold start. Multi-statement SQL runs via
- * `executeScript`, which each adapter (D1, SqlStorage, plain SQLite) handles.
+ * skipped, so it is safe to run on every cold start.
  * @param adapter - The database adapter to migrate.
  * @returns The ids applied in this run.
  */

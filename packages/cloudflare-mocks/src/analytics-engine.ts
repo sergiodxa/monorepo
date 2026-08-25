@@ -1,7 +1,7 @@
 /**
- * Recording `AnalyticsEngineDataset` binding. Data points are captured with their blobs,
- * doubles, and indexes so a test can assert what a Worker reported, and the platform's
- * cardinality and size limits are enforced instead of silently accepted.
+ * Recording `AnalyticsEngineDataset` binding. Data points are captured with their
+ * blobs, doubles, and indexes so a test can assert what a Worker reported, and the
+ * platform's cardinality and size limits raise real errors here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,9 +29,8 @@ export interface AnalyticsEngineMock extends AnalyticsEngineDataset {
 	/**
 	 * Discards every recorded data point, as if the dataset were new.
 	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets an empty dataset without re-creating the `env` the code
-	 * under test already captured.
+	 * A binding installed once at module scope outlives the test that used it;
+	 * `reset` empties it for a `beforeEach` while keeping the `env` already captured.
 	 */
 	reset(): void;
 }
@@ -39,9 +38,8 @@ export interface AnalyticsEngineMock extends AnalyticsEngineDataset {
 /**
  * Creates a recording Analytics Engine dataset.
  *
- * `writeDataPoint` is fire-and-forget on the platform, so failures there are invisible in
- * production; this mock throws on an over-budget data point to turn that silent loss into
- * a test failure.
+ * `writeDataPoint` is fire-and-forget in production, so this mock raises an error
+ * on an over-budget data point, turning a would-be silent loss into a test failure.
  * @returns An `AnalyticsEngineDataset` binding that records data points.
  * @example let analytics = createAnalyticsEngine(); analytics.writeDataPoint({ blobs: ["hit"] });
  */

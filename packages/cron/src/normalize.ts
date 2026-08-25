@@ -12,12 +12,9 @@ import type { CronFieldSet } from "./fields";
 import { stepFromStart } from "./describe";
 
 /**
- * Render a parsed schedule as a normalized expression: names resolved to numbers,
- * macros expanded, values sorted and deduplicated, runs collapsed to ranges.
- *
- * A day field that names every day still prints as a range rather than `*`, because
- * `*` is what turns the either-or rule off, and dropping it would change which
- * dates the expression fires on when it is read back.
+ * Render a parsed schedule as a normalized expression, with runs collapsed to
+ * ranges. A day field naming every day still prints as a range rather than
+ * `*`, since `*` would disable the day either-or rule and change which dates fire.
  *
  * @param fields - The parsed schedule.
  * @returns The five fields separated by single spaces.

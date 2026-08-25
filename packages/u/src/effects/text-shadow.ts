@@ -19,20 +19,9 @@ export interface TextShadowOptions {
 }
 
 /**
- * Applies `text-shadow`, which shadows the *glyphs* themselves. That is the
- * distinction from its two neighbours: `u.shadow()` shadows the element's box,
- * `u.dropShadow()` shadows its rendered shape, and this one traces the letter
- * forms.
- *
- * The real use is legibility for text sitting directly on an image or video,
- * where a soft dark shadow keeps the letters readable as the content behind
- * them changes. Treat it as the weaker option, though: it only rescues text
- * whose contrast is already borderline, and it does nothing measurable for a
- * contrast ratio. An actual scrim — a translucent overlay between the media and
- * the text — is the reliable fix, with a text shadow layered on top of it at
- * most.
- *
- * `text-shadow` accepts no spread radius and no `inset`, unlike `box-shadow`.
+ * Applies `text-shadow`, tracing the glyph forms themselves. The practical use
+ * is keeping text legible over an image or video; a translucent scrim between
+ * the media and the text stays the reliable fix, with this layered on top.
  *
  * @example u.textShadow()
  * @example css({ textShadow: "calc(var(--ui-spacing, 0.25rem) * 0) calc(var(--ui-spacing, 0.25rem) * 1) calc(var(--ui-spacing, 0.25rem) * 2) rgb(0 0 0 / 0.35)" })

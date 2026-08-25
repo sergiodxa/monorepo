@@ -26,6 +26,7 @@ import Subject from "../models/subject";
 
 /**
  * `GET /api/subjects/:id/sessions` — lists a subject's sessions with client info.
+ * Client lookups run in a single batched query to avoid N+1 requests.
  * @returns A JSON `Response` with the sessions, or `notFound` if the subject is missing.
  */
 export const index = createAction(
@@ -43,7 +44,6 @@ export const index = createAction(
 
 		let sessions = await Session.listBySubject(db, id);
 
-		// Fetch all unique client IDs to avoid N+1
 		let clientIds = [...new Set(sessions.map((session) => session.client_id))];
 		let clients = await Client.listByIds(db, clientIds);
 		let clientMap = new Map(clients.map((c) => [c.id, c]));

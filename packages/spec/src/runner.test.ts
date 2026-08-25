@@ -159,6 +159,11 @@ test "a helper defined without use fs cannot use the caller's import" {
 		expect(result?.error?.message).toContain('"write"');
 	});
 
+	/**
+	 * The error's file always names where the failing statement is written,
+	 * even when a different file invoked the command, since the span only
+	 * resolves against that file's text.
+	 */
 	test("a failure inside a cross-file command carries the defining file", async () => {
 		let root = await makeSuiteDir({
 			"commands/helper.spec": `command broken {
@@ -179,11 +184,14 @@ test "a helper defined without use fs cannot use the caller's import" {
 		let result = suite.results[0];
 		expect(result?.file).toBe(join(root, "main.spec"));
 		expect(result?.error?.code).toBe("unknown-name");
-		// The failing statement lives in the helper file; its span only makes
-		// sense against that file's text.
 		expect(result?.error?.file).toBe(join(root, "commands/helper.spec"));
 	});
 
+	/**
+	 * A denial must reach the caller before any process spawns; letting the
+	 * spawn attempt happen first would surface as a generic tool error
+	 * instead of a permission denial.
+	 */
 	test("a denied run permission is refused before any process spawns", async () => {
 		let root = await makeSuiteDir({
 			"denied.spec": `use cli
@@ -200,8 +208,6 @@ test "running a program needs --allow-run" {
 
 		expect(suite.failed).toBe(1);
 		let error = suite.results[0]?.error;
-		// A spawn attempt would surface as a tool-error (ENOENT for this
-		// binary); the gate must refuse with a denial before that can happen.
 		expect(error).toBeInstanceOf(PermissionDeniedError);
 		if (!(error instanceof PermissionDeniedError)) throw new Error("narrowing");
 		expect(error.permission).toBe("run");
@@ -224,11 +230,9 @@ test "running a program needs --allow-run" {
 });
 
 /**
- * A test plugin whose single tool, `probe.wait`, sleeps for a given number of
- * milliseconds while tracking how many calls are in flight at once. The
- * concurrency tests use it to observe whether the runner actually overlaps
- * tests: `maxActive` climbs above 1 only if two waits ran simultaneously, and
- * the recorded wall-clock intervals expose the real overlap.
+ * A test plugin whose tool `probe.wait` sleeps for N milliseconds while
+ * tracking concurrent calls: `maxActive` climbs above 1 only when two
+ * waits actually overlap, and the recorded intervals expose that overlap.
  */
 function createProbePlugin(): {
 	plugin: Plugin;
@@ -282,6 +286,11 @@ function noGrants(): Grants {
 }
 
 describe("runSuite concurrency", () => {
+	/**
+	 * With three slots and equal 120ms sleeps, every worker enters before any
+	 * exits, so the last start precedes the first end and all three
+	 * intervals overlap — proof the runner actually ran them concurrently.
+	 */
 	test("tests overlap in time when concurrency is above one", async () => {
 		let root = await makeSuiteDir({
 			"waits.spec": `use probe
@@ -308,9 +317,6 @@ test "third waiter" {
 		if (isFailure(run)) throw new Error(run.error.message);
 
 		expect(run.data.passed).toBe(3);
-		// Genuine overlap: at least two waits were in flight simultaneously. With
-		// three slots and equal sleeps every worker enters before any exits, so
-		// the last start precedes the first end — all three intervals overlap.
 		expect(probe.maxActive()).toBeGreaterThanOrEqual(2);
 		let spans = probe.intervals();
 		let latestStart = Math.max(...spans.map((span) => span.start));
@@ -318,6 +324,10 @@ test "third waiter" {
 		expect(latestStart).toBeLessThan(earliestEnd);
 	});
 
+	/**
+	 * Omitting the concurrency option defaults to 1, so only one wait is
+	 * ever in flight and each interval ends before the next begins.
+	 */
 	test("tests never overlap at the default concurrency of one", async () => {
 		let root = await makeSuiteDir({
 			"waits.spec": `use probe
@@ -335,17 +345,20 @@ test "second waiter" {
 		});
 		let probe = createProbePlugin();
 
-		// No concurrency option at all: the default is 1, i.e. strictly sequential.
 		let run = await runSuite({ root, grants: noGrants(), plugins: [probe.plugin] });
 		if (isFailure(run)) throw new Error(run.error.message);
 
 		expect(run.data.passed).toBe(2);
-		// Only ever one wait in flight, so each interval ends before the next begins.
 		expect(probe.maxActive()).toBe(1);
 		let spans = probe.intervals();
 		expect(spans[0]?.end).toBeLessThanOrEqual(spans[1]?.start ?? 0);
 	});
 
+	/**
+	 * Three overlapping 120ms waits finish the run in about one wait, so the
+	 * summary's wall-clock reports elapsed time and stays below the sum of
+	 * the per-test durations it also records.
+	 */
 	test("the reported wall-clock stays below the summed per-test durations under overlap", async () => {
 		let root = await makeSuiteDir({
 			"waits.spec": `use probe
@@ -372,14 +385,15 @@ test "third waiter" {
 		if (isFailure(run)) throw new Error(run.error.message);
 
 		expect(run.data.passed).toBe(3);
-		// Three 120ms waits overlap across three slots, so the run finishes in about
-		// one wait, yet each test still measures ~120ms of its own. The summary must
-		// report the run's wall-clock, which is strictly below the sum of durations —
-		// exactly the figure that would balloon if the summary summed them instead.
 		let summed = run.data.results.reduce((total, result) => total + result.durationMs, 0);
 		expect(run.data.wallMs).toBeLessThan(summed);
 	});
 
+	/**
+	 * At concurrency one the waits never overlap, so the wall-clock spans
+	 * both end to end and is at least their summed durations — confirming
+	 * wall-clock reporting stays accurate at the default concurrency too.
+	 */
 	test("the reported wall-clock spans the whole sequential run at concurrency one", async () => {
 		let root = await makeSuiteDir({
 			"waits.spec": `use probe
@@ -401,20 +415,16 @@ test "second waiter" {
 		if (isFailure(run)) throw new Error(run.error.message);
 
 		expect(run.data.passed).toBe(2);
-		// No overlap: the wall-clock spans both waits end to end, so it is at least
-		// their summed durations (plus each test's workspace setup and teardown) —
-		// never the deflated figure a single-test measurement would give. Wall-clock
-		// and the sum coincide here, which is why reporting wall-clock stays correct
-		// at the default concurrency too.
 		let summed = run.data.results.reduce((total, result) => total + result.durationMs, 0);
 		expect(run.data.wallMs).toBeGreaterThanOrEqual(summed);
 	});
 
+	/**
+	 * Waits finish out of source order under concurrency, so results are
+	 * checked against a source-ordered expectation, and running at
+	 * concurrency 1 and 8 confirms concurrency changes only the schedule.
+	 */
 	test("output is byte-for-byte source-ordered at concurrency 1 and 8", async () => {
-		// Descending waits across two files: under concurrency the tests complete
-		// in the reverse of source order (shortest wait finishes first, and the
-		// no-wait failing test finishes first of all), so a source-ordered result
-		// array can only come from the runner reordering by source position.
 		let files = {
 			"a.spec": `use probe
 
@@ -463,7 +473,10 @@ test "beta three fails" {
 		if (isFailure(sequential)) throw new Error(sequential.error.message);
 		if (isFailure(concurrent)) throw new Error(concurrent.error.message);
 
-		// Compare the observable shape of each result, not the varying durations.
+		/**
+		 * Extracts each result's title, status, and error code so shapes
+		 * stay comparable across differently-timed runs.
+		 */
 		function shape(suite: SuiteResult): { title: string; status: string; code?: string }[] {
 			return suite.results.map((result) => ({
 				title: result.title,
@@ -479,32 +492,22 @@ test "beta three fails" {
 			{ title: "beta three fails", status: "failed", code: "expectation-failed" },
 		];
 		expect(shape(sequential.data)).toEqual(expectedOrder);
-		// Determinism: concurrency changes only the schedule, never the outcome
-		// or its order — the two runs are identical.
 		expect(shape(concurrent.data)).toEqual(shape(sequential.data));
 		expect(concurrent.data.passed).toBe(sequential.data.passed);
 		expect(concurrent.data.failed).toBe(sequential.data.failed);
 	});
 
+	/**
+	 * Runs the CLI's own `.spec` suite through the published `spec` bin at
+	 * `--concurrency=8`; `--allow-env=SPEC_ENV_FIXTURE` grants only the one
+	 * variable spec/env.spec reads, confirming named-only env forwarding.
+	 */
 	test("the full dogfood suite stays green at --concurrency=8", async () => {
-		// The acceptance layer under a non-default schedule: run the CLI's own
-		// `.spec` suite through the workspace-linked `spec` bin (the same
-		// `bun cli.ts` entry the gate uses) with `--concurrency=8`, and assert it
-		// still passes with zero failures. `spec` is on PATH via the repo's
-		// node_modules/.bin so the meta-tests can spawn nested `spec` children.
 		let packageDir = resolve(import.meta.dirname, "..");
 		let binDir = resolve(packageDir, "..", "..", "node_modules", ".bin");
 		let child = spawn(
 			join(binDir, "spec"),
-			[
-				"run",
-				"spec",
-				"--allow-run=spec,echo",
-				// spec/env.spec reads one real variable, which `cli.run` forwards to
-				// its children only when it is granted by name here.
-				"--allow-env=SPEC_ENV_FIXTURE",
-				"--concurrency=8",
-			],
+			["run", "spec", "--allow-run=spec,echo", "--allow-env=SPEC_ENV_FIXTURE", "--concurrency=8"],
 			{
 				cwd: packageDir,
 				env: {

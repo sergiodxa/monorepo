@@ -1,3 +1,10 @@
+/**
+ * Tests for the RSS feed parser.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure, isSuccess } from "@pkg/result";
 import { XML } from "@pkg/xml";
 import { describe, expect, test } from "vitest";

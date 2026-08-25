@@ -24,30 +24,20 @@ export const PLATFORM_SESSION_COOKIE = "__platform_session";
  */
 export const PLATFORM_SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
-/**
- * Schema for validating session token payloads.
- */
 const SessionPayloadSchema = s.object({
-	/** Subject ID (user UUID) */
 	sub: s.string(),
-	/** Email address */
 	email: s.string(),
 	/** Tenant session ID (from ID token sid claim) */
 	sid: s.optional(s.string()),
-	/** Issued at timestamp (seconds) */
 	iat: s.number(),
-	/** Expiration timestamp (seconds) */
 	exp: s.number(),
 });
 
-/**
- * Session payload type inferred from the schema.
- */
 type SessionPayload = s.InferOutput<typeof SessionPayloadSchema>;
 
 /**
- * Creates a signed session token containing user information.
- * The token is self-contained and can be verified without a database lookup.
+ * Signs a self-contained session token: verification derives everything it
+ * needs from the token alone.
  * @param subjectId - The user's UUID
  * @param email - The user's email address
  * @param secret - The secret key for signing
@@ -78,9 +68,8 @@ export async function createSessionToken(
 }
 
 /**
- * Verifies and decodes a session token.
- *
- * Uses constant-time comparison for signature verification to prevent timing attacks.
+ * Verification compares signatures in constant time, keeping timing
+ * independent of how close a forged signature is to correct.
  *
  * @param token - The session token to verify
  * @param secret - The secret key used for signing
@@ -135,7 +124,8 @@ export async function verifySessionToken(
 }
 
 /**
- * Creates the Set-Cookie header value for a session cookie.
+ * Builds the Set-Cookie header for a platform session: HttpOnly, SameSite=Lax,
+ * and Secure when `isProduction` is true.
  * @param token - The session token to store
  * @param isProduction - Whether to add the Secure flag
  * @returns The Set-Cookie header value
@@ -159,7 +149,6 @@ export function createSessionCookie(token: string, isProduction: boolean): strin
 }
 
 /**
- * Creates a Set-Cookie header value to clear the session cookie.
  * @returns The Set-Cookie header value with Max-Age=0
  * @example
  * headers.append("Set-Cookie", clearSessionCookie());
@@ -169,7 +158,7 @@ export function clearSessionCookie(): string {
 }
 
 /**
- * Extracts a cookie value from the Cookie header.
+ * Extracts a cookie value using a boundary-anchored name match.
  * @param cookies - The Cookie header string
  * @param name - The cookie name to extract
  * @returns The cookie value, or null if not found
@@ -182,14 +171,9 @@ export function getCookie(cookies: string, name: string): string | null {
 }
 
 /**
- * Decides whether a platform session should be accepted on a privileged route by
- * confirming its `sid` still exists server-side. The signed token alone is not
- * revocable — a copied token stays valid until expiry — so this couples acceptance to
- * live session state, making logout and server-side revocation effective.
- *
- * Fail-closed on a missing `sid` (the token cannot be revoked, so it is rejected) and
- * fail-open on an infrastructure error reaching the session store (so a transient outage
- * does not sign every operator out); a session that resolves to "not found" is rejected.
+ * Confirms a session's `sid` still exists server-side, since a copied signed
+ * token stays valid until expiry on its own. Rejects when `sid` is missing or
+ * absent server-side, but accepts through a session-store outage.
  *
  * @param sessionId - The `sid` claim from the verified platform session token.
  * @param checkSession - Async check returning whether the `sid` exists server-side.
@@ -201,13 +185,11 @@ export async function isPlatformSessionActive(
 	sessionId: string | undefined,
 	checkSession: (sessionId: string) => Promise<boolean>,
 ): Promise<boolean> {
-	// No sid means the token predates revocable sessions and cannot be checked: reject it.
 	if (!sessionId) return false;
 
 	try {
 		return await checkSession(sessionId);
 	} catch {
-		// Infrastructure error reaching the session store: do not lock operators out.
 		return true;
 	}
 }

@@ -1,13 +1,7 @@
 /**
- * Coordinates roster-related battle operations for active and reserve combatants.
- *
- * This module centralizes the logic that evaluates switch actions, replacement prompts,
- * and roster availability checks so the battle engine can keep team state consistent
- * while resolving turn flow.
- *
- * It focuses on the rules for moving creatures between active slots and reserve slots,
- * gathering the events that result from those transitions, and exposing small helpers
- * that other battle systems can use without duplicating roster bookkeeping logic.
+ * Coordinates switch actions, replacement prompts, and roster availability checks
+ * for active and reserve combatants, keeping team state consistent as the battle
+ * engine resolves turn flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -182,7 +176,6 @@ export function getBattleOutcome(
 	return side0Alive ? 0 : 1;
 }
 
-/** Applies one validated replacement choice for a specific empty slot request. */
 function applyReplacementCommand(
 	context: RosterSystemContext,
 	request: ReplacementSelection,
@@ -247,7 +240,6 @@ export function applySwitchInPipeline(
 	}
 }
 
-/** Returns whether a side still has any active or bench contender left. */
 function sideHasRemainingContenders(
 	state: BattleState,
 	sideIndex: number,
@@ -263,7 +255,6 @@ function sideHasRemainingContenders(
 	return false;
 }
 
-/** Returns whether one team still has any active slot or bench creature remaining. */
 function teamHasRemainingPresence(
 	state: BattleState,
 	sideIndex: number,
@@ -285,7 +276,6 @@ function teamHasRemainingPresence(
 	return false;
 }
 
-/** Returns whether one specific creature index already occupies an active slot. */
 function isCreatureCurrentlyActive(
 	side: BattleState["sides"][number],
 	teamIndex: number,

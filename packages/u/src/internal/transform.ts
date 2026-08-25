@@ -1,17 +1,9 @@
 /**
- * `transform` is a single CSS property, so two independent utilities that
- * each set it outright (`transform: translateX(...)`, `transform:
- * rotate(...)`) would silently overwrite each other when composed on the
- * same element instead of combining. Every transform utility instead sets
- * its own CSS custom property (`--ui-translate-x`, `--ui-rotate`, ...) and
- * the exact same fixed `transform` declaration, one composite expression
- * referencing every transform function's variable with an identity
- * fallback (`0`, `0deg`, `1`, ...). Custom properties from separate classes
- * on the same element all apply simultaneously — only the *value* text of
- * `transform` matters for the cascade, and since that text is identical
- * across every transform utility, it doesn't matter which one's copy of it
- * "wins"; the resolved `transform` always reads every variable any applied
- * utility set, and defaults for every variable no utility touched.
+ * `transform` is a single CSS property, so two utilities that each set it
+ * outright would overwrite each other when composed. Every transform utility
+ * sets its own custom property (`--ui-translate-x`, `--ui-rotate`, ...) plus
+ * one byte-identical composite `transform` value reading every variable with
+ * an identity fallback, so whichever copy wins the cascade resolves them all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +16,10 @@ import type { UtilityMixin } from "./descriptor";
 
 import { utility } from "./descriptor";
 
-/** The CSS custom property (without its leading `--`) each transform function reads from. */
+/**
+ * Each transform function's CSS custom property, as the bare name
+ * {@link varUtility} prefixes with `--`.
+ */
 const TRANSFORM_VARS = {
 	translateX: "ui-translate-x",
 	translateY: "ui-translate-y",
@@ -50,11 +45,9 @@ export const COMPOSITE_TRANSFORM = [
 ].join(" ");
 
 /**
- * Builds a composable transform-function utility: sets the specific
- * `--ui-{name}` custom property (or properties) given, plus the shared
- * composite `transform` declaration, so calling more than one transform
- * utility on the same element combines every function instead of the last
- * one overwriting the rest.
+ * Builds a composable transform-function utility: sets the given
+ * `--ui-{name}` custom properties plus the shared composite `transform`
+ * declaration, so several transform utilities on one element combine.
  */
 export function transformFunction<Node extends Element = Element>(
 	values: Partial<Record<TransformFunctionName, string>>,
@@ -78,7 +71,10 @@ export function angle(value: AngleValue): string {
 
 export type ScaleValue = number | (string & {});
 
-/** Resolves a scale factor: a bare number passes through as a unitless factor, a string (e.g. a percentage) passes through unchanged. */
+/**
+ * Resolves a scale factor: a bare number becomes a unitless factor, a string
+ * (e.g. a percentage) passes through unchanged.
+ */
 export function scaleFactor(value: ScaleValue): string {
 	return typeof value === "number" ? `${value}` : value;
 }

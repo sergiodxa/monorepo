@@ -1,12 +1,9 @@
 /**
- * Router-level tests of the end-session endpoint: RP-initiated logout with and without
- * an `id_token_hint`, the interactive `POST` button, and post-logout redirect
- * validation.
- *
- * The fan-out is the point of this file. The recipient lists are derived from the very
- * session rows logout deletes, so the tests assert what the relying parties actually
- * received — a real back-channel `POST` per client, a real iframe URL per client, and
- * nothing at all for the client that started the logout.
+ * Router-level tests of the end-session endpoint: RP-initiated logout with and
+ * without an `id_token_hint`, the interactive `POST` button, and post-logout
+ * redirect validation. The fan-out is the point: recipient lists derive from
+ * the session rows logout deletes, so tests assert what relying parties
+ * actually received.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,16 +23,13 @@ import { createTestApp } from "~/app/lib/test/http";
 import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
-/** Back-channel logout endpoint the second relying party registers. */
 const OTHER_BACKCHANNEL = "https://other.example.com/backchannel-logout";
 
-/** Front-channel logout endpoint the second relying party registers. */
 const OTHER_FRONTCHANNEL = "https://other.example.com/frontchannel-logout";
 
-/** Back-channel endpoint the *initiating* client registers, which must never be called. */
+/** Back-channel endpoint the initiating client registers, used to confirm delivery excludes it. */
 const SEEDED_BACKCHANNEL = "https://client.example.com/backchannel-logout";
 
-/** Every `logout_token` a relying party received, in delivery order. */
 let delivered: Array<{ url: string; token: string }> = [];
 
 let server = setupServer(
@@ -64,7 +58,6 @@ beforeEach(async () => {
 	delivered = [];
 });
 
-/** The URL of the end-session endpoint with the given parameters. */
 function logoutUrl(params: Record<string, string> = {}): string {
 	let url = new URL(routes.oidc.logout.index.href(), ORIGIN);
 	for (let [key, value] of Object.entries(params)) url.searchParams.set(key, value);
@@ -72,8 +65,9 @@ function logoutUrl(params: Record<string, string> = {}): string {
 }
 
 /**
- * Re-issues an ID token with some of its claims replaced, so a test can hand the
- * end-session endpoint a hint that differs from a real one in exactly one way.
+ * Re-issues an ID token with some claims replaced, so a test can hand the endpoint
+ * a hint that differs from a real one in exactly one way. The signing key is
+ * imported at call time since each test swaps its `cloudflare:workers` bindings.
  *
  * @param token - A signed token to take the claims from.
  * @param claims - Claims to overwrite, such as an `exp` already in the past.
@@ -85,8 +79,6 @@ async function resign(
 	claims: Record<string, unknown>,
 	keys?: JWK.KeyPair[],
 ): Promise<string> {
-	// Imported here rather than at module load: the harness swaps the `cloudflare:workers`
-	// bindings per instance, and this has to read the bucket the current app is using.
 	let { getSigningKey } = await import("~/app/services/signing-keys");
 	let { payload } = JWT.decode(token);
 
@@ -96,7 +88,6 @@ async function resign(
 	);
 }
 
-/** Which logout channels a second relying party registers, and whether it wants `sid`. */
 interface OtherClientOptions {
 	backchannel?: boolean;
 	frontchannel?: boolean;
@@ -105,7 +96,8 @@ interface OtherClientOptions {
 
 /**
  * Registers a second relying party with the requested logout channels, and opens a
- * session for the signed-in subject against it through the server's own SSO path.
+ * session for the signed-in subject through the server's own SSO path, so the session
+ * row is the one a real authorization request creates.
  *
  * @returns The second client's id.
  */
@@ -127,7 +119,6 @@ async function registerOtherClient(options: OtherClientOptions = {}): Promise<st
 		frontchannel_logout_session_required: sessionRequired,
 	});
 
-	// A real authorization request, so the session row is the one the flow creates.
 	let url = new URL(authorizeUrl(fixtures));
 	url.searchParams.set("client_id", other.id);
 	url.searchParams.set("redirect_uri", "https://other.example.com/callback");
@@ -184,9 +175,6 @@ describe("GET /oidc/logout", () => {
 	test("logs out with an expired id_token_hint instead of failing", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		// The hint identifies the session being ended, so one that aged out is still a
-		// usable answer to "who is signing out?". The symptom this guards against is a
-		// 500 rather than a wrong redirect, so the status is what is asserted.
 		let expiredAt = Math.floor(Date.now() / 1000) - 60 * 60;
 		let expired = await resign(tokens.id_token, { iat: expiredAt - 60, exp: expiredAt });
 
@@ -201,7 +189,6 @@ describe("GET /oidc/logout", () => {
 	test("refuses an id_token_hint this server did not sign with a 400", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		// The same claims signed by somebody else: it must be a refusal, not a crash.
 		let foreign = await resign(tokens.id_token, {}, [
 			await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256)),
 		]);
@@ -230,9 +217,6 @@ describe("GET /oidc/logout", () => {
 	test("honors a registered post_logout_redirect_uri with no hint and no client_id", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		// A relying party whose stored session no longer holds an ID token has no hint to
-		// send, and the address it asks for is its own registered logout URI. That is
-		// enough: the destination is verified by the registration, not by the hint.
 		let response = await app.fetch(
 			new Request(
 				logoutUrl({
@@ -255,8 +239,6 @@ describe("GET /oidc/logout", () => {
 	test("signs out and stays on this server when the post_logout_redirect_uri is unregistered", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		// Nobody registered this address, so the browser is never sent to it — but the
-		// sign-out is what was asked for and still happens.
 		let response = await app.fetch(
 			new Request(logoutUrl({ post_logout_redirect_uri: "https://malicious.example.com/steal" }), {
 				redirect: "manual",
@@ -305,15 +287,11 @@ describe("GET /oidc/logout", () => {
 	test("delivers a back-channel logout token to every other relying party", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		// The initiating client registers a back-channel endpoint too, so "was it called"
-		// is a real question rather than one the fixture answers by omission.
 		await Client.update(app.db, fixtures.clientId, {
 			backchannel_logout_uri: SEEDED_BACKCHANNEL,
 			backchannel_logout_session_required: "true",
 		});
 
-		// Back channel only, so the response is the plain redirect and the delivery is
-		// the only thing this test is looking at.
 		let other = await registerOtherClient({ frontchannel: false });
 
 		let response = await app.fetch(
@@ -322,7 +300,6 @@ describe("GET /oidc/logout", () => {
 
 		expect(response.status).toBe(303);
 
-		// Exactly one delivery, and not to the client that asked for the logout.
 		expect(delivered).toHaveLength(1);
 		expect(delivered[0]?.url).toBe(OTHER_BACKCHANNEL);
 
@@ -376,16 +353,13 @@ describe("GET /oidc/logout", () => {
 
 		let html = await response.text();
 
-		// One iframe for the other client, carrying the issuer and this session's id.
 		expect(html).toContain(`${OTHER_FRONTCHANNEL}?iss=https%3A%2F%2Fauth.sergiodxa.com&amp;sid=`);
 		expect(html).toContain(`title="${other}"`);
 
-		// The follow-up navigation is markup, not script: no timer, no client JavaScript.
 		expect(html).toContain('http-equiv="refresh"');
 		expect(html).toContain("2;url=https://client.example.com/logout?state=correlation-2");
 		expect(html).not.toContain("setTimeout");
 
-		// And the manual way out for anything that ignores the refresh.
 		expect(html).toContain("<noscript>");
 		expect(html).toContain("Click here to continue");
 	});
@@ -406,16 +380,9 @@ describe("GET /oidc/logout", () => {
 
 		let html = await response.text();
 
-		// The page runs inside a relying party's logout flow, so nothing on it may
-		// execute: neither the module script the document layout normally emits nor the
-		// preload hint that would fetch it. This is the whole reason the layout has an
-		// opt-out, and it is asserted rather than trusted.
 		expect(html).not.toContain("<script");
 		expect(html).not.toContain("modulepreload");
 
-		// It is nonetheless the shared document: the palette is declared on the root
-		// element and the component library's reset and token layers are linked, which a
-		// standalone page rendering its own `<html>` used to do without.
 		expect(html).toContain("--ui-color-brand-600");
 		expect(html).toContain('class="system ');
 		expect(html).toContain('rel="stylesheet"');
@@ -433,7 +400,6 @@ describe("GET /oidc/logout", () => {
 			new Request(logoutUrl({ id_token_hint: tokens.id_token }), { redirect: "manual" }),
 		);
 
-		// Nobody else to notify, so the page is skipped entirely and the browser leaves.
 		expect(response.status).toBe(303);
 	});
 
@@ -469,8 +435,6 @@ describe("POST /oidc/logout", () => {
 		expect(response.headers.get("clear-site-data")).toBe('"*"');
 		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
 
-		// No client is excluded: this logout started here, so every relying party hears
-		// about it, including the one whose session opened the browser session.
 		expect(delivered.map((entry) => entry.url)).toEqual([OTHER_BACKCHANNEL]);
 	});
 

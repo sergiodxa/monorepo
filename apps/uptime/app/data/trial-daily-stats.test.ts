@@ -2,9 +2,8 @@
  * Unit tests for the `TrialDailyStats` data-access model: the stored copy of a reported day,
  * and the trailing sum the report closes with.
  *
- * The case worth having is the re-run. The job is dispatched through a queue, so its message
- * can be redelivered, and a day written twice would double itself in every total drawn from
- * this table forever after — which is the exact failure the table was added to prevent.
+ * The case worth having is the re-run. The job is dispatched through a queue, so a redelivered
+ * message could write a day twice and double every later total drawn from this table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

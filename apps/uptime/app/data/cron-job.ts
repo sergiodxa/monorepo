@@ -3,7 +3,7 @@
  * `cron_job_monitors`, its `cron_job_pings` history, cron-expression scheduling with
  * `@pkg/cron`, and the single `recordPing` write path the public ping endpoint uses.
  * The monitor's own `id` doubles as its public ping-URL identifier — see
- * `docs/cron-job-monitoring.md`; there is no separate secret token.
+ * `docs/cron-job-monitoring.md`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -89,17 +89,9 @@ export default class CronJobMonitor {
 	}
 
 	/**
-	 * Lists monitors the scheduled `CheckCronJobsJob` sweep should evaluate: enabled, and
-	 * not already `missed` (a `missed` monitor stays that way until its next on-time ping)
-	 * or `new` (which only leaves `new` once it receives a first ping).
-	 *
-	 * Deliberately does **not** require an expected-arrival time. It used to, and that was
-	 * a hole big enough to hide a ten-day outage: a row with a null `next_expected_at` was
-	 * never selected, so the sweep never evaluated it, so it never left `healthy` — and
-	 * five monitors sat green for ten days while nothing was pinging them at all. A
-	 * monitor with nothing to be on time against is not healthy, it is unmeasurable, and
-	 * the sweep is the only thing positioned to notice. It repairs the row instead; see
-	 * `CheckCronJobsJob.evaluate`.
+	 * Monitors the scheduled `CheckCronJobsJob` sweep evaluates: enabled, and `healthy`
+	 * or `late`. Rows with a null `next_expected_at` are included so the sweep repairs
+	 * them; omitting those once left five monitors green through a ten-day outage.
 	 */
 	static async listActionable(db: Database) {
 		return await db.findMany(cronJobMonitors, {
@@ -108,10 +100,9 @@ export default class CronJobMonitor {
 	}
 
 	/**
-	 * Sets a monitor's expected-arrival time without touching its status, used by the
-	 * sweep to repair a row that has none. Separate from {@link updateStatus} because
-	 * repairing what a monitor is measured against is not a statement about its health:
-	 * the monitor keeps whatever status it had, and the next pass judges it normally.
+	 * Sets a monitor's expected-arrival time while its status stands, used by the sweep
+	 * to repair a row that has none: what a monitor is measured against is separate
+	 * from its health, so the next pass judges it normally.
 	 */
 	static async setNextExpected(db: Database, monitorId: string, nextExpectedAt: number) {
 		return await db.update(
@@ -129,15 +120,14 @@ export default class CronJobMonitor {
 
 	/**
 	 * Records an inbound ping: inserts a history row and updates the monitor's
-	 * `last_ping_at`, freshly computed `next_expected_at`, and status (`healthy` when
-	 * on time, `late` otherwise — never set directly to `missed`, which only the
-	 * scheduled sweep decides once a job goes silent past its grace period).
+	 * `last_ping_at`, freshly computed `next_expected_at`, and status — `healthy`
+	 * when on time, `late` otherwise. Only the scheduled sweep decides `missed`.
 	 *
 	 * @returns The history row's id. Reaching this method is what makes a ping billable —
 	 * everything the endpoint rejects returns before it — and the row's id is the only
 	 * thing about an accepted ping that is unique and already persisted, which is what
-	 * makes it the idempotency key the ping meter bills against. A caller that retries its
-	 * `curl` would be refused by the per-minute rule rather than reaching a second insert.
+	 * makes it the idempotency key the ping meter bills against. A retried `curl` is
+	 * refused by the per-minute rule before it reaches a second insert.
 	 */
 	static async recordPing(
 		db: Database,
@@ -180,14 +170,9 @@ export default class CronJobMonitor {
 	}
 
 	/**
-	 * The next expected run for a cron expression evaluated in a timezone, as epoch
-	 * milliseconds — the value `next_expected_at` holds and the late/missed sweep
-	 * compares against.
-	 *
-	 * `null` when there is no answer to store: an expression that no longer parses, or
-	 * a `timezone` the runtime doesn't know (the column is free-form text, so a stale
-	 * zone name is reachable). Both leave the monitor unscheduled rather than writing a
-	 * timestamp that isn't a time.
+	 * The next expected run for a cron expression in a timezone, as epoch
+	 * milliseconds — what `next_expected_at` holds and the late/missed sweep
+	 * compares against. `null` means the expression or zone yields no valid time.
 	 *
 	 * @param cronExpression - The monitor's schedule.
 	 * @param timezone - IANA zone the schedule's wall-clock fields are read in.

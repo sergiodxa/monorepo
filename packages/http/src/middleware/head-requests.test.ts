@@ -22,7 +22,6 @@ const requireAuth: Middleware = (_context, _next) => {
 	return new Response("unauthorized", { status: 401 });
 };
 
-/** Builds a router with the middleware installed and a few representative routes. */
 function createTestRouter() {
 	let router = createRouter({
 		middleware: [headRequests()],

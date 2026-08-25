@@ -20,10 +20,9 @@ import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/databas
 import { hasRecordSetEdit } from "~/app/lib/dns-findings";
 
 /**
- * Locale key holding the shouty word a transition is announced with. Written out per
- * event type rather than interpolated into a key, so every key an email can ask for is
- * greppable in the locale files, and total rather than a lookup, because the column's
- * row type is a plain string and an unknown value still has to name a state.
+ * Locale key holding the shouty word a transition is announced with, written out per
+ * event type so every key an email can ask for is greppable in the locale files. Total
+ * over the column's plain string type, so an unrecognized value still names a state.
  */
 function statusKey(eventType: SelectAlertEvent["event_type"]): string {
 	if (eventType === "up") return "emails.alert.status.up";
@@ -33,13 +32,8 @@ function statusKey(eventType: SelectAlertEvent["event_type"]): string {
 
 /**
  * Locale key holding the sentence one finding is reported with, written out per outcome
- * for the same reason {@link statusKey} is: an interpolated key is a key no grep for the
- * locale files will find.
- *
- * Each key is a whole sentence rather than a word slotted into a shared template, because
- * the three outcomes are different claims — one record stopped resolving, one now answers
- * with a different value, one appeared and is not being watched — and a translator needs
- * to say each of them in its own language's word order.
+ * for the same reason {@link statusKey} is. Each key is a whole sentence, since the three
+ * outcomes are distinct claims a translator states in their own language's word order.
  */
 function findingKey(kind: DnsFinding["kind"]): string {
 	if (kind === "missing") return "emails.alert.values.dnsFinding.missing";
@@ -51,11 +45,9 @@ function findingKey(kind: DnsFinding["kind"]): string {
 type AlertField = EmailTableRow;
 
 /**
- * One of the email's instants, in the reader's language and in UTC.
- *
- * The zone is spelled out rather than guessed at: this address is a notification
- * target on a team, not necessarily a member with a profile, so there is no timezone
- * to render it in — and an unlabelled timestamp is one a reader will assume is local.
+ * One of the email's instants, in the reader's language, with the zone spelled out.
+ * The recipient is an alert's configured address, which carries no timezone of its own,
+ * so the zone must be explicit or the reader assumes local time.
  *
  * @param date - Instant to report.
  * @param locale - Language the surrounding copy is in.
@@ -66,8 +58,8 @@ function alertDateTime(date: Date, locale: string): string {
 }
 
 /**
- * The same, for the instants a snapshot carries as ISO strings rather than as dates,
- * falling back to the caller's word for an instant that was never recorded.
+ * The same, for the instants a snapshot carries as ISO strings, falling back to the
+ * caller's word for an instant that was never recorded.
  *
  * @param iso - Instant as the snapshot stored it, or `null` when there isn't one.
  * @param locale - Language the surrounding copy is in.
@@ -87,12 +79,9 @@ export namespace Lines {
 }
 
 /**
- * Several lines inside one table cell, separated by explicit breaks.
- *
- * `<br>` rather than a list or a nested table because it is the one break every mail
- * client honours inside a cell, and because it is also the only inline element the
- * plain-text derivation turns into a newline — so the text part reads as the same lines
- * the HTML one shows.
+ * Several lines inside one table cell, separated by explicit breaks. `<br>` is the one
+ * break every mail client honours inside a cell, and the only inline element the
+ * plain-text derivation turns into a newline, so the text part matches the HTML one.
  *
  * @example <Lines lines={["No longer resolving: example.com MX 10 mx.example.com"]} />
  */
@@ -118,10 +107,9 @@ export namespace AlertEmail {
 		/** Notifications actually delivered during the incident. */
 		sent: number;
 		/**
-		 * Notifications the alert's cooldown held back. There is no longer a ceiling on how
-		 * many an incident may send, so cooldown is the only thing this counts — the totals
-		 * of an incident that carries `skipped_cap` events from before the ceiling was
-		 * removed are reported the same way, since both were withheld to space out repeats.
+		 * Notifications the alert's cooldown held back. No per-incident ceiling exists anymore,
+		 * so cooldown is the only thing counted here — incidents carrying older `skipped_cap`
+		 * events are reported the same way, since both were withheld to space out repeats.
 		 */
 		suppressed: number;
 	}
@@ -155,8 +143,8 @@ export namespace AlertEmail {
 
 /**
  * Notification that a monitor changed state, addressed to the mailbox the alert
- * names. Alerts are configured with an address rather than with an account, so the
- * language is the app's fallback until an alert records one of its own.
+ * names. Alerts are configured with an address, so the language is the app's fallback
+ * until an alert records one of its own.
  *
  * @example await mailer.send(new AlertEmail({ ...transition, locale, t }));
  */
@@ -189,8 +177,9 @@ export class AlertEmail implements Email {
 	}
 
 	/**
-	 * Body tree the mailer renders into both parts: the headline, the reported fields
-	 * as a table, a link to the monitor, and the incident totals when there are any.
+	 * Body tree the mailer renders into both parts: headline, fields table, dashboard link,
+	 * and incident totals when present, keyed apart from the old copy that named a
+	 * since-removed per-incident ceiling.
 	 */
 	body(): RemixElement {
 		let { t, locale, monitorName, dashboardUrl, incident } = this.#alert;
@@ -212,11 +201,6 @@ export class AlertEmail implements Email {
 				<Email.Button href={dashboardUrl}>{t("emails.alert.action")}</Email.Button>
 				{incident ? (
 					<Email.Text muted>
-						{/*
-						 * A key of its own rather than a reworded `emails.alert.incident`: that one
-						 * interpolates the per-incident ceiling that no longer exists, and every
-						 * translation of it names the ceiling too.
-						 */}
 						{t("emails.alert.incidentCooldown", {
 							sent: incident.sent,
 							suppressed: incident.suppressed,
@@ -229,14 +213,9 @@ export class AlertEmail implements Email {
 	}
 
 	/**
-	 * Sentences the reported fields need but cannot carry, in reading order.
-	 *
-	 * Both belong to a domain sweep, and both exist because the table alone would mislead.
-	 * A record set holding several values has no per-record identity in DNS, so a value
-	 * edited inside one is reported as one record no longer resolving plus one new record:
-	 * accurate, and read as a bug by anyone not told why. And a newly seen record is stored
-	 * disabled on purpose, so the email has to say that nothing is watching it yet and that
-	 * accepting or fixing it is the reader's move.
+	 * Sentences the reported fields need but cannot carry: an edited value in a record set
+	 * reports as one record gone plus one new one, which reads as a bug unless explained. A
+	 * newly seen record starts disabled, awaiting the reader's action.
 	 */
 	#notes(): string[] {
 		let { t, snapshot } = this.#alert;
@@ -270,8 +249,8 @@ export class AlertEmail implements Email {
 
 	/**
 	 * The lines specific to the kind of check that ran. Every branch is exhaustive over
-	 * the snapshot union, so a new monitor type is a compile error here rather than an
-	 * email that quietly reports nothing about it.
+	 * the snapshot union, guaranteeing a compile error for any monitor type added without
+	 * its own case here.
 	 */
 	#snapshotFields(): AlertField[] {
 		let { t, locale, snapshot } = this.#alert;
@@ -316,8 +295,10 @@ export class AlertEmail implements Email {
 					}),
 				);
 
-				// The counters are the totals and the findings a capped sample of those same
-				// buckets, so the difference is exactly what this body is not listing.
+				/**
+				 * The counters are the totals; the findings are a capped sample of the same
+				 * buckets, so their difference is the count still to report as more findings.
+				 */
 				let hidden =
 					snapshot.recordsMissing +
 					snapshot.recordsChanged +
@@ -326,10 +307,9 @@ export class AlertEmail implements Email {
 				if (hidden > 0) lines.push(t("emails.alert.values.dnsMoreFindings", { count: hidden }));
 
 				/**
-				 * One row holding every finding rather than a row each: the table keys its rows
-				 * by their label, which two findings of the same kind would share, and reading
-				 * them as one block is what keeps the two halves of an edited record set
-				 * together.
+				 * One row holds every finding, since the table keys rows by label and two
+				 * findings of the same kind would share one. Reading them as a block keeps the
+				 * two halves of an edited record set together.
 				 */
 				if (lines.length > 0) {
 					rows.push({ label: t("emails.alert.fields.findings"), value: <Lines lines={lines} /> });

@@ -30,9 +30,8 @@ export interface RecordingCache extends CacheInterface {
 /**
  * Builds a recording cache for tests.
  *
- * Recording rather than faking is deliberate: this package produces headers and
- * calls a purge API, so a double that captures what was sent covers the whole
- * contract, and a stored-entry fake would only add behavior nothing asserts.
+ * The package's contract is the purge calls it sends, so recording those calls
+ * is enough to assert on selectors, order, and failure handling.
  *
  * @param options - Optional initial failure; see {@link RecordingCacheOptions}.
  * @returns A cache interface with the calls it received exposed.

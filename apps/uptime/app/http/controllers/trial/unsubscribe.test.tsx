@@ -1,15 +1,12 @@
 /**
- * Tests `/unsubscribe/:token`, whose two properties are both about what it refuses to do.
+ * Tests `/unsubscribe/:token`. A GET only renders: Outlook Safe Links and Gmail's fetcher
+ * follow every URL in a message before a human sees it, so the test walks the link the
+ * way a scanner would and confirms the lead and its watch both survive the visit.
  *
- * The GET must not delete. Outlook Safe Links and Gmail's fetcher follow every URL in a
- * message before a human sees it, so a GET that unsubscribed would quietly forget people
- * who never clicked; the test walks the link the way a scanner would and asserts the lead
- * and its watch are still there afterwards.
- *
- * Neither method may say whether a token exists. An unknown token, an already-used one and
- * a live one all have to come back the same, or the URL becomes a way to find out which
- * tokens are real. Both are asserted against a database that actually holds a lead, so a
- * regression that starts 404ing shows up here.
+ * Every response looks the same whether a token is real, already used, or unknown, so
+ * the URL can't become a way to find out which tokens are live. Both are asserted
+ * against a database that actually holds a lead, so a regression that starts 404ing
+ * shows up here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,7 +35,7 @@ import unsubscribe from "./unsubscribe";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
-/** Renders through `renderToString` — this page renders no `<Frame>`. */
+/** Renders through `renderToString`, which suffices for a page built from plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);

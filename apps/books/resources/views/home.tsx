@@ -1,7 +1,7 @@
 /**
- * Homepage view: the handbook's title, its one-paragraph pitch, and the early-access
- * email capture. Deliberately the whole page — a visitor who lands here either reads two
- * sentences and subscribes, or does not.
+ * Homepage view: the handbook's title, its one-paragraph pitch, and the
+ * early-access email capture. Deliberately the whole page — a visitor who
+ * lands here reads two sentences, then either subscribes or moves on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

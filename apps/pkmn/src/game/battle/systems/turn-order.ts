@@ -1,14 +1,7 @@
 /**
- * Resolves how one battle turn is transformed from validated player commands
- * into a deterministic sequence of executable actions. This module centralizes
- * the ordering rules that decide which commands become actionable entries and
- * how those entries are ranked against each other before turn resolution
- * continues.
- *
- * It also defines the shared contracts used by the turn-ordering step so the
- * surrounding battle systems can provide state, lookups, and rule callbacks
- * without coupling this logic to any specific content set or presentation
- * layer.
+ * Transforms validated player commands into a deterministic, ordered sequence
+ * of executable actions, applying priority, speed, and RNG tie-breaking rules
+ * before turn resolution continues.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +27,7 @@ const FALLBACK_MOVE_ID = "fallback";
 /**
  * Sentinel move type with no entry in any type chart. The effectiveness lookup
  * treats a missing attacking-type entry as neutral (×1), so the fallback move
- * is never zeroed by type immunity the way a `normal`-typed move would be.
+ * always deals damage regardless of the target's type.
  */
 const TYPELESS = "typeless";
 
@@ -75,7 +68,12 @@ export interface TurnOrderingContext {
 	getMovePriority(move: Move): number;
 }
 
-/** Builds and sorts one turn's actionable commands using the current battle state. */
+/**
+ * Builds and sorts one turn's actionable commands using the current battle state.
+ *
+ * Leaving battle and item use resolve before any speed-based ordering, ahead of
+ * switches and moves.
+ */
 export function getTurnActions(
 	context: TurnOrderingContext,
 	requests: BattlePosition[],
@@ -112,7 +110,6 @@ export function getTurnActions(
 		}
 
 		if (command.type === "use-item") {
-			// Using an item resolves at the top of the turn regardless of speed.
 			actions.push({
 				turnOrderRoll: context.random(),
 				user: active.combatant,

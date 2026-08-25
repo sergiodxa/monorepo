@@ -20,18 +20,11 @@ import * as f from "remix/data-schema/form-data";
 import { normalizeTrialUrl } from "~/app/lib/trial-identity";
 
 /**
- * How many non-blank lines one submission is looked at, and therefore the most monitors it
- * can create.
+ * How many non-blank lines one submission examines, and therefore the most
+ * monitors it can create. Each accepted line runs its own unbatched
+ * `INSERT`, so the cap keeps one submission inside the request's time budget.
  *
- * Every accepted line is its own `INSERT` in a request that has no transaction to batch them
- * into, so the work this endpoint does is linear in the length of the list and a long enough
- * list runs out of request budget half way down — leaving an import nobody can tell apart
- * from a finished one. Fifty bounds that to something a single request comfortably finishes,
- * covers the roster sizes this is for (an agency arriving with its client sites), and keeps
- * the report a person is expected to read and fix short enough to read. Past it lines are
- * counted, not examined, so a stray paste of a whole spreadsheet costs one count rather than
- * thousands of `URL` parses — {@link MonitorImportPlan.overflow} reports the remainder and
- * they go in a second paste.
+ * @see {@link MonitorImportPlan.overflow}
  */
 export const MAX_IMPORT_LINES = 50;
 
@@ -67,14 +60,9 @@ const DEFAULT_INTERVAL_SECONDS = 600;
 const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /**
- * A hostname made of at least two non-empty dot-separated labels.
- *
- * The dot is the guard against a spreadsheet's stray word: `Homepage` prefixed with
- * `https://` parses as a perfectly valid URL, so without this a column header would silently
- * become a monitor watching a host that cannot resolve — a worse outcome than telling
- * somebody line 1 isn't a URL. It also rejects the paste artifacts `example.`, `.example.com`
- * and `a..b`, and it rejects single-label hosts (`localhost`, a bracketed IPv6 literal),
- * which are not things this product can reach from an edge location anyway.
+ * A hostname made of at least two non-empty dot-separated labels. Guards
+ * against a spreadsheet's stray word — `Homepage` prefixed with `https://`
+ * parses as a URL that cannot resolve, and it rejects single-label hosts too.
  */
 const HOSTNAME_PATTERN = /^[^.]+(\.[^.]+)+$/;
 
@@ -101,28 +89,24 @@ export interface MonitorImportRejection {
 }
 
 /**
- * What one pasted list amounts to: the monitors to create, the lines that cannot become one,
- * and how many lines were never looked at.
- *
- * Both halves are expected to be non-empty at once. A partial result is the normal outcome of
- * pasting thirty lines off a spreadsheet, not an error state.
+ * What one pasted list amounts to: the monitors to create, the lines that
+ * cannot become one, and how many were never looked at. A partial result —
+ * some accepted, some rejected — is the expected outcome of a mixed paste.
  */
 export interface MonitorImportPlan {
 	accepted: MonitorImportCandidate[];
 	rejected: MonitorImportRejection[];
 	/**
-	 * Non-blank lines past {@link MAX_IMPORT_LINES} that were counted and never examined, so
-	 * the page can say how much is left to paste again rather than dropping it silently.
+	 * Non-blank lines past {@link MAX_IMPORT_LINES} that were counted and never
+	 * examined, so the page can tell the user how much remains to paste again.
 	 */
 	overflow: number;
 }
 
 /**
- * What the import page shows after an import ran: the rejected lines and the overflow count,
- * plus how many monitors were created.
- *
- * Carried in the session between the action and the page, which is why it holds only the
- * report and not the monitors themselves.
+ * What the import page shows after an import ran: how many monitors were
+ * created, the rejected lines, and the overflow count. Carried in the
+ * session between the action and the page, sized to fit there.
  */
 export interface MonitorImportReport {
 	created: number;
@@ -151,12 +135,9 @@ export const IMPORT_INTERVAL = {
 } as const;
 
 /**
- * The name a pasted URL gets: its host with a leading `www.` dropped and the path left out.
- *
- * A pasted list carries no names, so the host is the only name available — and it is the one
- * a person recognises in a list, which a path would only make longer. A string `URL` cannot
- * parse comes back unchanged, so this is total; callers only reach it with a URL that already
- * parsed.
+ * The name a pasted URL gets: its host with a leading `www.` dropped and
+ * the path left out — the host is the only name a pasted list carries.
+ * Total: a `URL` that fails to parse comes back unchanged.
  *
  * @param url - An absolute URL.
  * @returns A name for the monitor, never empty for a URL that parsed.
@@ -171,13 +152,9 @@ export function monitorImportName(url: string): string {
 }
 
 /**
- * Resolves one trimmed line to an absolute http(s) URL, or `null` when it isn't one.
- *
- * A line with no scheme gets `https://` rather than being refused: a bare host is what a
- * person copies out of a browser bar or a spreadsheet cell, and refusing it would reject most
- * of a realistic paste. `https` and not `http`, because an unqualified host today means the
- * secure one and watching the plaintext port instead would silently monitor a different
- * endpoint than the one that was meant.
+ * Resolves one trimmed line to an absolute http(s) URL, or `null` when it
+ * isn't one. A bare host gets `https://`, matching what a person copies
+ * from a browser bar, defaulting to the secure endpoint for a bare host.
  *
  * @param line - One trimmed, non-blank line.
  * @returns The parsed URL, or `null` when the line is not an http(s) URL with a real host.
@@ -192,7 +169,7 @@ function resolveImportUrl(line: string): URL | null {
 		return null;
 	}
 
-	/** A scheme this app cannot check is a rejection with a reason, not a silent coercion to one it can. */
+	/** A scheme this app cannot check is rejected as invalidUrl, giving the line its own explicit reason. */
 	if (url.protocol !== "https:" && url.protocol !== "http:") return null;
 	if (!HOSTNAME_PATTERN.test(url.hostname)) return null;
 	if (url.username || url.password) return null;
@@ -207,23 +184,9 @@ function forReport(line: string): string {
 }
 
 /**
- * Turns pasted text into the monitors to create and the lines to report back.
- *
- * The rules, in the order they apply to each line:
- *
- * - **Whitespace is trimmed** and **blank lines are skipped silently.** A blank line is not a
- *   mistake somebody needs told about — it is how pasted text ends, and how a spreadsheet
- *   separates blocks.
- * - **A line longer than {@link MAX_IMPORT_LINE_LENGTH}** is rejected without being parsed.
- * - **A bare host is normalised to `https://`**; anything that still isn't an http(s) URL
- *   with a real host is rejected as one, per line, so the rest of the list still lands.
- * - **A line naming a target an earlier line already named is rejected as a duplicate.**
- *   Sameness is the endpoint, not the spelling: `example.com`, `https://example.com/` and
- *   `https://example.com/#top` are one monitor written three ways, and creating three of them
- *   would triple somebody's check consumption for one site. The first spelling wins, so the
- *   report always points forward at the line to delete.
- * - **Only the first {@link MAX_IMPORT_LINES} non-blank lines are examined at all**; the rest
- *   are counted into {@link MonitorImportPlan.overflow}.
+ * Turns pasted text into the monitors to create and the lines to report
+ * back, applying the trim, length, host and duplicate rules per line.
+ * Duplicates share one endpoint however spelled, keeping one check per site.
  *
  * @param input - The raw contents of the paste box.
  * @returns The monitors to create, the lines that can't be, and the unexamined remainder.
@@ -261,8 +224,9 @@ export function parseMonitorImportList(input: string): MonitorImportPlan {
 		}
 
 		/**
-		 * The endpoint key, not the URL itself: it collapses the trailing slash, the fragment
-		 * and search-param order, which are the ways one target gets pasted twice.
+		 * The normalized endpoint key is compared here: it collapses the trailing
+		 * slash, the fragment and search-param order, the ways one target gets
+		 * pasted twice.
 		 */
 		let key = normalizeTrialUrl(url.toString());
 		if (seen.has(key)) {
@@ -272,9 +236,9 @@ export function parseMonitorImportList(input: string): MonitorImportPlan {
 		seen.add(key);
 
 		/**
-		 * The parsed URL's own serialization is stored rather than the line as pasted: the line
-		 * had to go through `URL` to be accepted at all, may be missing the scheme entirely, and
-		 * its serialization is the same request on the wire.
+		 * The parsed URL's own serialization is stored: it already passed `URL`
+		 * to be accepted, may have gained a scheme along the way, and matches
+		 * what will actually go out on the wire.
 		 */
 		let href = url.toString();
 		accepted.push({ line, name: monitorImportName(href), url: href });

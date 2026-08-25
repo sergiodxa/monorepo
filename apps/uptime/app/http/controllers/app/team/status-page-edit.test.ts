@@ -57,10 +57,9 @@ vi.doMock("cloudflare:workers", () => ({
 let { default: statusPageEditAction } = await import("./status-page-edit");
 
 /**
- * `createAction`'s return type is `Action<route, context, middleware>`, a union of
- * a bare handler function and `{ middleware, handler }` — TypeScript can't narrow
- * to the object arm statically, even though this controller is always defined as an
- * object at runtime. This asserts the shape so `.handler` is accessible below.
+ * `createAction`'s return type is `Action<route, context, middleware>`, a union of a
+ * bare handler function and `{ middleware, handler }` that TypeScript can't narrow
+ * statically; this asserts the object shape so `.handler` is accessible below.
  */
 let statusPageEditModule = statusPageEditAction as unknown as { handler: RequestHandler<any> };
 
@@ -178,6 +177,9 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 		expect(body).toContain(page.name);
 	});
 
+	/**
+	 * The regex requires `checked` immediately after the attribute name since the switch's own `:has(~ input:checked)` CSS text elsewhere in the body would satisfy a substring match, and a boolean attribute holds whenever merely present, so a stored `false` serialized as `0` would still render a ticked switch.
+	 */
 	test("renders stored false switches unticked, and stored true ones ticked", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -201,15 +203,7 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 		let response = await get(db, team, membership, page.id);
 		let body = await response.text();
 
-		// Matched as an attribute, not as a substring: the word `checked` also appears in
-		// the switch's own `:has(~ input:checked)` CSS, so `toContain("checked")` would
-		// pass no matter what the input renders. An HTML boolean attribute is on whenever
-		// it is merely present, so a stored `false` reaching the DOM as the number `0`
-		// would render `checked="0"` — a ticked switch that re-saving flips to true.
 		expect(body).not.toMatch(/name="is_public"[^>]*\schecked/);
-
-		// The control case: the same regex against a stored `true` must match, or the
-		// negative assertion above would be satisfied by a regex that can never fire.
 		expect(body).toMatch(/name="show_overall_status"[^>]*\schecked/);
 	});
 

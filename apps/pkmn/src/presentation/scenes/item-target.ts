@@ -1,13 +1,9 @@
 /**
  * The item-target picker: choose a party creature to use a held item on.
  *
- * The bag pushes this over itself when the player confirms an item that acts on
- * one creature — an evolution stone or a recovery medicine. It lists the party
- * exactly like the party screen (name, level, HP, status), confirming one hands
- * the creature id back through `onSelect` and cancelling calls `onCancel`; either
- * way the caller decides what to dispatch and when to pop. The scene reads the
- * party selector every frame so counts stay live and never mutates engine state
- * itself.
+ * The bag pushes this over itself when an item acts on one creature — an
+ * evolution stone or a recovery medicine. Confirming hands the creature id to
+ * `onSelect`; cancelling calls `onCancel`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,29 +1,11 @@
 /**
- * Tests the DNS monitor actions: create (which discovers, and lands on the review screen),
- * update, delete, the manual check, the review submission, a single record toggle and a
- * zone-file re-import. Successful mutations write `dns_monitors`/`dns_monitor_records` and
- * redirect; validation failure and the team-scoped not-found guard leave both tables
- * untouched.
- *
- * The DoH endpoint every one of these paths resolves through is stubbed with MSW, so the
- * sweep runs its real code against real-shaped answers and a test can count exactly how many
- * queries a request sent — which is how "resolved nothing" is asserted rather than assumed.
- * Alerts dispatch through `ctx.email`, so the mail middleware is registered over a recording
- * transport: nothing leaves the process, and no provider SDK is mocked.
- *
- * `cloudflare:workers` supplies a `waitUntil` because the meter event an on-demand check
- * produces is handed to it: the double collects that work instead of dropping it, so a test
- * can await what the response deliberately doesn't. What is pinned there is which requests
- * are billable — a check that swept is exactly one `ping` event keyed on the history row it
- * wrote, whatever the sweep cost in queries, and every request that returned without
- * sweeping (rejected form, another team's monitor, an owner without an active subscription)
- * is none.
- *
- * The same module supplies an in-memory `PING_RESULTS` dataset, which pins the other half of
- * that: a check that ran writes exactly one Analytics Engine point with the same dimensions
- * the scheduled sweep writes, and a refused one writes none — so billed work and reported
- * work stay in step.
- *
+ * Tests the DNS monitor actions: create, update, delete, manual check,
+ * review submission, record toggle, and zone-file re-import. The DoH
+ * endpoint each path resolves through is stubbed with MSW, so a test can
+ * count exactly how many queries a request sent. Alerts route through a
+ * recording mail transport, so nothing leaves the process. `waitUntil` and
+ * the in-memory `PING_RESULTS` dataset are doubled so a test can await the
+ * billing and analytics work a response defers.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -61,20 +43,19 @@ import {
 import routes from "~/routes/web";
 
 /**
- * Work the check action deferred past its response. Held rather than dropped so a test can
- * await the meter event the visitor is deliberately not made to wait for.
+ * Work the check action defers to `waitUntil`, held here so a test can
+ * await the meter event once the response has returned.
  */
 let deferred: Promise<unknown>[] = [];
 
 /**
- * The dataset `writePingResult` reports to — the only binding these paths touch. Module
- * scope because the actions capture `env` on import, so `beforeEach` empties it rather than
- * re-creating it. It enforces the platform's cardinality and size limits, so an over-budget
- * point fails here instead of being lost the way production loses it.
+ * The dataset `writePingResult` reports to, held at module scope because
+ * the actions capture `env` on import. Enforces the platform's cardinality
+ * and size limits on every point written; `beforeEach` resets it between tests.
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-/** `waitUntil` collects deferred work so a test can await what the response doesn't. */
+/** `waitUntil` collects deferred work so a test can await it once the response returns. */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
@@ -182,11 +163,11 @@ async function postDnsMonitorAction(
 		],
 	});
 	/**
-	 * Casts `router.map` itself (rather than its arguments) so this helper can map
-	 * several differently-shaped routes without losing type-checking elsewhere.
+	 * Casts `router.map` itself so this helper can map several
+	 * differently-shaped routes while keeping type-checking everywhere else.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		/** `i18n` because the toasts and the cap message are locale keys, not literals. */
+		/** `i18n` because the toasts and the cap message are locale keys. */
 		middleware: [teamContextMiddleware(team, membership), i18n],
 		handler: action,
 	});
@@ -331,7 +312,6 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 		let created = await db.findOne(dnsMonitors, { where: { team_id: team.id } });
 		expect(created?.name).toBe("Example domain");
 		expect(created?.domain).toBe("example.com");
-		// Nothing was pasted, so the monitor covers its apex and says so.
 		expect(created?.zone_file_imported_at).toBeNull();
 
 		let records = await db.findMany(dnsMonitorRecords, {
@@ -372,11 +352,9 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 		let declared = records.find((record) => record.value === "5.6.7.8");
 		expect(declared?.name).toBe("www.example.com");
 		expect(declared?.source).toBe("zone_file");
-		// It did not resolve, so it is a finding at review — never a standing alert.
 		expect(declared?.is_enabled).toBeFalsy();
 		expect(declared?.status).toBe("missing");
 
-		// The name the file contributed is swept too, so what does resolve there is watched.
 		let resolved = records.find(
 			(record) => record.name === "www.example.com" && record.source === "resolver",
 		);
@@ -384,9 +362,9 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 	});
 
 	/**
-	 * The paste is a map of somebody's infrastructure. It is parsed and dropped, so no column
-	 * anywhere may hold a byte of it that is not a record we now monitor — a comment is the
-	 * clearest probe for that, since nothing legitimate would ever store one.
+	 * The paste is a map of somebody's infrastructure. It is parsed and dropped,
+	 * so every stored byte belongs to a record we now monitor — a comment is
+	 * the clearest probe for that, since nothing legitimate would store one.
 	 */
 	test("stores no trace of the pasted zone file itself", async () => {
 		stubResolver();
@@ -411,6 +389,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 		expect(JSON.stringify({ created, records })).not.toContain("secret-comment");
 	});
 
+	/** The sweep is the expensive half of a create, run only once validation accepts the form. */
 	test("rejects a blank name and redirects to the new-monitor form without creating a row", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
@@ -430,7 +409,6 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 			routes.app.team.dnsMonitors.new.href({ team: team.slug }),
 		);
 		expect(await db.count(dnsMonitors, { where: { team_id: team.id } })).toBe(0);
-		// A rejected form resolves nothing: the sweep is the expensive half of a create.
 		expect(queries).toBe(0);
 	});
 
@@ -595,6 +573,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 });
 
 describe("POST /actions/:team/check-dns-monitor", () => {
+	/** One name, every supported record type: six DoH queries per domain. */
 	test("sweeps every tracked name, records the result, and redirects to the monitor", async () => {
 		stubResolver();
 		let { db } = createTestDatabase();
@@ -624,14 +603,12 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
 		expect(stored?.records_checked).toBe(1);
 		expect(stored?.queries_failed).toBe(0);
-		// One name, every supported type: a domain monitor is not one query.
 		expect(queries).toBe(6);
 	});
 
 	/**
-	 * The addition that the old containment matching let through: a record appearing beside
-	 * the ones we already track is a finding, and it is imported unwatched so that accepting
-	 * it is something the user does rather than something that happens by not reading.
+	 * A record appearing beside the ones already tracked is a finding, imported
+	 * unwatched so accepting it takes the user's own action, taken after review.
 	 */
 	test("reports a record nobody configured as new, and stores it unwatched", async () => {
 		stubResolver({
@@ -672,9 +649,8 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 	});
 
 	/**
-	 * A resolver having a bad minute must never be read as "every record at this name
-	 * vanished": the check reports `error` and the record it could not ask about keeps the
-	 * state it had.
+	 * A resolver's bad minute reports as `error`, and the record it could not
+	 * query keeps the status it already had.
 	 */
 	test("records a failed query as an error without marking anything missing", async () => {
 		server.use(
@@ -776,10 +752,9 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
 
 		/**
-		 * Six queries, one ping. What a domain monitor sells is one monitored domain, and the
-		 * public resolver costs us nothing per query, so billing the sweep as N would charge
-		 * for a cost we never incur. The key is the history row's id, which is what makes this
-		 * event impossible to collide with the scheduled sweep's: no two checks share a row.
+		 * Six queries, one ping: a domain monitor sells one monitored domain, so
+		 * the sweep bills as a flat unit regardless of query count. The history
+		 * row's id keys the event, keeping it distinct from the scheduled sweep's.
 		 */
 		expect(queries).toBe(6);
 		expect(await ingestedEvents()).toEqual([
@@ -810,7 +785,6 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 		);
 
 		expect(response.status).toBe(303);
-		// Refused before the sweep, so there is no work to charge for.
 		expect(queries).toBe(0);
 		expect(await ingestedEvents()).toEqual([]);
 	});
@@ -855,9 +829,9 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 });
 
 /**
- * A manual check must be indistinguishable from a scheduled one in the dataset: same
- * dimensions, same vocabulary, one point per check. A check the action never ran writes
- * nothing, so a refused request leaves no trace to inflate a chart with.
+ * A manual check matches a scheduled one in the dataset: same dimensions,
+ * same vocabulary, one point per check, so a refused request leaves the
+ * chart exactly as it was.
  */
 describe("POST /actions/:team/check-dns-monitor analytics", () => {
 	test("writes exactly one data point carrying DNS's own status and the team index", async () => {
@@ -882,9 +856,9 @@ describe("POST /actions/:team/check-dns-monitor analytics", () => {
 		expect(point?.blobs).toEqual([monitor.id, "dns", "ok"]);
 		expect(point?.indexes).toEqual([team.id]);
 		/**
-		 * The sweep's latency is measured, not stubbed, so only its shape is pinned. The
-		 * three that follow are fixed: one row means one check, and DNS has no notion of an
-		 * HTTP status to report or to expect.
+		 * The sweep's latency is measured live, so only its shape is pinned. The
+		 * three that follow are fixed: one row means one check, and DNS's own
+		 * status vocabulary carries no HTTP code.
 		 */
 		let doubles = point?.doubles ?? [];
 		expect(doubles).toHaveLength(4);
@@ -898,7 +872,6 @@ describe("POST /actions/:team/check-dns-monitor analytics", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await createMonitorRow(db, team.id);
-		// The one attributable edit: a single stored record, a single resolved value, differing.
 		await createRecordRow(db, monitor.id, { value: "9.9.9.9" });
 
 		await postDnsMonitorAction(
@@ -931,7 +904,6 @@ describe("POST /actions/:team/check-dns-monitor analytics", () => {
 			{ monitor_id: monitor.id },
 		);
 
-		// No sweep ran, so there is no result to report.
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 });
@@ -1099,8 +1071,8 @@ describe("POST /actions/:team/import-dns-monitor-zone-file", () => {
 	});
 
 	/**
-	 * A re-import must not undo a decision: a record the visitor declined stays declined,
-	 * or "I chose not to watch this" becomes a setting that expires.
+	 * A re-import preserves a visitor's earlier decision, so a declined record
+	 * stays declined across every subsequent paste.
 	 */
 	test("leaves an already-declined record declined", async () => {
 		stubResolver();

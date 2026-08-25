@@ -1,13 +1,11 @@
 /**
- * Unit tests for the `update-ssl` form validator: the manually entered expiry data
- * (`ssl_expiry_warning_days` bounds/default, optional `ssl_expires_at`/`ssl_issuer`
- * text fields).
+ * Unit tests for the `update-ssl` form validator: the manually entered expiry
+ * data (`ssl_expiry_warning_days` bounds/default, optional `ssl_expires_at`/
+ * `ssl_issuer` text fields).
  *
  * Exercises the schema directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but this is an `f.object(...)`
- * form-data schema that only accepts the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * `FormData`, since `UpdateSslSchema` is an `f.object(...)` form-data schema that
+ * only accepts a raw `FormData`/`URLSearchParams` instance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

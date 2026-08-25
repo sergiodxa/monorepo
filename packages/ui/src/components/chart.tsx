@@ -1,34 +1,9 @@
 /**
- * The `Chart` namespace's compound parts, covering both Cartesian and
- * circular chart geometries under one shared name. {@link Chart} renders the
- * coordinate space every nested Cartesian series shares — its pixel
- * dimensions and the data domains mapped across them — and publishes that
- * shared space through component context, so every series nested inside
- * reads the same coordinate system instead of a consumer repeating it on
- * each one. {@link Chart.Line} plots a stroked path connecting a set of data
- * points, drawn through {@link linearScale} for data-to-pixel positioning and
- * {@link linePath} for the path string. {@link Chart.Area} shares that same
- * positioning and closes it down to a baseline through {@link areaPath}
- * instead, filling the region beneath (or above) the series rather than just
- * tracing it. Both place a reachable, hoverable marker on a representative
- * spread of their points, computed through {@link ticks}. {@link Chart.Pie}
- * plots a circular geometry that shares no axis with a Cartesian series, so
- * it renders as its own independent `<svg>` root instead of nesting inside
- * {@link Chart}'s coordinate space: {@link pieAngles} allocates each wedge's
- * angle span proportional to its share of the total, and {@link arcPath}
- * turns that span into the wedge's `d` path string, drawing a solid pie or,
- * with a positive `innerRadius`, a donut. {@link Chart.Bar} plots a
- * categorical geometry that, like {@link Chart.Pie}, shares no axis with a
- * Cartesian series' continuous `xDomain`, so it too renders as its own
- * independent `<svg>` root: {@link bandScale} positions and sizes every bar
- * along its category axis — subdividing each category's band into one inner
- * band per series when a row plots more than one — {@link linearScale} maps
- * each bar's numeric value onto the vertical axis, and {@link ticks}
- * generates the horizontal gridlines drawn behind the bars. {@link Chart.Legend}
- * pairs with any of these roots as a later sibling: a checkbox-driven series
- * switcher whose swatches and names render fully readable with no script,
- * unchecking an item hiding its matching series through that chart root's
- * own static styling rather than a mixin of its own.
+ * The `Chart` namespace's compound parts, covering Cartesian series
+ * ({@link Chart}, {@link Chart.Line}, {@link Chart.Area}, {@link Chart.Bar})
+ * and the independent {@link Chart.Pie} root, each pairing with
+ * {@link Chart.Legend} for a script-free series switcher and
+ * {@link Chart.Tooltip} for a richer hover surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -95,19 +70,16 @@ const DEFAULT_AREA_COLOR: Chart.Color = 1;
 const DEFAULT_AREA_BASELINE = 0;
 
 /**
- * Approximate number of accessible markers {@link Chart.Line} and
- * {@link Chart.Area} place along their plotted points when `markerCount` is
- * omitted — enough to give a keyboard or screen-reader user a representative
- * spread of stops without a dense series turning into one stop per raw
- * sample.
+ * Approximate marker count {@link Chart.Line} and {@link Chart.Area} fall
+ * back to for `markerCount`, giving keyboard and screen-reader users a
+ * representative spread of stops instead of one per raw sample.
  */
 const DEFAULT_MARKER_COUNT = 6;
 
 /**
  * `aria-hidden="true"` applied to {@link Chart.Line}'s and {@link Chart.Area}'s
- * plotted `<path>` through {@link attrs}, keeping the purely visual stroke or
- * fill out of the accessibility tree — a series' accessible names and hover
- * tooltips live on its point markers instead.
+ * plotted `<path>` through {@link attrs} — a series' accessible name and
+ * hover tooltip live on its point markers instead.
  */
 const DEFAULT_PATH_ARIA_HIDDEN = "true";
 
@@ -126,10 +98,8 @@ const DEFAULT_SWATCH_COLOR: Chart.Color = 1;
 
 /**
  * `aria-hidden` value applied to {@link Chart.Tooltip} through
- * {@link attrs} unless a consumer overrides it. The surface only restates
- * the label, value, and series color a hovered point's own native
- * `<title>`, accessible name, and series color already carry, so
- * assistive technology gains nothing from encountering it directly.
+ * {@link attrs} unless overridden — the surface only restates the label,
+ * value, and color a hovered point's native `<title>` already carries.
  */
 const DEFAULT_TOOLTIP_ARIA_HIDDEN = "true";
 
@@ -141,9 +111,8 @@ const DEFAULT_CATEGORY_GAP = 0.2;
 
 /**
  * Fraction of a category's own band reserved as a gap between its series'
- * bars, {@link Chart.Bar} falls back to when `seriesGap` is omitted — packing
- * every category's bars edge to edge by default, since most bar charts plot
- * a single series per category and have no neighboring bar to gap against.
+ * bars, {@link Chart.Bar} falls back to when `seriesGap` is omitted —
+ * packing bars edge to edge, since most rows plot a single series.
  */
 const DEFAULT_SERIES_GAP = 0;
 
@@ -162,26 +131,8 @@ const DEFAULT_LEGEND_ITEM_CHECKED = true;
 
 /**
  * Renders the series switcher's host: a `role="group"` `<div>` laying its
- * {@link Chart.Legend.Item} children out in a wrapping horizontal row, each
- * pairing a color swatch with its series' name. Every swatch and name
- * renders fully readable with no script involved; unchecking an item is
- * what actually hides that series' points, driven entirely by the paired
- * chart root's own `css()` reading this same checkbox — this host and its
- * items carry no visibility logic of their own.
- *
- * Composition asks two things of the consumer, matching exactly how the
- * paired chart root's own static rules are keyed: render `Chart.Legend` as
- * a later sibling of the chart root it controls, since a chart root reads
- * this legend's checkboxes through the general sibling combinator, which
- * only looks at siblings that follow it; and render each
- * {@link Chart.Legend.Item} in the same order as the chart's own series,
- * since a chart root locates the item controlling series `n` by its
- * position among its siblings — the `n`-th `<label>` inside this legend —
- * not by reading any attribute off the checkbox itself.
- *
- * In dev mode, a legend rendered without an `aria-label` or
- * `aria-labelledby` logs a `console.warn`, since assistive technology
- * otherwise has no accessible name to announce for the set.
+ * {@link Chart.Legend.Item} children in a wrapping row. Must render as a
+ * later sibling of the chart root, with items in that chart's series order.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the legend's markup.
@@ -221,20 +172,8 @@ function ChartLegend(handle: Handle<Chart.LegendProps>) {
 
 /**
  * Renders one series' entry: a native `<label>` wrapping a visually hidden,
- * `defaultChecked` `<input type="checkbox">` alongside a small color swatch
- * and the series' name — the same "decorative element, then input, then
- * visible text" order this catalog's own `Checkbox` already establishes, so
- * clicking or tapping anywhere in the row toggles the control natively,
- * with no separate `htmlFor`/`id` pair required. The swatch reads its color
- * from `data-color` through the same eight-slot `--ui-chart-*` palette a
- * chart root's own points read, keeping every series' legend color
- * identical to its plotted color.
- *
- * Unchecking the input dims the whole row and strikes through its name — a
- * shape change paired with the color change, never color alone — and is the
- * only difference this item ever renders on its own; hiding the matching
- * series' points elsewhere is entirely the paired chart root's own `css()`
- * reacting to this same checkbox by its position among its siblings.
+ * `defaultChecked` checkbox, a `data-color` swatch matching its series, and
+ * its name — unchecking hides the series via the paired chart root's `css()`.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props, plus
  * the underlying `<input>`'s own attributes and per-part `swatch` styling.
@@ -269,13 +208,6 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					when("&:has(input:not(:checked))", [opacity(50), textDecoration("line-through")]),
 				]}
 			>
-				{/*
-				 * The swatch comes before the input in source order, mirroring
-				 * `Checkbox`'s own decorative-box-then-input layout, even though
-				 * this swatch's own color is static per series rather than a
-				 * reaction to the input's state — the whole row (swatch
-				 * included) dims through the label's own `opacity` above instead.
-				 */}
 				<span
 					aria-hidden="true"
 					data-slot="swatch"
@@ -312,10 +244,9 @@ ChartLegend.Item = ChartLegendItem;
  */
 export namespace Chart {
 	/**
-	 * Props accepted by {@link Chart.Legend}. Every native `<div>` attribute
-	 * is available unchanged, so `aria-label`, `aria-labelledby`, and `mix`
-	 * identify and style the host exactly as they would on a bare grouping
-	 * `<div>`.
+	 * Props accepted by {@link Chart.Legend}. Every native `<div>` attribute is
+	 * available unchanged, so `aria-label`, `aria-labelledby`, and `mix` style
+	 * the host exactly as they would on a bare grouping `<div>`.
 	 */
 	export interface LegendProps extends TagProps<"div"> {}
 
@@ -330,10 +261,8 @@ export namespace Chart {
 
 	/**
 	 * Props accepted by {@link Chart.Legend.Item}. Every native `<input>`
-	 * attribute is available unchanged — aside from `type`, which is always
-	 * `"checkbox"` — so `defaultChecked`, `name`, `value`, `disabled`, and
-	 * the rest work exactly as they would on a bare checkbox input, and
-	 * `mix` styles that same `<input>` host.
+	 * attribute is available unchanged — aside from `type`, always
+	 * `"checkbox"` — and `mix` styles that same `<input>` host.
 	 */
 	export interface LegendItemProps extends Omit<TagProps<"input">, "type" | "role"> {
 		/** ARIA role override, restricted to what a checkbox input may carry. */
@@ -355,10 +284,9 @@ export namespace Chart {
 	}
 
 	/**
-	 * Value {@link Chart} stores in component context: the pixel dimensions
-	 * of its coordinate space and the data domains mapped across them, read
-	 * by every series compound part nested inside so they all plot against
-	 * the same shared scale.
+	 * Value {@link Chart} stores in component context: the pixel dimensions of
+	 * its coordinate space and the data domains mapped across them, shared with
+	 * every nested series compound part.
 	 */
 	export interface Context {
 		/** Pixel width of the coordinate space, matching {@link Props.width}. */
@@ -373,17 +301,14 @@ export namespace Chart {
 
 	/**
 	 * Props accepted by {@link Chart}. Every native `<svg>` attribute still
-	 * applies except `viewBox`, `width`, and `height`, which this component
-	 * computes itself from the props of the same name below so every nested
-	 * series' pixel math always matches what's actually rendered.
+	 * applies except `viewBox`, `width`, and `height`, computed from the props
+	 * of the same name below so every nested series' pixel math matches.
 	 */
 	export interface Props extends Omit<TagProps<"svg">, "viewBox" | "width" | "height"> {
 		/**
-		 * Pixel width of the chart's internal coordinate space — the value
-		 * every nested series' `x` positions are mapped onto. The `<svg>`
-		 * itself renders at its container's full inline size, scaling this
-		 * coordinate space to fit while preserving its aspect ratio against
-		 * `height`.
+		 * Pixel width of the chart's internal coordinate space — the value every
+		 * nested series' `x` positions are mapped onto. The `<svg>` renders at its
+		 * container's full size, scaling this space while preserving aspect ratio.
 		 */
 		width: number;
 		/**
@@ -398,22 +323,17 @@ export namespace Chart {
 		 */
 		xDomain: readonly [number, number];
 		/**
-		 * `[start, end]` bounds of every nested series' vertical data values,
-		 * mapped across `height` and shared through context so every series
-		 * lines up on the same vertical scale. `start` maps to the
-		 * coordinate space's bottom edge and `end` to its top edge, matching
-		 * how a value axis grows upward while SVG's own `y` axis grows
-		 * downward.
+		 * `[start, end]` bounds of every nested series' vertical data values, mapped
+		 * across `height`. `start` maps to the coordinate space's bottom edge and
+		 * `end` to its top, matching a value axis growing upward against SVG's `y`.
 		 */
 		yDomain: readonly [number, number];
 	}
 
 	/**
-	 * One categorical color a {@link Chart.Line}, a {@link Chart.Area}, or
-	 * any further series plotted alongside them picks up through the
-	 * `--ui-chart-1` through `--ui-chart-8` semantic variables, rotating a
-	 * fixed palette across several series instead of assigning any of them a
-	 * fixed semantic role.
+	 * One categorical color a {@link Chart.Line}, {@link Chart.Area}, or any
+	 * further series picks up through the `--ui-chart-1` through `--ui-chart-8`
+	 * semantic variables, rotating a fixed palette across several series.
 	 */
 	export type Color = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -428,21 +348,16 @@ export namespace Chart {
 		y: number;
 		/**
 		 * Accessible name and hover tooltip text for this point, read by the
-		 * native `<title>` nested in its marker whenever this point falls
-		 * among the representative spread {@link Chart.Line} renders a
-		 * marker for. Typically a formatted description of both values
-		 * together (e.g. `"March: $1,240"`), built by the consumer through
-		 * the platform's `Intl` APIs against their own localized strings —
-		 * this component never derives it from `x`/`y` on its own.
+		 * native `<title>` nested in its marker when the point falls among the
+		 * representative spread {@link Chart.Line} renders a marker for.
 		 */
 		label: string;
 	}
 
 	/**
 	 * Props accepted by {@link Chart.Line}. Extends every native `<g>`
-	 * attribute except `children` and `points` — `points` is redefined below
-	 * with this series' own data-space shape, in place of the native SVG
-	 * attribute of the same name that only applies to `<polyline>`/`<polygon>`.
+	 * attribute except `children` and `points`, redefined below with this
+	 * series' own data-space shape in place of the native `<polyline>` attribute.
 	 */
 	export interface LineProps extends Omit<TagProps<"g">, "children" | "points"> {
 		/**
@@ -454,12 +369,11 @@ export namespace Chart {
 		/** Categorical color. Defaults to {@link DEFAULT_LINE_COLOR}. */
 		color?: Color;
 		/**
-		 * Approximate number of accessible, hoverable markers to place along
-		 * `points`. Each marker snaps to whichever actual point sits closest
-		 * to one of this many evenly spread "nice" values across the
-		 * ancestor {@link Chart}'s `xDomain`, so a dense series still exposes
-		 * a manageable, evenly distributed set of keyboard stops instead of
-		 * one per raw sample. Defaults to {@link DEFAULT_MARKER_COUNT}.
+		 * Approximate number of accessible, hoverable markers placed along
+		 * `points`. Each marker snaps to the point closest to one of this many
+		 * evenly spread "nice" values across the ancestor {@link Chart}'s `xDomain`.
+		 *
+		 * @default {@link DEFAULT_MARKER_COUNT}
 		 */
 		markerCount?: number;
 		/**
@@ -486,28 +400,22 @@ export namespace Chart {
 		y: number;
 		/**
 		 * Accessible name and hover tooltip text for this point, read by the
-		 * native `<title>` nested in its marker whenever this point falls
-		 * among the representative spread {@link Chart.Area} renders a
-		 * marker for. Typically a formatted description of both values
-		 * together (e.g. `"March: $1,240"`), built by the consumer through
-		 * the platform's `Intl` APIs against their own localized strings —
-		 * this component never derives it from `x`/`y` on its own.
+		 * native `<title>` nested in its marker when the point falls among the
+		 * representative spread {@link Chart.Area} renders a marker for.
 		 */
 		label: string;
 	}
 
 	/**
 	 * Props accepted by {@link Chart.Area}. Extends every native `<g>`
-	 * attribute except `children` and `points` — `points` is redefined below
-	 * with this series' own data-space shape, in place of the native SVG
-	 * attribute of the same name that only applies to `<polyline>`/`<polygon>`.
+	 * attribute except `children` and `points`, redefined below with this
+	 * series' own data-space shape in place of the native `<polyline>` attribute.
 	 */
 	export interface AreaProps extends Omit<TagProps<"g">, "children" | "points"> {
 		/**
-		 * The series' data points, in draw order along `x`. The filled
-		 * region traces every point given here before closing down to
-		 * `baseline`; the accessible markers render on only a representative
-		 * spread of them, chosen through `markerCount`.
+		 * The series' data points, in draw order along `x`. The filled region
+		 * traces every point given here before closing down to `baseline`; markers
+		 * render on a representative spread of them, chosen through `markerCount`.
 		 */
 		points: readonly AreaPoint[];
 		/** Categorical color. Defaults to {@link DEFAULT_AREA_COLOR}. */
@@ -519,12 +427,11 @@ export namespace Chart {
 		 */
 		baseline?: number;
 		/**
-		 * Approximate number of accessible, hoverable markers to place along
-		 * `points`. Each marker snaps to whichever actual point sits closest
-		 * to one of this many evenly spread "nice" values across the
-		 * ancestor {@link Chart}'s `xDomain`, so a dense series still exposes
-		 * a manageable, evenly distributed set of keyboard stops instead of
-		 * one per raw sample. Defaults to {@link DEFAULT_MARKER_COUNT}.
+		 * Approximate number of accessible, hoverable markers placed along
+		 * `points`. Each marker snaps to the point closest to one of this many
+		 * evenly spread "nice" values across the ancestor {@link Chart}'s `xDomain`.
+		 *
+		 * @default {@link DEFAULT_MARKER_COUNT}
 		 */
 		markerCount?: number;
 		/**
@@ -542,40 +449,30 @@ export namespace Chart {
 
 	/**
 	 * One wedge's input for {@link Chart.Pie}: a magnitude and its required
-	 * accessible label. {@link pieAngles} turns `value` into an angle span
-	 * proportional to its share of every value's total; a negative `value`
-	 * contributes a zero-width wedge instead of an inverted one, and an
-	 * all-zero (or empty-sum) `data` list splits the circle evenly instead of
-	 * collapsing every wedge to nothing.
+	 * accessible label. {@link pieAngles} turns `value` into a proportional
+	 * angle span, treating a negative value as zero and an all-zero total as even.
 	 */
 	export interface PieDatum {
 		/** The magnitude this wedge represents. */
 		value: number;
 		/**
 		 * Accessible name and hover tooltip text for this wedge, read by the
-		 * native `<title>` nested inside it — required, since the library
-		 * ships no built-in copy and a wedge with no label has nothing for
-		 * assistive technology to announce.
+		 * native `<title>` nested inside it — required, since a wedge with no
+		 * label has nothing for assistive technology to announce.
 		 */
 		label: string;
 		/**
-		 * Categorical color for this wedge. Defaults to this datum's position
-		 * in `data` modulo the palette's slot count (plus one), rotating the
-		 * same fixed palette {@link Chart.Line} and {@link Chart.Area} read
-		 * from — set it explicitly to keep a given category pinned to the
-		 * same color across several charts or a paired legend instead of
-		 * leaving it to positional cycling.
+		 * Categorical color for this wedge, defaulting to its position in `data`
+		 * modulo the palette's slot count. Set explicitly to pin a category's
+		 * color across several charts or a paired legend.
 		 */
 		color?: Color;
 	}
 
 	/**
-	 * Props accepted by {@link Chart.Pie}. Every native `<svg>` attribute
-	 * still applies except `children`, `viewBox`, `width`, and `height` —
-	 * `width`/`height` are redefined below as the plain numbers this
-	 * component's own coordinate-space math needs, in place of the native SVG
-	 * attribute's `number | string`, and `viewBox` is computed from them, so a
-	 * consumer never sets it directly.
+	 * Props accepted by {@link Chart.Pie}. Every native `<svg>` attribute still
+	 * applies except `children`, `viewBox`, `width`, and `height` — the latter
+	 * two take plain numbers for this component's own math, computing `viewBox`.
 	 */
 	export interface PieProps
 		extends PieAngles.Options, Omit<TagProps<"svg">, "children" | "viewBox" | "width" | "height"> {
@@ -585,10 +482,9 @@ export namespace Chart {
 		 */
 		data: readonly PieDatum[];
 		/**
-		 * Pixel width of the chart's internal coordinate space that `viewBox`
-		 * maps onto — not the rendered size, which always fills `100%` of the
-		 * host's own inline size, scaled to fit while preserving this aspect
-		 * ratio against `height`.
+		 * Pixel width of the chart's internal coordinate space that `viewBox` maps
+		 * onto. The rendered `<svg>` fills `100%` of the host's own inline size,
+		 * scaled to fit while preserving this aspect ratio against `height`.
 		 */
 		width: number;
 		/**
@@ -598,10 +494,10 @@ export namespace Chart {
 		height: number;
 		/**
 		 * Pixel distance from center to every wedge's inner edge, in the same
-		 * coordinate space as `width`/`height`. Leave at the default of
-		 * {@link DEFAULT_PIE_INNER_RADIUS} for a solid pie reaching the
-		 * center, or pass a positive value smaller than the chart's outer
-		 * radius for a donut with a hole that size.
+		 * coordinate space as `width`/`height`. A positive value smaller than the
+		 * chart's outer radius produces a donut with a hole that size.
+		 *
+		 * @default {@link DEFAULT_PIE_INNER_RADIUS}
 		 */
 		innerRadius?: number;
 		/**
@@ -620,12 +516,9 @@ export namespace Chart {
 	 */
 	export namespace Tooltip {
 		/**
-		 * Every native `<div>` attribute, plus the `mix` passthrough. Carries
-		 * no prop of its own for position or open state: a `chartTooltip()`
-		 * mixin writes both directly onto this host at runtime — position as
-		 * the `--ui-chart-tooltip-x`/`--ui-chart-tooltip-y` custom properties
-		 * this component's own CSS reads, open state as a `data-open`
-		 * attribute — rather than either one threading through a prop.
+		 * Every native `<div>` attribute, plus the `mix` passthrough. A
+		 * `chartTooltip()` mixin writes this host's position and open state
+		 * directly at runtime, as CSS custom properties and a `data-open` attribute.
 		 */
 		export interface Props extends TagProps<"div"> {}
 
@@ -660,11 +553,8 @@ export namespace Chart {
 		value: number;
 		/**
 		 * Accessible name and hover tooltip text for this bar, read by the
-		 * native `<title>` nested inside it. Typically a formatted
-		 * description of the category, series, and value together (e.g.
-		 * `"March revenue: $1,240"`), built by the consumer through the
-		 * platform's `Intl` APIs against their own localized strings — this
-		 * component never derives it from `value` on its own.
+		 * native `<title>` nested inside it — typically a formatted description of
+		 * the category, series, and value together (e.g. `"March revenue: $1,240"`).
 		 */
 		label: string;
 	}
@@ -675,10 +565,9 @@ export namespace Chart {
 	 */
 	export interface BarRow {
 		/**
-		 * Category key positioning this row's bars along the shared band
-		 * axis. Keep every row's category unique — a repeated category falls
-		 * back to sharing its first occurrence's position, so its bars
-		 * overlap instead of getting a band of their own.
+		 * Category key positioning this row's bars along the shared band axis.
+		 * Keep every row's category unique — a repeated category shares its first
+		 * occurrence's band position, overlapping its bars there.
 		 */
 		category: string;
 		/**
@@ -690,12 +579,9 @@ export namespace Chart {
 	}
 
 	/**
-	 * Props accepted by {@link Chart.Bar}. Every native `<svg>` attribute
-	 * still applies except `children`, `viewBox`, `width`, and `height` —
-	 * `width`/`height` are redefined below as the plain numbers this
-	 * component's own coordinate-space math needs, in place of the native SVG
-	 * attribute's `number | string`, and `viewBox` is computed from them, so a
-	 * consumer never sets it directly.
+	 * Props accepted by {@link Chart.Bar}. Every native `<svg>` attribute still
+	 * applies except `children`, `viewBox`, `width`, and `height` — the latter
+	 * two take plain numbers for this component's own math, computing `viewBox`.
 	 */
 	export interface BarProps extends Omit<
 		TagProps<"svg">,
@@ -704,22 +590,15 @@ export namespace Chart {
 		/** Rows to plot, one band per row along the category axis, in draw order. */
 		data: readonly BarRow[];
 		/**
-		 * Ordered series keys plotted within every row's band, subdividing
-		 * each category's own band into one inner band per key. A key's
-		 * position in this list is both the stable index stamped onto its
-		 * bars' `data-series-index` — the attribute a sibling
-		 * `Chart.Legend`'s checkbox-driven CSS and the `chartTooltip()` mixin
-		 * both key off, alongside `data-color` — and its position in the same
-		 * `--ui-chart-1` through `--ui-chart-8` palette {@link Chart.Line},
-		 * {@link Chart.Area}, and {@link Chart.Pie} rotate through, wrapping
-		 * back to the first color once `series` outgrows the sequence.
+		 * Ordered series keys plotted within every row's band. A key's position in
+		 * this list is both the stable index stamped onto `data-series-index` and
+		 * its slot in the `--ui-chart-1`–`--ui-chart-8` palette, wrapping past it.
 		 */
 		series: readonly string[];
 		/**
-		 * Pixel width of the chart's internal coordinate space that `viewBox`
-		 * maps onto — not the rendered size, which always fills `100%` of the
-		 * host's own inline size, scaled to fit while preserving this aspect
-		 * ratio against `height`.
+		 * Pixel width of the chart's internal coordinate space that `viewBox` maps
+		 * onto. The rendered `<svg>` fills `100%` of the host's own inline size,
+		 * scaled to fit while preserving this aspect ratio against `height`.
 		 */
 		width: number;
 		/**
@@ -729,10 +608,8 @@ export namespace Chart {
 		height: number;
 		/**
 		 * `[start, end]` bounds of every bar's value, mapped across `height`.
-		 * `start` maps to the coordinate space's bottom edge and `end` to its
-		 * top edge, matching how a value axis grows upward while SVG's own
-		 * `y` axis grows downward — the same convention
-		 * {@link Chart.Props.yDomain} uses.
+		 * `start` maps to the bottom edge and `end` to the top, matching the same
+		 * upward-value convention {@link Chart.Props.yDomain} uses against SVG's `y`.
 		 */
 		domain: readonly [number, number];
 		/** Approximate number of horizontal gridlines spanning `domain`. Defaults to {@link DEFAULT_BAR_TICK_COUNT}. */
@@ -741,9 +618,10 @@ export namespace Chart {
 		categoryGap?: number;
 		/**
 		 * Fraction of each category's own band reserved as a gap between its
-		 * series' bars. Defaults to {@link DEFAULT_SERIES_GAP} — packing every
-		 * category's bars edge to edge, since most bar charts plot a single
-		 * series per category and have no neighboring bar to gap against.
+		 * series' bars — most bar charts plot a single series per category, with
+		 * no neighboring bar to gap against.
+		 *
+		 * @default {@link DEFAULT_SERIES_GAP}
 		 */
 		seriesGap?: number;
 		/**
@@ -761,22 +639,9 @@ export namespace Chart {
 }
 
 /**
- * Renders a chart's coordinate space: a responsive `<svg>` sized to its
- * container's full inline size, its internal coordinate system fixed by a
- * `viewBox` built from `width` and `height`. Publishes those dimensions
- * alongside `xDomain` and `yDomain` through component context, so every
- * series compound part nested inside — {@link Chart.Line} today — maps its
- * own data points across the exact same shared scale without a consumer
- * repeating the domain on each one.
- *
- * Also carries the static, position-keyed rules a paired {@link Chart.Legend}
- * reacts against: for each of the eight `data-color` slots, unchecking the
- * matching {@link Chart.Legend.Item} — read by its position among its own
- * `<label>` siblings, the `n`-th one inside the legend — hides every nested
- * series element sharing that slot's `data-color`. This is why
- * {@link Chart.Legend} must render as a later sibling of this root: the
- * rule reaches it through the general sibling combinator, which only
- * matches siblings that follow.
+ * Renders a chart's coordinate space: a responsive `<svg>` whose `viewBox`
+ * comes from `width`/`height`, shared via context so nested series share one
+ * scale. A paired {@link Chart.Legend} must render as this root's later sibling.
  *
  * @param handle Runtime handle carrying the host `<svg>`'s props and providing {@link Chart.Context}.
  * @returns The render function producing the chart's coordinate space.
@@ -805,19 +670,7 @@ export function Chart(handle: Handle<Chart.Props, Chart.Context>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={[
-					// A paired `Chart.Legend`'s checkboxes drive this — one
-					// static rule per categorical color slot, keyed by the
-					// checkbox's position among its own `<label>` siblings
-					// rather than by any attribute read off the checkbox
-					// itself. Any further chart root sharing this same
-					// `data-color` contract needs this identical mixin.
-					legendToggle(),
-					block(),
-					is("full"),
-					bs("auto"),
-					mix,
-				]}
+				mix={[legendToggle(), block(), is("full"), bs("auto"), mix]}
 			/>
 		);
 	};
@@ -828,9 +681,7 @@ Chart.Legend = ChartLegend;
 /**
  * Renders one series' representative point markers: a small focusable
  * `<circle>` at each of `markerIndices`' scaled positions, nested with a
- * `<title>` carrying that point's own `label` — the identical marker both
- * {@link Chart.Line} and {@link Chart.Area} place along their plotted
- * points.
+ * `<title>` carrying that point's own `label`.
  *
  * @param points The series' original data points, read for each marker's label.
  * @param scaledPoints Each point's already-scaled pixel position, in the same order as `points`.
@@ -872,18 +723,9 @@ function renderChartMarkers(
 }
 
 /**
- * Renders a line series: a stroked `<path>` connecting `points` in order,
- * plus a reachable marker on a representative spread of them. Every point's
- * data-space `x`/`y` value is mapped to a pixel position through
- * {@link linearScale} built from the ancestor {@link Chart}'s `xDomain` and
- * `yDomain`, and the path's `d` string comes from feeding those scaled
- * positions to {@link linePath}. The path itself renders `aria-hidden`,
- * since it carries no accessible name of its own; each marker is a small
- * focusable `<circle>` nested with a `<title>`, giving assistive technology
- * and hover alike the point's `label`. Markers don't render one per raw
- * point — {@link ticks} generates a "nice", evenly spread set of `xDomain`
- * values first, and each snaps to whichever actual point sits closest to
- * it, keeping a dense series' keyboard and hover surface manageable.
+ * Renders a line series: a stroked, `aria-hidden` `<path>` connecting
+ * `points` via {@link linearScale} and {@link linePath}, plus a focusable
+ * marker with a `<title>`, sampled via {@link ticks} for manageable density.
  *
  * @param handle Runtime handle carrying the host `<g>`'s props.
  * @returns The render function producing the series' markup.
@@ -934,34 +776,9 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 };
 
 /**
- * Renders the tooltip's own floating host: a native `<div>` positioned
- * absolutely against its nearest positioned ancestor, reading its own
- * position from the `--ui-chart-tooltip-x`/`--ui-chart-tooltip-y` custom
- * properties a `chartTooltip()` mixin writes onto it — the bare pixel
- * position of the point or wedge currently hovered, not a fully offset
- * placement. This host's own `translate` lifts the surface above that
- * coordinate and centers it horizontally, so the mixin only ever supplies
- * the raw position. `left`/`top` read that position deliberately instead of
- * the logical inset properties this catalog otherwise favors: the
- * coordinate a mixin computes comes from the pointer's own physical screen
- * position, the same physical axis `left`/`top` already read from, so no
- * `dir`-based flip would be meaningful for it. Compose
- * {@link Chart.Tooltip.Swatch}, {@link Chart.Tooltip.Label}, and
- * {@link Chart.Tooltip.Value} inside it, matching the hovered point's
- * series color, label, and value.
- *
- * Renders fully transparent and inert at rest: `pointer-events: none` keeps
- * it from ever intercepting the pointer tracking it depends on, and its
- * `opacity`/`scale` stay collapsed until a `chartTooltip()` mixin toggles a
- * `data-open` attribute onto this same host alongside the position
- * properties above, on a point or wedge gaining and losing the pointer's
- * nearest hit. Composing this component without also attaching that mixin
- * to the chart root beside it leaves the surface permanently invisible —
- * the richer tooltip has no rendering of its own to fall back to, unlike
- * the plain hover tooltip and accessible name every point or wedge's native
- * `<title>` already supplies on its own. `aria-hidden="true"` applies by
- * default, since this surface only restates what that native `<title>`
- * already carries.
+ * Renders the tooltip's floating host: an absolutely positioned `<div>`
+ * reading position and `data-open` state a `chartTooltip()` mixin writes
+ * onto it. Visibility requires pairing that mixin with the chart root.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the surface's markup.
@@ -1023,12 +840,9 @@ function ChartTooltip(handle: Handle<Chart.Tooltip.Props>) {
 }
 
 /**
- * Renders a small circular color chip identifying which chart series the
- * tooltip's current point or wedge belongs to: a native `<span>` colored
- * through the `data-color` attribute contract, mapped onto the same
- * eight-slot categorical color sequence (`--ui-chart-1` through
- * `--ui-chart-8`) every series and wedge already render with. Defaults to
- * {@link DEFAULT_SWATCH_COLOR} when `color` is omitted.
+ * Renders a small circular color chip identifying the tooltip's current
+ * point or wedge: a native `<span>` colored through the `data-color`
+ * attribute, on the same eight-slot palette every series already renders with.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the swatch's markup.
@@ -1079,9 +893,8 @@ ChartTooltip.Label = function ChartTooltipLabel(handle: Handle<Chart.Tooltip.Lab
 
 /**
  * Renders the tooltip's value slot: a native `<span>` showing the hovered
- * point or wedge's own value, weighted more heavily than
- * {@link Chart.Tooltip.Label} so it reads as the surface's most prominent
- * figure.
+ * point or wedge's own value, weighted to read as the surface's most
+ * prominent figure against {@link Chart.Tooltip.Label}.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the value's markup.
@@ -1096,29 +909,13 @@ ChartTooltip.Value = function ChartTooltipValue(handle: Handle<Chart.Tooltip.Val
 	};
 };
 
-// tsgolint alone rejects this expando assignment as TS2339. `tsc --noEmit` accepts the
-// whole file, and tsgolint itself reads the sibling `Chart.Legend`/`Line`/`Area`/`Pie`
-// assignments below and above without complaint, so it is a gap in its handling of this
-// one name rather than a defect here. `@ts-ignore` and not `@ts-expect-error`: `tsc` has
-// no error to expect on this line and would report the directive as unused.
 // @ts-ignore
 Chart.Tooltip = ChartTooltip;
 
 /**
- * Renders an area series: a filled `<path>` tracing `points` in order and
- * closing down to `baseline`, plus a reachable marker on a representative
- * spread of them. Every point's data-space `x`/`y` value is mapped to a
- * pixel position through {@link linearScale} built from the ancestor
- * {@link Chart}'s `xDomain` and `yDomain` — the exact same scale calls
- * {@link Chart.Line} makes — and the path's `d` string comes from feeding
- * those scaled positions, plus `baseline` mapped through that same vertical
- * scale, to {@link areaPath}. The path itself renders `aria-hidden`, since it
- * carries no accessible name of its own; each marker is a small focusable
- * `<circle>` nested with a `<title>`, giving assistive technology and hover
- * alike the point's `label`. Markers don't render one per raw point —
- * {@link ticks} generates a "nice", evenly spread set of `xDomain` values
- * first, and each snaps to whichever actual point sits closest to it,
- * keeping a dense series' keyboard and hover surface manageable.
+ * Renders an area series: a filled, `aria-hidden` `<path>` tracing `points`
+ * and closing down to `baseline`, mapped through {@link linearScale} and
+ * {@link areaPath}, plus a focusable marker sampled via {@link ticks}.
  *
  * @param handle Runtime handle carrying the host `<g>`'s props.
  * @returns The render function producing the series' markup.
@@ -1176,32 +973,9 @@ Chart.Area = function ChartArea(handle: Handle<Chart.AreaProps>) {
 };
 
 /**
- * Renders a pie or donut chart: an independent `<svg>` root — not nested
- * inside {@link Chart}, since a circular layout shares no `xDomain`/`yDomain`
- * with a Cartesian series — sized to its container's full inline size, its
- * internal coordinate system fixed by a `viewBox` built from `width` and
- * `height`. {@link pieAngles} allocates one angle span per entry in `data`,
- * proportional to its share of the total, and {@link arcPath} turns each
- * span into that wedge's `d` string: a solid slice by default, or a donut
- * segment once `innerRadius` is set above {@link DEFAULT_PIE_INNER_RADIUS}.
- * Every wedge carries a native SVG `<title>` sourced from its datum's own
- * `label`, plus `tabIndex={0}` and `role="img"`, so the same title that shows
- * as a hover tooltip also becomes the wedge's accessible name the moment
- * keyboard focus reaches it — every wedge is reachable and nameable with no
- * script involved. A wedge whose allocated span computes to nothing (a
- * `value` of `0` or less among otherwise-positive values) renders no `<path>`
- * at all, keeping an empty wedge out of both the drawing and the tab order.
- *
- * Each wedge's fill color reads its own `color` when its datum sets one, or
- * else its position in `data` modulo the palette's slot count — the same
- * `--ui-chart-1` through `--ui-chart-8` palette {@link Chart.Line} and
- * {@link Chart.Area} rotate through for their own series.
- *
- * Also carries the same static, position-keyed rules {@link Chart} itself
- * does: a paired {@link Chart.Legend} rendered as this root's later sibling
- * hides a wedge sharing an unchecked {@link Chart.Legend.Item}'s `data-color`
- * slot, read from that checkbox's position among its own `<label>` siblings
- * rather than any attribute on the checkbox itself.
+ * Renders a pie or donut chart: an independent `<svg>` root, since a
+ * circular layout shares no domain with a Cartesian {@link Chart}. A paired
+ * {@link Chart.Legend} must render as this root's later sibling.
  *
  * @param handle Runtime handle carrying the host `<svg>`'s props.
  * @returns The render function producing the chart's markup.
@@ -1245,18 +1019,7 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={[
-					chartPalette("fill", " "),
-					// A paired `Chart.Legend`'s checkboxes drive this — see
-					// `Chart`'s own identical mixin for the full rationale;
-					// every further independent chart root sharing this
-					// `data-color` contract needs the same mixin.
-					legendToggle(),
-					block(),
-					is("full"),
-					bs("auto"),
-					mix,
-				]}
+				mix={[chartPalette("fill", " "), legendToggle(), block(), is("full"), bs("auto"), mix]}
 			>
 				{slices.map((slice, index) => {
 					let datum = data[index];
@@ -1298,42 +1061,9 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 };
 
 /**
- * Renders a categorical bar chart: an independent `<svg>` root — not nested
- * inside {@link Chart}, since a categorical band axis shares no continuous
- * `xDomain` with a Cartesian series — sized to its container's full inline
- * size, its internal coordinate system fixed by a `viewBox` built from
- * `width` and `height`. Every {@link Chart.BarRow} in `data` becomes one band
- * along the category axis, positioned and sized with {@link bandScale} —
- * subdivided into one inner band per key in `series` when a row plots more
- * than one — and every {@link Chart.BarValue} becomes a `<rect>` whose
- * block-axis position and size come from {@link linearScale} mapping its
- * numeric `value` against `domain`, the same convention
- * {@link Chart.Props.yDomain} uses. {@link ticks} generates the horizontal
- * gridlines drawn behind the bars, spanning that same `domain` at
- * `tickCount`'s approximate resolution.
- *
- * Every bar carries `data-color`, cycling through the same `--ui-chart-1`
- * through `--ui-chart-8` palette {@link Chart.Line}, {@link Chart.Area}, and
- * {@link Chart.Pie} rotate through by its position in `series` — the same
- * positional-cycling rule {@link Chart.Pie} applies to a datum with no
- * explicit color — plus `data-series-index`, that same raw position
- * unwrapped, so the `chartTooltip()` mixin can read a bar's series back off
- * whichever one a pointer lands nearest even past the eighth color. Also
- * carries the same static, position-keyed rules {@link Chart} and
- * {@link Chart.Pie} do: a paired {@link Chart.Legend} rendered as this root's
- * later sibling hides every bar sharing an unchecked
- * {@link Chart.Legend.Item}'s `data-color` slot, read from that checkbox's
- * position among its own `<label>` siblings rather than any attribute on the
- * checkbox itself.
- *
- * The chart needs no script to be useful on its own: every bar is an
- * already-computed `<rect>` reachable in the page's own Tab order, carrying
- * `tabIndex={0}`, `role="img"`, and a native `<title>` that supplies both its
- * hover tooltip and its accessible name on focus — the identical baseline
- * {@link Chart.Line}'s and {@link Chart.Area}'s own point markers, and
- * {@link Chart.Pie}'s own wedges, already establish. The `chartTooltip()`
- * mixin, applied separately, only adds a richer, pointer-positioned tooltip
- * surface on top of that same baseline.
+ * Renders a categorical bar chart: an independent `<svg>` root, since a
+ * band axis shares no continuous domain with a Cartesian {@link Chart}. A
+ * paired {@link Chart.Legend} must render as this root's later sibling.
  *
  * @param handle Runtime handle carrying the host `<svg>`'s props.
  * @returns The render function producing the chart's markup.
@@ -1412,18 +1142,7 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={[
-					chartPalette("fill", " "),
-					// A paired `Chart.Legend`'s checkboxes drive this — see
-					// `Chart`'s own identical mixin for the full rationale;
-					// every further independent chart root sharing this
-					// `data-color` contract needs the same mixin.
-					legendToggle(),
-					block(),
-					is("full"),
-					bs("auto"),
-					mix,
-				]}
+				mix={[chartPalette("fill", " "), legendToggle(), block(), is("full"), bs("auto"), mix]}
 			>
 				<g mix={[attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN })]}>
 					{gridlineValues.map((value) => (

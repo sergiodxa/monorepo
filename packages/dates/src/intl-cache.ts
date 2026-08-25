@@ -23,8 +23,8 @@ const LIST_FORMATTERS = new Map<string, Intl.ListFormat>();
 
 /**
  * Build the cache key for a locale and options pair. Keys are sorted and
- * `undefined` values dropped so two call sites that describe the same format in
- * a different property order share one instance instead of building two.
+ * `undefined` values dropped so two call sites that describe the same format
+ * in a different property order share one instance.
  *
  * @param locale - Locale or preference list the formatter was asked for.
  * @param options - The `Intl` options object, whose values are all primitives.

@@ -105,7 +105,6 @@ export const login = createController(routes.auth.login, {
 		async action(ctx) {
 			let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
 			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"), ctx.request);
-			// startExternalAuth stores the PKCE/state transaction in the session.
 			return startExternalAuth(provider, ctx, { returnTo: next });
 		},
 	},

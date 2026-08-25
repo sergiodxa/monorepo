@@ -1,12 +1,9 @@
 /**
  * Tests for the named-region sprite atlas.
  *
- * Covers the pure region math (`regionRect`), animated-frame selection over time
- * (`frameIndex`/`animationRect`, looping vs one-shot), and the `Atlas`/`drawSprite`
- * blitting: a recording fake context captures the source rect and destination so
- * the tests assert the right sub-region is drawn, scaling and flipping behave, and
- * a missing region (or null atlas) is a safe no-op. The real canvas blit is not
- * exercised — only the arguments handed to `drawImage`.
+ * Covers region lookup, animated-frame selection over time, and `drawSprite`'s
+ * blitting math via a recording fake context, including the safe no-ops for a
+ * missing region or a null atlas.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -94,7 +91,7 @@ test("frameIndex steps a looping animation and wraps past the end", () => {
 	expect(frameIndex(anim, 0)).toBe(0);
 	expect(frameIndex(anim, 99)).toBe(0);
 	expect(frameIndex(anim, 100)).toBe(1);
-	expect(frameIndex(anim, 200)).toBe(0); // wraps
+	expect(frameIndex(anim, 200)).toBe(0);
 	expect(frameIndex(anim, 350)).toBe(1);
 });
 
@@ -110,7 +107,7 @@ test("frameIndex clamps and holds the last frame for a one-shot animation", () =
 	};
 	expect(frameIndex(anim, 100)).toBe(1);
 	expect(frameIndex(anim, 200)).toBe(2);
-	expect(frameIndex(anim, 5000)).toBe(2); // holds the last frame
+	expect(frameIndex(anim, 5000)).toBe(2);
 });
 
 test("frameIndex treats a single-frame animation as static", () => {
@@ -150,7 +147,6 @@ test("drawSprite wraps a flipped blit in a mirrored transform", () => {
 	let ctx = fakeContext();
 	drawSprite(ctx, atlas, "tile.grass", 10, 10, { flipX: true });
 	expect(ctx.transforms).toEqual(["save", "translate", "scale", "restore"]);
-	// Flipped blits draw at the translated origin (0, 0).
 	expect(ctx.calls[0]).toMatchObject({ dx: 0, dy: 0 });
 });
 

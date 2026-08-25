@@ -41,7 +41,7 @@ export interface PurgeSelector {
 	tags?: string[];
 	/** URL prefix whose entries should be invalidated, e.g. `example.com/blog/`. */
 	prefix?: string;
-	/** Invalidate every entry; an incident escape hatch, not a content-write tool. */
+	/** Invalidate every entry; reserved for incident recovery. */
 	everything?: boolean;
 }
 
@@ -71,7 +71,7 @@ export interface PurgeByPrefix {
 	prefix: string;
 }
 
-/** Invalidate every entry, for incident recovery rather than content writes. */
+/** Invalidate every entry; reserved for incident recovery. */
 export interface PurgeEverything {
 	/** Always `true`; the field exists to make the intent explicit at the call site. */
 	everything: true;

@@ -3,11 +3,10 @@
  * update/delete a team (including the typed "DELETE" confirmation literal),
  * remove/promote/demote a member, create an additional team, and leave a team.
  *
- * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but these are `f.object(...)`
- * form-data schemas that only accept the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with
+ * real `FormData`, since these are `f.object(...)` form-data schemas that
+ * require the raw `FormData`/`URLSearchParams` instance to reach their
+ * field-level rules.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

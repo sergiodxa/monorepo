@@ -1,7 +1,7 @@
 /**
  * Public entry point: the {@link createSeo} factory, the {@link Seo} head components,
- * and the types both work in terms of. Nothing here carries a base URL, site name, or
- * description of its own — a site's identity arrives through the factory's configuration.
+ * and the types both work in terms of. A site's identity — base URL, name, and
+ * description — arrives entirely through the factory's configuration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

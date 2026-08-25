@@ -1,10 +1,9 @@
 /**
  * Menu and message window frames.
  *
- * RPG Maker draws every panel from one nine-slice windowskin; this module honours
- * that when a skin image is supplied and otherwise draws a clean procedural frame
- * (filled rounded rectangle plus border) so menus render before art exists. It
- * also offers a cursor glyph for list selection so every menu shares one look.
+ * RPG Maker draws every panel from one nine-slice windowskin; this module
+ * honours that when a skin image is supplied and otherwise draws a clean
+ * procedural frame so menus render before art exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -85,14 +84,11 @@ export class Window {
 			dHeight: number,
 		) => ctx.drawImage(skin, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 
-		// center
 		draw(c, c, sw - 2 * c, sh - 2 * c, x + c, y + c, w - 2 * c, h - 2 * c);
-		// edges
 		draw(c, 0, sw - 2 * c, c, x + c, y, w - 2 * c, c);
 		draw(c, sh - c, sw - 2 * c, c, x + c, y + h - c, w - 2 * c, c);
 		draw(0, c, c, sh - 2 * c, x, y + c, c, h - 2 * c);
 		draw(sw - c, c, c, sh - 2 * c, x + w - c, y + c, c, h - 2 * c);
-		// corners
 		draw(0, 0, c, c, x, y, c, c);
 		draw(sw - c, 0, c, c, x + w - c, y, c, c);
 		draw(0, sh - c, c, c, x, y + h - c, c, c);

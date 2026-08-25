@@ -20,12 +20,9 @@ import { TenantApiService } from "~/app/services/tenant-api";
 import routes from "~/routes/web";
 
 /**
- * POST /logout — revokes the server-side platform session and clears the cookie.
- *
- * Sign-out is a POST (behind the CSRF/origin check) so it cannot be triggered by a
- * cross-site GET. Beyond clearing the browser cookie, it revokes the underlying platform
- * tenant session (the `sid` embedded in the signed token) so a copied token can no longer
- * be used — the session middleware rejects tokens whose `sid` no longer exists server-side.
+ * Runs as a POST (behind the CSRF/origin check) so a cross-site GET can't
+ * trigger sign-out, and revokes the server-side session so a copied token
+ * can't be replayed; the cookie still clears if revocation fails.
  *
  * @returns A `303` redirect to the onboarding page with a cookie-clearing `Set-Cookie` header.
  * @example
@@ -35,7 +32,6 @@ export default createAction(routes.logout, async ({ request, logger }) => {
 	let log = logger.action("/logout");
 	log.info("Platform sign-out");
 
-	// Revoke the underlying platform tenant session so the token cannot be replayed.
 	let token = getCookie(request.headers.get("Cookie") ?? "", PLATFORM_SESSION_COOKIE);
 	if (token) {
 		let session = await verifySessionToken(token, env.SESSION_SECRET);
@@ -47,8 +43,6 @@ export default createAction(routes.logout, async ({ request, logger }) => {
 				);
 				log.info("Platform session revoked", { subjectId: session.subjectId });
 			} catch (error) {
-				// Best-effort: still clear the cookie even if revocation fails; the session
-				// will lapse at expiry and the next privileged request re-checks the sid.
 				log.error("Failed to revoke platform session", {
 					error: error instanceof Error ? error.message : String(error),
 				});

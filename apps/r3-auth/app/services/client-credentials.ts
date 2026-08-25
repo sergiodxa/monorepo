@@ -15,14 +15,9 @@ export interface ClientCredentials {
 }
 
 /**
- * Decodes the credentials of a `Basic` challenge, accepting either base64 alphabet.
- *
- * RFC 7617 specifies standard base64 (RFC 4648 §4), and that is what a browser or `curl`
- * sends. Clients built on a JOSE library encode the pair with a **base64url** helper
- * instead, which substitutes `-` and `_` and drops the padding — `atob` refuses both, and
- * the failure would surface as a client that can never authenticate with no error saying
- * why. Standard base64 contains neither `-` nor `_`, so accepting both alphabets is
- * unambiguous rather than lenient.
+ * Accepts base64 (RFC 7617) or the base64url a JOSE client sends, since
+ * refusing either leaves a client unable to authenticate. A remainder of 1 mod
+ * 4 has no whole byte to pad into validity.
  *
  * @returns The decoded `id:secret` string, or `null` when the value is not base64 at all.
  */
@@ -30,7 +25,6 @@ function decodeBasicCredentials(token: string): string | null {
 	let normalized = token.replace(/-/g, "+").replace(/_/g, "/");
 
 	let remainder = normalized.length % 4;
-	// A length of 1 mod 4 encodes no whole byte and cannot be padded into validity.
 	if (remainder === 1) return null;
 	if (remainder > 0) normalized += "=".repeat(4 - remainder);
 
@@ -42,7 +36,9 @@ function decodeBasicCredentials(token: string): string | null {
 }
 
 /**
- * Reads credentials from an `Authorization: Basic` header.
+ * Reads credentials from an `Authorization: Basic` header, splitting the
+ * decoded pair on the first colon since a secret may itself contain one while
+ * a client id is always colon-free.
  *
  * @returns The credentials, or `null` when the header is absent or unreadable.
  */
@@ -56,8 +52,6 @@ export function credentialsFromHeader(headers: Headers): ClientCredentials | nul
 	let decoded = decodeBasicCredentials(token);
 	if (decoded === null) return null;
 
-	// Split on the first colon only: a secret may legitimately contain one, a client
-	// id never does.
 	let separator = decoded.indexOf(":");
 	if (separator < 0) return null;
 

@@ -12,11 +12,9 @@
  */
 
 /**
- * Confirms a `pointerdown` event starts a fresh primary press: `activePointerId`
- * holds `undefined`, `event.isPrimary` is `true`, and `event.button` is `0`.
- * A mixin tracking one pointer at a time calls this first in its `pointerdown`
- * listener and returns early when it reports `false`, before recording the
- * event's `pointerId` as the one it now tracks.
+ * Confirms a `pointerdown` event starts a fresh primary press:
+ * `activePointerId` holds `undefined`, `event.isPrimary` is `true`, and
+ * `event.button` is `0`.
  *
  * @param event The `pointerdown` event to evaluate.
  * @param activePointerId The pointer id the caller currently tracks, or

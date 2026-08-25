@@ -1,4 +1,8 @@
 /**
+ * The CSS serializer appends `px` to a unitless number on any property
+ * outside its unitless list, so every mixin that emits a caller-chosen
+ * number is listed here and asserted to survive serialization unit-free.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -33,10 +37,6 @@ describe("declarations", () => {
 });
 
 describe("unitless numeric values", () => {
-	// The CSS serializer appends `px` to any unitless number whose property it
-	// doesn't know is unitless. These are the mixins that can emit a number the
-	// caller chose; each must come out of the serializer without a unit. Any new
-	// mixin that takes a bare number belongs in this list.
 	test.each([
 		["-webkit-line-clamp: 3", lineClamp(3)],
 		["fill-opacity: 0.5", fillOpacity(50)],

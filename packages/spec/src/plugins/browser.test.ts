@@ -60,15 +60,17 @@ interface PageResponse {
 interface PageServer {
 	/** The scheme, host and port, with no trailing slash. */
 	origin: string;
-	/** Stop serving, dropping any live socket. */
+	/**
+	 * Stop serving; closes any live socket first, since the browser keeps
+	 * connections open, which plain `close()` alone would wait on.
+	 */
 	stop(): undefined;
 }
 
 /**
- * Serve one page over an ephemeral port on 127.0.0.1, resolving only once the
- * port is known so the origin it hands back is immediately navigable. The
- * handler answers from what the request carried, which is what lets a test
- * assert on the server's view of a browser session rather than the browser's.
+ * Serve one page over an ephemeral port on 127.0.0.1, resolving once the port
+ * is known so the returned origin is immediately navigable. Each request is
+ * answered from its own path and headers, so assertions read the server's view.
  *
  * @param render - Answers each request from its path and headers.
  * @returns The running server's origin and its stop function.
@@ -98,8 +100,6 @@ async function servePage(render: (request: PageRequest) => PageResponse): Promis
 	return {
 		origin: `http://127.0.0.1:${port}`,
 		stop() {
-			// Drop live sockets first: the browser keeps connections alive, which
-			// `close` alone would wait on.
 			server.closeAllConnections();
 			server.close();
 			return undefined;
@@ -267,6 +267,7 @@ describe(createBrowserPlugin.name, () => {
 		]);
 	});
 
+	/** The denial lands after the URL parses and before any process spawns. */
 	test("a denied net grant fails browser.open before agent-browser is spawned", async () => {
 		let calls: { host: string; port: number | undefined }[] = [];
 		let result = await plugin.call(
@@ -278,7 +279,6 @@ describe(createBrowserPlugin.name, () => {
 		expect(error).toBeInstanceOf(PermissionDeniedError);
 		expect(error.code).toBe("permission-denied");
 		expect(error.remedy).toContain("--allow-net");
-		// The denial lands after the URL parses and before any process spawns.
 		expect(calls).toEqual([{ host: "example.com", port: 443 }]);
 	});
 
@@ -438,9 +438,11 @@ describe(createBrowserPlugin.name, () => {
 	});
 });
 
-// The end-to-end suite proves the accessibility path against a real browser.
-// It is skipped wholesale when `agent-browser` is not installed, so the unit
-// suite above (and the whole package) stays green without the CLI present.
+/**
+ * The end-to-end suite drives the accessibility path against a real browser,
+ * so the unit suite above (and the whole package) stays green without
+ * `agent-browser` installed.
+ */
 describe("browser end to end", () => {
 	let plugin: Plugin;
 	let server: PageServer | undefined;
@@ -451,7 +453,6 @@ describe("browser end to end", () => {
 		plugin = createBrowserPlugin();
 		server = await servePage(() => ({ html: PAGE_HTML }));
 		baseUrl = `${server.origin}/`;
-		// A real temp-dir-shaped root, so the derived session is unique.
 		context = buildContext(allowAll(), "/tmp/spec-browser-e2e-session");
 	});
 
@@ -465,16 +466,13 @@ describe("browser end to end", () => {
 		async () => {
 			expectSuccess(await plugin.call("open", [value(baseUrl)], context));
 
-			// Existence observers read the accessibility tree by role and name.
 			expect(expectSuccess(await plugin.call("heading", [value("Sign in")], context))).toBe(true);
 			expect(expectSuccess(await plugin.call("button", [value("Sign in")], context))).toBe(true);
 
-			// A missing element fails as an expectation, carrying expected/observed.
 			let absent = unwrapError(await plugin.call("heading", [value("Dashboard")], context));
 			expect(absent).toBeInstanceOf(ExpectationError);
 			expect(absent.code).toBe("expectation-failed");
 
-			// Fill a field by its label, click a button by its name, read the result.
 			expectSuccess(
 				await plugin.call(
 					"fill",
@@ -492,7 +490,6 @@ describe("browser end to end", () => {
 	test.skipIf(!AVAILABLE)("checks a checkbox and asserts its state", async () => {
 		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
 
-		// Unchecked to start: the state assertion fails as an expectation.
 		let before = unwrapError(
 			await plugin.call("checkbox", [value("Remember me"), word("checked")], context),
 		);
@@ -506,6 +503,10 @@ describe("browser end to end", () => {
 		).toBe(true);
 	});
 
+	/**
+	 * A `role="heading"` element with `aria-level` reaches the accessibility
+	 * tree the same way an `<h4>` element does.
+	 */
 	test.skipIf(!AVAILABLE)("matches a heading by level, HTML or aria", async () => {
 		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
 		expect(
@@ -513,14 +514,12 @@ describe("browser end to end", () => {
 				await plugin.call("heading", [value("Details"), word("level"), value(3)], context),
 			),
 		).toBe(true);
-		// role=heading + aria-level reaches the tree the same way an <h4> does.
 		expect(
 			expectSuccess(
 				await plugin.call("heading", [value("Aria section"), word("level"), value(4)], context),
 			),
 		).toBe(true);
 
-		// The right name at the wrong level fails, reporting the level it found.
 		let wrongLevel = unwrapError(
 			await plugin.call("heading", [value("Details"), word("level"), value(2)], context),
 		);
@@ -554,12 +553,9 @@ describe("browser end to end", () => {
 });
 
 /**
- * Parse a single-test `.spec` source, build a registry over the given plugins,
- * and execute the test — the real runtime path, so a bare-path `let`/`return`
- * right-hand side goes through the same zero-arg-tool resolution production code
- * uses. Net and env are granted so the coarse gate lets the browser and env
- * tools through; the permission set allows every scoped check for the loopback
- * host and every variable name.
+ * Parse a single-test `.spec` source and execute it through the real runtime
+ * path, so a bare-path `let`/`return` right-hand side resolves zero-arg
+ * tools exactly as production code does.
  */
 async function runSpec(
 	source: string,
@@ -590,9 +586,11 @@ async function runSpec(
 	return executeTest(test0, context);
 }
 
-// Session setup, end to end: a cookie or User-Agent set before the first
-// navigation must reach the server on the very next request, which is the only
-// reason those tools exist (arrive authenticated, arrive identifiable).
+/**
+ * A cookie or User-Agent set before the first navigation must reach the
+ * server on the very next request — the only reason `browser.cookie` and
+ * `browser.ua` exist.
+ */
 describe("browser session setup against a real browser", () => {
 	let plugin: Plugin;
 	let server: PageServer | undefined;
@@ -601,8 +599,6 @@ describe("browser session setup against a real browser", () => {
 
 	beforeAll(async () => {
 		plugin = createBrowserPlugin();
-		// The page reports what the request carried, so every assertion reads the
-		// server's view of the session, not the browser's.
 		server = await servePage((request) => {
 			let cookie = /session=([^;]*)/.exec(request.cookie);
 			let seen = cookie?.[1] ?? "none";
@@ -652,10 +648,11 @@ describe("browser session setup against a real browser", () => {
 	});
 });
 
-// The motivating workflow, written the way a suite writes it: the session
-// token lives in the environment, `env.get` names it, and `browser.cookie`
-// seeds it before the first navigation — so the protected page renders instead
-// of redirecting. Skipped wholesale without `agent-browser`.
+/**
+ * The session token lives in the environment; `env.get` names it, and
+ * `browser.cookie` seeds it before the first navigation, so the protected
+ * page renders for the request.
+ */
 describe("a session seeded from the environment", () => {
 	let browserPlugin: Plugin;
 	let envPlugin: Plugin;
@@ -665,8 +662,6 @@ describe("a session seeded from the environment", () => {
 	beforeAll(async () => {
 		browserPlugin = createBrowserPlugin();
 		envPlugin = createEnvPlugin();
-		// A minimal protected app: `/app` renders only for the right session
-		// cookie, and redirects to `/login` without it.
 		server = await servePage((request) => {
 			let cookie = /session=([^;]*)/.exec(request.cookie);
 			if (request.path === "/app" && cookie?.[1] !== "s3cret") {
@@ -685,10 +680,12 @@ describe("a session seeded from the environment", () => {
 		delete process.env.SPEC_E2E_SESSION;
 	});
 
+	/**
+	 * The token reaches `browser.cookie` through a boxed reference: a bare
+	 * binding in tool-argument position is a symbolic word (ADR-002), so it
+	 * is wrapped in an object first — the same pattern `browser.url` uses.
+	 */
 	test.skipIf(!AVAILABLE)("the seeded cookie keeps the browser on /app", async () => {
-		// The token reaches `browser.cookie` through a boxed reference: a bare
-		// binding in tool-argument position is a symbolic word (ADR-002), so it
-		// is wrapped in an object first — the same pattern `browser.url` uses.
 		let source = [
 			"use browser",
 			"use env",
@@ -719,20 +716,24 @@ describe("a session seeded from the environment", () => {
 	});
 });
 
-// End to end through the executor: `let current = browser.url` must capture the
-// current URL as a value, so the authorization_code chain (land on ?code=…,
-// read the code) is expressible. Skipped wholesale without `agent-browser`.
+/**
+ * `let current = browser.url` must capture the current URL as a value, so
+ * the authorization_code chain — land on `?code=…`, then read the code — is
+ * expressible.
+ */
 describe("browser.url captured through the executor", () => {
 	let browserPlugin: Plugin;
 	let urlPlugin: Plugin;
 	let server: PageServer | undefined;
 	let baseUrl = "";
 
+	/**
+	 * Any path returns the page, so navigating to a URL with a query string
+	 * leaves the session's current URL carrying that query string verbatim.
+	 */
 	beforeAll(async () => {
 		browserPlugin = createBrowserPlugin();
 		urlPlugin = createUrlPlugin();
-		// Any path returns the page, so navigating to a URL with a query string
-		// leaves the session's current URL carrying that query string verbatim.
 		server = await servePage(() => ({ html: PAGE_HTML }));
 		baseUrl = `${server.origin}/`;
 	});
@@ -746,9 +747,6 @@ describe("browser.url captured through the executor", () => {
 		"`let current = browser.url` captures the landing URL and url.query reads its code",
 		async () => {
 			let landing = `${baseUrl}callback?code=abc123&state=xyz`;
-			// `current` is a scalar binding; a bare identifier in tool-argument
-			// position is a symbolic word (ADR-002), so it is boxed to reach
-			// url.query through a dotted reference — the documented v1 pattern.
 			let source = [
 				"use browser",
 				"use url",

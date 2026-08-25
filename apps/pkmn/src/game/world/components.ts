@@ -1,17 +1,9 @@
 /**
- * Shared world-component contracts for the game state ECS layer.
+ * Serializable world-component contracts for the game state ECS layer.
  *
- * This module centralizes the serializable component shapes that describe entity
- * identity, progression, ownership, placement, and battle participation inside
- * the world model. It provides the stable data contracts used to attach domain
- * state to entities without coupling those records to rendering or authored
- * content concerns.
- *
- * By defining these component interfaces and unions in one place, the module
- * gives the rest of the world and engine layers a consistent vocabulary for
- * reading, persisting, and transforming entity state. The exported types are
- * intended to keep system boundaries explicit and make ECS-oriented state flows
- * easier to reason about as entities move across world contexts.
+ * Keeping identity, progression, ownership, and placement as separate
+ * component shapes lets entity state move across world contexts without
+ * coupling to rendering or authored content.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,7 +31,6 @@ export interface CreatureIdentityComponent {
 export interface CreatureProgressComponent {
 	/** Nature identifier used for stat modifiers. */
 	natureId: NatureId;
-	/** Total accumulated experience points. */
 	experience: number;
 	/** Individual values used by stat calculation. */
 	iv: StatSet;
@@ -98,10 +89,8 @@ export function createCreatureInstance(
 /**
  * Rolls a biological sex for one creature from its species' gender ratio.
  *
- * A species with no ratio (`Gender.Genderless`) always yields genderless. Otherwise
- * the ratio is a percentage split whose female share is compared against a single
- * `random()` draw in `[0, 1)`, so the roll is deterministic under a seeded RNG. A
- * ratio that omits both shares (or lists only one) treats the missing share as zero.
+ * A single seeded `random()` draw against the female share keeps rolls
+ * deterministic; either omitted share counts as zero.
  */
 export function rollGender(gender: Species["gender"], random: () => number): Gender {
 	if (gender === Gender.Genderless) return Gender.Genderless;
@@ -117,7 +106,6 @@ export function rollGender(gender: Species["gender"], random: () => number): Gen
 
 /** Ownership metadata for one creature entity. */
 export interface OwnershipComponent {
-	/** Current owning player entity. */
 	ownerId: PlayerId;
 }
 
@@ -153,9 +141,8 @@ export interface CreatureEncounterLocationComponent {
 /**
  * Marks one creature as belonging to an opposing trainer's fielded party.
  *
- * Trainer creatures are transient like encounter creatures — excluded from
- * persistence and despawned when their battle ends — but they are never
- * capturable, so they carry a distinct kind the capture path refuses.
+ * Trainer creatures are transient, excluded from persistence and despawned
+ * when battle ends; the distinct kind keeps them fixed to that trainer.
  */
 export interface CreatureTrainerLocationComponent {
 	kind: "trainer";
@@ -175,29 +162,19 @@ export interface LegacyCreatureComponent extends Creature.Arguments {}
 
 /** Bundles the persistent components required to rebuild one creature aggregate. */
 export interface CreatureComponentSet {
-	/** Identity fields for the creature. */
 	identity: CreatureIdentityComponent;
-	/** Growth and stat training fields. */
 	progress: CreatureProgressComponent;
-	/** Equipped moves and current PP. */
 	moves: CreatureMovesComponent;
-	/** Current damage state. */
 	health: CreatureHealthComponent;
-	/** Current major status condition. */
 	status: CreatureStatusComponent;
-	/** Per-instance rolled state (gender, held item, friendship). */
 	instance: CreatureInstanceComponent;
-	/** Ownership metadata when the creature is owned. */
 	ownership?: OwnershipComponent;
-	/** Current world placement when the creature is placed somewhere. */
 	location?: CreatureLocationComponent;
 }
 
 /** Input used when splitting one legacy creature blob into components. */
 export interface CreatureSplitInput {
-	/** Stable entity identifier that owns the creature components. */
 	creatureId: CreatureId;
-	/** Legacy aggregate creature payload. */
 	creature: LegacyCreatureComponent;
 	/** Optional owner inferred from bootstrap containers. */
 	ownerId?: PlayerId;
@@ -205,7 +182,12 @@ export interface CreatureSplitInput {
 	location?: CreatureLocationComponent;
 }
 
-/** Splits one legacy creature blob into explicit persistent ECS components. */
+/**
+ * Splits one legacy creature blob into explicit persistent ECS components.
+ *
+ * Legacy aggregates never carried instance state, so the instance component
+ * always seeds from the default.
+ */
 export function splitCreatureComponents(input: CreatureSplitInput): CreatureComponentSet {
 	let { creature } = input;
 
@@ -232,7 +214,6 @@ export function splitCreatureComponents(input: CreatureSplitInput): CreatureComp
 			state: creature.status.state,
 			...(creature.status.poison ? { poison: creature.status.poison } : {}),
 		},
-		// The legacy aggregate never carried instance state, so seed the default.
 		instance: createCreatureInstance(),
 		ownership: input.ownerId ? { ownerId: input.ownerId } : undefined,
 		location: input.location ? structuredClone(input.location) : undefined,

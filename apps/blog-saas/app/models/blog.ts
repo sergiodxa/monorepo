@@ -148,9 +148,8 @@ export default class Blog {
 
 	/**
 	 * Restores a soft-deleted blog by clearing `deleted_at` and setting it to the given
-	 * lifecycle status (only meaningful within the retention window). The caller passes
-	 * `active` only when billing currently entitles the account, otherwise `suspended`,
-	 * so a restore never re-serves a blog the account is no longer paying for.
+	 * lifecycle status (only meaningful within the retention window). Callers pass
+	 * `active` only when entitled, else `suspended`, keeping restores entitlement-gated.
 	 *
 	 * @param db The control-plane database.
 	 * @param id The blog id.

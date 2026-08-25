@@ -32,9 +32,8 @@ async function freshKey(): Promise<CryptoKey> {
 /**
  * Alters one ciphertext byte while leaving the envelope well-formed.
  *
- * The first base64url character is changed rather than the last, because the last
- * one may only carry padding bits, in which case the decoded bytes would be
- * identical and the test would prove nothing.
+ * Changing the first base64url character guarantees a different decoded byte,
+ * since the last character may carry only padding bits that decode identically.
  *
  * @param sealed Envelope produced by `seal`.
  * @returns The same envelope with a different ciphertext.

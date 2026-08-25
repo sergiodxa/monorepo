@@ -4,8 +4,8 @@
  * surface, and any panel layering its content and motion on top of one. Each
  * of the twelve values names a physical side of the viewport, the same one a
  * positioning engine would choose when flipping the surface to stay in view,
- * so a placement keeps attaching to that same physical side under any `dir`
- * value rather than mirroring for reading direction.
+ * so a placement keeps attaching to that same physical side for every `dir`
+ * value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

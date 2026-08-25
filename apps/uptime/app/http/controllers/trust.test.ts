@@ -2,7 +2,7 @@
  * Tests the `/trust` controller: it renders the trust page inside the shared
  * document/marketing chrome for both anonymous and signed-in viewers, emits its canonical
  * URL, names and links the person who operates the service, links the service's own status
- * page, and points at the Privacy Policy and Terms instead of restating them.
+ * page, and links to the Privacy Policy and Terms as their single source of truth.
  *
  * It also guards the page's copy against the two claims it must never make: an availability
  * percentage or a service level agreement (the Terms decline to offer one, so a marketing
@@ -38,7 +38,7 @@ import routes from "~/routes/web";
 
 import trust from "./trust";
 
-/** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
+/** Renders through `renderToString`, which suffices for a page built from plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);
@@ -87,7 +87,6 @@ describe("GET /trust", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<article");
-		// Anonymous: the header CTA is a sign-in form posting to the auth action.
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
 	});
 
@@ -96,7 +95,6 @@ describe("GET /trust", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(`<link rel="canonical" href="${SEO.baseUrl}${routes.trust.href()}" />`);
 	});
 
@@ -148,19 +146,20 @@ describe("GET /trust", () => {
 		}
 	});
 
+	/**
+	 * Checks both the percentage form and the bare number, since "99" alone is the shorthand
+	 * that always precedes an uptime claim; "SLA" and "guaranteed" get the same treatment
+	 * because the Terms offer neither, so the copy may never use language that implies one.
+	 */
 	test("claims no availability percentage and no service level agreement", async () => {
 		let response = await getTrust(null);
 
 		let body = await response.text();
 		let article = body.slice(body.indexOf("<article"), body.indexOf("</article>"));
 
-		// An availability figure is a promise this service does not make anywhere — not as a
-		// percentage, and not as the bare "99" that always introduces one.
 		expect(article).not.toMatch(/\d+(?:[.,]\d+)?\s?%/);
 		expect(article).not.toMatch(/\b99(?:[.,]\d+)?\b/);
-		// The acronym only ever appears in copy offering one, which the Terms decline to do.
 		expect(article).not.toMatch(/\bSLA\b/);
-		// The page may say a region is *not* a guarantee; it may never make one.
 		expect(article).not.toMatch(/\bguaranteed\b/i);
 		expect(article).not.toMatch(/\bwe guarantee\b/i);
 		expect(article).not.toMatch(/\buptime guarantee\b/i);

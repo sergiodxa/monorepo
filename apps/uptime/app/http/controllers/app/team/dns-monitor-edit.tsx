@@ -1,21 +1,11 @@
 /**
- * Edit DNS monitor page controller: settings form, posting to `update-dns-monitor`.
- * Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong to the
- * current team.
+ * Edit DNS monitor page controller: settings form posting to
+ * `update-dns-monitor`. Requires `requireUser` + `requireTeam` and 404s when
+ * the monitor doesn't belong to the current team.
  *
- * Three settings groups, each a bordered card with its own heading and action row, and each
- * on its own `<form>` posting to its own action: what the monitor is, the zone file its
- * tracked names come from, and the destructive card below both. They are separate forms
- * rather than one because they are separate decisions — renaming a monitor is not an
- * occasion to re-import a zone, and the zone file is not a value the monitor holds and
- * could re-submit unchanged.
- *
- * There is no record type and no expected value to edit: the records a monitor watches are
- * the monitor's own detail page, one row at a time, and are imported rather than typed.
- *
- * The delete confirmation is `@pkg/ui`'s `AlertDialog` composed directly rather than
- * through the `Confirm` convenience wrapper, since the confirming control is a real
- * `<form method="post">` submit button rather than a `command="close"` action.
+ * Settings, zone import, and deletion post through separate `<form>`s
+ * because each is a decision a visitor makes independently, at its own
+ * moment.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,7 +38,11 @@ import routes from "~/routes/web";
 /** `id` shared between the danger-zone trigger and its confirmation `AlertDialog`. */
 const DELETE_DIALOG_ID = "delete-dns-monitor";
 
-/** GET /app/:team/dns/:monitorId/edit — a DNS monitor's edit form. */
+/**
+ * GET /app/:team/dns/:monitorId/edit — a DNS monitor's edit form; importing a
+ * zone file re-runs discovery over its names while keeping whatever a
+ * visitor already decided about each already-tracked record.
+ */
 export default createAction(routes.app.team.dnsMonitors.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -116,14 +110,6 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 								</SettingsSection>
 							</form>
 
-							{/*
-							 * Its own form and its own action, not a field on the one above. The pasted
-							 * text is never stored, so this box is always empty however many times a zone
-							 * has been imported — there is nothing to pre-fill and nothing to save
-							 * unchanged. Submitting it re-runs discovery over the names it declares; a
-							 * record already tracked keeps whatever the visitor decided about it, so a
-							 * re-paste adds names and never quietly re-enables a declined record.
-							 */}
 							<form
 								method="post"
 								action={routes.actions.monitor.dns.importZoneFile.href({ team: ctx.team.slug })}
@@ -152,11 +138,6 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 												/>
 											</Field>
 
-											{/*
-											 * A zone file is a snapshot of the day it was pasted, so when it was
-											 * pasted is the whole of what it is worth: it is what says whether the
-											 * names this monitor sweeps still describe the zone.
-											 */}
 											<Description>
 												{monitor.zone_file_imported_at === null
 													? ctx.i18next.t("page.editDnsMonitor.zoneFileImport.neverImported")

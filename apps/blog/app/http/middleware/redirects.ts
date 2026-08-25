@@ -1,8 +1,7 @@
 /**
- * HTTP middleware that applies configured redirect rules. For GET/HEAD requests
- * it looks up a redirect for the current path via `RedirectsService` and, when a
- * valid non-self target exists, returns a redirect response with the rule's
- * status; otherwise it passes through. Exists to serve author-managed redirects.
+ * Serves author-managed redirects, resolving the request path through
+ * `RedirectsService`. A rule whose target resolves back to the current URL is
+ * skipped so it cannot trap the request in a loop.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,7 +16,8 @@ import { RedirectsService } from "~/app/services/redirects";
 const METHODS_TO_CHECK = new Set(["GET", "HEAD"]);
 
 /**
- * Resolves configured redirect rules for GET/HEAD requests and returns a redirect response when a valid target exists.
+ * Answers GET and HEAD requests with a redirect when a rule maps the path to a
+ * different URL, carrying the rule's own status.
  */
 let redirectsMiddleware: Middleware = (ctx, next) => {
 	return inject([RedirectsService] as const, async (redirectsService) => {

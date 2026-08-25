@@ -10,10 +10,9 @@
  */
 
 /**
- * Seconds a cookie written by {@link writeCookie} stays valid before a
- * browser drops it, when a call omits its own `maxAgeSeconds` — a year, long
- * enough that a returning visitor's persisted state outlives typical
- * browsing gaps.
+ * Seconds a cookie written by {@link writeCookie} stays valid when a call
+ * omits `maxAgeSeconds` — a year, long enough that a returning visitor's
+ * persisted state outlives typical browsing gaps.
  */
 export const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 

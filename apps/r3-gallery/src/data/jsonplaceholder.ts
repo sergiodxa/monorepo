@@ -1,8 +1,8 @@
 /**
  * JSONPlaceholder data layer for the gallery. It fetches and schema-validates albums,
  * a single album, an album's photos, and a single photo, returning Result values so
- * network and validation failures are handled without throwing. It centralizes all of
- * the app's remote data access behind one typed, non-throwing API.
+ * callers receive network and validation failures as data to handle explicitly. It
+ * centralizes all of the app's remote data access behind one typed API.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -105,7 +105,8 @@ export async function getPhoto(id: string, signal: AbortSignal): Promise<Result<
 }
 
 /**
- * Fetches JSON without throwing, preserving network and parse failures as results.
+ * Fetches JSON, surfacing network and parse failures as Result values for the caller
+ * to handle.
  *
  * @param url JSONPlaceholder endpoint URL.
  * @param signal Abort signal tied to the current route render.

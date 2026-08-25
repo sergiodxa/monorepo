@@ -26,7 +26,7 @@ import routes from "~/routes/web";
  */
 export namespace FeedView {
 	/**
-	 * Represents one activity entry shown in the feed list.
+	 * One activity entry in the feed list.
 	 */
 	export interface ActivityItem {
 		href: string;
@@ -47,7 +47,8 @@ export namespace FeedView {
 }
 
 /**
- * Formats an activity date for compact display in the timeline.
+ * Formats an activity date for the timeline; an unparseable value yields an
+ * empty string so the row still renders.
  */
 function formatDate(value: string) {
 	let date = new Date(value);
@@ -56,7 +57,9 @@ function formatDate(value: string) {
 }
 
 /**
- * Builds the feed page renderer used by the feed route response.
+ * Builds the feed page renderer used by the feed route response. A fixed icon
+ * column keeps every row's label at the same inline offset whatever the
+ * emoji's intrinsic width.
  */
 export function FeedView() {
 	return ({ model }: { model: FeedView.Model }) => (
@@ -84,9 +87,6 @@ export function FeedView() {
 							key={item.href + String(index)}
 							mix={[
 								grid(),
-								/* The leading icon well is a fixed spacing-scale column so every
-								row's label starts at the same inline offset regardless of the
-								emoji's own intrinsic width. */
 								gridTemplate({ columns: `${spacing(7)} 1fr auto` }),
 								gap(3),
 								items("start"),
@@ -101,8 +101,6 @@ export function FeedView() {
 									is(7),
 									bs(7),
 									text("xl"),
-									/* The view model picks which tone each activity kind reads in;
-									the theme still owns what that tone resolves to. */
 									fg(item.iconTint),
 								]}
 							>

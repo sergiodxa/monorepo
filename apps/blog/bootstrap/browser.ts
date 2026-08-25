@@ -11,27 +11,23 @@
 
 import { run } from "remix/ui";
 
-/** Attribute set on `<html>` while a client-side navigation is in flight, read by `NavigationIndicator`'s styling. */
+/**
+ * Set on `<html>` while a client-side navigation is in flight, read by
+ * `NavigationIndicator`'s styling.
+ */
 const NAVIGATING_ATTRIBUTE = "data-navigating";
 
 /**
  * How long a navigation must stay pending before the indicator appears. Most
- * navigations on this site resolve well inside this window, and a bar that
- * flashes for 40ms reads as a glitch rather than as progress — so the indicator
- * is for the slow ones, which are the only ones that need explaining.
+ * navigations resolve well inside this window, and a bar that flashes for 40ms
+ * reads as a glitch, so the indicator is reserved for the slow ones.
  */
 const INDICATOR_DELAY_MS = 150;
 
 /**
  * Mirrors pending-navigation state onto `<html>` so the server-rendered
- * indicator can show itself in CSS.
- *
- * Registered before `run()` so the listener is attached even if the runtime's
- * own setup throws — which it does on browsers without the Navigation API,
- * since it reads `window.navigation` unguarded. The feature check here is that
- * guard for our own listener; on a browser lacking the API every navigation is
- * a full page load and the browser draws its native indicator anyway, so there
- * is nothing to stand in for.
+ * indicator covers navigations the runtime intercepts. Registered before
+ * `run()`, whose setup throws on browsers lacking the Navigation API.
  */
 function trackPendingNavigations() {
 	if (!("navigation" in window)) return;
@@ -46,16 +42,11 @@ function trackPendingNavigations() {
 	}
 
 	window.navigation.addEventListener("navigate", (event) => {
-		// Only navigations the runtime actually intercepts leave the browser without
-		// its own feedback. A cross-document load still gets the native indicator,
-		// and a fragment jump isn't a load at all.
 		if (!event.canIntercept || event.hashChange) return;
 		if (timer !== undefined) clearTimeout(timer);
 		timer = setTimeout(() => root.setAttribute(NAVIGATING_ATTRIBUTE, ""), INDICATOR_DELAY_MS);
 	});
 
-	// `navigatesuccess` fires after the intercept handler resolves, which is the
-	// moment the swapped content is in the DOM — exactly when the bar should go.
 	window.navigation.addEventListener("navigatesuccess", clear);
 	window.navigation.addEventListener("navigateerror", clear);
 }
@@ -95,14 +86,9 @@ run({
 		let headers = new Headers({ accept: "text/html" });
 		if (target) headers.set("x-remix-target", target);
 
-		// A form that declares the default encoding is sent as one, so the server reads
-		// the body under the type the form asked for rather than the multipart type
-		// `fetch` picks for `FormData`.
 		let body =
 			formData && encType === "application/x-www-form-urlencoded"
 				? new URLSearchParams(
-						// A file entry has no text form; a urlencoded submission carries its
-						// filename, which is what the server can act on.
 						Array.from(formData, ([key, value]) => [
 							key,
 							value instanceof File ? value.name : value,
@@ -110,8 +96,6 @@ run({
 					)
 				: formData;
 
-		// The response itself carries the URL it was redirected to, which the frame
-		// reads to update its own source after a submission.
 		return await fetch(src, { credentials: "same-origin", headers, signal, method, body });
 	},
 });

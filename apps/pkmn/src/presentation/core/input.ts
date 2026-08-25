@@ -1,11 +1,9 @@
 /**
- * Device-agnostic input layer for the presentation.
- *
- * Keyboard and gamepad both feed a single logical `Button` state so scenes read
- * intent (`isPressed(Button.A)`) instead of raw DOM or pad events. Each fixed
- * update calls `poll()` once to merge every source and compute press/release
- * edges, letting scenes distinguish a tap this frame from a held button. This
- * module is the only place in the app that listens to hardware input.
+ * Keyboard and gamepad both feed a single logical `Button` state that scenes
+ * query through `isPressed(Button.A)`. Each fixed update calls `poll()` once to
+ * merge every source and compute press/release edges, letting scenes distinguish
+ * a tap this frame from a held button. This module is the only place that
+ * listens to hardware input.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,9 +35,9 @@ const KEY_BINDINGS: Record<string, Button> = {
 	KeyA: Button.Left,
 	KeyD: Button.Right,
 	KeyZ: Button.A,
-	Enter: Button.A, // confirm / interact
+	Enter: Button.A,
 	KeyX: Button.B,
-	Escape: Button.B, // cancel / run
+	Escape: Button.B,
 	ShiftLeft: Button.Select,
 	KeyM: Button.Start,
 };

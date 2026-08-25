@@ -1,20 +1,9 @@
 /**
- * Tests for the cron-job monitor detail page controller. Doesn't import
- * `~/app/data/monitor`, so no `cloudflare:workers` mock is needed. The page computes a
- * per-request ping URL from `routes.api.cronJobPing` plus `ctx.request.url` — this
- * checks the relative path shows up in the rendered `curl`/ping-endpoint snippets
- * rather than the full origin, since the origin is test-request-specific.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
- * matching the template in `app/http/controllers/app/team/http-monitors.test.ts`.
- *
- * Several assertions here guard decisions an ordinary edit could silently undo: the
- * status badge living in the shell's header rather than in a stat card, the bare
- * `POST <url>` snippet staying deleted (it told a reader nothing the `curl` line
- * doesn't, and reads as a complete instruction while omitting the now-mandatory
- * `cron-jobs:ping` credential), and the route to creating a scoped key staying on the
- * page. `<main` is the boundary between the shell's header and the page body, so a
- * marker's index relative to it is what "in the header" means in the rendered HTML.
+ * Tests for the cron-job monitor detail page controller. Skips `~/app/data/monitor`,
+ * so no `cloudflare:workers` mock is needed. Checks the ping URL's relative path,
+ * since the origin is request-specific, and guards decisions an ordinary edit could
+ * silently undo: the status badge living in the shell header, and the bare `POST
+ * <url>` snippet staying replaced by an authenticated `curl` line.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -122,6 +111,10 @@ describe("cronJobShow", () => {
 		expect(response.status).toBe(404);
 	});
 
+	/**
+	 * The 90-day bar is the uptime history section, so "90 days ago" is the caption
+	 * this page must carry.
+	 */
 	test("renders the monitor's detail page with its ping URL and empty ping history", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
@@ -146,8 +139,6 @@ describe("cronJobShow", () => {
 		expect(body).toContain("Nightly Backup");
 		expect(body).toContain(routes.api.cronJobPing.href({ cronJobId: monitor.id }));
 		expect(body).toContain("No pings received yet");
-		// The uptime history section is the 90-day bar, so its range caption is what the
-		// page must carry.
 		expect(body).toContain("90 days ago");
 		expect(body).not.toContain("Failure");
 	});
@@ -201,6 +192,10 @@ describe("cronJobShow", () => {
 		expect(body).not.toContain("900s");
 	});
 
+	/**
+	 * Every rendered snippet wraps its request in an authenticated `curl` command,
+	 * leaving `<code>POST` unmatched.
+	 */
 	test("offers authenticated snippets and a route to a scoped API key, and no bare POST line", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
@@ -221,8 +216,6 @@ describe("cronJobShow", () => {
 		let response = await send(db, team, membership, monitor.id);
 		let body = await response.text();
 
-		// Every rendered snippet carries the Authorization header; the old bare
-		// `POST <url>` block was the only `<code>` starting with the bare verb.
 		expect(body).not.toContain("<code>POST");
 		expect(body).toContain("curl -X POST");
 		expect(body).toContain("Authorization: Bearer $UPTIME_API_KEY");

@@ -1,12 +1,9 @@
 /**
  * Translates ordered battle events into sequential animation tasks.
  *
- * Each engine `BattleEvent` becomes zero or more tasks — a narration message, an
- * HP-bar drain, a faint — that the scene's queue drains in order. The scene
- * supplies a small `BattleHud` so this module stays free of rendering details: it
- * only decides what to say and which bar to move, never how they are drawn. HP
- * changes come straight from the event's `remainingHP`, never from selector
- * diffs, exactly as the ADR requires.
+ * Each `BattleEvent` becomes zero or more tasks that the scene's queue drains
+ * in order, using a small `BattleHud` to stay free of rendering details. HP
+ * tasks always read the event's own `remainingHP`, so the bar matches it exactly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,25 +39,17 @@ export interface BattleHud {
 	/** Marks a slot as fainted for rendering. */
 	markFainted(position: BattlePosition): void;
 	/**
-	 * Rebinds a slot's HP bar to the creature that just switched in.
-	 *
-	 * The slot's bar is reused across replacements, so after a switch it still shows
-	 * the previous (fainted, 0 HP) occupant. Snapping it to the fresh creature's full
-	 * bar means any following damage drains downward instead of the bar re-animating
-	 * up from empty (Bug 2). Also clears the slot's fainted marker so the new creature
-	 * is drawn.
+	 * Rebinds a slot's HP bar to the creature that just switched in, snapping it
+	 * full so a later drain eases downward instead of animating up from empty
+	 * (Bug 2), and clears the slot's fainted marker for the new creature.
 	 */
 	switchedIn(position: BattlePosition): void;
 }
 
 /**
- * Builds the ordered task list for one burst of battle events.
- *
- * When an `audio` player is supplied, events that carry a sound effect enqueue a
- * zero-duration task that plays it at the visual moment — `hit` as an HP bar
- * starts draining, `heal` as a treated bar refills, `faint` alongside the faint
- * marker. The `audio` argument is optional so existing callers and tests keep
- * working, and the synth is a safe no-op when Web Audio is unavailable.
+ * Builds the ordered task list for one burst of battle events. When an
+ * `audio` player is supplied, events that carry a sound effect enqueue a
+ * zero-duration task that plays it at the visual moment the effect lands.
  */
 export function buildBattleTasks(
 	events: BattleEvent[],
@@ -104,8 +93,10 @@ export function buildBattleTasks(
 			case "item-used": {
 				message(`Used the ${event.itemId}.`);
 				if (event.revived) message(`${hud.nameAt(event.user)} was revived!`);
-				// Only the acting slot has a rendered HP bar; drive it toward the
-				// reported HP so healing a benched teammate stays a no-op on screen.
+				/**
+				 * Only the acting slot has a rendered HP bar; drive it toward the
+				 * reported HP so healing a benched teammate stays a no-op on screen.
+				 */
 				if (event.healed > 0 || event.revived) {
 					sfx(event);
 					tasks.push(hpTask(event.user, event.remainingHP, hud));
@@ -131,8 +122,6 @@ export function buildBattleTasks(
 				message(`${hud.nameAt(event.target)} was hurt by ${event.effect.replace(/-/g, " ")}!`);
 				break;
 			case "creature-switched":
-				// Snap the reused slot bar to the fresh creature before narrating, so a
-				// later drain eases downward instead of the bar re-animating up from 0.
 				tasks.push(callbackTask(() => hud.switchedIn(event.target)));
 				message(`Go, ${hud.nameAt(event.target)}!`);
 				break;
@@ -141,8 +130,10 @@ export function buildBattleTasks(
 				sfx(event);
 				tasks.push(faintTask(event.target, hud));
 				break;
-			// turn-started / turn-ended / requests / battle-started / battle-finished:
-			// bookkeeping the scene handles directly.
+			/**
+			 * turn-started, turn-ended, requests, battle-started, and
+			 * battle-finished are bookkeeping the scene handles directly.
+			 */
 		}
 	}
 

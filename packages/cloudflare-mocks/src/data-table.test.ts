@@ -1,6 +1,3 @@
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
-import { column as c, Database, table } from "remix/data-table";
 /**
  * Parity tests that drive the real `remix/data-table` D1 and SqlStorage adapters against
  * the mocks in this package. They are the package's fidelity contract: if a mock drifts
@@ -9,6 +6,9 @@ import { column as c, Database, table } from "remix/data-table";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { column as c, Database, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { createD1Database } from "./d1";
@@ -92,9 +92,11 @@ describe("createD1Database with the D1 data-table adapter", () => {
 
 		await expect(promise).rejects.toBe(boom);
 
-		// The mock must autocommit each statement like D1 does. If this ever reads 0 the
-		// mock has started wrapping the scope in a SQLite transaction, which would make
-		// tests pass against behavior production does not have.
+		/**
+		 * The mock must autocommit each statement like D1 does. If this ever reads 0 the
+		 * mock has started wrapping the scope in a SQLite transaction, which would make
+		 * tests pass against behavior production does not have.
+		 */
 		expect(await db.count(users)).toBe(1);
 	});
 

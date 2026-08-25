@@ -1,15 +1,7 @@
 /**
- * Coordinates storage-related world updates for creatures owned by a player.
- *
- * This module contains the system-level operations that move creatures between
- * active party slots and persistent storage boxes, ensure storage capacity
- * exists for a player, and keep location metadata synchronized with those
- * changes.
- *
- * The behavior here is intentionally scoped to storage state transitions and
- * indexing concerns within the world model. It centralizes the rules needed to
- * maintain consistent party, box, and location records whenever storage data is
- * mutated.
+ * Coordinates storage-related world updates for creatures owned by a
+ * player, moving them between active party slots and persistent storage
+ * boxes while keeping location metadata synchronized with each change.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

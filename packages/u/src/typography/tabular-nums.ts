@@ -6,9 +6,8 @@ import { utility } from "../internal/descriptor";
 
 /**
  * Applies `font-variant-numeric: tabular-nums`, so digits render at a fixed
- * width instead of their proportional metrics — a running total, a
- * countdown, or a one-time-code field reads without its layout shifting as
- * the displayed digits change.
+ * width instead of their proportional metrics — a running total, countdown,
+ * or one-time-code field reads without its layout shifting as digits change.
  *
  * @example u.tabularNums()
  * @example css({ fontVariantNumeric: "tabular-nums" })

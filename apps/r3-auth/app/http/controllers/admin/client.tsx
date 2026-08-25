@@ -1,7 +1,7 @@
 /**
  * GET/POST /admin/clients/:clientId — one relying party's registration, and the deletion
- * its confirmation posts. The rendered shape never reads the `secret` column, so this
- * page cannot become a way to read an existing secret back.
+ * its confirmation posts. The rendered shape omits the `secret` column, so a stored
+ * secret stays readable only at the moment it is generated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,7 +90,11 @@ export default createController(routes.admin.client, {
 			);
 		}),
 
-		/** POST /admin/clients/:clientId — deletes this client and every consent for it. */
+		/**
+		 * POST /admin/clients/:clientId — deletes this client and every consent for it.
+		 * Grants go first, so a deletion interrupted halfway leaves every remaining grant
+		 * pointing at a client that still exists.
+		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let clientId = ctx.params.clientId!;
@@ -101,8 +105,6 @@ export default createController(routes.admin.client, {
 				return badRequest({ error: "invalid_intent" });
 			}
 
-			// Grants before the client, for the same reason the list page does it: a
-			// deletion interrupted between the two leaves no row pointing at nothing.
 			await Grant.deleteByClientId(db, clientId);
 			await Client.delete(db, clientId);
 

@@ -161,7 +161,6 @@ describe("createQueue", () => {
 
 		await expect(promise).rejects.toBe(boom);
 
-		// The acked message is gone; everything else came back for another attempt.
 		expect(queue.messages.map((message) => message.body.type)).toEqual(["again"]);
 	});
 
@@ -257,18 +256,18 @@ describe("createQueue", () => {
 
 describe("createQueue with deferred work", () => {
 	/**
-	 * Defers `work` past the microtask queue.
-	 *
-	 * A promise chained off `Promise.resolve()` would settle on a tick `consume` happens to
-	 * yield anyway, so these tests would pass with or without the drain and prove nothing.
-	 * Real deferred work does IO, so a timer is the honest stand-in.
+	 * Defers `work` past the microtask queue so the drain is genuinely exercised: a
+	 * promise chained off `Promise.resolve()` settles on a tick `consume` happens to
+	 * yield anyway, proving nothing. A timer is the honest stand-in for real IO.
 	 * @param work What the handler put off until after it returned.
 	 */
 	function defer(work: () => void): Promise<void> {
 		return new Promise((resolve, reject) => {
 			setTimeout(() => {
-				// Settled both ways: a throw inside a timer callback escapes the executor, so
-				// without this the promise would never settle and `settled()` would hang.
+				/**
+				 * Settles both ways: a throw inside a timer callback escapes the executor, so
+				 * without this catch the promise would never settle and `settled()` would hang.
+				 */
 				try {
 					work();
 					resolve();
@@ -285,8 +284,6 @@ describe("createQueue with deferred work", () => {
 
 		await queue.send({ type: "sweep" });
 
-		// The handler defers the retry, exactly as a Worker that hands its real work to
-		// `waitUntil` does.
 		let result = await queue.consume(
 			(batch) => {
 				for (let message of batch.messages) context.waitUntil(defer(() => message.retry()));
@@ -322,8 +319,11 @@ describe("createQueue with deferred work", () => {
 
 		await queue.send({ type: "sweep" });
 
-		// The point of the option: the same handler, with nothing draining its deferred
-		// work, is acked on its behalf before it ever decided.
+		/**
+		 * Without something draining deferred work, the handler's message is acked on
+		 * its behalf before the deferred retry runs — the reason the `context` option
+		 * exists.
+		 */
 		let result = await queue.consume((batch) => {
 			for (let message of batch.messages) context.waitUntil(defer(() => message.retry()));
 		});
@@ -353,7 +353,10 @@ describe("createQueue with deferred work", () => {
 
 		await expect(consuming).rejects.toThrow("job blew up");
 
-		// Deferred work that failed decided nothing, so the message goes back for another try.
+		/**
+		 * Deferred work that failed decided nothing, so the message goes back for
+		 * another try.
+		 */
 		expect(queue.messages).toHaveLength(1);
 	});
 });

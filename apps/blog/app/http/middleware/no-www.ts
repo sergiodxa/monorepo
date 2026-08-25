@@ -1,8 +1,7 @@
 /**
- * HTTP middleware factory that canonicalizes the hostname. Requests to a `www.`
- * hostname are permanently redirected to the apex domain, while non-`www`
- * requests pass through unchanged. Exists to keep the site on a single canonical
- * host for SEO and consistency.
+ * Canonical-host middleware: a `www.` hostname gets a permanent redirect to the
+ * apex domain, so the site answers on one host for search engines and for
+ * cookies scoped to it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,8 +12,7 @@ import type { Middleware } from "remix/router";
 import { redirect } from "@pkg/http/response";
 
 /**
- * Redirects `www.` hostnames to the apex domain with a permanent redirect.
- * Passes through unchanged requests when the hostname is already non-`www`.
+ * Permanently redirects a `www.` hostname to the apex domain.
  */
 export default function createNoWWWMiddleware(): Middleware {
 	return async (ctx, next) => {

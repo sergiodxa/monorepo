@@ -1,21 +1,9 @@
 /**
- * Unit tests for `CheckTrialWatchesJob.perform()`: which watches a run claims (only those
- * whose hour has come round, and each of them once however often the trigger is delivered),
- * the result it records, the on-change email and the per-day cap that bounds it, and the
- * seven-day wrap-up that ends a watch.
- *
- * The cases that would break silently are the point of this file: a watch past `expires_at`
- * must stop being claimed rather than be checked forever, a target that flaps every hour must
- * cost at most one email a day, and a probe that threw must not take the rest of the sweep
- * with it.
- *
- * Also covered: that nothing here is billed or reported. No Analytics Engine point is written
- * — the container is given no `PolarClient` at all, so a job that asked for one would fail
- * outright, which is the assertion that the metering path is genuinely absent.
- *
- * `HttpCheck` is faked rather than mocked at the network level, since the real one probes
- * through a Durable Object that the test runner has no runtime for; the options it was constructed
- * with are recorded so the probe's own configuration can be asserted on.
+ * Unit tests for `CheckTrialWatchesJob.perform()`: which watches a run claims, the
+ * result recorded, the on-change email and its per-day cap, and the seven-day wrap-up.
+ * Nothing here is billed or reported — the container gets no `PolarClient`, so a job
+ * needing one would fail outright. `HttpCheck` is faked with a lightweight stand-in,
+ * since the real check runs through a Durable Object the test runner lacks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -315,7 +303,11 @@ describe("CheckTrialWatchesJob change notifications", () => {
 		answering("down", null);
 		await runJob(db);
 
-		// Every following hour disagrees with the one before it, and none of them may write.
+		/**
+		 * The hours alternate up/down, so each still disagrees with the last and would notify
+		 * on its own; the cap is what stops all but the first. Suppressed flaps still land in
+		 * the history the digest bar draws from, which the five-row count below confirms.
+		 */
 		for (let hour = 0; hour < 4; hour++) {
 			answering(hour % 2 === 0 ? "up" : "down", hour % 2 === 0 ? 120 : null);
 			await makeDue(db, watch.id);
@@ -323,7 +315,6 @@ describe("CheckTrialWatchesJob change notifications", () => {
 		}
 
 		expect(sentOf(TrialChangeEmail)).toBe(1);
-		// Every flap the cap suppressed is still in the history the digest bar is drawn from.
 		expect(await TrialWatch.listResults(db, watch.id)).toHaveLength(5);
 	});
 
@@ -372,12 +363,8 @@ describe("CheckTrialWatchesJob wrap-up", () => {
 	});
 
 	/**
-	 * The wrap-up is the only email that carries a link to the report as a page, and the token
-	 * is what addresses it. A summary sent without one renders no link at all — the email still
-	 * looks complete, so nothing else here would notice.
-	 *
-	 * Asserted against the watch's own stored token rather than any token, since passing the
-	 * wrong watch's would point a reader at somebody else's report.
+	 * The wrap-up's report link needs the watch's real token; this checks the token appears
+	 * correctly in the rendered HTML, which is what proves the recipient gets a working link.
 	 */
 	test("carries the watch's own report token, so the wrap-up can link the report page", async () => {
 		let { db } = createTestDatabase();
@@ -394,9 +381,6 @@ describe("CheckTrialWatchesJob wrap-up", () => {
 
 		expect(transport.last?.email).toBeInstanceOf(TrialWeeklyDigestEmail);
 
-		// Asserted against the rendered body rather than the constructor argument, because the
-		// argument being right is not the thing that matters — the email carrying a working link
-		// is, and the token reaching the template but rendering nothing would pass either way.
 		expect(watch.report_token).toBeTruthy();
 		expect(transport.last?.html).toContain(routes.trial.report.href({ token: watch.report_token }));
 	});
@@ -448,6 +432,7 @@ describe("CheckTrialWatchesJob wrap-up", () => {
 });
 
 describe("CheckTrialWatchesJob metering", () => {
+	/** A watch belongs to no team, so no ping point exists for a query to ever select. */
 	test("writes no Analytics Engine point for a trial check", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedLead(db);
@@ -455,7 +440,6 @@ describe("CheckTrialWatchesJob metering", () => {
 
 		await runJob(db);
 
-		// A watch belongs to no team, and every query against the ping dataset filters on one.
 		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(costs.dataPoints).toHaveLength(0);
 	});
@@ -472,8 +456,8 @@ describe("CheckTrialWatchesJob metering", () => {
 });
 
 /**
- * The two funnel events the sweep emits. Both are "first" events, so what is pinned is the
- * boundary in each: the second check and the second alert are not new funnel steps, and
+ * The two funnel events the sweep emits. Both are "first" events, so what is pinned is
+ * the boundary in each: only the first check and first alert count as a new step, and
  * neither event may name the URL it is about.
  */
 describe("CheckTrialWatchesJob funnel events", () => {
@@ -573,8 +557,8 @@ describe("CheckTrialWatchesJob funnel events", () => {
 		expect(funnelEvents(first, "first_trial_alert_sent")).toHaveLength(1);
 
 		/**
-		 * The change email is capped at one a day, so the stamp has to be backdated for a second
-		 * one to go out at all — which is exactly the case this asserts is not a first alert.
+		 * The change email is capped at one a day, so the stamp has to be backdated for a
+		 * second one to go out at all — the case this asserts should count as a repeat alert.
 		 */
 		await db.update(
 			trialWatches,

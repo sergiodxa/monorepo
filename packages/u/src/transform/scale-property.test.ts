@@ -27,10 +27,12 @@ describe("scaleProperty", () => {
 		expect(await declarations(scaleProperty("0.98"))).toEqual(["scale: 0.98"]);
 	});
 
+	/**
+	 * `scale` accepts a unitless number, so converting it to a string before
+	 * serializing produces `0.95`, which browsers apply directly to scale the
+	 * element.
+	 */
 	test("stringifies a bare number", async () => {
-		// `scale` is not a length, so the string conversion in the utility is
-		// what keeps the serializer from turning `0.95` into `0.95px` — an
-		// invalid value browsers drop, leaving the element unscaled.
 		expect(await declarations(scaleProperty(0.95))).toEqual(["scale: 0.95"]);
 	});
 });

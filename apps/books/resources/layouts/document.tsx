@@ -28,14 +28,18 @@ import prismStyles from "~/resources/css/prism.css?url";
 import proseStyles from "~/resources/css/prose.css?url";
 
 /**
- * The Cloudflare Insights beacon token. Kept verbatim: it identifies this site in the
- * Cloudflare dashboard, so a changed token silently ends the analytics history.
+ * The Cloudflare Insights beacon token. Kept verbatim: it identifies this
+ * site in the Cloudflare dashboard, so a changed token silently ends the
+ * analytics history. It loads with no cookies and no first-party bundle.
  */
 const CF_BEACON_TOKEN = "4037e619e61b4e5a894789c3c98da9ab";
 
 namespace DocumentLayout {
 	export interface Props {
-		/** The page's content, rendered inside `<body>`. */
+		/**
+		 * The page's content, rendered inside `<body>`, which centers it as a
+		 * column so each section can cap its own width without a wrapper element.
+		 */
 		children: RemixNode;
 		/** The document title. */
 		title: string;
@@ -52,29 +56,20 @@ namespace DocumentLayout {
 	}
 }
 
-/** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. */
+/**
+ * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. Dark
+ * mode is CSS-only, via the `system` class and `colorScheme` mix, and body
+ * colors stay pure black-on-white, matching the page's untinted light mode.
+ */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { canonical, children, description, head, robots, schema, title } = handle.props;
 
 		return (
-			/* `system` opts the theme layer into `prefers-color-scheme`, which is the only
-			dark-mode signal this site has ever had — there is no theme toggle, and adding
-			one would need client JavaScript the site deliberately does not load.
-
-			`colorScheme("light dark")` covers what the theme layer cannot: the chrome the
-			browser paints itself — scrollbars, the canvas behind the document, and the
-			native form controls this site is mostly made of. */
 			<html lang="en" class="system" mix={[colorScheme("light dark")]}>
-				{/* `data-key` on every child is what a head diff would match on. No client
-				runtime is loaded today, so nothing diffs the head; the keys are kept so
-				introducing one cannot silently reintroduce a head-diff bug. */}
 				<head>
 					<meta charSet="utf-8" data-key="charset" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" data-key="viewport" />
-					{/* Pure white and pure black, matching the page itself in each scheme rather
-					than a palette step: `content` is parsed as a bare color and cannot resolve
-					`var()`, so these are literals by necessity. */}
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: light)"
@@ -88,22 +83,12 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						data-key="theme-color-dark"
 					/>
 					<link rel="shortcut icon" href="/favicon.ico" data-key="favicon" />
-					{/* Reset first, then this site's palette scales, then the semantic tokens that
-					read them through `var()`. Custom properties resolve at used-value time, so
-					the order does not change which value wins; it mirrors the token layering. */}
 					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
 					<link rel="stylesheet" href={colorStyles} data-key="style-palette" />
 					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
-					{/* Three rule sets that cannot be mixins, because none of the elements they style
-					is written at a call site: the banner a third-party script injects, and the prose
-					and code the Markdown renderer emits. They are linked from every page rather than
-					only the two that use them — three small files on one shared cache entry beats a
-					second stylesheet request on the page that converts. */}
 					<link rel="stylesheet" href={parityDealsStyles} data-key="style-parity-deals" />
 					<link rel="stylesheet" href={proseStyles} data-key="style-prose" />
 					<link rel="stylesheet" href={prismStyles} data-key="style-prism" />
-					{/* `Seo` emits the `<title>` itself, along with the description, canonical
-					link, and both social card namespaces. */}
 					<Seo
 						title={title}
 						description={description}
@@ -115,22 +100,16 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					/>
 					{head}
 				</head>
-				{/* Black on white, inverting to white on black — the whole of the site's color
-				design. The page is centered as a column so every section can cap its own
-				width without a wrapper element. */}
 				<body
 					mix={[
 						vstack({ align: "center", justify: "center" }),
 						minBs("100dvh"),
 						font("sans"),
-						// Pure white and pure black rather than palette steps: the site's light mode
-						// is the untinted page, which no scale step is.
 						raw({ backgroundColor: "#ffffff", color: "#000000" }),
 						dark([bg("color.neutral.900"), fg("color.neutral.100")]),
 					]}
 				>
 					{children}
-					{/* Cloudflare's own analytics beacon: no cookies, no first-party bundle. */}
 					<script
 						defer
 						src="https://static.cloudflareinsights.com/beacon.min.js"

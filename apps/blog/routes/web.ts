@@ -1,7 +1,6 @@
 /**
- * Top-level route table for blog. Declares the public pages (feed, colors,
- * sponsor, listings, individual posts, sitemap, WebFinger/avatar) and mounts the
- * auth, RSS, and CMS sub-route trees so the router can resolve every URL.
+ * Top-level route table for the blog, joining the public pages with the auth,
+ * RSS, and CMS sub-trees so every URL resolves from one declaration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +13,7 @@ import cms from "~/routes/cms";
 import rss from "~/routes/rss";
 
 /**
- * Registers the public site routes and mounts auth, RSS, and CMS sub-routers.
+ * Entry point the router resolves every blog URL against.
  */
 export default route({
 	feed: get("/"),

@@ -1,3 +1,10 @@
+/**
+ * Tests for the reusable `remix/data-schema` field checks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
@@ -171,15 +178,12 @@ describe("combined checks", () => {
 	test("can chain multiple checks", () => {
 		let schema = s.string().pipe(minLength(5), maxLength(30), httpsUrl());
 
-		// Valid
 		let validResult = schema["~standard"].validate("https://a.co");
 		expect(validResult.issues).toBeUndefined();
 
-		// Too short
 		let shortResult = schema["~standard"].validate("http");
 		expect(shortResult.issues).toBeDefined();
 
-		// Too long
 		let longResult = schema["~standard"].validate("https://very-long-url.example.com");
 		expect(longResult.issues).toBeDefined();
 	});

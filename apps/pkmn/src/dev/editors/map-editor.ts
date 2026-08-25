@@ -1,20 +1,9 @@
 /**
- * State-holding editor for a map-in-progress, built on the canonical editor class
- * pattern. A plain class (no framework coupling) that owns ALL editor state: the
- * map id, its grid size (`width`/`height` in tiles, `tileWidth`/`tileHeight` in
- * pixels), the ordered `tilesets`, the three tile layers plus a collision grid,
- * the current layer/tool/selected-tile, and the ordered list of {@link MapEvent}s.
- * The view constructs it once in component setup and drives every gesture through
- * it; the class mutates the grids/events and the view re-renders from
- * {@link MapEditor.toMapData}.
- *
- * The grid math is kept pure and DOM-free so it is unit-testable without a canvas:
- * a cell index is `y * width + x`, a painted layer cell is a packed tile ref (see
- * {@link packTileRef}), and an empty cell is {@link EMPTY_CELL}. The editor only
- * enforces the structural bounds the format cares about (layers and collision are
- * always exactly `width * height` cells long, tile refs name a declared tileset)
- * so the in-progress state can never drift past what {@link MapDataSchema} accepts;
- * the export path re-validates the final map through `loadMap`.
+ * Editor state for a map-in-progress: grid size, tilesets, three tile layers plus a
+ * collision grid, the active layer/tool/tile, and the events. The grid math stays
+ * pure and DOM-free so it is unit-testable without a canvas, and the class enforces
+ * the structural bounds the format needs (layers exactly `width * height` cells,
+ * refs naming a declared tileset) so the state always stays exportable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,12 +38,9 @@ export type TileLayerName = (typeof TILE_LAYERS)[number];
 export type EditLayer = TileLayerName | "collision";
 
 /**
- * The map-editing tools. `paint` writes the selected tile (or collision value) to
- * the tile under the cursor, `erase` clears a tile-layer cell to {@link EMPTY_CELL}
- * (or collision to walkable), `fill` flood-fills the contiguous same-value region,
- * `rectangle`/`ellipse` press-drag a shape then fill every cell it covers on
- * release, `select` press-drags a rectangular region to copy/cut/paste, and `event`
- * places/selects an event marker rather than painting.
+ * The map-editing tools. `paint`/`erase` write one cell, `fill` flood-fills a
+ * contiguous same-value region, `rectangle`/`ellipse` fill a press-dragged shape
+ * on release, `select` marks a region to copy, and `event` places markers.
  */
 export type MapTool = "paint" | "erase" | "fill" | "rectangle" | "ellipse" | "select" | "event";
 
@@ -94,10 +80,9 @@ export interface TileRegion {
 }
 
 /**
- * A copied rectangular block of a single layer/grid: its `width`×`height` in tiles
- * and the flat `width * height` array of cell values captured from the source (row
- * by row). Pasting stamps this block at an anchor, clipping any cell that would land
- * off-map.
+ * A copied rectangular block of one layer/grid: its footprint in tiles and the flat
+ * `width * height` array of cells captured row by row. Pasting stamps the block at
+ * an anchor, clipping any cell that would land off-map.
  */
 export interface RegionBlock {
 	/** Block width in tiles. */
@@ -128,9 +113,8 @@ export function normalizeRegion(x0: number, y0: number, x1: number, y1: number):
 
 /**
  * Every tile coordinate covered by the inclusive rectangle spanning two drag
- * endpoints, in row-major order. The bounds are inclusive of both endpoints and the
- * result is identical regardless of which corner the drag started from. Pure and
- * DOM-free so the fill and its tests share the exact geometry.
+ * endpoints, in row-major order, identical regardless of which corner the drag
+ * started from. Pure and DOM-free so the fill and its tests share one geometry.
  *
  * @param x0 One corner's column.
  * @param y0 One corner's row.
@@ -151,9 +135,7 @@ export function rectCells(x0: number, y0: number, x1: number, y1: number): TileC
 /**
  * Every tile coordinate inside the ellipse inscribed in the inclusive rectangle
  * spanning two drag endpoints, in row-major order. A cell is inside when its center
- * satisfies the ellipse equation for the region's half-extents; a 1×N or N×1 drag
- * degenerates to the full rectangle (the ellipse fills its bounding line). Pure and
- * DOM-free so the fill and its tests share the exact geometry.
+ * satisfies the ellipse equation; a 1×N or N×1 drag fills its whole bounding line.
  *
  * @param x0 One corner's column.
  * @param y0 One corner's row.
@@ -162,7 +144,6 @@ export function rectCells(x0: number, y0: number, x1: number, y1: number): TileC
  */
 export function ellipseCells(x0: number, y0: number, x1: number, y1: number): TileCoord[] {
 	let region = normalizeRegion(x0, y0, x1, y1);
-	// Half-extents and center of the inscribed ellipse, in tile units.
 	let radiusX = region.width / 2;
 	let radiusY = region.height / 2;
 	let centerX = region.x + radiusX - 0.5;
@@ -170,8 +151,6 @@ export function ellipseCells(x0: number, y0: number, x1: number, y1: number): Ti
 	let cells: TileCoord[] = [];
 	for (let y = region.y; y < region.y + region.height; y++) {
 		for (let x = region.x; x < region.x + region.width; x++) {
-			// A degenerate axis (radius 0) never divides; that axis contributes 0 so the
-			// whole 1-wide/1-tall line counts as inside.
 			let normX = radiusX === 0 ? 0 : (x - centerX) / radiusX;
 			let normY = radiusY === 0 ? 0 : (y - centerY) / radiusY;
 			if (normX * normX + normY * normY <= 1) cells.push({ x, y });
@@ -306,7 +285,6 @@ export class MapEditor {
 	/** The collision grid, a flat `width * height` array of {@link Collision} values. */
 	#collision: number[];
 
-	/** The ordered map events. */
 	#events: MapEvent[];
 
 	/** Background music track id (a manifest audio id), empty for none. */
@@ -315,7 +293,6 @@ export class MapEditor {
 	/** The active editing layer (a tile layer or the collision grid). */
 	#layer: EditLayer = "ground";
 
-	/** The active tool. */
 	#tool: MapTool = "paint";
 
 	/** The currently selected tile the paint tool writes. */
@@ -333,7 +310,7 @@ export class MapEditor {
 	/** Whether the tile grid is stroked over the map canvas. */
 	#showGrid: boolean = true;
 
-	/** Whether the collision overlay is always shown (not just on the collision layer). */
+	/** Whether the collision overlay is drawn over every layer. */
 	#showCollision: boolean = false;
 
 	/** The current rectangular selection (a copy is exposed), or `null` when none. */
@@ -455,8 +432,8 @@ export class MapEditor {
 
 	/**
 	 * The clipboard block's footprint in tiles, or `null` when the clipboard is empty.
-	 * The view previews the paste stamp's extent from this without reading the block's
-	 * cells (which stay encapsulated).
+	 * The view previews the paste stamp's extent from this while the block's cells
+	 * stay encapsulated.
 	 */
 	get clipboardSize(): { width: number; height: number } | null {
 		return this.#clipboard
@@ -528,10 +505,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Resizes the map to a new tile size, preserving the overlapping top-left region
-	 * of every layer and the collision grid. Cells outside the old bounds are empty
-	 * (tile layers) or walkable (collision); events beyond the new bounds are
-	 * dropped so no event ever sits off-map.
+	 * Resizes the map, preserving the overlapping top-left region of every layer and
+	 * the collision grid; newly exposed cells are empty or walkable. Events and any
+	 * selection beyond the new bounds are dropped so nothing ever sits off-map.
 	 *
 	 * @param width New width in tiles.
 	 * @param height New height in tiles.
@@ -562,12 +538,10 @@ export class MapEditor {
 		this.#width = nextWidth;
 		this.#height = nextHeight;
 		this.#events = this.#events.filter((event) => this.#inBounds(event.x, event.y));
-		// A selection made against the old bounds may now be off-map; drop it.
 		this.#selectionRegion = null;
 		return this;
 	}
 
-	/** True when a tile coordinate is inside the map. */
 	#inBounds(x: number, y: number): boolean {
 		return x >= 0 && y >= 0 && x < this.#width && y < this.#height;
 	}
@@ -585,8 +559,8 @@ export class MapEditor {
 	}
 
 	/**
-	 * Removes the tileset at `index`, clearing every layer cell that referenced it
-	 * and shifting refs to later tilesets down by one so the remaining refs stay
+	 * Removes the tileset at `index`, clearing every layer cell that referenced it and
+	 * shifting later refs — and the current tile selection — down by one so they stay
 	 * valid. A no-op for an out-of-range index.
 	 *
 	 * @param index The tileset index to remove.
@@ -607,7 +581,6 @@ export class MapEditor {
 			}
 		}
 
-		// Keep the selection pointing at a valid tileset (or reset it).
 		if (this.#selection.tilesetIndex === index) {
 			this.#selection = { tilesetIndex: 0, tileIndex: 0 };
 		} else if (this.#selection.tilesetIndex > index) {
@@ -789,10 +762,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Flood-fills the contiguous region of same-valued cells reachable from a seed
-	 * with `value`, on the given layer/grid. Works on a tile layer (packed refs) or
-	 * the collision grid; a no-op when the seed already holds `value` or is
-	 * off-map. Returns the number of cells changed.
+	 * Flood-fills the contiguous region of same-valued cells reachable from a seed with
+	 * `value`, on a tile layer (packed refs) or the collision grid. A no-op when the
+	 * seed already holds `value` or is off-map; returns the number of cells changed.
 	 *
 	 * @param name The layer or grid to fill (a tile layer or `"collision"`).
 	 * @param x Seed tile column.
@@ -839,9 +811,8 @@ export class MapEditor {
 
 	/**
 	 * The value the rectangle/ellipse tools write on the active layer/grid: the packed
-	 * selected ref for a tile layer, or the active collision kind for the collision
-	 * grid. `null` when a tile layer is active but no tileset is declared (nothing to
-	 * paint), so callers can no-op.
+	 * selected ref for a tile layer, or the active collision kind for collision.
+	 * `null` when a tile layer is active with no tileset declared, so callers no-op.
 	 */
 	#brushValue(): number | null {
 		if (this.#layer === "collision") return COLLISION_VALUES[this.#collisionKind];
@@ -850,10 +821,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Fills every tile the rectangle spanning two drag endpoints covers with the
-	 * active brush (the selected tile on a tile layer, or the collision kind on the
-	 * collision grid). Cells outside the map are skipped and a tile-layer fill with no
-	 * tileset declared is a no-op. Returns the number of cells changed.
+	 * Fills every tile the rectangle spanning two drag endpoints covers with the active
+	 * brush: the selected tile on a tile layer, or the collision kind on the collision
+	 * grid. Cells outside the map are skipped; returns the number of cells changed.
 	 *
 	 * @param x0 One drag-corner column.
 	 * @param y0 One drag-corner row.
@@ -893,10 +863,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Records a rectangular selection spanning two drag endpoints, normalized so it is
-	 * the same regardless of drag direction and clamped to the map bounds. The
-	 * selection is what {@link copySelection} / {@link cutSelection} grab; it does not
-	 * itself change any cell. Returns the stored selection (a copy).
+	 * Records a rectangular selection spanning two drag endpoints, normalized against
+	 * drag direction and clamped to the map bounds so it stays on-map. The selection is
+	 * what {@link copySelection} / {@link cutSelection} grab; every cell stays as-is.
 	 *
 	 * @param x0 One drag-corner column.
 	 * @param y0 One drag-corner row.
@@ -905,7 +874,6 @@ export class MapEditor {
 	 */
 	select(x0: number, y0: number, x1: number, y1: number): TileRegion {
 		let region = normalizeRegion(x0, y0, x1, y1);
-		// Clamp to the map so a selection never extends past an edge.
 		let minX = Math.max(0, region.x);
 		let minY = Math.max(0, region.y);
 		let maxX = Math.min(this.#width - 1, region.x + region.width - 1);
@@ -919,7 +887,7 @@ export class MapEditor {
 		return { ...this.#selectionRegion };
 	}
 
-	/** Clears the current selection (without touching the clipboard). */
+	/** Clears the current selection; the clipboard keeps its contents. */
 	clearSelection(): this {
 		this.#selectionRegion = null;
 		return this;
@@ -927,9 +895,8 @@ export class MapEditor {
 
 	/**
 	 * Copies the current selection's cells from the active layer/grid into the
-	 * clipboard, ready for {@link paste}. A no-op returning `null` when nothing is
-	 * selected. The copied block records the layer's raw cell values (empty cells and
-	 * walkable collision included) so a paste reproduces the region exactly.
+	 * clipboard, ready for {@link paste}. The block records raw cell values (empty
+	 * cells and walkable collision included) so a paste reproduces the region exactly.
 	 *
 	 * @returns The captured block (a copy), or `null` when there is no selection.
 	 */
@@ -978,7 +945,6 @@ export class MapEditor {
 		let next = pasteRegion(grid, this.#width, this.#height, this.#clipboard, anchorX, anchorY);
 		if (this.#layer === "collision") this.#collision = next;
 		else this.#layers[this.#layer] = next;
-		// Count how many cells actually landed in bounds.
 		let stamped = 0;
 		for (let row = 0; row < this.#clipboard.height; row++) {
 			for (let col = 0; col < this.#clipboard.width; col++) {
@@ -991,11 +957,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Places a new event at a tile and returns it. The event is seeded with a
-	 * generated unique id, a display name matching that id, and exactly one default
-	 * {@link EventPage} (no conditions, no graphic, fixed movement, all options off,
-	 * an `action` trigger, an empty command list) matching the RPG-Maker-XP model. A
-	 * no-op returning `null` for an off-map coordinate.
+	 * Places a new event at a tile, seeded with a generated unique id, a display name
+	 * matching that id, and exactly one default {@link EventPage} so an event always
+	 * starts page-complete. A no-op for an off-map coordinate.
 	 *
 	 * @param x Tile column.
 	 * @param y Tile row.
@@ -1038,11 +1002,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Overwrites the event with the given id's identity/position/name and its whole
-	 * page list from a patch, replacing only the provided fields. This is the commit
-	 * point the event editor dialog uses to save a whole edited event at once (the
-	 * dialog edits a working copy and hands back the final `pages`). A no-op for an
-	 * unknown id. Returns the updated event (a copy) or `null`.
+	 * Overwrites the given event's identity, position, name, and whole page list from a
+	 * patch, applying only the provided fields. This is the commit point the event
+	 * dialog saves a whole working copy through in one step.
 	 *
 	 * @param id The event id to configure.
 	 * @param patch The fields to overwrite on the event (`name`, `pages`, position…).
@@ -1062,13 +1024,13 @@ export class MapEditor {
 	}
 
 	/**
-	 * Replaces the whole page list of the event with the given id. A convenience over
-	 * {@link configureEvent} for the dialog's save path; falls back to one default
-	 * page when handed an empty list so an event is never page-less. A no-op for an
-	 * unknown id. Returns the updated event (a copy) or `null`.
+	 * Replaces the whole page list of the event with the given id, falling back to one
+	 * default page when handed an empty list so an event always keeps at least one
+	 * page.
 	 *
 	 * @param id The event id whose pages to replace.
 	 * @param pages The new page list (deep-copied in).
+	 * @returns The updated event (a copy), or `null` for an unknown id.
 	 */
 	setEventPages(id: string, pages: EventPage[]): MapEvent | null {
 		return this.configureEvent(id, { pages });
@@ -1087,10 +1049,9 @@ export class MapEditor {
 	}
 
 	/**
-	 * Serializes the current editor state to a JSON-clean {@link MapData}. The id
-	 * and bgm are trimmed, and every nested value is a fresh copy so callers cannot
-	 * mutate the editor's internal state through the snapshot. Encounters and warps
-	 * are not authored in this editor yet and serialize empty.
+	 * Serializes the current editor state to a JSON-clean {@link MapData}. The id and
+	 * bgm are trimmed and every nested value is a fresh copy, so callers cannot mutate
+	 * the editor through the snapshot; encounters and warps serialize empty.
 	 *
 	 * @returns The current map definition.
 	 */
@@ -1181,8 +1142,10 @@ function resizeGrid(
 	return next;
 }
 
-/** Returns a deep copy of an event (id/position/name plus every page) so callers
- * cannot mutate the editor's internal state through the snapshot. */
+/**
+ * Returns a deep copy of an event so callers cannot mutate the editor's internal
+ * state through the snapshot.
+ */
 function cloneEvent(event: MapEvent): MapEvent {
 	return {
 		id: event.id,

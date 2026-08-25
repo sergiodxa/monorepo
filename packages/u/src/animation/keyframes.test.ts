@@ -15,13 +15,15 @@ describe("keyframes", () => {
 		expect(css).toContain("@keyframes fade-in");
 		expect(css).toContain("from");
 		expect(css).toContain("to");
-		// The frame values are the only declarations in the whole stylesheet,
-		// and `opacity` is unitless, so neither picks up a `px` suffix.
 		expect(
 			await declarations(keyframes("fade-in", { from: { opacity: 0 }, to: { opacity: 1 } })),
 		).toEqual(["opacity: 0", "opacity: 1"]);
 	});
 
+	/**
+	 * A stop that reaches the declaration path serializes as
+	 * `0%: [object Object];` and the browser drops the rule.
+	 */
 	test("emits percentage stops as real stop blocks, not as declarations", async () => {
 		let css = await serialize(
 			keyframes("ramp", {
@@ -31,8 +33,6 @@ describe("keyframes", () => {
 			}),
 		);
 
-		// A stop that reached the declaration path instead of the selector path
-		// serializes as `0%: [object Object];` and the browser drops the rule.
 		expect(css).not.toContain("[object Object]");
 		expect(css).toMatch(/\b0%\s*\{/);
 		expect(css).toMatch(/\b10%,\s*90%\s*\{/);

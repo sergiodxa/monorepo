@@ -1,14 +1,8 @@
 /**
- * Tests for the API keys list page controller. This is a full page-rendering
- * controller (`ctx.render(<Jsx/>)`), so it needs a page-render harness rather than
- * the bare-action pattern used by `../actions/monitors.test.ts`: a router with
- * `asyncContext()` + the real `i18n` middleware (its `findLocale` calls `getViewer()`
- * and reads `userPreferences`, both of which resolve fine against the seeded auth
- * state and an empty test DB, falling back to English) + `renderWith
- * (createHtmlRenderer)`, plus a `seedTeam` middleware standing in for the real
- * `requireUser`/`requireTeam`/`requireRole` chain. Neither `cloudflare:workers` nor
- * `~/app/services/analytics` is touched by this controller (it only reads
- * `~/app/data/api-key`), so no `vi.doMock` is needed.
+ * Tests for the API keys list page controller. Renders through `ctx.render`, so
+ * it needs a page-render harness: a router with `asyncContext()` + the real
+ * `i18n` middleware + `renderWith(createHtmlRenderer)`, plus a `seedTeam`
+ * middleware standing in for `requireUser`/`requireTeam`/`requireRole`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,11 +1,8 @@
 /**
- * Central move data contracts used by the game data layer. This module defines
- * the identifiers, enums, and effect shapes that describe how move records are
- * represented once loaded into the engine.
+ * Central move data contracts used by the game data layer.
  *
- * It provides the shared vocabulary for move behavior without embedding any
- * specific content entries, allowing other parts of the system to read, validate,
- * and apply move data through stable, content-agnostic types.
+ * Defines identifiers, enums, and effect shapes for move records, giving
+ * the rest of the system stable, content-agnostic types to read and apply.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

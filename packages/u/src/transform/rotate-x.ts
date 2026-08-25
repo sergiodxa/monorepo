@@ -7,10 +7,9 @@ import type { AngleValue } from "../internal/transform";
 import { angle, transformFunction } from "../internal/transform";
 
 /**
- * Rotates the element in 3D around its horizontal axis — a flip-card or
- * page-turn effect. Pair with `u.backfaceVisibility()` so the reversed face
- * doesn't show through mid-rotation. Composable with every other
- * `transform/` utility.
+ * Rotates the element in 3D around its horizontal axis for a flip-card or
+ * page-turn effect. Pair with `u.backfaceVisibility()` to keep the reversed
+ * face hidden mid-rotation, and compose freely with other `transform/` utilities.
  *
  * @example u.rotateX(180)
  * @example css({ "--ui-rotate-x": "180deg", transform: "... rotateX(var(--ui-rotate-x, 0deg)) ..." })

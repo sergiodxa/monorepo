@@ -21,11 +21,9 @@ import { ifModifiedSince, isModifiedSince } from "./if-modified-since";
 const CONDITIONAL_METHODS = new Set(["GET", "HEAD"]);
 
 /**
- * The only headers a `304` carries, per the caching specification.
- *
- * `Vary` is on the list for a reason worth stating: a shared cache that receives
- * a `304` without it can no longer tell which negotiated variant was validated,
- * and may serve the stored one to a client that asked for something else.
+ * The only headers a `304` carries, per the caching specification. `Vary` stays
+ * on the list because a shared cache without it can no longer tell which
+ * negotiated variant was validated, and may serve the wrong one.
  */
 const NOT_MODIFIED_HEADERS = [
 	"Cache-Control",
@@ -37,11 +35,9 @@ const NOT_MODIFIED_HEADERS = [
 ];
 
 /**
- * The same entity tag written with the other strength.
- *
- * Weak comparison ignores the `W/` prefix, so a tag matches its counterpart; the
- * two forms are compared rather than the prefix stripped, so the framework's own
- * quoting and wildcard handling stays in charge of the match.
+ * The same entity tag written with the other strength, so weak comparison
+ * matches a tag against its counterpart while the framework's own quoting and
+ * wildcard handling stays in charge of the match.
  */
 function counterpart(tag: string): string {
 	return tag.startsWith("W/") ? tag.slice(2) : `W/${tag}`;
@@ -49,10 +45,8 @@ function counterpart(tag: string): string {
 
 /**
  * Whether the client's `If-None-Match` covers the response's own `ETag`, under
- * the weak comparison the specification defines for this header.
- *
- * A `*` matches because a representation exists at all; a response with no `ETag`
- * of its own can never match a listed tag.
+ * the weak comparison the specification defines for this header. A `*` matches
+ * because a representation exists at all; a response with no `ETag` can't match.
  */
 function matchesEtag(header: string, tag: string | null): boolean {
 	let ifNoneMatch = IfNoneMatch.from(header);
@@ -64,11 +58,9 @@ function matchesEtag(header: string, tag: string | null): boolean {
 }
 
 /**
- * Whether the copy the client already holds is still current.
- *
- * `If-None-Match` decides on its own whenever it is present, and
- * `If-Modified-Since` is consulted only in its absence, which is the precedence
- * the specification sets: an entity tag is the stronger validator of the two.
+ * Whether the copy the client already holds is still current. `If-None-Match`
+ * decides whenever present; `If-Modified-Since` is consulted only in its
+ * absence, per the precedence the specification sets between the two validators.
  */
 function isCurrent(request: Request, response: Response): boolean {
 	let ifNoneMatch = request.headers.get("If-None-Match");
@@ -84,11 +76,9 @@ function isCurrent(request: Request, response: Response): boolean {
 }
 
 /**
- * Builds the `304` for a response whose body the client already has.
- *
- * The original body is cancelled rather than left dangling, so a response piped
- * from an upstream request releases its connection instead of waiting to be
- * garbage collected.
+ * Builds the `304` for a response whose body the client already has. Cancelling
+ * the original body lets a response piped from an upstream request release its
+ * connection immediately.
  */
 async function notModified(response: Response): Promise<Response> {
 	let headers = new Headers();
@@ -105,15 +95,8 @@ async function notModified(response: Response): Promise<Response> {
 
 /**
  * Downgrades a response to a `304` when the request's validators still hold.
- *
- * Only a `GET` or `HEAD` answered with `200` is eligible; every other method and
- * status is returned untouched, so this can be applied at the end of a handler
- * without inspecting what the handler produced. Validators are read from the
- * response itself, meaning the caller decides what identifies the content by
- * setting `ETag` or `Last-Modified` on it.
- *
- * This is a separate saving from an edge cache: the cache decides whether the
- * handler runs, while a validator decides whether a body crosses the network.
+ * Only a `GET` or `HEAD` answered with `200` is eligible, so this runs safely
+ * at the end of any handler, using `ETag` or `Last-Modified` set on the response.
  *
  * @param request - The incoming request, carrying the client's validators.
  * @param response - The response the handler produced.

@@ -42,9 +42,8 @@ export namespace KVSessionStorage {
 	export interface Options {
 		/**
 		 * How long a saved session survives in KV. A bare number is whole seconds,
-		 * the unit this option has always used and the unit KV expiration counts,
-		 * so numeric call sites keep their exact lifetime; a duration string states
-		 * its own unit instead, making `3600` and `"1 hour"` equivalent.
+		 * the unit KV expiration counts; a duration string states its own unit,
+		 * so `3600` and `"1 hour"` are equivalent.
 		 */
 		ttlSeconds?: DurationInput;
 
@@ -148,9 +147,6 @@ function parseSessionData<
 	}
 }
 
-/**
- * Checks whether a value is a plain object record.
- */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

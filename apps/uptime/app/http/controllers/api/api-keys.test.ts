@@ -114,7 +114,6 @@ describe("POST /api/v1/api-keys", () => {
 	test("creates an API key and returns the plaintext key once", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		// The caller must hold every scope it grants, so it holds the one it hands over here.
 		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read"]);
 
 		let response = await dispatch(db, post(key, { name: "CI key", scopes: ["monitors:read"] }));
@@ -142,7 +141,6 @@ describe("POST /api/v1/api-keys", () => {
 		expect(body.error.code).toBe("FORBIDDEN");
 		expect(body.error.message).toContain("monitors:write");
 
-		// Nothing was minted: the refusal has to happen before the key exists, not after.
 		expect(await ApiKey.countByTeam(db, team.id)).toBe(1);
 	});
 
@@ -197,7 +195,6 @@ describe("POST /api/v1/api-keys", () => {
 				expires_at: null,
 			});
 		}
-		// The auth key itself plus these makes MAX_API_KEYS_PER_TEAM total already.
 
 		let response = await dispatch(
 			db,

@@ -1,24 +1,9 @@
 /**
- * The on-disk species JSON format and its `remix/data-schema` validator.
- *
- * This module is the single contract the species content LOADER trusts and the
- * species EDITOR's export path re-validates against. It defines
- * {@link SpeciesSchema} (one species record) and {@link SpeciesIndexSchema}
- * (the whole `species.json` map keyed by id), plus {@link parseSpecies}, which
- * validates an untrusted parsed JSON value back into the exact
- * `Record<SpeciesId, Species>` shape the rest of the game consumes.
- *
- * Enums are stored and validated as their runtime string/number VALUES (e.g.
- * `"grass"`, `"medium-fast"`, `"level"`) rather than TypeScript enum members, so
- * a plain JSON serialization of the authored roster round-trips losslessly and
- * re-types cleanly. Ids inside evolutions and learnsets are shape-checked as
- * non-empty strings only — the format never hard-fails on an unknown id at load
- * time (cross-references are validated later by `GameData.create`), so the file
- * stays loadable as content changes.
- *
- * The validator is pure and disk-free: callers hand it an already-parsed value
- * (a bundled JSON import or a file read) so it can be unit-tested
- * directly and reused by both the loader and the export handler.
+ * The on-disk species JSON format and its validator, trusted by the content
+ * loader and re-checked by the editor's export path. Enums validate as their
+ * stored string/number values so a JSON round-trip of the authored roster
+ * re-types losslessly; ids validate as non-empty strings, leaving
+ * cross-reference checks to `GameData.create` so the file stays loadable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,10 +32,8 @@ import { EggGroup, Gender } from "~/game/data/species";
 import { Stat } from "~/game/data/stat";
 import { Type } from "~/game/data/type";
 
-/** A whole, finite number (no fraction) used by counts, levels, and ids. */
 const wholeNumber = () => number().refine(Number.isInteger, "Expected a whole number.");
 
-/** A non-empty identifier string (a species or move id); never blank. */
 const idString = () => string().pipe(minLength(1));
 
 /**
@@ -62,16 +45,12 @@ function enumValues<T>(members: Record<string, T>): readonly [T, ...T[]] {
 	return Object.values(members) as unknown as readonly [T, ...T[]];
 }
 
-/** Validates a stat value key against the runtime {@link Stat} values. */
 const statValue = () => enum_(enumValues(Stat));
 
-/** Validates a type value against the runtime {@link Type} values. */
 const typeValue = () => enum_(enumValues(Type));
 
-/** Validates a growth-rate value against the runtime {@link GrowthRate} values. */
 const growthRateValue = () => enum_(enumValues(GrowthRate));
 
-/** Validates an egg-group value against the runtime {@link EggGroup} values. */
 const eggGroupValue = () => enum_(enumValues(EggGroup));
 
 /** Physical dimensions (weight in kg, height in m). */
@@ -80,7 +59,6 @@ const SizeSchema = object({
 	height: number(),
 });
 
-/** A complete base-stat block, one entry per {@link Stat}. */
 const StatSetSchema = object({
 	[Stat.HP]: number(),
 	[Stat.Attack]: number(),
@@ -90,26 +68,18 @@ const StatSetSchema = object({
 	[Stat.Speed]: number(),
 });
 
-/**
- * A partial EV yield: any subset of stat keys mapped to numbers. Validated as a
- * record of stat value -> number so a missing stat simply contributes no EVs.
- */
+/** A partial EV yield; a stat left out of the record contributes no EVs. */
 const EvYieldSchema = record(statValue(), number());
 
-/** One or two elemental types. */
 const TypesSchema = array(typeValue())
 	.refine((types) => types.length >= 1, "A species needs at least one type.")
 	.refine((types) => types.length <= 2, "A species has at most two types.");
 
-/** One or two egg groups. */
 const EggGroupsSchema = array(eggGroupValue())
 	.refine((groups) => groups.length >= 1, "A species needs at least one egg group.")
 	.refine((groups) => groups.length <= 2, "A species has at most two egg groups.");
 
-/**
- * Gender distribution: either the genderless sentinel value or an object with an
- * optional male/female percentage. Stored exactly as authored.
- */
+/** Gender distribution, stored exactly as authored. */
 const GenderSchema = union([
 	enum_([Gender.Genderless]),
 	object({
@@ -154,19 +124,15 @@ const EvolutionSchema = union([
 	}),
 ]);
 
-/**
- * A species sprite reference, or `null` for none: a named region inside a shared
- * atlas, or a standalone manifest image id. Ids are shape-checked only.
- */
+/** A sprite reference: a region inside a shared atlas, or a manifest image id. */
 const SpriteSchema = nullable(
 	union([object({ atlas: idString(), region: idString() }), object({ image: idString() })]),
 );
 
 /**
- * Validates one species record. The shape mirrors the {@link Species} contract,
- * with enums validated as their stored string/number values so a JSON round-trip
- * of the authored roster re-types losslessly. `evYield` and `sprite` are genuinely
- * optional keys (absent when the content omits them).
+ * Validates one species record against the {@link Species} contract. `evYield`
+ * and `sprite` are genuinely optional keys, so content that omits them still
+ * validates.
  */
 export const SpeciesSchema = object({
 	number: wholeNumber(),
@@ -191,16 +157,9 @@ export const SpeciesIndexSchema = record(idString(), SpeciesSchema);
 export type ValidatedSpecies = InferOutput<typeof SpeciesSchema>;
 
 /**
- * Validates an untrusted parsed JSON value into the exact
- * `Record<SpeciesId, Species>` shape the game consumes.
- *
- * Throws a `remix/data-schema` `ValidationError` when the value does not match
- * {@link SpeciesIndexSchema}, so a malformed `species.json` fails loudly at
- * content-load time. On success the return is re-typed to
- * `Record<SpeciesId, Species>`: the schema validates each field to a value
- * structurally identical to `Species`, and the cast reunites the loosened
- * `types`/`eggGroup`/`sprite` shapes with their exact tuple/union contract
- * without changing any runtime value.
+ * Validates an untrusted parsed JSON value into the `Record<SpeciesId, Species>`
+ * shape the game consumes, so a malformed `species.json` fails loudly at
+ * content-load time; the cast restores the exact tuple/union field contracts.
  *
  * @param value The parsed JSON value to validate (untrusted).
  * @returns The validated species roster keyed by id.

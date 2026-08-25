@@ -41,10 +41,9 @@ const COORDINATING_CONJUNCTIONS: ReadonlyArray<string> = [
 ];
 
 /**
- * Prepositions, which Chicago lowercases regardless of length. This is the rule
- * that separates Chicago from AP style, and the list is the part of this module
- * most likely to be incomplete: English has well over a hundred prepositions,
- * and an unlisted one is capitalized when it should not be.
+ * Prepositions, which Chicago lowercases regardless of length — the rule that
+ * separates Chicago style from AP. The list can't be exhaustive, so an
+ * unlisted preposition renders capitalized instead of lowercase.
  */
 const PREPOSITIONS: ReadonlyArray<string> = [
 	"aboard",
@@ -298,8 +297,9 @@ function renderCompound(core: string, special: Map<string, string>, last: boolea
 }
 
 /**
- * Applies the Chicago rules across a whole title, tracking the subtitle colon so
- * the word that starts a subtitle is capitalized even when it is a small word.
+ * Applies the Chicago rules across a title, capitalizing the word after a
+ * subtitle colon even when it is a small word, and matching `special` against
+ * the whole word before splitting a hyphenated compound so it survives intact.
  */
 function applyRules(value: string, special: Map<string, string>): string {
 	let parts = toParts(value);
@@ -324,8 +324,6 @@ function applyRules(value: string, special: Map<string, string>): string {
 		let first = index === firstIndex;
 		let last = index === lastIndex;
 		let force = first || last || afterColon;
-		// A `special` entry is matched against the whole word first, so a
-		// hyphenated entry survives instead of being split into elements.
 		let core =
 			special.get(part.core.toLowerCase()) ??
 			(part.core.includes("-")
@@ -356,9 +354,9 @@ export function createTitleizer(options: TitleizeOptions = {}): Titleizer {
 const DEFAULT_TITLEIZER = createTitleizer();
 
 /**
- * Headline-style capitalization per the Chicago Manual of Style. Intended for
- * authored English headings, not for text a user typed, and not for localized
- * copy: headline case is an English convention.
+ * Headline-style capitalization per the Chicago Manual of Style, meant for
+ * headings an author writes in English. Headline case is an English-specific
+ * convention, so localized copy follows its own capitalization rules.
  *
  * @param value - Title to capitalize
  * @param options - Words rendered exactly as written

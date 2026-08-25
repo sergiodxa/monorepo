@@ -1,7 +1,7 @@
 /**
  * Data model for tenant team membership. Wraps the `tenant_members` D1 table, which
  * grants non-owner subjects `admin` or `viewer` access to a tenant. Tenant owners live
- * in the `tenants` table, not here.
+ * in the `tenants` table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +19,7 @@ export type TenantMemberRole = "admin" | "viewer";
 /**
  * TenantMember model for managing team access to tenants.
  * Members can have admin (full access except billing) or viewer (read-only) roles.
- * Owners are stored in the tenants table, not here.
+ * Owners are stored in the tenants table.
  *
  * @example
  * let members = await TenantMember.listByTenant(db, tenantId);

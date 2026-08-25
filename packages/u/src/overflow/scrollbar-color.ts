@@ -8,36 +8,19 @@ import { utility } from "../internal/descriptor";
 import { color } from "../internal/tokens";
 
 /**
- * Themes a scroll container's scrollbar through the standard
- * `scrollbar-color` property, which takes exactly two colors — the thumb
- * first, then the track. This is the right first reach for recoloring a
- * scrollbar: it needs no pseudo-element selectors and works in Firefox and
- * modern Chromium alike, unlike the `::-webkit-scrollbar-thumb` family, which
- * is vendor-prefixed and was never supported by Firefox at all.
+ * Themes a scroll container's scrollbar via the standard `scrollbar-color`
+ * property, supported by Firefox and modern Chromium alike through plain
+ * CSS. Inherits down the tree, theming nested scroll containers too.
  *
- * `thumb` resolves through the token layer with `border` as its default
- * property, since a thumb reads as a border-weight mark over the track;
- * `track` resolves with `tint` as its default, the tone's subtle background
- * fill. With no arguments at all it emits CSS's own `auto`, leaving the
- * platform scrollbar untouched rather than inventing a token pair. Given only
- * a `thumb`, the track falls back to `transparent` — the property is invalid
- * with a single color, and a transparent track lets the container's own
- * background show through, which is almost always the intent when someone
- * only names a thumb.
- *
- * Three constraints worth knowing. It is an inherited property, so setting it
- * high in the tree themes every nested scroll container underneath unless one
- * of them overrides it. Safari does not support it as of writing, where it
- * simply degrades to the platform scrollbar rather than breaking anything.
- * And a thumb that sits at low contrast against its track erases the visual
- * cue telling a reader the region scrolls at all, so keep the two clearly
- * distinguishable.
- *
- * Composes with `u.thinScrollbar()`, which sets `scrollbar-width` — a
- * different property — so the two combine into a thin *and* themed scrollbar
- * with no conflict. It is pointless alongside `u.noScrollbar()`, which hides
- * the scrollbar outright, leaving nothing to color.
- *
+ * @param thumb - Resolves through the token layer with `border` as the
+ * default property. Leaving it out emits `auto`, the platform's own
+ * scrollbar.
+ * @param track - Resolves with `tint` as the default property. Given only
+ * a `thumb`, falls back to `transparent` so the container's own background
+ * shows through.
+ * @see u.thinScrollbar - sets the unrelated `scrollbar-width` property;
+ * combine freely for a thin, themed scrollbar.
+ * @see u.noScrollbar - hides the scrollbar outright.
  * @example u.scrollbarColor()
  * @example css({ scrollbarColor: "auto" })
  * @example u.scrollbarColor("neutral")

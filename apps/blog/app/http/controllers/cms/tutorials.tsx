@@ -25,26 +25,20 @@ import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/resources/views
 import routes from "~/routes/web";
 
 /**
- * Coordinates CMS tutorial management routes.
- *
- * Keeps controller responsibilities focused on auth/flow decisions and delegates parsing,
- * shaping, and persistence to schema, view-model, and repository layers.
+ * CMS tutorial routes. The controller owns auth and flow decisions and delegates parsing,
+ * shaping, and persistence to the schema, view-model, and repository layers.
  */
 export default createController(routes.cms.tutorials, {
 	/**
-	 * Leaves middleware empty because CMS auth is enforced per mutating action.
-	 *
-	 * This keeps read-only views reachable for existing route wiring while still guarding
-	 * create/update paths with explicit redirects.
+	 * CMS auth is enforced per mutating action, so read-only views stay reachable through the
+	 * existing route wiring while create and update paths guard themselves with redirects.
 	 */
 	middleware: [],
 
 	actions: {
 		/**
-		 * Builds the CMS tutorials index model from persisted tutorial rows.
-		 *
-		 * Uses `Post.isPublishedAt` so preview badges match the shared publish contract
-		 * (`null` or past date is published, future date is preview).
+		 * Preview badges come from `Post.isPublishedAt`, so they match the shared publish
+		 * contract: `null` or a past date is published, a future date is preview.
 		 *
 		 * @param ctx Request-scoped container used to resolve the database connection.
 		 * @returns HTML response with the tutorials list view-model.
@@ -65,10 +59,8 @@ export default createController(routes.cms.tutorials, {
 		}),
 
 		/**
-		 * Creates a tutorial from validated form payload and redirects to the edit screen.
-		 *
-		 * Redirects unauthenticated users to login instead of rendering errors, preserving the
-		 * CMS post/redirect/get flow and avoiding accidental form resubmission.
+		 * Unauthenticated callers go to login, and every exit is a See Other redirect so the
+		 * post/redirect/get flow holds and a reload only repeats a read.
 		 *
 		 * @param ctx Request-scoped container that provides submitted form data and database access.
 		 * @returns Redirect response to login, tutorials index fallback, or newly created edit page.
@@ -100,10 +92,8 @@ export default createController(routes.cms.tutorials, {
 		}),
 
 		/**
-		 * Deletes a tutorial when an id is provided and always returns to the list page.
-		 *
-		 * Missing ids are treated as no-op redirects so malformed requests cannot leak details
-		 * about internal identifiers or controller state.
+		 * A missing id resolves to the same index redirect as a successful delete, so a malformed
+		 * request reveals only the list page.
 		 *
 		 * @param ctx Request context carrying optional route params and database access.
 		 * @returns Redirect response to the CMS tutorials index.
@@ -119,10 +109,8 @@ export default createController(routes.cms.tutorials, {
 		}),
 
 		/**
-		 * Loads tutorial data for the edit form or returns a CMS-scoped 404 state.
-		 *
-		 * Returning the action view with a 404 status keeps the CMS layout and messaging
-		 * consistent with other missing-resource flows.
+		 * An unknown id renders the action view with a 404 status, keeping CMS layout and
+		 * messaging consistent with other missing-resource flows.
 		 *
 		 * @param ctx Request context containing route params and database access.
 		 * @returns HTML response for either the populated edit form or not-found model.
@@ -152,10 +140,8 @@ export default createController(routes.cms.tutorials, {
 		}),
 
 		/**
-		 * Renders the blank tutorial form used by CMS create flows.
-		 *
-		 * Uses a dedicated `new` view-model state so the template can reuse the same action view
-		 * as edit while keeping default field semantics explicit.
+		 * A dedicated `new` view-model state lets the template reuse the edit action view while
+		 * keeping default field semantics explicit.
 		 *
 		 * @returns HTML response with an empty tutorial form model.
 		 */
@@ -166,10 +152,8 @@ export default createController(routes.cms.tutorials, {
 		},
 
 		/**
-		 * Updates an existing tutorial from validated form input.
-		 *
-		 * Treats missing auth or id as redirect-only failures, and only renders 404 when the
-		 * referenced record no longer exists after validation.
+		 * Missing auth or id ends in a redirect, and the 404 view appears once validation passes
+		 * and the referenced record turns out to be gone.
 		 *
 		 * @param ctx Request context with route params, form data, and database access.
 		 * @returns Redirect response on success/guard failures, or 404 CMS action view when missing.

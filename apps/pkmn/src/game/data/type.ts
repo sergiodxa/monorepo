@@ -1,13 +1,8 @@
 /**
- * Centralizes the module-level type taxonomy and effectiveness primitives used by the
- * game data layer. It defines the canonical identifiers for elemental categories and
- * the numeric effectiveness values that other systems can reuse when expressing
- * interactions between typed entities.
- *
- * This module also provides the generic matchup shape for mapping relationships across
- * those identifiers in a consistent way. By keeping these shared data contracts in one
- * place, the rest of the codebase can depend on stable, content-agnostic structures for
- * type-based rules and lookups.
+ * Centralizes the type taxonomy and effectiveness primitives used by the
+ * game data layer: elemental category identifiers, numeric effectiveness
+ * values, and the generic matchup shape for mapping relationships between
+ * them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

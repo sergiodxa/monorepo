@@ -46,11 +46,9 @@ vi.doMock("cloudflare:workers", () => ({ env: { R2: countingBucket } }));
 let { getSigningKey, invalidateSigningKeys } = await import("~/app/services/signing-keys");
 
 /**
- * Writes one key into the bucket, so a read finds a key already there.
- *
- * A bucket with a key in it costs one listing to read, which makes the counts a test
- * asserts on say what they mean. Reading an empty bucket mints a key and reads again,
- * so it costs two — covered on its own below.
+ * Writes one key into the bucket, so a read finds one already there and costs
+ * a single listing, the count other tests assert on. An empty bucket instead
+ * mints a key and reads again, costing two, covered separately below.
  */
 async function seedKey(): Promise<void> {
 	let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
@@ -116,11 +114,14 @@ describe("getSigningKey", () => {
 		expect(listCalls).toBe(2);
 	});
 
+	/**
+	 * Minting reads again afterward so the result matches what the next isolate
+	 * will see, which is the second listing; both concurrent requests share that
+	 * one mint.
+	 */
 	test("mints one key on an empty bucket, however many requests arrive at once", async () => {
 		let [first, second] = await Promise.all([getSigningKey(), getSigningKey()]);
 
-		// Minting reads again so the result matches what the next isolate will see, which
-		// is the second listing. Both requests share the one mint.
 		expect(listCalls).toBe(2);
 		expect(first).toHaveLength(1);
 		expect(second).toBe(first);

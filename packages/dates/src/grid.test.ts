@@ -1,7 +1,7 @@
 /**
- * Tests for the day grids: that a year enumerates every day including leap day, that
- * a rolling window is exactly as long as asked, and that week bucketing keeps the
- * partial weeks at both ends of a range instead of padding or dropping them.
+ * Tests for the day grids: that a year enumerates every day including leap day, that a
+ * rolling window is exactly as long as asked, and that week bucketing keeps every day in
+ * its partial week at both ends of a range.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -101,8 +101,8 @@ describe("groupByWeek", () => {
 		expect(weeks.flat()).toHaveLength(365);
 	});
 
+	/** 2025-01-01 is a Wednesday, so a Sunday-based first week holds four days. */
 	test("keeps the first week of 2025 partial", () => {
-		// 2025-01-01 is a Wednesday, so a Sunday-based first week holds four days.
 		let days = daysOfYear(2025, "UTC").slice(0, 7);
 		expect(
 			groupByWeek(days, { weekStartsOn: 0, timeZone: "UTC" })

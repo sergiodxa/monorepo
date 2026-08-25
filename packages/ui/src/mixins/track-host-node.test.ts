@@ -1,8 +1,7 @@
 /**
  * Unit tests for the host-node lifecycle cache in
  * {@link "./track-host-node"}: every assertion drives a plain `EventTarget`
- * standing in for a mixin handle through its `insert`/`remove` events, with
- * no DOM and no rendering involved.
+ * standing in for a mixin handle through its `insert`/`remove` events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

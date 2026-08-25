@@ -156,7 +156,7 @@ describe("retention sweeps", () => {
 			let old = await db.findOne(cronJobPings, { where: { id: "old" } });
 			expect(old?.source_ip).toBeNull();
 			expect(old?.user_agent).toBeNull();
-			/** The rest of the row is untouched — this is field retention, not row retention. */
+			/** The rest of the row survives untouched: this sweep clears fields, keeping the row. */
 			expect(old?.cron_job_monitor_id).toBe("monitor-1");
 			expect(old?.created_at).toBe(100);
 

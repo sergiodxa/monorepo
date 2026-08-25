@@ -9,9 +9,8 @@ export type CornerShape = "squircle" | "bevel" | "notch";
 
 /**
  * The primitive `corner-shape` utility. Composes `u.supports()` so the
- * declaration only applies behind `@supports`, keeping an unsupported
- * browser on its normal `border-radius` shape instead of getting no corner
- * treatment at all.
+ * declaration only applies behind `@supports`, leaving unsupported
+ * browsers with their normal `border-radius` shape.
  *
  * @example u.corner("squircle")
  * @example css({ "@supports (corner-shape: squircle)": { cornerShape: "squircle" } })

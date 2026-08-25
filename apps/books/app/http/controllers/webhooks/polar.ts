@@ -35,8 +35,7 @@ const TIERS: Record<string, string> = {
  * @param request - The incoming webhook request, for its signature headers and raw body.
  * @param log - The request logger, so the outcome lands in the same trace as the request.
  * @returns `success` when the delivery was handled, `failure` with the reason otherwise.
- * The webhook secret never reaches the logs or the response: only the signature verdict
- * does.
+ * Only the signature verdict reaches the logs or the response.
  */
 async function processWebhook(request: Request, log: Logger): Promise<Result<"OK", Error>> {
 	let polar = getServiceContainer().get(PolarClient);
@@ -59,9 +58,9 @@ async function processWebhook(request: Request, log: Logger): Promise<Result<"OK
 		let buttondown = getServiceContainer().get(Buttondown);
 
 		/**
-		 * Only an existing subscriber is tagged. Someone who bought without ever joining
-		 * the newsletter is recorded in the log and otherwise left alone — subscribing
-		 * them here would add an address that never opted in.
+		 * Tagging reaches only a buyer already subscribed, so every tagged address
+		 * opted into the newsletter itself; an unsubscribed buyer's purchase is
+		 * recorded in the log alone.
 		 */
 		if (await buttondown.isSubscribed(customerEmail)) {
 			let tier = TIERS[productId];

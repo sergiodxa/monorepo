@@ -1,13 +1,9 @@
 /**
- * Tests for the new alert page controller. `cloudflare:workers` is mocked because
- * `~/app/data/monitor` (used here to populate the monitor-scope dropdown) reads `env`
- * at module load — following the exact pattern established in
- * `app/http/controllers/actions/monitors.test.ts`. It renders an empty
- * `AlertFormFields` form, so this only checks the 200 response and that the form's
- * fields are present. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded
- * directly by a fake middleware standing in for the real `auth`/`requireUser`/
- * `requireTeam` chain, matching the template in
- * `app/http/controllers/app/team/http-monitors.test.ts`.
+ * Tests for the new alert page controller. `cloudflare:workers` is mocked
+ * because `~/app/data/monitor` reads `env` at module load. The rendered form
+ * is empty, so assertions check structure and field presence only, with
+ * `ctx.team`/`ctx.membership`/`ctx.teams`/auth state seeded directly by a
+ * fake middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -123,14 +119,17 @@ describe("alertNew", () => {
 		expect(body).toContain(`action="${routes.actions.alert.create.href({ team: team.slug })}"`);
 	});
 
+	/**
+	 * Every channel's fields stay in the document because the validator only
+	 * requires the selected strategy's, and CSS alone switches which one shows,
+	 * so the picker needs no JavaScript.
+	 */
 	test("posts every channel's inputs while showing only the selected channel", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(db, team, membership);
 		let body = await response.text();
 
-		// Every channel's inputs stay in the document — the validator only requires the
-		// selected strategy's, and the action reads no others.
 		for (let name of [
 			"email_to",
 			"email_subject_prefix",
@@ -143,10 +142,8 @@ describe("alertNew", () => {
 			expect(body).toContain(`name="${name}"`);
 		}
 
-		// The webhook signing note stays with the field it explains.
 		expect(body).toContain("Webhook-Signature");
 
-		// What hides the other three is CSS alone, so the picker works with no JavaScript.
 		for (let channel of ["email", "webhook", "slack", "discord"]) {
 			expect(body).toContain(`data-channel="${channel}"`);
 			expect(body).toContain(
@@ -175,8 +172,10 @@ describe("alertNew", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Homepage");
-		// The per-type group and its "all of them" choice come with it, so a team can watch
-		// a whole kind of monitor without naming each one.
+		/**
+		 * The per-type group's "all of them" option lets a team watch a whole
+		 * kind of monitor without naming each one individually.
+		 */
 		expect(body).toContain("HTTP Monitors");
 		expect(body).toContain('value="type:http"');
 	});
@@ -241,21 +240,20 @@ describe("alertNew", () => {
 		expect(/<select[^>]*defaultvalue=/i.test(body)).toBe(false);
 	});
 
+	/**
+	 * Each field's spacing comes only from the card's single gap rule, so an
+	 * extra trailing margin would double it, and the body pads every edge since
+	 * the last field ends flush with it.
+	 */
 	test("spaces the card's fields from the card alone, never twice", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await send(db, team, membership)).text();
 
-		// The card body states the field rhythm once, as a gap, in a single rule.
 		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
-		// And nothing inside restates it as its own trailing margin, which would
-		// leave that one field sitting on a doubled gap.
 		expect(body).not.toContain("margin-block-end: 28px");
-		// The body pads all four edges now that the last field ends flush with it.
 		expect(body).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
 
-		// The channel fieldsets stack on that same rhythm from their own container, so
-		// the three hidden ones cost no space and the visible one is spaced like a field.
 		expect(body).toContain('<fieldset data-channel="email"');
 	});
 });

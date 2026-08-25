@@ -2,10 +2,10 @@
  * A native `<select>` styled as a bordered, rounded field and progressively
  * upgraded with customizable-select rendering — a custom trigger button, a
  * value slot mirroring the current selection, and richly styled options and
- * groups — wherever the browser resolves `appearance: base-select`. A
- * browser that doesn't resolve it keeps the platform's own default dropdown
- * rendering instead, since the trigger, value, and picker styling all layer
- * on top of ordinary `<option>`/`<optgroup>` markup rather than replacing it.
+ * groups — wherever the browser resolves `appearance: base-select`. The
+ * trigger, value, and picker styling layer on top of ordinary
+ * `<option>`/`<optgroup>` markup, so every browser renders a working
+ * dropdown from that same markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,8 +37,7 @@ import { attrs } from "remix/ui";
 /**
  * The `<selectedcontent>` element mirrors the currently selected
  * `<option>`'s rendered content inside a customized `<select>`'s trigger
- * button. It isn't part of this runtime's own JSX element catalog yet, so
- * its attribute shape is declared here, matching a plain `<span>`'s.
+ * button, its attribute shape declared here to match a plain `<span>`'s.
  */
 declare global {
 	namespace JSX {
@@ -76,11 +75,8 @@ export namespace Select {
 
 	/**
 	 * Every native `<select>` attribute, unchanged, plus the `mix` passthrough.
-	 * `multiple` and a `size` greater than `1` both remain fully functional,
-	 * but switch the browser back to its plain list-box rendering — see
-	 * {@link Select}'s own description for what that means for the trigger and
-	 * option styling. `role` is left off, since the platform already assigns
-	 * a select element the correct implicit role on its own.
+	 * `multiple` and a `size` greater than `1` remain functional but switch
+	 * rendering back to the plain list-box; `role` is already implicit.
 	 */
 	export interface Props extends Omit<TagProps<"select">, "role"> {
 		/** Semantic color role for the focus-visible ring. Defaults to {@link DEFAULT_COLOR}. */
@@ -95,9 +91,8 @@ export namespace Select {
 
 	/**
 	 * Every attribute a plain `<span>` accepts, unchanged, plus the `mix`
-	 * passthrough. Any `children` supplied render only where the browser
-	 * hasn't wired up the live-mirrored selection content — see
-	 * {@link Select.Value}'s own description.
+	 * passthrough. Any `children` supplied render as a fallback in browsers
+	 * treating `<selectedcontent>` as unknown — see {@link Select.Value}.
 	 */
 	export interface ValueProps extends TagProps<"selectedcontent"> {}
 
@@ -114,38 +109,9 @@ export namespace Select {
 }
 
 /**
- * Renders a native `<select>` host styled as a bordered, rounded field and
- * opted into customizable-select rendering through `appearance: base-select`.
- * Where a browser resolves that value, an {@link Select.Trigger} placed as
- * this host's first child replaces the platform's own trigger with fully
- * styled content, the dropdown surface itself is styled through the
- * `::picker(select)` pseudo-element, and every {@link Select.Option} and
- * {@link Select.Group} renders with this library's own option and group
- * styling. Where a browser doesn't resolve it, the parser still accepts
- * {@link Select.Trigger} as valid content but the browser's own stylesheet
- * keeps it out of the render tree, so what's left is a plain native dropdown
- * built from the same `<option>`/`<optgroup>` markup — the box styling on
- * this host itself (border, radius, padding, color, and every interaction
- * state below) is ordinary CSS that always applies regardless.
- *
- * Hover, focus, and disabled states all ride this host's own native
- * `:hover`, `:focus-visible`, and `:disabled` pseudo-classes — there's no
- * tracked selection state anywhere in this module. Invalid styling reads
- * `[aria-invalid="true"]` (set directly, or mirrored in by a validation
- * script) together with `:user-invalid` (the platform's own post-interaction
- * validity signal), colored in the semantic danger tone regardless of
- * `color`. The keyboard focus ring reads `color` instead, defaulting to
- * {@link DEFAULT_COLOR}.
- *
- * A dimmed placeholder look — the one thing native `<select>` has no
- * built-in concept for — follows a plain convention: give the placeholder
- * {@link Select.Option} an empty `value` and `disabled`, and this host mutes
- * {@link Select.Value}'s color whenever that option is the checked one.
- *
- * In dev mode, setting `multiple` or a `size` greater than `1` logs a
- * `console.warn`, since both silently drop the customizable-select
- * rendering in favor of the browser's plain list-box, which can otherwise
- * look like a styling regression rather than a platform limit.
+ * Renders a native `<select>` styled as a bordered, rounded field that
+ * progressively upgrades to customizable-select rendering via
+ * `appearance: base-select`, falling back to the platform's own dropdown.
  *
  * @param handle Runtime handle carrying the host `<select>`'s props.
  * @returns The render function producing the field's markup.
@@ -209,17 +175,10 @@ export function Select(handle: Handle<Select.Props>) {
 			when('&[aria-invalid="true"], &:user-invalid', [
 				outlineWidth("2px"),
 				outlineStyle("solid"),
-				// No bare setter exists yet for outline-offset alone.
 				raw({ outlineOffset: "0px" }),
 			]),
 			when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 
-			// `&::picker(select)`/`&::picker-icon` selector blocks must stay
-			// wrapped only in `raw()`, never `when()` — nesting either through
-			// `when()` trips a pre-existing remix/ui generic-variance bug
-			// specific to `HTMLSelectElement` (a `remove(): void` vs
-			// `remove(): Element` structural mismatch), which only surfaces in
-			// a consuming app's stricter typecheck.
 			raw({
 				"&::picker(select)": {
 					margin: "0",
@@ -299,14 +258,9 @@ export function Select(handle: Handle<Select.Props>) {
 }
 
 /**
- * Renders {@link Select}'s customizable trigger: a native `<button>`, placed
- * as {@link Select}'s first child, that a supporting browser shows in place
- * of its own default trigger. Left without `children`, it renders
- * {@link Select.Value} followed by a chevron glyph that rotates while the
- * dropdown is open; passing `children` replaces that default entirely with
- * whatever content a consumer composes instead. The button carries no border,
- * background, or padding of its own — it fills {@link Select}'s own field
- * box exactly, so the styled surface stays a single, seamless shape.
+ * Renders {@link Select}'s customizable trigger: a native `<button>` placed
+ * as {@link Select}'s first child, showing {@link Select.Value} and a
+ * rotating chevron by default, filling the field's box edge to edge.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the trigger's markup.
@@ -368,13 +322,9 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 };
 
 /**
- * Renders a native `<selectedcontent>` element inside {@link Select.Trigger}:
- * a live-mirrored copy of the currently selected {@link Select.Option}'s
- * content, kept in sync by the platform with no script of this library's
- * own. Any `children` supplied render only in a browser that treats
- * `<selectedcontent>` as a plain unknown element instead of mirroring the
- * selection into it — a static fallback for that case, never shown
- * alongside the mirrored content.
+ * Renders a native `<selectedcontent>` element inside {@link Select.Trigger},
+ * mirroring the currently selected {@link Select.Option}'s content via the
+ * platform; `children` render as a fallback where it's treated as unknown.
  *
  * @param handle Runtime handle carrying the host element's props.
  * @returns The render function producing the value slot's markup.
@@ -390,30 +340,16 @@ Select.Value = function SelectValue(handle: Handle<Select.ValueProps>) {
 		return (
 			<selectedcontent
 				{...rest}
-				mix={[
-					// `flex: "1"` shorthand decomposes to grow(1) + shrink(1) +
-					// basis("0%") — no single utility covers the shorthand
-					// itself (see `packages/u/src/layout/grow.ts` docs).
-					grow(),
-					shrink(1),
-					basis("0%"),
-					truncate(),
-					textAlign("start"),
-					mix,
-				]}
+				mix={[grow(), shrink(1), basis("0%"), truncate(), textAlign("start"), mix]}
 			/>
 		);
 	};
 };
 
 /**
- * Renders a native `<option>`, styled for the rounded, padded row a
+ * Renders a native `<option>` styled for the rounded, padded row a
  * supporting browser shows inside {@link Select}'s `::picker(select)`
- * dropdown surface. Hover, keyboard-highlighted, selected, and disabled looks
- * read the option's own `:hover`, `:focus`, `:checked`, and `:disabled`
- * states — a browser that doesn't resolve `appearance: base-select` ignores
- * this styling and renders the option through its own plain list rendering
- * instead, with no loss of the option's value or text.
+ * dropdown, reading its own hover, focus, checked, and disabled states.
  *
  * @param handle Runtime handle carrying the host `<option>`'s props.
  * @returns The render function producing the option's markup.
@@ -454,14 +390,9 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 };
 
 /**
- * Renders a native `<optgroup>`, styled as a padded run of
- * {@link Select.Option}s set off from the group before it by a block-start
- * divider — the first group in a {@link Select} carries no divider of its
- * own, since there's nothing above it to separate from.
- *
- * In dev mode, an `<optgroup>` with no `label` logs a `console.warn`, since
- * it would otherwise render with no visible heading for the options grouped
- * under it.
+ * Renders a native `<optgroup>` styled as a padded run of
+ * {@link Select.Option}s, set off from the group before it by a
+ * block-start divider on every group after the first.
  *
  * @param handle Runtime handle carrying the host `<optgroup>`'s props.
  * @returns The render function producing the group's markup.

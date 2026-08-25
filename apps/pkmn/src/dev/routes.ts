@@ -1,9 +1,7 @@
 /**
- * Route table for the dev-tools server. Declares the tool-page URLs (launcher
- * plus the four editor placeholders), the client-bundle asset URL, and the
- * export form actions (text, binary, and sprite). The server matches these to
- * serve the static HTML shell, the Bun-built client JS, and to handle disk-write
- * actions.
+ * Route table for the dev-tools server: the tool-page URLs, the client-bundle
+ * asset URL, and the export form actions. The server matches these to serve the
+ * static HTML shell, the Bun-built client JS, and the disk-write actions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,12 +10,9 @@
 import { form, get, route } from "remix/routes";
 
 /**
- * The dev-tools routes. Every tool page (`/`, `/sprite`, `/map`, `/species`,
- * `/trainer`) serves the same static shell — client-side view switching handles
- * navigation between them without a server round-trip. `client` serves the
- * bundled browser JS. `export` persists UTF-8 text; `exportBinary` persists
- * base64-decoded bytes; `exportSprite` writes a PNG and registers it in the
- * asset manifest. All persist via `action`.
+ * Every tool page serves the same static shell, leaving navigation between them to
+ * client-side view switching. `client` serves the bundled browser JS; each
+ * `export*` form persists to disk through its own action.
  */
 export default route({
 	launcher: get("/"),

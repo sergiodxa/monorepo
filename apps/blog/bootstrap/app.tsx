@@ -56,23 +56,21 @@ import session from "~/app/http/middleware/session";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
-/** Redirects anonymous CMS requests to login without changing request context typing. */
+/** Redirects anonymous CMS requests to login, preserving the request context typing. */
 let requireCMSAuth: Middleware = (_ctx, next) => {
 	if (isAuthenticated()) return next();
 	return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 };
 
 /**
- * Builds the blog HTTP router with global middleware, route mappings,
- * CMS auth guards, and the HTML 404 fallback handler.
+ * Builds the blog HTTP router with global middleware, route mappings, CMS auth
+ * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
+ * middleware sees a plain `GET` and treats a `HEAD` probe as the page request.
  * @param env Worker environment bindings injected into request context.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
 export default function createApplication(env: App.Env) {
 	let globalMiddleware: Array<Middleware<any>> = [
-		// First, so every middleware after it — the canonical-host redirects, the auth
-		// guard, cross-origin protection — sees a plain `GET` and treats a `HEAD` probe
-		// exactly as it would the page request behind it.
 		headRequests(),
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
@@ -154,10 +152,9 @@ export default function createApplication(env: App.Env) {
 }
 
 /**
- * Creates the request-scoped renderer used by controllers via `ctx.render`.
- *
- * Exported so the doctype and content type it guarantees can be asserted without
- * standing up the whole router.
+ * Creates the request-scoped renderer used by controllers via `ctx.render`,
+ * exported so its guarantees can be asserted directly. `createHtmlResponse`
+ * leads the stream with `<!DOCTYPE html>`, keeping every page in standards mode.
  */
 export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 	return async function render(ViewComponent, viewModel, options?: RenderOptions) {
@@ -171,12 +168,6 @@ export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 		let headers = new Headers(options?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 
-		// `createHtmlResponse` rather than `new Response`, because it prepends
-		// `<!DOCTYPE html>` to the stream's first chunk — the only place the doctype
-		// can go, since JSX escapes text and the renderer exposes no option for it.
-		// Without it every page parses in quirks mode. Fragment responses get one
-		// too, which is harmless: `remix/ui` strips any doctype out of frame content
-		// before inserting it, on the server and in the browser alike.
 		return createHtmlResponse(stream, {
 			status: options?.status ?? 200,
 			headers,
@@ -184,7 +175,6 @@ export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 	};
 }
 
-/** Resolves SSR frames using the current request URL and forwarded headers. */
 async function resolveSsrFrame(request: Request, src: string, context?: ResolveFrameContext) {
 	let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url);
 	let headers = new Headers(request.headers);

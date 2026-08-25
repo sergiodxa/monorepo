@@ -1,10 +1,6 @@
 /**
- * Centralizes the stat identifiers used by the game data layer and provides the
- * canonical set of keys for referencing per-stat values consistently.
- *
- * This module defines the shared stat enum and the corresponding mapped shape
- * for complete stat collections, so other modules can depend on a single source
- * of truth when reading, storing, or transforming stat data.
+ * Centralizes the stat identifiers used by the game data layer, giving
+ * other modules one canonical set of keys for per-stat values.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

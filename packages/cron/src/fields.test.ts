@@ -171,7 +171,6 @@ describe("parseCronField", () => {
 	});
 
 	test("reports a position relative to the whole expression", () => {
-		// "0 0 * * 8": the day-of-week field starts at index 8 of the expression.
 		let result = parseCronField(DAY_OF_WEEK, "0 0 * * 8", "8", 8);
 		if (isSuccess(result)) throw new Error("expected a failure");
 		expect(result.error.position).toBe(8);

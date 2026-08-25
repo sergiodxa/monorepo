@@ -51,8 +51,6 @@ describe("nested wrappers", () => {
 		let mixin = hover([bg("brand.tint"), border("brand")]);
 		let css = await serialize(mixin);
 
-		// One block, not two: a second `&:hover` would mean the wrapper replaced
-		// rather than merged.
 		expect(css.match(/&:hover/g)).toHaveLength(1);
 		expect(await declarations(mixin)).toEqual([
 			"background-color: var(--ui-brand-bg-tint)",

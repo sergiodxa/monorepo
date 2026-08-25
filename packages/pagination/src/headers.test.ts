@@ -2,7 +2,7 @@
  * Tests for `paginate()`.
  *
  * `Link` is shared with resource hints, so the merge is what is really under test:
- * a preload hint must survive, a second call must not duplicate anything, and a hint
+ * a preload hint must survive, a second call must be idempotent, and a hint
  * whose URL contains a comma must come back out intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -22,7 +22,6 @@ function offsetPage(page: number, perPage: number, total: number): Page<number> 
 	return { items: [], pagination: new Pagination({ page, perPage, total }) };
 }
 
-/** Builds a keyset page carrying the given cursors and no rows. */
 function keysetPage(next: string | null, prev: string | null): KeysetPage<number> {
 	return { items: [], cursors: { next, prev } };
 }

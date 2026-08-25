@@ -1,19 +1,8 @@
 /**
- * Email-safe uptime bar: a caption naming the range, one row of equal-width table
- * cells filled with the colour of each period's status, and a legend naming the
- * colours. Everything it renders is a table with inline styles, which is the only
- * layout every mail client agrees on.
- *
- * This is a second implementation of the bar rather than a reuse of the one the web
- * pages render, and deliberately so. That component is built on the app's CSS mixin
- * system: `mix={[...]}` compiles to class names in a stylesheet mail clients strip,
- * its row is a flex container Gmail drops, and every colour is a `--ui-*` custom
- * property Gmail also drops. All three fail at once and none of them degrades into
- * anything readable — the row would collapse and the bars would have no fill. The
- * construction that survives is different enough that parameterising the web
- * component would put two unrelated code paths in one file, so the duplication is
- * the cheaper of the two. The colours come from `shared/palette`, which holds the
- * same tokens the web component asks for, so the two agree.
+ * Email-safe uptime bar: a caption naming the range, one row of equal-width
+ * table cells filled with each period's status colour, and a legend naming the
+ * colours. Every part of it is a table with inline styles from `shared/palette`,
+ * the one construction every mail client agrees on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,7 +18,7 @@ import {
 	UP_COLOR,
 } from "~/app/emails/shared/palette";
 
-/** Height of the bar row in pixels, matching the web bar so the two read the same. */
+/** Height of the bar row in pixels. */
 const BAR_HEIGHT = "32";
 
 /** Side of a legend swatch in pixels. */
@@ -45,10 +34,9 @@ const SEGMENT_GAP = "2";
  */
 const FILLER = " ";
 
-/** Shared style of every caption and legend label. */
 const LABEL_STYLE = `font-family:inherit;font-size:12px;line-height:1.5;color:${MUTED_COLOR};white-space:nowrap;`;
 
-/** Everything a legend swatch needs except its fill, which the entry supplies. */
+/** Legend swatch style; the entry appends the fill it names. */
 const SWATCH_STYLE = `width:${SWATCH_SIZE}px;height:${SWATCH_SIZE}px;border-radius:2px;font-size:0;line-height:0;`;
 
 export namespace UptimeBar {
@@ -77,11 +65,9 @@ export namespace UptimeBar {
 }
 
 /**
- * Fill for a status, total over the union so an unfilled state is impossible.
- *
- * Exported because a bar is not the only place a status is coloured — a digest that lists a
- * team's monitors as rows paints the same four states — and two mappings of the same four
- * words would eventually disagree about which green.
+ * Fill for a status, total over the union so every state has a colour. Exported
+ * so a digest painting the same four states shares this one mapping, which keeps
+ * both of them on the same green.
  *
  * @param status - Status to paint.
  * @returns The colour, as a literal every mail client keeps.
@@ -94,30 +80,25 @@ export function statusFill(status: UptimeBar.Status): string {
 }
 
 /**
- * The name a status answers `palette`'s dark rules by, in the two properties a status is
- * ever painted in: `fill` for a box behind it, `ink` for the word itself.
- *
- * The inline colour stays whatever {@link statusFill} returned, so a client that strips
- * the stylesheet still shows the light bar it always did; the class is only what the
- * dark block has to aim at.
+ * The class `palette`'s dark rules aim at, for the two properties a status is
+ * painted in: `fill` for a box, `ink` for the word. The inline colour stays as
+ * {@link statusFill} returned it, so a stripped stylesheet keeps the light bar.
  *
  * @param status - Status being painted.
  * @param property - Whether it is being painted as a fill or as copy.
- * @returns The class name, or none for a state that has no dark counterpart.
+ * @returns The class name; an unchecked period names a fill only, since the
+ * muted copy colour the kit already flips covers it as a word.
  * @example <td class={statusClass(status, "fill")} style={`background-color:${statusFill(status)};`} />
  */
 export function statusClass(status: UptimeBar.Status, property: "fill" | "ink"): string {
-	// An unchecked period is a fill and never a word: the digest prints those rows in the
-	// muted copy colour, which the kit already flips.
 	if (status === null) return property === "fill" ? "uptime-fill-none" : "";
 	return `uptime-${property}-${status}`;
 }
 
 /**
- * The four legend entries, each paired with the fill it names. The caller renders them
- * as sibling cells rather than as a nested table per entry — one table level fewer is
- * one less thing for Outlook's renderer to get wrong, and flattening them keeps every
- * cell individually keyed without needing a fragment inside the row.
+ * The four legend entries, each paired with the fill it names. The caller
+ * renders them as sibling cells, which keeps Outlook to a single table level and
+ * leaves every cell individually keyed.
  */
 function legendEntries(labels: UptimeBar.Labels): { status: UptimeBar.Status; label: string }[] {
 	return [
@@ -129,11 +110,9 @@ function legendEntries(labels: UptimeBar.Labels): { status: UptimeBar.Status; la
 }
 
 /**
- * Renders `segments` as a row of coloured cells between its caption and its legend.
- *
- * The row is `table-layout:fixed` with no per-cell width, so the segments divide the
- * card evenly however many of them there are and the bar never trails off into empty
- * space.
+ * Renders `segments` as a row of coloured cells between its caption and its
+ * legend; an empty range renders caption and legend alone. `table-layout:fixed`
+ * with no per-cell width divides the card evenly however many segments there are.
  *
  * @example <UptimeBar segments={hours} labels={labels} />
  */
@@ -176,7 +155,6 @@ export function UptimeBar(handle: Handle<UptimeBar.Props>) {
 						</td>
 					</tr>
 
-					{/* With no segments the row renders as a hairline rather than as a bar. */}
 					{segments.length > 0 ? (
 						<tr>
 							<td>

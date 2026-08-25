@@ -18,7 +18,6 @@ import { fetchApp } from "~/app/lib/test/router";
 /** The hosted checkout URL the fake answers with, which is where the visitor must land. */
 const CHECKOUT_URL = "https://polar.test/checkout/abc";
 
-/** Requests a checkout against a scripted billing client. */
 function start(polar: FakePolarClient, path: string) {
 	return fetchApp(path, { services: [[PolarClient, polar]] });
 }

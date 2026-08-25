@@ -1,6 +1,7 @@
 /**
  * Tests for the blog-saas Analytics Engine query helper — the SQL-injection date
- * guard and page-view row parsing in `queryDailyPageViews`.
+ * guard and page-view row parsing in `queryDailyPageViews`. The account mock runs
+ * before the dynamic import so `env` carries credentials when the helper loads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,18 +11,14 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-// The helper reads `env` at import time, and the mock only reaches imports that run after
-// it, so the account credentials are published before the dynamic import below.
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 }));
 
 let { queryDailyPageViews } = await import("./analytics");
 
-/** The Analytics Engine SQL API endpoint the helper POSTs to. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
 
-/** MSW server intercepting the Analytics Engine SQL API. */
 let server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -30,8 +27,6 @@ afterAll(() => server.close());
 
 describe("queryDailyPageViews", () => {
 	test("rejects a non-YYYY-MM-DD date without querying (injection guard)", async () => {
-		// Any request would fail the test both via this handler and the
-		// `onUnhandledRequest: "error"` guard, so a bad date must not query at all.
 		server.use(
 			http.post(SQL_URL, () => {
 				throw new Error("queryDailyPageViews must not query for an invalid date");

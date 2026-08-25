@@ -1,3 +1,9 @@
+/**
+ * Collects and serializes sitemap entries as sitemap protocol XML.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { XML } from "@pkg/xml";
 
 import { createURLChildren } from "./lib/create-url-children";

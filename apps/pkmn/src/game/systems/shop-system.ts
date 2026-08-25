@@ -1,13 +1,8 @@
 /**
- * Shop system utilities for reading and mutating the money balance attached to player entities and for
- * exchanging that balance for inventory items. This module centralizes the rules for buying, selling, and
- * adjusting currency so callers interact with money through a small, predictable surface instead of updating
- * world state manually.
- *
- * The functions here keep the module's responsibility as a focused ECS system layer: they coordinate
- * money-specific state transitions, enforce a non-negative balance invariant, and lean on the inventory
- * system for the item side of a transaction so purchases and sales stay consistent with the rest of the
- * engine. Pricing is read from authored item data, keeping the engine agnostic to any specific content.
+ * Shop system utilities for reading and mutating a player's money balance
+ * and exchanging it for inventory items, enforcing a non-negative balance
+ * invariant so purchases and sales stay consistent with the rest of the
+ * engine.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,12 +33,9 @@ export function getMoney(world: World, playerId: PlayerId): number {
 }
 
 /**
- * The most copies of a `price`-each item a `money` balance can afford at once.
- *
- * Returns `min(MAX_PURCHASE_COUNT, floor(money / price))`, so it is `0` when the
- * balance cannot cover a single copy and caps at `MAX_PURCHASE_COUNT` however
- * large the balance grows. A non-positive price yields `0`, since such an item
- * has no meaningful per-unit cost to divide by.
+ * The most copies of a `price`-each item a `money` balance can afford at
+ * once, capping at `MAX_PURCHASE_COUNT`; a non-positive price yields `0`
+ * since it has no meaningful per-unit cost to divide by.
  */
 export function maxAffordable(money: number, price: number): number {
 	if (price <= 0) return 0;

@@ -120,7 +120,6 @@ describe("createNoFilesystemWorkspace", () => {
 			expect(resolved.error.code).toBe("tool-error");
 			expect(resolved.error.message).toContain("no filesystem");
 		}
-		// Cleanup is a no-op rather than an error: the runner always calls it.
 		expect(await workspace.cleanup()).toBeUndefined();
 	});
 });
@@ -132,12 +131,9 @@ describe("the Workers entry point's import graph", () => {
 		await walk(resolve(import.meta.dirname, "workers.ts"));
 
 		/**
-		 * Follow every relative import from a module, recording any dependency on
-		 * `bun`/`bun:*` specifiers or the `Bun` global — the two things that make a
-		 * module unloadable in a V8-isolate runtime. `node:*` is deliberately
-		 * allowed: those resolve under the `nodejs_compat` flag, and the paths that
-		 * would actually call into them are gated behind grants a hosted run never
-		 * makes (see the `permissions` row of ADR-027's portability table).
+		 * Walks relative imports, flagging `bun`/`bun:*` specifiers and the `Bun`
+		 * global that a V8-isolate runtime cannot load. `node:*` stays allowed since
+		 * it resolves under `nodejs_compat`, behind grants a hosted run never makes.
 		 */
 		async function walk(path: string): Promise<void> {
 			if (visited.has(path)) return;
@@ -158,8 +154,6 @@ describe("the Workers entry point's import graph", () => {
 		}
 
 		expect(offences).toEqual([]);
-		// A guard that silently stopped walking would also pass, so assert it
-		// actually reached the core it is meant to be vouching for.
 		expect([...visited].map((path) => path.replace(`${import.meta.dirname}/`, ""))).toContain(
 			"executor.ts",
 		);

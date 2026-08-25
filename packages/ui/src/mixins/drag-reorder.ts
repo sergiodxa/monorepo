@@ -1,19 +1,8 @@
 /**
  * Pointer-driven reorder for a GridList or Tree row list: turns a pointer
- * press on a row's drag handle into a `DragSession`, tracks whichever row
- * the pointer currently sits over and the drop position computed against
- * it, mirrors that onto the hovered row as a `data-drop-position` attribute
- * its own drop-indicator styling reads, and dispatches `ui:reorder` once the
- * pointer releases over a valid target.
- *
- * Why JS: reordering rows by dragging one over another has no HTML
- * equivalent — the platform exposes no declarative way to turn a pointer
- * press/move/release gesture into a computed "before", "after", or "on"
- * relationship between two rows.
- * No-JS baseline: rows still render in server order and stay fully usable;
- * only the drag gesture is unavailable, so a list that needs to stay
- * reorderable without it keeps a server-rendered fallback (move-up/move-down
- * buttons submitting a form) alongside this mixin.
+ * press on a row's drag handle into a drag session, tracks the row under
+ * the pointer and the computed drop position, and dispatches `ui:reorder`
+ * once the pointer releases over a valid target.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,38 +13,30 @@ import { createElement, createMixin, on } from "remix/ui";
 import type { DragSession } from "../behaviors/drag-session";
 
 /**
- * Attribute every reorderable row carries its stable identity on.
- * `dragReorder()` reads it to resolve which row the pointer is over and
- * writes {@link DRAG_REORDER_POSITION_ATTRIBUTE} and
- * {@link DRAG_REORDER_SOURCE_ATTRIBUTE} back onto the matching row; a
- * keyboard-navigation or selection mixin applied to the same rows shares
- * this attribute for its own row lookups.
+ * Attribute every reorderable row carries its stable identity on, read by
+ * {@link dragReorder} to resolve the row under the pointer and shared by
+ * other mixins on the same rows for their own row lookups.
  */
 export const DRAG_REORDER_ROW_ATTRIBUTE = "data-key";
 
 /**
- * Attribute a row's drag handle element carries. A pointer press only
- * starts a drag session when it originates on an element bearing this
- * attribute — never anywhere on the row — so a row's own interactive
- * content (an expand toggle, an inline action button) keeps its ordinary
- * pointer behavior untouched.
+ * Attribute a row's drag handle element carries; a drag session only
+ * starts from a pointer press that originates on this attribute, so a
+ * row's other interactive content keeps its ordinary pointer behavior.
  */
 export const DRAG_REORDER_HANDLE_ATTRIBUTE = "data-drag-handle";
 
 /**
- * Attribute a row carries to opt into accepting an "on" drop — nesting the
- * dragged row inside it — on top of the "before"/"after" reorder positions
- * every row accepts. A Tree branch row carries it; a flat GridList row, or a
- * Tree leaf that can't hold children, omits it and only ever resolves to
- * "before"/"after".
+ * Attribute a row carries to accept an "on" drop nesting the dragged row
+ * inside it, on top of the "before"/"after" positions every row accepts;
+ * a Tree branch row carries it, other rows resolve only to those two.
  */
 export const DRAG_REORDER_NESTABLE_ATTRIBUTE = "data-drop-nestable";
 
 /**
- * Attribute `dragReorder()` writes on the row currently tracked as the drop
- * target, set to the current {@link DragSession.Position} ("before",
- * "after", or "on"). A row's own styles — or a drop-indicator part nested
- * inside it — read this attribute to render the pending drop in place.
+ * Attribute {@link dragReorder} writes on the row tracked as the drop
+ * target, set to the current {@link DragSession.Position}, for a row's
+ * own styles or a nested drop-indicator part to render the pending drop.
  */
 export const DRAG_REORDER_POSITION_ATTRIBUTE = "data-drop-position";
 
@@ -76,11 +57,9 @@ declare global {
 }
 
 /**
- * Dispatched on a GridList or Tree's row-list host by {@link dragReorder}
- * once a drag session ends in a committed drop, carrying the dragged row's
- * key, the row it was dropped against, and the resolved position between
- * them — so a consumer can move the underlying data and re-render without
- * reading the `DragSession` instance itself.
+ * Dispatched on a row-list host by {@link dragReorder} once a drag session
+ * commits a drop, carrying the dragged row's key, the target row's key,
+ * and the resolved position, so a consumer can move data and re-render.
  */
 export class ReorderEvent extends Event {
 	/** Key of the row that was dragged. */
@@ -102,10 +81,9 @@ export class ReorderEvent extends Event {
 }
 
 /**
- * Finds the nearest reorderable row — identified by
- * {@link DRAG_REORDER_ROW_ATTRIBUTE} — containing `node`, scoped to rows
- * that fall inside `host` so a pointer that has strayed outside the list
- * entirely never resolves to a stale row from elsewhere on the page.
+ * Finds the nearest reorderable row containing `node`, scoped to rows
+ * inside `host` so a pointer that strays outside the list only ever
+ * resolves against rows that belong to it.
  *
  * @param host Row-list host the mixin is applied to.
  * @param node Candidate element to search upward from.
@@ -119,9 +97,8 @@ function findRow(host: HTMLElement, node: Element | null): HTMLElement | null {
 
 /**
  * Resolves the drop position a pointer at `clientY` implies against `row`:
- * a plain vertical midpoint split into "before"/"after" for a row that
- * doesn't carry {@link DRAG_REORDER_NESTABLE_ATTRIBUTE}, or a thirds split
- * adding a middle "on" band for a row that does.
+ * a vertical midpoint split into "before"/"after", or, when `row` carries
+ * {@link DRAG_REORDER_NESTABLE_ATTRIBUTE}, a thirds split adding "on".
  *
  * @param row Row currently under the pointer.
  * @param clientY Pointer's vertical viewport position.
@@ -141,22 +118,9 @@ function resolveDropPosition(row: HTMLElement, clientY: number): DragSession.Pos
 }
 
 /**
- * Adds pointer-driven reorder to a GridList or Tree's row-list host. A
- * pointer press on any element carrying {@link DRAG_REORDER_HANDLE_ATTRIBUTE}
- * starts `session` on the enclosing row (identified by
- * {@link DRAG_REORDER_ROW_ATTRIBUTE}); dragging over another row computes
- * "before", "after", or "on" from the pointer's position within it (see
- * {@link DRAG_REORDER_NESTABLE_ATTRIBUTE}) and records it on `session`;
- * releasing the pointer commits the drop and dispatches {@link ReorderEvent}
- * on the host. `Escape` or a `pointercancel` ends the session without
- * committing.
- *
- * Every `session` `"change"` re-scans the host's rows and mirrors the
- * current source and target onto them as
- * {@link DRAG_REORDER_SOURCE_ATTRIBUTE} and
- * {@link DRAG_REORDER_POSITION_ATTRIBUTE}, so a row's own styles — or a drop
- * indicator nested inside it — render purely from those attributes instead
- * of any component reading `session` directly.
+ * Adds pointer-driven reorder to a row-list host: a press on a
+ * {@link DRAG_REORDER_HANDLE_ATTRIBUTE} element starts `session` on its
+ * row, and releasing over a valid target dispatches {@link ReorderEvent}.
  *
  * @param session Drag session already constructed by the consumer, shared
  * with any drop zone or drop indicator observing the same drag.

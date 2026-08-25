@@ -46,10 +46,8 @@ export namespace Command {
 
 	/**
 	 * Every native `<input>` attribute, unchanged, plus the `mix` passthrough,
-	 * which styles the control itself rather than the row wrapping it. A type
-	 * alias rather than an interface, since the native input prop type resolves
-	 * through a conditional type keyed on `type` that an `interface … extends`
-	 * clause can't statically extend.
+	 * styling the control itself — a type alias, since the native input prop
+	 * type resolves through a conditional type only a type alias can express.
 	 */
 	export type InputProps = TagProps<"input">;
 
@@ -67,9 +65,8 @@ export namespace Command {
 	export interface ItemProps extends TagProps<"div"> {
 		/**
 		 * Plain-text value identifying this row's content. A paired filter
-		 * behavior matches the text a person types against this value rather
-		 * than parsing whatever markup `children` renders, so it stays required
-		 * even when the visible content is already plain text.
+		 * behavior matches typed text against this value directly, so it stays
+		 * required even when the visible content is already plain text.
 		 */
 		value: string;
 		/** The row's visible content: a label, and optionally a leading icon or trailing hint. */
@@ -116,17 +113,9 @@ export function Command(handle: Handle<Command.Props>) {
 }
 
 /**
- * Renders the panel's query row: a `<div>` bordered along its block-end edge
- * wrapping a native `<input>` with no box, border, or background of its own —
- * the row's own border is what reads as the field's edge, sitting flush
- * against {@link Command}'s top corners. The input carries its own padding
- * and full row block-size directly, rather than the wrapper, so its
- * focus-visible ring spans the row's full width and height instead of an
- * inset rectangle. The input's placeholder renders muted, a keyboard
- * focus-visible ring reads in the primary color, and a disabled input dims to
- * half opacity with a "not-allowed" cursor. The `<input>` carries a
- * `data-command-input` marker a paired filter mixin reads its typed value
- * from.
+ * Renders the panel's query row: a `<div>` bordered along its block-end
+ * edge wrapping a native `<input>` sized to the row's full padding and
+ * height, marked `data-command-input` for a paired filter mixin to read.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the query row's markup.
@@ -166,13 +155,8 @@ Command.Input = function CommandInput(handle: Handle<Command.InputProps>) {
 
 /**
  * Renders the panel's scrollable option region: a `<div>` carrying the
- * `listbox` role, capped at a fixed block size with its own padding once
- * {@link Command.Item} rows grow past a handful of entries. Its small inline
- * padding exists only so a selected or hovered {@link Command.Item}'s own
- * rounded corners have room to render fully instead of butting flush against
- * the panel's edge; the bulk of a row's text inset still comes from
- * {@link Command.Item}'s own larger inline padding, the two adding up to
- * match {@link Command.Input}'s inline padding above it.
+ * `listbox` role, capped at a fixed block size, its small inline padding
+ * leaving room for a selected {@link Command.Item}'s own rounded corners.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the option region's markup.
@@ -205,15 +189,8 @@ Command.List = function CommandList(handle: Handle<Command.ListProps>) {
 
 /**
  * Renders a single row: a `<div>` carrying the `option` role, its `value`
- * mirrored onto a `data-value` attribute so a paired filter behavior can read
- * it without parsing `children`. The row renders as a plain, static element by
- * default — nest a `<button>` or `<a>` inside `children` to give it its own
- * native activation, or set `aria-selected="true"` directly to read it as the
- * currently highlighted row. Setting `aria-disabled="true"` mutes the row.
- *
- * In dev mode, an item rendered without a `value` logs a `console.warn`,
- * since a filter behavior matching against typed text would otherwise have
- * nothing to compare it to.
+ * mirrored onto `data-value` for a paired filter behavior to read. Nest a
+ * `<button>` or `<a>` in `children` for native activation.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -266,11 +243,8 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 
 /**
  * Renders the panel's no-match message: a centered, muted passage of small
- * text filling {@link Command.List}'s content area. A paired filter behavior
- * decides when to show it; render it unconditionally in a page that never
- * hydrates that behavior, or alongside {@link Command.List} for one that does.
- * Carries a `data-command-empty` marker that filter behavior reads to know
- * which element to toggle.
+ * text filling {@link Command.List}'s content area, carrying a
+ * `data-command-empty` marker a paired filter behavior reads to toggle it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the message's markup.

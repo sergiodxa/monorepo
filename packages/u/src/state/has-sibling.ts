@@ -7,22 +7,9 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { when } from "./when";
 
 /**
- * Sugar over `when("&:has(~ {selector})", input)`. Styles an element from the
- * state of a sibling rather than a descendant.
- *
- * This is the compound-control idiom: a visually-hidden native `<input>` paired
- * with a sibling element that paints the visible indicator, where the indicator
- * needs to read the input's state — checked, focused, disabled — while the
- * input itself stays the real, accessible, form-submitting control. It is the
- * single most repeated hand-written selector pattern in real usage, which is
- * why it gets a name of its own.
- *
- * The `~` combinator only looks at *following* siblings, so this matches only
- * when the element matching `selector` comes after the styled element in the
- * DOM — put the indicator first and the hidden input after it. Reach for
- * `has()` instead when the state lives on a descendant, and `precededBy()` when
- * the source order goes the other way, with the input first and the indicator
- * after it.
+ * Sugar over `when("&:has(~ {selector})", input)`, styling an element by a
+ * sibling's state. `~` matches only *following* siblings, so the indicator
+ * must come before the source input in the DOM.
  *
  * @example u.hasSibling("input:checked", u.bg("brand.solid"))
  * @example css({ "&:has(~ input:checked)": { backgroundColor: "..." } })

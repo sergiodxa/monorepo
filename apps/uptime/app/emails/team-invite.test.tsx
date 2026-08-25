@@ -1,7 +1,7 @@
 /**
  * Tests the invite email as a value: it addresses the invitee it was constructed
- * with, takes its subject from the locale files rather than from a literal, and
- * renders the team name and the accept link into both body parts.
+ * with, takes its subject from the locale files, and renders the team name and
+ * the accept link into both body parts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,7 +1,7 @@
 /**
  * The OpenID Connect Discovery 1.0 endpoint. Publishes the server's metadata document
  * — endpoints, scopes, response types, signing algorithms — so a relying party can
- * configure itself from one URL instead of hardcoding this server's shape.
+ * configure itself from a single URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

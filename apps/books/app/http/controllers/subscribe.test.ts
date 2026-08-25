@@ -17,8 +17,8 @@ import { Buttondown } from "~/app/services/buttondown";
 
 /**
  * Posts the subscribe form against a scripted newsletter client. The body is
- * url-encoded, not multipart: the form has no file input, so this is what a browser
- * actually sends.
+ * url-encoded, matching what a browser sends for a form built only from text
+ * fields.
  */
 function submit(
 	buttondown: FakeButtondown,
@@ -46,7 +46,10 @@ describe("POST /api/subscribe", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe("/release");
-		// Attribution has to reach the newsletter, which is the only place it is stored.
+		/**
+		 * Attribution has to reach the newsletter, since that is the only place
+		 * it is stored.
+		 */
 		expect(buttondown.subscribed).toEqual([
 			{
 				email: "reader@example.com",
@@ -82,7 +85,6 @@ describe("POST /api/subscribe", () => {
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("My upstream provider is blocking you");
-		// The page itself comes back, not a bare JSON error.
 		expect(body).toContain("React Router OAuth2 Handbook");
 	});
 
@@ -115,7 +117,10 @@ describe("POST /api/subscribe", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Invalid email address");
-		// A failed validation must not reach the newsletter at all.
+		/**
+		 * Validation failure keeps the address local; only a valid address is
+		 * forwarded to the newsletter.
+		 */
 		expect(buttondown.subscribed).toEqual([]);
 	});
 });

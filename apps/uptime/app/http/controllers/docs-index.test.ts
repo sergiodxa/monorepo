@@ -1,6 +1,5 @@
 /**
- * Tests the `/docs` controller: it redirects every visitor straight to the overview
- * doc instead of rendering a page of its own.
+ * Tests the `/docs` controller: it redirects every visitor to the overview doc.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +11,7 @@ import { describe, expect, test } from "vitest";
 import docsIndex from "~/app/http/controllers/docs-index";
 import routes from "~/routes/web";
 
-/** Dispatches a real GET request to `/docs`, without following the redirect. */
+/** Dispatches a real GET request to `/docs` and captures the redirect response. */
 async function getDocsIndex() {
 	let router = createRouter();
 	router.map(routes.docs.index, docsIndex);

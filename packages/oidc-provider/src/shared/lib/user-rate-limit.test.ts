@@ -1,3 +1,10 @@
+/**
+ * Tests for per-user rate limiting on authentication endpoints.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { afterEach, describe, expect, test } from "vitest";
 
 import { checkUserRateLimit, clearUserRateLimitCache, USER_RATE_LIMITS } from "./user-rate-limit";
@@ -43,11 +50,9 @@ describe("checkUserRateLimit", () => {
 		let result2 = checkUserRateLimit("user2@example.com", "test", config);
 		expect(result2.success).toBe(true);
 
-		// user1 should be rate limited
 		let result3 = checkUserRateLimit("user1@example.com", "test", config);
 		expect(result3.success).toBe(false);
 
-		// user2 should also be rate limited
 		let result4 = checkUserRateLimit("user2@example.com", "test", config);
 		expect(result4.success).toBe(false);
 	});
@@ -61,11 +66,9 @@ describe("checkUserRateLimit", () => {
 		let result2 = checkUserRateLimit("test@example.com", "action2", config);
 		expect(result2.success).toBe(true);
 
-		// action1 should be rate limited
 		let result3 = checkUserRateLimit("test@example.com", "action1", config);
 		expect(result3.success).toBe(false);
 
-		// action2 should also be rate limited
 		let result4 = checkUserRateLimit("test@example.com", "action2", config);
 		expect(result4.success).toBe(false);
 	});
@@ -90,11 +93,9 @@ describe("checkUserRateLimit", () => {
 	});
 
 	test("default configs are reasonable", () => {
-		// Auth attempts: 5 per minute
 		expect(USER_RATE_LIMITS.authOptions.maxRequests).toBe(5);
 		expect(USER_RATE_LIMITS.authOptions.windowMs).toBe(60_000);
 
-		// Registration: 3 per 5 minutes (more strict)
 		expect(USER_RATE_LIMITS.registerOptions.maxRequests).toBe(3);
 		expect(USER_RATE_LIMITS.registerOptions.windowMs).toBe(300_000);
 	});

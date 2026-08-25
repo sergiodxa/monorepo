@@ -100,8 +100,8 @@ export function truncate(text: string, options: TruncateOptions): string {
 
 /**
  * Collapses every run of whitespace into a single space and then truncates,
- * which turns multi-paragraph source text into a one-line summary. Unlike
- * {@link truncate} it cuts at a word boundary by default.
+ * which turns multi-paragraph source text into a one-line summary, cutting at
+ * a word boundary by default.
  *
  * @param text - Text to summarize
  * @param options - Limit, word-boundary behavior, omission marker, and locale

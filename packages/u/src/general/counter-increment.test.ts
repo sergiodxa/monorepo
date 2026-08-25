@@ -1,4 +1,7 @@
 /**
+ * Unit tests for `counterIncrement()`. The value is folded into the string so
+ * the serializer emits a bare integer.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -14,8 +17,6 @@ describe("counterIncrement", () => {
 	});
 
 	test("an explicit increment value", async () => {
-		// The value is folded into the string here rather than left as a number,
-		// which is what keeps the serializer from emitting `section 2px`.
 		expect(await declarations(counterIncrement("section", 2))).toEqual([
 			"counter-increment: section 2",
 		]);

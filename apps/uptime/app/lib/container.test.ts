@@ -3,9 +3,9 @@
  * `./container` resolves to an instance of the right class without throwing. `env.*` is
  * an in-memory binding set, which is enough because every service — including
  * `IdTokenVerificationKeyService`, whose resolver only goes to the network once a
- * token needs a key — stores its config at construction time rather than performing
- * I/O eagerly. Only the bindings the registrations read are supplied, so a service that
- * grows a new dependency fails here naming the binding it reached for.
+ * token needs a key — stores its config at construction time and defers I/O until
+ * it's actually needed. Only the bindings the registrations read are supplied, so a
+ * service that grows a new dependency fails here naming the binding it reached for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

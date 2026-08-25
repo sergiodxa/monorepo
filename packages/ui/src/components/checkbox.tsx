@@ -44,12 +44,9 @@ export namespace Checkbox {
 	}
 
 	/**
-	 * Props accepted by {@link Checkbox}. Every native `<input>` attribute is
-	 * available unchanged — aside from `type`, which is always `"checkbox"` —
-	 * so `checked`, `defaultChecked`, `disabled`, `required`, `name`, `value`,
-	 * `aria-invalid`, `aria-describedby`, and the rest work exactly as they
-	 * would on a bare input, and `mix` styles that same `<input>` host. `role`
-	 * is narrowed to the set the platform allows on a checkbox input.
+	 * Props accepted by {@link Checkbox}. Extends every native `<input>`
+	 * attribute except `type`, fixed to `"checkbox"`; `mix` styles that same
+	 * `<input>` host, and `role` is narrowed to what a checkbox input allows.
 	 */
 	export interface Props extends Omit<TagProps<"input">, "type" | "role"> {
 		/** ARIA role override, restricted to what a checkbox input may carry. */
@@ -58,9 +55,8 @@ export namespace Checkbox {
 		color?: Color;
 		/**
 		 * Label content rendered after the box, inside the same native
-		 * `<label>` wrapping the whole row — clicking or tapping any of it
-		 * toggles the checkbox natively, with no separate `htmlFor`/`id` pair
-		 * required.
+		 * `<label>` wrapping the row — clicking any of it toggles the checkbox
+		 * natively, with no separate `htmlFor`/`id` pair required.
 		 */
 		children?: RemixNode;
 		/** Per-part styling for this wrapper's internally composed elements. */
@@ -69,31 +65,9 @@ export namespace Checkbox {
 }
 
 /**
- * Renders a native `<input type="checkbox">` wrapped in a `<label>` alongside
- * a decorative glyph box, colored and shaped through the box's own
- * `data-color` attribute. The box's border, fill, glyph, and focus ring read
- * entirely from the input's own `:checked`, `:indeterminate`,
- * `:focus-visible`, and `:disabled` states through a `:has()` sibling query —
- * there is no tracked selection state anywhere in this module, and the whole
- * control keeps working with no JavaScript at all.
- *
- * The check glyph shows for `:checked`, the dash glyph shows for
- * `:indeterminate`. Unlike `checked`, the platform exposes no HTML attribute
- * for `indeterminate` — it is a DOM-only property set imperatively via
- * `element.indeterminate = true`, typically from a companion mixin reading a
- * "some but not all selected" state. This component's styling already
- * renders that state correctly the moment something sets it; the component
- * itself never sets it.
- *
- * The host carries no `aria-checked` of its own — the native control's
- * checkedness is what assistive technology reports — so a hydrated island
- * that needs the attribute composes the `ariaChecked()` mixin through `mix`,
- * which renders the matching token (including `"mixed"`) and keeps rewriting
- * it from the live control.
- *
- * In dev mode, a checkbox whose row carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * The box precedes the input in source order so its `:has(~ input:…)` rules
+ * can read state directly off it, keeping the whole control CSS-driven;
+ * `shrink(0)` also keeps the box square regardless of label length.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the checkbox's markup.
@@ -117,13 +91,6 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 
 		return (
 			<label mix={[relative(), hstack({ gap: 2, align: "center" })]}>
-				{/*
-				 * The box comes before the input in source order so its own
-				 * `:has(~ input:…)` rules can read the input's state through the
-				 * general sibling combinator, which only looks at *following*
-				 * siblings. The input itself is visually hidden but stays in the
-				 * tab order and keeps its native checkbox semantics.
-				 */}
 				<span
 					aria-hidden="true"
 					data-slot="box"
@@ -132,12 +99,6 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 						center(),
 						is("1.25rem"),
 						bs("1.25rem"),
-						/*
-						 * The row is a flex container, and a flex item with a declared size still
-						 * gives that size up when a sibling does not fit — so a long label squashed
-						 * the box into a sliver instead of wrapping. A checkbox is only legible while
-						 * it stays square, so it never participates in that negotiation.
-						 */
 						shrink(0),
 						rounded("sm"),
 						border({ width: 2, color: "neutral.strong" }),

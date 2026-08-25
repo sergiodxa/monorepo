@@ -5,12 +5,9 @@
 import { filterFunction } from "../internal/filter";
 
 /**
- * Applies a `filter: saturate(...)`, scaling color intensity. `0` is fully
- * desaturated and values above `1` oversaturate. This is the `filter`
- * counterpart to `u.backdropSaturate()`, which saturates what shows *through*
- * an element rather than the element itself. Composes through the shared
- * composite `filter` declaration, so it combines with every other filter
- * utility instead of overwriting them.
+ * Applies a `filter: saturate(...)` to the element itself, where `0` is fully
+ * desaturated and values above `1` oversaturate. Writes into the shared
+ * composite `filter` declaration, so it stacks with every other filter utility.
  *
  * @example u.saturate(1.5)
  * @example css({ "--ui-filter-saturate": "1.5", filter: "... saturate(var(--ui-filter-saturate, 1)) ..." })

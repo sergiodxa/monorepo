@@ -1,15 +1,11 @@
-import { isFailure, isSuccess } from "@pkg/result";
 /**
- * Exercises the `GameData` test module that verifies how structured game content is
- * assembled into runtime lookup tables and validated for internal consistency.
- *
- * This module documents the expected behavior of the data-loading boundary by
- * asserting successful indexing for valid inputs and preserving confidence that
- * curated content fixtures remain compatible with the engine-facing data model.
+ * Exercises the `GameData` test module: assembling structured game content
+ * into runtime lookup tables and validating internal consistency.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isFailure, isSuccess } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { SPECIES } from "~/content/species";

@@ -1,10 +1,8 @@
 /**
- * Verifies the storage system keeps party, storage boxes, and creature locations in sync.
- *
- * The tests cover ensuring a box exists (creating one, being idempotent, and honoring custom ids),
- * moving a creature from the party into a box, moving one back into the party, and the full-party and
- * missing-creature guard rails. They assert that slot indices reindex after a move so the location
- * components always mirror the ordered membership.
+ * Verifies the storage system keeps party, storage boxes, and creature
+ * locations in sync: ensuring a box exists, moving creatures between party
+ * and storage, and reindexing slots so locations mirror the ordered
+ * membership after every move.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

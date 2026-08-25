@@ -1,14 +1,7 @@
 /**
- * Unit tests for `GeoFetchDO.fetch`: it proxies the underlying `fetch` call, stamps the
- * response with an `X-Response-Time` header measuring elapsed time, and passes the
- * underlying response's status and body through unchanged for both success and error
- * statuses. Also covers the outcome tagging that lets the caller tell an unreachable
- * monitor apart from this object being unavailable: a failed proxied request resolves
- * as `unreachable` rather than rejecting, and the header is always overwritten so a
- * monitored endpoint can't declare its own outcome. The probed endpoint is served by MSW
- * instead of the network, and `cloudflare:workers` is replaced since `GeoFetchDO extends
- * DurableObject` imported from it: the object touches no binding, so the env is empty and
- * reading one would name the binding that was reached for.
+ * Unit tests for `GeoFetchDO.fetch`: it proxies `fetch`, stamps the response with an
+ * `X-Response-Time` header, and tags a failed proxied request as `unreachable` instead
+ * of letting it reject.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,13 +43,8 @@ function probe() {
 
 /**
  * A mocked response whose `body` stream survives being read by the object under test.
- *
- * Bun 1.3.14 empties a response's body stream when `clone()` runs after `body` has been
- * materialized, and the interceptor does exactly that: it reads `body` to look for a
- * content encoding, then clones the response to announce it. The object under test then
- * re-wraps `response.body`, which by that point yields nothing, so a body assertion would
- * measure the runtime rather than the object. Handing out a fresh stream per read keeps
- * the pass-through observable; status and headers are unaffected and come from `init`.
+ * Bun 1.3.14 empties a response's body stream when `clone()` follows reading `body`,
+ * which the interceptor does; handing out a fresh stream per read keeps it observable.
  */
 function respondWithBody(body: string, init?: ResponseInit) {
 	let response = new HttpResponse(body, init);
@@ -120,8 +108,6 @@ describe("GeoFetchDO.fetch", () => {
 	});
 
 	test("resolves as 'unreachable' instead of rejecting when the request fails", async () => {
-		// A transport-level failure, the shape a refused connection or a DNS failure takes:
-		// the call rejects rather than answering with a status.
 		server.use(http.get(PROBE_URL, () => HttpResponse.error()));
 
 		let response = await probe();

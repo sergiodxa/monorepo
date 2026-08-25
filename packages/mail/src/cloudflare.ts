@@ -20,9 +20,8 @@ import { formatAddress } from "./lib/address";
 
 /**
  * The send payload the binding accepts, narrowed to the fields this package fills.
- * Addresses are mailbox strings throughout: the platform also takes name/email
- * objects, but a formatted string carries the display name just as well and keeps
- * the mapping identical to the one every other transport performs.
+ * Addresses are mailbox strings, since a formatted string carries the display name
+ * just as well as a name/email object and keeps every transport's mapping alike.
  */
 export interface SendEmailMessage {
 	/** Sender mailbox; the domain has to be verified for the account. */
@@ -73,10 +72,9 @@ function optionalAddresses(addresses: NormalizedMessage["to"]): string[] | undef
 }
 
 /**
- * Maps a normalized message onto the binding's send payload. Only the first reply-to
- * mailbox survives, because the platform's field holds one address; the rest are
- * dropped rather than folded into a header, so a message never ships a `Reply-To`
- * the platform did not write.
+ * Maps a normalized message onto the binding's send payload. Only the first
+ * reply-to mailbox survives, since the platform's field holds one address, so
+ * every shipped `Reply-To` is one the platform actually wrote itself.
  */
 function toPayload(message: NormalizedMessage): SendEmailMessage {
 	let replyTo = message.replyTo.at(0);
@@ -95,14 +93,9 @@ function toPayload(message: NormalizedMessage): SendEmailMessage {
 }
 
 /**
- * Transport that delivers through the Workers email sending binding.
- *
- * The platform assembles the message, so the `Date` and `Message-ID` a normalized
- * message carries are not what goes on the wire: the binding writes its own and
- * returns the identifier it assigned, which is the one its delivery logs are keyed
- * by. Everything else maps across a field at a time, and the binding refuses at send
- * time — not at deploy time — anything outside the sender and destination limits its
- * configuration declares.
+ * Transport that delivers through the Workers email sending binding, which writes
+ * its own `Date` and `Message-ID` and returns the identifier its delivery logs are
+ * keyed by, enforcing sender and destination limits from its configuration on send.
  *
  * @example
  * let transport = new CloudflareTransport(env.EMAIL);

@@ -1,19 +1,8 @@
 /**
- * Trainer tool view — a content-authoring form built on the canonical tool-view
- * pattern. The component constructs a {@link TrainerEditor} once in setup and
- * drives every control through it: identity fields (id, name), a sprite picker
- * (any manifest image id, or none), the three battle quotes, and a party builder
- * that adds up to {@link MAX_PARTY_SIZE} members — each choosing a species from
- * the real roster, a level, and up to four moves. There are no framework hooks:
- * local state lives in setup-scope variables and the component re-renders through
- * `handle.update()` when a control changes it.
- *
- * The species and move option lists come from the real content roster (`SPECIES`
- * / `MOVES`) so an author can only pick ids that exist, and the sprite options
- * come from the asset manifest's `images`. Export serializes the current
- * definition and POSTs it to the trainer export action, which validates it,
- * writes `src/content/trainers/<id>.json` behind the shared path-safety guard,
- * and reports where the file landed inline.
+ * Trainer-content authoring tool. Builds a {@link TrainerEditor} in setup and
+ * drives identity, sprite, quote, and party controls through it. Species and
+ * move options come from the real content roster, so an author can only pick
+ * ids that exist.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,12 +25,9 @@ import { TrainerEditor } from "../editors/trainer-editor";
 type CssMixinStyles = Parameters<typeof css>[0];
 
 /**
- * The style-object shape the `css()` mixin accepts, used for shared base styles.
- *
- * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
- * carries that interface's `Symbol.iterator` member and reads as an iterable.
- * Dropping the symbol keys leaves the same plain property bag the base styles
- * actually are, so they can be spread into an override object.
+ * The style-object shape the `css()` mixin accepts, used for shared base
+ * styles. Its parameter type carries `CSSStyleDeclaration`'s `Symbol.iterator`
+ * member; dropping the symbol keys leaves a plain bag spreadable into overrides.
  */
 type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
@@ -95,7 +81,6 @@ const CONTROL_BUTTON: Styles = {
 export function TrainerTool(handle: Handle<Record<string, never>>) {
 	let editor = new TrainerEditor();
 
-	// Local UI state, mirrored back into the view on `handle.update()`.
 	let trainer: TrainerDefinition = editor.toDefinition();
 	let status = "";
 	let statusIsError = false;

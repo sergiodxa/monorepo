@@ -1,12 +1,9 @@
 /**
- * Unit tests for the TCP monitor create/update/delete/check form validators: the
- * required, un-defaulted `port` field and the timing fields' bounds/defaults.
- *
- * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but these are `f.object(...)`
- * form-data schemas that only accept the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * Unit tests for the TCP monitor create/update/delete/check form validators:
+ * the required, un-defaulted `port` field and the timing fields'
+ * bounds/defaults. Exercises the schemas directly via `parseSafe()` with real
+ * `FormData`, since `f.object(...)` form-data schemas accept only the raw
+ * `FormData`/`URLSearchParams` instance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -28,14 +28,9 @@ const RELATIVE_CLAIMS = ["exp", "iat", "nbf"] as const;
 
 /**
  * Resolves any claim written as a length of time into the instant it names.
- *
- * A duration is measured from now, so `exp: "1h"` is an hour from the moment the
- * token is built. Only text is read this way: a number is already the seconds since
- * the epoch RFC 7519 defines, and reading it as a length of time instead would move
- * every existing claim to 1970.
- *
- * The claim set is copied only when there is something to resolve, so a caller that
- * holds onto the object it passed in keeps seeing what the token carries.
+ * A duration is measured from now, so `exp: "1h"` is an hour from now; a
+ * number is already seconds since the epoch. The claim set is copied only
+ * when something needs resolving.
  *
  * @param payload - The claims as written.
  * @returns The claims with every time claim as seconds since the epoch.
@@ -55,11 +50,10 @@ function resolveRelativeClaims(payload: JWT.PayloadInput): JWT.Payload {
 /**
  * A JWT payload, with the registered claims exposed as typed accessors.
  *
- * Subclass it to describe a specific kind of token, overriding the accessors whose
- * claims that token guarantees and adding the ones it carries beyond the registered
- * set:
+ * Subclass it to add accessors for claims beyond the registered set; an
+ * instance proxies to `payload`, so an accessor-less claim still reads by name.
  *
- * ```ts
+ * @example
  * class IdToken extends JWT {
  * 	override get subject() {
  * 		return this.parser.string("sub"); // required here, so `string` not `string | null`
@@ -69,11 +63,6 @@ function resolveRelativeClaims(payload: JWT.PayloadInput): JWT.Payload {
  * 		return this.parser.string("email");
  * 	}
  * }
- * ```
- *
- * Instances are proxied, so a claim with no accessor is still readable by name and
- * returns `null` when absent — which is what lets a caller reach for `payload` and a
- * subclass reach for its getters on the very same object.
  */
 export class JWT implements jose.JWTPayload {
 	/** The raw claim set, readable whole for callers that want the payload itself. */
@@ -90,7 +79,9 @@ export class JWT implements jose.JWTPayload {
 	[propName: string]: unknown;
 
 	/**
-	 * Wraps a claim set.
+	 * Wraps a claim set in a proxy: a claim with no accessor still reads through
+	 * to the payload, and assigning an unknown property lands there too, so a
+	 * missing claim answers `null` and callers can test for it directly.
 	 *
 	 * @param payload - The claims, defaulting to an empty set so a token can be built
 	 *   up through the setters.
@@ -102,16 +93,9 @@ export class JWT implements jose.JWTPayload {
 		this.payload = resolveRelativeClaims(payload);
 		this.parser = new ObjectParser(this.payload);
 
-		// Returning a proxy from the constructor is what makes an instance behave like
-		// the payload it wraps: a claim with no accessor reads through to the payload
-		// instead of being `undefined`, and assigning an unknown property writes into
-		// the payload so it is carried into the signature. Without this, a token class
-		// would have to declare an accessor for every claim it merely passes along.
 		return new Proxy(this, {
 			get(self, prop) {
 				if (prop in self) return Reflect.get(self, prop);
-				// Absent rather than thrown: an unrecognized claim is a normal thing to
-				// ask about, and callers test the result rather than catching.
 				if (typeof prop === "string" && self.parser.has(prop)) return self.parser.get(prop);
 				return null;
 			},
@@ -307,12 +291,9 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Signs a token with the first key matching the algorithm.
 	 *
-	 * The keys arrive newest first, so the newest one generated for that algorithm signs
-	 * and the older ones stay published purely to verify what they already signed — which
-	 * holds just as well for a set mixing algorithms, since the ones generated for
-	 * another are passed over. The chosen key's `kid` goes into the header, which is what
-	 * lets `verify` — here and at any other relying party — pick it straight out of a set
-	 * publishing several.
+	 * The keys arrive newest first, so the newest key for that algorithm signs
+	 * while older ones stay published to verify what they already signed. The
+	 * chosen key's `kid` goes into the header, letting `verify` pick it out.
 	 *
 	 * @param jwt - The token to sign.
 	 * @param algorithm - Algorithm to sign with; also selects the key.
@@ -332,24 +313,14 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Verifies a token and returns it as an instance of the class this was called on.
 	 *
-	 * The key is chosen per token, from the header the token carries: the key whose
-	 * `kid` the header names is the one used, narrowed further by key type, curve,
-	 * algorithm and intended use. That is what lets an issuer publish several keys at
-	 * once — during a rotation, the retired key stays published and the tokens it
-	 * signed keep verifying, while new tokens name the new key and get it.
-	 *
-	 * Pass `algorithms`, and pass the ones this caller actually expects. It is the pin
-	 * that keeps a token naming one algorithm from being answered with a key published
-	 * for another, once a set carries keys for more than one.
-	 *
-	 * Signature, `exp`, `nbf`, and whichever of `issuer` and `audience` are given are
-	 * all checked, and the first failure throws — so reaching the return value means
-	 * the claims are trustworthy. Calling this on a subclass produces that subclass,
-	 * which is what makes `IdToken.verify(...)` yield typed claim accessors.
+	 * The key is picked by the token's `kid`, letting a retired key keep verifying
+	 * what it already signed through a rotation; `algorithms` pins which ones this
+	 * caller accepts.
 	 *
 	 * @param token - The compact-serialized token.
 	 * @param jwks - The keys themselves, or a resolver from `JWK.importLocal` /
-	 *   `JWK.importRemote`.
+	 *   `JWK.importRemote`. Keys given directly are wrapped into a local key set so
+	 *   they go through the same per-token `kid` selection a resolver would apply.
 	 * @param options - Expected issuer, audience, algorithms, clock tolerance, and so on.
 	 * @returns The verified token.
 	 * @throws When the set offers no key for the token, or when a check on it fails.
@@ -370,8 +341,6 @@ export class JWT implements jose.JWTPayload {
 			throw new Error("No key available to verify JWT");
 		}
 
-		// Keys held directly become a key set of the caller's own making, so that they go
-		// through the same per-token selection as a set published by somebody else.
 		let key = Array.isArray(jwks)
 			? jose.createLocalJWKSet({ keys: jwks.map((candidate) => candidate.jwk) })
 			: jwks;
@@ -382,11 +351,10 @@ export class JWT implements jose.JWTPayload {
 	}
 
 	/**
-	 * Reads a token's claims without checking anything.
+	 * Reads a token's claims as the token presents them, prior to verification.
 	 *
-	 * What comes back is the token's own account of itself, read without any check. Use
-	 * it to decide how to verify a token — reading `iss` to pick a JWKS, for instance —
-	 * and let `verify` be what every decision about the request rests on.
+	 * Use it to decide how to verify a token — reading `iss` to pick a JWKS, for
+	 * instance — and let `verify` be what every decision about the request rests on.
 	 *
 	 * @param token - The compact-serialized token.
 	 * @returns The decoded token, as an instance of the class this was called on.
@@ -403,9 +371,8 @@ export namespace JWT {
 	/**
 	 * A claim set as it may be written, where a time claim can be a length of time.
 	 *
-	 * `exp: "1h"` is an hour from the moment the token is built. A number stays the
-	 * seconds since the epoch, so a claim computed by the caller is passed through as
-	 * it is. Whichever form is used, `payload` holds the resolved seconds.
+	 * `exp: "1h"` is an hour from the moment the token is built; a number stays
+	 * seconds since the epoch. Either way, `payload` holds the resolved seconds.
 	 */
 	export type PayloadInput = Omit<Payload, "exp" | "iat" | "nbf"> & {
 		exp?: number | DurationString;

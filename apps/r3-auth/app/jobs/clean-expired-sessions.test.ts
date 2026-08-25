@@ -1,7 +1,7 @@
 /**
  * Tests for the daily session sweep, run against the real schema: it must delete every
- * row whose expiry has passed, leave every live row alone, and do nothing at all when
- * there is nothing to remove.
+ * row whose expiry has passed, leave every live row alone, and leave the table untouched
+ * when nothing has expired.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,10 +50,8 @@ function createMessage(): QueuedMessage & { acked: boolean; retried: boolean } {
 }
 
 /**
- * Inserts a session row expiring at the given instant.
- *
- * Written through the table rather than through `Session.create`, which always computes
- * a 30-day expiry — this sweep is about rows whose expiry is already in the past.
+ * Inserts a session row expiring at the given instant, written straight through the table
+ * so the expiry can sit in the past, which is the case the sweep is about.
  */
 async function createSession(expiresAt: number): Promise<string> {
 	let session = await db.create(

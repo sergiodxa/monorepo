@@ -1,10 +1,8 @@
 /**
- * Unit tests for the KV-backed session storage adapter. Using a fake in-memory KV
- * store, they verify that a session round-trips its data through save and read,
- * that destroying a session both deletes its KV key and clears the cookie, and
- * that a lifetime given as a number or as a duration string expires identically.
- * They exist to guard the adapter's persistence, expiration, and destruction
- * behavior against regressions.
+ * Unit tests for the KV-backed session storage adapter. They verify that a
+ * session round-trips through save and read, that destroying a session
+ * deletes its KV key and clears the cookie, and that numeric and
+ * duration-string lifetimes expire identically.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

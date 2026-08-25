@@ -31,13 +31,9 @@ export interface RateLimitDecision {
 }
 
 /**
- * A rate limit backend. Implementations own the counting; the policy (how many
- * requests over how long) is stated once on the adapter, so a consumer reads the
- * limit off the adapter instead of repeating it at every call site.
- *
- * `consume` reports failure through a `Result` rather than throwing, because an
- * unreachable backend is an expected operational state that the caller resolves
- * with a fail-open or fail-closed policy.
+ * A rate limit backend where implementations own counting and the policy is
+ * stated once on the adapter for every call site to read. `consume` reports
+ * failure through a `Result`, since an unreachable backend is expected.
  */
 export interface Adapter {
 	/** Requests permitted per window, as configured. */

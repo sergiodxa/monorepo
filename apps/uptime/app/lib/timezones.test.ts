@@ -22,10 +22,11 @@ import {
 } from "~/app/lib/timezones";
 
 describe("supportedTimezones", () => {
+	/**
+	 * The Workers runtime enumerates no `"UTC"` zone, while this test's runtime does,
+	 * which is why the prepended default also has to de-duplicate.
+	 */
 	test("leads with the default, so a picker can offer it above the regional groups", () => {
-		// The default is prepended rather than found in the enumeration: the Workers
-		// runtime's list has no "UTC" entry at all. This runtime's list happens to
-		// include one, which is exactly why the prepend also has to de-duplicate.
 		expect(supportedTimezones()[0]).toBe(DEFAULT_TIMEZONE);
 	});
 
@@ -69,7 +70,6 @@ describe("groupedTimezones", () => {
 	test("leaves the default out, since it has no area to sit under", () => {
 		let members = groupedTimezones().flatMap((group) => group.zones);
 		expect(members).not.toContain(DEFAULT_TIMEZONE);
-		// Every listed zone lands in exactly one group.
 		expect(members.length).toBe(supportedTimezones().length - 1);
 	});
 });

@@ -45,6 +45,8 @@ export async function createSubject(
 
 /**
  * Creates a test client with optional overrides.
+ * Looks the client up by name after creation, since `Client.create` returns a
+ * write result rather than the record itself.
  * @param db - Test database handle.
  * @param overrides - Optional name, type, and management-client flag.
  * @returns The created client record.
@@ -61,7 +63,6 @@ export async function createClient(
 	let name = overrides.name ?? `Test Client ${crypto.randomUUID().slice(0, 8)}`;
 	let type = overrides.type ?? "confidential";
 
-	// Client.create returns WriteResult, so we need to get the client after creation
 	await Client.create(db, {
 		name,
 		type,
@@ -69,7 +70,6 @@ export async function createClient(
 		isManagementClient: overrides.isManagementClient ?? false,
 	});
 
-	// Get the most recently created client by name
 	let clients = await Client.list(db);
 	let client = clients.find((c) => c.name === name);
 	if (!client) throw new Error("Failed to create client");
@@ -196,7 +196,6 @@ export async function createResource(
 		scopes: overrides.scopes ?? [{ name: "read" }, { name: "write" }],
 	});
 
-	// Get the resource by identifier
 	let resource = await Resource.findByIdentifier(db, identifier);
 	if (!resource) throw new Error("Failed to create resource");
 

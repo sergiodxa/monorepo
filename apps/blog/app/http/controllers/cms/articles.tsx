@@ -25,24 +25,21 @@ import { CMSArticlesActionView, CMSArticlesIndexView } from "~/resources/views/c
 import routes from "~/routes/web";
 
 /**
- * Handles CMS article CRUD flows for backoffice pages.
- *
- * The controller returns rendered HTML views for read/edit screens and See Other redirects
- * for mutating actions to preserve PRG behavior in the CMS.
+ * CMS article CRUD. Read screens answer with rendered HTML while mutating actions answer
+ * with See Other redirects, so a reload never repeats the write.
  */
 export default createController(routes.cms.articles, {
 	/**
-	 * Leaves route-level middleware empty because authentication is enforced by the CMS route group,
-	 * while action-level guards still protect direct access or misconfigured mounts.
+	 * The CMS route group enforces authentication, and each action keeps its own guard so
+	 * direct access or a misconfigured mount still redirects.
 	 */
 	middleware: [],
 
 	actions: {
 		/**
-		 * Loads all articles and renders the CMS index table.
-		 *
-		 * The `preview` flag mirrors publish-state semantics via `Post.isPublishedAt`, where
-		 * `null` and past timestamps are treated as published and future timestamps as preview.
+		 * Lists every article, preview included, so editors see scheduled work. The `preview`
+		 * flag follows `Post.isPublishedAt`: `null` and past timestamps count as published,
+		 * future timestamps as preview.
 		 *
 		 * @param ctx Request-scoped services used to resolve the database client.
 		 * @returns SSR view response for the article listing page.
@@ -62,10 +59,8 @@ export default createController(routes.cms.articles, {
 		}),
 
 		/**
-		 * Creates a new article from validated form data.
-		 *
-		 * Redirects unauthenticated users to login and uses See Other redirects for both failure
-		 * and success paths so form submissions never remain on a mutating endpoint.
+		 * Unauthenticated callers go to login. Both the failure and success paths answer with
+		 * See Other so the browser leaves the mutating endpoint before any reload.
 		 *
 		 * @param ctx Request-scoped access to form data and database services.
 		 * @returns Redirect response to login, index, or the edit page for the created article.
@@ -95,10 +90,8 @@ export default createController(routes.cms.articles, {
 		}),
 
 		/**
-		 * Deletes an article by route id and returns to the CMS index.
-		 *
-		 * Missing ids are treated as a non-action and redirected to index instead of surfacing
-		 * an error page to keep the CMS flow resilient to malformed action URLs.
+		 * A malformed action URL carrying no id lands the editor back on the index, keeping the
+		 * CMS flow resilient.
 		 *
 		 * @param ctx Request context containing route params and database service.
 		 * @returns Redirect response to the CMS article index.
@@ -114,10 +107,8 @@ export default createController(routes.cms.articles, {
 		}),
 
 		/**
-		 * Loads an article for editing and renders a not-found CMS state when absent.
-		 *
-		 * This action returns an HTML 404 view within the CMS shell instead of redirecting so
-		 * editors get immediate feedback that the requested record no longer exists.
+		 * An unknown id renders a 404 view inside the CMS shell so editors keep their context
+		 * and learn immediately that the record is gone.
 		 *
 		 * @param ctx Request context with route params and database service.
 		 * @returns SSR view response for edit form or not-found state.
@@ -148,9 +139,7 @@ export default createController(routes.cms.articles, {
 		}),
 
 		/**
-		 * Renders the empty article form for creating a new entry.
-		 *
-		 * @returns SSR view response for the new article form.
+		 * @returns SSR view response for the empty article form.
 		 */
 		async new(ctx) {
 			let viewProps = ArticleViewModel.new({});
@@ -159,10 +148,8 @@ export default createController(routes.cms.articles, {
 		},
 
 		/**
-		 * Updates an existing article using validated form input.
-		 *
-		 * Requires both an authenticated user and route id; missing prerequisites short-circuit to
-		 * index, while unknown ids render a 404 CMS state to keep editor context visible.
+		 * Requires an authenticated user and a route id; either one missing sends the editor back
+		 * to the index, while an unknown id renders the 404 CMS state in place.
 		 *
 		 * @param ctx Request-scoped access to params, form data, and database services.
 		 * @returns Redirect response for success/guard paths or a 404 edit-state view.

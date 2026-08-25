@@ -1,8 +1,7 @@
 /**
- * HTTP action for the related-posts fragment on post detail pages. It queries up to
- * three related posts by type and slug from the database and renders them through the
- * related-post view. Only tutorial relationships are served; missing params or a
- * non-tutorial post type intentionally return an empty collection view.
+ * HTTP action for the related-posts fragment on post detail pages. Only tutorial
+ * relationships are served, capped at three items; every other request renders an empty
+ * collection so the fragment always resolves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,19 +18,11 @@ import { PostRelatedView } from "~/resources/views/post-related";
 import routes from "~/routes/web";
 
 /**
- * Resolves related-post fragments for the post detail page.
- *
- * Contract: this endpoint only serves tutorial relationships; missing params or
- * non-tutorial post types intentionally return an empty collection view payload.
+ * Resolves the related-post fragment for a post detail page.
+ * @returns A rendered fragment holding up to three tutorial items.
  */
 export default createAction(
 	routes.postRelated,
-	/**
-	 * Maps route params to a related-post query and renders the fragment model.
-	 *
-	 * @param ctx Request context with route params and database accessor.
-	 * @returns A rendered related-post view with up to three tutorial items.
-	 */
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let postType = ctx.params.postType;

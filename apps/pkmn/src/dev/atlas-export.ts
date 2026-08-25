@@ -1,20 +1,9 @@
 /**
- * Sprite-into-atlas export flow for the dev tools. Where the plain sprite export
- * (see `sprite-export.ts`) registers a drawn PNG as a flat `images` entry, this
- * module additionally assigns it as a NAMED REGION of a sprite atlas in
- * `src/content/manifest.json`, so renderers can blit it by region name via the
- * presentation's `Atlas` (see `src/presentation/render/atlas.ts`) rather than
- * loading the whole file as one image.
- *
- * It is split into a pure half and a server half. The pure half
- * ({@link deriveAtlasTarget} + {@link registerAtlasRegion}) validates the atlas
- * id, region name, and rect, then shapes the manifest mutation — registering the
- * image under `images` and adding/updating the region under
- * `atlases[atlasId].regions[region]` — without touching disk, so the mapping can
- * be unit-tested directly. The server half ({@link runAtlasExport}) writes the
- * PNG and persists the updated manifest behind the shared path-safety guard and
- * disk. It reuses `deriveSpriteTarget` for the image name/path/url and the
- * binary export for the PNG so it shares the exact same safety checks.
+ * Sprite-into-atlas export for the dev tools: a drawn PNG is registered both as
+ * a flat `images` entry and as a named region of an atlas in
+ * `src/content/manifest.json`, so renderers blit it by region name. Validation
+ * and manifest shaping stay pure and unit-testable; the write half reuses the
+ * binary export, inheriting its path-safety guard and base64 decode.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,10 +25,9 @@ import { validateWritePath } from "./path-safety";
 import { deriveSpriteTarget, SpriteNameError, type SpriteExportTarget } from "./sprite-export";
 
 /**
- * Allowed shape for an atlas id and a region name: a slug of lowercase letters,
- * digits, and single hyphens, optionally in dotted segments (e.g. `hero.down`,
- * `tile.grass`) to match the region-naming convention the presentation atlas
- * uses. No leading/trailing hyphen or dot, no empty segment.
+ * Allowed shape for an atlas id and a region name: a lowercase slug of letters,
+ * digits, and single hyphens, optionally in dotted segments (`hero.down`), to
+ * match the region-naming convention the render layer expects.
  */
 export const ATLAS_NAME_PATTERN =
 	/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/;
@@ -78,7 +66,6 @@ export class AtlasExportError extends Error {
 	}
 }
 
-/** Validates one atlas id / region name against {@link ATLAS_NAME_PATTERN}. */
 function validateName(label: string, raw: string): Result<string, AtlasExportError> {
 	let value = raw.trim();
 	if (value.length === 0) return failure(new AtlasExportError(`${label} is required.`));
@@ -98,8 +85,8 @@ function validateName(label: string, raw: string): Result<string, AtlasExportErr
 }
 
 /**
- * Validates a rect: every field must be a non-negative integer and both
- * dimensions must be positive, so a region can never be zero-sized or fractional.
+ * Every field must be a non-negative integer and both dimensions positive, so a
+ * region always lands on whole pixels with a visible size.
  */
 function validateRect(rect: AtlasRect): Result<AtlasRect, AtlasExportError> {
 	let fields: Array<[label: string, value: number, positive: boolean]> = [
@@ -134,7 +121,7 @@ export interface AtlasAssignment {
 /**
  * Validates an atlas assignment and derives its export target: the image target
  * (via {@link deriveSpriteTarget}) plus the validated atlas id, region name, and
- * rect. Pure — no disk, canvas, or network — so the mapping is unit-testable.
+ * rect. Pure, so the mapping stays unit-testable on its own.
  *
  * @param assignment The untrusted assignment fields.
  * @returns Success with an {@link AtlasExportTarget}, or failure with a
@@ -174,10 +161,9 @@ export interface ManifestAtlasEntry {
 }
 
 /**
- * The minimal manifest slice this export reads and writes: `images` (for the
- * flat image registration) and `atlases` (for the region assignment). Other
- * kinds are carried through untouched. Kept structural (not importing the
- * presentation type) so this module has no cross-layer dependency.
+ * The manifest slice this export reads and writes: `images` for the flat image
+ * registration, `atlases` for the region assignment, every other kind carried
+ * through untouched. Structural, so the module stands on its own types.
  */
 export interface ManifestAtlases {
 	images: Record<string, string>;
@@ -186,12 +172,9 @@ export interface ManifestAtlases {
 }
 
 /**
- * Returns a copy of the manifest with the sprite registered both as a flat
- * `images` entry (id → served URL) and as a named region of an atlas
- * (`atlases[atlasId]`), creating the atlas entry when absent and adding/updating
- * just the one region otherwise. The atlas's `image` is set to the sprite's URL:
- * the drawn sprite IS the atlas sheet, so a renderer blits the region straight
- * from it. Pure — never mutates the input — so the caller decides when to persist.
+ * Returns a copy of the manifest with the sprite registered as a flat `images`
+ * entry (id → served URL) and as one region of `atlases[atlasId]`, whose `image`
+ * is the sprite's own URL: the drawn sprite is itself the atlas sheet.
  *
  * @param manifest The current manifest contents.
  * @param target The derived atlas export target (image + atlas id + region + rect).
@@ -233,10 +216,9 @@ export interface AtlasExportResult {
 }
 
 /**
- * Reads the manifest from disk, tolerating an absent file (treated as an empty
- * manifest) so the first export bootstraps it, and coercing missing `images` /
- * `atlases` maps to empty objects. A present-but-invalid manifest is a hard
- * error rather than being silently overwritten.
+ * Reads the manifest, treating an absent file as empty so the first export
+ * bootstraps it and coercing missing `images` / `atlases` maps to empty objects.
+ * A present-but-invalid manifest fails hard, leaving whatever is on disk intact.
  *
  * @returns Success with the parsed manifest, or failure describing the problem.
  */
@@ -273,27 +255,18 @@ interface AtlasExportPayload {
 	h: unknown;
 }
 
-/** Reads a required string field off an untrusted payload, or returns `null`. */
 function readString(value: unknown): string | null {
 	return typeof value === "string" ? value : null;
 }
 
-/** Reads a required finite-number field off an untrusted payload, or `null`. */
 function readNumber(value: unknown): number | null {
 	return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 /**
- * Validates an atlas export payload, writes the PNG to `src/assets/<name>.png`,
- * and registers it in `src/content/manifest.json` both as a flat image and as a
- * named region of the chosen atlas.
- *
- * The name/atlas-id/region/rect are validated by {@link deriveAtlasTarget}; the
- * PNG bytes are written through {@link runBinaryExport} so they share the same
- * path-safety guard and base64 decode as every other binary write; and the
- * manifest write path is the fixed {@link MANIFEST_PATH}, itself re-checked by
- * {@link validateWritePath}. Any step failing surfaces as a failure result rather
- * than a partial export.
+ * Validates the payload, writes the PNG to `src/assets/<name>.png`, and registers
+ * it in `src/content/manifest.json` as a flat image and a named region. Both
+ * writes route through the shared path-safety guard.
  *
  * @param payload The parsed JSON body from an atlas export request (untrusted).
  * @returns Success with an {@link AtlasExportResult}, or failure with a
@@ -329,8 +302,6 @@ export async function runAtlasExport(payload: unknown): Promise<Result<AtlasExpo
 	let target = deriveAtlasTarget({ name, atlasId, region, rect: { x, y, w, h } });
 	if (isFailure(target)) return failure(target.error);
 
-	// Write the PNG through the binary export so it shares the same path-safety
-	// guard and base64 decode as every other binary write.
 	let pngResult = await runBinaryExport({
 		path: target.data.image.path,
 		contentsBase64: pngBase64,

@@ -30,11 +30,9 @@ export interface ReplayResult {
 }
 
 /**
- * Replays a recording against a freshly built engine and returns the collected events plus final snapshot.
- *
- * A new engine is constructed through `buildEngine(recording.seed)` for every call so replays never share
- * mutable state. Commands are dispatched in recorded order and their event arrays are concatenated into one
- * flat stream, mirroring what a live session would have observed.
+ * Replays a recording against a freshly built engine, returning the collected
+ * events and final snapshot. A fresh engine per call keeps replays from
+ * sharing mutable state.
  */
 export function replaySession(recording: Recording, buildEngine: BuildEngine): ReplayResult {
 	let engine = buildEngine(recording.seed);
@@ -80,11 +78,9 @@ export function replaysAreEqual(left: ReplayResult, right: ReplayResult): boolea
 }
 
 /**
- * Replays a recording twice and asserts both outcomes are identical, throwing a descriptive error otherwise.
- *
- * This is the primary pass/fail entry point for callers guarding engine determinism: identical seeds and
- * commands must yield identical events and snapshots. The two independent runs are returned so callers can
- * inspect them further when the assertion passes.
+ * Replays a recording twice and throws when the two runs diverge, guarding
+ * engine determinism for callers. Returns both runs so callers can inspect
+ * them further after the assertion passes.
  */
 export function assertDeterministicReplay(
 	recording: Recording,

@@ -1,19 +1,12 @@
-import { parseSafe } from "remix/data-schema";
 /**
- * Tests for the map JSON format's schema and its pack/unpack helpers.
- *
- * Covers the tile-ref packing round-trip (`packTileRef`/`unpackTileRef`) and the
- * `MapDataSchema` validator: a well-formed map parses (applying the documented
- * defaults for optional fields), the RPG-Maker-XP event model (multi-page events,
- * every trigger and autonomous-movement type, the recursive command union with
- * nested `show-choices`/`conditional-branch`) validates, and malformed maps — a
- * non-object, a missing dimension, a negative tile ref, a bad trigger, an unknown
- * command kind, and non-array pages — are rejected with issues. Cross-field
- * invariants (layer lengths, tileset-index bounds) live in the loader.
+ * Tests for the map JSON format's schema and its pack/unpack helpers: the
+ * tile-ref round-trip, well-formed maps applying documented defaults, the
+ * recursive event/command model, and malformed maps rejected with issues.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { parseSafe } from "remix/data-schema";
 import { expect, test } from "vitest";
 
 import {
@@ -59,7 +52,6 @@ test("a well-formed map parses and applies defaults for omitted optional fields"
 	expect(result.success).toBe(true);
 	if (!result.success) return;
 	expect(result.value.id).toBe("m");
-	// Omitted optional collections default to empty, and bgm defaults to "".
 	expect(result.value.encounters).toEqual([]);
 	expect(result.value.warps).toEqual([]);
 	expect(result.value.events).toEqual([]);
@@ -182,7 +174,6 @@ test("every command kind parses, and give-item defaults its count to 1", () => {
 		{ kind: "move", steps: ["up", "down"] },
 		{ kind: "wait", frames: 30 },
 	];
-	// `give-item` sent without a count should default to 1.
 	let sent = [...commands, { kind: "give-item", itemId: "POTION" }];
 	let result = parseSafe(
 		MapDataSchema,

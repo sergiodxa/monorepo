@@ -28,10 +28,9 @@ export interface ToolParam {
 }
 
 /**
- * A tool a plugin exposes. `kind` separates mutations from observations:
- * only observables may run inside `eventually`, and only observables can head
- * the observable form of `expect`. `requires` is the permission metadata the
- * design suite calls for — declared here, enforced centrally by the runtime.
+ * A tool a plugin exposes. `kind` separates mutations from observations: only
+ * observables may run inside `eventually` or head the observable form of
+ * `expect`. `requires` declares the permission family the runtime enforces.
  */
 export interface ToolDescriptor {
 	/** The tool's name inside its namespace, e.g. `"write"`. */
@@ -49,9 +48,7 @@ export interface ToolDescriptor {
 /**
  * What the runtime hands a tool for one call: the test's workspace and the
  * caller's grants. The `PermissionSet` is runtime-owned — a plugin calling
- * `check*` is asking the runtime, not authorizing itself — and the runtime
- * additionally gates every call on the tool's declared `requires` before the
- * plugin ever sees it.
+ * `check*` asks the runtime, since every call is already gated on `requires`.
  */
 export interface ToolContext {
 	/** The current test's isolated workspace. */
@@ -79,11 +76,9 @@ export interface Plugin {
 	 */
 	call(tool: string, args: ToolArg[], context: ToolContext): Promise<Result<Value, SpecError>>;
 	/**
-	 * Release any process-external resources the plugin accumulated during a
-	 * run — browser sessions, connections, spawned daemons. Optional, because
-	 * the built-in `fs`, `cli`, and `http` plugins hold nothing to release; the
-	 * runner calls it once per plugin after the whole suite has run, and
-	 * implementations must make it best-effort so teardown never fails a run.
+	 * Release any process-external resources the plugin accumulated — browser
+	 * sessions, connections, spawned daemons. Optional because built-ins hold
+	 * nothing to release; must be best-effort so teardown never fails a run.
 	 */
 	dispose?(): Promise<void>;
 }

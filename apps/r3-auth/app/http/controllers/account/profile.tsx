@@ -1,11 +1,8 @@
 /**
  * `GET /account/profile` — the signed-in subject's own profile, read straight from the
- * subject the session guard resolved rather than re-queried, so the page can never show
- * a different person than the one the guard let through.
- *
- * It is also the one place a person can see that their address is unconfirmed and do
- * something about it, so it renders the verification badge and, while the address is
- * unconfirmed, the panel that asks for a fresh message.
+ * subject the session guard resolved, so the page always shows the person the guard let
+ * through. It is also the one place a person sees that their address is unconfirmed, so
+ * it renders the verification badge and the panel that asks for a fresh message.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +21,6 @@ import routes from "~/routes/web";
 
 export default createAction(routes.account.profile, {
 	middleware: [requireSubject],
-	/** Renders the profile card for the subject the guard resolved. */
 	handler(ctx) {
 		let subject = ctx.subject;
 

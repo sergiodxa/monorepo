@@ -1,7 +1,7 @@
 /**
- * Tenant client secrets controller: renders the generate form, creates a secret and
- * shows it once, then supports revocation. Edit/update are unsupported (redirect
- * no-ops). Rendering uses `remix/ui` JSX via `ctx.render`.
+ * Tenant client secrets controller: renders the generate form, creates a
+ * secret shown once, and lets a tenant revoke it via destroy. Edit and update
+ * redirect back to the client, leaving existing secrets unchanged.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -122,7 +122,6 @@ export default {
 
 			log.info("Secret created", { tenantId: tenant.id, clientId: params.clientId, secretId: id });
 
-			// Show the secret once - user must copy it
 			return ctx.render(
 				<Document title={`Secret Created - ${client.name}`} tenant={tenant}>
 					<h2 mix={[s.pageTitle]}>Secret Created</h2>
@@ -159,7 +158,6 @@ export default {
 			);
 			log.info("Secret edit not supported - secrets cannot be edited");
 
-			// Secrets cannot be edited, only revoked
 			return new Response(null, {
 				status: 302,
 				headers: {
@@ -180,7 +178,6 @@ export default {
 			);
 			log.info("Secret update not supported - secrets cannot be edited");
 
-			// Secrets cannot be updated
 			return new Response(null, {
 				status: 302,
 				headers: {

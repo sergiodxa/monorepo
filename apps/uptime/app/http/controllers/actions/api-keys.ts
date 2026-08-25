@@ -1,9 +1,8 @@
 /**
  * Form actions for creating and deleting API keys. Requires `requireRole("admin")`.
- * The newly-created plaintext key is stashed in a one-time session flash (read and
- * cleared by the list page) rather than shown directly here — there's no
- * client-side navigation state to pass it through, since every page here is a full
- * server render.
+ * The newly-created plaintext key is stashed in a one-time session flash, read
+ * and cleared by the list page, since every page here is a full server render
+ * with no client-side navigation state to carry it through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

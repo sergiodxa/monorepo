@@ -26,10 +26,8 @@ const PAGING_RELS = new Set(["first", "prev", "next", "last"]);
 export interface PaginateOptions {
 	/**
 	 * The URL this page was requested with; every other query parameter is preserved.
-	 *
-	 * Explicit rather than configured, so the same call works in an export job or a
-	 * feed generator. A service behind a proxy must pass its public URL, or it will
-	 * advertise internal hostnames to its clients.
+	 * Explicit rather than configured, so a proxied service must pass its public URL
+	 * or it will leak internal hostnames.
 	 */
 	url: URL | string;
 }
@@ -64,10 +62,8 @@ function linkUrl(
 
 /**
  * Merges paging links into a `Link` header, keeping every link this package does not own.
- *
- * Its own four relations are dropped before the new ones are appended, which is what
- * makes a second call with the same page produce the same header, and what keeps
- * `rel="preload"` and the other resource hints that share this header alive.
+ * Dropping its own four relations before appending new ones keeps other
+ * resource hints on the header alive.
  */
 function mergeLinkHeader(headers: Headers, additions: readonly string[]): void {
 	let kept = parseLinkHeader(headers.get("Link"))
@@ -81,10 +77,9 @@ function mergeLinkHeader(headers: Headers, additions: readonly string[]): void {
 }
 
 /**
- * Writes a page's headers into `headers`, with the paging parameter names applied.
- *
- * Shared by the standalone `paginate()` and by the bound `paginate` a `createPaging()`
- * factory returns, so both spell their `Link` URLs the same way they read a request.
+ * Writes a page's headers, with the paging parameter names applied. Shared by
+ * `paginate()` and `createPaging()`'s bound paginate. A keyset page skips the
+ * total and the first/last relations, none reachable without a page count.
  *
  * @param headers The response's own headers, mutated in place.
  * @param page An offset page or a keyset page.
@@ -115,8 +110,6 @@ export function annotate<T>(
 
 		headers.set(TOTAL_COUNT_HEADER, String(pagination.total));
 	} else {
-		// A keyset page runs no count query, so it advertises no total and no first or
-		// last relation: neither is reachable without knowing how many pages there are.
 		if (page.cursors.prev !== null) {
 			additions.push(serializeLink(linkUrl(base, names, "cursor", page.cursors.prev), "prev"));
 		}
@@ -131,12 +124,9 @@ export function annotate<T>(
 }
 
 /**
- * Annotates a response's headers with the navigation for one page.
- *
- * `X-Total-Count` is replaced; `Link` is merged, so calling this twice with the same
- * page is a no-op and resource hints already on the response survive. An offset page
- * emits `first`, `prev`, `next`, `last`, and the total; a keyset page emits only the
- * cursor relations it can express.
+ * Annotates a response's headers with one page's navigation. `Link` is merged and
+ * `X-Total-Count` replaced, so calling it twice with the same page is a no-op; an
+ * offset page gets all four relations, a keyset page only the cursors it has.
  *
  * @param headers The response's own headers, mutated in place.
  * @param page The page to advertise; the shape decides which relations are emitted.

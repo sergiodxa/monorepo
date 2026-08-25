@@ -1,7 +1,7 @@
 /**
  * In-memory `R2Bucket` binding: objects with HTTP and custom metadata, real MD5 etags,
  * conditional reads and writes, range reads, delimiter-grouped listing, and multipart
- * uploads, so object-storage code can be tested against stored bytes rather than a stub.
+ * uploads, so object-storage code is tested against real stored bytes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,21 +22,16 @@ type R2Value = ReadableStream | ArrayBuffer | ArrayBufferView | string | null | 
 
 /** A stored object: its bytes plus everything R2 reports about it. */
 interface R2StoredObject {
-	/** Object key. */
 	key: string;
 	/** Opaque version assigned on write. */
 	version: string;
-	/** Object bytes. */
 	bytes: ArrayBuffer;
 	/** MD5 hex digest, which is also the object's etag. */
 	etag: string;
-	/** Write time. */
 	uploaded: Date;
 	/** HTTP metadata replayed by `writeHttpMetadata`. */
 	httpMetadata: R2HTTPMetadata;
-	/** Arbitrary string metadata stored with the object. */
 	customMetadata: Record<string, string>;
-	/** Storage class the object was written with. */
 	storageClass: string;
 	/** Digests computed at write time. */
 	checksums: R2StringChecksums;
@@ -58,22 +53,17 @@ export interface R2BucketMock extends R2Bucket {
 	readonly keys: string[];
 
 	/**
-	 * Discards every object and every in-flight multipart upload, as if the bucket were
-	 * new.
-	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets an empty bucket without re-creating the `env` the code under
-	 * test already captured.
+	 * Discards every object and every in-flight multipart upload, as if the
+	 * bucket were new, so `beforeEach` resets a module-scoped binding without
+	 * recreating the captured `env`.
 	 */
 	reset(): void;
 }
 
 /**
- * Creates an in-memory R2 bucket.
- *
- * Writes compute a real MD5 etag and verify any checksum the caller supplies, so a
- * corrupted upload fails here the way it fails on the platform. Reads honour `range` and
- * `onlyIf`, and `list` implements prefix, delimiter, cursor, and `include` semantics.
+ * Creates an in-memory R2 bucket, computing a real MD5 etag on write and
+ * verifying any checksum the caller supplies, so a corrupted upload fails
+ * the way it does on the platform.
  * @returns An `R2Bucket` binding storing objects in memory.
  * @example let bucket = createR2Bucket(); await bucket.put("a.txt", "hello");
  */
@@ -180,11 +170,9 @@ export function createR2Bucket(): R2BucketMock {
 	}
 
 	/**
-	 * Lists objects in lexicographic key order.
-	 *
-	 * With a `delimiter`, keys that contain it after the prefix collapse into
-	 * `delimitedPrefixes` instead of appearing as objects, which is how R2 emulates
-	 * directories. Metadata is omitted unless asked for through `include`.
+	 * Lists objects in lexicographic key order. A `delimiter` collapses keys
+	 * that contain it after the prefix into `delimitedPrefixes` instead of
+	 * objects, and metadata appears only when `include` asks for it.
 	 * @param options `prefix`, `delimiter`, `limit`, `cursor`, `startAfter`, `include`.
 	 * @returns A page of objects and collapsed prefixes, with a cursor when truncated.
 	 */
@@ -359,11 +347,9 @@ export function createR2Bucket(): R2BucketMock {
 }
 
 /**
- * Builds the metadata-only `R2Object` view of a stored object.
- *
- * The return type is inferred rather than annotated as `R2Object` so
- * {@link toR2ObjectBody} can spread it and keep `writeHttpMetadata`; every caller still
- * checks the shape through its own `R2Object` return type.
+ * Builds the metadata-only `R2Object` view of a stored object, its return
+ * type inferred so {@link toR2ObjectBody} can spread it while keeping
+ * `writeHttpMetadata`.
  */
 function toR2Object(
 	stored: R2StoredObject,
@@ -491,10 +477,9 @@ function computeChecksums(bytes: ArrayBuffer): R2StringChecksums {
 }
 
 /**
- * Verifies each checksum the caller supplied against the bytes actually received.
- *
- * R2 rejects a mismatched digest rather than storing corrupted data, and reproducing that
- * is the only way a test can cover the failure path.
+ * Verifies each checksum the caller supplied against the bytes actually
+ * received, matching R2's rejection of a mismatched digest — the only way
+ * a test can cover the failure path.
  */
 function verifyChecksums(options: R2PutOptions | undefined, computed: R2StringChecksums): void {
 	if (!options) return;
@@ -513,10 +498,9 @@ function verifyChecksums(options: R2PutOptions | undefined, computed: R2StringCh
 }
 
 /**
- * Computes one hex digest over the given bytes.
- *
- * `node:crypto` rather than a runtime-specific hasher, because every runner this mock is
- * exercised under provides it and the digests have to be byte-identical across them.
+ * Computes one hex digest over the given bytes, using `node:crypto` because
+ * every runner this mock is exercised under provides it and needs
+ * byte-identical digests across them.
  */
 function digest(algorithm: string, bytes: ArrayBuffer): string {
 	return createHash(algorithm).update(new Uint8Array(bytes)).digest("hex");

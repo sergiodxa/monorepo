@@ -1,15 +1,7 @@
 /**
- * Coordinates move resolution within the battle systems layer by defining the
- * contracts and helpers needed to evaluate one action from setup through
- * aftermath. It centralizes the logic that turns a chosen move and its effects
- * into state changes and emitted battle events while staying decoupled from any
- * single battle controller implementation.
- *
- * This module exists as the integration point for hit checks, damage handling,
- * effect processing, secondary outcomes, and combatant cleanup during move
- * execution. It keeps the resolution flow explicit and reusable so the broader
- * battle engine can delegate move processing to a focused system with clear
- * inputs, outputs, and extension points.
+ * Resolves one submitted move end-to-end: pre-move checks, charge handling, hit
+ * checks, damage, effects, and knockout cleanup, always returning the same
+ * ordered event stream regardless of the move involved.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +14,10 @@ import { Type } from "~/game/data/type";
 import type { BattleEvent, BattlePosition, FightCommand } from "../battle";
 import type { CombatantState } from "../combatant-state";
 
-/** Collects the battle callbacks needed to resolve one move without owning the whole battle class. */
+/**
+ * Collects the battle callbacks needed to resolve one move, so any battle
+ * controller can supply its own implementation.
+ */
 export interface MoveResolutionContext {
 	random(): number;
 	flattenEffects(effect: MoveEffect): MoveEffect[];
@@ -151,8 +146,8 @@ export interface MoveResolutionContext {
 /**
  * Resolves a committed move whose single-target slot no longer has an active combatant.
  *
- * This keeps stale target failures on the move-resolution path so battle orchestration emits
- * an explicit invalid-target outcome instead of dropping the action during turn iteration.
+ * This keeps stale target failures on the move-resolution path so battle orchestration
+ * always emits an explicit invalid-target outcome during turn iteration.
  */
 export function resolveMissingTargetEvents(
 	context: MoveResolutionContext,
@@ -172,11 +167,9 @@ export function resolveMissingTargetEvents(
 }
 
 /**
- * Resolves one submitted move into the exact ordered events expected by battle orchestration.
- *
- * The sequence is intentionally centralized here: pre-move locks and failures, charge handling, hit checks,
- * direct damage, follow-up effects, forced switching, and knockout cleanup. Keeping that order in one place
- * makes `Battle` smaller without changing the event stream that tests treat as behavior.
+ * Resolves one submitted move into the exact ordered events battle orchestration
+ * expects: pre-move locks, charge handling, hit checks, damage, follow-up effects,
+ * forced switching, and knockout cleanup, centralized here to keep `Battle` small.
  */
 export function resolveMoveEvents(
 	context: MoveResolutionContext,

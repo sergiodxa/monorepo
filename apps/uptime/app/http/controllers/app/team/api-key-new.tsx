@@ -1,20 +1,7 @@
 /**
  * New API key page controller. Requires `requireUser` + `requireTeam` +
- * `requireRole("admin")`. Renders the new API key form, listing every value of
- * `apiKeyScopes` as a scope checkbox.
- *
- * The fields are grouped into two bordered cards — what the key is called and how
- * long it lives, and what it is allowed to do — inside a single `<form>`, so the
- * page reads as distinct settings groups while still submitting as one request. The
- * submit control sits at the foot of the last card rather than loose under the
- * fields.
- *
- * There are two dozen scopes and each carries a sentence or two of prose, so the
- * list is a row-flow grid that splits into two columns on wide viewports: grid
- * items are atomic, so no entry can be torn across the column boundary the way CSS
- * multi-column would tear it, and row flow keeps the DOM in `apiKeyScopes` order so
- * tab order matches the reading order and each `:read`/`:write` pair stays side by
- * side in one row.
+ * `requireRole("admin")`. Renders the new API key form, grouping fields into
+ * two cards and listing every `apiKeyScopes` value as a checkbox.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,19 +28,16 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
- * Widest this form's column is allowed to grow, overriding `FormPage`'s default.
- * Every other field is comfortable at the default, but two columns of scopes are
- * not: each entry is a scope string plus a wrapped sentence of prose, and at 640px
- * the pair would be ~310px each and wrap after three or four words.
+ * Widest this form's column may grow, overriding `FormPage`'s default: at that
+ * width, two columns of scope entries (a scope string plus a sentence of prose)
+ * would be ~310px each and wrap after three or four words.
  */
 const FORM_MAX_WIDTH = "880px";
 
 /**
  * Viewport width from which the scope list splits into two columns. `AppShell`
- * spends 256px on the sidebar and 48px of padding per side from 768px up, so the
- * form only sees `viewport - 352px`: this leaves ~320px per column, and the next
- * step down (768px) would leave ~200px, which is narrower than the descriptions
- * read well at.
+ * reserves 352px for sidebar and padding, leaving ~320px per column here versus
+ * ~200px at the next breakpoint down — too narrow for the descriptions to read well.
  */
 const SCOPES_TWO_COLUMN_QUERY = "(min-width: 1024px)";
 
@@ -119,9 +103,6 @@ export default createAction(routes.app.team.apiKeys.new, {
 								</SettingsSection.Card>
 							</SettingsSection>
 
-							{/* The section heading is the group's visible caption now, so the group is named
-							through `aria-label` with that same string rather than repeating it as a second
-							"Permissions" line inside the card. */}
 							<SettingsSection
 								id="scopes"
 								title={ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}

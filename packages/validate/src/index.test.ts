@@ -1,37 +1,32 @@
+/**
+ * Covers `validate()` across every input shape it accepts, including
+ * `FormData`, `URLSearchParams`, `Request` bodies, and plain objects, plus
+ * the two `FormData`-reading schema styles it must reconcile.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { isFailure, isSuccess } from "@pkg/result";
 import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
-/**
- * Covers `validate()` across every input shape it accepts — `FormData`,
- * `URLSearchParams`, `Request` (JSON, urlencoded and multipart bodies) and plain
- * objects — plus schema features (transforms, nested objects, optional fields),
- * async Standard Schemas, and the two schema styles that read `FormData`
- * differently: `remix/data-schema/form-data` (raw source) and core
- * `remix/data-schema` (flattened plain object).
- *
- * @author [Sergio Xalambrí](https://sergiodxa.com)
- * @copyright Sergio Xalambrí 2026
- */
 import { describe, expect, test } from "vitest";
 
 import { validate, ValidationError } from "./index";
 
-// Checks are plain objects, so a custom `message` is applied by spreading the
-// factory's result instead of passing an argument to it.
+/** Checks are plain objects, so a custom `message` is applied by spreading the factory's result instead of passing an argument to it. */
 let userSchema = s.object({
 	name: s.string().pipe({ ...minLength(1), message: "Name is required" }),
 	email: s.string().pipe({ ...email(), message: "Invalid email format" }),
 });
 
-// `remix/data-schema` schemas are synchronous, so an async `.refine()` is not
-// expressible with them: `.refine()` takes a sync predicate, and a promise is
-// always truthy, which would make the check silently always pass. Hand-rolling
-// the Standard Schema interface is the only honest way to exercise the
-// `result instanceof Promise` branches in `validate()` — which stay reachable
-// because `validate()` accepts *any* Standard Schema, not just data-schema ones.
+/**
+ * `remix/data-schema` schemas are synchronous, so an async `.refine()` always
+ * passes silently; hand-rolling the Standard Schema interface here exercises
+ * the `result instanceof Promise` branches `validate()` supports.
+ */
 type AsyncInput = { value: string };
 
 let asyncSchema: StandardSchemaV1<AsyncInput, AsyncInput> = {
@@ -39,7 +34,6 @@ let asyncSchema: StandardSchemaV1<AsyncInput, AsyncInput> = {
 		version: 1,
 		vendor: "test",
 		async validate(input) {
-			// Simulate async validation
 			await new Promise((resolve) => setTimeout(resolve, 1));
 
 			let data = input as AsyncInput;
@@ -303,8 +297,6 @@ describe("validate", () => {
 
 	describe("content-type validation", () => {
 		test("handles multipart/form-data (auto-detected)", async () => {
-			// When you pass FormData to Request, it automatically sets
-			// Content-Type: multipart/form-data with the correct boundary
 			let formData = new FormData();
 			formData.append("name", "Test");
 			formData.append("email", "test@example.com");
@@ -314,7 +306,6 @@ describe("validate", () => {
 				body: formData,
 			});
 
-			// Verify the content-type was set automatically
 			let contentType = request.headers.get("content-type");
 			expect(contentType).toContain("multipart/form-data");
 
@@ -440,7 +431,6 @@ describe("validate", () => {
 			let result = await validate(formData, userSchema);
 
 			if (isSuccess(result)) {
-				// TypeScript should infer result.data as { name: string, email: string }
 				let user: { name: string; email: string } = result.data;
 				expect(user.name).toBe("Test");
 				expect(user.email).toBe("test@example.com");
@@ -556,11 +546,11 @@ describe("validate", () => {
 		});
 	});
 
-	// `remix/data-schema/form-data`'s `object()` validates the raw `FormData`/
-	// `URLSearchParams` source directly (it reads fields via `.get()`/`.getAll()`)
-	// instead of a flattened plain object, unlike the core `remix/data-schema`
-	// schemas used everywhere else in this file. `validate()` must detect this and
-	// retry with the raw source instead of always failing.
+	/**
+	 * `remix/data-schema/form-data`'s `object()` validates the raw `FormData`/
+	 * `URLSearchParams` source directly, reading fields via `.get()`/`.getAll()`
+	 * instead of a flattened plain object, so `validate()` must detect and retry.
+	 */
 	describe("with remix/data-schema/form-data schemas", () => {
 		let formSchema = f.object({
 			name: f.field(s.string()),
@@ -598,7 +588,6 @@ describe("validate", () => {
 		test("returns the field-level failure, not the raw-source rejection, for missing data", async () => {
 			let formData = new FormData();
 			formData.append("name", "Alice");
-			// `email` is missing entirely.
 
 			let result = await validate(formData, formSchema);
 
@@ -619,10 +608,11 @@ describe("validate", () => {
 		});
 	});
 
-	// Confirms the fix above didn't change behavior for schemas that already
-	// succeed against the flattened plain object — this is core `remix/data-schema`
-	// (not `form-data`), which expects a plain object rather than the raw
-	// `FormData`/`URLSearchParams` source.
+	/**
+	 * Confirms the raw-source retry added for `form-data` schemas leaves core
+	 * `remix/data-schema` schemas, which validate a flattened plain object,
+	 * succeeding exactly as before.
+	 */
 	describe("with core remix/data-schema (non-form-data) schemas", () => {
 		let coreSchema = s.object({ name: s.string(), email: s.string() });
 

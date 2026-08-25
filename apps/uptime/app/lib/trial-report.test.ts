@@ -1,10 +1,9 @@
 /**
- * Unit tests for the free-watch bucketing: that a period with several checks reports the
- * worst of them, that a period with none reports nothing rather than the last known state,
- * and that checks outside the range are dropped instead of clamped into the nearest period.
+ * Unit tests for the free-watch bucketing: a period with several checks
+ * reports the worst of them, an uncovered period reports as empty, and
+ * checks outside the range are excluded from every period.
  *
- * Plus the incident grouping a report names its outages from, whose tests are about what it
- * refuses to call an outage.
+ * Plus the incident grouping a report names its outages from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,10 +63,8 @@ describe("segmentsOver", () => {
 });
 
 /**
- * Incidents are the one figure on a report that is derived rather than counted, so the tests
- * are about what the derivation refuses to claim: `degraded` is not an outage, consecutive
- * failures are one incident rather than several, and a run is closed by the first check that
- * comes back at all.
+ * Incidents are a derived figure: consecutive failing checks merge into
+ * one run, and any check that comes back — even `degraded` — closes it.
  */
 describe("incidentsFrom", () => {
 	test("reports nothing for a target that never failed", () => {

@@ -1,13 +1,9 @@
 /**
- * Tests for the new cron-job monitor page controller. It renders an empty form with
- * no data dependency beyond the team, so this only checks the 200 response, that the
- * form's fields are present, and that they are framed as the three settings cards the
- * page groups them into (asserted through the sections' anchor ids, which stay stable
- * while their translated headings can change). Doesn't import
- * `~/app/data/monitor`, so no `cloudflare:workers` mock is needed. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the
- * template in `app/http/controllers/app/team/http-monitors.test.ts`.
+ * Tests for the new cron-job monitor page controller: an empty form with no data
+ * dependency beyond the team, so this checks the 200 response, the fields'
+ * presence, and their grouping into the three settings cards via each section's
+ * stable anchor id. Skips `~/app/data/monitor`, so no `cloudflare:workers` mock is
+ * needed. Auth and team state are seeded directly by a fake middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -147,6 +143,11 @@ describe("cronJobNew", () => {
 		expect(body).toContain('command="--step-down" commandfor="cron-job-grace-period-seconds"');
 	});
 
+	/**
+	 * A second `selected` claimant would leave the browser to pick, so the picker
+	 * renders exactly one; zones are grouped by region instead of one long list, and
+	 * `<select>` carries its selection only through each option's `selected` attribute.
+	 */
 	test("offers the timezone as a grouped picker defaulting to UTC", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -155,18 +156,14 @@ describe("cronJobNew", () => {
 		let markup = /<select[^>]*\bname="timezone"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
 		expect(markup).not.toBe("");
 
-		// Exactly one option claims `selected` — a second claimant would leave which one
-		// the browser honours up to the browser rather than to the markup.
 		let selected = [...markup.matchAll(/<option\b[^>]*>/g)]
 			.map((match) => match[0])
 			.filter((tag) => /\sselected(?=[\s/>])/.test(tag))
 			.map((tag) => /\bvalue="([^"]*)"/.exec(tag)?.[1] ?? "");
 		expect(selected).toEqual(["UTC"]);
 
-		// The zones are grouped by region rather than listed as one 400-entry run.
 		expect(markup).toContain('<optgroup label="Europe"');
 		expect(markup).toContain('<option value="Europe/Madrid"');
-		// A `<select>` has no `defaultValue` attribute; spelling one renders inert markup.
 		expect(/<select[^>]*defaultvalue=/i.test(body)).toBe(false);
 	});
 });

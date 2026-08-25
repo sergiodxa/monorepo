@@ -1,13 +1,12 @@
 /**
  * Tests the first-touch attribution record: what it keeps off a URL, and what it refuses to.
  *
- * The normalization is the part with rules in it, so it is tested directly against
- * `readAttribution` rather than through a request. Every case passes a fixed instant, so
- * nothing here depends on the clock.
+ * The normalization is the part with rules in it, so these cases call `readAttribution`
+ * directly, each passing a fixed instant so nothing here depends on the clock.
  *
  * The middleware itself is exercised through a router carrying the same head-of-chain
- * `HEAD` handling and session the app installs, because the one thing it must never do is
- * write on a probe.
+ * `HEAD` handling and session the app installs, confirming a probe gets a read-only pass
+ * through it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,7 +64,7 @@ describe("readAttribution", () => {
 
 	/**
 	 * The query string is where the personal data on this site lives — `/try?url=` pre-fills
-	 * with somebody's own address. The landing path must never carry it.
+	 * with somebody's own address. The landing path always resolves to the bare pathname.
 	 */
 	test("keeps the path and drops the query string", () => {
 		let record = read("https://uptime.test/try?url=https://someones-private-staging.example");
@@ -75,16 +74,14 @@ describe("readAttribution", () => {
 	});
 
 	/**
-	 * The value reaches an internal email and a database column, so what matters is that
-	 * nothing outside a slug survives — not that a hostile input is rejected outright. A
-	 * stripped `<script>` becomes the harmless word `script`, which is the right outcome: it
-	 * still attributes the visit and carries no markup.
+	 * The value reaches an internal email and a database column, so what matters is that only a
+	 * slug survives. A stripped `<script>` becomes the harmless word `script`, which still
+	 * attributes the visit in plain text.
 	 */
 	test("strips anything that is not a slug out of a campaign value", () => {
 		expect(read("https://uptime.test/?ref=%3Cscript%3E").source).toBe("script");
 		expect(read("https://uptime.test/?ref=a<b>c").source).toBe("abc");
 		expect(read("https://uptime.test/?ref=a'b\"c;d").source).toBe("abcd");
-		// The slug characters that are kept, so the rule isn't "strip everything".
 		expect(read("https://uptime.test/?ref=my.campaign_1-x").source).toBe("my.campaign_1-x");
 	});
 
@@ -137,12 +134,9 @@ describe("attribution middleware", () => {
 	});
 
 	/**
-	 * The guard reads the *original* request method on purpose. The head-of-chain `HEAD`
-	 * middleware rewrites `context.method` to `GET` and runs the whole handler, so reading
-	 * `context.method` here would make every monitoring probe look like a first arrival:
-	 * it would claim the visitor's first touch for whichever path a machine happened to
-	 * probe, and it would write a session — and therefore a `Set-Cookie` — for a caller
-	 * that has no session and no campaign behind it. A probe must never be attributed.
+	 * The guard reads `context.request.method`, preserved as-is by the head-of-chain `HEAD`
+	 * middleware even though it rewrites `context.method` to `GET` and runs the whole handler;
+	 * a probe must still read as `HEAD` here, or every monitoring check would count as a first arrival.
 	 */
 	test("records nothing for a HEAD probe of the same page", async () => {
 		let record = await run(

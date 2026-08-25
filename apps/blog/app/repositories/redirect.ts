@@ -12,8 +12,8 @@ import type { KVStore } from "~/app/contracts/kv-store";
 /**
  * Redirect domain types persisted in the REDIRECTS KV namespace.
  *
- * KV values can be legacy plain strings or structured JSON payloads, so callers
- * should rely on `Redirect.parseValue` output instead of assuming one storage format.
+ * Stored values arrive as legacy plain strings or structured JSON, so callers
+ * read them through `Redirect.parseValue` to get one shape.
  */
 export namespace Redirect {
 	/**
@@ -77,11 +77,12 @@ export class Redirect {
 
 	/**
 	 * Lists every valid redirect currently stored in KV.
+	 *
+	 * Entries that fail to read or parse are skipped, keeping admin listings
+	 * resilient to stale keys and malformed legacy values.
+	 *
 	 * @param kv KV namespace containing redirect definitions.
 	 * @returns Redirect records with normalized `from` paths.
-	 *
-	 * Entries that cannot be read or parsed are skipped to keep admin listings resilient
-	 * to stale keys and malformed legacy values.
 	 */
 	static async findAll(kv: KVStore): Promise<Array<Redirect.Record>> {
 		let list = await kv.list();
@@ -137,12 +138,11 @@ export class Redirect {
 	}
 
 	/**
-	 * Parses a raw KV value into a redirect payload.
+	 * Plain strings are legacy shorthand and resolve to `302`, as do JSON payloads
+	 * carrying an unsupported status.
+	 *
 	 * @param value Raw value read from KV.
 	 * @returns Parsed redirect payload, or `null` for empty/invalid values.
-	 *
-	 * Plain strings are treated as legacy shorthand and default to `302`. JSON payloads
-	 * with unsupported statuses are accepted but coerced to `302`.
 	 */
 	static parseValue(value: string): Redirect.Value | null {
 		let trimmed = value.trim();

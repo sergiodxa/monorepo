@@ -13,10 +13,8 @@ import { slugify } from "@pkg/strings";
 import routes from "~/routes/web";
 
 /**
- * Type contracts for CMS article view-model transformations.
- *
- * These interfaces define the boundary between repositories/controllers
- * and the mapper methods in this module.
+ * Payload contracts at the boundary between repositories/controllers and the
+ * mapper methods in this module.
  */
 export namespace ArticleViewModel {
 	/**
@@ -25,13 +23,9 @@ export namespace ArticleViewModel {
 	 * `preview` is precomputed by the caller and rendered as-is.
 	 */
 	export interface SourceIndexItem {
-		/** Stable article identifier used for CMS routes. */
 		id: string;
-		/** Human-readable title shown in index rows. */
 		title: string;
-		/** Public slug used to build the reader-facing URL. */
 		slug: string;
-		/** Whether the row should be labeled as preview in CMS. */
 		preview: boolean;
 	}
 
@@ -41,90 +35,53 @@ export namespace ArticleViewModel {
 	 * Optional fields are normalized to empty strings by `edit`.
 	 */
 	export interface SourceEditItem {
-		/** Stable article identifier used by update/delete routes. */
 		id: string;
-		/** Current title, if present in stored metadata. */
 		title?: string;
-		/** Current public slug, if present in stored metadata. */
 		slug?: string;
-		/** Locale code used by content rendering and indexing. */
 		locale?: string;
-		/** Short summary shown in feeds and metadata. */
 		excerpt?: string;
-		/** Optional canonical URL for SEO de-duplication. */
 		canonical_url?: string;
-		/** Markdown body content. */
 		content?: string;
-		/**
-		 * Publish timestamp in ISO format or `null`.
-		 *
-		 * In this app, `null` is treated as published (not preview).
-		 */
+		/** ISO timestamp, or `null` to mark the article as published. */
 		published_at: string | null;
 	}
 
 	/**
-	 * Raw field values posted by the CMS create/edit form.
-	 *
-	 * Values are still user-facing and may require normalization.
+	 * Raw field values posted by the CMS create/edit form; normalize them with
+	 * `input` before persisting.
 	 */
 	export interface SourceFormData {
-		/** User-entered title; also used to derive a slug fallback. */
+		/** Source of the slug fallback when `slug` is omitted. */
 		title: string;
-		/** Optional explicit slug override from the editor form. */
 		slug?: string;
-		/** Locale selected in the CMS form. */
 		locale: string;
-		/** Optional summary used by cards, feeds, and metadata. */
 		excerpt?: string;
-		/** Optional canonical URL for cross-posted content. */
 		canonical_url?: string;
-		/** Markdown body entered in the editor. */
 		content: string;
-		/**
-		 * Optional publish value from date/datetime inputs.
-		 *
-		 * Empty/invalid values are coerced to `null` by `input`.
-		 */
+		/** Empty or invalid values are coerced to `null` by `input`. */
 		published_at?: string;
 	}
 
-	/**
-	 * Input payload for `index`.
-	 */
+	/** Input payload for `index`. */
 	export interface InputIndex {
-		/** Repository-provided rows to map into CMS table entries. */
 		items: Array<SourceIndexItem>;
 	}
 
-	/**
-	 * Input payload for `new`.
-	 *
-	 * Kept for API symmetry with other mapper methods.
-	 */
+	/** Empty payload for `new`, kept for symmetry with the other mappers. */
 	export interface InputNew {}
 
-	/**
-	 * Input payload for `notFound`.
-	 */
+	/** Input payload for `notFound`. */
 	export interface InputNotFound {
-		/** Missing article id that triggered the fallback state. */
 		id?: string;
 	}
 
-	/**
-	 * Input payload for `edit`.
-	 */
+	/** Input payload for `edit`. */
 	export interface InputEdit {
-		/** Existing article record to convert into editable form values. */
 		article: SourceEditItem;
 	}
 
-	/**
-	 * Input payload for `input`.
-	 */
+	/** Input payload for `input`. */
 	export interface InputForm {
-		/** Raw form data to normalize before persistence. */
 		data: SourceFormData;
 	}
 }
@@ -137,9 +94,8 @@ export namespace ArticleViewModel {
  */
 export class ArticleViewModel {
 	/**
-	 * Maps article summaries into CMS index rows.
-	 *
-	 * Each row includes both the public article URL and CMS actions.
+	 * Each row carries the public article URL alongside the CMS edit and delete
+	 * actions.
 	 * @param input Source items used by the CMS listing screen.
 	 * @returns Index rows ready for CMS table rendering.
 	 */
@@ -155,9 +111,8 @@ export class ArticleViewModel {
 	}
 
 	/**
-	 * Builds the default state for the "new article" CMS screen.
-	 *
-	 * The returned payload mirrors the `edit` shape to simplify form reuse.
+	 * Builds the default state for the "new article" CMS screen, in the same
+	 * shape as `edit` so one form component serves both.
 	 * @param _input Placeholder input to keep a consistent API shape.
 	 * @returns New-form metadata, submit target, and empty field values.
 	 */
@@ -181,10 +136,8 @@ export class ArticleViewModel {
 	}
 
 	/**
-	 * Builds a recoverable "not found" state for the CMS form screen.
-	 *
-	 * It intentionally returns `mode: "new"` so editors can create a
-	 * replacement article without leaving the page.
+	 * Returns `mode: "new"` so an editor who requested a missing article can
+	 * create a replacement in place.
 	 * @param input Context used to describe which article was requested.
 	 * @returns New-form view model with a not-found description message.
 	 */
@@ -208,10 +161,8 @@ export class ArticleViewModel {
 	}
 
 	/**
-	 * Builds edit-form state from an existing article record.
-	 *
-	 * Nullable/optional repository fields are converted to string values so
-	 * controlled form inputs always receive defined data.
+	 * Nullable and optional repository fields become strings so controlled form
+	 * inputs always receive defined values.
 	 * @param input Stored article used to prefill form fields.
 	 * @returns Edit-form metadata, actions, and normalized form values.
 	 */
@@ -238,10 +189,8 @@ export class ArticleViewModel {
 	}
 
 	/**
-	 * Normalizes posted CMS form values into repository input.
-	 *
-	 * Slugs default to a slugified title and publish values are coerced
-	 * into ISO timestamps (or `null` when absent/invalid).
+	 * Slugs default to a slugified title, and publish values become ISO
+	 * timestamps or `null`.
 	 * @param input CMS form payload collected from the request body.
 	 * @returns Persistable article metadata plus normalized publish timestamp.
 	 */
@@ -262,10 +211,8 @@ export class ArticleViewModel {
 	}
 
 	/**
-	 * Converts publish input from HTML form controls into ISO timestamp format.
-	 *
-	 * Date-only values (`YYYY-MM-DD`) are interpreted as UTC midnight to avoid
-	 * locale-dependent shifts. Invalid inputs are treated as unpublished (`null`).
+	 * Date-only values (`YYYY-MM-DD`) are read as UTC midnight so stored
+	 * timestamps stay stable across locales; invalid input counts as unpublished.
 	 * @param value Raw publish input from form data.
 	 * @returns ISO timestamp when valid, otherwise `null`.
 	 */
@@ -282,9 +229,7 @@ export class ArticleViewModel {
 	}
 
 	/**
-	 * Formats a stored publish timestamp for date-input controls.
-	 *
-	 * Invalid or missing values become an empty string so form fields remain
+	 * Invalid or missing values become an empty string so the date field stays
 	 * controlled and editable.
 	 * @param value Stored publish timestamp.
 	 * @returns `YYYY-MM-DD` for `<input type="date">`, or empty string.

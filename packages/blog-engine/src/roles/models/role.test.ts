@@ -31,7 +31,6 @@ describe("Role permission resolution", () => {
 		let permissions = await Role.permissionsFor(db, "role_editor");
 		expect(permissions.has("posts.publish")).toBe(true);
 		expect(permissions.has("posts.edit_any")).toBe(true);
-		// Editor manages content, never users/roles/settings.
 		expect(permissions.has("users.manage")).toBe(false);
 		expect(permissions.has("roles.manage")).toBe(false);
 		expect(permissions.has("settings.manage")).toBe(false);
@@ -54,7 +53,6 @@ describe("Role permission resolution", () => {
 
 		expect(admin).not.toBeNull();
 		expect(Role.isAdminRole(admin!)).toBe(true);
-		// Editor is missing users.manage/roles.manage, so it is not an admin role.
 		expect(ADMIN_PERMISSIONS.every((key) => editor!.permissions.includes(key))).toBe(false);
 		expect(Role.isAdminRole(editor!)).toBe(false);
 		expect(Role.isAdminRole(reader!)).toBe(false);
@@ -125,7 +123,6 @@ describe("Role built-in protection", () => {
 			permissions: ["users.manage", "roles.manage"],
 		});
 
-		// Only label/description are mutable on built-ins; name and permissions are frozen.
 		expect(updated.name).toBe("reader");
 		expect(updated.label).toBe("Relabelled Reader");
 		expect(updated.description).toBe("new copy");

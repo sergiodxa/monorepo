@@ -1,5 +1,5 @@
 /**
- * Unit tests for `calc()`, a plain string builder (not a mixin).
+ * Unit tests for `calc()`, a plain string builder.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

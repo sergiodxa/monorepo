@@ -16,17 +16,15 @@ import { column as c, table } from "remix/data-table";
 import { sanitizeCss } from "../../shared/lib/css-sanitizer";
 
 /**
- * Model for tenant branding configuration.
- * Manages logo, colors, and custom CSS for the authentication UI.
+ * Single row keyed by `id: "default"`. Reads substitute default colors when
+ * unset, and writes sanitize custom CSS before it reaches storage.
  */
 export default class Brand {
-	/** Default branding values. */
 	static DEFAULTS = {
 		primaryColor: "#3B82F6",
 		backgroundColor: "#FFFFFF",
 	};
 
-	/** Database table schema for branding. */
 	static table = table({
 		name: "branding",
 		primaryKey: ["id"],
@@ -120,7 +118,6 @@ export default class Brand {
 	}
 
 	/**
-	 * Returns the default branding values.
 	 * @returns Default primary and background colors
 	 */
 	static getDefaults() {

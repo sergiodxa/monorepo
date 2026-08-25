@@ -8,10 +8,9 @@ import type { UtilityMixin } from "../internal/descriptor";
 import { utility } from "../internal/descriptor";
 
 /**
- * Sets only `outline-width`, leaving `outline-color`/`outline-style`
- * untouched. A bare number is treated as pixels; a string passes through
- * unchanged. Use this over `u.outline()` when a state needs to override just
- * the width without forcing a color/style that wasn't already set.
+ * Sets `outline-width` alone, so a state can override the width while the
+ * color and style already in effect stay in force. A bare number is treated
+ * as pixels; a string passes through unchanged.
  *
  * @example u.outlineWidth(4)
  * @example css({ outlineWidth: "4px" })

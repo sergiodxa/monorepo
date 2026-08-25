@@ -28,7 +28,6 @@ import { reject } from "../../shared/lib/reject";
 import SigningKey from "../../signing-keys/models/signing-key";
 import Subject from "../../subjects/models/subject";
 
-/** Validation schema for the RP-initiated logout query parameters. */
 let LogoutSchema = s.object({
 	id_token_hint: s.optional(s.string()),
 	post_logout_redirect_uri: s.optional(s.string()),

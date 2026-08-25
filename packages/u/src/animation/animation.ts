@@ -1,10 +1,8 @@
 /**
  * The primitive animation composer: it emits an `@keyframes` rule and the
  * host `animation-*` declarations that reference it together, in one mixin.
- * It does not introduce animation opinions such as fade, slide, scale, spin,
- * or shimmer recipes; it only provides CSS keyframe emission and animation
- * declaration composition. Named recipes belong in `@pkg/ui/animations` or a
- * future animation package built on top of this layer.
+ * It stays at the CSS layer — keyframe emission and declaration composition —
+ * leaving named recipes such as fade, slide, or spin to the layers above.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,35 +14,29 @@ import { compose, utility } from "../internal/descriptor";
 
 import { keyframes } from "./keyframes";
 
-/**
- * The keyframes, duration, and optional easing/delay/iteration/direction/
- * fill-mode shared by both `animation()` call shapes.
- */
+/** The keyframes and timing shared by both `animation()` call shapes. */
 export interface AnimationConfig {
 	keyframes: Record<string, CSSStyles>;
 	duration: string;
 	easing?: string;
-	/** Sets `animationDelay` (e.g. `"150ms"`). Omitted (platform default `0s`) when not given. */
+	/** `"150ms"`. The platform default `0s` applies when omitted. */
 	delay?: string;
-	/** Sets `animationIterationCount` (e.g. `"infinite"`, `2`). Omitted (platform default `1`) when not given. */
+	/** `"infinite"`, `2`. The platform default `1` applies when omitted. */
 	iterationCount?: string | number;
-	/** Sets `animationDirection` (e.g. `"alternate"`, `"reverse"`). Omitted (platform default `"normal"`) when not given. */
+	/** `"alternate"`, `"reverse"`. The platform default `"normal"` applies when omitted. */
 	direction?: string;
-	/** Sets `animationFillMode` (e.g. `"both"`, `"forwards"`). Omitted (platform default `"none"`) when not given. */
+	/** `"both"`, `"forwards"`. The platform default `"none"` applies when omitted. */
 	fillMode?: string;
-	/** Sets `animationTimeline` (e.g. `"scroll()"`, `"view()"`, or a named `--custom-timeline`). Omitted (platform default `"auto"`) when not given. */
+	/** `"scroll()"`, `"view()"`, or a named `--custom-timeline`. The platform default `"auto"` applies when omitted. */
 	timeline?: string;
-	/** Sets `animationRange` (e.g. `"entry 0% cover 40%"`). Omitted (platform default `"normal"`) when not given. */
+	/** `"entry 0% cover 40%"`. The platform default `"normal"` applies when omitted. */
 	range?: string;
 }
 
 /**
- * Emits an `@keyframes` rule under `name` plus host `animationName`,
- * `animationDuration`, and (when given) `animationTimingFunction`,
- * `animationDelay`, `animationIterationCount`, `animationDirection`,
- * `animationFillMode`, `animationTimeline`, and `animationRange` declarations
- * that reference it. Use the named form when the animation name is useful for
- * debugging in devtools.
+ * Emits an `@keyframes` rule under `name` together with the host
+ * `animation-*` declarations that reference it. Use the named form when the
+ * animation name is useful for debugging in devtools.
  *
  * @example
  * u.animation("fade-in", {
@@ -79,11 +71,9 @@ export function animation<Node extends Element = Element>(
 	config: AnimationConfig,
 ): UtilityMixin<Node>;
 /**
- * Emits the same `@keyframes` rule and host `animation-*` declarations as
- * the named form, but generates a stable name from the keyframe content
- * instead of taking one. Identical `keyframes` content always generates the
- * identical name, so use this form for one-off animations that don't need a
- * debuggable name.
+ * Generates a stable name from the keyframe content instead of taking one:
+ * identical `keyframes` content always generates the identical name, so
+ * one-off animations share a single rule.
  *
  * @example
  * u.animation({
@@ -113,19 +103,9 @@ export function animation<Node extends Element = Element>(
 }
 
 /**
- * Emits just the host `animation-*` declarations `animation()` would —
- * `animationName`/`animationDuration` plus whichever optional fields are
- * given (it takes every {@link AnimationConfig} key except `keyframes`, so
- * `delay`, `timeline`, and `range` all work here too) — with NO accompanying
- * `@keyframes` rule. This is the primitive
- * `animation()` is sugar over, for call sites that need to compose the
- * keyframes and the host declarations separately: a loop that gates its
- * running state behind a selector (`u.when("&[data-busy]", u.animationHost(...))`)
- * must never pass the keyframes utility itself through `when()` — nesting an
- * `@keyframes` rule under a selector produces broken CSS, since keyframes
- * only hoist to the stylesheet root from a mixin's own top level (or from
- * inside `u.media()`/`u.supports()`, which are safe). Pair this with a
- * sibling `u.keyframes(name, frames)` call in the same `mix` array instead.
+ * Emits the host `animation-*` declarations alone, taking every
+ * {@link AnimationConfig} key but `keyframes`. Pair it with a sibling
+ * `u.keyframes` call, since `@keyframes` only hoists from a mixin's top level.
  *
  * @example
  * <div
@@ -146,6 +126,11 @@ export function animationHost<Node extends Element = Element>(
 	return utility<Node>(() => hostDeclarations(name, config as AnimationConfig));
 }
 
+/**
+ * `iterationCount` is stringified because the CSS serializer appends `px` to a
+ * unitless number outside its allow-list, and browsers drop the resulting
+ * `animation-iteration-count: 2px`, falling back to a single iteration.
+ */
 function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
 	let styles: Record<string, string | number> = {
 		animationName: name,
@@ -153,12 +138,6 @@ function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
 	};
 	if (config.easing) styles.animationTimingFunction = config.easing;
 	if (config.delay) styles.animationDelay = config.delay;
-	// Stringified, not passed through as a number: the CSS serializer appends
-	// `px` to any unitless number whose property isn't on its unitless
-	// allow-list, and `animation-iteration-count` isn't on it. A numeric
-	// `iterationCount: 2` would emit `animation-iteration-count: 2px`, which is
-	// invalid and gets dropped, silently falling back to a single iteration.
-	// Do not "simplify" the `String()` away.
 	if (config.iterationCount !== undefined) {
 		styles.animationIterationCount = String(config.iterationCount);
 	}

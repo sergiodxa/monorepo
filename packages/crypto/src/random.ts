@@ -61,9 +61,8 @@ export namespace randomToken {
 /**
  * Generates a URL-safe random token, optionally namespaced by a prefix.
  *
- * The random part is unpadded base64url, so the token needs no escaping in a URL,
- * a header, or a file name. The prefix is not entropy: it exists so a token found
- * in a log can be recognized and revoked by kind.
+ * Unpadded base64url avoids escaping in a URL, header, or file name; the
+ * prefix lets a leaked token be recognized and revoked by kind.
  *
  * @param options Entropy and prefix.
  * @returns The token, as `<prefix>_<random>` when a prefix is given.

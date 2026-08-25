@@ -17,9 +17,8 @@ import { Session } from "remix/session";
 /**
  * Name of the signed cookie carrying the session id.
  *
- * Deliberately not the name the React app used: the stored record has a different
- * format, and a distinct name means rolling back finds its own untouched cookie
- * rather than one it cannot parse.
+ * A distinct cookie name guarantees a rollback always finds a cookie already in the
+ * format it expects, ready to parse from the first read.
  */
 const SESSION_COOKIE_NAME = "auth:session";
 
@@ -43,12 +42,9 @@ export type ResponseMode = "query" | "fragment" | "form_post";
 export type PromptValue = "none" | "login" | "consent" | "select_account" | "create";
 
 /**
- * The authorization request a sign-in is being performed for, parked in the session
- * between the `/authorize` redirect and whichever login flow completes it.
- *
- * `codeChallenge` / `codeChallengeMethod` are carried here so PKCE survives the
- * round trip through the login UI: they arrive on the `/authorize` request and are
- * needed when the code is finally issued, which happens on a later request.
+ * The in-flight authorization request, parked in the session between the `/authorize`
+ * redirect and the login flow that completes it. `codeChallenge` and
+ * `codeChallengeMethod` ride along so PKCE survives to the request that issues the code.
  */
 export interface AuthzState {
 	clientId: string;
@@ -122,8 +118,8 @@ export function getRefreshToken(): string | null {
 }
 
 /**
- * Stores both tokens for the signed-in person. Always written as a pair: a session
- * holding one without the other cannot refresh and cannot be recovered from.
+ * Stores both tokens for the signed-in person, always written together: only a session
+ * holding both can refresh itself or recover from a failed request.
  */
 export function setTokens(accessToken: string, refreshToken: string): void {
 	let value = readSession();
@@ -139,22 +135,18 @@ export function unsetTokens(): void {
 }
 
 /**
- * Discards the whole session record, not just its contents: the KV entry is deleted
- * and the response replaces the cookie with an empty one.
- *
- * Nothing may read or write the session afterwards — a destroyed session throws on
- * access — so call this last, once the response is decided.
+ * Discards the whole session record: the KV entry is deleted and the response replaces
+ * the cookie with an empty one. Call this last, once the response is decided — a
+ * destroyed session throws on any further access.
  */
 export function destroySession(): void {
 	readSession().destroy();
 }
 
 /**
- * The authorization request currently in flight, or `null` when none is parked.
- *
- * The stored value is validated structurally rather than trusted: a record written by
- * an older deployment, or by a session whose format has since changed, must read as
- * "no request in flight" instead of feeding half a request into the code issuer.
+ * The authorization request currently in flight, or `null` when none is parked. The
+ * stored value is checked structurally, so a record from an older deployment or a
+ * changed format still reads as none parked, keeping the code issuer safe from it.
  */
 export function getAuthz(): AuthzState | null {
 	let value: unknown = readSession().get(SESSION_KEYS.AUTHZ);

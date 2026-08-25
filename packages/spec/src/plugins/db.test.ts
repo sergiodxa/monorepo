@@ -1,15 +1,8 @@
 /**
- * Tests for the built-in `db` plugin. The unit tests never open a database:
- * they exercise the static descriptor, argument validation, the scoped
- * `DATABASE_URL` permission check, and the unset-variable configuration error,
- * all before a connection would be attempted, so they run under this runtime.
- *
- * The end-to-end tests cover the row/count shaping and the connection lifecycle
- * against a real temp-file SQLite database. The plugin's connection comes from
- * Bun's SQL client, which has no `node:` counterpart, so that half runs as a
- * black box: `db-e2e-probe.ts` executes the scenarios under Bun and reports what
- * it saw as JSON, and the expectations stay here. The functional acceptance layer
- * lives in `../db-example.test.ts`, which runs the CLI against `examples/db`.
+ * Tests for the built-in `db` plugin. Unit tests exercise the descriptor,
+ * argument validation, and permission checks without opening a connection;
+ * end-to-end tests run the real query lifecycle against a temp-file SQLite
+ * database via `db-e2e-probe.ts`, spawned under Bun.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,15 +29,15 @@ import { PermissionDeniedError } from "../errors";
 import { createDbPlugin } from "./db";
 
 /**
- * The Bun executable, found on PATH. The code under test reaches for Bun's SQL client, so
- * the end-to-end half is spawned by name rather than through this runtime's executable.
+ * The Bun executable, found on PATH. The end-to-end half spawns Bun
+ * directly, since the code under test depends on Bun's SQL client.
  */
 const BUN_EXECUTABLE = "bun";
 
 /**
- * Whether Bun's SQL client exposes SQLite; gates the end-to-end suite. The probe runs
- * inside Bun rather than here, because the SQL client belongs to the runtime the child
- * executes under, not to this file's.
+ * Whether Bun's SQL client exposes SQLite; gates the end-to-end suite. The
+ * probe runs inside Bun because the SQL client belongs to the runtime the
+ * child executes under.
  */
 const SQLITE_AVAILABLE =
 	spawnSync(
@@ -126,8 +119,6 @@ describe(createDbPlugin.name, () => {
 	});
 
 	test("describe never opens a connection, so it needs no DATABASE_URL", () => {
-		// Calling describe repeatedly is pure and side-effect-free: a suite that
-		// never touches db.* pays nothing and never reads the environment.
 		let previous = process.env.DATABASE_URL;
 		delete process.env.DATABASE_URL;
 		try {
@@ -180,10 +171,12 @@ describe(createDbPlugin.name, () => {
 		expect(error.remedy).toBe("spec run --allow-env=DATABASE_URL");
 	});
 
+	/**
+	 * DATABASE_URL is unset, so the call stops at the configuration error; the
+	 * scoped permission check is still the one that ran, by name.
+	 */
 	test("query asks the permission set about DATABASE_URL by name", async () => {
 		let envCalls: string[] = [];
-		// Env is granted but DATABASE_URL is unset, so this stops at the config
-		// error; the point is that the scoped check named DATABASE_URL.
 		let previous = process.env.DATABASE_URL;
 		delete process.env.DATABASE_URL;
 		try {
@@ -234,11 +227,10 @@ interface ProbeObservations {
 /** How long the probe may take: it spawns Bun and touches SQLite. */
 const PROBE_TIMEOUT_MS = 60_000;
 
-// The end-to-end suite proves row/count shaping and the connection lifecycle against a real
-// SQLite database in a temp file. The scenarios execute under Bun — the plugin's SQL client
-// is Bun's — and every assertion stays here, so a failure names the expectation rather than
-// a subprocess exit code. Skipped when Bun's SQL client has no SQLite driver, so the unit
-// suite stays green regardless.
+/**
+ * Skipped when Bun's SQL client has no SQLite driver, so the unit suite
+ * stays green regardless.
+ */
 describe("db end to end (SQLite)", () => {
 	let observed: ProbeObservations;
 	let dbPath = join(tmpdir(), `spec-db-e2e-${process.pid}-${Date.now()}.sqlite`);
@@ -253,23 +245,25 @@ describe("db end to end (SQLite)", () => {
 			);
 			observed = JSON.parse(stdout) as ProbeObservations;
 		} finally {
-			// SQLite may leave a WAL/SHM sidecar; remove all three, ignore misses.
+			/** SQLite may leave a WAL/SHM sidecar; remove all three, ignore misses. */
 			for (let suffix of ["", "-wal", "-shm"]) rmSync(`${dbPath}${suffix}`, { force: true });
 		}
 	}, PROBE_TIMEOUT_MS);
 
+	/**
+	 * An INSERT reports the rows it changed as affected_rows, with no rows
+	 * returned; a SELECT returns rows, with affected_rows and count both
+	 * equal to the row count.
+	 */
 	test.skipIf(!SQLITE_AVAILABLE)("shapes DDL, DML and SELECT results", () => {
 		expect(observed.created.rows).toEqual([]);
 		expect(observed.created.count).toBe(0);
 
-		// An INSERT reports the rows it changed as affected_rows, with no rows returned —
-		// the canonical `expect result.affected_rows 1` shape.
 		expect(observed.inserted.affected_rows).toBe(1);
 		expect(observed.inserted.count).toBe(0);
 		expect(observed.inserted.rows).toEqual([]);
 		expect(observed.insertedMany.affected_rows).toBe(2);
 
-		// A SELECT returns rows; affected_rows and count both equal the row count.
 		expect(observed.selected.count).toBe(3);
 		expect(observed.selected.affected_rows).toBe(3);
 		expect(observed.selected.rows).toEqual([
@@ -286,11 +280,13 @@ describe("db end to end (SQLite)", () => {
 		expect(observed.sqlError.message).toContain("does_not_exist");
 	});
 
+	/**
+	 * The same handle serves every call in a run, so two writes landing in
+	 * the same table is the observable proof of reuse; dispose is
+	 * idempotent and best-effort, so calling it twice never throws.
+	 */
 	test.skipIf(!SQLITE_AVAILABLE)("reuses one connection across calls, closed by dispose", () => {
-		// The same handle serves every call in a run; two writes landing in the same table is
-		// the observable proof the connection was reused.
 		expect(observed.reuse.count).toBe(2);
-		// dispose is idempotent and best-effort: calling it twice never throws.
 		expect(observed.reuse.disposeThrew).toBe(false);
 	});
 });

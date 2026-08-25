@@ -52,7 +52,6 @@ const UpdateCronJobSchema = s.object({
 	description: s.optional(s.string().pipe(checks.maxLength(500))),
 	cronExpression: s.optional(s.string().pipe(checks.minLength(1))),
 	gracePeriodSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
-	// Checked against the runtime's IANA list — see the create schema for why.
 	timezone: s.optional(s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE)),
 	alertOnLate: s.optional(s.boolean()),
 	enabled: s.optional(s.boolean()),
@@ -79,7 +78,11 @@ export default createController(cronJobRoutes, {
 			},
 		},
 
-		/** PUT /api/v1/cron-jobs/:cronJobId — updates a cron-job monitor's editable fields. */
+		/**
+		 * PUT /api/v1/cron-jobs/:cronJobId — updates a cron-job monitor's editable fields. A
+		 * rejected cron expression's error names the reason, field, and character index
+		 * verbatim; an accepted one is stored normalized, so one schedule has one spelling.
+		 */
 		cronJobUpdate: {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
@@ -109,13 +112,10 @@ export default createController(cronJobRoutes, {
 
 				if (result.data.cronExpression !== undefined) {
 					let timezone = result.data.timezone ?? existing.timezone;
-					// The failure's message names the reason, the field at fault, and the
-					// character index inside the expression the client sent.
 					let schedule = Schedule.parse(result.data.cronExpression);
 					if (isFailure(schedule)) {
 						return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
 					}
-					// Stored normalized, so one schedule has one spelling in the database.
 					changes.cron_expression = schedule.data.toString();
 					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
 						changes.cron_expression,

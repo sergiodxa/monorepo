@@ -3,7 +3,8 @@
  * The reference external plugin: a runnable script that proves the stdio
  * transport's language neutrality. It exposes namespace "demo" with a `say`
  * action that echoes its input back and an `upper` observable that returns
- * the uppercased text. Both tools are permissionless — no grant required.
+ * the uppercased text. Both tools are open to every caller, regardless of
+ * granted permissions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,7 +65,6 @@ function say(args: ToolArg[]): Result<Value, SpecError> {
 	return success(first.value);
 }
 
-/** Uppercase the single string argument. */
 function upper(args: ToolArg[]): Result<Value, SpecError> {
 	let first = args[0];
 	if (args.length !== 1 || first === undefined || first.kind !== "value") {

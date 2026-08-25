@@ -88,11 +88,6 @@ interface VerifyEmailPageProps {
 	message: string;
 }
 
-/**
- * Renders the email verification result page for success and error states.
- * @param handle - Component handle exposing the brand, status, and message props.
- * @returns A render function producing the page markup.
- */
 function VerifyEmailPage(handle: Handle<VerifyEmailPageProps>) {
 	return () => {
 		let { brand, status, message } = handle.props;

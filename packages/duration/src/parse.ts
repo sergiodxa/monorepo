@@ -16,7 +16,8 @@ import { longUnitToMs, shortUnitToMs } from "./units";
 
 /**
  * An amount, one space, then a long unit spelling: `"5 minutes"`. The amount is
- * a whole number in canonical form, so `"1.5"`, `"5e3"` and `"05"` never match.
+ * a whole number in canonical form, excluding forms like `"1.5"`, `"5e3"`, and
+ * `"05"`.
  */
 const SPACED_PATTERN = /^(?<amount>-?(?:0|[1-9][0-9]*)) (?<unit>[a-z]+)$/;
 
@@ -28,12 +29,8 @@ const COMPACT_PATTERN = /^(?<amount>-?(?:0|[1-9][0-9]*))(?<unit>[a-z]*)$/;
 
 /**
  * Parse duration text into milliseconds, accepting exactly the forms
- * `DurationString` allows plus a bare amount of milliseconds, with surrounding
- * whitespace trimmed.
- *
- * A long spelling requires the single space and a short alias requires none, so
- * `"5 m"` and `"5minutes"` are failures: the runtime grammar stays the mirror of
- * the type, and text a call site could not have written is never accepted here.
+ * `DurationString` allows plus a bare amount of milliseconds, with
+ * surrounding whitespace trimmed and spacing mismatches rejected.
  *
  * @param text - Text to parse, e.g. an environment variable value.
  * @returns The duration in milliseconds, or an `InvalidDurationError` naming the

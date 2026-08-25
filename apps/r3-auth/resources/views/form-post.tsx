@@ -1,7 +1,7 @@
 /**
  * The OAuth 2.0 Form Post Response Mode page: a self-submitting form that POSTs the
  * authorization response parameters to the relying party's redirect URI, with a
- * no-script fallback button for browsers that will not run the submit.
+ * no-script fallback button for browsers that skip the script.
  *
  * Every value is rendered as a text node or an attribute, so JSX escaping is what
  * keeps a hostile `state` from breaking out of the markup.
@@ -15,9 +15,8 @@ import type { Handle } from "remix/ui";
 /**
  * The one line of script this page carries: submitting the form as soon as it renders.
  *
- * It contains no character HTML escaping touches, so it survives being rendered as a
- * text node — which is what keeps this page inside the "no HTML strings" rule while
- * still doing what the Form Post Response Mode specification describes.
+ * Kept as a plain string, it renders as a text node and satisfies the "no HTML
+ * strings" rule while still performing the Form Post Response Mode auto-submit.
  */
 const SUBMIT_SCRIPT = "document.forms[0].submit()";
 
@@ -29,7 +28,7 @@ namespace FormPostView {
 		params: Record<string, string>;
 		/** Label of the fallback button, translated by the caller. */
 		submitLabel: string;
-		/** Sentence explaining the fallback, shown only when the submit did not run. */
+		/** Sentence explaining the fallback, shown in the no-script case. */
 		noscriptMessage: string;
 		/** Document title, translated by the caller. */
 		title: string;
@@ -39,9 +38,8 @@ namespace FormPostView {
 /**
  * Renders the auto-submitting authorization response form.
  *
- * The submit is a one-line `<script>` text node rather than an inline event attribute,
- * which `remix/ui` does not type. Browsers that will not run it fall through to the
- * `<noscript>` button, so the response is never stranded.
+ * The submit runs as a one-line `<script>` text node, the shape of inline script
+ * `remix/ui` supports; the `<noscript>` button covers browsers that skip it.
  */
 export default function FormPostView(handle: Handle<FormPostView.Setup>) {
 	return () => {

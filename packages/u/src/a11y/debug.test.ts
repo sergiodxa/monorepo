@@ -1,7 +1,7 @@
 /**
- * `import.meta.env.DEV` reads through to `process.env.DEV` at call time, so both
- * of `debug()`'s branches are reachable by setting or deleting `process.env.DEV`
- * around each assertion, with no module mocking.
+ * `import.meta.env.DEV` reads through to `process.env.DEV` at call time, so
+ * both of `debug()`'s branches are reachable by setting or deleting
+ * `process.env.DEV` around each assertion.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,7 +55,6 @@ describe("debug", () => {
 			let css = await serialize(debug("nested"));
 
 			expect(css).toContain("& *");
-			// Twice over: once on the host block, once inside the `& *` block.
 			expect(await declarations(debug("nested"))).toEqual([
 				"outline: 2px solid red",
 				"outline-offset: -2px",

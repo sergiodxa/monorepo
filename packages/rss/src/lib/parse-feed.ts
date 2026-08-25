@@ -1,3 +1,10 @@
+/**
+ * Parses raw XML into RSS channel and item data structures.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";

@@ -1,11 +1,8 @@
 /**
- * Tests for {@link AlertDialog}'s two footer controls: that both render an
- * explicit `type="button"` — and render it before their command attributes,
- * without which the platform refuses to run their Invoker Command inside a
- * `<form>` (a button there defaults to `"submit"`, a submit button can't
- * invoke, and the check runs while the command attributes are parsed) — and
- * that an action asked to submit instead drops the command it could no longer
- * run.
+ * Tests for {@link AlertDialog}'s two footer controls: both render an explicit
+ * `type="button"` ahead of their command attributes, which is what lets the
+ * platform run their Invoker Command inside a `<form>`, and an action asked to
+ * submit renders as a plain submit button.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,8 +29,6 @@ describe("AlertDialog.Cancel", () => {
 			<AlertDialog.Cancel commandfor="delete-project">Cancel</AlertDialog.Cancel>,
 		);
 
-		// This control is the one the admin screens render inside a `<form>`, so it is
-		// the one whose attribute order the platform actually judges.
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
 	});

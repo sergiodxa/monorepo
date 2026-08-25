@@ -20,15 +20,12 @@ const ID = "msg_p5jXN8AQM9LWM0D4loKWxJek";
 
 /** A `ReplayKVNamespace` backed by a map, recording the TTL each write asked for. */
 class FakeNamespace implements ReplayKVNamespace {
-	/** Written keys mapped to their value and requested expiry. */
 	entries = new Map<string, { value: string; expirationTtl?: number }>();
 
-	/** Reads a key, resolving `null` when it was never written. */
 	async get(key: string): Promise<string | null> {
 		return this.entries.get(key)?.value ?? null;
 	}
 
-	/** Records a write and the expiry it asked for. */
 	async put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void> {
 		this.entries.set(key, { value, expirationTtl: options?.expirationTtl });
 	}

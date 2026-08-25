@@ -34,23 +34,15 @@ export { buildMimeMessage } from "./mime";
 export { render } from "./render";
 
 /**
- * An email authored as a class: who it goes to, what it says, and what it looks
- * like. A class implementing it can be handed straight to `send()` or `later()`.
- *
- * Declared as an alias rather than re-exported, because the layout kit below
- * publishes the same name in value space and only an alias can share the identifier.
+ * An email authored as a class: who it goes to, what it says, and what it
+ * looks like, handed straight to `send()` or `later()`. Declared as an alias
+ * so it can share the `Email` identifier with the layout kit below.
  */
 export type Email = EmailContract;
 
 /**
- * Layout kit for email bodies: the document (`Email.Layout`), the copy (`Email.Heading`,
- * `Email.Text`, `Email.Link`, `Email.CodeInline`), the layout primitives
- * (`Email.Section`, `Email.Row`, `Email.Column`), and the furniture (`Email.Button`,
- * `Email.Table`, `Email.Img`, `Email.Hr`, `Email.Footer`). Named as a namespace because
- * that is how the components are addressed, and it shares the identifier with the
- * `Email` contract.
- *
- * `Markdown` and `CodeBlock` are not here: they live behind `@pkg/mail/markdown`, which
- * keeps their parser and highlighter out of an app that sends neither.
+ * Layout kit for email bodies, addressed as `Email.*` because this namespace
+ * shares its identifier with the `Email` type contract above. `Markdown` and
+ * `CodeBlock` live behind `@pkg/mail/markdown` instead, shipped only where imported.
  */
 export const Email = EmailComponents;

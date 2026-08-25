@@ -1,14 +1,9 @@
 /**
  * Tests for the edit alert page controller. `cloudflare:workers` is mocked because
- * `~/app/data/monitor` (used here to populate the monitor-scope dropdown) reads `env`
- * at module load — following the exact pattern established in
- * `app/http/controllers/actions/monitors.test.ts`. It's a plain GET handler with no
- * branch that re-renders the form with validation errors (that only happens in the
- * `actions/alerts.ts` form-submission controller, tested separately), so this only
- * covers the 404 and the pre-filled-form 200 cases. `getViewer()`/`ctx.team`/
- * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for
- * the real `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/app/team/http-monitors.test.ts`.
+ * `~/app/data/monitor` reads `env` at module load when populating the monitor-scope
+ * dropdown. This is a plain GET handler with no error-rerender branch, so only the
+ * 404 and pre-filled 200 cases apply here. `getViewer()`/`ctx.team`/`ctx.membership`/
+ * `ctx.teams` come from a fake middleware standing in for the real chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -175,19 +170,24 @@ describe("alertEdit", () => {
 			return await response.text();
 		}
 
-		// Anchored to the attribute inside this input's own tag, never to the bare word
-		// `checked`: that word also shows up in the components' `input:checked` CSS
-		// selectors, so a substring check would pass no matter what the input renders.
+		/**
+		 * Anchored to the attribute inside this input's own tag, never to the bare word
+		 * `checked`: that word also appears in the components' `input:checked` CSS
+		 * selectors, so a substring check would pass no matter what the input renders.
+		 */
 		let CHECKED_ATTRIBUTE = /<input[^>]*name="notify_on_recovery"[^>]*\schecked/;
 
-		// Control case: proves the regex can actually see a present `checked` attribute,
-		// so the negative assertion below is failing for the right reason.
+		/**
+		 * Control case: proves the regex can see a present `checked` attribute, so the
+		 * negative assertion below is failing for the right reason.
+		 */
 		expect(await renderWithRecovery(true)).toMatch(CHECKED_ATTRIBUTE);
 
-		// SQLite stores booleans as 1/0. If a stored `false` came back as `0`,
-		// `defaultChecked={0}` would still emit the attribute, and an HTML boolean
-		// attribute is ON whenever it is merely present — so the switch would render
-		// ticked and re-saving would silently flip the user's stored decision.
+		/**
+		 * SQLite stores booleans as 1/0: `defaultChecked={0}` would still emit the
+		 * attribute, and an HTML boolean attribute is on whenever merely present, so a
+		 * stored `false` would render ticked and silently flip the decision on re-save.
+		 */
 		expect(await renderWithRecovery(false)).not.toMatch(CHECKED_ATTRIBUTE);
 	});
 
@@ -210,10 +210,12 @@ describe("alertEdit", () => {
 		let response = await send(db, team, membership, alert.id);
 		let body = await response.text();
 
-		// Exactly one option carries `selected`, so the saved channel is what the browser
-		// shows and what `:checked` reads with no JavaScript involved.
+		/**
+		 * Exactly one option carries `selected`, so the saved channel is what the browser
+		 * shows and what `:checked` reads with no JavaScript involved.
+		 */
 		expect(body.match(/<option value="[a-z]+" selected/g)).toHaveLength(1);
-		// The saved channel is the selected option, so its block is the one CSS leaves visible.
+		/** The saved channel is the selected option, so its block is the one CSS leaves visible. */
 		expect(body).toContain('value="webhook" selected');
 		expect(body).toContain('value="shh"');
 

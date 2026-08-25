@@ -1,9 +1,8 @@
 import { unwrap } from "@pkg/result";
 /**
- * Verifies the end-of-turn residual pipeline's held-item passive heal in isolation,
- * so the Leftovers-style recovery can be covered without depending on unrelated
- * full-battle sequencing. The harness builds a real battle state with one active
- * combatant and wires the same HP helpers the engine uses at runtime.
+ * Verifies the end-of-turn residual pipeline's held-item passive heal using a
+ * minimal battle state with one active combatant, wired with the same HP
+ * helpers the engine uses at runtime.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,9 +60,9 @@ test("Leftovers restores floor(maxHP / 16) at the end of the turn", () => {
 	});
 });
 
+/** One point of damage: a full 1/16 heal would overshoot, so it must clamp to 0. */
 test("Leftovers never overheals past maximum HP", () => {
 	let scenario = createEndOfTurnScenario("LEFTOVERS");
-	// One point of damage: a full 1/16 heal would overshoot, so it must clamp to 0.
 	scenario.combatant.creature.status.damage = 1;
 
 	applyEndOfTurnEffects(scenario.context);
@@ -81,10 +80,10 @@ test("Leftovers does nothing at full HP", () => {
 	expect(events).toHaveLength(0);
 });
 
+/** A fainted wielder is at (or beyond) full damage and must not be revived. */
 test("Leftovers does nothing when the wielder has fainted", () => {
 	let scenario = createEndOfTurnScenario("LEFTOVERS");
 	let maxHP = getCreatureStat(GAME_DATA, scenario.combatant.creature, Stat.HP);
-	// A fainted wielder is at (or beyond) full damage and must not be revived.
 	scenario.combatant.creature.status.damage = maxHP;
 
 	let events = applyEndOfTurnEffects(scenario.context);
@@ -107,8 +106,8 @@ test("A creature with no held item is unaffected at end of turn", () => {
 	expect(events).toHaveLength(0);
 });
 
+/** CHARCOAL only boosts damage; it must not trigger the residual heal path. */
 test("A held item without a heal fraction does not heal", () => {
-	// CHARCOAL only boosts damage; it must not trigger the residual heal path.
 	let scenario = createEndOfTurnScenario("CHARCOAL");
 	let maxHP = getCreatureStat(GAME_DATA, scenario.combatant.creature, Stat.HP);
 	scenario.combatant.creature.status.damage = maxHP - 1;

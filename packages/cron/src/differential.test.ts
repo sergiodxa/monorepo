@@ -75,10 +75,12 @@ function ours(expression: string, from: string, direction: "next" | "prev"): str
 }
 
 describe(`differential run of ${CORPUS.length} generated expressions`, () => {
+	/**
+	 * The generator draws each field's list items from disjoint slices, so no value is
+	 * named twice — the one shape the other library refuses and this one allows — and
+	 * excluding it from the corpus is what keeps this comparison total.
+	 */
 	test("both libraries accept every generated expression", () => {
-		// The generator carves list items out of disjoint slices of a field, so no value is
-		// named twice: that is the one thing the other library refuses and this one allows,
-		// and keeping it out of the corpus is what makes the comparison total.
 		let rejected: string[] = [];
 		for (let expression of CORPUS) {
 			if (Schedule.parse(expression).status === "failure") rejected.push(`ours: ${expression}`);
@@ -102,10 +104,13 @@ describe(`differential run of ${CORPUS.length} generated expressions`, () => {
 		}
 	});
 
+	/**
+	 * Anchored three past the forward walk's index, so a backward walk starts where a
+	 * forward walk did not and the two directions do not share the same handful of
+	 * instants.
+	 */
 	test("agrees with cron-parser on every backward walk", () => {
 		for (let [index, expression] of CORPUS.entries()) {
-			// Offset so a walk backward starts somewhere a walk forward did not, and the two
-			// directions are not both anchored to the same handful of instants.
 			let from = ANCHORS[(index + 3) % ANCHORS.length] ?? "";
 			expect({ expression, from, runs: ours(expression, from, "prev") }).toEqual({
 				expression,
@@ -115,10 +120,12 @@ describe(`differential run of ${CORPUS.length} generated expressions`, () => {
 		}
 	});
 
+	/**
+	 * The normalized text is what a consumer stores and what a schedule still read
+	 * through the other library during a migration would see, so it has to name the
+	 * same schedule read back through either one.
+	 */
 	test("agrees on the normalized form of every expression it accepts", () => {
-		// Reading back what this package stores has to give the other library the same
-		// schedule, because that text is what a consumer keeps and what would be read by
-		// anything still using the old library during a migration.
 		for (let [index, expression] of CORPUS.entries()) {
 			let from = ANCHORS[index % ANCHORS.length] ?? "";
 			let normalized = unwrap(Schedule.parse(expression)).toString();
@@ -131,18 +138,19 @@ describe(`differential run of ${CORPUS.length} generated expressions`, () => {
 	});
 });
 
+/**
+ * The generated corpus writes day of week as 0 to 6, since a step reaching its `7`
+ * alias is the one shape the two libraries read differently; that case is enumerated
+ * exhaustively in `field-forms.test.ts` and pinned here so the choice stays visible.
+ */
 describe("where the generated corpus stops short of what the grammar allows", () => {
-	// The corpus writes day of week as 0 to 6, because a step reaching its `7` alias is
-	// the one shape the two libraries read differently. It is enumerated exhaustively in
-	// `field-forms.test.ts`; the disagreement is pinned here so the choice stays visible.
-
+	/**
+	 * Vixie cron's bitmap folds the range's bit 7 onto bit 0, so `6-7/2` never sets
+	 * Sunday; cron-parser added Sunday for any range ending in 7 until 5.10.0's fix.
+	 * This pins that semantics directly, independent of whether the two agree.
+	 */
 	test("only reaches Sunday through a step that actually lands on seven", () => {
-		// Vixie cron expands the range into a bitmap of 0 to 7 and folds bit 7 onto bit 0
-		// afterwards, so "6-7/2" never sets bit 7 and Sunday is not included. cron-parser
-		// used to add Sunday whenever the range end was 7, whatever the stride, turning a
-		// Saturday-only schedule into a weekend one; 5.10.0 fixed that, so the two now
-		// agree here. Ours is unchanged — this pins the semantics, not the agreement.
-		let from = new Date("2026-02-28T12:00:00Z"); // a Saturday afternoon
+		let from = new Date("2026-02-28T12:00:00Z");
 		let saturdays = ["2026-03-07T00:00:00.000Z", "2026-03-14T00:00:00.000Z"];
 
 		expect(
@@ -158,10 +166,12 @@ describe("where the generated corpus stops short of what the grammar allows", ()
 		]).toEqual(saturdays);
 	});
 
+	/**
+	 * `3/3` reaches Wednesday and Saturday: 3, then 6, then 9 which is past the field.
+	 * cron-parser used to add Sunday here too, until 5.10.0's fix.
+	 */
 	test("reads a step on a single day-of-week value the same way", () => {
-		// "3/3" is Wednesday and Saturday: 3, then 6, then 9 which is past the field. The
-		// other library used to add Sunday here too, and stopped in 5.10.0.
-		let from = new Date("2026-02-28T12:00:00Z"); // a Saturday afternoon
+		let from = new Date("2026-02-28T12:00:00Z");
 		let wednesday = "2026-03-04T00:00:00.000Z";
 		expect(unwrap(Schedule.parse("0 0 * * 3/3")).toString()).toBe("0 0 * * 3,6");
 		expect(
@@ -172,9 +182,11 @@ describe("where the generated corpus stops short of what the grammar allows", ()
 		expect(interval.next().toDate().toISOString()).toBe(wednesday);
 	});
 
+	/**
+	 * The two libraries only diverge when a stride steps over 7, so a step that lands
+	 * on it exactly — every day, or every seventh — still matches.
+	 */
 	test("agrees on every day-of-week step whose stride does land on seven", () => {
-		// The two are only apart when the stride steps over 7, so a step that reaches it,
-		// such as every day or every seventh, still matches exactly.
 		for (let form of ["*", "*/1", "0-7", "0-7/7", "1-7/2", "1-7/3", "5-7/1", "7", "6,7"]) {
 			let expression = `0 0 * * ${form}`;
 			expect({ form, runs: ours(expression, "2026-03-01T00:00:00Z", "next") }).toEqual({
@@ -186,9 +198,12 @@ describe("where the generated corpus stops short of what the grammar allows", ()
 });
 
 describe(`differential run of ${CORPUS.length} generated non-expressions`, () => {
+	/**
+	 * Each generated non-expression is a valid expression with one character dropped
+	 * in that no cron grammar has a rule for, so the expected answer is known without
+	 * a lookup table.
+	 */
 	test("both libraries reject every generated non-expression", () => {
-		// Each one is a valid expression with a character dropped into it that no cron
-		// grammar has a rule for, so the expected answer is known without a table.
 		for (let expression of randomInvalidExpressions({ seed: CORPUS_SEED, count: CORPUS_SIZE })) {
 			let theirVerdict = (() => {
 				try {

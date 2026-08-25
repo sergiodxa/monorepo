@@ -1,18 +1,9 @@
 /**
- * Wires a SearchField's clear button to empty its associated input alone,
- * leaving every other field in the surrounding form untouched, and reveals
- * the button itself the moment it mounts.
- *
- * Why JS: a button inside a `<form>` either submits it or, declared
- * `type="reset"`, empties every field the form holds — neither gives a
- * single input its own dedicated clear action, and no built-in browser
- * command does either, so a script has to supply both the wiring and the
- * one field it targets. The button ships `hidden` in markup for exactly
- * that reason: until a script backs it, it has nothing useful to do.
- * No-JS baseline: the button stays hidden, leaving the field's own native
- * `type="search"` cancel affordance — rendered by WebKit-based browsers —
- * as the only dedicated way to clear it; in every browser the text can
- * still be selected and deleted by hand.
+ * Wires a SearchField's clear button to empty its associated input alone
+ * and reveals the button, shipped `hidden` in markup, the moment it mounts.
+ * Script is required since a form button can only submit or reset every
+ * field, and no built-in browser command clears a single input on its own —
+ * WebKit's native `type="search"` cancel affordance is the only fallback.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,9 +18,7 @@ import { DISABLED_SELECTOR } from "../utils/disabled-selector";
 /**
  * Custom Invoker Command a SearchField's clear button declares
  * (`command={SEARCH_FIELD_CLEAR_COMMAND}`, `commandfor` pointing at the
- * field's input) so the pairing reads as a real invoker relationship in
- * markup, even though {@link clearField} itself reacts to the button's
- * click rather than to the command bubbling off the input.
+ * field's input) so the pairing reads as a real invoker relationship in markup, matched by {@link clearField} through the button's own click.
  */
 export const SEARCH_FIELD_CLEAR_COMMAND = "--clear" as const;
 
@@ -45,9 +34,7 @@ declare global {
 /**
  * Dispatched on a SearchField's input by {@link clearField} immediately
  * after its value is emptied, carrying the text it held a moment before so
- * a consumer can react to the clear — cancel an in-flight request for that
- * term, drop a query param — without having captured the value itself
- * ahead of the press.
+ * a consumer can react to the clear — canceling an in-flight request for that term, or dropping a query param — using only this event.
  */
 export class SearchFieldClearEvent extends Event {
 	/** The input's value immediately before this clear. */
@@ -80,22 +67,9 @@ function resolveClearTarget(button: HTMLButtonElement): HTMLInputElement | undef
 }
 
 /**
- * Wires a SearchField's clear button to empty its associated input alone,
- * instead of the whole-form reset a plain `type="reset"` button would
- * trigger. Reveals the button — shipped `hidden` in markup so a page this
- * mixin never reaches still renders without an inert control — the moment
- * it mounts, then resolves the field to clear from the button's own
- * `commandfor` reference on every press, rather than assuming a fixed
- * position among siblings.
- *
- * A press writes an empty string into the resolved input, dispatches the
- * `input` and `change` events that setting `.value` directly doesn't raise
- * on its own — so any filtering or validation listening for those reacts
- * exactly as it would to the user deleting the text themselves — then
- * dispatches {@link SearchFieldClearEvent} on the input and returns focus to
- * it, since the button can itself vanish the instant the surrounding styles
- * react to the now-empty field. A disabled button, or one whose target is
- * disabled, read-only, or already empty, ignores the press.
+ * Wires a SearchField's clear button to empty its own `commandfor`-resolved
+ * input and dispatch `input`/`change` plus {@link SearchFieldClearEvent}
+ * before refocusing the field, since the button can vanish once styles react to the emptied state; a disabled, read-only, or already-empty target leaves the press with no effect.
  *
  * @returns A mixin descriptor for a SearchField clear button's `mix` prop.
  * @example

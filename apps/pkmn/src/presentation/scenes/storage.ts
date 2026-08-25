@@ -2,9 +2,8 @@
  * The storage screen: withdraw creatures from the first box.
  *
  * Reads the storage view and lists the first box's creatures; confirming one
- * dispatches `withdraw-creature` to move it into the party, and cancel returns to
- * the pause menu. A fuller box-to-box interface is future work; this covers the
- * common "pull a reserve into the party" flow through the shipped commands.
+ * dispatches `withdraw-creature` to move it into the party, and cancel
+ * returns to the pause menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +18,6 @@ import * as theme from "../render/theme";
 
 /** Lists the first storage box and withdraws to the party. */
 export class StorageScene implements Scene {
-	/** The list widget for box contents. */
 	private readonly list = new ListMenu(6);
 
 	enter(game: GameClient) {

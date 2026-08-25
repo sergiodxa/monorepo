@@ -28,7 +28,9 @@ export namespace NotFoundView {
 }
 
 /**
- * Creates the not-found page renderer with blog layout styling.
+ * Creates the not-found page renderer. Type sizes are pushed above the panel's
+ * compact defaults because a 404 owns the whole page, and `Empty.Title`
+ * renders an `<h1>` while the layout leaves headings unscoped.
  *
  * @returns A view function that renders the page from a `model` payload.
  */
@@ -36,10 +38,6 @@ export function NotFoundView() {
 	return ({ model }: { model: NotFoundView.Model }) => (
 		<BlogLayout title={model.title} description={model.description}>
 			<main mix={[pbs(12)]}>
-				{/* The panel supplies the centered column, the emoji well, and the brand
-				tint; only the type sizes are pushed up from the panel's compact defaults,
-				since a 404 is the whole page rather than a slot inside one. Empty.Title
-				still renders an <h1> here because no HeadingScope wraps the layout. */}
 				<Empty color="brand">
 					<Empty.Icon mix={[text("4xl")]}>{model.emoji}</Empty.Icon>
 					<Empty.Title mix={[text("5xl")]}>{model.title}</Empty.Title>

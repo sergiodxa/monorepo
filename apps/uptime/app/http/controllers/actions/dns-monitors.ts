@@ -1,21 +1,12 @@
 /**
- * Form actions for a DNS monitor: create, update, delete, the manual check, and the three
- * record-level actions a domain monitor needs — reviewing what discovery found, toggling one
- * stored record, and re-importing a zone file. Each follows the validate → mutate → flash →
- * redirect pattern: on validation failure the visitor is sent back to the form with an error
- * toast; on success, to the monitor (or list).
- *
- * Two of them do billable work. Creating a monitor and importing a zone file both sweep, so
- * both refuse a paste larger than the parser's cap or a zone with more names than one check
- * can cover, before any of it is resolved. The manual check is metered: it performs the same
- * sweep the scheduled job performs, so it is gated by the same entitlement check, written to
- * the same Analytics Engine dataset, and billed as one ping keyed on the history row it
- * wrote — which it never was under the old shape, leaving a full sweep behind a button
- * anybody can hold down.
- *
- * A pasted zone file is parsed and dropped. Nothing here writes it anywhere: what survives a
- * request is the records it declared and the fact that an import happened.
- *
+ * Form actions for a DNS monitor: create, update, delete, the manual
+ * check, and the record-level review, toggle, and zone-file re-import.
+ * Each follows validate → mutate → flash → redirect: an error toast and
+ * the form on failure, the monitor (or list) on success.
+ * Create and import both sweep, so both enforce the parser's size cap and
+ * the per-monitor name cap before resolving anything. The manual check
+ * runs the same sweep as the scheduled job, so it is gated, reported, and
+ * billed the same way; a pasted zone file survives only as parsed records.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -63,10 +54,8 @@ const ZONE_FILE_LIMIT_LABEL = `${MAX_ZONE_FILE_BYTES / 1024} KiB`;
 
 /**
  * A refusal to import: which toast to flash, in place of the records an import would return.
- *
- * The two failures are told apart because they lead to different fixes — a paste over the
- * size cap has to be trimmed, while a zone with too many names has to be split across
- * monitors — and both must be decided before a single query is sent.
+ * The two failure modes lead to different fixes — an oversized paste must be trimmed, while
+ * too many names must be split across monitors — and both are decided before any query runs.
  */
 interface ZoneFileRefusal {
 	messageKey: string;
@@ -77,8 +66,8 @@ interface ZoneFileRefusal {
  * Parses a pasted zone file and checks it against both import limits.
  *
  * @returns The declared records and the names they add to, or the refusal to flash. An empty
- * paste is not a refusal: it means the monitor covers its apex alone, which is a legitimate
- * (and the commonest) way to create one.
+ * paste always yields records instead, meaning the monitor covers its apex alone — the
+ * commonest, legitimate way to create one.
  */
 function readZoneFile(
 	zoneFile: string | undefined,
@@ -157,10 +146,9 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	});
 
 	/**
-	 * Discovery runs inline because the next screen is the review of what it found, and an
-	 * empty review screen would read as "your domain publishes nothing". A resolver that
-	 * cannot be reached still leaves a usable monitor — its next scheduled check discovers
-	 * the same records — so a failure here is not allowed to undo the creation.
+	 * Discovery runs inline because the next screen reviews what it found, and an empty
+	 * review would read as "your domain publishes nothing." A resolver that cannot be
+	 * reached still leaves a usable monitor, since its next scheduled check finds the same records.
 	 */
 	try {
 		await importDiscovery(db, monitor.id, zone.names, zone.records);
@@ -242,12 +230,9 @@ export const deleteDnsMonitor = createAction(routes.actions.monitor.dns.delete, 
 });
 
 /**
- * POST /actions/:team/check-dns-monitor — triggers an immediate on-demand check.
- *
- * A sweep this runs is the same work the scheduled job runs, so it is gated, reported and
- * billed the same way. Everything that returns before {@link runDnsCheck} — a rejected form,
- * a monitor this team does not own, an owner without entitlement — swept nothing and bills
- * nothing; only work actually done reaches the meter.
+ * POST /actions/:team/check-dns-monitor — triggers an immediate on-demand check, gated,
+ * reported, and billed the same way the scheduled sweep is. Everything that returns before
+ * {@link runDnsCheck} swept nothing, so only work actually done reaches the meter.
  */
 export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, async (ctx) => {
 	let result = await validate(ctx.formData, DnsMonitorIdSchema);
@@ -264,9 +249,9 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	if (!monitor) return notFound("Not Found");
 
 	/**
-	 * `stateFor`, not `isActive`: an owner whose entitlement cannot be determined still gets
-	 * their check, because refusing a paying customer over an inconclusive lookup is the
-	 * worse of the two mistakes. The same reading every other manual check takes.
+	 * `stateFor` returns a state even when entitlement cannot be determined, and an owner in
+	 * that case still gets their check: refusing a paying customer over an inconclusive lookup
+	 * is the worse of the two mistakes, the same reading every other manual check takes.
 	 */
 	if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
@@ -292,19 +277,17 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 		type: "dns",
 		status: check.status,
 		/**
-		 * A check no query answered has no latency to report and the result column is nullable
-		 * for exactly that, but the dataset's doubles are not — zero is how the rest of the
-		 * dataset already spells "no measurement", so it is what goes in.
+		 * A check no query answered has no latency to report, and the result column is nullable
+		 * for exactly that; the dataset's doubles instead spell "no measurement" as zero,
+		 * matching the rest of the dataset.
 		 */
 		responseTimeMs: check.responseTimeMs ?? 0,
 	});
 
 	/**
-	 * One ping for the whole sweep, keyed on the history row it just wrote. One per *query*
-	 * would charge for a cost we never incur — the public resolver is free to us — and the id
-	 * is what makes the event impossible to collide with the scheduled sweep's, since no two
-	 * checks ever share a row. Deferred rather than awaited, like every meter event on a
-	 * response path: the visitor is waiting on a result this request already has.
+	 * One ping covers the whole sweep, keyed on the history row it just wrote — queries cost
+	 * nothing extra since the resolver is free, and the key keeps this event from colliding
+	 * with the scheduled sweep's. Deferred, since the visitor already has the result to show.
 	 */
 	waitUntil(
 		ingestPings(getServiceContainer().get(PolarClient), [
@@ -319,9 +302,8 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	);
 
 	/**
-	 * The findings come from the diff this check produced rather than from the record rows it
-	 * just wrote: the diff knows what moved at the moment of the transition, which is more
-	 * precise than anything reconstructed after the fact.
+	 * The findings come from the diff this check produced: the diff knows what moved at the
+	 * moment of the transition, more precise than anything reconstructed after the fact.
 	 */
 	await notifyDnsResult(
 		db,
@@ -342,12 +324,9 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 });
 
 /**
- * POST /actions/:team/review-dns-monitor — persists which discovered records are watched.
- *
- * It settles every record on the monitor at once rather than writing only the checked ones,
- * because a record the visitor declined is stored disabled instead of being dropped. Dropping
- * it would make the very next check rediscover it as new and alert on it forever, and would
- * leave the user's decision not to watch something unrepresentable.
+ * POST /actions/:team/review-dns-monitor — persists which discovered records are watched, by
+ * settling every record on the monitor at once. A declined record is stored disabled, which
+ * keeps it representable and stops the next check from rediscovering it as new.
  */
 export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, async (ctx) => {
 	let result = await validate(ctx.formData, ReviewDnsMonitorSchema);
@@ -370,8 +349,8 @@ export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, 
 	if (!monitor) return notFound("Not Found");
 
 	/**
-	 * The submitted ids are intersected with the monitor's own records rather than trusted:
-	 * the form is a list of checkboxes, and an id from somewhere else must decide nothing.
+	 * The submitted ids are intersected with the monitor's own records: the form is a list of
+	 * checkboxes, so an id from somewhere else decides nothing.
 	 */
 	let submitted = new Set(result.data.record_ids);
 	let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
@@ -393,11 +372,8 @@ export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, 
 
 /**
  * POST /actions/:team/toggle-dns-monitor-record — flips one stored record between watched
- * and not.
- *
- * The record is looked up through the monitor's own list, which is both how its name reaches
- * the toast and how a record belonging to another team's monitor is refused: an id that is
- * not in this monitor's set matches nothing here and nothing in the write below.
+ * and not, looked up through the monitor's own list. That lookup is how its name reaches the
+ * toast and how a record from another team's monitor is refused: a foreign id matches nothing.
  */
 export const toggleDnsMonitorRecord = createAction(
 	routes.actions.monitor.dns.toggleRecord,
@@ -444,12 +420,9 @@ export const toggleDnsMonitorRecord = createAction(
 );
 
 /**
- * POST /actions/:team/import-dns-monitor-zone-file — re-parses a freshly pasted zone file
- * for an existing monitor.
- *
- * The pasted text is never stored, so this is the only way names discovered by an earlier
- * import can be refreshed. What it adds is names: records already tracked keep the watched
- * flag their owner chose for them, so re-importing is safe to repeat.
+ * POST /actions/:team/import-dns-monitor-zone-file — re-parses a freshly pasted zone file for
+ * an existing monitor. The pasted text is never stored, so this is the only way names found
+ * by an earlier import get refreshed; already-tracked records keep their owner's watched flag.
  */
 export const importDnsMonitorZoneFile = createAction(
 	routes.actions.monitor.dns.importZoneFile,

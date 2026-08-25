@@ -1,15 +1,7 @@
 /**
- * Tests for the D1 `DatabaseDriver`, run inside workerd against a real Cloudflare D1 binding.
- *
- * These cover the behaviour D1 itself defines: what a raw `exec` returns for each statement
- * shape, how `c.json()` and `c.boolean()` columns survive a round trip, what the observer sees,
- * and — the one that most needed a real binding — that a failing `transaction()` does not roll
- * back the writes that already ran, because D1 has no interactive transactions.
- *
- * Two assertions cannot be made here and stay in `index.test.ts` against a shim: that the
- * adapter passes `meta.duration` through rather than timing statements itself, and that it
- * reports zeros when `meta` is absent. Both need a `meta` a test controls, which a real binding
- * by definition does not offer.
+ * Tests for the D1 `DatabaseDriver`, run inside workerd against a real Cloudflare D1 binding,
+ * covering what D1 itself defines: `exec()` results per statement shape, `c.json()`/`c.boolean()`
+ * round-tripping, statement observation, and that a failing transaction leaves earlier writes intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,12 +48,12 @@ const SCHEMA = [
 ].join("\n");
 
 /**
- * Builds an adapter over the real D1 binding and applies the schema.
+ * Builds an adapter over the real D1 binding and applies the schema, after resetting the
+ * binding — shared across the file — so each test starts from empty tables that `count()`
+ * assertions can rely on.
  * @param onStatement Observer to install, when a test asserts on what was reported.
  */
 async function setup(onStatement?: D1StatementObserver) {
-	// The binding is shared across the file, so the schema and rows of the previous test are
-	// still there without this; `count()` assertions in particular depend on starting empty.
 	await reset();
 	let adapter = createD1DatabaseAdapter(env.DB, onStatement ? { onStatement } : undefined);
 	await adapter.executeScript(SCHEMA);
@@ -101,10 +93,11 @@ describe("createD1DatabaseAdapter", () => {
 		expect(await db.count(users)).toBe(1);
 	});
 
+	/**
+	 * `create`/`update` need synchronous RETURNING results, which the adapter can only supply by
+	 * executing each statement immediately — the reason the transaction scope cannot be atomic.
+	 */
 	test("RETURNING inside a transaction works because statements run immediately", async () => {
-		// The remix/data-table `create`/`update` helpers require synchronous RETURNING
-		// results, which the adapter can only satisfy by executing each statement
-		// immediately. This is exactly why the scope cannot be atomic.
 		let updated = await db.transaction(async (tx) => {
 			await tx.create(users, { id: 9, email: "nine@example.com" });
 			return tx.update(users, 9, { email: "changed@example.com" });
@@ -140,6 +133,10 @@ describe("createD1DatabaseAdapter", () => {
 		expect(await db.count(users)).toBe(1);
 	});
 
+	/**
+	 * `affectedRows` must match what the same statement without `RETURNING` reports, so adding
+	 * the clause never changes what an existing caller reads back.
+	 */
 	test("db.exec() with a raw UPDATE ... RETURNING yields the rows it moved", async () => {
 		await db.create(users, { id: 1, email: "one@example.com" });
 		await db.create(users, { id: 2, email: "two@example.com" });
@@ -150,8 +147,6 @@ describe("createD1DatabaseAdapter", () => {
 		);
 
 		expect(result.rows).toEqual([{ id: 1, email: "one@example.com.updated" }]);
-		// `affectedRows` must match what the same statement without `RETURNING` reports, so
-		// adding the clause never changes what an existing caller reads back.
 		expect(result.affectedRows).toBe(1);
 	});
 
@@ -188,6 +183,11 @@ describe("createD1DatabaseAdapter", () => {
 		expect(found?.config).toEqual(config);
 	});
 
+	/**
+	 * Asserts identity, not truthiness: a leaked `0` used to render `checked="0"`, an HTML boolean
+	 * attribute that reads as ON, so a stored `false` came back ticked. `archived`'s `null` is a
+	 * third state that must survive the decode, or a `?? true` default written over it stops firing.
+	 */
 	test("c.boolean() columns read back as real booleans, not SQLite's 1 and 0", async () => {
 		await db.create(flags, { id: 1, enabled: false, archived: null });
 		await db.create(flags, { id: 2, enabled: true, archived: true });
@@ -195,14 +195,9 @@ describe("createD1DatabaseAdapter", () => {
 		let off = await db.findOne(flags, { where: { id: 1 } });
 		let on = await db.findOne(flags, { where: { id: 2 } });
 
-		// `toBe` rather than a truthiness check on purpose: `0` is the exact value that used to
-		// leak out here, and it renders `checked="0"` — an HTML boolean attribute that is ON —
-		// so a stored `false` came back ticked. Only identity catches that.
 		expect(off?.enabled).toBe(false);
 		expect(on?.enabled).toBe(true);
 
-		// A nullable boolean's `null` is a third state and must survive the decode, or every
-		// `?? true` default written over one silently stops firing.
 		expect(off?.archived).toBe(null);
 		expect(on?.archived).toBe(true);
 	});
@@ -219,6 +214,11 @@ describe("createD1DatabaseAdapter", () => {
 		expect(updated.enabled).toBe(true);
 	});
 
+	/**
+	 * D1 auto-commits each statement immediately, so a write made before a later failure stays
+	 * committed; this pins that behavior against the real binding rather than a shim's imitation.
+	 * A result other than 1 here would mean the adapter gained atomicity worth revisiting the docs for.
+	 */
 	test("DOCUMENTS D1 limitation: a failing transaction does NOT roll back earlier writes", async () => {
 		let boom = new Error("second statement failed");
 
@@ -229,13 +229,6 @@ describe("createD1DatabaseAdapter", () => {
 
 		await expect(promise).rejects.toBe(boom);
 
-		// D1 has no ROLLBACK: the first write already auto-committed and remains. This asserts
-		// the honest, documented behavior — NOT desired atomicity. The Durable Object adapter
-		// (@pkg/data-table-sqlstorage) rolls this back; D1 cannot. If this ever returns 0, the
-		// adapter gained real atomicity and the docs and tests should be revisited.
-		//
-		// Against the real binding this is now D1's own answer rather than a shim's imitation
-		// of it, which is the whole reason the limitation is worth a test.
 		expect(await db.count(users)).toBe(1);
 	});
 });
@@ -253,6 +246,10 @@ describe("createD1DatabaseAdapter onStatement", () => {
 		expect(observations.map((observation) => observation.table)).toEqual(["users", "users"]);
 	});
 
+	/**
+	 * A real binding measures `durationMs`, so only its shape can be asserted here; that the
+	 * adapter reads it from `meta` instead of timing the call itself is pinned in `index.test.ts`.
+	 */
 	test("surfaces the row counters D1 itself reports", async () => {
 		let observations: D1StatementObservation[] = [];
 		let { db } = await setup((observation) => observations.push(observation));
@@ -266,8 +263,6 @@ describe("createD1DatabaseAdapter onStatement", () => {
 		expect(observations).toHaveLength(1);
 		expect(observations[0]?.rowsRead).toBe(2);
 		expect(observations[0]?.rowsWritten).toBe(0);
-		// A real binding measures this, so only its shape can be asserted; that the adapter
-		// reads it from `meta` instead of timing the call itself is pinned in `index.test.ts`.
 		expect(typeof observations[0]?.durationMs).toBe("number");
 	});
 

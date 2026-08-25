@@ -1,7 +1,7 @@
 /**
  * Barrel for framework-free helper modules: pure scale, path, and color math
  * that specific components build on, kept separate from the components that
- * consume them so neither carries any `remix/ui` dependency of its own.
+ * consume them so both stay plain TypeScript that any renderer can import.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

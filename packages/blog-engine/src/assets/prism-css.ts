@@ -12,7 +12,7 @@
  * self-served by the engine at `/assets/prism.css`, so hosts need no build-pipeline
  * cooperation. A compact light theme keyed to the token classes prismjs emits.
  */
-export const PRISM_CSS = /* css */ `
+export const PRISM_CSS = `
 code[class*="language-"], pre[class*="language-"] {
 	color: #24292e;
 	background: none;

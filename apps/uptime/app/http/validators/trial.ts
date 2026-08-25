@@ -1,22 +1,13 @@
 /**
- * The field names the two public try-it forms submit under, and the schema the second of
- * them is validated with.
+ * Field names the two public try-it forms submit under, and the schema the
+ * lead-capture form validates. Defined here since the landing page, the try
+ * page, and the handler all write these names, so a mismatch would submit
+ * silently empty; only email needs a schema, since the checked URL arrives
+ * pre-verified via the session's `guardTrialProbe`.
  *
- * The names live here rather than beside either form because three pages write them — the
- * landing page's box, the try page's box, and the handler that reads them — and a name
- * spelled two ways is a submission that silently arrives empty. This module imports only
- * the schema library, which also keeps the landing page out of the prober's module graph.
- *
- * The email capture is the only one of the two with anything to validate. The address is
- * required and is the only field that can fail; the URL a watch gets created for never
- * travels through it — it comes out of the session, put there by the probe that already
- * passed `guardTrialProbe` — so there is nothing else here worth a schema.
- *
- * The marketing opt-in is an unticked checkbox, which a browser does not submit at all, so
- * its absence is the ordinary case and must parse to `false` — never to a validation
- * error, and never to a default of `true`. Handing over an address to hear about one URL
- * is not consent to be marketed to, and `consented_at` is the column that keeps the two
- * apart.
+ * The checkbox field defaults to `false` when the browser omits it, and
+ * `consented_at` tracks that opt-in separately from supplying an email to
+ * check one URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,7 +24,7 @@ const MAX_EMAIL_LENGTH = 320;
 /** Form field the URL to check arrives in, on the landing page and on `/try` alike. */
 export const TRIAL_URL_FIELD = "url";
 
-/** Field name Turnstile's widget writes its token into; fixed by Cloudflare, not by us. */
+/** Field name Cloudflare's Turnstile widget writes its token into, per its fixed contract. */
 export const TURNSTILE_FIELD = "cf-turnstile-response";
 
 /** Validates the `POST /try/lead` form body. */

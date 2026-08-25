@@ -1,6 +1,4 @@
 /**
- * Unit tests for `overflowY()`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

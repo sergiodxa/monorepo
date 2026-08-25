@@ -1,3 +1,9 @@
+/**
+ * A URL-like value object for a pathname, search params, and hash with no
+ * origin, so relative paths can be built and mutated without a base URL.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export namespace Location {
 	export interface Options {
 		pathname: string;

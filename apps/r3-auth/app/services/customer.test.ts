@@ -129,7 +129,6 @@ describe("Customer.findOrCreateByEmail", () => {
 
 		let customer = await Customer.findOrCreateByEmail(polar, "jane@example.com", subject);
 
-		// `updateCustomer` throws in this fake, so reaching here proves it was not called.
 		expect(customer.externalId).toBe("someone-else");
 	});
 });

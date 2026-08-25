@@ -1,4 +1,7 @@
 /**
+ * Quoting is load-bearing: `content: ""` must reach the stylesheet verbatim,
+ * since only a valid quoted value generates the pseudo-element.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -10,8 +13,6 @@ import { pseudoContent } from "./pseudo-content";
 
 describe("pseudoContent", () => {
 	test("sets an empty pseudo-element content", async () => {
-		// The quotes must reach the stylesheet: a bare `content: ;` is invalid
-		// and the pseudo-element never gets generated.
 		expect(await declarations(pseudoContent('""'))).toEqual(['content: ""']);
 	});
 

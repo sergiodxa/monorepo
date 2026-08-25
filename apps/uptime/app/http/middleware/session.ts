@@ -13,17 +13,11 @@ import { KVSessionStorage } from "@pkg/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { session } from "remix/middleware/session";
 
-/**
- * Name of the signed cookie carrying the session id.
- */
 const SESSION_COOKIE_NAME = "uptime:session";
 /**
  * Session lifetime in seconds (one year), matching the KV entry TTL.
  */
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
-/**
- * Key prefix for session entries stored in KV.
- */
 const SESSION_PREFIX = "session:";
 
 /**

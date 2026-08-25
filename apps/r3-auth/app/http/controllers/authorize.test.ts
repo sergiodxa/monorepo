@@ -1,13 +1,9 @@
 /**
- * Router-level tests of the authorization endpoint and the code it issues: the full
- * authorization-code flow with PKCE and without it, every `prompt` value, exact
- * redirect-URI matching, code replay and expiry, the three response modes, and the
- * parameterless self-redirect.
- *
- * The PKCE pair is the point of this file. One test proves a code issued with a
- * challenge cannot be redeemed without the matching verifier; the other proves a code
- * issued without one still redeems with no verifier at all, which is what keeps every
- * client that does not use PKCE working.
+ * Router-level tests of the authorization endpoint and the code it issues: the
+ * full flow with and without PKCE, every `prompt` value, exact redirect-URI
+ * matching, code replay and expiry, the three response modes, and the
+ * parameterless self-redirect. A code issued with a challenge redeems only with
+ * the matching verifier; a code issued plain redeems on its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -106,6 +102,10 @@ describe("GET /authorize", () => {
 		expect(location.searchParams.get("code")).toBeTruthy();
 	});
 
+	/**
+	 * An ordinary sign-in offers the provider button; the credential form belongs to a
+	 * request that asked to create an account.
+	 */
 	test("renders the sign-in page when nobody is signed in", async () => {
 		let response = await app.fetch(new Request(authorizeUrl(fixtures)));
 
@@ -114,17 +114,16 @@ describe("GET /authorize", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Client App");
-		// The provider button is what an ordinary sign-in offers; the credential form is
-		// only rendered for a request that asked to create an account.
 		expect(body).toContain('action="/auth/github"');
 		expect(body).not.toContain('name="password"');
 	});
 
+	/**
+	 * The bare domain redirects here, so a monitor or crawler reaches this handler with
+	 * no query and is answered with the self-redirect. Such a probe enumerates nothing,
+	 * and the IP-keyed budget stays whole for whoever shares its egress.
+	 */
 	test("spends no budget on a probe carrying no authorization request", async () => {
-		// The bare domain redirects here, so a monitor, a crawler or a bodyless probe on `/`
-		// arrives at this handler with no query at all and is answered with the parameterless
-		// self-redirect. That request enumerates nothing, and the budget is keyed by IP, so
-		// letting it spend would let a prober lock out whoever shares its egress.
 		app = await createTestApp({ limits: { authorize: 1 } });
 		fixtures = await seed(app);
 
@@ -136,18 +135,19 @@ describe("GET /authorize", () => {
 			(await app.fetch(new Request(bare, { method: "HEAD", redirect: "manual" }))).status,
 		).toBe(303);
 
-		// The one slot in the budget is still there for the request it exists to protect.
 		let response = await app.fetch(new Request(authorizeUrl(fixtures), { redirect: "manual" }));
 
 		expect(response.status).toBe(200);
 	});
 
+	/**
+	 * Naming a client is what an enumeration does, so it spends the budget from the
+	 * first attempt, ahead of the lookup that would answer it.
+	 */
 	test("still limits a caller enumerating client ids", async () => {
 		app = await createTestApp({ limits: { authorize: 1 } });
 		fixtures = await seed(app);
 
-		// Naming a client is what an enumeration does, and it costs the budget from the very
-		// first attempt — before the lookup that would answer it.
 		let first = await app.fetch(new Request(authorizeUrl(fixtures), { redirect: "manual" }));
 		expect(first.status).toBe(200);
 
@@ -202,8 +202,6 @@ describe("GET /authorize", () => {
 
 		let response = await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "login" })));
 
-		// The sign-in page rather than a code: an existing session must not answer a
-		// request that asked for the person to authenticate again.
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain('action="/auth/github"');
 	});
@@ -357,13 +355,15 @@ describe("POST /authorize", () => {
 		expect(location.searchParams.get("code")).toBeTruthy();
 	});
 
+	/**
+	 * Regression: the sign-in path admits only verified credentials, so registration
+	 * stamps `verified_at` on the credential it writes and the account it just created
+	 * can authenticate straight away.
+	 */
 	test("a freshly registered account signs in again with the same password", async () => {
 		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
 		await register();
 
-		// Regression: registration used to store the credential with no `verified_at`,
-		// which the sign-in path refuses outright, so the account it had just created
-		// could never authenticate.
 		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "login" })));
 		let response = await register();
 
@@ -373,6 +373,10 @@ describe("POST /authorize", () => {
 		expect(location.searchParams.get("code")).toBeTruthy();
 	});
 
+	/**
+	 * The page shows the locale copy, while the engine's own `missing_validation`
+	 * description stays an internal diagnostic.
+	 */
 	test("refuses a registered subject whose credential was never verified", async () => {
 		let subject = await Subject.create(app.db, {
 			email_address: "github@example.com",
@@ -403,8 +407,6 @@ describe("POST /authorize", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		// The locale copy, not the engine's own `missing_validation` description, which
-		// stays an internal diagnostic.
 		expect(body).toContain(en.authorize.errors.missingValidation);
 		expect(body).not.toContain("Verify your email address.");
 	});
@@ -479,9 +481,12 @@ describe("the authorization code flow", () => {
 		).toBe(200);
 	});
 
+	/**
+	 * The first request is parked with no session, so the challenge reaches the exchange
+	 * only through the session; the verifier-less redemption two requests later failing
+	 * is what proves it arrived.
+	 */
 	test("with PKCE: the challenge survives the sign-in round trip through the session", async () => {
-		// No session yet, so this parks the request — challenge included — and renders the
-		// sign-in page instead of issuing a code straight away.
 		await app.fetch(
 			new Request(
 				authorizeUrl(fixtures, {
@@ -494,8 +499,6 @@ describe("the authorization code flow", () => {
 		let login = await submitSignIn(app);
 		let code = new URL(login.headers.get("location")!).searchParams.get("code")!;
 
-		// The challenge arrived two requests ago. If the session had not carried it, this
-		// verifier-less exchange would succeed.
 		expect((await exchangeCode(app, fixtures, { code })).status).toBe(400);
 	});
 
@@ -519,11 +522,11 @@ describe("the authorization code flow", () => {
 		expect(await replay.json()).toMatchObject({ error: "invalid_grant" });
 	});
 
+	/** Expiry is the KV entry disappearing, which is what deleting the key models. */
 	test("an expired code is invalid_grant", async () => {
 		await signIn(app, fixtures);
 
 		let code = await codeFrom();
-		// Expiry is the KV entry disappearing, which is what deleting it models.
 		await app.kv.delete(`authz-code:${code}`);
 
 		expect((await exchangeCode(app, fixtures, { code })).status).toBe(400);

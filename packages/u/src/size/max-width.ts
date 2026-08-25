@@ -1,13 +1,9 @@
 /**
- * `@pkg/u` is logical-property-first everywhere else in the `size/` family
- * (`u.maxIs()`, `u.maxBs()`, ...), but some components size themselves
- * relative to the physical viewport/container axis on purpose — e.g. a chat
- * bubble whose `max-width` describes its shape relative to the screen, not
- * the inline reading direction, and must not flip under a different
- * writing-mode or direction. This utility is a deliberate, narrow exception
- * scoped to that one use case: it sets the physical `max-width` property
- * directly. For the logical default, use `u.maxIs()` (`max-inline-size`)
- * instead.
+ * A deliberate exception in the logical-property-first `size/` family: sets
+ * the physical `max-width` property for elements whose sizing is pinned to
+ * the physical viewport axis, staying fixed across writing-mode and
+ * direction changes. Use `u.maxIs()` (`max-inline-size`) for the logical
+ * default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,9 +14,9 @@ import { utility } from "../internal/descriptor";
 import { boxLength } from "../internal/tokens";
 
 /**
- * Applies the physical `max-width` property. Prefer `u.maxIs()`
- * (`max-inline-size`) unless the element's sizing is genuinely tied to the
- * physical viewport axis rather than the logical inline axis.
+ * Applies the physical `max-width` property, for elements whose sizing is
+ * genuinely tied to the physical viewport axis. Prefer `u.maxIs()`
+ * (`max-inline-size`) for the logical default.
  *
  * @example u.maxWidth("full")
  * @example css({ maxWidth: "100%" })

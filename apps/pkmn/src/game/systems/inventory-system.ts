@@ -1,11 +1,7 @@
 /**
- * Inventory system utilities for reading and mutating the inventory state attached to player entities.
- * This module centralizes the rules for adding and removing item counts so callers can interact with
- * inventory data through a small, predictable surface instead of updating world state manually.
- *
- * The functions in this module preserve the module's responsibility as a focused ECS system layer:
- * they coordinate inventory-specific state transitions, enforce basic count invariants, and return
- * values that let other systems react to successful or rejected inventory updates.
+ * Centralizes item-count mutations for the inventory attached to player
+ * entities, so callers interact through a small, predictable surface
+ * instead of updating world state manually.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,7 +13,10 @@ import type { World } from "../world/world";
 
 import { getPlayerInventory } from "../world/world";
 
-/** Adds one or more items to the player's inventory component. */
+/**
+ * Adds a positive count to an item's stack; a non-positive count leaves
+ * the inventory unchanged.
+ */
 export function addInventoryItem(world: World, playerId: PlayerId, itemId: ItemId, count = 1) {
 	if (count <= 0) return getPlayerInventory(world);
 
@@ -33,7 +32,10 @@ export function addInventoryItem(world: World, playerId: PlayerId, itemId: ItemI
 	return getPlayerInventory(world);
 }
 
-/** Removes one or more items when enough copies are available. */
+/**
+ * Removes a positive count when enough copies are held, returning false
+ * otherwise; a non-positive count is a no-op that returns true.
+ */
 export function removeInventoryItem(
 	world: World,
 	playerId: PlayerId,

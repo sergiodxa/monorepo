@@ -2,7 +2,7 @@
  * Unit tests for the `CronJobMonitor` data-access model: team-scoped CRUD over
  * cron-job monitors, ping-history recording via the single `recordPing` write path,
  * the scheduled-sweep query `listActionable`, and `calculateNextExpected`, including
- * the two inputs that leave a monitor unscheduled instead of throwing.
+ * the two inputs that leave a monitor unscheduled.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -273,7 +273,7 @@ describe("CronJobMonitor.listActionable", () => {
 		});
 		await CronJobMonitor.updateStatus(db, missed.id, "missed");
 
-		/** Still "new" — never received a first ping, and has no next_expected_at yet. */
+		/** Still "new": awaiting its first ping, with `next_expected_at` still null. */
 		await CronJobMonitor.create(db, "team-1", {
 			name: "New",
 			description: null,

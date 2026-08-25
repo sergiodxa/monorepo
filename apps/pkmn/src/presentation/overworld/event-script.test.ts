@@ -1,15 +1,9 @@
 /**
  * Verifies the resumable command interpreter drives host effects in order.
  *
- * A run executes synchronous commands (control-switch, control-self-switch,
- * give-item, heal-party, face-player, move) back-to-back and parks on a blocking
- * command (text, show-choices, the battle commands, wait, warp) until the host
- * calls `resume()`, then continues. `show-choices` resumes with a picked index and
- * runs that branch's commands; `conditional-branch` runs its `then`/`else` against
- * the injected flag context (a `selfSwitch` condition reading the interacting
- * event's namespaced flag). A warp blocks and is never resumed (the map reload
- * replaces the runner). The runner forwards authored data to the host and assigns
- * no meaning itself.
+ * Synchronous commands run back-to-back; blocking commands (text,
+ * show-choices, the battle commands, wait, warp) park until the host calls
+ * `resume()`, replaying the picked branch for show-choices/conditional-branch.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,7 +77,7 @@ test("text blocks the runner until the host resumes it", () => {
 	expect(runner.blocked).toBe(true);
 	expect(calls).toEqual(["text:Hello!"]);
 
-	// Advancing again while blocked is a no-op: the switch must not run early.
+	/** Advancing again while blocked is a no-op: the switch must not run early. */
 	runner.advance();
 	expect(calls).toEqual(["text:Hello!"]);
 
@@ -127,7 +121,8 @@ test("show-choices blocks, then runs the picked branch's commands on resume", ()
 	expect(runner.blocked).toBe(true);
 	expect(calls).toEqual(["choices:Well?:Yes,No"]);
 
-	runner.resume(1); // pick "No"
+	/** 1 picks "No". */
+	runner.resume(1);
 	expect(runner.done).toBe(true);
 	expect(calls).toEqual(["choices:Well?:Yes,No", "switch:no:true"]);
 });
@@ -159,7 +154,7 @@ test("conditional-branch reads a selfSwitch condition through the namespaced fla
 			[THEN_BRANCH_KEY]: [{ kind: "text", text: "open" }],
 		},
 	];
-	// The context namespaces "A" to "self:A"; only that flag being on makes the branch hold.
+	/** The context namespaces "A" to "self:A"; only that flag being on makes the branch hold. */
 	let { runner, calls } = runnerFor(commands, new Set(["self:A"]));
 
 	runner.advance();
@@ -202,11 +197,13 @@ test("a trainer battle command blocks and forwards its party, resuming after", (
 	let { runner, calls } = runnerFor(commands);
 
 	runner.advance();
-	runner.resume(); // dismiss the message → starts the battle, blocks again
+	/** Dismisses the message, which starts the battle and blocks again. */
+	runner.resume();
 	expect(runner.blocked).toBe(true);
 	expect(calls).toEqual(["text:Fight me!", "trainer:Rival"]);
 
-	runner.resume(); // battle ended
+	/** Signals the battle ended. */
+	runner.resume();
 	expect(runner.done).toBe(true);
 	expect(calls).toEqual(["text:Fight me!", "trainer:Rival", "switch:beat-rival:true"]);
 });

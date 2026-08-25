@@ -1,11 +1,9 @@
 /**
  * Unit tests for `CheckCronJobsJob.perform()`, covering the healthy → late → missed
- * status-transition sweep: the grace-period arithmetic that decides each transition, which
- * monitors `CronJobMonitor.listActionable` excludes from the sweep entirely, and that a
- * `notify` message is enqueued only on an actual transition the monitor asked to hear about
- * — carrying the status the monitor held before `updateStatus` overwrote it, which is what
- * makes the transition classifiable downstream. A monitor with `alert_on_late` off still
- * transitions to `late`; it just never reaches the queue.
+ * status-transition sweep: the grace-period arithmetic behind each transition, which
+ * monitors `CronJobMonitor.listActionable` excludes entirely, and that a `notify` message
+ * carries the status held before `updateStatus` overwrote it, which is what makes the
+ * transition classifiable downstream.
  *
  * The `QUEUE` binding is an in-memory queue installed through `cloudflare:workers`, so the
  * assertions are about the messages that really landed on it; alert delivery itself now
@@ -33,12 +31,13 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 /**
- * The queue the sweep notifies through. It lives at module scope because the module under
- * test captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ * The queue the sweep notifies through. It lives at module scope because the module
+ * under test captures `env` on import; `beforeEach` empties it to reuse the same
+ * instance across tests.
  */
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 
-/** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
+/** Spying on `sendBatch` confirms the send path was actually invoked, beyond what `sent` alone shows. */
 let sendBatch = vi.spyOn(queue, "sendBatch");
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
@@ -90,9 +89,11 @@ beforeEach(() => {
 
 describe("CheckCronJobsJob", () => {
 	test("repairs an enabled monitor that has no expected-arrival time", async () => {
-		// The hole this closes: such a row used to be filtered out of the sweep entirely, so
-		// it never left `healthy` however long it went unpinged. Five production monitors
-		// reported green for ten days while nothing pinged them.
+		/**
+		 * The hole this closes: such a row used to be filtered out of the sweep entirely, so
+		 * it never left `healthy` however long it went unpinged. Five production monitors
+		 * reported green for ten days while nothing pinged them.
+		 */
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { status: "healthy", next_expected_at: null });
 
@@ -101,7 +102,7 @@ describe("CheckCronJobsJob", () => {
 		let repaired = await CronJobMonitor.findById(db, monitor.id);
 		expect(repaired?.next_expected_at).not.toBeNull();
 		expect(repaired?.next_expected_at ?? 0).toBeGreaterThan(Date.now());
-		// Repair is not a health verdict, and there is nothing to be late for yet.
+		/** Repair is not a health verdict, and there is nothing to be late for yet. */
 		expect(repaired?.status).toBe("healthy");
 		expect(enqueued()).toEqual([]);
 	});
@@ -117,7 +118,7 @@ describe("CheckCronJobsJob", () => {
 		await runJob(db);
 		let repaired = await CronJobMonitor.findById(db, monitor.id);
 
-		// Wind the repaired deadline into the past; the next sweep must now judge it.
+		/** Wind the repaired deadline into the past; the next sweep must now judge it. */
 		await CronJobMonitor.setNextExpected(
 			db,
 			monitor.id,
@@ -356,8 +357,10 @@ describe("CheckCronJobsJob", () => {
 				await seedMonitor(db, {
 					name: `Backup ${index}`,
 					status: "healthy",
-					// Past the following daily occurrence, so each transitions to `missed` —
-					// the transition that notifies regardless of `alert_on_late`.
+					/**
+					 * Past the following daily occurrence, so each transitions to `missed` — the
+					 * transition that notifies regardless of `alert_on_late`.
+					 */
 					next_expected_at: now - (24 * 60 * 60 * 1000 + 600 * 1000),
 					grace_period_seconds: 300,
 				}),

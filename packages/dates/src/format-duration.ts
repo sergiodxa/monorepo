@@ -43,16 +43,16 @@ export interface FormatDurationOptions {
 }
 
 /**
- * Word a length of time, not an instant: what `"90 minutes"` reads as to a person.
- * Components that are zero are skipped, so a whole number of hours never reads as
- * "2 hours, 0 minutes", and a length under a second reads in milliseconds.
- *
- * A negative length carries its sign on the largest component, and a zero length
- * reads as zero seconds rather than as an empty string.
+ * Words a length of time the way a person would read it aloud. Zero-valued
+ * components are skipped, sub-second lengths read in milliseconds, and a
+ * negative length signs only its largest component.
  *
  * @param input - A duration string, or a number of milliseconds.
  * @param options - Locale, wording length, and how many components to keep.
- * @returns The localized length.
+ * @returns The localized length. An all-zero length reads as zero seconds, a
+ * non-finite total — only possible when the duration type is bypassed —
+ * collapses to one value in seconds, and a single component is joined the same
+ * way several are.
  *
  * @example
  * formatDuration("90 minutes", { locale: "en-US" }); // "1 hour, 30 minutes"
@@ -72,8 +72,6 @@ export function formatDuration(input: DurationInput, options: FormatDurationOpti
 	let render = (value: number, unit: string) =>
 		numberFormatter(options.locale, { style: "unit", unit, unitDisplay: style }).format(value);
 
-	// A non-finite total only happens when the duration type was bypassed; report it
-	// in seconds rather than repeating it once per unit.
 	if (!Number.isFinite(total)) return render(total, "second");
 
 	let remaining = Math.abs(Math.trunc(total));
@@ -90,6 +88,5 @@ export function formatDuration(input: DurationInput, options: FormatDurationOpti
 
 	if (components.length === 0) components.push(render(0, "second"));
 
-	// A one-component list formats as that component alone, so no special case here.
 	return listFormatter(options.locale, { type: "unit", style }).format(components);
 }

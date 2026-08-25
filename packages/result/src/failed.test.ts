@@ -1,3 +1,10 @@
+/**
+ * Tests for `failed`, the Result-narrowing assertion.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";
@@ -41,7 +48,6 @@ describe(failed, () => {
 		let result: Result<number, Error> = failure(new Error("Failed"));
 
 		failed(result);
-		// After this point, TypeScript knows result is Failure<Error>
 		let error: Error = result.error;
 		expect(error.message).toBe("Failed");
 	});

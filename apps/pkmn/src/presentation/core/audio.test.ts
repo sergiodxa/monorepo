@@ -1,12 +1,8 @@
 /**
- * Tests for the `AudioManager`'s procedural-SFX delegation.
- *
- * `AudioManager` builds a real `AudioContext` in its field initializers, which
- * does not exist headless, so these tests install a recording stub as the global
- * `AudioContext` before constructing one. They then verify `playSynthSfx` routes
- * a known effect through the sfx channel (creating oscillators), that a muted sfx
- * channel schedules nothing, and that an unknown name is a safe no-op — without
- * relying on real Web Audio.
+ * Tests for the `AudioManager`'s procedural-SFX delegation. `AudioManager`
+ * builds a real `AudioContext` in its field initializers, so these tests
+ * install a recording stub as the global `AudioContext` before constructing
+ * one, then verify `playSynthSfx`'s routing, muting, and unknown-name cases.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +11,6 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 
 import type { AssetStore } from "./assets";
 
-/** A recording gain node: tracks its scalar value and connections. */
 class StubGainNode {
 	readonly gain = {
 		value: 1,
@@ -26,7 +21,6 @@ class StubGainNode {
 	connect() {}
 }
 
-/** A recording oscillator node: tracks whether it was started. */
 class StubOscillatorNode {
 	type = "sine";
 	readonly frequency = { setValueAtTime() {}, linearRampToValueAtTime() {} };
@@ -35,7 +29,6 @@ class StubOscillatorNode {
 	stop() {}
 }
 
-/** A recording `AudioContext` stub installed globally for the manager to build. */
 class StubAudioContext {
 	static instances: StubAudioContext[] = [];
 	state = "running";
@@ -69,7 +62,10 @@ class StubAudioContext {
 	}
 }
 
-/** An asset store that never has any audio buffers (procedural SFX need none). */
+/**
+ * An asset store stub sufficient for procedural SFX, which synthesize sound
+ * in real time.
+ */
 const EMPTY_ASSETS = {
 	audioBuffer: () => null,
 	audioLoopPoints: () => ({}),
@@ -89,7 +85,6 @@ afterEach(() => {
 	else (globalThis as { AudioContext?: unknown }).AudioContext = originalAudioContext;
 });
 
-/** Builds an `AudioManager` against the installed stub context. */
 async function makeManager() {
 	let { AudioManager } = await import("./audio");
 	let manager = new AudioManager(EMPTY_ASSETS);

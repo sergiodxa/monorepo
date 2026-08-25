@@ -10,7 +10,6 @@ import { radius } from "../internal/tokens";
 /** A single logical corner, named by its block/inline start/end pair. */
 export type LogicalCorner = "start-start" | "start-end" | "end-start" | "end-end";
 
-/** Maps a {@link LogicalCorner} to the logical CSS property it should set. */
 const CORNER_PROPERTY: Record<LogicalCorner, string> = {
 	"start-start": "borderStartStartRadius",
 	"start-end": "borderStartEndRadius",
@@ -19,11 +18,9 @@ const CORNER_PROPERTY: Record<LogicalCorner, string> = {
 };
 
 /**
- * Applies a corner radius from the radius scale or a raw CSS length to a
- * single logical corner, instead of all four at once like {@link rounded}.
- * Useful for shapes that round three corners uniformly but flatten or
- * otherwise differentiate the fourth — a chat bubble's "tail" corner, for
- * example.
+ * Applies a radius from the radius scale, or a raw CSS length, to one logical
+ * corner — for shapes that round three corners uniformly and differentiate
+ * the fourth, like a chat bubble's tail.
  *
  * @example u.roundedCorner("end-start", "xs")
  * @example css({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" })

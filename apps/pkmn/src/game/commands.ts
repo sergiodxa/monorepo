@@ -28,9 +28,8 @@ export namespace Command {
 		/**
 		 * Whether the player side may flee voluntarily; defaults to true.
 		 *
-		 * Wild battles leave this on so the player can run. Trainer battles pass
-		 * false, reusing the battle's per-side `canLeaveBattle` flag to make the
-		 * fight inescapable.
+		 * Trainer battles pass false, reusing the battle's per-side
+		 * `canLeaveBattle` flag to make the fight inescapable.
 		 */
 		canLeaveBattle?: boolean;
 	}
@@ -142,9 +141,8 @@ export namespace Command {
 	/**
 	 * Uses one overworld item on a specific creature.
 	 *
-	 * Today this resolves evolution-stone use: when the item matches the creature's
-	 * use-item evolution the creature evolves and the item is consumed; any other
-	 * item leaves the bag and the creature untouched.
+	 * Resolves evolution-stone use: a matching use-item evolution consumes the
+	 * item and evolves the creature; any other item leaves both untouched.
 	 */
 	export interface UseItemOnCreature {
 		type: "use-item-on-creature";
@@ -154,15 +152,9 @@ export namespace Command {
 	}
 
 	/**
-	 * Uses one overworld medicine item on a specific creature.
-	 *
-	 * The item must be a stored medicine whose effect recovers HP or status. Only
-	 * when applying it would change the creature — a heal on a damaged target, a
-	 * cure on a matching status, a revive on a fainted one — does the creature's
-	 * stored HP and status update and one copy leave the bag. A missing item, an
-	 * empty stack, a non-recovery item, or an effect that would change nothing (a
-	 * heal at full HP, a revive on a healthy creature) is a no-op that neither
-	 * touches the creature nor consumes the item.
+	 * Applies a stored medicine item to a creature and consumes it only when
+	 * doing so changes the creature: a heal on damage, a cure on matching
+	 * status, or a revive on a faint.
 	 */
 	export interface UseMedicine {
 		type: "use-medicine";
@@ -180,9 +172,8 @@ export namespace Command {
 	/**
 	 * Sets one named boolean story flag on the world.
 	 *
-	 * Flags are engine-generic persisted switches; the engine assigns no meaning to
-	 * a flag's name and only records the boolean the caller provides. `value`
-	 * defaults to true so setting a flag is the common case.
+	 * Flags are engine-generic persisted switches whose meaning belongs to the
+	 * caller; `value` defaults to true since setting is the common case.
 	 */
 	export interface SetFlag {
 		type: "set-flag";
@@ -205,9 +196,8 @@ export namespace Command {
 	/**
 	 * Creates a non-capturable creature fielded by an opposing trainer.
 	 *
-	 * Rolls omitted fields exactly like `spawn-encounter`, but places the creature
-	 * at a `trainer` location so it is excluded from persistence and despawned when
-	 * the battle ends, while the capture path refuses it.
+	 * Rolls omitted fields like `spawn-encounter`, but a `trainer` location
+	 * keeps it battle-only: it despawns at battle end and capture is refused.
 	 */
 	export interface SpawnTrainerCreature {
 		type: "spawn-trainer-creature";
@@ -229,12 +219,9 @@ export namespace Command {
 	}
 
 	/**
-	 * Resolves a pending level-up move offer for one creature.
-	 *
-	 * When the creature has a free slot the move is appended and `replaceSlotIndex`
-	 * is ignored. When its four slots are full, `replaceSlotIndex` names the slot to
-	 * overwrite; an out-of-range or negative index (or an omitted one on a full
-	 * moveset) is treated as declining the move.
+	 * Resolves a pending level-up move offer: appends the move on a free
+	 * slot, or uses `replaceSlotIndex` to overwrite a slot on a full
+	 * moveset, declining on an invalid or omitted index.
 	 */
 	export interface LearnMove {
 		type: "learn-move";

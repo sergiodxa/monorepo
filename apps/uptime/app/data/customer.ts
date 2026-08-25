@@ -50,10 +50,9 @@ export default class Customer {
 	}
 
 	/**
-	 * Revokes every active monitoring subscription for the team owner (used on team
-	 * deletion). Best-effort: a Polar failure here must never block deleting the
-	 * team and its data, so any error is swallowed, matching
-	 * {@link PolarClient.hasActiveSubscription}'s fail-open convention.
+	 * Revokes the team owner's active monitoring subscriptions on team deletion.
+	 * Swallows Polar failures so deleting the team and its data always proceeds,
+	 * matching {@link PolarClient.hasActiveSubscription}'s fail-open convention.
 	 */
 	static async cancelSubscriptions(polar: PolarClient, ownerId: string): Promise<void> {
 		try {
@@ -61,8 +60,6 @@ export default class Customer {
 			await Promise.all(
 				subscriptions.map((subscription) => polar.revokeSubscription(subscription.id)),
 			);
-		} catch {
-			// intentionally empty
-		}
+		} catch {}
 	}
 }

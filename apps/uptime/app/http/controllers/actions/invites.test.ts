@@ -30,16 +30,9 @@ import { invites, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * `@pkg/validate`'s `validate()` rejects the flattened `FormData` these schemas expect, failing
+ * every submission regardless of validity (a shared-package bug tracked separately). The import
+ * below runs after the mock patches it, so tests exercise the actions' real branching.
  */
 let { createInvite, revokeInvite } = await import("./invites");
 
@@ -61,7 +54,7 @@ async function createFixture() {
 	return { db, team, membership };
 }
 
-/** Stands in for the language middleware, which this router does not run. */
+/** Provides the translator directly, standing in for the app's language middleware here. */
 let { i18n: i18nextInstance } = await createTranslator({
 	resources: { en: { translation: en } },
 	supportedLanguages: ["en"],
@@ -142,8 +135,6 @@ describe("createInvite", () => {
 		expect(invite?.sender_id).toBe(membership.subject_id);
 		expect(invite?.accepted_at).toBeNull();
 
-		// Identified by type rather than by subject: a string assertion passes when the
-		// wrong email goes out with similar copy, and fails when the copy is reworded.
 		expect(transport.messages).toHaveLength(1);
 		expect(transport.find((message) => message.email instanceof TeamInviteEmail)).toBeDefined();
 		expect(transport.last?.to).toEqual([{ email: "new-member@example.com" }]);

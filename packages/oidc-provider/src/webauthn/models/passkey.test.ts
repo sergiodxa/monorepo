@@ -1,3 +1,12 @@
+/**
+ * Unit tests for the Passkey model: creation, lookup by id and by subject,
+ * counter and name updates, deletion, and excluding legacy null-credential
+ * passkeys from authentication candidates.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
@@ -139,7 +148,6 @@ describe("Passkey", () => {
 		test("returns only passkeys with a non-null credential_id", async () => {
 			let subject = await createSubject(db, { verified: true });
 
-			// A passkey created through the model always stores its credential_id.
 			await Passkey.create(db, {
 				subjectId: subject.id,
 				credentialId: "cred-with-id",
@@ -147,8 +155,8 @@ describe("Passkey", () => {
 				counter: 0,
 			});
 
-			// A legacy passkey migrated before credential_id was persisted (migration
-			// 0006) has a null credential_id and must be excluded from authentication.
+			/** A passkey migrated before migration 0006 added `credential_id` has a
+			 * null value and must be excluded from authentication. */
 			await db.create(Passkey.table, {
 				id: crypto.randomUUID(),
 				subject_id: subject.id,

@@ -79,10 +79,9 @@ export default {
 		},
 
 		/**
-		 * Die drei Dinge, die wahr bleiben, egal wie viel jemand am Ende überwacht. Preis und
-		 * Freikontingent werden aus `~/app/lib/pricing.ts` eingesetzt und nicht hier
-		 * geschrieben — ein fester Wert wäre am Tag einer Preisänderung veraltet, und
-		 * `app/lib/public-claims.ts` lässt den Build daran scheitern.
+		 * Die drei Dinge, die wahr bleiben, egal wie viel jemand am Ende überwacht. Preis
+		 * und Freikontingent kommen aus `~/app/lib/pricing.ts`, damit sie bei einer
+		 * Preisänderung aktuell bleiben; `public-claims.ts` erzwingt das beim Build.
 		 */
 		benefits: {
 			badge: "Warum Uptime",
@@ -563,8 +562,8 @@ export default {
 			},
 
 			/**
-			 * Code-available, not open source: the repository carries its own license with
-			 * conditions, so the claim is only that a reader can check the code.
+			 * Source-available under its own license with conditions, so the claim made
+			 * here is only that a reader can check the code.
 			 */
 			source: {
 				title: "Sie können den Code lesen",
@@ -1348,7 +1347,7 @@ export default {
 				dnsMoreFindings: "… und {{count}} weitere",
 			},
 
-			/** Said only where it applies: what a DNS diff means, not what it found. */
+			/** Said only where it applies, naming what a DNS diff means. */
 			dns: {
 				recordSetEditNote:
 					"Ein Eintragssatz mit mehreren Werten hat in DNS keine Identität je Eintrag. Ein darin geänderter Wert wird deshalb als ein Eintrag, der nicht mehr auflöst, plus ein neuer Eintrag gemeldet.",
@@ -1669,10 +1668,9 @@ export default {
 		},
 
 		/**
-		 * Ein Massenimport meldet zwei Zahlen, und `partial` ist die entscheidende: eine Eingabe,
-		 * bei der einige Zeilen durchgekommen sind, ist ein Erfolg mit einer To-do-Liste und kein
-		 * Fehlschlag, deshalb nennt sie zuerst die Zahl der angelegten Monitore und dann die Zahl
-		 * der Zeilen, die korrigiert werden müssen.
+		 * Ein Massenimport meldet zwei Zahlen, und `partial` ist die entscheidende: eine
+		 * Eingabe mit einigen durchgekommenen Zeilen zählt als Erfolg mit einer To-do-Liste,
+		 * deshalb zuerst die Zahl der angelegten Monitore, dann die noch zu korrigierenden Zeilen.
 		 */
 		importMonitors: {
 			errors: {
@@ -2761,8 +2759,6 @@ export default {
 						description: "Ein Name zur Identifizierung der Benachrichtigung.",
 					},
 
-					// The picker's own copy is shared with the maintenance-window form; only this
-					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
 						description:
 							"Was diese Benachrichtigung überwacht. Lassen Sie sie teamweit, beschränken Sie sie auf eine Monitor-Art oder richten Sie sie auf einen einzelnen Monitor.",
@@ -3115,8 +3111,8 @@ export default {
 
 			/**
 			 * Die abgelehnten Zeilen, angezeigt über dem Feld, in das sie neu eingefügt werden.
-			 * Es beginnt mit dem, was *erstellt* wurde, damit ein teilweiser Import nicht wie ein
-			 * fehlgeschlagener klingt.
+			 * Es beginnt mit dem, was *erstellt* wurde, damit ein teilweiser Import als Erfolg
+			 * mit Nacharbeit klingt.
 			 */
 			report: {
 				section: { title: "Letzter Import" },
@@ -3292,7 +3288,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				/** ADR-026 §14: said on the setup screen as well as in the docs. */
 				apexOnlyNotice:
 					"DNS erlaubt es niemandem, die Einträge einer Zone aufzulisten. Ohne Zonendatei können wir nur den Apex Ihrer Domain überwachen – niemals eine Subdomain.",
 
@@ -3428,7 +3424,7 @@ export default {
 
 				findings: "{{changed}} geändert · {{missing}} fehlen · {{new}} neu",
 				noFindings: "Keine Änderungen",
-				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				/** Only a successful query enters the diff, so a partial sweep reads as partial. */
 				queriesFailed_one: "{{count}} Abfrage blieb ohne Antwort",
 				queriesFailed_other: "{{count}} Abfragen blieben ohne Antwort",
 			},
@@ -3472,8 +3468,7 @@ export default {
 
 		/**
 		 * The review step between creating a domain monitor and monitoring anything with it.
-		 * Its own page, so a reload lands back on the decision rather than on a detail page
-		 * that implies it was already made.
+		 * Its own page, so a reload lands back on the pending decision.
 		 */
 		dnsMonitorReview: {
 			header: {
@@ -3482,7 +3477,7 @@ export default {
 					"Alle gefundenen Einträge werden standardmäßig überwacht. Entfernen Sie den Haken bei allem, worüber Sie nicht benachrichtigt werden möchten – der Eintrag bleibt so oder so erhalten, damit nichts, was Sie ablehnen, später erneut als neuer Eintrag auftaucht.",
 			},
 
-			/** A line the parser could not use is reported, never silently dropped. */
+			/** A line the parser could not use is reported, keeping every skipped row visible. */
 			unparsed: {
 				title_one: "{{count}} Zeile wurde nicht importiert",
 				title_other: "{{count}} Zeilen wurden nicht importiert",
@@ -3530,8 +3525,8 @@ export default {
 
 			/**
 			 * A line repeating a record an earlier line declared. Reported apart from the
-			 * rejections: nothing was lost, so calling it "not imported" would describe a
-			 * complete import as a partial one.
+			 * rejections, since the record already exists and the import created everything
+			 * it could.
 			 */
 			duplicates: {
 				title_one:
@@ -3543,7 +3538,7 @@ export default {
 				line: "Zeile {{line}}: {{name}} {{type}} wurde bereits in Zeile {{firstLine}} deklariert.",
 			},
 
-			/** Said at review, where the cap is enforced, rather than at check time. */
+			/** Said at review, where the cap is enforced. */
 			namesCap: {
 				title: "Mehr Namen, als ein Monitor überwachen kann",
 				description:
@@ -3559,7 +3554,7 @@ export default {
 					value: "Wert",
 				},
 
-				/** Each box names the record it decides, since the column heading is not read per row. */
+				/** Each box names the record it decides, since the column heading appears once for the whole list. */
 				watchRecord: "{{name}} {{type}} überwachen",
 			},
 
@@ -4039,11 +4034,9 @@ export default {
 
 		trial: {
 			/**
-			 * Der Bericht als eigene Seite, erreichbar über das Token der Beobachtung. Jeder Wert
-			 * wird aus gespeicherten Prüfungen berechnet, deshalb hat jeder eine Formulierung für
-			 * „noch nichts zu berichten“ daneben: eine Beobachtung ohne abgeschlossene Prüfung
-			 * zeigt einen Gedankenstrich und sagt warum, und behauptet nie „keine Vorfälle“, weil
-			 * noch niemand nachgesehen hat.
+			 * Der Bericht als eigene Seite, erreichbar über das Token der Beobachtung. Jeder
+			 * Wert stammt aus gespeicherten Prüfungen; eine Beobachtung ohne abgeschlossene
+			 * Prüfung zeigt einen Gedankenstrich mit Begründung, bis jemand nachgesehen hat.
 			 */
 			report: {
 				meta: {

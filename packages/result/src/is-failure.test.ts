@@ -1,3 +1,11 @@
+/**
+ * Unit tests for the isFailure type guard, covering the truthiness check
+ * and the compile-time narrowing it gives callers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";
@@ -21,7 +29,6 @@ describe(isFailure, () => {
 		let result: Result<number, Error> = failure(new Error("Failed"));
 
 		if (isFailure(result)) {
-			// TypeScript should know result.error is Error
 			let error: Error = result.error;
 			expect(error.message).toBe("Failed");
 		}

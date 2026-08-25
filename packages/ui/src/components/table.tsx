@@ -60,18 +60,16 @@ const DEFAULT_ALIGN: Table.Align = "start";
  */
 export namespace Table {
 	/**
-	 * Text alignment for a column's header and, by convention, the cells
-	 * beneath it. `"start"`/`"end"` follow the current writing direction
-	 * rather than a fixed screen side, so a column stays left- or
-	 * right-aligned correctly under `dir="rtl"`.
+	 * Text alignment for a column's header and, by convention, its cells.
+	 * `"start"`/`"end"` follow the writing direction, so a column stays
+	 * left- or right-aligned correctly under `dir="rtl"`.
 	 */
 	export type Align = "start" | "center" | "end";
 
 	/**
 	 * Current sort direction for a sortable column, matching the values the
-	 * native `aria-sort` attribute accepts. Leaving it unset (while `href` is
-	 * still set) renders the column as sortable but not currently the active
-	 * sort key.
+	 * native `aria-sort` attribute accepts. Leaving it unset while `href` is
+	 * set renders the column as sortable but not the active sort key.
 	 */
 	export type SortDirection = "ascending" | "descending";
 
@@ -105,13 +103,9 @@ export namespace Table {
 	}
 
 	/**
-	 * Every native `<th>` attribute, plus the `mix` passthrough. Setting `href`
-	 * turns the header's label into a link that a consumer points at the same
-	 * page with a query string requesting the next sort order; `sortDirection`
-	 * then reflects which direction is currently active so the header can
-	 * render the right indicator and expose it through `aria-sort`. Omitting
-	 * `href` renders a plain, unsortable header. `align` shadows the native,
-	 * deprecated `align` attribute on `<th>` with the logical, writing-direction-aware values above.
+	 * Every native `<th>` attribute, plus the `mix` passthrough. Setting
+	 * `href` turns the header into a sort link exposing `aria-sort`; `align`
+	 * shadows the deprecated native `align` with the logical values above.
 	 */
 	export interface ColumnProps extends Omit<TagProps<"th">, "align"> {
 		/** Text alignment for the header and its indicator. Defaults to {@link DEFAULT_ALIGN}. */
@@ -127,8 +121,7 @@ export namespace Table {
 	/**
 	 * Every native `<tr>` attribute, unchanged, plus the `mix` passthrough.
 	 * Set `aria-selected="true"` directly to mark a row selected — the row's
-	 * own selection tint rides that native attribute rather than a bespoke
-	 * boolean prop.
+	 * own selection tint rides that native attribute.
 	 */
 	export interface RowProps extends TagProps<"tr"> {}
 
@@ -149,10 +142,9 @@ export namespace Table {
 	}
 
 	/**
-	 * Every native `<tr>` attribute, plus the `mix` passthrough. `href` points
-	 * at the URL that renders the next page of results, `colSpan` should match
-	 * the number of columns the surrounding table renders so the link spans
-	 * the full row width, and `children` is the link's own visible label.
+	 * Every native `<tr>` attribute, plus the `mix` passthrough. `colSpan`
+	 * should match the number of columns the surrounding table renders so
+	 * the link spans the full row width.
 	 */
 	export interface LoadMoreProps extends TagProps<"tr"> {
 		/** Target URL that renders the next page of results. */
@@ -169,9 +161,7 @@ export namespace Table {
 /**
  * Renders the table's `<table>` host: a full-width, border-collapsed grid
  * with a small base font size, ready to hold {@link Table.Header} and
- * {@link Table.Body}. In dev mode, a table rendered without an `aria-label` or
- * `aria-labelledby` logs a `console.warn`, since assistive technology
- * otherwise has no accessible name to announce for the table as a whole.
+ * {@link Table.Body}. Dev mode warns when it lacks an accessible name.
  *
  * @param handle Runtime handle carrying the host `<table>`'s props.
  * @returns The render function producing the table's markup.
@@ -210,11 +200,8 @@ export function Table(handle: Handle<Table.Props>) {
 
 /**
  * Renders an optional wrapper around {@link Table}: a relatively positioned
- * `<div>` that scrolls its own inline axis when the table inside grows wider
- * than the space available, so a wide table stays usable on a narrow screen
- * instead of forcing the whole page to scroll. Declares the `ui-table` named
- * container so a consumer's own descendant styles can adapt to the wrapper's
- * width rather than the page's.
+ * `<div>` that scrolls its own inline axis when the table grows wider than
+ * the available space, and declares the `ui-table` named container.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the wrapper's markup.
@@ -265,12 +252,9 @@ Table.Header = function TableHeader(handle: Handle<Table.HeaderProps>) {
 };
 
 /**
- * Renders the table's `<tbody>` host: divides its direct row children with a
- * block-start border so only the space between rows is ruled, never the
- * first row's own leading edge. Sets `content-visibility: auto` with a
- * `contain-intrinsic-size` placeholder, so a long body's off-screen rows skip
- * layout and paint work until they scroll into view, without the page
- * jumping around before the browser has measured their real size.
+ * Renders the table's `<tbody>` host: a block-start border rules the space
+ * between direct row children, and `content-visibility: auto` lets a long
+ * body's off-screen rows skip layout and paint until they scroll into view.
  *
  * @param handle Runtime handle carrying the host `<tbody>`'s props.
  * @returns The render function producing the body section's markup.
@@ -305,16 +289,9 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
 };
 
 /**
- * Renders a column header inside a native `<th scope="col">`, its label
- * aligned by the `data-align` attribute contract. Setting `href` turns the
- * label into a link pointed at the URL that re-requests the table sorted by
- * this column, exposes the column's current state through the native
- * `aria-sort` attribute (`"ascending"`, `"descending"`, or `"none"` while
- * sortable but not the active key), and renders a small direction indicator
- * next to the label — an up or down arrow for the active direction, a paired
- * up/down arrow at reduced opacity while sortable but inactive. Omitting
- * `href` renders a plain header with no link, no indicator, and no
- * `aria-sort`.
+ * Renders a column header inside a native `<th scope="col">`, aligned by
+ * the `data-align` attribute. Setting `href` turns the label into a sort
+ * link exposing `aria-sort` and a direction indicator for the active key.
  *
  * @param handle Runtime handle carrying the host `<th>`'s props.
  * @returns The render function producing the column header's markup.
@@ -378,11 +355,9 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 };
 
 /**
- * Renders a native `<tr>` host: transitions its background smoothly, tints it
- * on hover, and tints it more strongly whenever it carries
- * `aria-selected="true"` — set that attribute directly rather than through a
- * dedicated boolean prop, since the row's selection state is the platform's
- * own to track.
+ * Renders a native `<tr>` host: transitions its background smoothly, tints
+ * it on hover, and tints it more strongly when it carries
+ * `aria-selected="true"`, set directly since selection state is native.
  *
  * @param handle Runtime handle carrying the host `<tr>`'s props.
  * @returns The render function producing the row's markup.
@@ -438,12 +413,9 @@ Table.Cell = function TableCell(handle: Handle<Table.CellProps>) {
 };
 
 /**
- * Renders a trailing row carrying a single link that spans every column: the
- * no-JS replacement for an auto-loading "next page" trigger, since fetching
- * more rows without a full navigation requires script a consumer attaches
- * itself. Point `href` at the URL that renders the next page of results and
- * set `colSpan` to the number of columns the surrounding table renders so the
- * link's row spans the table's full width.
+ * Renders a trailing row carrying a single link that spans every column,
+ * standing in for an auto-loading "next page" trigger since fetching more
+ * rows without a full navigation requires script a consumer attaches.
  *
  * @param handle Runtime handle carrying the host `<tr>`'s props.
  * @returns The render function producing the row's markup.

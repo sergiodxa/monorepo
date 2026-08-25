@@ -1,3 +1,11 @@
+/**
+ * Provides the XML class and error types for parsing, traversing, and
+ * serializing XML documents.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { failure, success } from "@pkg/result";

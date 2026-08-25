@@ -1,3 +1,10 @@
+/**
+ * Builds, parses, and serializes RSS 2.0 feeds.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { XML } from "@pkg/xml";
 

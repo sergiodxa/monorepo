@@ -1,3 +1,10 @@
+/**
+ * Tests for the HTML status-response helpers, covering their
+ * Content-Type header, status code, body, and header overrides.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import * as ContentType from "../content-type";

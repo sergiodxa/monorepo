@@ -1,11 +1,9 @@
 import { isFailure, isSuccess } from "@pkg/result";
 /**
- * Verifies the multi-map project lifecycle without a canvas: newMap adds a fresh map
- * and selects it, selectMap switches the active map, renameMap keeps ordering/edits
- * and rejects duplicate/invalid ids, deleteMap keeps at least one map and moves the
- * selection off a deleted active map, and — the load-bearing guarantee — each map's
- * in-progress edits stay isolated because every map is its own live {@link MapEditor}
- * (edit map A, switch to B and back → A's edits are intact and never leaked into B).
+ * Covers the multi-map project lifecycle — create, select, rename, delete — and the
+ * ordering and id rules each one enforces. The load-bearing guarantee is edit
+ * isolation: every map owns its live {@link MapEditor}, so edits and UI state made
+ * on one map survive a switch away and back intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -94,7 +92,6 @@ describe("renameMap", () => {
 		let project = new MapProject({ id: "a" });
 		project.newMap("b");
 		project.newMap("c");
-		// Give "b" some content so we can prove the editor is the same instance after rename.
 		project.selectMap("b");
 		project.active.addTileset(tileset("x"));
 		project.active.addEvent(1, 1);
@@ -147,7 +144,6 @@ describe("deleteMap", () => {
 		let result = project.deleteMap("b");
 		expect(isSuccess(result)).toBe(true);
 		expect(project.mapIds()).toEqual(["a", "c"]);
-		// The neighbor after the deleted one becomes active.
 		expect(project.activeMapId).toBe("c");
 	});
 
@@ -190,7 +186,6 @@ describe("edit isolation", () => {
 		let project = new MapProject({ id: "a", width: 4, height: 4 });
 		project.newMap("b", 4, 4);
 
-		// Paint a tile on map A.
 		project.selectMap("a");
 		project.active.addTileset(tileset("a-set"));
 		project.active.setLayer("ground");
@@ -198,15 +193,12 @@ describe("edit isolation", () => {
 		let painted = packTileRef(0, 0);
 		expect(project.active.cellAt("ground", 1, 1)).toBe(painted);
 
-		// Switch to B: its grid must be untouched (no tileset, empty cell).
 		project.selectMap("b");
 		expect(project.active.tilesets.length).toBe(0);
 		expect(project.active.cellAt("ground", 1, 1)).not.toBe(painted);
-		// Edit B independently.
 		project.active.addTileset(tileset("b-set"));
 		project.active.paintTile("ground", 2, 2);
 
-		// Back to A: its paint is intact and B's edit did not leak in.
 		project.selectMap("a");
 		expect(project.active.cellAt("ground", 1, 1)).toBe(painted);
 		expect(project.active.cellAt("ground", 2, 2)).not.toBe(painted);
@@ -222,7 +214,6 @@ describe("edit isolation", () => {
 		project.active.setLayer("collision");
 
 		project.selectMap("b");
-		// B keeps its own defaults, unaffected by A's tool/layer choice.
 		expect(project.active.tool).toBe("paint");
 		expect(project.active.layer).toBe("ground");
 	});

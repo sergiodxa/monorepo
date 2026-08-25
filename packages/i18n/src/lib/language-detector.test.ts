@@ -15,12 +15,10 @@ import { describe, expect, test } from "vitest";
 
 import { LanguageDetector } from "./language-detector";
 
-/** Builds a request for the given path and headers. */
 function makeRequest(path = "/", headers: Record<string, string> = {}): Request {
 	return new Request(new URL(path, "https://example.com"), { headers });
 }
 
-/** In-memory SessionStorage that reads back sessions saved by id. */
 function makeSessionStorage(): SessionStorage {
 	let sessions = new Map<string, Session>();
 	return {

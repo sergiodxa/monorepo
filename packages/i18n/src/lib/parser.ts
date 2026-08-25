@@ -49,9 +49,9 @@ export function formatLanguageString(
 }
 
 /**
- * Parses an Accept-Language header into language descriptors sorted by quality,
- * highest first. Malformed segments are skipped instead of failing the whole
- * header, so garbage input yields an empty list rather than an error.
+ * Parses an Accept-Language header into language descriptors sorted by
+ * quality, highest first, skipping malformed segments so garbage input
+ * yields an empty list.
  *
  * @param acceptLanguage - The raw Accept-Language header value.
  * @returns The parsed languages, sorted by descending quality.
@@ -97,10 +97,9 @@ function parseQuality(bit: string | undefined): number {
 }
 
 /**
- * Picks the best supported language for the given Accept-Language header (or
+ * Picks the best supported language for an Accept-Language header (or
  * pre-parsed languages), honoring the client's quality ordering. Strict mode
- * requires script and region subtags sent by the client to match; loose mode
- * matches on the primary code alone.
+ * requires matching script and region subtags; loose mode matches by primary code.
  *
  * @param supportedLanguages - Languages the application supports.
  * @param acceptLanguage - Raw header value or already-parsed languages.

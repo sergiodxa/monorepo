@@ -7,8 +7,8 @@ import { utility } from "../internal/descriptor";
 export type FitValue = "cover" | "contain" | "fill" | "none" | "scale-down";
 
 /**
- * Applies `object-fit`, for media elements (`img`, `video`) sized by their
- * container rather than their intrinsic dimensions.
+ * Applies `object-fit`, shaping how a container-sized media element
+ * (`img`, `video`) fills its box.
  *
  * @example u.fit("cover")
  * @example css({ objectFit: "cover" })

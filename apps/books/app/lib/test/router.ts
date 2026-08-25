@@ -1,14 +1,9 @@
 /**
- * Test-only helper that drives the real application router — the same middleware chain,
- * container scope, and controllers the worker builds — so a router-level test exercises
- * the funnel end to end instead of a hand-assembled router that can drift from
- * production.
- *
- * External clients are replaced through the container rather than at the network layer.
- * MSW cannot be used for these tests: with its interceptors installed, the router's own
- * form-data middleware sees an empty body, so every POST would fail validation before
- * reaching the code under test. The clients themselves are covered by their own
- * MSW-backed tests, which is where the request shape belongs.
+ * Drives the real application router — the same middleware chain, container
+ * scope, and controllers the worker builds — end to end. The container swaps
+ * in fakes for the external clients because MSW's interceptors leave the
+ * router's form-data middleware reading an empty body, failing every POST
+ * before validation; request-shape coverage lives in each client's own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

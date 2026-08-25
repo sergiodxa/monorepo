@@ -1,29 +1,9 @@
 /**
- * Tests `POST /api/v1/ping`, the ad-hoc check endpoint: the guards in front of it
- * (`ping:trigger`, a per-key budget, an entitlement gate), the request contract for each
- * of its three check types, and the response envelope each one answers with.
- *
- * Two of the cases here are the endpoint's whole reason for existing rather than
- * incidental detail. A target that is down, refusing connections or not resolving still
- * answers **HTTP 200** with a failing `status` in the payload — the non-2xx codes are
- * reserved for the request itself being wrong, so a CI script branches on
- * `data.ping.status` and never on the HTTP status. And **nothing monitor-shaped happens**:
- * no `monitor_results` row, no monitor row, no alert, which is asserted directly because
- * it is the difference between this endpoint and creating a throwaway monitor.
- *
- * The entitlement gate is tested in both directions on purpose. A positively known
- * `inactive` owner is refused with 402, while an owner with no subscription rows at all is
- * *allowed* — refusing a paying customer because a lookup was inconclusive is the worse of
- * the two mistakes, so failing open is deliberate behaviour and is pinned as such.
- *
- * `cloudflare:workers` is mocked before the controller is imported: the caller budget
- * reads its backend off `env`, the probe goes through the `GEO_FETCH` binding, and the
- * result lands in `PING_RESULTS`. The limiter really counts per key and the dataset really
- * records what it was handed, so the budget is exhausted rather than faked, and `GEO_FETCH`
- * answers every probe with a canned response while recording the region it was asked for.
- * `cloudflare:sockets` stands in for the TCP check the same way its own service test does,
- * the DNS check's resolver is served by MSW, and the Polar ingest runs under a `waitUntil`
- * the harness drains so the billed event can be asserted.
+ * Tests `POST /api/v1/ping`, the ad-hoc check endpoint: its guards (`ping:trigger` scope,
+ * a per-key budget, an entitlement gate), each check type's request contract, and the
+ * response envelope. A target that is down, refusing connections, or not resolving still
+ * answers HTTP 200, so `data.ping.status` in the JSON body is the source of truth for a
+ * target's health, and a ping's only persisted effect is its own ad-hoc result event.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,10 +67,9 @@ let pingResults = createAnalyticsEngine();
 let costs = createAnalyticsEngine();
 
 /**
- * The `RATE_LIMITER` binding, counting per key against {@link CALLER_LIMIT} the way the
- * platform's does. The clock is frozen so the fixed window never rolls over mid-test: the
- * budget test spends sixty requests, and a rollover between two of them would hand the
- * caller a fresh allowance and turn the expected refusal into a pass.
+ * The `RATE_LIMITER` binding, counting per key against {@link CALLER_LIMIT}. The clock is
+ * frozen so the fixed window never rolls over mid-test: the budget test spends sixty
+ * requests, and a rollover between them would turn the expected refusal into a pass.
  */
 let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 
@@ -112,9 +91,9 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 /**
- * How the next TCP check's socket settles. A factory rather than a prepared promise, so a
- * refusal is created inside `connect` and handled by the check that asked for it — a
- * rejected promise built up front would sit unhandled while the request is authenticated.
+ * How the next TCP check's socket settles, produced by a factory. Each refusal is created
+ * inside `connect` at the moment the check awaits it, keeping it handled from the instant
+ * it exists.
  */
 let openSocket: () => Promise<void> = async () => {};
 
@@ -124,7 +103,7 @@ vi.doMock("cloudflare:sockets", () => ({
 
 let { default: pingCreate } = await import("./ping");
 
-/** Both guards log through the immediate logger; the assertions read responses instead. */
+/** Both guards log through the immediate logger, silenced here so assertions read the response bodies. */
 vi.spyOn(console, "info").mockImplementation(() => {});
 vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -183,6 +162,11 @@ async function createCaller(db: Db) {
 	return { team, key };
 }
 
+/**
+ * Sends a ping request through the router. The handler defers its billing ingest
+ * under `waitUntil`, so this drains it explicitly before returning, letting
+ * assertions observe the ingested event.
+ */
 async function dispatch(
 	db: Db,
 	request: { key?: string; body?: Record<string, unknown> | unknown[] },
@@ -204,16 +188,17 @@ async function dispatch(
 	});
 
 	let response = await container.scope(() => router.fetch(httpRequest));
-	// The billing ingest is deliberately not awaited by the handler, so drain it here.
 	await Promise.all(deferred.splice(0));
 	return response;
 }
 
-/** The `data.ping` payload of a served request. */
+/**
+ * The `data.ping` payload of a served request. `id` is typed as a string because the
+ * billing assertions read it directly; the rest of the payload stays unknown so each
+ * assertion states what it expects.
+ */
 async function pingBody(response: Response) {
 	let body = (await response.json()) as {
-		// `id` is named because the billing assertions read it into a string; the rest of
-		// the payload stays unknown so each assertion has to say what it expects.
 		data: { ping: Record<string, unknown> & { id: string } };
 		meta: { requestId: string; timestamp: string };
 	};
@@ -292,6 +277,7 @@ describe("POST /api/v1/ping authentication", () => {
 });
 
 describe("POST /api/v1/ping entitlement", () => {
+	/** A 402 refusal short-circuits ahead of the probe, the dataset write, and the billing call. */
 	test("returns 402 for an owner whose subscription is known to be inactive", async () => {
 		let { db } = createTestDatabase();
 		let { team, key } = await createCaller(db);
@@ -304,12 +290,15 @@ describe("POST /api/v1/ping entitlement", () => {
 
 		expect(response.status).toBe(402);
 		expect((await errorBody(response)).error.code).toBe("SUBSCRIPTION_REQUIRED");
-		// Refused before any billable work: no probe, no data point, no ingested event.
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
 	});
 
+	/**
+	 * Failing open is deliberate: an inconclusive entitlement lookup serves the
+	 * request, since refusing a paying customer is the costlier mistake.
+	 */
 	test("serves an owner with no subscription rows at all, failing open", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
@@ -319,8 +308,6 @@ describe("POST /api/v1/ping entitlement", () => {
 			body: { type: "http", url: "https://example.com" },
 		});
 
-		// An unknown state is not an unentitled one: refusing a paying customer because a
-		// lookup was inconclusive is the worse of the two mistakes.
 		expect(response.status).toBe(200);
 		expect((await pingBody(response)).data.ping.status).toBe("up");
 	});
@@ -429,10 +416,13 @@ describe("POST /api/v1/ping http", () => {
 		expect(data.ping.contentChecksPassed).toBe(false);
 	});
 
+	/**
+	 * `GeoFetchDO` reports a target it couldn't reach as a 204 response with an
+	 * `X-Probe-Outcome: unreachable` header.
+	 */
 	test("still answers 200 when the target is unreachable", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
-		// How `GeoFetchDO` reports a request it couldn't complete.
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
@@ -440,8 +430,6 @@ describe("POST /api/v1/ping http", () => {
 
 		let response = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 
-		// A refused connection is the answer the caller asked for, not a failure of this
-		// request: a CI script branches on `data.ping.status`, never on the HTTP status.
 		expect(response.status).toBe(200);
 		let { data } = await pingBody(response);
 		expect(data.ping.status).toBe("down");
@@ -455,10 +443,8 @@ describe("POST /api/v1/ping http", () => {
 
 		let response = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 
-		// GET rather than the monitor column's HEAD, and the caller's own region default.
 		expect(doFetchMock.mock.calls[0]?.[1]?.method).toBe("GET");
 		expect(probedLocationHints()).toEqual(["wnam"]);
-		// A 200 is `up`, which is only true if the expected status defaulted to 200.
 		expect((await pingBody(response)).data.ping.status).toBe("up");
 	});
 
@@ -474,11 +460,14 @@ describe("POST /api/v1/ping http", () => {
 		expect((await pingBody(response)).data.ping.status).toBe("degraded");
 	});
 
+	/**
+	 * A `Response` with a null-body status like 204 accepts only a `null` body, so
+	 * the mock passes `null` here.
+	 */
 	test("probes from the region the body asked for, with the status it expects", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
-			// 204 is a null-body status, so the body has to be `null` rather than `""`.
 			async () => new Response(null, { status: 204, headers: { "X-Response-Time": "8" } }),
 		);
 
@@ -520,6 +509,10 @@ describe("POST /api/v1/ping dns", () => {
 		});
 	});
 
+	/**
+	 * A stateless caller has no prior check to compare against, so `changed` here
+	 * only ever means the resolved value differs from the given `expectedValue`.
+	 */
 	test("compares against the expected value the caller gave, with no history", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
@@ -530,8 +523,6 @@ describe("POST /api/v1/ping dns", () => {
 			body: { type: "dns", domain: "example.com", expectedValue: "1.2.3.4" },
 		});
 
-		// A stateless caller has no previous check, so `changed` can only ever mean "did
-		// not match the expectedValue you gave me".
 		expect(response.status).toBe(200);
 		let { data } = await pingBody(response);
 		expect(data.ping.status).toBe("changed");
@@ -541,7 +532,6 @@ describe("POST /api/v1/ping dns", () => {
 	test("still answers 200 when the lookup fails", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
-		// The resolver being unreachable, not answering with an error status.
 		server.use(http.get(DOH_URL, () => HttpResponse.error()));
 
 		let response = await dispatch(db, { key, body: { type: "dns", domain: "example.com" } });
@@ -602,7 +592,6 @@ describe("POST /api/v1/ping side effects", () => {
 		let response = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 		expect(response.status).toBe(200);
 
-		// The whole point of the endpoint: it runs one check and forgets it.
 		expect(await db.count(monitors)).toBe(0);
 		expect(await db.count(monitorResults)).toBe(0);
 		expect(await db.count(dnsMonitors)).toBe(0);
@@ -611,6 +600,10 @@ describe("POST /api/v1/ping side effects", () => {
 		expect(await db.count(alertEvents)).toBe(0);
 	});
 
+	/**
+	 * An ad-hoc ping affects only its own ping-result stream, so a monitor already
+	 * watching the same target keeps its history exactly where it was.
+	 */
 	test("leaves an existing monitor of the same target untouched", async () => {
 		let { db } = createTestDatabase();
 		let { team, key } = await createCaller(db);
@@ -619,8 +612,6 @@ describe("POST /api/v1/ping side effects", () => {
 		let response = await dispatch(db, { key, body: { type: "http", url: monitor.url } });
 		expect(response.status).toBe(200);
 
-		// A ping is not a check of anybody's monitor: nothing about the one watching the
-		// same URL may move, or an ad-hoc probe would rewrite a monitor's history.
 		let unchanged = await db.findOne(monitors, { where: { id: monitor.id } });
 		expect(unchanged?.last_status).toBeNull();
 		expect(unchanged?.last_checked_at).toBeNull();
@@ -628,6 +619,10 @@ describe("POST /api/v1/ping side effects", () => {
 		expect(await db.count(monitorResults)).toBe(0);
 	});
 
+	/**
+	 * Every ad-hoc ping is recorded under one shared monitor id, keeping a team's
+	 * ad-hoc traffic as a single low-cardinality stream in the dataset.
+	 */
 	test("records one ad-hoc data point for the calling team", async () => {
 		let { db } = createTestDatabase();
 		let { team, key } = await createCaller(db);
@@ -635,8 +630,6 @@ describe("POST /api/v1/ping side effects", () => {
 		await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 
 		expect(pingResults.dataPoints).toHaveLength(1);
-		// One shared monitor id, so a team's ad-hoc traffic counts as the single stream it
-		// is rather than one high-cardinality blob per ping.
 		expect(pingResults.dataPoints[0]?.blobs).toEqual(["adhoc", "adhoc", "up"]);
 		expect(pingResults.dataPoints[0]?.indexes).toEqual([team.id]);
 	});
@@ -675,6 +668,10 @@ describe("POST /api/v1/ping side effects", () => {
 });
 
 describe("POST /api/v1/ping caller budget", () => {
+	/**
+	 * The budget is scoped to the API key, so a second key sharing the same CI
+	 * runner's egress address keeps its own separate allowance.
+	 */
 	test("refuses a key past its budget and leaves another key's alone", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
@@ -689,8 +686,6 @@ describe("POST /api/v1/ping caller budget", () => {
 		expect(refused.status).toBe(429);
 		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
 
-		// The budget follows the key rather than the address, so a second key sharing a CI
-		// runner's egress is untouched by the first one's runaway loop.
 		let unaffected = await dispatch(db, {
 			key: other.key,
 			body: { type: "tcp", host: "db", port: 5432 },

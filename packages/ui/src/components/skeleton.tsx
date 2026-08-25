@@ -1,8 +1,7 @@
 /**
- * A decorative loading placeholder rendered as a single static block, sized
- * to stand in for the content it precedes. It carries no animation of its
- * own, so a page that never composes one still shows a still, inert
- * silhouette instead of empty space while data loads.
+ * A decorative loading placeholder rendered as a single static block,
+ * sized to stand in for the content it precedes and showing a still,
+ * inert silhouette while data loads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +16,8 @@ import { attrs } from "remix/ui";
 
 /**
  * Default `aria-hidden` value applied through {@link attrs}, keeping a
- * placeholder out of the accessibility tree unless a consumer explicitly
- * sets `aria-hidden={false}` (for example, to expose a loading label to
- * assistive technology instead of hiding the block outright).
+ * placeholder out of the accessibility tree unless a consumer sets
+ * `aria-hidden={false}` to expose a loading label to assistive tech.
  */
 const DEFAULT_ARIA_HIDDEN = "true";
 
@@ -29,21 +27,16 @@ const DEFAULT_ARIA_HIDDEN = "true";
 export namespace Skeleton {
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * A placeholder's box shape comes entirely from the space it renders
-	 * into, tuned through a `style` override, a wrapping layout, or an
-	 * additional `css()` mixin composed through `mix`.
+	 * A placeholder's box shape comes from the space it renders into, tuned
+	 * through `style`, a wrapping layout, or a `css()` mixin via `mix`.
 	 */
 	export interface Props extends TagProps<"div"> {}
 }
 
 /**
- * A static loading placeholder: a block that fills its container's inline
- * axis, stands one text line tall by default, and is shaped with a rounded
- * corner and filled with the neutral border color so it reads as an inert
- * silhouette rather than live content. Its own styling never animates —
- * compose the `pulse()` or `shimmer()` factory from the animation layer
- * through `mix` for a breathing or sweeping loading cue, or leave it still
- * for viewers who have `prefers-reduced-motion` set.
+ * A static loading placeholder: a rounded block filled with the neutral
+ * border color, sized to its container and one text line tall by default.
+ * Compose `pulse()` or `shimmer()` through `mix` for a motion cue.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the placeholder's markup.

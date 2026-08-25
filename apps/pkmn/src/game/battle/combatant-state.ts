@@ -1,13 +1,9 @@
 /**
- * Battle combatant state bridges a persistent creature record with the temporary
- * state required while that creature participates in combat. This module defines
- * the small state container that keeps battle-scoped data close to the creature
- * it augments without changing the underlying saved entity.
- *
- * The module centralizes the volatile flags and temporary stat stage adjustments
- * that only matter during an active battle. By isolating those concerns here, the
- * rest of the battle engine can depend on a single, well-defined runtime shape
- * for combatant-specific state.
+ * Bridges a persistent creature record with the temporary state a creature
+ * needs while it participates in combat, keeping battle-scoped data close to
+ * the creature it augments while the underlying saved entity stays intact. It
+ * centralizes volatile flags and stat stage adjustments so the rest of the
+ * battle engine depends on a single, well-defined runtime shape.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

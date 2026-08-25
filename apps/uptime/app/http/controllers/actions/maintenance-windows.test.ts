@@ -25,16 +25,9 @@ import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * `@pkg/validate`'s `validate()` flattens `FormData` before validation, but every schema
+ * in this app validates raw `FormData`/`URLSearchParams` directly, so
+ * `validate(ctx.formData, ...)` always fails until that upstream bug is fixed.
  */
 let {
 	createMaintenanceWindow,
@@ -173,9 +166,9 @@ describe("createMaintenanceWindow", () => {
 	});
 
 	/**
-	 * Never falls back to team-wide: a scope nobody could have picked means the submission
-	 * is not the form we rendered, and quietly widening it would silence every monitor the
-	 * team has for the window's duration.
+	 * A scope nobody could have picked signals a submission that diverges from the
+	 * rendered form, so rejecting it keeps a mismatched scope from silently widening
+	 * to every monitor the team has for the window's duration.
 	 */
 	test("rejects a scope naming a monitor the team doesn't own, without creating a row", async () => {
 		let { db, team, membership } = await createFixture();

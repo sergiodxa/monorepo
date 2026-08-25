@@ -1,7 +1,7 @@
 /**
- * `ExecutionContext` that records `waitUntil` work instead of discarding it, with an
- * awaitable `settled()`. Background work started during a request is otherwise invisible
- * to a test, which is how "fire and forget" bugs survive their own test suite.
+ * `ExecutionContext` that captures `waitUntil` work so a test can await it via
+ * `settled()`. Background work started during a request is otherwise invisible,
+ * which is how "fire and forget" bugs survive their own test suite.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +18,7 @@ export interface ExecutionContextMock<Props = unknown> extends ExecutionContext<
 	readonly waitUntilPromises: readonly Promise<unknown>[];
 	/** Whether the handler asked to pass exceptions through to the origin. */
 	readonly passedThroughOnException: boolean;
-	/** Whether the handler aborted the context. */
+	/** True after `abort` runs at least once. */
 	readonly aborted: boolean;
 	/** Reason given to the first `abort` call, or `undefined` when it was called without one. */
 	readonly abortReason: unknown;
@@ -26,10 +26,8 @@ export interface ExecutionContextMock<Props = unknown> extends ExecutionContext<
 	/**
 	 * Abandons the context, recording that it happened.
 	 *
-	 * Declared here rather than left to the platform interface: a workspace that checks
-	 * against generated worker types sees whichever vintage was last written to disk, and
-	 * `abort` is absent from the older ones. Stating it here keeps this mock checkable
-	 * under both.
+	 * Declared directly on this mock because generated worker types vary in
+	 * whether `abort` exists yet, keeping the mock checkable either way.
 	 * @param reason Cause supplied by the caller, absent when it aborted without one.
 	 */
 	abort(reason?: unknown): void;
@@ -45,8 +43,8 @@ export interface ExecutionContextMock<Props = unknown> extends ExecutionContext<
 /**
  * Creates an execution context that captures deferred work.
  *
- * Nothing is swallowed: `waitUntil` promises are kept so a test can await them through
- * {@link ExecutionContextMock.settled} and assert on whatever they wrote.
+ * Every `waitUntil` promise is kept so a test can await it through
+ * {@link ExecutionContextMock.settled} and assert on what it wrote.
  * @param options Value to expose as `ctx.props`.
  * @returns An `ExecutionContext` with inspectable deferred work.
  * @example let ctx = createExecutionContext(); await handler(request, env, ctx); await ctx.settled();
@@ -92,8 +90,8 @@ export function createExecutionContext<Props = unknown>(
 		/**
 		 * Records that the handler abandoned the context.
 		 *
-		 * Aborting is terminal on the platform, so a second call cannot change why the first
-		 * one happened; the original reason is kept rather than overwritten.
+		 * Aborting is terminal on the platform, so the reason from the first call
+		 * persists through every later one.
 		 * @param reason Cause supplied by the caller, absent when it aborted without one.
 		 */
 		abort(reason?: unknown): void {
@@ -112,8 +110,10 @@ export function createExecutionContext<Props = unknown>(
 			}
 		},
 
-		// `props` is untyped at the platform boundary and has no meaningful default, so an
-		// omitted value stands in as-is rather than being invented.
+		/**
+		 * Exposes exactly the value the caller supplied, including `undefined` when
+		 * omitted, since `props` is untyped at the platform boundary.
+		 */
 		props: options?.props as Props,
 
 		/** Rejects access to the RPC entrypoints, which have no in-memory equivalent. */

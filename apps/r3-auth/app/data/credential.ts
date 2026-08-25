@@ -23,12 +23,11 @@ export default class Credential {
 
 	/**
 	 * Stores a password credential for a subject. `password_hash` must already be a
-	 * PBKDF2 hash: this never sees a plaintext password.
+	 * PBKDF2 hash, derived by the caller.
 	 *
 	 * @param verifiedAt - Epoch milliseconds at which the credential became usable, or
-	 *   `null` to store it unusable — sign-in refuses a credential with no `verified_at`,
-	 *   and nothing in this server sets the column afterwards, so `null` means "this
-	 *   password can never be used" rather than "not yet".
+	 *   `null` to store it unusable — sign-in requires `verified_at`, and the column keeps
+	 *   whatever is written here, so `null` makes the password permanently unusable.
 	 */
 	static async create(
 		db: Database,
@@ -49,11 +48,9 @@ export default class Credential {
 	}
 
 	/**
-	 * Replaces the stored hash for a subject that already has a credential, which is
-	 * how a hash written under an older scheme is retired after it verified.
-	 *
-	 * Scoped by subject and never an insert: a subject with no credential must stay
-	 * without one rather than gain a password they never set.
+	 * Replaces the stored hash for a subject that already has a credential, retiring a
+	 * hash written under an older scheme once it verified. Scoped to an update, so a
+	 * subject who has set no password stays passwordless.
 	 *
 	 * @returns How many credentials were rewritten — zero when the subject has none.
 	 */
@@ -72,21 +69,11 @@ export default class Credential {
 	}
 
 	/**
-	 * Sets a subject's password to a new hash and marks the credential usable, creating it
-	 * when the subject had none.
+	 * Sets a subject's password to a new hash and marks the credential usable, creating
+	 * it when the subject has none. `verified_at` is stamped because the caller proved
+	 * inbox control; update-then-insert keeps the row whole without a transaction.
 	 *
-	 * `verified_at` is stamped because the only caller has already established that whoever
-	 * is doing this reads the account's inbox: the column records that this password is
-	 * known to belong to this account, and inbox control is the strongest proof of that
-	 * this server can obtain. Leaving it null would store a hash sign-in refuses forever,
-	 * which is the failure the recovery flow exists to end rather than to reproduce.
-	 *
-	 * Two statements rather than one because the database has no interactive transactions:
-	 * the update is attempted first and an insert only follows when it matched nothing, so
-	 * a failure between them leaves either the old credential or none — never a half-written
-	 * one.
-	 *
-	 * @param passwordHash - An already-derived PBKDF2 hash; this never sees a plaintext password.
+	 * @param passwordHash - An already-derived PBKDF2 hash, produced by the caller.
 	 * @param verifiedAt - Epoch milliseconds the credential became usable at.
 	 */
 	static async setVerifiedPassword(

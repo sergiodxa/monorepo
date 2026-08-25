@@ -31,17 +31,15 @@ export interface DocumentProps {
 	backLink?: string;
 	/** Explicit breadcrumb label paired with {@link DocumentProps.backLink}. */
 	backText?: string;
-	/** Optional past-due subscription warning banner. */
 	subscriptionWarning?: SubscriptionWarning;
 	/** Page body rendered inside `<main>`. */
 	children: RemixNode;
 }
 
 /**
- * Renders the full dashboard HTML document around a page's content, matching the
- * behavior of the previous `layout()` helper (breadcrumb precedence, sign-out form,
- * and the optional past-due warning banner). The `<head>` loads the dashboard client
- * runtime bundle (`/assets/clientEntry.js`) so the `remix/ui` pages hydrate.
+ * Renders the full dashboard HTML document around a page's content, preserving the
+ * previous `layout()` helper's breadcrumb precedence, sign-out form, and past-due
+ * warning banner. The `<head>` loads the client bundle so `remix/ui` pages hydrate.
  *
  * @param handle - Component handle exposing the shell props.
  * @returns A render function producing the dashboard document markup.
@@ -84,8 +82,6 @@ export function Document(handle: Handle<DocumentProps>) {
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<title>{title} - Auth SaaS</title>
 					<style>{s.RESET_CSS}</style>
-					{/* Dashboard client runtime bundle emitted by vite.config.browser.ts; hydrates
-					    the remix/ui pages. Served from the ASSETS binding at /assets/clientEntry.js. */}
 					<script type="module" src="/assets/clientEntry.js" />
 				</head>
 				<body mix={[s.body]}>

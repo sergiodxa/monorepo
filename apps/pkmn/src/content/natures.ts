@@ -1,9 +1,8 @@
 /**
  * Canonical nature content for the game's content layer.
  *
- * This module maps each nature identifier to the stat it raises and the stat it lowers, giving the rest of the app a single source of truth for nature modifiers. Neutral natures are represented explicitly with `null` values so the content remains complete and uniform.
- *
- * As a content-layer file, this module focuses on authored game data rather than mechanics. The engine and domain layers can consume this table without embedding nature-specific values elsewhere, which keeps balancing data centralized and easier to maintain.
+ * Neutral natures spell out `null` on both sides, so every nature id resolves to
+ * a complete record and callers read the modifiers directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

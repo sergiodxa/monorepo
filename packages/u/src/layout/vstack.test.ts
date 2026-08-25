@@ -1,8 +1,4 @@
 /**
- * Unit tests for `vstack()`'s base flex-column declaration plus its
- * optional `gap`/`align`/`justify` composition, including the
- * `between`/`around`/`evenly` aliasing `u.justify()` applies.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

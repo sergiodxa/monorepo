@@ -59,11 +59,8 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 
 /**
  * Reads the submitted scope, or `null` when it is not one the team can be given.
- *
- * Both failures are the same answer on purpose: a value the encoding does not produce and
- * a monitor the team does not own are both "this form was not the one we rendered", and
- * neither should fall back to team-wide — silently widening an alert to every monitor is
- * exactly the noise this scope exists to avoid.
+ * An unparseable value and a monitor the team does not own both resolve to the
+ * same `null`, so the alert stays scoped to a monitor the team actually owns.
  */
 async function resolveSubmittedScope(
 	db: Database,
@@ -118,10 +115,9 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 	});
 
 	/**
-	 * The count comes from the cap check above rather than a second query, plus this one: the
-	 * cap already read it and nothing between the two can have changed it for this team.
-	 * Neither the destination nor any part of the config is recorded — three of the four
-	 * strategies configure a secret webhook URL and the fourth an address.
+	 * Reuses the count from the cap check above, which nothing between the two calls
+	 * could have changed for this team. Only the alert's shape is logged, keeping
+	 * webhook URLs and email addresses out of it.
 	 */
 	trackAlertConfigured(ctx.logger, {
 		teamId: ctx.team.id,

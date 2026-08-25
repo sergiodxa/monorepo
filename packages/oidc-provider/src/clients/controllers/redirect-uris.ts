@@ -40,7 +40,6 @@ function normalizeRedirectUri(redirectUri: RedirectUriRow) {
 	};
 }
 
-/** Validation schema for the create-redirect-URI request body. */
 let CreateRedirectUriSchema = s.object({
 	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), url()),
 	environment: s.optional(s.string().pipe(maxLength(50))),
@@ -57,7 +56,6 @@ export const index = createAction(
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.loader("/api/clients/:clientId/redirect-uris");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -84,7 +82,6 @@ export const create = createAction(
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/redirect-uris");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -118,7 +115,6 @@ export const destroy = createAction(
 		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/redirect-uris/:id");
 
-		// Verify client exists
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });

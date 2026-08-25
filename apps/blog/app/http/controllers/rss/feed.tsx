@@ -50,9 +50,6 @@ export default createAction(
 			link: ctx.url.origin,
 		});
 
-		/**
-		 * Collects normalized feed entries before global sorting and RSS serialization.
-		 */
 		let items: Array<RSS.Item> = [];
 
 		for (let article of articles) {

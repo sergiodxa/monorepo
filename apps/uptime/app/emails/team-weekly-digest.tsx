@@ -1,19 +1,9 @@
 /**
- * One team's last seven days, in one email, to one of its members: the week as a bar, how many
- * of its monitors got through it clean, then every monitor as a row with its week.
- *
- * Same unit and same reasoning as the daily digest — a member and a team — and the same
- * deliberate restraint about detail. What makes this one worth sending on top of the daily is
- * the shape of the week, which no single day can show: a monitor that failed on Tuesday and
- * recovered is a row that reads "up" in every daily digest after it, and the bar is where that
- * Tuesday is still visible.
- *
- * **The bar is the team's week, not one monitor's.** Seven segments, each the worst status any of
- * the team's monitors reported that day, because the question a weekly digest answers is "which
- * days were bad for us" — one bar per monitor would be a hundred and forty segments for a
- * twenty-monitor team, and the per-monitor answer is the row underneath it. The worst status wins
- * for the same reason it wins inside a segment anywhere else: a day that averaged an outage away
- * would hide the only thing in the week a reader could act on (ADR-024).
+ * One team's last seven days, in one email, to one of its members: the week
+ * as a bar, how many monitors got through it clean, then every monitor as a
+ * row with its own week. Each bar segment is the worst status any monitor
+ * reported that day, so a monitor that failed and recovered still shows as
+ * the day it failed (ADR-024).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,7 +63,7 @@ export namespace TeamWeeklyDigestEmail {
  * @example await mailer.send(new TeamWeeklyDigestEmail({ to, teamName, segments, monitors, locale, t }));
  */
 export class TeamWeeklyDigestEmail implements Email {
-	/** The week this email reports; nothing is loaded while rendering. */
+	/** The week this email reports, fully resolved so rendering stays synchronous. */
 	#digest: TeamWeeklyDigestEmail.Data;
 
 	/**

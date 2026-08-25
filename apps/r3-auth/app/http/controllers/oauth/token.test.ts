@@ -3,10 +3,9 @@
  * client-credentials grant through both HTTP Basic and body credentials, client
  * authentication failures, and the no-store headers every response carries.
  *
- * The body-credentials tests guard a frozen contract. The OIDC client library the
- * relying parties use defaults to sending `client_id`/`client_secret` in the body, so
- * an endpoint that only accepts Basic fails every sign-in at once — which has happened
- * once already.
+ * The body-credentials tests guard a frozen contract: the relying parties' OIDC client
+ * library defaults to sending `client_id`/`client_secret` in the body, so accepting
+ * Basic alone fails every sign-in at once — which has happened once already.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,6 +67,10 @@ describe("POST /oauth/token", () => {
 });
 
 describe("the refresh_token grant", () => {
+	/**
+	 * The session id *is* the refresh token, so refreshing hands back the same value:
+	 * rotation renews the access token and extends the session row.
+	 */
 	test("returns a new access token and the rotated refresh token", async () => {
 		let tokens = await signIn(app, fixtures);
 		app.resetCookies();
@@ -83,8 +86,6 @@ describe("the refresh_token grant", () => {
 		expect(typeof refreshed.access_token).toBe("string");
 		expect(typeof refreshed.id_token).toBe("string");
 		expect(refreshed.access_token).not.toBe(tokens.access_token);
-		// The session id *is* the refresh token, so refreshing keeps handing back the
-		// same value: rotation renews the access token and extends the session row.
 		expect(refreshed.refresh_token).toBe(tokens.refresh_token);
 	});
 
@@ -113,6 +114,7 @@ describe("the refresh_token grant", () => {
 });
 
 describe("the client_credentials grant", () => {
+	/** A machine grant carries no subject, so the response is an access token alone. */
 	test("issues an access token for credentials in the Authorization header", async () => {
 		let response = await post({ grant_type: "client_credentials" }, { Authorization: basic() });
 
@@ -121,7 +123,6 @@ describe("the client_credentials grant", () => {
 		let tokens = (await response.json()) as Record<string, unknown>;
 		expect(typeof tokens.access_token).toBe("string");
 		expect(tokens.token_type).toBe("Bearer");
-		// A machine grant has no subject and therefore nothing to refresh.
 		expect(tokens.refresh_token).toBeUndefined();
 	});
 
@@ -136,11 +137,14 @@ describe("the client_credentials grant", () => {
 		expect(typeof ((await response.json()) as Record<string, unknown>).access_token).toBe("string");
 	});
 
+	/**
+	 * `??>` encodes to "Pz8+", so the secret exercises the `+` that only standard
+	 * base64 produces.
+	 */
 	test("a secret containing base64 padding characters still authenticates over Basic", async () => {
 		let { default: Client } = await import("~/app/data/client");
 		let { clients } = await import("~/database/schema");
 
-		// `??>` encodes to "Pz8+", exercising the `+` that base64url would have mangled.
 		let secret = "??>";
 		await app.db.updateMany(clients, { secret }, { where: { id: fixtures.clientId } });
 

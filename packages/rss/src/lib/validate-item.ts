@@ -1,3 +1,11 @@
+/**
+ * Validates that an RSS item carries the minimum RSS 2.0 requirement of a
+ * title or description.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RSS } from "../index";
 
 /**

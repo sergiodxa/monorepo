@@ -1,20 +1,15 @@
 /**
- * Guard for the two rules in `~/app/lib/public-claims`, run against this app's real
- * public copy: the six locale files and the marketing content records.
+ * Guard for the two rules in `~/app/lib/public-claims`, run against this app's
+ * real public copy: the six locale files and the marketing content records.
  *
- * The scanner is exercised against fixtures first. A codebase with no current violations
- * cannot otherwise prove a guard would catch one — every assertion below would pass just
- * as well against a scanner that always returned nothing.
+ * Exercised against fixtures first: the current codebase alone would pass under
+ * any scanner, so only known-bad input proves the guard actually detects one.
  *
- * Everything is scanned as *source* rather than as rendered strings or imported data, and
- * that is the whole design. At runtime an interpolated figure and a hardcoded one are the
- * same characters: `formatUsd(BASE_PRICE_USD)` evaluates to `"$5"`, so a walk over the
- * imported records flags the copy that is already correct and cannot see the copy that
- * isn't. Source text is the only representation in which `"{{price}}/month"` and
- * `"$5/month"` are still distinguishable, and the second is the failure.
+ * Everything scans as *source*, where `"{{price}}/month"` and `"$5/month"`
+ * still differ even though both render as the same characters at runtime.
  *
- * The one exemption is two fields on a `/vs/:slug` pricing row, applied per source line in
- * the marketing scan below — see `quotesACompetitor`.
+ * The one exemption is two fields on a `/vs/:slug` pricing row, handled per
+ * source line by `quotesACompetitor` in the marketing scan below.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -123,12 +118,9 @@ describe("marketing content", () => {
 	let lines = source.split("\n");
 
 	/**
-	 * Two fields on a `/vs/:slug` pricing row are meant to hold a currency literal, and
-	 * neither is a claim about our model: `theirCost` quotes a competitor's published price
-	 * as they state it, hedges and all, and `ourCost` covers the rows a ping volume cannot
-	 * express (seat pricing, tool sprawl) where the answer is copy rather than a projection.
-	 * Recognised by the source line they sit on, since that is the representation being
-	 * scanned — and only for the pricing rule.
+	 * Two fields on a `/vs/:slug` pricing row hold a currency literal that makes no
+	 * claim about our model: `theirCost` quotes a competitor's published price as
+	 * stated, and `ourCost` covers rows — seat pricing, tool sprawl — that read as copy.
 	 */
 	function quotesACompetitor(violation: ClaimViolation): boolean {
 		let line = lines[violation.line - 1] ?? "";

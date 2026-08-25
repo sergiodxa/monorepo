@@ -8,10 +8,9 @@ import type { UtilityMixin } from "../internal/descriptor";
 import { utility } from "../internal/descriptor";
 
 /**
- * Sets `vector-effect`, the SVG property that can exempt a shape from its
- * ancestor transforms — most commonly `"non-scaling-stroke"`, which keeps a
- * chart line's stroke width constant while the chart itself scales or
- * zooms.
+ * Sets `vector-effect`, exempting an SVG shape from its ancestor transforms:
+ * `"non-scaling-stroke"` keeps a chart line's stroke width constant while the
+ * chart itself scales or zooms.
  *
  * @example u.vectorEffect("non-scaling-stroke")
  * @example css({ vectorEffect: "non-scaling-stroke" })

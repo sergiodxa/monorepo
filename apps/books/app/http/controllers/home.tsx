@@ -1,8 +1,8 @@
 /**
  * Homepage controller. Renders the pitch and the early-access subscribe form, carrying
  * the request's UTM parameters into the form as hidden fields. Also exports the render
- * itself, because a failed subscribe re-renders this page with the error inline instead
- * of answering with a bare JSON 400.
+ * itself, because a failed subscribe reuses it to re-render this page with the error
+ * shown inline, keeping the failure response an HTML page with a 400 status.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

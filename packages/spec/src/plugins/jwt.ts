@@ -1,18 +1,9 @@
 /**
- * The built-in `jwt` capability: read and verify JSON Web Tokens, the core of
- * specifying an OIDC server. `jwt.decode` splits a token into its header and
- * payload with no signature check — permissionless, for asserting claims.
- * `jwt.verify` proves a token is genuinely signed: it fetches the issuer's JWKS,
- * selects the key the token names, and checks the ES256 signature and expiry
- * with Bun's WebCrypto — so a spec can assert an id_token is really issuer-signed
- * rather than merely well-formed. Verifying reaches the network to read the JWKS,
- * so it declares `net`; decoding touches nothing and declares no permission.
- *
- * Only ES256 (ECDSA P-256 / SHA-256) is supported: it is the single algorithm
- * the target OIDC server advertises and signs with, and refusing every other
- * `alg` outright closes the "alg confusion" downgrade rather than trusting a
- * header field. No JWT library is used — WebCrypto verifies a raw r‖s signature
- * against a `{kty,crv,x,y}` public JWK directly.
+ * The built-in `jwt` capability: read and verify JSON Web Tokens for OIDC.
+ * `jwt.decode` splits a token with no signature check, permissionless.
+ * `jwt.verify` fetches the JWKS, selects the named key, and checks the
+ * ES256 signature and expiry with WebCrypto, declaring `net`. Requiring
+ * ES256 alone closes the "alg confusion" downgrade class of attack.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -66,10 +57,8 @@ const DESCRIPTORS: ToolDescriptor[] = [
 
 /**
  * Create the built-in `jwt` plugin (namespace `"jwt"`): `jwt.decode` (a
- * permissionless observable) and `jwt.verify` (a `net` action). Neither throws;
- * every malformed token, missing key, bad signature, or expired token is a
- * {@link ToolError}, and a denied `net` grant surfaces as the runtime's
- * permission error before any JWKS is fetched.
+ * permissionless observable) and `jwt.verify` (a `net` action), each
+ * returning a {@link ToolError} for a malformed, unverifiable, or expired token.
  */
 export function createJwtPlugin(): Plugin {
 	return {
@@ -96,11 +85,12 @@ interface Segments {
 }
 
 /**
- * `jwt.decode <token>` → `{ header, payload }`. Both segments are base64url
- * decoded and JSON parsed; the signature is ignored entirely, so this is a pure,
- * permissionless read used to assert on claims. A token without exactly three
- * segments, or with a segment that is not base64url of a JSON object, is a tool
- * error.
+ * `jwt.decode <token>` → `{ header, payload }`, each base64url-decoded and
+ * JSON-parsed; a pure, permissionless read for asserting on claims without
+ * proving the signature.
+ *
+ * @throws {ToolError} when the token lacks three segments, or a segment is
+ * not base64url of a JSON object.
  */
 function decode(args: ToolArg[]): Result<Value, SpecError> {
 	let token = readString("decode", args, 0, "token");
@@ -115,13 +105,12 @@ function decode(args: ToolArg[]): Result<Value, SpecError> {
 }
 
 /**
- * `jwt.verify <token> <jwks_url>` → the verified payload. Steps, in order:
- * decode the header and require `alg === ES256` (closing alg-downgrade before
- * any I/O); pass the `net` check for the JWKS host and fetch it; select the key
- * the token's `kid` names (or the sole/only-EC key when the header omits a kid);
- * import it as an ECDSA P-256 public key and verify the raw signature over
- * `header.payload`; then reject an expired (`exp`) or not-yet-valid (`nbf`)
- * token. Any failure is a tool error; only success returns the payload.
+ * `jwt.verify <token> <jwks_url>` → the verified payload. The `alg` check
+ * runs before any I/O, closing the alg-downgrade path; the `net` permission
+ * gate runs before the JWKS fetch, so a denied grant never reaches the network.
+ *
+ * @throws {ToolError} on a bad `alg`, an unselectable or unimportable key, a
+ * failed signature check, or an expired/not-yet-valid token.
  */
 async function verify(args: ToolArg[], context: ToolContext): Promise<Result<Value, SpecError>> {
 	let token = readString("verify", args, 0, "token");
@@ -215,11 +204,9 @@ function decodeJsonObject(
 }
 
 /**
- * Select the JWKS key a token should verify against. When the header names a
- * `kid`, exactly that key must be present — a named-but-absent kid is a hard
- * error, never silently falling back to another key. When the header omits a
- * kid, the sole key is used, or the single EC/P-256 key among several; no
- * usable key is an error.
+ * Select the JWKS key a token should verify against: a named `kid` must
+ * match exactly, always hard-erroring on a stale or wrong one; an unnamed
+ * `kid` falls back to the sole key, or the single EC/P-256 key among several.
  */
 function selectKey(keys: ValueObject[], kid: string | undefined): Result<ValueObject, SpecError> {
 	if (kid !== undefined) {
@@ -302,10 +289,9 @@ async function checkSignature(
 }
 
 /**
- * Reject an expired or not-yet-valid token. `exp` is required and must be a
- * finite number of seconds; a token whose `exp` is at or before now is expired.
- * `nbf`, when present, must not be in the future. Both are compared with no
- * clock skew, for deterministic specs.
+ * Reject an expired or not-yet-valid token: `exp` is required and, at or
+ * before now, expired; a present `nbf` in the future is not yet valid. Both
+ * compare with zero clock skew, for deterministic specs.
  */
 function checkTemporal(payload: ValueObject): Result<undefined, SpecError> {
 	let now = Math.floor(Date.now() / 1000);

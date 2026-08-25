@@ -43,7 +43,7 @@ import { SentinelRow } from "./sentinel-row";
 /**
  * Named container {@link GridList} declares on its own host, so its inner
  * row-list wrapper can react to the list's own width — switching a `"grid"`
- * layout's column count, in particular — instead of reading the viewport.
+ * layout's column count, in particular.
  */
 const CONTAINER_NAME = "ui-grid-list";
 
@@ -59,8 +59,7 @@ const DEFAULT_ITEM_ROLE = "row";
 /**
  * Tab stop {@link GridList.Item} falls back to when no explicit `tabIndex` is
  * set, so every row stays individually reachable in ordinary Tab order
- * before a keyboard-navigation behavior collapses the list down to a single
- * roving stop.
+ * before a keyboard-navigation behavior collapses the list to one stop.
  */
 const DEFAULT_ITEM_TAB_INDEX = 0;
 
@@ -71,11 +70,9 @@ const DEFAULT_SECTION_ROLE = "rowgroup";
 const DEFAULT_DRAG_HANDLE_ROLE = "gridcell";
 
 /**
- * Marker {@link GridList.DragHandle} always carries as its `data-drag-handle`
- * attribute, applied through {@link attrs} unless a consumer supplies its
- * own value. A pointer-driven reorder behavior reads this attribute to know
- * where a drag gesture may originate within the row, rather than starting
- * one from anywhere on it.
+ * Marker {@link GridList.DragHandle} always carries as `data-drag-handle`
+ * via {@link attrs} unless overridden, so a reorder behavior can tell where
+ * within the row a drag gesture should originate.
  */
 const DEFAULT_DRAG_HANDLE_MARKER = true;
 
@@ -85,9 +82,8 @@ const DEFAULT_DRAG_HANDLE_MARKER = true;
 export namespace GridList {
 	/**
 	 * Arrangement of {@link GridList.Item} rows: `"stack"` renders them as a
-	 * single column, `"grid"` wraps them into a multi-column layout that grows
-	 * from two columns up to four as the list's own `ui-grid-list` container
-	 * widens.
+	 * single column, `"grid"` wraps them into a multi-column layout growing
+	 * from two columns up to four as the list's own container widens.
 	 */
 	export type Layout = "stack" | "grid";
 
@@ -122,9 +118,8 @@ export namespace GridList {
 	export interface ItemProps extends TagProps<"div"> {
 		/**
 		 * Stable identifier for this row, mirrored onto both the rendered
-		 * element's own `id` and a `data-key` attribute. Required even for a
-		 * list with no paired behavior yet, so the row is already
-		 * correlation-ready once one is attached.
+		 * element's own `id` and a `data-key` attribute, so the row is already
+		 * correlation-ready for a paired behavior once one is attached.
 		 */
 		id: string;
 	}
@@ -149,9 +144,8 @@ export namespace GridList {
 
 	/**
 	 * Props accepted by {@link GridList.DragHandle}: every native `<button>`
-	 * attribute except `type` (fixed to `"button"` so it never submits an
-	 * enclosing form) and `children` (fixed to the handle's own grip glyph),
-	 * plus a required `aria-label` since the control is icon-only.
+	 * attribute except `type`, fixed to `"button"` so it never submits an
+	 * enclosing form, and `children`, fixed to the handle's own grip glyph.
 	 */
 	export interface DragHandleProps extends Omit<TagProps<"button">, "type" | "children"> {
 		/** Accessible name for the icon-only control, e.g. "Reorder" or "Drag to reorder". */
@@ -160,25 +154,9 @@ export namespace GridList {
 }
 
 /**
- * Renders the list's root host: a bordered, rounded `<div>` carrying
- * `role="grid"`, wrapping an internal row-list layer that arranges
- * {@link GridList.Item} rows as either a single `"stack"`ed column or a
- * multi-column `"grid"`, and virtualizes a long list through
- * `content-visibility: auto` so its off-screen rows skip layout and paint
- * work until they scroll into view. The `"grid"` layout renders two columns
- * by default, growing to three once the list's own `ui-grid-list` container
- * passes `40rem` and to four past `48rem` — measured against the list's own
- * width rather than the viewport, so it adapts correctly however narrow or
- * wide a space it's embedded in.
- *
- * The row-list layer lives in its own internal wrapper rather than directly
- * on this root host because a `@container` query can never resolve against
- * the very element that declares the container; reach `parts.list` when the
- * wrapper's own spacing or column thresholds need adjusting.
- *
- * In dev mode, a list rendered without an `aria-label` or `aria-labelledby`
- * logs a `console.warn`, since assistive technology otherwise has no
- * accessible name to announce for it.
+ * Renders the list's root host as a bordered `<div>` with `role="grid"`,
+ * keeping its row-list layer in an inner wrapper since a `@container` query
+ * can't resolve against the host that declares it; reach `parts.list` to adjust it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the list's markup.
@@ -245,12 +223,7 @@ export function GridList(handle: Handle<GridList.Props>) {
 /**
  * Renders a single row: a `<div>` carrying `role="row"`, its `id` mirrored
  * onto a `data-key` attribute so a paired selection, keyboard-navigation, or
- * reorder behavior can correlate the row with its own tracked state without
- * parsing the row's rendered content. Reachable in ordinary Tab order by
- * default — a keyboard-navigation behavior later collapses every row down to
- * a single roving stop instead. Tints on hover and swaps in a stronger tint
- * while focused; set `aria-selected="true"` directly to read it as selected
- * and `aria-disabled="true"` to mute it.
+ * reorder behavior can correlate the row with its own state.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -296,10 +269,8 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 
 /**
  * Renders a titled group of rows: a `<div>` carrying `role="rowgroup"`,
- * stacking an optional {@link GridList.Header} label above its
- * {@link GridList.Item} rows and separating itself from a preceding sibling
- * section with a block-start rule. The list's first section renders flush,
- * with no rule or extra spacing above it.
+ * stacking an optional {@link GridList.Header} above its {@link GridList.Item}
+ * rows, with a block-start rule before every section but the first.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the section's markup.
@@ -335,10 +306,8 @@ GridList.Section = function GridListSection(handle: Handle<GridList.SectionProps
 
 /**
  * Renders a section's label: a `<header>` styled as small, muted, uppercase
- * text introducing the {@link GridList.Item} rows nested beneath it inside a
- * {@link GridList.Section}. Give it an `id` and point the enclosing
- * section's `aria-labelledby` at it to expose the label to assistive
- * technology.
+ * text for the {@link GridList.Item} rows nested beneath it in a
+ * {@link GridList.Section}; point the section's `aria-labelledby` at its `id`.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the label's markup.
@@ -369,10 +338,8 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 
 /**
  * Renders a decorative sentinel row: a `<div>` styled as centered, muted
- * small text, sized to match {@link GridList.Item}'s own vertical rhythm.
- * Carries no loading or fetching behavior of its own — it's styling only,
- * ready to hold whatever loading indicator a paired enhancement supplies as
- * `children`.
+ * small text sized to match {@link GridList.Item}'s vertical rhythm, ready to
+ * hold whatever loading indicator a paired enhancement supplies as `children`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the sentinel row's markup.
@@ -382,18 +349,9 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 GridList.LoadMoreItem = SentinelRow;
 
 /**
- * Renders the one element inside a row a pointer-driven reorder behavior may
- * grab: a native `<button type="button">` carrying `role="gridcell"` and a
- * fixed grip glyph, styled with a grab cursor that swaps to a grabbing
- * cursor while pressed. Carries no reorder behavior of its own — a paired
- * behavior reads the button's `data-drag-handle` marker to know where a drag
- * gesture may originate within the row.
- *
- * `type="button"` is written before the consumer's own attributes, so a handle
- * carrying `command`/`commandfor` can still run its command inside a `<form>`:
- * the platform judges whether an invoker is ambiguous while it parses the
- * command attributes and never revisits that decision for a later `type`. A
- * consumer passing an explicit `type` still overrides the default.
+ * Renders the drag-grab element of a row: a native `<button type="button">`
+ * written before the consumer's own attributes, so a `command`/`commandfor`
+ * pair still runs inside a `<form>` — a `type` seen only after them is ignored.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the handle's markup.
@@ -408,11 +366,6 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 		let { mix, ...rest } = handle.props;
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type="button"
 				{...rest}

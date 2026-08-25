@@ -2,7 +2,7 @@
  * Schemas for the password-recovery endpoints: the address a reset is asked for, the
  * token a reset link carries, the new password posted back, and the shape of the record
  * a pending reset is stored as. Everything here arrives from an unauthenticated caller,
- * so nothing is trusted beyond its shape.
+ * so validation here confirms shape only.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,17 +26,16 @@ const MAXIMUM_PASSWORD_LENGTH = 256;
 
 /**
  * Longest token accepted before anything hashes it. The tokens this server issues are a
- * fixed length; the bound exists so a megabyte of query string is refused by the
- * validator rather than digested.
+ * fixed length; the bound exists so the validator rejects a megabyte of query string
+ * before it reaches the hash step.
  */
 const MAXIMUM_TOKEN_LENGTH = 128;
 
 /**
  * The "forgot my password" form.
  *
- * Only the address is asked for, and it is shaped rather than looked up here: whether it
- * belongs to a subject must not change what the endpoint answers, so that question is
- * asked after validation and never reported.
+ * Only the address is asked for and validated here for shape; whether it belongs to a
+ * subject is checked afterward, so the endpoint's answer stays the same either way.
  */
 export const ForgotPasswordSchema = s.object({
 	email: s.string().pipe(checks.email()),
@@ -56,10 +55,8 @@ export type ResetTokenQuery = s.InferOutput<typeof ResetTokenQuerySchema>;
 /**
  * The new-password form.
  *
- * The token travels as a hidden field rather than on the query string of the `POST`, so
- * the request that spends it does not put it in a `Referer` or a server access log. The
- * two password fields are only shaped here; that they match is checked by the controller,
- * which owns the message a mismatch is reported with.
+ * The token stays out of the `POST` URL's `Referer` trail as a hidden field;
+ * the controller matches the two password fields against each other.
  */
 export const ResetPasswordSchema = s.object({
 	token: s.string().pipe(checks.minLength(1), checks.maxLength(MAXIMUM_TOKEN_LENGTH)),
@@ -75,9 +72,8 @@ export type ResetPassword = s.InferOutput<typeof ResetPasswordSchema>;
 /**
  * The record a pending reset is stored as.
  *
- * Validated on read rather than trusted: the value comes back from a key-value store both
- * this server and its own future versions write, and a record whose shape drifted must
- * read as "no such token" instead of resetting whatever `subject_id` happened to parse.
+ * Read and validated fresh from the key-value store, so a shape-drifted record reads
+ * as "no such token," keeping the reset scoped to a `subject_id` that actually parsed.
  */
 export const PasswordResetRecordSchema = s.object({
 	subject_id: s.string().pipe(checks.minLength(1)),

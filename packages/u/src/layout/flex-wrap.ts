@@ -5,7 +5,7 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Sets `flex-wrap`.
+ * Sets `flex-wrap`, defaulting to `wrap`.
  *
  * @example u.flexWrap()
  * @example css({ flexWrap: "wrap" })

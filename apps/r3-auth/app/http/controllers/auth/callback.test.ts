@@ -1,7 +1,7 @@
 /**
  * Router-level tests of this server's own OAuth callback: the whole self-login round
- * trip from a bare `/authorize` to a browser session, and the four refusals that keep
- * the callback from adopting a session it was not part of.
+ * trip from a bare `/authorize` to a browser session, and the four refusals that limit
+ * it to a session this server itself began.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +19,7 @@ import routes from "~/routes/web";
 let app: TestApp;
 let fixtures: Fixtures;
 
-/** Requests a URL without following the redirect it answers with. */
+/** Requests a URL and returns the redirect response itself. */
 async function visit(url: string): Promise<Response> {
 	return await app.fetch(new Request(url, { redirect: "manual" }));
 }
@@ -45,6 +45,10 @@ beforeEach(async () => {
 });
 
 describe("GET /auth/callback", () => {
+	/**
+	 * The second `/authorize` proves the tokens reached the session: a recognized
+	 * visitor lands straight on the account area.
+	 */
 	test("exchanges the code and leaves the browser signed in to this server", async () => {
 		let callback = await signInAsSelf();
 
@@ -55,8 +59,6 @@ describe("GET /auth/callback", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
 
-		// Proof the tokens landed in the session rather than just a redirect happening:
-		// a bare `/authorize` now recognizes the visitor instead of starting a new flow.
 		let afterwards = await visit(`${ORIGIN}${routes.authorize.index.href()}`);
 		expect(afterwards.headers.get("location")).toBe(routes.account.sessions.index.href());
 	});
@@ -78,9 +80,11 @@ describe("GET /auth/callback", () => {
 		expect(response.status).toBe(400);
 	});
 
+	/**
+	 * Parking a relying party's request first is what puts the callback in front of a
+	 * session whose authorization request belongs to somebody else.
+	 */
 	test("refuses a code issued for a relying party rather than for this server", async () => {
-		// A relying party's request is parked, so the callback is reached with a session
-		// whose authorization request belongs to somebody else.
 		await visit(authorizeUrl(fixtures));
 
 		let url = new URL(routes.auth.callback.href(), ORIGIN);

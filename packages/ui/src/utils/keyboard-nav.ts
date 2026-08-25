@@ -15,8 +15,7 @@ import { DISABLED_SELECTOR } from "./disabled-selector";
 /**
  * Collects `root`'s enabled descendants matching `selector`, in document
  * order. Queried fresh on every keystroke or focus change so a keyboard
- * pattern built on it stays correct as items are added, removed, or toggled
- * disabled while the widget is open.
+ * pattern built on it stays correct as items change while the widget is open.
  *
  * @param root Subtree to search — a menu surface, a menu row's open surface, or any other container of focusable items.
  * @param selector Selector identifying the items to collect.

@@ -1,29 +1,13 @@
 /**
  * `GET /app/:team/import-monitors` — paste a list of URLs, get one monitor per line.
  *
- * The create form is right for one monitor and wrong for thirty. An agency arriving with a
- * roster of client sites has no way to get them in other than repeating the same form once per
- * site, which is the single most tedious thing this product asks of exactly the customer it is
- * trying to win — and it is asked at the worst possible moment, before they have seen any value.
+ * A roster of client sites otherwise means repeating the single-monitor form once per
+ * site. It reuses that same creation path, so an imported monitor is indistinguishable
+ * from a hand-made one, needing no column mapping or per-vendor field translation.
  *
- * Paste-a-list rather than CSV, competitor imports, or sitemap discovery, all of which were
- * considered first: this needs no column mapping, no third-party API, no per-vendor field
- * translation that breaks when a vendor changes theirs, and no new data model. It reuses the
- * same creation path the form uses, so an imported monitor is indistinguishable from a
- * hand-made one.
- *
- * It is also where an import's rejected lines are read: the action redirects back here with a
- * one-time report whenever any line did not become a monitor, so the reasons sit directly above
- * the box the corrected lines get pasted into. The box itself is left empty rather than
- * pre-filled with the rejected lines — a report is a description of what was pasted, and
- * re-submitting our summary of somebody's text as if it were their text is how a truncated line
- * turns into a monitor watching the wrong URL.
- *
- * The paste box and the cadence applied to every line it creates sit in two bordered cards
- * inside a single `<form>`, so the page reads as distinct settings groups while still
- * submitting as one request. The report is a reading of the *previous* submission rather than
- * an input to the next one, so it gets a section of its own above the form instead of being
- * folded into a form card.
+ * The action redirects back here with a one-time report whenever a line did not become
+ * a monitor, so the reasons sit above the box the corrected lines get pasted into. That
+ * box stays empty afterward, since resubmitting rejected text risks the wrong URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,7 +41,11 @@ interface Toast {
 	message: string;
 }
 
-/** GET /app/:team/import-monitors — the bulk URL paste form, plus the last import's report. */
+/**
+ * GET /app/:team/import-monitors — the bulk URL paste form, plus the last import's
+ * report. The interval control mirrors the single-monitor form's bounds and default,
+ * applied once to every pasted line since a paste carries no per-site cadence.
+ */
 export default createAction(routes.app.team.monitorsImport, {
 	middleware: [requireUser, requireTeam],
 	handler: async () => {
@@ -90,10 +78,6 @@ export default createAction(routes.app.team.monitorsImport, {
 				>
 					<FormPage>
 						<div mix={[vstack({ gap: 12 })]}>
-							{/* The `id`s name the two regions of the report — the per-line table and the
-							unexamined remainder — so what this page renders can be asserted on without
-							depending on the copy inside them. The count of what *was* created leads the
-							section as its description, so a partial import never reads as a failed one. */}
 							{report && (report.rejected.length > 0 || report.overflow > 0) && (
 								<SettingsSection
 									id="import-report"
@@ -201,10 +185,6 @@ export default createAction(routes.app.team.monitorsImport, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* The same control, bounds and default the single-monitor form offers,
-											applied to every line at once: a pasted list carries no per-site cadence,
-											and asking for thirty of them one at a time is the tedium this page
-											exists to remove. */}
 											<RangeSlider
 												label={ctx.i18next.t("page.monitorsImport.form.fields.interval.label")}
 												description={ctx.i18next.t(

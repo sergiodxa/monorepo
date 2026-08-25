@@ -2,8 +2,7 @@
  * Covers `SelectionModel` state transitions and dispatched `"change"` events:
  * constructor clamping, point/toggle/range/select-all/clear semantics per
  * mode, anchor tracking, key/disabled-key set replacement and pruning, and
- * the no-op guard that keeps `"change"` from firing when a call does not
- * actually alter the selected-key set.
+ * the guard that fires `"change"` only when the selected-key set changes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,10 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { SelectionModel } from "./selection-model";
 
-/**
- * Subscribes to a model's `"change"` event and returns a counter reflecting
- * how many times it has fired so far.
- */
+/** Returns a counter whose `count` rises with every `"change"` the model fires. */
 function countChanges(model: SelectionModel): { readonly count: number } {
 	let counter = { count: 0 };
 	model.addEventListener("change", () => {

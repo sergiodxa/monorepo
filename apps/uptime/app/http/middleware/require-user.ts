@@ -1,10 +1,9 @@
 /**
  * Route guard requiring a signed-in viewer. On failure, stores the current URL in the
  * `returnTo` cookie before redirecting home so the visitor lands back where they
- * started after signing in. Written as a plain middleware (rather than
- * `remix/middleware/auth`'s `requireAuth`) so it stays a plain `Middleware` with no
- * context-transform generic to reconcile against route-specific middleware chains.
- * Must run after the `auth` middleware.
+ * started after signing in. Implemented as a plain `Middleware` with no
+ * context-transform generic, so it composes directly with route-specific
+ * middleware chains. Must run after the `auth` middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

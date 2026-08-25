@@ -1,9 +1,8 @@
 /**
  * Unit tests for the `DnsMonitor` data-access model: team-scoped CRUD, the per-team
- * {@link MAX_DNS_MONITORS_PER_TEAM} limit, `recordCheckResult`'s combined history-insert +
- * cached-fields-update write path, and the `next_due_at` scheduling — the raw-SQL `claimDue`
- * claim each sweep runs and the create/edit writes that keep the column consistent with
- * whether and how often a monitor should be checked.
+ * {@link MAX_DNS_MONITORS_PER_TEAM} limit, `recordCheckResult`'s combined history-insert
+ * and cached-fields update, and the `next_due_at` scheduling that the raw-SQL `claimDue`
+ * claim and the create/edit writes keep consistent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,8 +48,6 @@ describe("DnsMonitor.create", () => {
 		expect(monitor.interval_seconds).toBe(86_400);
 		expect(monitor.is_enabled).toBeTruthy();
 		expect(monitor.last_checked_at).toBeNull();
-		// Due immediately, so the first check runs on the next tick rather than a whole
-		// interval later.
 		expect(monitor.next_due_at).not.toBeNull();
 		expect(monitor.next_due_at).toBeLessThanOrEqual(Date.now());
 	});
@@ -116,10 +113,9 @@ describe("DnsMonitor.countByTeam", () => {
 });
 
 /**
- * `claimDue` is a claim, not a query: it takes the monitors whose `next_due_at` has arrived
- * and advances that column in the same call, so what matters is the state it leaves behind.
- * Every case below therefore calls it more than once, or inspects `next_due_at` afterwards,
- * rather than asserting on a single return value.
+ * `claimDue` mutates as it reads: it takes the monitors whose `next_due_at` has arrived and
+ * advances that column in the same call, so every case below calls it more than once or
+ * inspects `next_due_at` afterwards.
  */
 describe("DnsMonitor.claimDue", () => {
 	/** The `next_due_at` currently stored for a monitor, which is what a claim moves. */
@@ -141,10 +137,10 @@ describe("DnsMonitor.claimDue", () => {
 		expect(await nextDueAt(disabled.id)).toBeNull();
 	});
 
+	/** The two deliveries this cron really produces: same minute, ~7s apart. */
 	test("never claims the same monitor twice in the same minute", async () => {
 		await createMonitor({ interval_seconds: 300 });
 
-		// The two deliveries this cron really produces: same minute, ~7s apart.
 		let first = Date.now() + 1000;
 		expect(await DnsMonitor.claimDue(db, first)).toHaveLength(1);
 		expect(await DnsMonitor.claimDue(db, first + 7000)).toEqual([]);
@@ -157,18 +153,19 @@ describe("DnsMonitor.claimDue", () => {
 
 		await DnsMonitor.claimDue(db, anchor);
 
-		// A 5-minute monitor is claimed every 5 minutes, not once an hour as the old sweep did.
 		expect(await DnsMonitor.claimDue(db, anchor + 60_000)).toEqual([]);
 		expect(await DnsMonitor.claimDue(db, anchor + 5 * 60_000)).toHaveLength(1);
 	});
 
+	/**
+	 * A day late on an hourly monitor: the due time lands on the first hour boundary after
+	 * the claim, so the 24 slept-through runs collapse into one.
+	 */
 	test("advances the due time by whole intervals from the previous one", async () => {
 		let monitor = await createMonitor({ interval_seconds: 3600 });
 		let anchor = Date.now();
 		await db.update(dnsMonitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
-		// A day late on an hourly monitor: the due time skips to the first hour boundary
-		// strictly after the claim rather than replaying the 24 it slept through.
 		let scheduledAt = anchor + 24 * 60 * 60_000;
 		expect(await DnsMonitor.claimDue(db, scheduledAt)).toHaveLength(1);
 		expect(await nextDueAt(monitor.id)).toBe(scheduledAt + 60 * 60_000);
@@ -180,9 +177,6 @@ describe("DnsMonitor.claimDue", () => {
 
 		let [claimed] = await DnsMonitor.claimDue(db, Date.now() + 1000);
 
-		// The sweep reads the tracked names from `dns_monitor_records`, so what it needs from
-		// the monitor itself is the domain, the name its findings are reported under, and
-		// whether a zone file was ever imported — the one monitor-level fact about discovery.
 		expect(claimed).toEqual({
 			id: monitor.id,
 			team_id: monitor.team_id,
@@ -195,9 +189,9 @@ describe("DnsMonitor.claimDue", () => {
 });
 
 describe("DnsMonitor.updateById scheduling", () => {
+	/** The monitor sits a day out from a claim, so a shorter interval must bring it back. */
 	test("re-anchors the schedule when the interval changes", async () => {
 		let monitor = await createMonitor({ interval_seconds: 86_400 });
-		// Pushed a day out by a claim, so a shorter interval must bring it back.
 		await db.update(
 			dnsMonitors,
 			monitor.id,
@@ -210,13 +204,15 @@ describe("DnsMonitor.updateById scheduling", () => {
 		expect(await DnsMonitor.claimDue(db, Date.now() + 1000)).toHaveLength(1);
 	});
 
+	/**
+	 * The web form resubmits the interval on every edit, so a rename or a same-value
+	 * interval must leave the cadence as it stands.
+	 */
 	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
 		let monitor = await createMonitor({ interval_seconds: 3600 });
 		let scheduled = Date.now() + 3_600_000;
 		await db.update(dnsMonitors, monitor.id, { next_due_at: scheduled }, { touch: false });
 
-		// The web form resubmits the unchanged interval on every edit, so neither a rename nor
-		// a same-value interval may restart the cadence.
 		let renamed = await DnsMonitor.updateById(db, monitor.id, {
 			name: "Renamed",
 			interval_seconds: 3600,
@@ -308,8 +304,8 @@ describe("DnsMonitor.deleteById", () => {
 	});
 
 	/**
-	 * Regression: the records survived their monitor. Nothing sweeps `dns_monitor_records` —
-	 * it is configuration, not history — so a row left behind here is orphaned forever.
+	 * Regression: the records survived their monitor. The retention sweep visits history
+	 * alone and these rows are configuration, so one left behind here is orphaned forever.
 	 */
 	test("deletes the records the monitor tracked", async () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
@@ -346,7 +342,6 @@ describe("DnsMonitor.deleteById", () => {
 		await DnsMonitor.deleteById(db, monitor.id);
 
 		expect(await DnsMonitorRecord.listByMonitor(db, monitor.id)).toEqual([]);
-		// The other monitor's records are its own and stay where they are.
 		expect(await DnsMonitorRecord.countByMonitor(db, other.id)).toBe(1);
 	});
 });

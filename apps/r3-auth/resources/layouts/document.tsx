@@ -29,28 +29,20 @@ namespace DocumentLayout {
 		 */
 		head?: RemixNode;
 		/**
-		 * Whether the client runtime is loaded. `false` omits both the `modulepreload`
-		 * hint and the module script, so the response carries no JavaScript at all —
-		 * which a page whose contract forbids script (front-channel logout) needs, and
-		 * which any page holding no island may as well have.
+		 * Whether the client runtime is loaded. `false` omits the `modulepreload`
+		 * hint and the module script, so the response ships as static HTML — required
+		 * by pages whose contract forbids script, such as front-channel logout.
 		 *
-		 * Defaults to `true`: a page carrying an island has to say nothing.
+		 * @default true
 		 */
 		clientRuntime?: boolean;
 	}
 }
 
 /**
- * Renders the `<html>`/`<head>`/`<body>` shell around a page.
- *
- * `class="system"` is what makes the token layer's dark rules follow
- * `prefers-color-scheme`; without it only the light values ever apply. `<body>`
- * establishes the container every responsive layout in the app queries against, so a
- * page's breakpoints read the document's own width rather than the viewport's.
- *
- * Styling and script are separable here on purpose: `clientRuntime={false}` still gets
- * the palette, the reset and the token layer, so a page that must ship zero JavaScript
- * no longer has to render its own unstyled document to get there.
+ * Renders the `<html>`/`<head>`/`<body>` shell around a page. `class="system"`
+ * makes the token layer's dark rules follow `prefers-color-scheme`, and the
+ * reset stylesheet loads first so the theme layer's rules win the cascade.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
@@ -62,8 +54,6 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					{title && <title>{title}</title>}
-					{/* Reset first, then the semantic tokens that read the palette declared
-					on this element through `var()`. */}
 					<link rel="stylesheet" href={resetStyles} />
 					<link rel="stylesheet" href={themeStyles} />
 					{clientRuntime && <link rel="modulepreload" href={CLIENT_ENTRY_SRC} />}

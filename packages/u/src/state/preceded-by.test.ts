@@ -23,11 +23,6 @@ describe("precededBy", () => {
 	});
 
 	test("the selector is wrapped, never emitted bare", async () => {
-		// Regression: the sibling selector used to be interpolated bare, as
-		// `input:checked ~ &`. The serializer only treats a key starting with
-		// `&`, `@`, `:`, `[` or `.` as a nested selector, so that key was emitted
-		// as a declaration — `input:checked ~ &: [object Object];` — and every
-		// rule this utility ever produced was silently discarded by the browser.
 		let css = await serialize(precededBy("input:checked", opacity(100)));
 
 		expect(css).not.toContain("[object Object]");

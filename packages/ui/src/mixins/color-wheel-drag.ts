@@ -1,31 +1,8 @@
 /**
  * Reshapes a ColorWheel's underlying hue input into a ring the moment it
- * attaches, then drags the root as a single angular gesture: a `pointerdown`
- * anywhere on the ring captures the pointer, and every `pointermove` while
- * that pointer stays captured measures its clockwise angle around the root's
- * own center, converts that angle to a hue, and writes the hue input's
- * `valueAsNumber` — the one update the input's own linear drag handling can't
- * produce alone, since its native thumb only ever tracks a straight track,
- * never an angle around a point.
- *
- * Shares its angle math — {@link angleFromCenter}, {@link angleToHue} — with
- * `colorAreaDrag()` through `color-math.ts`, but keeps its own pointer wiring
- * separate from that mixin's: measuring an angle around a center point and
- * driving one input is a different shape of problem than clamping a position
- * inside a rectangle and driving two, and merging the two into one mixin
- * would only complicate both — the same reasoning that keeps `resizeHandle()`
- * and `dualRange()` as two mixins covering two different shapes of drag
- * instead of one covering both.
- *
- * Why JS: a native `<input type="range">` reports a pointer drag along its
- * own single axis only; nothing in HTML or CSS measures a pointer's angle
- * around a center point, or reshapes a track already laid out as a straight
- * bar into a ring in the first place.
- * No-JS baseline: the hue input still renders as a real, independent
- * `<input type="range">` a screen reader announces and a keyboard drives with
- * its own arrow keys, and it still posts its value with the form; only the
- * ring shape, dragging around it as one gesture, and the settled change
- * notification are unavailable.
+ * attaches, then drags the root as one angular gesture: measures the
+ * pointer's clockwise angle around the root's center, converts it to a hue,
+ * and writes the hue input's `valueAsNumber`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,12 +18,8 @@ import { angleFromCenter, angleToHue, roundChannel } from "../utils/color-math";
 
 /**
  * `data-*` attribute {@link colorWheelDrag} sets to
- * {@link COLOR_WHEEL_SHAPE_CIRCULAR} on its host the moment it attaches.
- * ColorWheel's own `css()` styling keys off this same attribute to repaint
- * its default linear track as a ring — the mixin only ever flips the flag;
- * the shape change itself lives entirely in that static styling, the same
- * "mixin flips a data-* flag, static CSS does the rest" technique
- * `imageFallback()` uses for its own fallback attribute.
+ * {@link COLOR_WHEEL_SHAPE_CIRCULAR} on its host the moment it attaches, so
+ * ColorWheel's own static `css()` styling repaints its track as a ring.
  */
 export const COLOR_WHEEL_SHAPE_ATTRIBUTE = "data-shape";
 
@@ -68,9 +41,7 @@ declare global {
 /**
  * Dispatched on a ColorWheel's host by {@link colorWheelDrag} whenever a
  * pointer gesture writes the underlying hue input to a new value, so a
- * consumer can react to the settled hue — recomputing a swatch preview,
- * writing a combined value into a hidden field — without reading the
- * `<input>` element itself.
+ * consumer can react to the settled hue without reading the `<input>` itself.
  */
 export class ColorWheelChangeEvent extends Event {
 	/** Settled hue, in degrees, `0`–`360`, after mapping the pointer's angle through {@link angleToHue}. */
@@ -98,9 +69,8 @@ function findHueInput(host: HTMLElement): HTMLInputElement | undefined {
 
 /**
  * Measures `host`'s own center point in viewport coordinates — the origin
- * {@link angleFromCenter} measures a pointer's position against, so the same
- * angle reads correctly regardless of where the ring sits on the page or how
- * large it renders.
+ * {@link angleFromCenter} measures a pointer's position against, so the
+ * angle reads correctly regardless of where or how large the ring renders.
  *
  * @param host ColorWheel root element to measure.
  * @returns The center point, in viewport coordinates.
@@ -111,11 +81,9 @@ function measureCenter(host: HTMLElement): Point {
 }
 
 /**
- * Measures `point` as a clockwise angle around `host`'s own center through
- * {@link angleFromCenter}, converts that angle to a hue through
- * {@link angleToHue}, writes the rounded result onto `hueInput.valueAsNumber`,
- * and dispatches {@link ColorWheelChangeEvent} on `host` with the settled
- * hue.
+ * Measures `point` as a clockwise angle around `host`'s own center, converts
+ * it to a hue through {@link angleToHue}, writes the rounded result onto
+ * `hueInput.valueAsNumber`, and dispatches {@link ColorWheelChangeEvent} on `host`.
  *
  * @param host ColorWheel root element the pointer position measures against.
  * @param hueInput The wheel's underlying hue input to write.
@@ -131,27 +99,9 @@ function applyPointerHue(host: HTMLElement, hueInput: HTMLInputElement, point: P
 }
 
 /**
- * Adds pointer-driven, angular dragging to a ColorWheel root. On attach, sets
- * {@link COLOR_WHEEL_SHAPE_ATTRIBUTE} to {@link COLOR_WHEEL_SHAPE_CIRCULAR}
- * on the host, so its own static styling repaints its default linear track
- * as a ring.
- *
- * A `pointerdown` from the primary pointer, pressed with the primary button,
- * captures the pointer against the root and immediately measures its
- * position; every subsequent `pointermove` while that pointer stays captured
- * measures its position again; `pointerup` and `pointercancel` release it.
- * Only one pointer is tracked at a time, so a second `pointerdown` while one
- * is already captured is ignored.
- *
- * Each measured position is read as a clockwise angle around the root's own
- * center through {@link angleFromCenter}, converted to a hue through
- * {@link angleToHue}, and written onto the underlying hue input's
- * `valueAsNumber` — found beneath the root through {@link findHueInput} —
- * since a native range input's own drag handling only ever tracks a position
- * along its single axis, never an angle around a point.
- *
- * Dispatches {@link ColorWheelChangeEvent} on the root every time a measured
- * position settles the hue input on a new value.
+ * Adds pointer-driven, angular dragging to a ColorWheel root, reshaping its
+ * hue input into a ring via {@link COLOR_WHEEL_SHAPE_ATTRIBUTE}, then mapping
+ * each captured pointer's angle to a hue and dispatching {@link ColorWheelChangeEvent} on settled values.
  *
  * @returns A mixin descriptor for a ColorWheel root's `mix` prop.
  * @example

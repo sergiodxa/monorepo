@@ -1,3 +1,12 @@
+/**
+ * Tests for the request-builder helpers: JSON, text, XML, form-data, and
+ * URL-encoded requests, covering method defaults, header overrides, and
+ * body encoding.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import * as ContentType from "./content-type";

@@ -1,8 +1,8 @@
 /**
  * Tests for `/upgrade` — the path an existing reader takes to the Complete Package. The
  * three outcomes are the point: a reader who owns Essentials gets the upgrade discount,
- * and both "not a customer" and "customer of something else" fall back to the ordinary
- * checkout rather than dead-ending, because a lost upgrade should still be a sale.
+ * and both a stranger and a customer of something else land on the ordinary checkout,
+ * turning every lost upgrade into a sale.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +58,10 @@ describe("POST /upgrade", () => {
 				allowDiscountCodes: false,
 			},
 		]);
-		// The order lookup has to be scoped to Essentials, or any past purchase would do.
+		/**
+		 * The order lookup is scoped to Essentials, since any past purchase would
+		 * otherwise qualify for the discount.
+		 */
 		expect(polar.orderQueries).toEqual([{ customerId: "cus_1", productId: Product.Essentials }]);
 	});
 
@@ -97,7 +100,6 @@ describe("POST /upgrade", () => {
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Invalid email address");
-		// The page itself comes back, not a bare JSON error.
 		expect(body).toContain("Upgrade to the Complete Package");
 	});
 });

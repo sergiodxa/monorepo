@@ -1,10 +1,8 @@
 /**
  * End-to-end tests rendering real `<div mix={...}>` elements through
- * `remix/ui`'s server renderer, asserting on the actual generated CSS text
- * and class attribute in the rendered HTML — covering merging, nesting, and
- * dedupe the way a real consumer would observe them, rather than inspecting
- * the internal style tree directly the way the rest of this package's tests
- * do.
+ * `remix/ui`'s server renderer, asserting on the generated CSS text and class
+ * attribute in the rendered HTML, so merging, nesting, and dedupe are observed
+ * the way a real consumer sees them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,8 +66,6 @@ describe("rendering a real <div mix={...}>", () => {
 		expect(html).toContain("--ui-rotate: 45deg;");
 		expect(html).toContain("--ui-scale-x: 1.2;");
 		expect(html).toContain("--ui-scale-y: 1.2;");
-		// all three declare the identical `transform` formula, so it doesn't matter
-		// which class's copy the cascade picks — every custom property still applies
 		let transformDeclarations = [...html.matchAll(/transform: ([^;]+);/g)].map((match) => match[1]);
 		expect(transformDeclarations).toHaveLength(3);
 		expect(new Set(transformDeclarations).size).toBe(1);

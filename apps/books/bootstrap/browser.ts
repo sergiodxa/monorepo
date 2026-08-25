@@ -1,8 +1,8 @@
 /**
- * Client runtime entry point. Nothing on the site loads it today — every page is
- * server-rendered HTML with native form validation — but it stays wired into the
- * Vite build so an island can be introduced later by linking it from the document
- * layout, without reshaping the build first.
+ * Client runtime entry point. Every page today is server-rendered HTML with
+ * native form validation, and this file stays wired into the Vite build so
+ * linking it from the document layout is the only step adding an island
+ * would need.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,20 +39,20 @@ run({
 
 		return entry;
 	},
+	/**
+	 * Sends a submission under the form's declared encoding, coercing a file
+	 * entry to its filename for a urlencoded body, and returns the response
+	 * as-is so the frame can read its redirect target.
+	 */
 	async resolveFrame(src, options) {
 		let { target, signal, method, formData, encType } = options ?? {};
 
 		let headers = new Headers({ accept: "text/html" });
 		if (target) headers.set("x-remix-target", target);
 
-		// A form that declares the default encoding is sent as one, so the server reads
-		// the body under the type the form asked for rather than the multipart type
-		// `fetch` picks for `FormData`.
 		let body =
 			formData && encType === "application/x-www-form-urlencoded"
 				? new URLSearchParams(
-						// A file entry has no text form; a urlencoded submission carries its
-						// filename, which is what the server can act on.
 						Array.from(formData, ([key, value]) => [
 							key,
 							value instanceof File ? value.name : value,
@@ -60,8 +60,6 @@ run({
 					)
 				: formData;
 
-		// The response itself carries the URL it was redirected to, which the frame
-		// reads to update its own source after a submission.
 		return await fetch(src, { credentials: "same-origin", headers, signal, method, body });
 	},
 });

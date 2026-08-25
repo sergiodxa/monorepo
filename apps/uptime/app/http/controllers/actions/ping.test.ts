@@ -1,22 +1,10 @@
 /**
- * Tests `POST /actions/:team/run-ping`, the dashboard's quick check. The action is mapped
- * with its own `requireUser`/`requireTeam` chain and driven through a real session, a real
- * viewer and a real team row, because what this action produces is a session flash and a
- * redirect — there is no response body to read, so the session has to be a real one that
- * survives the request and can be read back the way the dashboard reads it.
- *
- * Three properties are worth the setup. A check that ran is a check that is billed, down
- * targets included: a failed check is work the team asked for and the allowance counts
- * work performed, not endpoints that answered. A check that never ran is billed nothing —
- * every rejection below is asserted to leave no probe, no data point and no meter event
- * behind. And the entitlement gate is `stateFor`, not `isActive`, so an owner with no
- * subscription rows at all is *allowed* through; that fail-open is deliberate and is
- * pinned here so a later tightening has to be a deliberate one too.
- *
- * `cloudflare:workers` is replaced before the action is imported: the probe goes out through
- * the `GEO_FETCH` binding, the result lands in an in-memory `PING_RESULTS` dataset, and the
- * meter event is deferred with `waitUntil`, which the harness drains so it can be asserted
- * at all.
+ * Tests `POST /actions/:team/run-ping`, the dashboard's quick check, through a real
+ * session, viewer, and team row, since the action's whole output is a session flash and
+ * redirect. A check that ran is billed even when it fails; a check that never ran bills
+ * nothing, asserted on every refusal below. The entitlement gate is `stateFor`, so an
+ * owner with no subscription rows is allowed through — pinned here so a later tightening
+ * is deliberate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,7 +71,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
-	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
+	/** `~/app/do/geo-fetch` extends this at module load; that's the only use it needs. */
 	DurableObject: class {},
 }));
 
@@ -200,11 +188,9 @@ function cookieHeader(response: Response): string {
 }
 
 /**
- * Submits the quick-check form and reads back what the action flashed.
- *
- * The flash is read through a second request on purpose: a flashed value is only
- * readable on the request *after* the one that wrote it, which is exactly how the
- * dashboard sees it.
+ * Submits the quick-check form and drains the deferred work standing in for the
+ * platform's post-response settling, then reads back what the action flashed — a
+ * flash only readable one request after it was written, exactly how the dashboard reads it.
  */
 async function dispatch(db: Db, team: SelectTeam, url: string) {
 	let { router, container } = createTestRouter(db);
@@ -219,8 +205,6 @@ async function dispatch(db: Db, team: SelectTeam, url: string) {
 	);
 
 	let response = await container.scope(() => router.fetch(request));
-	// The platform settles deferred work after the response; this stands in for that, so
-	// asserting on the meter event doesn't race it.
 	await Promise.all(deferred.splice(0));
 
 	let read = await container.scope(() =>
@@ -249,14 +233,14 @@ describe("POST /actions/:team/run-ping", () => {
 
 		let { response, flashed } = await dispatch(db, team, "https://example.com/health");
 
-		// A redirect rather than a rendered response, so a refresh cannot re-run the check.
+		/** A redirect rather than a rendered response, so a refresh cannot re-run the check. */
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.dashboard.index.href({ team: team.slug }),
 		);
 		expect(flashed.outcome).toEqual({
 			kind: "result",
-			// Minted per submission; what it is worth is that it differs from the last one.
+			/** Minted per submission; what it is worth is that it differs from the last one. */
 			id: expect.any(String),
 			url: "https://example.com/health",
 			status: "up",
@@ -270,7 +254,6 @@ describe("POST /actions/:team/run-ping", () => {
 
 		await dispatch(db, team, "https://example.com/health");
 
-		// GET rather than the monitors' HEAD, from a shard of the default region.
 		expect(doFetchMock.mock.calls[0]?.[1]?.method).toBe("GET");
 		expect(geoFetch.resolutions[0]?.locationHint).toBe("wnam");
 		expect(geoFetch.resolutions[0]?.name).toMatch(/^wnam:[0-7]$/);
@@ -283,8 +266,10 @@ describe("POST /actions/:team/run-ping", () => {
 		await dispatch(db, team, "https://example.com/health");
 		await dispatch(db, team, "https://elsewhere.test/status");
 
-		// A person poking at one deploy submits this form several times in a row, and each
-		// of those checks should land on the object that is already warm for that target.
+		/**
+		 * A person poking at one deploy submits this form several times in a row, and each
+		 * of those checks lands on the object already warm for that target.
+		 */
 		let probes = geoFetch.resolutions;
 		expect(probes[1]?.name).toBe(probes[0]?.name);
 		expect(probes[2]?.name).not.toBe(probes[0]?.name);
@@ -312,21 +297,21 @@ describe("POST /actions/:team/run-ping", () => {
 
 		expect(flashed.outcome).toEqual({
 			kind: "result",
-			// Minted per submission; what it is worth is that it differs from the last one.
+			/** Minted per submission; what it is worth is that it differs from the last one. */
 			id: expect.any(String),
 			url: "https://example.com/health",
 			status: "down",
 			responseStatus: 500,
 			responseTimeMs: 31,
 		});
-		// The check ran, so the team performed a ping: a failed check is billable work.
+		/** The check ran, so the team performed a ping: a failed check is billable work. */
 		expect(pingResults.dataPoints).toHaveLength(1);
 		expect(ingested.flat()).toHaveLength(1);
 	});
 
 	test("flashes no code and no timing for a target that never answered", async () => {
 		let { db, team } = await createFixture();
-		// How `GeoFetchDO` reports a request it couldn't complete.
+		/** How `GeoFetchDO` reports a request it couldn't complete. */
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
@@ -334,10 +319,10 @@ describe("POST /actions/:team/run-ping", () => {
 
 		let { flashed } = await dispatch(db, team, "https://nothing.invalid");
 
-		// `null`, not a zero: no status and no measurement is a different fact from a 0.
+		/** `null` means no status or measurement was recorded, distinct from an actual 0 reading. */
 		expect(flashed.outcome).toEqual({
 			kind: "result",
-			// Minted per submission; what it is worth is that it differs from the last one.
+			/** Minted per submission; what it is worth is that it differs from the last one. */
 			id: expect.any(String),
 			url: "https://nothing.invalid",
 			status: "down",
@@ -399,7 +384,7 @@ describe("POST /actions/:team/run-ping refusals", () => {
 		});
 		expect(flashed.toast).toBeNull();
 
-		// Refused before any billable work: no probe, no data point, no meter event.
+		/** Refused before any billable work: no probe, no data point, no meter event. */
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
@@ -410,8 +395,10 @@ describe("POST /actions/:team/run-ping refusals", () => {
 
 		let { flashed } = await dispatch(db, team, "https://example.com/health");
 
-		// An unknown state is not an unentitled one: the gate reads `stateFor`, so refusing
-		// a paying customer because a lookup was inconclusive is the mistake it avoids.
+		/**
+		 * The gate reads `stateFor`, treating an inconclusive lookup as entitled — guarding
+		 * against refusing a paying customer merely because a lookup came back unclear.
+		 */
 		expect(expectResult(flashed.outcome).status).toBe("up");
 		expect(pingResults.dataPoints).toHaveLength(1);
 	});

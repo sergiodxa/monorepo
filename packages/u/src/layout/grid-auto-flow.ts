@@ -12,21 +12,9 @@ import { utility } from "../internal/descriptor";
 export type GridAutoFlowValue = "row" | "column" | "dense" | "row dense" | "column dense";
 
 /**
- * Applies `grid-auto-flow`, choosing the axis auto-placed items fill along
- * and whether the dense packing mode is on. Defaults to `"row"`, the CSS
- * default of filling each row before moving to the next.
- *
- * `dense` changes packing rather than direction: the default sparse algorithm
- * only ever moves forward, so an explicitly placed item that pushes past a
- * few tracks leaves holes behind it, while `dense` goes back and backfills
- * those earlier holes with any later item small enough to fit.
- *
- * The real caveat is that backfilling decouples visual order from DOM order —
- * an item rendered late can end up displayed early. For keyboard users, focus
- * still follows the DOM, so tab order stops matching what they see on screen.
- * Don't use `dense` where the grid items are interactive (links, buttons,
- * form controls, anything focusable); keep it to purely presentational
- * content such as an image or card mosaic.
+ * Applies `grid-auto-flow`, the axis auto-placed items fill along; defaults
+ * to `"row"`. `dense` backfills earlier holes with later items, diverging
+ * visual order from the DOM order focus follows — keep it presentational.
  *
  * @example u.gridAutoFlow()
  * @example css({ gridAutoFlow: "row" })

@@ -1,14 +1,8 @@
 /**
- * Copies the text content of the element a Message footer action button's
- * `commandfor` points at onto the system clipboard, and reports whether the
- * write landed by dispatching a namespaced event on the button itself.
- *
- * Why JS: `navigator.clipboard.writeText()` is a script-only API with no
- * HTML form, attribute, or Invoker Command equivalent — nothing in markup
- * can place text on the system clipboard on its own.
- * No-JS baseline: the button renders in its usual place, stays reachable in
- * Tab order, and reads its accessible label normally; only the copy action
- * itself goes silent until a script backs it.
+ * Copies text from an element a Message footer copy button's `commandfor`
+ * targets onto the system clipboard. Only script can reach the clipboard
+ * API, so the copy action alone depends on script; the button's markup,
+ * tab order, and label render normally either way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,11 +15,9 @@ import { createElement, createMixin, on } from "remix/ui";
 import { DISABLED_SELECTOR } from "../utils/disabled-selector";
 
 /**
- * Custom Invoker Command a Message footer copy button declares
- * (`command={COPY_COMMAND}`, `commandfor` pointing at the message content to
- * copy) so the pairing reads as a real invoker relationship in markup, even
- * though {@link copyToClipboard} itself reacts to the button's click rather
- * than to the command bubbling off its target.
+ * Custom Invoker Command a Message footer copy button declares via
+ * `command={COPY_COMMAND}` and `commandfor`, giving the pairing a genuine
+ * invoker relationship in markup, read by {@link copyToClipboard} on click.
  */
 export const COPY_COMMAND = "--copy" as const;
 
@@ -40,10 +32,8 @@ declare global {
 
 /**
  * Dispatched on a Message footer copy button by {@link copyToClipboard} once
- * a clipboard write settles, carrying whether it succeeded and the text that
- * was attempted, so a consumer can render its own feedback — a toast, a
- * temporary label swap, an icon change — for either outcome instead of
- * polling the clipboard itself.
+ * a clipboard write settles, carrying success and the attempted text so
+ * consumers can render their own feedback for either outcome.
  */
 export class CopyEvent extends Event {
 	/** `true` once the text reached the clipboard, `false` if the write was rejected or the platform API is unavailable. */
@@ -80,17 +70,9 @@ function resolveCopyTarget(button: HTMLButtonElement): Element | undefined {
 }
 
 /**
- * Writes the text content of the element a Message footer copy button's
- * `commandfor` points at onto the system clipboard through
- * `navigator.clipboard.writeText()`. Resolves the target from the button's
- * own `commandfor` reference on every press, rather than assuming a fixed
- * position among siblings, and ignores a press on a disabled button or one
- * whose target resolves to no text.
- *
- * Once the write settles, dispatches {@link CopyEvent} on the button
- * carrying whether it succeeded and the text that was attempted, leaving
- * every visible outcome of that — an icon swap, a status message, a toast —
- * to whatever feedback the consuming app renders around it.
+ * Writes the text content of a Message footer copy button's `commandfor`
+ * target onto the system clipboard, resolving the target fresh from the
+ * button on every press so it stays correct even as the DOM changes.
  *
  * @returns A mixin descriptor for a Message footer copy button's `mix` prop.
  * @example

@@ -41,9 +41,11 @@ function createTestRenderer(): Renderer<RemixNode> {
 
 describe("default handler", () => {
 	test("renders the not-found page with a 404 status for any unmatched route", async () => {
-		// `i18n` (rather than a stub) — `defaultHandler` renders its copy through
-		// `ctx.i18next.t()`, and the global `i18n` middleware wraps the whole
-		// router (see `bootstrap/app.tsx`), `defaultHandler` included.
+		/**
+		 * The real `i18n` middleware runs here because `defaultHandler` renders its
+		 * copy through `ctx.i18next.t()`, and the global middleware (`bootstrap/app.tsx`)
+		 * wraps the whole router, `defaultHandler` included.
+		 */
 		let router = createRouter({
 			middleware: [
 				asyncContext(),

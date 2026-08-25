@@ -1,18 +1,9 @@
 /**
  * Unit tests for `DeleteAccountsJob.perform()`.
  *
- * Every case here is really about the same property: the queued row is the only state, so what
- * matters is precisely when it survives and when it goes. It goes after the data is deleted and
- * the confirmation is accepted, and it survives a Polar failure (with nothing deleted) and a
- * transport failure (with the data already gone) — because in both of those tomorrow's run is
- * the retry, and there is no other one.
- *
- * The double-run test is the load-bearing one: a failed run leaves a half-erased account behind,
- * and re-erasing it must be clean rather than an exception.
- *
- * The notification cases are about the opposite property: telling a destroyed team's other members
- * must never touch the row. A member the fake auth server refuses, and a notice the transport
- * rejects, both have to leave the deletion finished and the request gone.
+ * The queued row is the only state: it survives a Polar or transport failure so tomorrow's
+ * run can retry, and clears once the data is deleted and the confirmation is sent. A refused
+ * member notice still lets the deletion finish for good.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -221,7 +212,7 @@ describe("DeleteAccountsJob", () => {
 		expect(transport.messages).toHaveLength(1);
 		expect(transport.messages[0]?.subject).toBe("Your Uptime account has been deleted");
 
-		// The request is gone, which is the only thing that says "finished".
+		/** The request is gone, which is the only thing that says "finished". */
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
 	});
 
@@ -259,7 +250,7 @@ describe("DeleteAccountsJob", () => {
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 		expect(await db.count(memberships, { where: { subject_id: "subject-1" } })).toBe(1);
 		expect(transport.messages).toHaveLength(0);
-		// Still queued, which is the retry: tomorrow's run tries again.
+		/** Still queued, which is the retry: tomorrow's run tries again. */
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
 	});
 
@@ -272,7 +263,7 @@ describe("DeleteAccountsJob", () => {
 		await runJob(db, createFakePolar(), new RefusingTransport());
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
-		// The row is the only copy of the address, so it has to outlive a refused send.
+		/** The row is the only copy of the address, so it has to outlive a refused send. */
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
 	});
 
@@ -309,7 +300,7 @@ describe("DeleteAccountsJob", () => {
 		await runJob(db, createFakePolar());
 		expect(transport.messages).toHaveLength(1);
 
-		// The queue is empty now, so the second run finds nothing and mails nothing.
+		/** The queue is empty now, so the second run finds nothing and mails nothing. */
 		await runJob(db, createFakePolar());
 
 		expect(transport.messages).toHaveLength(1);
@@ -322,7 +313,7 @@ describe("DeleteAccountsJob", () => {
 		await addMember(db, team.id, "subject-1");
 		await addMember(db, team.id, "colleague-1", "member");
 		await addMember(db, team.id, "colleague-2", "admin");
-		// Seeded on purpose: the owner is excluded by the rule, not by being unresolvable.
+		/** Seeded so the owner's exclusion follows from the rule, independent of address resolution. */
 		addresses.set("subject-1", "ada@example.com");
 		addresses.set("colleague-1", "one@example.com");
 		addresses.set("colleague-2", "two@example.com");
@@ -347,7 +338,6 @@ describe("DeleteAccountsJob", () => {
 		await runJob(db, createFakePolar());
 
 		expect(notifiedAddresses(transport.messages)).toEqual([]);
-		// Only the account holder's own confirmation.
 		expect(transport.messages).toHaveLength(1);
 	});
 
@@ -363,7 +353,7 @@ describe("DeleteAccountsJob", () => {
 
 		await runJob(db, createFakePolar());
 
-		// The team survives, so nobody lost anything and nobody is told anything.
+		/** The team survives, so nobody lost anything and nobody is told anything. */
 		expect(notifiedAddresses(transport.messages)).toEqual([]);
 		expect(transport.messages).toHaveLength(1);
 	});
@@ -374,7 +364,7 @@ describe("DeleteAccountsJob", () => {
 		await addMember(db, team.id, "subject-1");
 		await addMember(db, team.id, "colleague-1", "member");
 		await addMember(db, team.id, "colleague-2", "member");
-		// No address for colleague-1: the auth server refuses that subject.
+		/** No address for colleague-1: the auth server refuses that subject. */
 		addresses.set("colleague-2", "two@example.com");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
@@ -416,9 +406,7 @@ describe("DeleteAccountsJob", () => {
 		let selective = new SelectiveTransport((message) => message.email instanceof TeamDeletedEmail);
 		await runJob(db, createFakePolar(), selective);
 
-		// It was attempted, and refused.
 		expect(notifiedAddresses(selective.messages)).toEqual(["one@example.com"]);
-		// And the deletion is finished all the same.
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
 	});
@@ -432,7 +420,7 @@ describe("DeleteAccountsJob", () => {
 		await AccountDeletion.enqueue(db, "subject-1", "one@example.com", 1_000);
 		await AccountDeletion.enqueue(db, "subject-2", "two@example.com", 2_000);
 
-		// Fails for the first subject only, so the run has to carry on to the second.
+		/** Fails for the first subject only, so the run has to carry on to the second. */
 		let polar = {
 			listActiveSubscriptions: vi.fn(async (externalCustomerId: string) => {
 				if (externalCustomerId === "subject-1") throw new Error("Polar unavailable");

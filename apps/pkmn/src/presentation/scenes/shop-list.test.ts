@@ -1,10 +1,9 @@
 /**
  * Tests for the shop's buy/sell list derivation.
  *
- * Covers which content items a shop will sell (finite, positive buy price only)
- * and which inventory entries it will buy back (held stock whose item has a
- * positive sell price), including the priceless-item and unknown-item edge
- * cases that must be excluded.
+ * Covers which content items a shop will sell (finite, positive buy price) and
+ * which inventory entries it buys back (positive sell price, held stock),
+ * including the priceless- and unknown-item edge cases.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

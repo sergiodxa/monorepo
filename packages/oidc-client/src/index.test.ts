@@ -213,9 +213,10 @@ describe("toAuthProfile", () => {
 	});
 
 	test("yields an empty username when there is no email (empty local-part)", () => {
-		// `email` normalizes undefined to "", and "".split("@")[0] is "" (not
-		// undefined), so `??` never reaches the subject fallback. This mirrors the
-		// original blog-engine behavior and must be preserved.
+		/**
+		 * `email` normalizes undefined to "", and "".split("@")[0] is "" (not
+		 * undefined), so `??` never reaches the subject fallback.
+		 */
 		let profile = toAuthProfile({ sub: "user-1" });
 		expect(profile.username).toBe("");
 		expect(profile.email).toBe("");
@@ -223,7 +224,7 @@ describe("toAuthProfile", () => {
 });
 
 describe("discover", () => {
-	// A distinct issuer per test avoids the module-level cache masking a call.
+	/** A distinct issuer per test avoids the module-level cache masking a call. */
 	test("fetches and returns the discovery document", async () => {
 		let doc = {
 			authorization_endpoint: "https://a.example.com/authorize",
@@ -344,8 +345,10 @@ describe("exchangeCode", () => {
 
 describe("resolveEndSessionEndpoint", () => {
 	test("prefers inline metadata without a network call", async () => {
-		// Any request fails the test both through this handler and through the
-		// `onUnhandledRequest: "error"` guard, so inline metadata must not discover.
+		/**
+		 * Any request fails the test both through this handler and through the
+		 * `onUnhandledRequest: "error"` guard, so inline metadata must not discover.
+		 */
 		server.use(
 			http.get(discoveryUrl("https://inline.example.com"), () => {
 				throw new Error("resolveEndSessionEndpoint must not discover with inline metadata");

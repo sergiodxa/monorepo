@@ -18,10 +18,8 @@ import type { CSSStyles } from "../utils/css-styles";
 
 /**
  * A shrink-resistant, nudged-down, current-colored mixin for a leading
- * graphic slot: `flexShrink: 0` keeps the slot from collapsing alongside
- * flexible text content beside it, a small block-start margin lines its
- * glyph up with the first line of that text, and `color: currentcolor` picks
- * up whatever foreground color the host already carries.
+ * graphic slot, keeping an icon and a loading graphic laid out identically.
+ * `fg("currentcolor")` matches `@pkg/u`'s case-normalized token lookup.
  *
  * @returns A `css()` mixin ready for a host element's `mix` prop.
  * @example
@@ -34,11 +32,5 @@ export function graphicHostStyle<Node extends Element = Element>(): MixinDescrip
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return combine<Node>([
-		shrink(),
-		mbs("0.125rem"),
-		// `@pkg/u`'s internal token resolver special-cases the `currentcolor`
-		// keyword (case-normalized to `currentColor`), so `fg()` covers it.
-		fg("currentcolor"),
-	]);
+	return combine<Node>([shrink(), mbs("0.125rem"), fg("currentcolor")]);
 }

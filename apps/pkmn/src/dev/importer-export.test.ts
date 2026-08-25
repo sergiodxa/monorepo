@@ -1,11 +1,9 @@
 /**
- * Verifies the importer-export flow: the pure payload shaping
- * ({@link deriveImporterTarget} validates the atlas id and its whole region map
- * and derives the `src/assets/<id>.png` image target; {@link registerAtlas} adds
- * the image AND the full atlas — every region — to a manifest without mutating the
- * input or clobbering unrelated entries), and a real {@link runImporterExport}
- * round-trip that writes a PNG and persists a multi-region atlas, snapshotting and
- * restoring the real manifest so the test leaves no trace.
+ * Verifies the importer-export flow: {@link deriveImporterTarget} validates an
+ * atlas id and its whole region map and derives the image target,
+ * {@link registerAtlas} adds the image and every region to a copy of a manifest,
+ * and a real {@link runImporterExport} round-trip writes a PNG and persists a
+ * multi-region atlas, restoring the real manifest so the test leaves no trace.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +20,6 @@ import { APP_ROOT, MANIFEST_PATH } from "./export";
 import { deriveImporterTarget, registerAtlas, runImporterExport } from "./importer-export";
 import { SpriteNameError } from "./sprite-export";
 
-// A 1×1 transparent PNG, base64-encoded, used as the importer export body.
 let ONE_PX_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
@@ -78,8 +75,6 @@ describe("deriveImporterTarget rejects invalid assignments", () => {
 		test(`bad id (${label}) is rejected`, () => {
 			let result = deriveImporterTarget({ id, regions });
 			expect(isFailure(result)).toBe(true);
-			// An empty/too-long id is caught as an AtlasExportError; a slug-shaped id
-			// that still fails the sprite name rule surfaces as a SpriteNameError.
 			if (isFailure(result)) {
 				expect(
 					result.error instanceof AtlasExportError || result.error instanceof SpriteNameError,
@@ -202,11 +197,9 @@ describe("runImporterExport", () => {
 				expect(result.data.regions.sort()).toEqual(["tile.0", "tile.1"]);
 				expect(result.data.bytesWritten).toBeGreaterThan(0);
 
-				// The PNG landed on disk with the expected magic bytes.
 				let pngBytes = new Uint8Array(await readFile(resolve(APP_ROOT, ASSET_PATH)));
 				expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
 
-				// The manifest now holds both the flat image and the full atlas.
 				let manifestText = await readFile(resolve(APP_ROOT, MANIFEST_PATH), "utf8");
 				let manifest = JSON.parse(manifestText) as ManifestAtlases;
 				expect(manifest.images[ATLAS_ID]).toBe(`/assets/${ATLAS_ID}.png`);
@@ -219,7 +212,6 @@ describe("runImporterExport", () => {
 				});
 			}
 		} finally {
-			// Restore the manifest and delete the scratch PNG — leave no trace.
 			if (original !== null) await writeFile(resolve(APP_ROOT, MANIFEST_PATH), original);
 			await rm(resolve(APP_ROOT, ASSET_PATH), { force: true });
 		}

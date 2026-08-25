@@ -47,8 +47,11 @@ export function openDatabase(filename: string): SqliteDatabase {
 			};
 		},
 
+		/**
+		 * Executes SQL directly when no bindings are given, so a `;`-separated
+		 * script runs in full; otherwise prepares and runs a single statement.
+		 */
 		exec(sql: string, ...values: unknown[]): void {
-			// Only the no-binding form can carry a multi-statement script.
 			if (values.length === 0) {
 				database.exec(sql);
 				return;

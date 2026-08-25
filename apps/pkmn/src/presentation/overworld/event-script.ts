@@ -1,23 +1,9 @@
 /**
  * A resumable interpreter for an event page's declarative command list.
  *
- * A page's `commands` (see `map-schema`) is a list of {@link EventCommand}s that run
- * in order, and the union is recursive: `show-choices` branches into the chosen
- * label's commands and `conditional-branch` into its `then`/`else`, so the runner
- * keeps an explicit stack of command frames rather than a single cursor. Some
- * commands block — `text` waits for the dialogue to be dismissed, `show-choices`
- * for a choice, the battle commands for the fight to end, `wait` for its frames, and
- * `warp` ends the run because the map reloads underneath it — so this is a
- * pull-driven state machine, not an async function: `advance()` runs synchronous
- * commands back-to-back and parks on the first blocking one, whose host hook it
- * calls; the host later calls `resume()` (with the picked choice, for a choice) to
- * continue. This suits the fixed-timestep loop and lets a test drive a whole page by
- * calling `advance`/`resume` and asserting the host calls happen in order.
- *
- * The runner adds no franchise meaning: it forwards authored command data to the
- * host and evaluates branch conditions through the injected flag context, which the
- * scene binds to the interacting event so a `selfSwitch` condition resolves to that
- * event's namespaced flag.
+ * Nested commands (`show-choices`, `conditional-branch`) need an explicit
+ * frame stack; blocking commands park the runner until the host calls
+ * `resume()`, so a fixed-timestep loop drives it one step per frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,11 +11,9 @@
 import type { Direction, EventCommand, TrainerParty } from "../render/map-schema";
 
 /**
- * The flag context a running page evaluates `conditional-branch` conditions against.
- *
- * `isFlagOn` reads a global switch (a story flag) by name; `selfSwitchFlag` maps one
- * of the interacting event's self-switch names to the namespaced flag it is stored
- * under, so a `selfSwitch` condition reads the right per-event flag.
+ * The flag context a running page evaluates `conditional-branch` conditions
+ * against. `isFlagOn` reads a global story flag by name; `selfSwitchFlag` maps
+ * a self-switch name to the namespaced flag it is stored under.
  */
 export interface EventFlagContext {
 	/** Reads whether a global switch (story flag) is currently on. */
@@ -39,14 +23,9 @@ export interface EventFlagContext {
 }
 
 /**
- * The side-effect surface a running page's commands drive.
- *
- * Synchronous hooks (controlSwitch, controlSelfSwitch, giveItem, healParty,
- * facePlayer, move) apply an effect and let the run continue on the same `advance`.
- * Blocking hooks (showText, showChoices, startTrainerBattle, startWildBattle, wait,
- * warp) begin an effect the runner parks on; the host calls `resume()` once it
- * finishes — `resume(index)` for a choice, passing the picked choice's index. `warp`
- * never resumes: the map reload replaces the runner, ending the run after it.
+ * The side-effect surface a running page's commands drive. Synchronous hooks
+ * apply an effect and let the run continue on the same `advance`; blocking
+ * hooks begin an effect and park the runner until the host calls `resume()`.
  */
 export interface EventCommandHost {
 	/** Shows one message and later calls `resume()` when it is dismissed. */
@@ -76,7 +55,7 @@ export interface EventCommandHost {
 	startWildBattle(speciesId: string, level: number): void;
 	/** Pauses for a number of frames, then calls `resume()` when they elapse. */
 	wait(frames: number): void;
-	/** Reloads the map at a new position; the run ends here (no resume). */
+	/** Reloads the map at a new position, ending the run as part of the reload. */
 	warp(map: string, x: number, y: number): void;
 }
 
@@ -91,14 +70,8 @@ interface Frame {
 
 /**
  * Drives one page's commands in order against an {@link EventCommandHost}.
- *
- * Construct with the commands, the host, and the flag context bound to the
- * interacting event, then call `advance()` to run until the page blocks or finishes.
- * While blocked, the host drives its effect and calls `resume()` to continue;
- * `advance()` is idempotent while blocked or done, so the scene can call it every
- * frame without double-running a step. Nested commands (`show-choices`,
- * `conditional-branch`) push a new frame the runner drains before returning to the
- * step after the nesting command.
+ * `advance()` runs until the page blocks or finishes and is idempotent while
+ * blocked or done, so a scene can call it every frame without double-running.
  */
 export class EventCommandRunner {
 	/** The stack of command frames; the top frame is the one being drained. */
@@ -134,12 +107,9 @@ export class EventCommandRunner {
 	}
 
 	/**
-	 * Runs commands until one blocks or the page ends.
-	 *
-	 * Synchronous commands run back-to-back within one call; the first blocking
-	 * command begins its host effect and parks the runner. Finished frames pop so the
-	 * run resumes after the command that nested them. A no-op while already blocked or
-	 * done, so it is safe to call once per frame.
+	 * Runs commands until one blocks or the page ends. Synchronous commands run
+	 * back-to-back within one call; the first blocking command parks the runner.
+	 * A no-op while already blocked or done, so it is safe to call once per frame.
 	 */
 	advance() {
 		if (this.state !== "idle") return;
@@ -151,7 +121,7 @@ export class EventCommandRunner {
 			}
 			let command = frame.commands[frame.cursor]!;
 			frame.cursor += 1;
-			if (this.run(command)) return; // a blocking command parked the runner
+			if (this.run(command)) return;
 		}
 		this.state = "done";
 	}
@@ -159,10 +129,11 @@ export class EventCommandRunner {
 	/**
 	 * Resumes after a blocking step the host has finished, running the next steps.
 	 *
-	 * A no-op unless the runner is actually blocked, so a stray resume cannot skip a
-	 * step or advance a finished page. For a parked `show-choices`, `choiceIndex`
-	 * selects the branch to run; its commands are pushed as a new frame before the run
-	 * continues. Other blocking commands ignore the argument.
+	 * A no-op unless the runner is actually blocked, so a stray resume cannot skip
+	 * a step or advance a finished page.
+	 *
+	 * @param choiceIndex - For a parked `show-choices`, selects the branch to run;
+	 * ignored by other blocking commands.
 	 */
 	resume(choiceIndex?: number) {
 		if (this.state !== "blocked") return;
@@ -176,14 +147,9 @@ export class EventCommandRunner {
 	}
 
 	/**
-	 * Runs one command; returns true when it blocks (parks the runner).
-	 *
-	 * Synchronous commands return false so `advance` keeps going. Nesting commands
-	 * (`conditional-branch`) push the chosen branch as a frame and return false so it
-	 * runs next; `show-choices` blocks so the host can present the labels and resume
-	 * with a pick. Blocking commands set the state to blocked and return true; `warp`
-	 * blocks too but the host is expected never to resume it, ending the run as the
-	 * map reloads.
+	 * Runs one command; returns true when it blocks (parks the runner) and false
+	 * when the run should keep going, including after pushing a nested frame for
+	 * `conditional-branch`.
 	 */
 	private run(command: EventCommand): boolean {
 		switch (command.kind) {
@@ -242,11 +208,9 @@ export class EventCommandRunner {
 	}
 
 	/**
-	 * Evaluates a branch condition against the bound flag context.
-	 *
-	 * A `switch` condition reads a global flag; a `selfSwitch` condition reads the
-	 * interacting event's namespaced self-switch flag. Both must hold when both are
-	 * present; an empty condition (neither field) always holds.
+	 * Evaluates a branch condition against the bound flag context: `switch` reads
+	 * a global flag, `selfSwitch` reads the event's self-switch flag, both must
+	 * hold together, and an empty condition always holds.
 	 */
 	private conditionHolds(condition: { switch?: string; selfSwitch?: string }): boolean {
 		if (condition.switch && !this.flags.isFlagOn(condition.switch)) return false;

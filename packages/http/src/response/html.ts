@@ -1,3 +1,10 @@
+/**
+ * HTML response helpers, one per HTTP status code, pairing an HTML body with
+ * its matching status and status text.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { html } from "../response";
 import * as StatusCode from "../status-code";
 

@@ -1,8 +1,7 @@
 /**
- * HTTP action for the XML sitemap. It combines static section URLs (feed, articles,
- * tutorials, bookmarks, glossary) with individual published articles and tutorials,
- * deriving `lastmod` hints from the freshest creation date per section. It exists to give
- * crawlers a canonical, discoverable index of the site's public pages.
+ * HTTP action for the XML sitemap. It combines section URLs with published articles and
+ * tutorials, deriving `lastmod` hints from the freshest creation date per section, so
+ * crawlers get a canonical index of the site's public pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,22 +19,13 @@ import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
-/**
- * Serves the XML sitemap consumed by crawlers for discoverable public pages.
- *
- * The payload mixes section-level URLs and individual published posts, and sets
- * `lastmod` hints using the freshest known creation date per section.
- */
+/** Serves the XML sitemap covering the section pages and every published post. */
 export default createAction(
 	routes.sitemap,
 	/**
-	 * Builds a canonical sitemap from static sections plus published articles/tutorials.
-	 *
-	 * It assumes repository `findAll` methods return newest-first rows, so using
-	 * `.at(0)` yields the latest timestamp for each listing page.
-	 *
-	 * @param ctx - Request context with database access and base URL.
-	 * @returns XML response ready for `/sitemap.xml` style endpoints.
+	 * Repository `findAll` results arrive newest-first, so `.at(0)` holds the latest
+	 * timestamp for each listing page.
+	 * @returns XML response for the sitemap endpoint.
 	 */
 	inject([Database] as const, async function sitemapAction(database) {
 		let ctx = getContext();
@@ -52,16 +42,7 @@ export default createAction(
 		let lastBookmarkDate = likes.at(0)?.created_at;
 
 		let dates = [lastArticleDate, lastTutorialDate, lastBookmarkDate]
-			/**
-			 * Removes missing section dates before numeric comparison.
-			 */
 			.filter(Boolean)
-			/**
-			 * Converts date-like values to epoch milliseconds for `Math.max`.
-			 *
-			 * @param d - Persisted timestamp from repository records.
-			 * @returns Milliseconds since Unix epoch.
-			 */
 			.map((d) => new Date(d).getTime());
 
 		let lastPostDate = dates.length > 0 ? new Date(Math.max(...dates)) : undefined;

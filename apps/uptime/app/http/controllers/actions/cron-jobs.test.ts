@@ -2,7 +2,8 @@
  * Tests the cron-job monitor create/update/delete actions: a successful create or
  * update schedules `next_expected_at` from a valid cron expression and redirects to
  * the monitor; an invalid cron expression is rejected before any write; validation
- * failure and the team-scoped not-found guard leave `cron_job_monitors` untouched. *
+ * failure and the team-scoped not-found guard leave `cron_job_monitors` untouched.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -32,7 +33,11 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 	};
 }
 
-/** Posts a form body to one of the cron-job actions through the real action, DB, and service container. */
+/**
+ * Posts a form body to one of the cron-job actions through the real action, DB,
+ * and service container, including `i18n` since the actions flash translated
+ * toasts and need `ctx.i18next` present when the router runs.
+ */
 async function postCronJobAction(
 	action: unknown,
 	route: { method: string; href: (params: { team: string }) => string },
@@ -45,12 +50,10 @@ async function postCronJobAction(
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
 
-	// The real chain resolves the language for `/actions/*` too, and these actions flash
-	// translated toasts, so `ctx.i18next` has to be there.
 	let router = createRouter({ middleware: [asyncContext(), formData(), i18n] });
 	/**
-	 * Casts `router.map` itself (rather than its arguments) so this helper can map
-	 * several differently-shaped routes without losing type-checking elsewhere.
+	 * Casts `router.map` itself so this helper can map several differently-shaped
+	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
 		middleware: [teamContextMiddleware(team, membership)],

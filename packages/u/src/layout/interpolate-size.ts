@@ -8,9 +8,8 @@ export type InterpolateSizeValue = "allow-keywords" | "numeric-only";
 
 /**
  * Opts the element into animating to and from keyword sizes (`auto`,
- * `min-content`, `max-content`, `fit-content`) instead of only numeric
- * lengths, so a transition to `height: auto` (or `block-size: auto`) can
- * actually animate rather than jumping instantly.
+ * `min-content`, `max-content`, `fit-content`), so a transition to
+ * `height: auto` or `block-size: auto` animates across its full duration.
  *
  * @example u.interpolateSize()
  * @example css({ interpolateSize: "allow-keywords" })

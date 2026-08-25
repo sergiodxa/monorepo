@@ -6,11 +6,9 @@ import { compose, utility } from "../internal/descriptor";
 import { when } from "../state/when";
 
 /**
- * Hides the scrollbar on a scroll container across every browser engine —
- * `::-webkit-scrollbar` for Chrome/Safari, `-ms-overflow-style` for legacy
- * Edge, and `scrollbar-width` for Firefox — while leaving the element free
- * to scroll through any other input (wheel, touch, keyboard, programmatic).
- * Pair with `u.scroll()`/`u.overflow()` on the same element.
+ * Hides the scrollbar across Chrome/Safari, legacy Edge, and Firefox, while
+ * the element stays scrollable by wheel, touch, keyboard, and script. Pair
+ * with `u.scroll()`/`u.overflow()` on the same element.
  *
  * @example u.noScrollbar()
  * @example css({ "&::-webkit-scrollbar": { display: "none" }, msOverflowStyle: "none", scrollbarWidth: "none" })

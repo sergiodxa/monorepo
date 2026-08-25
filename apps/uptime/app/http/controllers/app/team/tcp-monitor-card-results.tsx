@@ -2,8 +2,8 @@
  * TCP monitor detail page results fragment controller. GET
  * /app/:team/tcp/:monitorId/cards/results — loads the monitor's recent check results
  * once and renders both what is derived from them (uptime rate, average response time,
- * total checks) and the results table itself, with no document shell, so the detail
- * page's results `Frame` can swap it in over its skeleton fallback.
+ * total checks) and the results table itself, as a bare fragment the detail page's
+ * results `Frame` can swap in over its skeleton fallback.
  *
  * The stat cards live here rather than on the page because every one of them is a
  * reduction over the same result rows: leaving them behind would mean the page paying

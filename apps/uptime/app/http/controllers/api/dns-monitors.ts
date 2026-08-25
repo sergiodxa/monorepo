@@ -1,13 +1,9 @@
 /**
- * API v1 collection endpoints for DNS monitors: `GET /api/v1/dns-monitors` lists a
- * team's DNS monitors and `POST /api/v1/dns-monitors` creates one. Requires
- * `dns-monitors:read`/`dns-monitors:write` via `requireApiKey`.
- *
- * A create optionally carries a zone file, and runs discovery inline: there is no reviewer
- * on an API call, so everything discovered is imported **and watched**, and the records
- * sub-resource is how a script turns off what it did not want. The lines the parser could
- * not use come back in the response rather than being dropped, since a script has no review
- * screen to read them off.
+ * API v1 collection endpoints for DNS monitors: `GET /api/v1/dns-monitors` lists a team's
+ * monitors and `POST /api/v1/dns-monitors` creates one, gated by `dns-monitors:read`/`write`
+ * via `requireApiKey`. A create can carry a zone file and runs discovery inline, since no
+ * reviewer sits between an API call and the monitor, so everything discovered is imported
+ * **and watched**; rejected lines come back in the response since a script has no review screen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,7 +57,7 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 const CreateDnsMonitorSchema = s.object({
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	domain: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	/** Read once, parsed, and discarded — the API stores the records, never the text. */
+	/** Read once and parsed; only the records it declares persist beyond the request. */
 	zoneFile: s.optional(s.string()),
 	intervalSeconds: s.defaulted(
 		s.number().pipe(checks.min(MIN_DNS_INTERVAL_SECONDS), checks.max(MAX_DNS_INTERVAL_SECONDS)),
@@ -70,17 +66,13 @@ const CreateDnsMonitorSchema = s.object({
 	isEnabled: s.defaulted(s.boolean(), true),
 });
 
-/** What a parsed paste amounts to here: the records it declared and the lines it did not. */
+/** What a parsed paste amounts to here: the records it declared and the lines it rejected. */
 type ZoneFileParse = ZoneFileImport;
 
 /**
- * What discovery found, reported back on a create.
- *
- * The rejected lines are here because this is the only channel a script has: the web flow
- * shows them above the review list, and an API caller that pasted a zone with `$ORIGIN` in it
- * would otherwise be told nothing and end up monitoring a subset of what it thinks it is.
- * Only the line number and the reason travel — never the line's text, which is a copy of
- * somebody's zone and is not this response's business.
+ * What discovery found, reported back on a create. Rejected lines travel here since a
+ * script has no review screen to read them off — only the line number and reason travel,
+ * while the zone text stays with the caller who pasted it.
  */
 function serializeDiscovery(
 	names: string[],
@@ -126,10 +118,9 @@ export default createController(dnsMonitorsRoutes, {
 				let db = getServiceContainer().get(Database);
 
 				/**
-				 * Checked before anything is parsed or resolved: one check sweeps every tracked
-				 * name of every monitor a team owns, so an unbounded collection is a cost and
-				 * platform-limit problem rather than an untidy one. Same cap the web create flow
-				 * applies, so a key cannot be used to walk around it.
+				 * Checked before anything is parsed: one check sweeps every tracked name of every monitor
+				 * a team owns, so an unbounded collection is a cost problem before it is an untidy one, and
+				 * a key cannot use this endpoint to walk around the web flow's cap.
 				 */
 				let existingCount = await DnsMonitor.countByTeam(db, ctx.apiTeam.id);
 				if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
@@ -165,11 +156,9 @@ export default createController(dnsMonitorsRoutes, {
 
 				let names = discoveryNames(result.data.domain, zoneFile?.records ?? []);
 				/**
-				 * Refused rather than truncated, and before the monitor row exists: a check
-				 * sweeps every tracked name inside one invocation, so a zone with more names
-				 * than that budget covers has to be split across monitors — and a caller told
-				 * "created" while half its zone was dropped would be monitoring less than it
-				 * believes it is.
+				 * Refused before the monitor row exists, since the invocation-wide check sweeps every
+				 * tracked name once: a zone over the limit is split across monitors, and the caller sees an
+				 * accurate count of what actually got tracked.
 				 */
 				if (names.length > MAX_TRACKED_NAMES_PER_MONITOR) {
 					return apiError(
@@ -188,11 +177,9 @@ export default createController(dnsMonitorsRoutes, {
 				});
 
 				/**
-				 * Awaited, so the response describes a monitor whose records exist: a script
-				 * that creates one and immediately lists its records must not be handed an empty
-				 * list. A resolver that could not be reached still leaves a usable monitor — the
-				 * next scheduled check discovers the same records — so it is reported through
-				 * `queriesFailed` rather than failing the create.
+				 * Awaited, so the response reflects a monitor whose records already exist, since a script
+				 * that lists immediately after creating must see them. An unreachable resolver still leaves
+				 * a usable monitor for the next scheduled check to discover, reported here through `queriesFailed`.
 				 */
 				let imported = 0;
 				let queriesFailed = 0;

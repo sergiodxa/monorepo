@@ -1,26 +1,7 @@
 /**
- * Map + Events tool view — an RPG-Maker-XP-style multi-map editor built on the
- * canonical tool-view pattern. The component constructs a {@link MapProject} once in
- * setup — an ordered set of maps, each its own {@link MapEditor}, with one active —
- * and drives every control through the active map; there are no framework hooks, so
- * local UI state lives in setup-scope variables and the view re-renders through
- * `handle.update()` when a control changes it. A {@link MapCanvas} DOM helper (the
- * imperative shell around the pure editor) blits the active map to a canvas and turns
- * pointer input into paint/erase/fill/event gestures; switching maps retargets it.
- *
- * The surface adds a map tree (create/select/rename/delete, active map highlighted)
- * above the per-map controls, then: resize + BGM controls, a tileset sidebar (load one
- * or more tileset images from the manifest
- * `images`/`atlases` or a URL, each sliced into a clickable tile grid — the
- * selected tile carries its tileset index), a layer/tool bar (ground/decor/
- * overhead/collision plus paint/erase/fill/event, and the collision kind when
- * editing collision), and the map canvas itself. In event mode a click places a new
- * event (one default page) or opens the {@link EventEditor} dialog on the clicked
- * one — the RPG-Maker-XP-style modal that edits its {@link MapEvent}'s name and
- * ordered {@link EventPage}s (conditions, graphic, autonomous movement, options,
- * trigger, and the recursive command list) and commits back on OK. Export POSTs the
- * active map's serialized {@link MapData} to the map export action; Export all loops
- * the project's maps through the same action so each is written and registered.
+ * Map + Events tool view: an RPG-Maker-XP-style multi-map editor built on the
+ * canonical tool-view pattern, with a live {@link MapCanvas} that blits the active
+ * map and turns pointer gestures into paint/erase/fill/event edits.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,11 +54,8 @@ type CssMixinStyles = Parameters<typeof css>[0];
 
 /**
  * The style-object shape the `css()` mixin accepts, used for shared base styles.
- *
- * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
- * carries that interface's `Symbol.iterator` member and reads as an iterable.
- * Dropping the symbol keys leaves the same plain property bag the base styles
- * actually are, so they can be spread into an override object.
+ * Drops the mixin parameter's inherited `Symbol.iterator` key so the result stays a
+ * plain property bag that spreads into override objects.
  */
 type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
@@ -186,14 +164,9 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Canvas-backed map renderer and pointer handler — the imperative DOM shell around
- * the pure {@link MapEditor}. It blits the visible tile layers (dimming the ones that
- * are not the active editing layer) and the collision overlay from the loaded tileset
- * images, draws each event's sprite with a kind badge (outlining sprite-less triggers
- * and highlighting the selected event), previews the selected tile under the cursor,
- * and translates pointer gestures into editor mutations, calling back the view to
- * re-render after each change. All geometry runs through the pure `map-render`
- * helpers so the blit rectangles are testable without a canvas.
+ * Canvas-backed map renderer and pointer handler around the pure {@link MapEditor}.
+ * Computes blit geometry through the pure `map-render` helpers, kept independent of
+ * canvas APIs, and calls back the view to re-render after each gesture.
  */
 class MapCanvas {
 	/** The display canvas, or `null` before attach / after detach. */
@@ -204,8 +177,8 @@ class MapCanvas {
 
 	/**
 	 * The anchor tile a rectangle/ellipse/select drag started on, or `null` when no
-	 * shape/selection drag is in progress. The committed layer is never touched until
-	 * release; only the preview overlay reflects the in-progress drag.
+	 * shape/selection drag is in progress. The preview overlay alone reflects an
+	 * in-progress drag, and release commits its shape to the layer.
 	 */
 	#dragStart: { x: number; y: number } | null = null;
 
@@ -253,10 +226,9 @@ class MapCanvas {
 	}
 
 	/**
-	 * Retargets the canvas at another map's editor and its loaded tilesets (used when
-	 * the map tree switches the active map). Any in-progress drag/paste/hover is
-	 * dropped so a gesture started on the old map never lands on the new one, and the
-	 * canvas re-renders the newly active map.
+	 * Retargets the canvas at another map's editor and its loaded tilesets. Drops any
+	 * in-progress drag/paste/hover so each gesture stays scoped to the map it started
+	 * on, then re-renders the newly active map.
 	 *
 	 * @param editor The now-active map's editor to render and mutate.
 	 * @param tilesets The loaded tileset images for that map (index-aligned to it).
@@ -274,7 +246,7 @@ class MapCanvas {
 	/**
 	 * Arms (or disarms) the clipboard paste: while armed, the clipboard block previews
 	 * under the cursor and the next canvas click stamps it on the active layer. Arming
-	 * is a no-op when the clipboard is empty. Re-renders the preview.
+	 * only takes effect when the clipboard already holds a block.
 	 */
 	armPaste(armed: boolean): void {
 		this.#pasteArmed = armed && this.editor.hasClipboard;
@@ -316,7 +288,10 @@ class MapCanvas {
 		this.#canvas = null;
 	}
 
-	/** Draws every visible layer, the collision overlay, event markers, and the cursor. */
+	/**
+	 * Draws every visible layer, dimming every one except the active editing layer so
+	 * it stands out, then the collision overlay, event markers, and the cursor.
+	 */
 	render(): void {
 		if (this.#canvas === null) return;
 		let context = this.#canvas.getContext("2d");
@@ -328,12 +303,9 @@ class MapCanvas {
 		this.#canvas.height = height;
 		context.imageSmoothingEnabled = false;
 
-		// Backdrop.
 		context.fillStyle = "#0b0b0e";
 		context.fillRect(0, 0, width, height);
 
-		// Tile layers, back-to-front; hidden layers skipped, non-active ones dimmed so
-		// the layer being edited stands out.
 		let active = this.editor.layer;
 		for (let name of TILE_LAYERS) {
 			if (!this.editor.isLayerVisible(name)) continue;
@@ -342,7 +314,6 @@ class MapCanvas {
 		}
 		context.globalAlpha = 1;
 
-		// Collision overlay when editing collision, or when the always-on toggle is set.
 		if (active === "collision" || this.editor.showCollision) this.#drawCollisionOverlay(context);
 
 		if (this.editor.showGrid) this.#drawGrid(context, width, height);
@@ -354,7 +325,10 @@ class MapCanvas {
 		this.#drawPastePreview(context);
 	}
 
-	/** Blits one tile layer's non-empty cells from their tileset images. */
+	/**
+	 * Blits one tile layer's non-empty cells, drawing a placeholder square for any
+	 * tile whose tileset image is still loading, so the cell stays visible.
+	 */
 	#drawLayer(context: CanvasRenderingContext2D, name: TileLayerName): void {
 		let zoom = this.editor.zoom;
 		let layer = this.editor.toMapData().layers[name];
@@ -369,7 +343,6 @@ class MapCanvas {
 				zoom,
 			);
 			if (loaded === null) {
-				// No image yet: draw a labeled placeholder so the cell is still visible.
 				context.fillStyle = "#3f3f46";
 				context.fillRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
 				continue;
@@ -446,7 +419,6 @@ class MapCanvas {
 			let drew = this.#drawEventSprite(context, event, rect);
 
 			if (!drew) {
-				// No usable sprite: an outlined tinted placeholder so the tile stays legible.
 				context.fillStyle = style.invisible ? "rgba(24, 24, 27, 0.55)" : style.color;
 				context.fillRect(rect.x + 2, rect.y + 2, rect.w - 4, rect.h - 4);
 				context.strokeStyle = style.color;
@@ -456,7 +428,6 @@ class MapCanvas {
 				context.setLineDash([]);
 			}
 
-			// Kind badge in the top-left corner.
 			let badge = Math.max(8, Math.floor(size * 0.42));
 			context.fillStyle = style.color;
 			context.fillRect(rect.x, rect.y, badge, badge);
@@ -475,10 +446,9 @@ class MapCanvas {
 	}
 
 	/**
-	 * Blits an event's first-page graphic into its tile rect, scaled to fill. Supports
-	 * a raw image sub-rect (image id + x/y/w/h) from a loaded tileset image; an atlas
-	 * region is out of scope here (atlases aren't loaded on this canvas) so those fall
-	 * back to the badge placeholder. Returns whether a sprite was drawn.
+	 * Blits an event's first-page graphic into its tile rect, scaled to fill, when
+	 * that graphic is a raw image sub-rect on an already-loaded tileset image. Returns
+	 * whether a sprite was drawn, so the caller falls back to the badge placeholder.
 	 */
 	#drawEventSprite(
 		context: CanvasRenderingContext2D,
@@ -513,7 +483,6 @@ class MapCanvas {
 		let zoom = this.editor.zoom;
 		let rect = tileScreenRect(hover.x, hover.y, zoom);
 
-		// A ghost of the selected tile while painting a tile layer.
 		if (this.editor.tool === "paint" && this.editor.layer !== "collision") {
 			let selection = this.editor.selection;
 			let loaded = this.tilesets[selection.tilesetIndex] ?? null;
@@ -563,10 +532,9 @@ class MapCanvas {
 	}
 
 	/**
-	 * While a rectangle/ellipse/select drag is in progress, previews its extent: a
-	 * rectangle/ellipse tints every covered cell and outlines its bounding box; a select
-	 * drag draws only the marquee outline. A no-op when no such drag is in progress. The
-	 * committed layer is never touched — this is overlay only.
+	 * Previews an in-progress rectangle/ellipse/select drag's extent, tinting each
+	 * covered cell and outlining its bounding box for a rectangle or ellipse, or just
+	 * the marquee outline for a select drag, on an overlay above the committed layer.
 	 */
 	#drawShapePreview(context: CanvasRenderingContext2D): void {
 		let start = this.#dragStart;
@@ -576,7 +544,6 @@ class MapCanvas {
 		if (tool !== "rectangle" && tool !== "ellipse" && tool !== "select") return;
 		let zoom = this.editor.zoom;
 
-		// Translucent fill over each covered cell (shape tools only; select is outline).
 		if (tool === "rectangle" || tool === "ellipse") {
 			let cells =
 				tool === "ellipse"
@@ -590,7 +557,6 @@ class MapCanvas {
 			}
 		}
 
-		// Bounding-box outline so the drag extent reads even for a sparse ellipse.
 		context.strokeStyle = tool === "select" ? SELECTION_OUTLINE : PREVIEW_OUTLINE;
 		context.lineWidth = Math.max(1, Math.floor(zoom / 2));
 		this.#strokeRegion(context, normalizeRegion(start.x, start.y, end.x, end.y));
@@ -602,9 +568,9 @@ class MapCanvas {
 	}
 
 	/**
-	 * When the select tool is armed to paste, previews the clipboard's footprint under
-	 * the cursor (its top-left corner at the hovered tile) so the author sees where the
-	 * stamp will land before committing. A no-op when not armed or off-canvas.
+	 * While armed to paste, previews the clipboard's footprint under the cursor — its
+	 * top-left corner at the hovered tile — so the author sees where the stamp will
+	 * land before it commits.
 	 */
 	#drawPastePreview(context: CanvasRenderingContext2D): void {
 		if (!this.#pasteArmed) return;
@@ -639,12 +605,14 @@ class MapCanvas {
 		);
 	}
 
-	/** Maps a pointer event to a tile coordinate, or `null` when off-canvas. */
+	/**
+	 * Maps a pointer event to a tile coordinate, or `null` when off-canvas. Converts
+	 * through the canvas's own bitmap pixels first, undoing any CSS scaling.
+	 */
 	#tileAt(event: PointerEvent): { x: number; y: number } | null {
 		if (this.#canvas === null) return null;
 		let rect = this.#canvas.getBoundingClientRect();
 		if (rect.width === 0 || rect.height === 0) return null;
-		// Map the client point into the canvas's own bitmap pixels, undoing CSS scaling.
 		let scaleX = this.#canvas.width / rect.width;
 		let scaleY = this.#canvas.height / rect.height;
 		let offsetX = (event.clientX - rect.left) * scaleX;
@@ -671,7 +639,7 @@ class MapCanvas {
 		this.onHover(null);
 	}
 
-	/** Applies the active tool to a tile without recording a drag boundary. */
+	/** Executes the active tool's action at a single tile. */
 	#applyAt(tile: { x: number; y: number }): void {
 		let layer = this.editor.layer;
 		let tool = this.editor.tool;
@@ -690,7 +658,6 @@ class MapCanvas {
 		}
 
 		if (layer === "collision") {
-			// Erase paints walkable; paint/fill paint the selected collision kind.
 			let value =
 				tool === "erase" ? Collision.Walkable : COLLISION_VALUES[this.editor.collisionKind];
 			if (tool === "fill") this.editor.fill("collision", tile.x, tile.y, value);
@@ -707,16 +674,15 @@ class MapCanvas {
 	}
 
 	/**
-	 * Begins a gesture. Paint/erase start a drag; fill/event are one-shot;
-	 * rectangle/ellipse/select begin a drag rectangle that only previews until release;
-	 * an armed select click stamps the clipboard instead of starting a selection.
+	 * Begins a gesture: paint/erase and shape/select drags capture the pointer so the
+	 * release is caught even if it leaves the canvas; fill/event apply once
+	 * immediately. An armed select click stamps the clipboard at that tile and disarms.
 	 */
 	#handlePointerDown(event: PointerEvent): void {
 		let tile = this.#tileAt(event);
 		if (tile === null) return;
 		let tool = this.editor.tool;
 
-		// An armed paste stamps the clipboard at the click and disarms; no drag begins.
 		if (tool === "select" && this.#pasteArmed) {
 			this.editor.paste(tile.x, tile.y);
 			this.#pasteArmed = false;
@@ -726,8 +692,6 @@ class MapCanvas {
 			return;
 		}
 
-		// Rectangle/ellipse/select all drag a region; capture so the release is caught
-		// even if the pointer leaves the canvas, and preview without committing.
 		if (tool === "rectangle" || tool === "ellipse" || tool === "select") {
 			this.#dragStart = tile;
 			this.#canvas?.setPointerCapture(event.pointerId);
@@ -750,9 +714,9 @@ class MapCanvas {
 	}
 
 	/**
-	 * Ends a gesture. A paint/erase drag just stops; a rectangle/ellipse drag commits
-	 * the shape fill on the active layer; a select drag records the rectangular
-	 * selection. The drag anchor is cleared and the view re-rendered either way.
+	 * Ends a gesture, falling back to the last in-bounds hovered tile as the endpoint
+	 * so a drag released past an edge still commits its covered region: a rectangle
+	 * or ellipse commits its shape fill, a select drag records the selection.
 	 */
 	#stopPainting(): void {
 		this.#painting = false;
@@ -760,8 +724,6 @@ class MapCanvas {
 		if (start === null) return;
 		this.#dragStart = null;
 
-		// Release outside the map falls back to the last hovered in-bounds tile so a
-		// drag that ends past an edge still commits its covered region.
 		let end = this.#hover ?? start;
 		let tool = this.editor.tool;
 		if (tool === "rectangle") {
@@ -789,14 +751,14 @@ class MapCanvas {
  * @returns The render function for the map tool.
  */
 export function MapTool(handle: Handle<Record<string, never>>) {
-	// The multi-map project: an ordered set of maps, each its own live editor, with one
-	// active. Every editing gesture targets `project.active`, mirrored into `editor`.
 	let project = new MapProject();
 	let editor = project.active;
 
-	// View-owned loaded tileset images per map id, index-aligned to that map's editor's
-	// tilesets. Kept per map (not a single array) so switching maps swaps the images too
-	// and a map's tiles never render against another map's declarations.
+	/**
+	 * View-owned loaded tileset images per map id, index-aligned to that map's
+	 * editor's tilesets. Kept per map so switching maps swaps the images too, and
+	 * each map's tiles always render against its own declarations.
+	 */
 	let loadedByMap = new Map<string, Array<LoadedTileset | null>>([[project.activeMapId, []]]);
 
 	/** The loaded-tileset list for a map id, creating an empty one on first access. */
@@ -808,24 +770,19 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		return fresh;
 	}
 
-	// The active map's loaded images, re-pointed whenever the active map changes.
 	let loaded = loadedFor(project.activeMapId);
 
-	// Local UI state, mirrored back into the view on `handle.update()`.
 	let bgm = editor.bgm;
 	let newWidth = editor.width;
 	let newHeight = editor.height;
 	let selectedEventId: string | null = null;
 
-	// Map-tree controls for creating a new map.
 	let newMapId = "";
 	let newMapWidth = editor.width;
 	let newMapHeight = editor.height;
 
-	// The tile under the pointer, mirrored into the coordinate readout.
 	let hoverTile: { x: number; y: number } | null = null;
 
-	// New-tileset controls.
 	let tilesetImageChoice = IMAGE_IDS[0] ?? "";
 	let tilesetUrl = "";
 	let tilesetColumns = 8;
@@ -951,7 +908,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		}
 		let id = result.data;
 		if (id !== oldId) {
-			// Carry the loaded images under the new key so the renamed map keeps its tiles.
 			let images = loadedFor(oldId);
 			loadedByMap.delete(oldId);
 			loadedByMap.set(id, images);
@@ -1030,17 +986,16 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		refresh();
 	}
 
-	/** Closes the event editor dialog without saving. */
+	/** Closes the event editor dialog, discarding any edits made in it. */
 	function cancelEvent() {
 		selectedEventId = null;
 		refresh();
 	}
 
 	/**
-	 * POSTs one serialized map to the export action, returning a short outcome line for
-	 * that map. Shared by the single-map export and the export-all loop so both report
-	 * identically. The map id is validated by the project's slug rules, but the server
-	 * re-validates and is the authority on what actually got written.
+	 * POSTs one serialized map to the export action and returns a short outcome line,
+	 * shared by the single-map and export-all paths so both report identically. The
+	 * server re-validates the map id and is the authority on what actually got written.
 	 *
 	 * @param map The serialized map to write.
 	 * @returns A `{ ok, line }` outcome describing the write or the failure.
@@ -1079,10 +1034,9 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 	}
 
 	/**
-	 * Exports every map in the project in tree order, POSTing each to the same export
-	 * action so each is validated, written to `src/content/maps/<id>.json`, and
-	 * registered in the manifest. Maps are attempted independently; the status line sums
-	 * up how many were written and names any that failed.
+	 * Exports every map in the project in tree order, POSTing each to the export
+	 * action independently so a single failure still lets the rest complete. The
+	 * status line sums up how many were written and names any that failed.
 	 */
 	async function exportAll() {
 		let ids = project.mapIds();
@@ -1116,7 +1070,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					</p>
 				</header>
 
-				{/* Active-map controls: resize (content-preserving) + background music. */}
 				<div
 					mix={css({ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" })}
 				>
@@ -1172,7 +1125,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					</label>
 				</div>
 
-				{/* Map tree: the project's maps, plus create/select/rename/delete. */}
 				<MapTreePanel
 					ids={project.mapIds()}
 					activeId={project.activeMapId}
@@ -1194,7 +1146,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					onDelete={(id) => deleteMap(id)}
 				/>
 
-				{/* Layer + tool + view bar. */}
 				<div
 					mix={css({
 						display: "flex",
@@ -1247,7 +1198,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 										}),
 										on<HTMLButtonElement, "click">("click", () => {
 											editor.setTool(entry.id);
-											// Leaving the select tool disarms a pending paste so no stray stamp lands.
 											if (entry.id !== "select") canvas.armPaste(false);
 											refresh();
 										}),
@@ -1325,7 +1275,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 											css({
 												...CONTROL_BUTTON,
 												borderColor: editor.collisionKind === entry.id ? ACCENT : IDLE_BORDER,
-												// A swatch of the kind's overlay color so the mapping is obvious.
 												boxShadow: `inset 0 -3px 0 0 ${entry.color}`,
 											}),
 											on<HTMLButtonElement, "click">("click", () => {
@@ -1341,7 +1290,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						</div>
 					) : null}
 
-					{/* Layer visibility toggles. */}
 					<div mix={LABEL}>
 						Show layers
 						<div mix={css({ display: "flex", gap: "0.35rem" })}>
@@ -1372,7 +1320,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						</div>
 					</div>
 
-					{/* View toggles: grid + always-on collision overlay. */}
 					<div mix={LABEL}>
 						View
 						<div mix={css({ display: "flex", gap: "0.35rem" })}>
@@ -1412,7 +1359,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						</div>
 					</div>
 
-					{/* Zoom stepper. */}
 					<div mix={LABEL}>
 						Zoom
 						<div mix={css({ display: "flex", gap: "0.35rem", alignItems: "center" })}>
@@ -1464,15 +1410,12 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					</div>
 				</div>
 
-				{/* Sidebar + canvas. */}
 				<div
 					mix={css({ display: "flex", flexWrap: "wrap", gap: "1.5rem", alignItems: "flex-start" })}
 				>
-					{/* Tileset sidebar. */}
 					<aside mix={css({ display: "grid", gap: "0.75rem", width: "18rem" })}>
 						<h3 mix={css({ margin: 0, fontSize: "1rem" })}>Tilesets</h3>
 
-						{/* Selected-tile preview so the active brush is always visible. */}
 						<SelectedTilePreview
 							loaded={loaded[editor.selection.tilesetIndex] ?? null}
 							tilesetIndex={editor.selection.tilesetIndex}
@@ -1555,7 +1498,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						))}
 					</aside>
 
-					{/* Map canvas. */}
 					<div mix={css({ display: "grid", gap: "0.5rem", flex: "1 1 24rem", minWidth: "0" })}>
 						<div
 							mix={css({
@@ -1613,7 +1555,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 							</span>
 						</div>
 
-						{/* Legend for the event trigger badges + collision colors. */}
 						<div
 							mix={css({
 								display: "flex",
@@ -1677,7 +1618,6 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						</div>
 					</div>
 
-					{/* Event editor dialog (modal), opened when an event is placed/clicked. */}
 					{selectedEvent ? (
 						<EventEditor event={selectedEvent} onCommit={commitEvent} onCancel={cancelEvent} />
 					) : null}
@@ -1769,11 +1709,9 @@ interface MapTreePanelProps {
 }
 
 /**
- * The map tree: the project's ordered list of maps (the active one highlighted) with
- * a create row (id + width×height + New map) above it. Clicking a map selects it;
- * each row has Rename (prompts for a new id) and Delete (disabled when only one map
- * remains so a project always keeps at least one). All lifecycle changes are handled
- * by the parent through the callbacks; this component only renders and dispatches.
+ * The map tree: the project's ordered maps, the active one highlighted, with a
+ * create row above it. Delete stays disabled when only one map remains, so a
+ * project always keeps at least one.
  *
  * @param handle Component handle exposing the tree props.
  * @returns The render function for the map-tree panel.
@@ -1801,7 +1739,6 @@ function MapTreePanel(handle: Handle<MapTreePanelProps>) {
 					</span>
 				</div>
 
-				{/* New-map row. */}
 				<div
 					mix={css({ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "flex-end" })}
 				>
@@ -1858,7 +1795,6 @@ function MapTreePanel(handle: Handle<MapTreePanelProps>) {
 					</button>
 				</div>
 
-				{/* The map list. */}
 				<ul
 					mix={css({
 						listStyle: "none",
@@ -1972,7 +1908,7 @@ interface TilesetPaletteProps {
  * highlighted; clicking a tile selects it (carrying this tileset's index). A
  * canvas per tile blits the tile's source rect from the loaded image.
  *
- * @param handle Component handle used to schedule re-renders (unused; props drive it).
+ * @param handle Component handle; rendering is driven entirely by `props`.
  * @returns The render function for one tileset palette.
  */
 function TilesetPalette(handle: Handle<TilesetPaletteProps>) {

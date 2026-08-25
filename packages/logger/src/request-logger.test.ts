@@ -1,3 +1,11 @@
+/**
+ * Unit tests for {@link Logger}, covering request/response capture, header
+ * filtering, scoped loggers, and the flush output format.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Logger } from "./request-logger";
@@ -330,7 +338,6 @@ describe(Logger.name, () => {
 				let request = new Request("https://example.com/test");
 				let logger = new Logger(request);
 
-				// Simulate parallel loaders
 				let teamLog = logger.loader("$team");
 				let monitorsLog = logger.loader("$team.monitors");
 
@@ -482,7 +489,6 @@ describe(Logger.name, () => {
 			let request = new Request("https://example.com/test");
 			let logger = new Logger(request);
 
-			// Only log to one scope
 			logger.loader("$team").info("team.loaded");
 			logger.flush();
 

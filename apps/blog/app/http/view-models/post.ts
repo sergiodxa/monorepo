@@ -17,10 +17,8 @@ import * as s from "remix/data-schema";
 type MarkdownContent = MarkdownType.Parsed<Record<string, never>>["content"];
 
 /**
- * Shared markdown parser configured to accept body-only content.
- *
- * Post sources in this app do not require frontmatter keys, so the parser uses
- * an empty frontmatter schema and treats markdown body content as the contract.
+ * Shared markdown parser built with an empty frontmatter schema: post sources
+ * carry body content only, so the markdown body is the whole contract.
  */
 let markdown = new Markdown({ frontmatter: s.object({}) });
 
@@ -38,31 +36,23 @@ export namespace PostViewModel {
 	 * so fields here act as the rendering contract for post responses.
 	 */
 	export interface Page {
-		/** Human-readable page title used in `<title>` and social tags. */
 		title: string;
-		/** Short summary used for SEO description and feed-like previews. */
 		description: string;
-		/** Top-level navigation path that should appear active in the UI. */
 		activePath: string;
 		/** Preferred URL for indexing; may differ from the request URL. */
 		canonical: string;
 		/** Open Graph and Twitter meta entries emitted by the layout. */
 		meta: Array<{ property: string; content: string }>;
-		/** Core post content displayed in the article body template. */
 		post: {
-			/** Display title repeated in page body and share cards. */
 			title: string;
 			/** Parsed markdown render tree; `null` when source content is empty. */
 			content: MarkdownContent | null;
-			/** URL slug used in public route segments. */
 			slug: string;
-			/** Public section path supported by this app. */
 			typePath: "articles" | "tutorials";
 			/** Small label shown above the title to identify post kind. */
 			eyebrow: string;
 			/** Raw DB publish timestamp where `null` means already published. */
 			publishedAt: string | null;
-			/** Optional content type override requested by the response format. */
 			format: "html" | "md" | undefined;
 			/** Tutorial tags, or an empty list for article posts. */
 			tags: Array<string>;
@@ -78,15 +68,11 @@ export namespace PostViewModel {
 	 * transformation step can preserve data origin before normalization.
 	 */
 	export interface ArticlePost {
-		/** Discriminant used to branch article-specific mapping logic. */
 		postType: "articles";
 		post: {
 			meta: {
-				/** Article heading displayed in metadata and page content. */
 				title: string;
-				/** Slug segment used to build `/articles/:slug` URLs. */
 				slug: string;
-				/** Optional summary used as SEO description when present. */
 				excerpt?: string;
 				/** Optional external canonical URL for syndicated content. */
 				canonical_url?: string;
@@ -101,19 +87,15 @@ export namespace PostViewModel {
 	/**
 	 * Repository payload expected when resolving a tutorial post.
 	 *
-	 * Tutorials do not provide `canonical_url`, and may include technology tags
-	 * that are rendered in both the page body and structured metadata.
+	 * Tutorials canonicalize to their own public URL, and may carry technology
+	 * tags rendered in both the page body and structured metadata.
 	 */
 	export interface TutorialPost {
-		/** Discriminant used to branch tutorial-specific mapping logic. */
 		postType: "tutorials";
 		post: {
 			meta: {
-				/** Tutorial heading displayed in metadata and page content. */
 				title: string;
-				/** Slug segment used to build `/tutorials/:slug` URLs. */
 				slug: string;
-				/** Optional summary used as SEO description when present. */
 				excerpt?: string;
 				/** Raw markdown content persisted in storage. */
 				content: string;
@@ -240,8 +222,8 @@ export class PostViewModel {
 	/**
 	 * Parses raw markdown into an AST and enforces parse success.
 	 *
-	 * Throws through `succeeded(...)` when parsing fails to avoid rendering a
-	 * partially-initialized page model.
+	 * Throws through `succeeded(...)` on failure so the page model is built only
+	 * from fully parsed content.
 	 *
 	 * @param content Raw markdown text from persisted post metadata.
 	 * @param message Failure message used when parse result is unsuccessful.

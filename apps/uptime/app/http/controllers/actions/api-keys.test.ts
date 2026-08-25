@@ -2,7 +2,7 @@
  * Tests the API-key create/delete actions: a successful create generates and stores
  * a hashed key (capped per team) and redirects to the list; a successful delete
  * removes the key; validation failure and the team-scoped not-found guard leave the
- * `api_keys` table untouched. *
+ * `api_keys` table untouched.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -59,8 +59,8 @@ async function postApiKeyAction(
 
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
 	/**
-	 * Casts `router.map` itself (rather than its arguments) so this helper can map
-	 * several differently-shaped routes without losing type-checking elsewhere.
+	 * Casts `router.map` itself so this helper can map several differently-shaped
+	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
 		middleware: [teamContextMiddleware(team, membership)],

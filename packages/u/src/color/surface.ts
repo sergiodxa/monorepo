@@ -13,11 +13,9 @@ import { fg } from "./fg";
 export type SurfaceRecipe = "default" | "muted" | SemanticToneName | `${SemanticToneName}.tinted`;
 
 /**
- * A surface recipe pattern, not a theme layer: composes `u.bg()`, `u.fg()`,
- * and `u.border()` together so a surface's contrast is preserved by
- * construction. Accepts only recipe names — never a raw palette value like
- * `"color.brand.500"` — because a surface must choose a matching background,
- * foreground, and border as a set, not one channel at a time.
+ * Composes `u.bg()`, `u.fg()`, and `u.border()` so a surface's contrast holds
+ * by construction. Accepts recipe names only, because a surface's background,
+ * foreground, and border must be chosen as one matching set.
  *
  * @example u.surface()
  * @example css({ backgroundColor: "var(--ui-bg, Canvas)", color: "var(--ui-fg, CanvasText)", borderColor: "var(--ui-border, ...)" })

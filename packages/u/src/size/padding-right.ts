@@ -1,12 +1,8 @@
 /**
- * `@pkg/u` is logical-property-first everywhere else in the `size/` family
- * (`u.pi()`, `u.pis()`, `u.pie()`, ...), but a fixed-side docked panel (e.g.
- * a drawer/sheet pinned to a physical screen edge) that pads itself away
- * from a genuinely physical, fixed viewport side — often combined with a
- * safe-area-inset offset — needs the physical property itself. This utility
- * is a deliberate, narrow exception scoped to that one use case: it sets
- * `padding-right` directly. For the logical default, use `u.pie()`/`u.pi()`
- * instead.
+ * `@pkg/u` is logical-property-first elsewhere in `size/`, but a docked
+ * panel pinned to a physical, fixed viewport edge — often with a
+ * safe-area-inset offset — needs the physical property itself. This
+ * utility is that narrow exception: it sets `padding-right` directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +13,9 @@ import { utility } from "../internal/descriptor";
 import { spacing } from "../internal/tokens";
 
 /**
- * Applies the physical `padding-right` property. Prefer `u.pie()`/`u.pi()`
- * (logical padding-inline) unless the padding is genuinely tied to the
- * physical right side rather than the logical inline-start/end edge.
+ * Applies the physical `padding-right` property, for padding pinned to a
+ * fixed, physical viewport edge — such as a safe-area-inset offset on a
+ * docked panel. Prefer `u.pie()`/`u.pi()` for logical inline padding.
  *
  * @example u.paddingRight(4)
  * @example css({ paddingRight: "calc(var(--ui-spacing, 0.25rem) * 4)" })

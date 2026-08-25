@@ -1,8 +1,7 @@
 /**
- * HTTP action for the public `/articles` index. It loads article list items from the
- * database (including preview posts when the viewer is an admin), maps them through the
- * articles view model, and renders the articles HTML view. It exists to compose
- * repository data into a server-rendered listing without SQL in the controller.
+ * HTTP action for the public `/articles` index. Admin viewers also receive posts still
+ * in preview. Data access stays in the repository layer so the controller composes and
+ * renders only.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,17 +19,11 @@ import { ArticlesView } from "~/resources/views/articles";
 import routes from "~/routes/web";
 
 /**
- * Serves the public articles index by composing repository data into a server-rendered HTML response.
- * Contract: resolve `Database` from route context, map items through the view model, and render `ArticlesView`.
+ * Serves the public articles index as a server-rendered listing.
+ * @returns HTML response for `GET /articles`.
  */
 export default createAction(
 	routes.articles,
-	/**
-	 * Handles `GET /articles` using request-scoped dependencies from the route context.
-	 * @param ctx Route context that must provide a `Database` instance.
-	 * @returns HTML response for the articles listing page.
-	 * @example GET /articles
-	 */
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let articles = await ArticlePost.listItems(db, { includePreview: isAdmin() });

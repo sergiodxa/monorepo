@@ -80,12 +80,9 @@ describe(Tabs.List.name, () => {
 			</Tabs>,
 		);
 
-		// The pre-existing fallback-only var() reads are always present...
 		expect(html).toContain("var(--ui-tab-indicator-inline-size, 0px)");
 		expect(html).toContain("var(--ui-tab-indicator-inline-start, 0px)");
 		expect(html).toContain("var(--ui-tab-indicator-opacity, 0)");
-		// ...but nothing on the host itself sets a literal value for them —
-		// that's the signature a controlled activeIndex/tabSize would leave.
 		expect(html).not.toContain("--ui-tab-indicator-inline-start: calc(");
 		expect(html).not.toContain("--ui-tab-indicator-inline-size: ");
 		expect(html).not.toContain("--ui-tab-indicator-opacity: 1;");

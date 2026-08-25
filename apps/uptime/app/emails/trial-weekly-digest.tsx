@@ -1,24 +1,9 @@
 /**
- * The last email of one URL's free watch: the whole seven days as a bar and three
- * numbers, then the one call to action this family is allowed.
- *
- * Its unit is the URL, not the address, because what it marks is the end of *that*
- * URL's week — a lead who tried three URLs on three different days gets three of these
- * on three different days. That is the opposite unit from the daily digest, which
- * gathers a whole address into one message, so the two are separate classes with
- * separate data rather than one class with a window parameter. They still share the
- * bar and the totals block, which is the part that genuinely is the same.
- *
- * The bar is one segment per day, not per hour. 168 hourly segments across the 552px
- * the layout leaves would be about 1px each once the gutters are taken out, below the
- * width several clients round away entirely; seven segments also matches the promise
- * the confirmation made, so the row reads as the week that was watched. Each segment
- * is the worst status that day produced, because a summary that hid an outage inside
- * an average would be the one number a reader could not act on.
- *
- * The subscribe link carries no persuasion copy. Seven days of checks on the reader's
- * own URL is the argument, and a sentence claiming as much on top of it would only
- * make the report look like it needed help (ADR-030).
+ * The last email of one URL's free watch: seven days as a bar and three numbers,
+ * then the one call to action this family allows. One segment per day, each the
+ * worst status that day produced, keeps an outage visible in the total. The
+ * subscribe link states the offer plainly, since seven days of checks on the
+ * reader's own URL is the argument (ADR-030).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,9 +41,8 @@ export namespace TrialWeeklyDigestEmail {
 		subscribeUrl: string;
 		/**
 		 * The watch's own `report_token`, which turns this report into a page the reader can
-		 * reopen — see `TrialFooter`. Omitted when the sender has no token to give: a mail
-		 * is worth sending without the link, and a report link built from a missing token would
-		 * be a 404 in somebody's inbox forever.
+		 * reopen — see `TrialFooter`. Omitted when missing, since a link built from no token
+		 * would be a 404 in somebody's inbox forever.
 		 */
 		reportToken?: string;
 		/** The lead's unguessable token, which the footer link and the headers are built from. */
@@ -76,7 +60,7 @@ export namespace TrialWeeklyDigestEmail {
  * @example ctx.email.later(new TrialWeeklyDigestEmail({ ...week, subscribeUrl, locale, t }));
  */
 export class TrialWeeklyDigestEmail implements Email {
-	/** The week this email reports; nothing is loaded while rendering. */
+	/** The already-resolved week this email reports; rendering only formats it. */
 	#digest: TrialWeeklyDigestEmail.Data;
 
 	/**
@@ -93,7 +77,7 @@ export class TrialWeeklyDigestEmail implements Email {
 		return { email: this.#digest.to };
 	}
 
-	/** Subject naming the URL and the window, so it reads as a report rather than an offer. */
+	/** Subject naming the URL and the window, so it reads as a report of the week that ended. */
 	get subject(): string {
 		return this.#digest.t("emails.trial.weekly.subject", {
 			url: trialDisplayUrl(this.#digest.url),

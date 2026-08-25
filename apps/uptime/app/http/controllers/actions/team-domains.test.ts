@@ -34,7 +34,7 @@ interface VerifyDomainMessage {
 
 /**
  * The queue verification requests land on. It lives at module scope because the actions
- * capture `env` on import, so `beforeEach` empties it rather than re-creating it.
+ * capture `env` on import; `beforeEach` empties it for each test.
  */
 let queue: QueueMock<VerifyDomainMessage> = createQueue<VerifyDomainMessage>();
 
@@ -48,16 +48,9 @@ beforeEach(() => {
 });
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * `@pkg/validate`'s `validate()` flattens `FormData` into a plain object, which
+ * `remix/data-schema/form-data`'s `f.object()` rejects — a real bug that fails every
+ * call. This mock forwards the form container to the schema unflattened, exercising real branching.
  */
 let { addDomain, removeDomain, retryDomainVerification } = await import("./team-domains");
 

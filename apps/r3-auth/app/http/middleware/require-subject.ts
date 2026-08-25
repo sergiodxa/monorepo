@@ -2,7 +2,7 @@
  * Route guard for the signed-in area. Requires both tokens in the session, refreshes
  * the access token through the OIDC engine when it is close to expiring, resolves the
  * subject it names, and publishes it as `ctx.subject`. Any failure clears both tokens
- * and sends the visitor back to `/authorize` rather than leaving a half-valid session.
+ * and sends the visitor back to `/authorize`, closing out the session cleanly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,13 +38,9 @@ declare module "remix/router" {
 }
 
 /**
- * Requires a signed-in subject, refreshing the access token when needed.
- *
- * The refresh is silent, and both tokens are written back rather than only the access
- * token. The refresh token is the session row's id, so the grant hands back the *same*
- * value and only touches the row — but writing the pair is what keeps this correct if
- * the grant ever does issue a new id, since a session holding a stale refresh token
- * could never refresh again.
+ * Requires a signed-in subject, refreshing the access token when needed. Both tokens are
+ * written back together, since the refresh token is the session row's id — a stale one
+ * would prevent the session from ever refreshing again.
  */
 export const requireSubject: Middleware = async (ctx, next) => {
 	let accessToken = getAccessToken();
@@ -62,8 +58,10 @@ export const requireSubject: Middleware = async (ctx, next) => {
 			ctx.logger.info("auth_refreshing_token");
 			let tokens = await createOidcProvider(db).token({ type: "refresh_token", refreshToken });
 
-			// The grant must answer with both tokens; anything else is a bug in the engine
-			// and must sign the session out rather than half-write it.
+			/**
+			 * The grant must answer with both tokens; anything short of that signals an
+			 * engine bug, so the guard signs the session out wholesale.
+			 */
 			if (typeof tokens.access_token !== "string") throw new Error("No access token returned");
 			if (!("refresh_token" in tokens)) throw new Error("No refresh token returned");
 			if (typeof tokens.refresh_token !== "string") throw new Error("No refresh token returned");

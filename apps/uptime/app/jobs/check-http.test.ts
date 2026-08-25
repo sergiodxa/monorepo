@@ -1,34 +1,9 @@
 /**
- * Unit tests for `CheckHttpJob.perform()`, the whole HTTP check pipeline: input
- * validation, classification of up/degraded/down against the expected status, degraded
- * threshold and content checks, and the at-least-once guarantees — a redelivered job id
- * must not produce a second `monitor_results` row, a second analytics data point, or a
- * second alert. An unavailable Durable Object must ask for a redelivery; an unreachable
- * monitored endpoint must not.
- *
- * `env.GEO_FETCH` is a binding mock whose objects answer with a stub, so the region-hinted
- * fetch is controlled per test and every object the job resolved is recorded, which is how
- * the shard a check lands on and the jurisdiction it is pinned to are asserted. The
- * database is a real in-memory SQLite one so the primary-key collision that backs
- * idempotency is genuinely exercised rather than simulated.
- *
- * Neither `~/app/services/analytics` nor `~/app/services/alerts` is mocked: analytics is
- * observed through the in-memory `PING_RESULTS` dataset it writes to, which records each
- * point and enforces the platform's cardinality and size limits, and alert dispatch runs for
- * real against the test database and is observed through the `alert_events` rows it
- * leaves behind — which is what makes the "no duplicate alert" assertions meaningful.
- * MSW serves the two endpoints the pipeline reaches for — webhook delivery, and the
- * Analytics Engine SQL API the check no longer needs to ask anything of — on separate
- * handlers, so a delivery is observed as the request it is.
- *
- * Polar is the one dependency held as a double: the container is handed a client whose
- * `ingestEventsSafe` is spied on, so the ping the job bills can be asserted — its
- * deduplication id, its customer, its metadata — without a request leaving the process.
- *
- * Two of the suites are about cost rather than correctness (ADR-019): that the job
- * logs the Durable Object's billed wall time next to the probe's response time instead
- * of conflating them, and that one healthy check still costs the six indexed D1
- * statements it is supposed to cost.
+ * Unit tests for `CheckHttpJob.perform()`: classification, degraded thresholds and
+ * content checks, at-least-once idempotency, Durable Object sharding and EU
+ * jurisdiction pinning (ADR-013), the D1 cost model (ADR-019), and Polar metering.
+ * The database is a real in-memory SQLite instance and MSW serves the webhook and
+ * Analytics Engine endpoints, so only the Polar client is mocked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,22 +57,15 @@ let doFetchMock = vi.fn(
 
 /**
  * The `GEO_FETCH` binding, routing every object it hands out to {@link doFetchMock}.
- *
- * Its `resolutions` are the probes the job issued, in order, one per `get`, each carrying
- * the object's name, the region it was placed in, and the jurisdiction it was reached
- * through. It enforces the platform's rule that a jurisdiction is a property of the *id*,
- * stamped on by whichever (sub)namespace minted it, so `get` errors when the id's
- * jurisdiction differs from the namespace's — see
- * https://developers.cloudflare.com/durable-objects/reference/data-location/. That rule is
- * the whole reason the EU branch has to mint its id from the subnamespace instead of from
- * `env.GEO_FETCH` (ADR-013).
+ * Its `resolutions` record each probe's object name, region, and jurisdiction, in
+ * order, since a jurisdiction is a property of the id that minted it (ADR-013).
  */
 let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchMock }));
 
 /**
- * The dataset `writePingResult` reports to. It lives at module scope because the module
- * under test captures `env` on import, so `beforeEach` empties it rather than re-creating
- * it, and it enforces the platform's per-point cardinality and size limits.
+ * The dataset `writePingResult` reports to, at module scope since the module under
+ * test captures `env` on import; `beforeEach` empties it in place to keep that
+ * reference live, and it enforces the platform's per-point cardinality and size limits.
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
@@ -109,7 +77,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 let polar = new PolarClient({ accessToken: "polar_at_test" });
 let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
-/** The queue the check's own path never sends to, kept so a stray send would be recorded. */
+/** The queue, watched so a stray send from the check would be caught here. */
 let queue: QueueMock = createQueue();
 
 vi.doMock("cloudflare:workers", () => ({
@@ -121,7 +89,7 @@ vi.doMock("cloudflare:workers", () => ({
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
 	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
-	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
+	/** Present so `~/app/do/geo-fetch` can extend it at module load. */
 	DurableObject: class {},
 }));
 
@@ -161,8 +129,8 @@ async function runJob(db: Database, monitorId: string, options: { jobId?: string
 
 /**
  * Seeds the team a monitor belongs to, which is what names the Polar customer the check
- * is billed to. Most suites here leave it out — the check itself doesn't depend on it —
- * so the metering and cost suites seed it explicitly.
+ * is billed to. Only the metering and cost suites need it seeded, since billing is the
+ * one thing here that reads it.
  */
 async function seedTeam(db: Database, overrides: Record<string, unknown> = {}) {
 	return await db.create(
@@ -242,7 +210,7 @@ function derivedObjectNames(): string[] {
 	return geoFetch.resolutions.map((resolution) => resolution.name);
 }
 
-/** The Analytics Engine SQL API endpoint, which the check reads nothing from any more. */
+/** The Analytics Engine SQL API endpoint, served as a default handler for any query landing there. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/test-account/analytics_engine/sql";
 
 /** The endpoint {@link seedAlert}'s webhook alert delivers to. */
@@ -252,9 +220,9 @@ let WEBHOOK_URL = "https://hooks.test/alert";
 let deliveries: string[] = [];
 
 /**
- * MSW serving the two endpoints the pipeline reaches for. They are default handlers rather
- * than per-test ones because every check may touch either, and `onUnhandledRequest: "error"`
- * turns any third destination into a failure instead of a silent request.
+ * MSW serving the two endpoints the pipeline reaches for, as default handlers so every
+ * check can touch either one; `onUnhandledRequest: "error"` turns any third destination
+ * into a failure.
  */
 let server = setupServer(
 	http.post(SQL_URL, () => HttpResponse.json({ data: [] })),
@@ -331,7 +299,6 @@ describe("CheckHttpJob classification", () => {
 	test("records a 'down' result with null timings when the endpoint is unreachable", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
-		// How `GeoFetchDO` reports a request it couldn't complete.
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
@@ -434,11 +401,9 @@ describe("CheckHttpJob content checks", () => {
 });
 
 /**
- * Which `GeoFetchDO` instance a check probes through (ADR-009). The region still comes
- * from the monitor's location hint, but the object id is sharded within that region so a
- * region's probing isn't serialized through a single object — while staying stable per
- * monitor, because a monitor that moved shards would show a step change in its response
- * times that nothing the user did explains.
+ * Which `GeoFetchDO` instance a check probes through (ADR-009): the region comes from
+ * the location hint, sharded eight ways to spread probing across objects, and pinned
+ * per monitor so a shard move can't fake a response-time change.
  */
 describe("CheckHttpJob Durable Object sharding", () => {
 	test("probes through a shard of the monitor's region", async () => {
@@ -447,7 +412,6 @@ describe("CheckHttpJob Durable Object sharding", () => {
 
 		await runJob(db, monitor.id);
 
-		// The region is still the location hint; eight shards per region, hence 0-7.
 		expect(derivedObjectNames()).toEqual([expect.stringMatching(/^weur:[0-7]$/)]);
 	});
 
@@ -465,7 +429,6 @@ describe("CheckHttpJob Durable Object sharding", () => {
 	test("spreads monitors across the shards instead of collapsing onto one", async () => {
 		let { db } = createTestDatabase();
 
-		// Fixed ids so this asserts the hash's spread rather than which uuids came up.
 		for (let index = 0; index < 8; index++) {
 			let monitor = await seedMonitor(db, { id: `monitor-${index}` });
 			await runJob(db, monitor.id);
@@ -477,11 +440,9 @@ describe("CheckHttpJob Durable Object sharding", () => {
 });
 
 /**
- * Which regions get an EU-pinned Durable Object, and that the id it probes through was
- * minted by the namespace it is handed to (ADR-013). A jurisdiction is a hard constraint
- * on where the object runs while a location hint is only a preference, so a hint pinned to
- * the wrong jurisdiction probes from the wrong continent and records a `response_time_ms`
- * for it — which is what `enam` in the set did, uncaught, because none of this was covered.
+ * Which regions get an EU-pinned Durable Object, and that its id was minted by the
+ * subnamespace handed to `get`, since a jurisdiction lives on the id and a mismatch is
+ * what the real binding rejects (ADR-013) — the bug that once retried every EU check.
  */
 describe("CheckHttpJob EU jurisdiction", () => {
 	/** Every value `monitors.location_hint` accepts. */
@@ -509,9 +470,6 @@ describe("CheckHttpJob EU jurisdiction", () => {
 
 		await runJob(db, monitor.id);
 
-		// Eastern *North America*: the region it asked for, and no jurisdiction to
-		// override it. Pinning it to the EU moved the probe to another continent, and
-		// every response time it recorded with it.
 		expect(geoFetch.resolutions[0]?.locationHint).toBe("enam");
 		expect(geoFetch.resolutions[0]?.jurisdiction).toBeUndefined();
 	});
@@ -522,9 +480,6 @@ describe("CheckHttpJob EU jurisdiction", () => {
 
 		await runJob(db, monitor.id);
 
-		// An id minted off the base namespace carries no jurisdiction, and handing that to
-		// the EU subnamespace's `get` is the mismatch the real binding rejects — which
-		// turned every check in a European region into a retry that could only spin.
 		expect(geoFetch.resolutions[0]?.jurisdiction).toBe("eu");
 		expect(geoFetch.resolutions[0]?.name).toMatch(/^eeur:[0-7]$/);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
@@ -534,7 +489,6 @@ describe("CheckHttpJob EU jurisdiction", () => {
 describe("CheckHttpJob idempotency", () => {
 	test("a redelivered job records one result, one data point, and one alert", async () => {
 		let { db } = createTestDatabase();
-		// A `down` result so alert dispatch is reached at all.
 		let monitor = await seedMonitor(db, { expected_status: 500 });
 		await seedAlert(db, monitor.id);
 		let jobId = `${monitor.id}:1700000000000`;
@@ -591,7 +545,6 @@ describe("CheckHttpJob error handling", () => {
 				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
 		);
 
-		// Resolving rather than rejecting is what makes `Job.run` ack the message.
 		await expect(runJob(db, monitor.id)).resolves.toBeDefined();
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
@@ -599,7 +552,6 @@ describe("CheckHttpJob error handling", () => {
 	test("an unavailable Durable Object retries instead of recording a 'down'", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
-		// A rejected stub call is the object itself failing, not the monitored endpoint.
 		doFetchMock.mockImplementation(async () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
@@ -672,12 +624,9 @@ interface ObservedStatement {
 }
 
 /**
- * Builds a test database that records every statement executed through it, together
- * with the query plan SQLite chose, so a test can assert what one job costs.
- *
- * The adapter is wrapped rather than replaced, so the SQL, the bindings, and the plan
- * are the real ones the production adapter would send to D1 — `@pkg/data-table-d1`
- * and this test adapter compile identical SQLite statements from the same operations.
+ * Builds a test database that records every statement executed through it, with the
+ * query plan SQLite chose, so a test can assert what one job costs against the same
+ * SQL and bindings production sends to D1.
  * @returns The `db` handle and the array statements are appended to.
  */
 function createObservedDatabase() {
@@ -709,8 +658,8 @@ function createObservedDatabase() {
 /**
  * Asks SQLite how it intends to run a statement.
  *
- * Returns an empty plan for anything SQLite won't explain (an `INSERT` of literal
- * values has no interesting plan) rather than failing the test that asked.
+ * Returns an empty plan for anything SQLite won't explain — an `INSERT` of literal
+ * values has no interesting plan — so the assertions above see nothing to flag.
  * @param sqliteDb Open SQLite database with the schema applied.
  * @param sql Statement text as compiled for D1.
  * @param values Bindings for the statement.
@@ -728,10 +677,10 @@ function explain(sqliteDb: SqliteDatabase, sql: string, values: unknown[]): stri
 }
 
 /**
- * The plan steps that read a whole table instead of searching it.
+ * The plan steps where SQLite scans a whole table.
  *
- * These are what make rows read scale with table size, which is the property the cost
- * model depends on and the one counting returned rows cannot see.
+ * Rows read scale with table size once a plan degrades to a scan, a property that
+ * counting returned rows alone cannot reveal.
  * @param statements Statements recorded by {@link createObservedDatabase}.
  * @returns One entry per scanning plan step, empty when every statement uses an index.
  */
@@ -741,7 +690,11 @@ function tableScans(statements: ObservedStatement[]): string[] {
 	);
 }
 
-/** Narrows a compiled binding to something the SQLite driver accepts. */
+/**
+ * Narrows a compiled binding to something the SQLite driver accepts. Any other type
+ * throws, since its default stringification would send the query a value nothing
+ * meant to bind.
+ */
 function toBinding(value: unknown): unknown {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "string") return value;
@@ -749,8 +702,6 @@ function toBinding(value: unknown): unknown {
 	if (typeof value === "bigint") return value;
 	if (typeof value === "boolean") return value ? 1 : 0;
 	if (value instanceof Uint8Array) return value;
-	// Anything else is not a value the driver ever compiles into a binding, and binding
-	// its default stringification would silently run the query against nonsense.
 	throw new TypeError(`Unsupported SQL binding of type ${typeof value}`);
 }
 
@@ -769,8 +720,6 @@ describe("CheckHttpJob Durable Object wall time", () => {
 		let logger = await runJob(db, monitor.id);
 
 		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
-		// Two numbers, not one conflated one: 12ms is what the monitored site's users
-		// experience, 37.5ms is (a lower bound on) what the Durable Object bills for.
 		expect(completed?.responseTimeMs).toBe(12);
 		expect(completed?.doWallTimeMs).toBe(37.5);
 	});
@@ -803,52 +752,14 @@ describe("CheckHttpJob Durable Object wall time", () => {
 		let logger = await runJob(db, monitor.id);
 
 		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
-		// A measurement that didn't happen is not a handler that took no time.
 		expect(completed?.doWallTimeMs).toBeNull();
 	});
 });
 
 /**
- * The cost model of one HTTP check, asserted (ADR-019 §4). ADR-002 derives the cost of
- * an HTTP ping mostly from its D1 rows read, and the single worst regression that
- * analysis found was a query that reads a whole table to answer a question about a few
- * rows. These tests turn that into a CI failure instead of a bill six months later.
- *
- * What is pinned, and why those numbers:
- *
- * - **N = 6 statements**, one per thing the job has to know or record: the
- *   at-least-once duplicate check on `monitor_results`, the monitor row, its enabled
- *   content checks, the insert of the result, the write-back of the status that
- *   result put the monitor in, and the team row naming the owner the ping is billed to.
- *   A healthy `up` check dispatches no alerts (`notifyHttpResult` returns early unless
- *   the check is a recovery or not `up`), so nothing in the alert pipeline runs, and
- *   neither Analytics Engine nor Polar is D1.
- *
- *   It was 4 until ADR-011 moved recovery detection off Analytics Engine and onto a
- *   `monitors.last_status` column, which has to be maintained by a statement of its own —
- *   the scheduler's claim is a different write with a different trigger, so there was
- *   nothing to ride on. That trades one D1 statement per check for one Analytics Engine
- *   query per check, roughly a wash; the saving that paid for it is on the read side,
- *   where the monitors list dropped one uncached Analytics Engine query per monitor per
- *   page view.
- *
- *   The sixth is the owner lookup metering needs. Unlike the DNS and TCP sweeps, which
- *   resolve every owner a sweep touches in one query, this job checks a single monitor,
- *   so its lookup cannot be amortised over anything — one indexed point lookup per HTTP
- *   check is the price of billing one.
- * - **M = 6 rows**, at most one per statement: every statement is a point lookup
- *   through a unique or composite index, so it either finds its row or finds nothing.
- *   A healthy check actually returns 4 (the monitor row, the inserted result, the
- *   monitor row the status write updates, and the team row).
- * - **No statement may `SCAN` a table.** This is the assertion that really bounds rows
- *   read: rows read scales with table size the moment a plan degrades to a scan, and
- *   that cannot be seen by counting rows returned. D1's own planner has the final say —
- *   ADR-019 §3 re-checks these plans against production — but a plan that scans here
- *   will scan there.
- *
- * Rows *written* are deliberately not asserted: they are driven by how many indexes
- * cover the written table, which SQLite reports nowhere useful. That number now comes
- * from production instead, through the `usage` field this ADR added to `job.completed`.
+ * The cost model of one HTTP check: 6 D1 statements, 6 rows, no table scan (ADR-019 §4).
+ * ADR-002 traced the platform's worst cost regression to a table-scanning query, so
+ * catching one here turns it into a CI failure long before it becomes a bill.
  */
 describe("CheckHttpJob cost model", () => {
 	/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
@@ -876,8 +787,6 @@ describe("CheckHttpJob cost model", () => {
 
 		let rows = statements.reduce((total, statement) => total + statement.rows, 0);
 		expect(rows).toBeLessThanOrEqual(MAX_ROWS);
-		// The monitor row read, the result row written back with RETURNING, the monitor row
-		// the cached-status write updates, and the team row the ping is billed to.
 		expect(rows).toBe(4);
 	});
 
@@ -890,8 +799,6 @@ describe("CheckHttpJob cost model", () => {
 
 		await runJob(db, monitor.id);
 
-		// A `findDue`-shaped query — the regression ADR-002 §16 is most afraid of —
-		// shows up here as a `SCAN <table>` step and fails this assertion.
 		expect(tableScans(statements)).toEqual([]);
 	});
 
@@ -900,8 +807,6 @@ describe("CheckHttpJob cost model", () => {
 		await seedTeam(db);
 		let monitor = await seedMonitor(db);
 
-		// Enough unrelated rows that a plan which scanned instead of searching would
-		// read hundreds of them rather than one.
 		for (let index = 0; index < 50; index++) await seedMonitor(db);
 		for (let index = 0; index < 200; index++) {
 			await db.create(
@@ -930,8 +835,6 @@ describe("CheckHttpJob cost model", () => {
 		let { db, statements } = createObservedDatabase();
 		statements.length = 0;
 
-		// `monitors.name` is deliberately unindexed, so this is what a regression looks
-		// like to the assertions above.
 		await db.findMany(monitors, { where: { name: "Example site" } });
 
 		expect(tableScans(statements)).toEqual(["SCAN monitors"]);
@@ -963,14 +866,12 @@ describe("CheckHttpJob alerting", () => {
 
 	test("treats a never-checked monitor as no previous status", async () => {
 		let { db } = createTestDatabase();
-		// A fresh monitor's `last_status` is NULL, which is why no backfill is needed.
 		let monitor = await seedMonitor(db);
 		await seedAlert(db, monitor.id);
 		expect(monitor.last_status).toBeNull();
 
 		await runJob(db, monitor.id);
 
-		// No previous status is never a recovery, so an `up` check stays silent.
 		expect(await db.findMany(alertEvents, { where: { monitor_id: monitor.id } })).toHaveLength(0);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
@@ -979,8 +880,6 @@ describe("CheckHttpJob alerting", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { last_status: "down" });
 		await seedAlert(db, monitor.id);
-		// The previous status comes from the monitor row now, so the SQL API being down
-		// cannot silence a recovery the way it used to.
 		server.use(http.post(SQL_URL, () => HttpResponse.error()));
 
 		await runJob(db, monitor.id);
@@ -988,8 +887,6 @@ describe("CheckHttpJob alerting", () => {
 		let events = await db.findMany(alertEvents, { where: { monitor_id: monitor.id } });
 		expect(events).toHaveLength(1);
 		expect(events[0]?.event_type).toBe("up");
-		// The row is written before delivery is attempted, so the wire is what proves the
-		// recovery was actually announced.
 		expect(deliveries).toEqual([WEBHOOK_URL]);
 	});
 });
@@ -1010,8 +907,6 @@ describe("CheckHttpJob cached status", () => {
 	test("doesn't cache a status for a check that never committed a result", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
-		// An unavailable Durable Object taught us nothing about the endpoint, so the row
-		// must not come away claiming a check happened.
 		doFetchMock.mockImplementation(async () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
@@ -1026,10 +921,9 @@ describe("CheckHttpJob cached status", () => {
 });
 
 /**
- * The check as a billable ping. One check is one event against the `ping` meter, keyed on
- * the job id so a redelivery Polar does see is deduplicated on its side as well as
- * short-circuited on ours, and reported after the commit so it can never bill a check that
- * produced no result.
+ * The check as a billable ping: one event against the `ping` meter, keyed on the job id
+ * so a redelivery is deduplicated on Polar's side as well as short-circuited on ours, with
+ * billing happening only once a result has actually committed.
  */
 describe("CheckHttpJob metering", () => {
 	/** Every event the job handed Polar, flattened across the calls it made. */
@@ -1066,7 +960,6 @@ describe("CheckHttpJob metering", () => {
 
 		await runJob(db, monitor.id);
 
-		// The allowance counts checks performed, not endpoints that answered correctly.
 		expect(ingestedEvents()).toHaveLength(1);
 	});
 
@@ -1084,7 +977,6 @@ describe("CheckHttpJob metering", () => {
 
 	test("records an unbillable team and bills nothing when the team row is gone", async () => {
 		let { db } = createTestDatabase();
-		// No team row: a delete that raced this delivery, so there is no Polar customer.
 		let monitor = await seedMonitor(db);
 
 		let logger = await runJob(db, monitor.id);
@@ -1094,7 +986,6 @@ describe("CheckHttpJob metering", () => {
 			(entry) => entry.event === "job.check_http.unbillable_team",
 		);
 		expect(unbillable?.teamId).toBe("team-1");
-		// The check still happened and is still recorded — only the billing is lost.
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 
@@ -1106,8 +997,6 @@ describe("CheckHttpJob metering", () => {
 
 		let logger = await runJob(db, monitor.id);
 
-		// Past the commit point a redelivery short-circuits on the job id, so throwing here
-		// would ask the queue for a retry that can only spin.
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 		expect(logger.events.find((entry) => entry.event === "job.check_http.completed")).toBeDefined();
 	});

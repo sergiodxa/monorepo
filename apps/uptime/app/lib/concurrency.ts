@@ -9,13 +9,9 @@
  */
 
 /**
- * How many monitors a sweep works on at once.
- *
- * Ten is a placeholder pending measurement, not a tuned value: it sits under the
- * Workers simultaneous-subrequest ceiling with room for the D1 statements each check
- * makes, but the real number should come from observed sweep durations under load
- * (ADR-008 leaves this explicitly open, and ADR-019's instrumentation is what makes it
- * measurable). Change it here and every sweep picks it up.
+ * How many monitors a sweep works on at once. Ten is a placeholder pending
+ * measurement (ADR-008), sized to leave room under the Workers subrequest ceiling
+ * for each check's D1 statements; change it here and every sweep picks it up.
  */
 export const SWEEP_CONCURRENCY = 10;
 
@@ -42,12 +38,8 @@ export type Settled<Item, Value> =
 
 /**
  * Runs `work` over `items` in batches of at most `concurrency`, awaiting each batch
- * before starting the next, and returns every outcome in the input's order.
- *
- * Failures are isolated rather than propagated: one item throwing neither abandons the
- * rest of its batch nor stops later batches, matching the per-monitor `try`/`catch`
- * every sweep already had. Callers decide what a failure means — count it, log it, or
- * both — by inspecting the returned outcomes.
+ * before starting the next, and returns every outcome in the input's order; the rest
+ * of the batch and every batch after it still complete even when one item throws.
  */
 export async function mapWithConcurrency<Item, Value>(
 	items: Item[],
@@ -68,9 +60,9 @@ export async function mapWithConcurrency<Item, Value>(
 		);
 
 		/**
-		 * The mapped function above turns a throw into a resolved outcome, so every
-		 * promise here is fulfilled. `allSettled` is still what awaits them, so a
-		 * rejection that somehow escapes can't take the whole batch down with it.
+		 * The mapped function above turns every throw into a resolved outcome, so every
+		 * promise here is fulfilled; `allSettled` still awaits them, keeping the batch's
+		 * outcomes intact even if one promise rejects unexpectedly.
 		 */
 		for (let outcome of outcomes) if (outcome.status === "fulfilled") settled.push(outcome.value);
 	}

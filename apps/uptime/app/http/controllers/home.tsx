@@ -1,23 +1,10 @@
 /**
- * Home controller. Renders the public marketing homepage — a split hero with a product
- * screenshot, trust indicators, three benefit rows, feature and use-case grids, an
- * interactive usage-based pricing calculator, and a two-column FAQ — inside the shared
- * `MarketingLayout` chrome. It exists as the top-of-funnel entry point for anonymous
- * visitors, and as the redirect target for unauthenticated `requireUser` guards
- * (signed-in viewers see a "Go to dashboard" call to action instead of a sign-in form).
- *
- * The pricing calculator is the one part of this page that ships JavaScript: it's a
- * `clientEntry` island, since a running total that responds to a slider drag can't be
- * expressed server-side. Everything else here is static server-rendered HTML,
- * including the FAQ (native `<details>`).
- *
- * The hero's try-it box is the one form on the page, and it `POST`s straight to the run
- * action on `/try`, so the check runs on the first click and its answer comes back in
- * that same response. Running a check is only ever a `POST`, which is what keeps a link
- * preview, a crawler, or a URL somebody shared from spending one of the free probes:
- * none of them issue one. The box carries no call to action, no benefits copy
- * and no email capture either: `/try` is the page that sells, and every control added
- * beside this field is one more thing between a visitor and their answer.
+ * Home controller — the public marketing homepage: hero, trust indicators, benefit
+ * rows, feature and use-case grids, a pricing calculator, and an FAQ, inside
+ * `MarketingLayout`. Serves as the top-of-funnel entry point and the redirect target
+ * for unauthenticated `requireUser` guards. The pricing calculator is the page's one
+ * `clientEntry` island; the hero's try-it form `POST`s straight to `/try` so the
+ * check runs on the first click.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -136,17 +123,9 @@ function marketingContainer() {
 }
 
 /**
- * The one/two/three-column ladder every content grid on this page shares.
- *
- * The breakpoints are deliberately identical across sections rather than tuned per
- * grid: `css()` emits each mixin into its own `@layer rmx.<class>`, and layer order
- * follows each class's *first* appearance in the document — so between two
- * overlapping media rules on the same element, the one whose class the page happened
- * to emit later wins, regardless of which breakpoint is narrower. A grid asking for
- * two columns at ≥640px and three at ≥1024px therefore renders two columns at
- * 1280px whenever some earlier section already emitted the 1024px rule. Sharing one
- * ladder keeps every grid's rules in ascending breakpoint order, which is the order
- * the cascade needs them in.
+ * The one/two/three-column ladder every content grid on this page shares. Grids
+ * list breakpoints in ascending order because `css()` layers mixins by first
+ * appearance, and layer order decides which overlapping media rule wins.
  */
 function responsiveGrid() {
 	return [
@@ -157,10 +136,9 @@ function responsiveGrid() {
 }
 
 /**
- * Background for the alternating sections. One palette step off the page's own
- * `--ui-neutral-bg-tint` body color in each scheme, rather than the semantic
- * `bg("neutral.tint")` — that resolves to the *same* token the body already uses,
- * so the alternation it's meant to express renders as no change at all.
+ * Background for the alternating sections: one palette step off the page's own
+ * `--ui-neutral-bg-tint` body color in each scheme, so the alternation stays visible
+ * against a body already painted with the semantic `neutral.tint` token.
  */
 function tintedSection() {
 	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
@@ -200,12 +178,12 @@ export default createAction(routes.home, async (ctx) => {
 		t("landing.hero.trustIndicators.cancelAnytime"),
 	];
 
+	/**
+	 * Each value is a verifiable product spec, chosen so every figure in this strip
+	 * can be checked against real behavior. "1min" is the enforced check-interval
+	 * floor: `interval_seconds` carries a 60-second minimum in validation.
+	 */
 	let TRUST_INDICATORS: TrustIndicator[] = [
-		// Every figure in this strip has to be a fact about what the product does, not a
-		// claim about how well it does it: this is a monitoring tool, so an unbacked
-		// reliability number is the most expensive kind of copy on the page. The count is
-		// the five kinds of check the app actually runs — HTTP, DNS, TCP, SSL and
-		// cron/heartbeat.
 		{
 			icon: <ActivityIcon size={24} strokeWidth={1.5} />,
 			value: "5",
@@ -221,11 +199,6 @@ export default createAction(routes.home, async (ctx) => {
 			value: "365",
 			label: t("landing.trustIndicators.daysDataRetention"),
 		},
-		// The check-interval floor rather than an alert-delivery time: how fast a
-		// notification arrives depends on an inbox, a webhook endpoint and a chat
-		// provider we don't run, so a latency figure here would be a promise about
-		// somebody else's infrastructure. The floor is ours, and it's enforced —
-		// `interval_seconds` is validated at a 60-second minimum.
 		{
 			icon: <ClockIcon size={24} strokeWidth={1.5} />,
 			value: "1min",
@@ -303,12 +276,9 @@ export default createAction(routes.home, async (ctx) => {
 	}));
 
 	/**
-	 * The three audiences this row points at, not all six `/for/:slug` pages. Six pills
-	 * of equal weight tell a visitor nothing about who the product is for — the row reads
-	 * as a tag cloud, and the two audiences the product is least shaped for (enterprises,
-	 * platform teams with their own on-call stack) borrow the same prominence as the ones
-	 * it is. The other pages stay in the footer's solutions column and in the sitemap, so
-	 * every one of them is still crawlable and one click from the chrome.
+	 * The three audiences this row highlights, out of six `/for/:slug` pages —
+	 * curated so each pill reads as a deliberate pick a visitor can act on. The
+	 * other three stay reachable through the footer's solutions column and the sitemap.
 	 */
 	let AUDIENCE_LINKS = [
 		{ key: "agencies", slug: "agencies" },
@@ -321,8 +291,8 @@ export default createAction(routes.home, async (ctx) => {
 
 	/**
 	 * The pricing model's own figures, formatted for the request's locale, for the
-	 * copy that quotes them. Interpolated rather than written into the translations so
-	 * `app/lib/pricing.ts` stays the only place a price is stated.
+	 * copy that quotes them. Interpolating these into the copy keeps `app/lib/pricing.ts`
+	 * the only place a price is stated.
 	 */
 	let pricingCopyValues = {
 		price: formatMoney(ctx.locale, BASE_PRICE_USD),
@@ -332,10 +302,9 @@ export default createAction(routes.home, async (ctx) => {
 	};
 
 	/**
-	 * The three reasons to keep reading, stated as product facts a visitor can check on
-	 * this page: what a subscription covers, what it doesn't count, and what it costs.
-	 * The cost line interpolates {@link pricingCopyValues} rather than spelling the
-	 * figures out, so `app/lib/pricing.ts` stays the only place a price is stated.
+	 * The three reasons to keep reading, stated as checkable product facts: coverage,
+	 * usage accounting, and cost. The cost line interpolates {@link pricingCopyValues},
+	 * keeping `app/lib/pricing.ts` the only place a price is stated.
 	 */
 	let BENEFITS = [
 		{
@@ -350,6 +319,7 @@ export default createAction(routes.home, async (ctx) => {
 		description: t(`landing.benefits.list.${benefit.key}.description`, pricingCopyValues),
 	}));
 
+	/** FAQ entries; the billing answers interpolate {@link pricingCopyValues}. */
 	let FAQS = [
 		"first",
 		"second",
@@ -372,13 +342,14 @@ export default createAction(routes.home, async (ctx) => {
 		"nineteenth",
 	].map((key) => ({
 		question: t(`landing.faq.list.${key}.q`),
-		// The billing answers quote the pricing model's own figures through
-		// interpolation, so `app/lib/pricing.ts` stays the only place a price is
-		// stated; the keys that don't mention money simply ignore these values.
 		answer: t(`landing.faq.list.${key}.a`, pricingCopyValues),
 	}));
 
-	/** Split into two balanced accordion columns, the longer half first. */
+	/**
+	 * Split into two balanced accordion columns, the longer half first. Each column's
+	 * items carry independent `name`s, so a visitor can open several answers across
+	 * columns at once.
+	 */
 	let faqSplitIndex = Math.ceil(FAQS.length / 2);
 	let firstFaqColumn = FAQS.slice(0, faqSplitIndex);
 	let secondFaqColumn = FAQS.slice(faqSplitIndex);
@@ -390,7 +361,6 @@ export default createAction(routes.home, async (ctx) => {
 			seo={{
 				description: t("landing.meta.description"),
 				canonical: SEO.canonical(ctx.url),
-				// The one page whose subject is the site itself.
 				schema: SEO.schema.website(),
 			}}
 			preload={[
@@ -413,12 +383,6 @@ export default createAction(routes.home, async (ctx) => {
 						}),
 					]}
 				>
-					{/*
-					 * Decorative halo behind the hero, centered on its top edge. Its soft
-					 * falloff comes from a radial gradient rather than a `blur()` filter —
-					 * the named blur scale tops out at 24px, which on an 800px circle reads
-					 * as a hard-edged disc rather than a glow.
-					 */}
 					<div
 						aria-hidden="true"
 						mix={[
@@ -554,7 +518,6 @@ export default createAction(routes.home, async (ctx) => {
 								</div>
 							</div>
 
-							{/* The product screenshot, one variant per color scheme. */}
 							<picture
 								mix={[
 									block(),
@@ -570,8 +533,6 @@ export default createAction(routes.home, async (ctx) => {
 								<img
 									src={SCREENSHOT_LIGHT}
 									alt={t("landing.hero.screenshot.alt")}
-									// Intrinsic size of both variants, so the hero reserves the
-									// right box before the image decodes instead of reflowing.
 									width={3216}
 									height={2080}
 									mix={[block(), is("full"), bs("auto")]}
@@ -581,10 +542,6 @@ export default createAction(routes.home, async (ctx) => {
 					</div>
 				</section>
 
-				{/* Its own padding rather than `sectionPadding()`, and none at all on top: this is
-				    one line of copy and a field, not a chapter, and the hero above already ends
-				    with 128px of its own. Stacking a second block on that put 184px of nothing
-				    between the trust strip and the heading. */}
 				<section id="try" mix={[pbs(0), pbe(10), media("(min-width: 1024px)", pbe(14))]}>
 					<div mix={[...marketingContainer(), vstack({ gap: 4, align: "center" })]}>
 						<Heading level={2} mix={[m(0), fontSize("2xl"), textAlign("center")]}>
@@ -594,12 +551,6 @@ export default createAction(routes.home, async (ctx) => {
 							{t("landing.try.description")}
 						</p>
 
-						{/* Posts straight to `/try` rather than navigating there with the URL in the
-						    query. A GET landing on `/try` could only pre-fill the field — probing on a
-						    GET would let a crawler or a link preview spend a check — so it cost the
-						    visitor a second click for the same intent. A POST is followed by neither,
-						    so the check runs on the first click and its answer comes back in that
-						    same response. */}
 						<form
 							method="post"
 							action={routes.trial.check.action.href()}
@@ -621,12 +572,7 @@ export default createAction(routes.home, async (ctx) => {
 								required
 								mix={[grow(1), is("full"), textAlign("start")]}
 							/>
-							{/* This form posts straight to the run action, so it has to carry the same
-							    challenge `/try`'s own form does — otherwise the one-click path would be
-							    the one way into the prober that skips it. */}
 							<Turnstile siteKey={trialTurnstileSiteKey()} />
-							{/* Pinned to `Input`'s own fixed 40px rather than left to padding, which is
-							    what sizes a Button and what left the two a few pixels apart. */}
 							<Button type="submit" mix={[shrink(0), nowrap(), bs(10)]}>
 								{t("landing.try.submit")}
 							</Button>
@@ -636,12 +582,6 @@ export default createAction(routes.home, async (ctx) => {
 
 				<MarketingTrustIndicators indicators={TRUST_INDICATORS} />
 
-				{/* Directly after the hero block — the try-it box and the figure strip above are
-				    part of it — and before the feature grid, because a visitor decides whether the
-				    product is for them before they care which checks it runs. Rendered with the
-				    same icon-beside-text rows the capability list below uses rather than a fourth
-				    kind of card: three claims about the product don't need a visual treatment of
-				    their own, and inventing one would make the page look like it has two heroes. */}
 				<section id="benefits" mix={[...sectionPadding()]}>
 					<div mix={[...marketingContainer()]}>
 						<SectionHeader
@@ -727,7 +667,6 @@ export default createAction(routes.home, async (ctx) => {
 							))}
 						</div>
 
-						{/* The audience links: one row of pills below the use-case grid. */}
 						<div
 							mix={[
 								mbs(12),
@@ -777,10 +716,6 @@ export default createAction(routes.home, async (ctx) => {
 							description={t("landing.pricing.description")}
 						/>
 
-						{/* `PricingCalculator` is a `clientEntry` island: its render function runs
-						both here (the server pass) and again after hydration, so it reads its copy
-						through `intl(handle)` rather than `ctx.i18next` — which needs an
-						`IntlProvider` ancestor for `intl(handle)` to resolve at all. */}
 						<IntlProvider i18n={ctx.i18next}>
 							<PricingCalculator initialFrequencies={[10]} />
 						</IntlProvider>
@@ -795,8 +730,6 @@ export default createAction(routes.home, async (ctx) => {
 							description={t("landing.faq.description")}
 						/>
 
-						{/* Two independent accordion columns — each item opens and closes on its
-						own (no shared `name`), so a visitor can compare several answers at once. */}
 						<div
 							mix={[
 								grid(),

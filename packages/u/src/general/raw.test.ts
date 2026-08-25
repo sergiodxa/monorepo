@@ -1,4 +1,10 @@
 /**
+ * The escape hatch inherits the serializer's number handling: a bare number on
+ * a property outside the unitless allow-list gains a `px` suffix, so `flex: 1`
+ * serializes as `flex: 1px` and parses as a `1px` basis, leaving the layout
+ * quietly wrong. Pass such values as strings; zero and known-unitless
+ * properties keep their bare number.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -23,19 +29,11 @@ describe("raw", () => {
 	});
 
 	test("a bare number on a non-unitless property picks up a px suffix", async () => {
-		// The trap this escape hatch cannot protect callers from: the serializer
-		// appends `px` to any unitless number outside its small allow-list of
-		// genuinely unitless properties. `flex: 1` becomes `flex: 1px`, which
-		// does not get dropped — it parses as a `1px` flex-basis instead of the
-		// `0%` the shorthand means — so the layout is quietly wrong rather than
-		// visibly broken. Pass the value as a string when in doubt.
 		expect(await declarations(raw({ flex: 1 }))).toEqual(["flex: 1px"]);
 		expect(await declarations(raw({ flex: "1" }))).toEqual(["flex: 1"]);
 	});
 
 	test("zero and known-unitless properties are left alone", async () => {
-		// The serializer skips zero, and skips properties it knows take a
-		// unitless number — so the hazard above is narrower than "every number".
 		expect(await declarations(raw({ margin: 0 }))).toEqual(["margin: 0"]);
 		expect(await declarations(raw({ lineHeight: 1.5 }))).toEqual(["line-height: 1.5"]);
 	});

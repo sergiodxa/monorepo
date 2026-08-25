@@ -1,3 +1,12 @@
+/**
+ * `DatabaseDriver` implementation for a Cloudflare Durable Object `SqlStorage`
+ * binding, compiling `remix/data-table` operations to SQLite text and
+ * normalizing the types SQLite cannot store natively on the way back.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type {
 	DataManipulationOperation,
 	DataManipulationRequest,
@@ -17,12 +26,8 @@ interface SqlStorageAdapterOptions {
 
 /**
  * Creates a `DatabaseDriver` backed by a Cloudflare Durable Object `SqlStorage`.
- *
- * SQL generation follows SQLite semantics. Durable Object SQLite (`ctx.storage.sql`)
- * runs synchronously inside the object and accepts `BEGIN`/`COMMIT`/`ROLLBACK` and
- * `SAVEPOINT` statements, so transactions are executed for real: statements issued
- * within a `transaction()` scope are committed atomically on success and rolled back
- * as a unit on failure. Nested transactions are implemented with savepoints.
+ * `SqlStorage` runs `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` synchronously, so
+ * transactions commit or roll back atomically and nesting uses savepoints.
  * @param db `SqlStorage` handle used to execute SQL.
  * @param options Optional capability overrides for adapter feature flags.
  * @returns A `DatabaseDriver` implementation for `SqlStorage`.
@@ -62,10 +67,6 @@ export function createSQLStorageDatabaseAdapter(
 				};
 			}
 
-			// `c.json()` columns hold JS objects/arrays at the model layer, but SqlStorage's
-			// binder accepts only strings/numbers/booleans/null — encode them to JSON
-			// text before binding. `decodeColumns` undoes this, and the boolean-to-integer
-			// narrowing SQLite forces, on every row read back.
 			operation = encodeJsonColumns(operation);
 
 			let statement = compileSqliteStatement(operation);
@@ -105,8 +106,6 @@ export function createSQLStorageDatabaseAdapter(
 				assertTransaction(transaction);
 			}
 
-			// SqlStorage.exec runs a single statement, so split multi-statement
-			// scripts and execute each non-empty statement in order.
 			for (let statement of splitStatements(sql)) {
 				db.exec(statement);
 			}
@@ -219,10 +218,9 @@ export function createSQLStorageDatabaseAdapter(
 		},
 
 		/**
-		 * Rejects: the SQLite database belongs to the Durable Object and is created and
-		 * destroyed with it, so an adapter holding `ctx.storage.sql` can drop the tables
-		 * it knows about but cannot recreate the database. Callers that want an empty
-		 * schema should run migrations down, or delete the object's storage.
+		 * Always rejects. The Durable Object owns the SQLite database's lifecycle,
+		 * so callers get a clean slate by running migrations down or deleting the
+		 * object's storage.
 		 */
 		async wipe(): Promise<void> {
 			throw new Error("SqlStorage adapter wipe is not supported");
@@ -235,8 +233,6 @@ export function createSQLStorageDatabaseAdapter(
 		close(): void {},
 	};
 }
-
-// SQL Compilation
 
 type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
 type UpsertOperation = Extract<DataManipulationOperation, { kind: "upsert" }>;
@@ -768,8 +764,6 @@ function splitStatements(sql: string): string[] {
 		.filter((statement) => statement.length > 0);
 }
 
-// Result normalization
-
 function normalizeStatementValues(values: unknown[]): SqlStorageValue[] {
 	return values.map((value) => (value === undefined ? null : value)) as SqlStorageValue[];
 }
@@ -811,12 +805,9 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 }
 
 /**
- * Returns `true` when a `db.exec()`/raw SQL statement's text looks like a `SELECT`
- * (including a `WITH` CTE or a `PRAGMA` read). A `"raw"` operation's kind carries no
- * structural read/write signal — unlike `select`/`insert`/etc., which the query
- * builder already knows — so this sniffs the leading keyword to decide whether the
- * statement's already-executed cursor should be read via `.toArray()`. Without this,
- * a raw `SELECT` silently gets no rows even though the cursor already holds them.
+ * Returns `true` when a raw SQL statement's text looks like a `SELECT`
+ * (including a `WITH` CTE or `PRAGMA` read). A `"raw"` operation carries no
+ * read/write signal of its own, so `execute()` sniffs the leading keyword instead.
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);
@@ -901,8 +892,8 @@ interface DecodableColumns {
 /**
  * Collects a table's `c.json()` and `c.boolean()` column names in a single pass.
  *
- * One pass rather than two because this runs per read statement: the read path needs
- * both sets together, while the write path only ever needs the JSON one.
+ * This runs per read statement, and the read path needs both sets together,
+ * while the write path uses only the JSON set.
  */
 function getDecodableColumnNames(table: StatementTable): DecodableColumns {
 	let definitions = getTableColumnDefinitions(table);
@@ -919,21 +910,8 @@ function getDecodableColumnNames(table: StatementTable): DecodableColumns {
 
 /**
  * Restores, on every row read back, the JS types SQLite cannot store natively.
- *
- * `c.json()` columns go in as JSON text and must come back as the objects the model
- * layer works with. `c.boolean()` columns are the same problem with a quieter failure:
- * SQLite has no boolean storage class, so `normalizeBoundValue` writes `true`/`false`
- * as `1`/`0` and, without this decode, the column reads back as a number while the
- * generated row type still claims `boolean`. That lie corrupts data rather than
- * crashing — `<input checked={0}>` renders `checked="0"`, and an HTML boolean
- * attribute is on whenever it is merely present, so a stored `false` came back ticked
- * and re-saving the form flipped it to true; a JSON API serializing the same field
- * promised `boolean` and emitted `1`. Decoding here, where the table definition is in
- * hand, is what makes the row type honest for every caller at once, instead of asking
- * each call site to remember a `Boolean(...)` wrapper.
- *
- * `null` is left alone: a nullable boolean column's `null` is a third state, and the
- * `?? true` defaults callers write over it depend on telling it apart from `false`.
+ * `c.json()` text decodes to objects and `c.boolean()` integers decode to real
+ * booleans; `null` stays untouched so a nullable column's third state survives.
  */
 function decodeColumns(
 	operation: DataManipulationOperation,
@@ -954,9 +932,7 @@ function decodeColumns(
 			if (typeof value === "string") {
 				try {
 					decoded[column] = JSON.parse(value);
-				} catch {
-					// Leave the raw string in place if it somehow isn't valid JSON.
-				}
+				} catch {}
 			}
 		}
 
@@ -1014,6 +990,11 @@ function normalizeInsertIdForReader(
 	return row ? row[key] : undefined;
 }
 
+/**
+ * The cursor reports only rows and counts, so the last inserted id comes from
+ * querying `last_insert_rowid()` directly; a `RETURNING` clause is the more
+ * direct way for callers that need the id.
+ */
 function normalizeInsertIdForRun(
 	kind: DataManipulationOperation["kind"],
 	operation: DataManipulationOperation,
@@ -1027,8 +1008,6 @@ function normalizeInsertIdForRun(
 		return undefined;
 	}
 
-	// SqlStorage does not expose lastInsertRowid on the cursor, so query it
-	// directly. Callers that need the id should prefer a RETURNING clause.
 	let row = db.exec("SELECT last_insert_rowid() as id").toArray()[0];
 
 	return row ? row.id : undefined;

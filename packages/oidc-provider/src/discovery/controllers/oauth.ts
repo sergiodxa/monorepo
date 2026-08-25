@@ -21,7 +21,6 @@ import routes from "../../routes";
 
 /**
  * OAuth 2.0 Authorization Server Metadata endpoint (RFC 8414).
- * Provides discovery information about the OAuth 2.0 authorization server.
  * @returns A JSON `Response` with the authorization server metadata.
  */
 export default createAction(

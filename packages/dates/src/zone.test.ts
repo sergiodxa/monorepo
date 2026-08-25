@@ -92,7 +92,6 @@ describe("instantFromParts", () => {
 	});
 
 	test("resolves an hour DST skipped to the instant just after the gap", () => {
-		// 02:30 does not exist in New York on 2026-03-08; the clock goes 01:59 to 03:00.
 		let instant = instantFromParts(
 			{ year: 2026, month: 3, day: 8, hour: 2, minute: 30, second: 0, millisecond: 0 },
 			NEW_YORK,
@@ -102,7 +101,6 @@ describe("instantFromParts", () => {
 	});
 
 	test("resolves an hour DST repeated to the earlier of the two instants", () => {
-		// 01:30 happens twice in New York on 2026-11-01, first at -04:00 then at -05:00.
 		let instant = instantFromParts(
 			{ year: 2026, month: 11, day: 1, hour: 1, minute: 30, second: 0, millisecond: 0 },
 			NEW_YORK,
@@ -177,7 +175,6 @@ describe("startOfDayInstant", () => {
 	});
 
 	test("opens a day at the first instant that exists when DST skips midnight", () => {
-		// Cuba starts daylight time at 00:00, so 2026-03-08 begins at 01:00 there.
 		let instant = startOfDayInstant({ year: 2026, month: 3, day: 8 }, "America/Havana");
 		expect(zonedParts(instant, "America/Havana")).toMatchObject({ day: 8, hour: 1, minute: 0 });
 		expect(calendarDayAt(instant - 1, "America/Havana")).toEqual({

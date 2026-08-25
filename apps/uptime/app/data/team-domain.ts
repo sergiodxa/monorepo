@@ -66,13 +66,9 @@ export default class TeamDomain {
 	}
 
 	/**
-	 * Verified hostnames for several teams at once, keyed by team id.
-	 *
-	 * For the flow sweep, which claims monitors across every team and then needs each one's
-	 * allowance: a lookup per monitor would put a D1 read on every check in the batch, and two
-	 * monitors on the same team would read the same rows twice. A team with no verified domain
-	 * is absent from the map rather than present with an empty list, so a caller has to decide
-	 * what that means instead of running a check that can reach nothing.
+	 * Verified hostnames for several teams at once, keyed by team id, so a sweep across
+	 * many monitors reads each team's rows once. A team with no verified domain is
+	 * absent from the map, leaving the caller to decide what an empty allowance means.
 	 */
 	static async verifiedHostnamesByTeamIds(
 		db: Database,

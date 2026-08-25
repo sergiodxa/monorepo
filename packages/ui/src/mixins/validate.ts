@@ -1,20 +1,9 @@
 /**
  * Applies a shared `remix/data-schema` field schema to a native form
- * control's current value, layering the schema's verdict onto the field's
- * own Constraint Validation API state through `setCustomValidity()`. Once
- * the browser's own validation attempt flags the field, this mirrors the
- * resulting message into the field's `FieldError` slot instead of letting
- * the browser render its native validation bubble for it.
- *
- * Why JS: turning an arbitrary schema check into a message the browser's own
- * `invalid` event and `:invalid`/`:user-invalid` selectors already
- * understand requires evaluating that schema in script — no HTML constraint
- * attribute expresses a schema-shaped check.
- * No-JS baseline: the field's native constraint attributes (`required`,
- * `pattern`, `minlength`, `type="email"`, ...) still block submission on
- * their own, and the browser's own validation bubble reports them; the
- * server re-validates the same shared schema on submit and re-renders the
- * field with whatever `FieldError` message it finds.
+ * control's current value, layering the verdict onto the field's Constraint
+ * Validation API state via `setCustomValidity()` and mirroring it into the
+ * field's `FieldError` slot once the browser flags it invalid, since no HTML
+ * constraint attribute expresses a schema-shaped check on its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,11 +22,9 @@ import { createElement, createMixin, on } from "remix/ui";
 export type ValidatableField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
 /**
- * Attribute the FieldError slot exposes itself on. A field's own
- * `aria-describedby` may list more than one id — a Description alongside a
- * FieldError — so {@link validate} walks those ids and mirrors the schema's
- * verdict into the first one carrying this attribute, rather than assuming
- * the FieldError sits at a fixed position in the DOM relative to the field.
+ * Attribute the FieldError slot exposes itself on. Since `aria-describedby`
+ * may list a Description alongside a FieldError, {@link validate} walks
+ * those ids and mirrors the verdict into the first one carrying this attribute.
  */
 export const FIELD_ERROR_ATTRIBUTE = "data-field-error";
 
@@ -53,8 +40,7 @@ declare global {
 /**
  * Dispatched on a field by {@link validate} whenever running its schema
  * changes whether the field is valid, so a consumer can react — disabling a
- * submit button, announcing the change through a live region — without
- * polling the field's `validity` state itself.
+ * submit button, a live-region announcement — without polling `validity`.
  */
 export class ValidateChangeEvent extends Event {
 	/** `true` once the field's current value satisfies the schema and every other constraint. */
@@ -74,10 +60,8 @@ export class ValidateChangeEvent extends Event {
 
 /**
  * Runs `schema` against `field`'s current value and layers the verdict onto
- * the field's native validity through `setCustomValidity()` — an empty
- * string clears any previous custom error, leaving the field's other native
- * constraints (`required`, `pattern`, ...) to keep deciding validity on
- * their own.
+ * its native validity via `setCustomValidity()` — an empty string clears any
+ * prior custom error, leaving the field's other constraints to keep deciding.
  *
  * @param field Field whose value `schema` checks.
  * @param schema Schema `field.value` is validated against.
@@ -114,10 +98,8 @@ function findFieldErrorSlot(field: ValidatableField): HTMLElement | null {
 
 /**
  * Mirrors `message` onto `field` and its FieldError slot: sets `aria-invalid`
- * for assistive technology (the field's own styling already reacts to
- * `:user-invalid` without help from script), and writes `message` into the
- * FieldError slot found through {@link findFieldErrorSlot}, hiding that slot
- * again once `message` is empty.
+ * for assistive technology since `:user-invalid` styling needs no script
+ * help, and writes `message` into the slot from {@link findFieldErrorSlot}, hiding it once empty.
  *
  * @param field Field the message belongs to.
  * @param message Current `validationMessage`, empty when `field` is valid.
@@ -141,22 +123,9 @@ function mirrorValidity(field: ValidatableField, message: string): void {
 }
 
 /**
- * Adds schema-driven client validation to a native form field. Every `input`
- * keeps the field's Constraint Validation API state current with `schema`'s
- * verdict through `setCustomValidity()`, so the browser's own submission
- * blocking and `:invalid`/`:user-invalid` selectors already reflect it.
- *
- * The first time the browser actually reports the field invalid — a submit
- * attempt, or any `reportValidity()` call — `validate()` intercepts that
- * `invalid` event in the capture phase (the event does not bubble, so the
- * field is where it must be caught), prevents the browser's own validation
- * bubble, and mirrors `field.validationMessage` into the field's FieldError
- * slot instead. From that point on, every further `input` keeps the
- * FieldError slot and `aria-invalid` live as the value changes, clearing
- * them again once the field satisfies `schema` and every other constraint.
- *
- * Dispatches {@link ValidateChangeEvent} on the field whenever this changes
- * whether it's valid.
+ * Adds schema-driven client validation to a form field: `input` keeps its
+ * Constraint Validation state current via `setCustomValidity()`, and once
+ * reported invalid, mirrors the message into the FieldError slot instead of the native bubble, dispatching {@link ValidateChangeEvent} on change.
  *
  * @param schema Schema checked against the field's raw string value —
  * typically the same schema the server parses the submitted form with.

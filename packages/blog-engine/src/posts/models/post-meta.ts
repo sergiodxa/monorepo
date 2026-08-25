@@ -10,7 +10,7 @@ import type { Database } from "remix/data-table";
 
 import { postMeta } from "../../database/schema";
 
-/** Input for creating a metadata row attached to a post. */
+/** Fields accepted when creating a metadata row; `id`, `created_at`, and `updated_at` default when omitted. */
 export interface CreatePostMetaInput {
 	id?: string;
 	post_id: string;
@@ -20,7 +20,7 @@ export interface CreatePostMetaInput {
 	updated_at?: string;
 }
 
-/** Repository for `post_meta` rows (EAV metadata for posts). */
+/** CRUD access to `post_meta` rows, returning values in their raw stored string form. */
 export class PostMeta {
 	/** Table reference shared by all queries. */
 	static table = postMeta;

@@ -2,7 +2,7 @@
  * Tests the `/api/v1/monitors` collection endpoints: listing and creating HTTP
  * monitors for the authenticated team, and the team-wide stats rollup. Covers the
  * happy paths, validation failures, missing/invalid API keys, wrong-scope keys, and
- * that the index never leaks another team's monitors.
+ * that the index returns only the calling team's monitors.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +23,9 @@ import { monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` (imported by `./monitors`) reads `env` from `cloudflare:workers`
- * at module load time, so it has to resolve under the test runner. These endpoints touch no
- * binding, and the empty strict env proves it: any read would throw by the binding's name
- * instead of quietly answering `undefined`.
+ * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
+ * must resolve under the test runner. An empty strict env proves these endpoints touch no
+ * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 

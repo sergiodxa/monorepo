@@ -1,12 +1,9 @@
 /**
  * Tests for the in-battle switch/replacement picker and its decision helper.
  *
- * Covers the pure `decideReplacement` classifier — zero healthy choices lose, one
- * auto-sends, two or more prompt — and the `BattleSwitch` component: a forced
- * replacement blocks cancel (the fainted creature cannot be left in play) while a
- * voluntary switch allows it, and confirming a row returns its team-local creature
- * index. A scripted fake `InputManager` supplies the button edges; `render` needs a
- * canvas and is not tested.
+ * Covers `decideReplacement` (lose/auto/prompt by choice count) and
+ * `BattleSwitch`, where a forced replacement blocks cancel and a voluntary
+ * switch allows it. A fake `InputManager` supplies button edges.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,9 +68,7 @@ test("a voluntary switch allows cancel back to the action menu", () => {
 test("a forced replacement blocks cancel: the fainted creature cannot be left in play", () => {
 	let picker = new BattleSwitch();
 	picker.open(true);
-	// Pressing B (cancel) is ignored while the replacement is mandatory.
 	expect(picker.update(fakeInput({ pressed: [Button.B] }), CHOICES)).toBe(null);
-	// Only confirming a creature resolves a forced replacement.
 	expect(picker.update(fakeInput({ pressed: [Button.A] }), CHOICES)).toEqual({
 		kind: "switch",
 		creature: 1,

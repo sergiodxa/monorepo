@@ -1,10 +1,9 @@
 /**
  * An interruptive modal surface that demands an explicit response before a
  * page continues — confirming a destructive action, surfacing a blocking
- * error — built on the same native `<dialog>` host as {@link Dialog} but
- * widened for its two-button layout and sealed against light dismiss. Its
- * compound parts cover a header, title, description, and a footer holding an
- * emphasized action and a cancel control.
+ * error — built on the native `<dialog>` host of {@link Dialog}, widened for
+ * its two-button layout and sealed against light dismiss. Its compound parts
+ * cover a header, title, description, and a two-control footer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,10 +29,8 @@ const DEFAULT_COMMAND = "close";
 
 /**
  * Native `button` `type` {@link AlertDialog.Action} and
- * {@link AlertDialog.Cancel} fall back to when `type` is omitted. It has to
- * be spelled out: a `<button>` inside a `<form>` defaults to `"submit"`, and
- * the platform refuses to run an Invoker Command on a submit button, so a
- * cancel or close control left untyped inside a form silently does nothing.
+ * {@link AlertDialog.Cancel} always spell out, since the platform runs an
+ * Invoker Command only from a button typed `"button"`, `<form>` or not.
  */
 const DEFAULT_TYPE: NonNullable<Button.Props["type"]> = "button";
 
@@ -51,10 +48,9 @@ const DEFAULT_CANCEL_COLOR: Button.Color = "neutral";
  */
 export namespace AlertDialog {
 	/**
-	 * Every prop {@link Dialog} accepts except the ones this component fixes
-	 * on the consumer's behalf: `role` is always `"alertdialog"`, and
-	 * `closedby`/`closedBy` are always `"closerequest"`, so the panel can
-	 * never be light-dismissed by clicking its backdrop.
+	 * Every prop {@link Dialog} accepts, minus the ones this component fixes:
+	 * `role` is always `"alertdialog"` and `closedby`/`closedBy` always
+	 * `"closerequest"`, so the panel closes only on an explicit close request.
 	 */
 	export interface Props extends Omit<Dialog.Props, "role" | "closedby" | "closedBy"> {}
 
@@ -65,9 +61,8 @@ export namespace AlertDialog {
 
 	/**
 	 * Props accepted by {@link AlertDialog.Title}. Every native heading-element
-	 * attribute still applies, since the rendered tag depends on the nearest
-	 * ambient heading level, falling back to `<h1>` where nothing supplies
-	 * one.
+	 * attribute applies, since the rendered tag follows the nearest ambient
+	 * heading level, falling back to `<h1>`.
 	 */
 	export interface TitleProps extends TagProps<"h1"> {}
 
@@ -88,17 +83,14 @@ export namespace AlertDialog {
 	export interface ActionProps extends Omit<Button.Props, "commandfor" | "command"> {
 		/**
 		 * `id` of the ancestor {@link AlertDialog} this action dismisses.
-		 * Needed for the default `type="button"` action, which closes the panel
-		 * through an Invoker Command; a `type="submit"` action leaves it off,
-		 * since submitting its enclosing form is what ends the interruption.
+		 * Required for the default `type="button"` action; a `type="submit"`
+		 * action ends the interruption by submitting its enclosing form.
 		 */
 		commandfor?: string;
 		/**
 		 * Invoker Commands verb dispatched to the target AlertDialog. Defaults
-		 * to `"close"`, and is dropped entirely for an action whose `type` is
-		 * `"submit"` or `"reset"` — the platform refuses to run a command on
-		 * such a button, so rendering one would be a promise this control
-		 * cannot keep.
+		 * to `"close"`, and is dropped for a `"submit"` or `"reset"` action,
+		 * which the platform drives as a form control instead of an invoker.
 		 */
 		command?: "close";
 	}
@@ -113,28 +105,18 @@ export namespace AlertDialog {
 		/** Invoker Commands verb dispatched to the target AlertDialog. Defaults to `"close"`. */
 		command?: "close";
 		/**
-		 * Narrowed to the only value a cancel control can carry, and rendered
-		 * whether or not it's passed: a cancel control is never a submit
-		 * button, and an untyped button inside a `<form>` would default to
-		 * `"submit"`, which the platform then refuses to run a command on.
+		 * Narrowed to the only value a cancel control carries, and always
+		 * rendered, since the platform runs its close command only from a
+		 * button typed `"button"`, including inside a `<form>`.
 		 */
 		type?: "button";
 	}
 }
 
 /**
- * Renders the alert panel through {@link Dialog}, inheriting its native
- * `<dialog>` host, tinted `::backdrop`, padding, and rounded, shadowed
- * surface, widened to fit a two-button footer. `role` is fixed to
- * `"alertdialog"` and `closedby` is fixed to `"closerequest"`: an Escape
- * press still closes the panel, but clicking its backdrop never does,
- * matching the alert dialog pattern's requirement that an interruption only
- * clears through an explicit response. Opening and closing still ride
- * Invoker Commands exactly as {@link Dialog} does — a trigger elsewhere on
- * the page points `commandfor` at this element's `id` with
- * `command="show-modal"`, and {@link AlertDialog.Action} or
- * {@link AlertDialog.Cancel} inside it point back at that same `id` with
- * `command="close"`.
+ * Renders the alert panel through {@link Dialog}, widened to fit a two-button
+ * footer, with `role` fixed to `"alertdialog"` and `closedby` to
+ * `"closerequest"` so the interruption clears through an explicit response.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props.
  * @returns The render function producing the panel's markup.
@@ -187,9 +169,7 @@ AlertDialog.Header = function AlertDialogHeader(handle: Handle<AlertDialog.Heade
 /**
  * Renders {@link AlertDialog.TitleProps.children} as the panel's heading,
  * inside the native heading element matching the nearest ancestor
- * `HeadingScope`'s depth, or `<h1>` where no scope wraps it at all, sized as
- * the panel's most prominent line of text at its font's own default line
- * height.
+ * `HeadingScope`'s depth, or `<h1>` where no scope wraps it.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the heading's markup.
@@ -239,11 +219,9 @@ AlertDialog.Description = function AlertDialogDescription(
 };
 
 /**
- * Renders {@link AlertDialog.FooterProps.children} as the panel's action row:
- * an end-aligned row of controls, separated from the content above it by a
- * block-start margin. Compose {@link AlertDialog.Cancel} before
- * {@link AlertDialog.Action} so the emphasized, potentially destructive
- * control renders last.
+ * Renders {@link AlertDialog.FooterProps.children} as an end-aligned action
+ * row. Compose {@link AlertDialog.Cancel} before {@link AlertDialog.Action}
+ * so the emphasized, potentially destructive control renders last.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action row's markup.
@@ -262,24 +240,9 @@ AlertDialog.Footer = function AlertDialogFooter(handle: Handle<AlertDialog.Foote
 };
 
 /**
- * Renders the panel's emphasized action for the ancestor {@link AlertDialog}
- * named by `commandfor`: a {@link Button} colored with the semantic danger
- * tone by default, since this control most often confirms a destructive
- * action. `command` defaults to `"close"`, so passing `commandfor` and the
- * button's label is enough to wire it up; pass `color` to override the
- * default tone for a non-destructive confirmation.
- *
- * `type` defaults to `"button"`, so the control stays a command invoker even
- * inside a `<form>`, where an untyped button would default to `"submit"` and
- * the platform would then refuse to run its command at all. Passing
- * `type="submit"` deliberately swaps that around: the control submits its
- * enclosing form and renders no `command`/`commandfor` of its own, which is
- * how a server-rendered destructive action confirms — the form's response
- * ends the interruption instead of a command closing the panel.
- *
- * In dev mode, an action that is neither a submit button nor pointed at a
- * panel through `commandfor` logs a `console.warn`, since pressing it would
- * do nothing at all.
+ * Renders the panel's emphasized action as a danger-toned {@link Button},
+ * typed `"button"` so its `command="close"` reaches the {@link AlertDialog}
+ * named by `commandfor`; `type="submit"` submits the enclosing form instead.
  *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the action's markup.
@@ -317,17 +280,9 @@ AlertDialog.Action = function AlertDialogAction(handle: Handle<AlertDialog.Actio
 };
 
 /**
- * Renders the panel's dismiss control for the ancestor {@link AlertDialog}
- * named by `commandfor`: an outline-styled, neutral-colored {@link Button}
- * that backs out of the interruption without taking
- * {@link AlertDialog.Action}'s action. `command` defaults to `"close"`, so
- * passing `commandfor` and the button's label is enough to wire it up.
- *
- * `type` is fixed to `"button"`: a cancel control is never a submit button,
- * and leaving it untyped inside a `<form>` would let it default to `"submit"`,
- * which the platform then refuses to run a command on — cancelling would
- * silently submit the form instead of closing the panel, leaving Escape as
- * the only way out.
+ * Renders the panel's dismiss control as an outline, neutral {@link Button}
+ * with `type` fixed to `"button"`, so its `command="close"` reaches the
+ * {@link AlertDialog} named by `commandfor` from inside a `<form>` too.
  *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the cancel control's markup.

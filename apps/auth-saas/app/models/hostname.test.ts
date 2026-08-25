@@ -1,7 +1,7 @@
 /**
  * Behavioural tests for `Hostname.getStatusMessage`, which derives the
- * human-readable state shown for a custom domain from its stored status and the
- * Cloudflare SSL sub-status. Pure logic: no Cloudflare API or database involved.
+ * human-readable state shown for a custom domain from its stored status and
+ * the Cloudflare SSL sub-status, exercised through direct input/output assertions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

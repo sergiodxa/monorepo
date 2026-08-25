@@ -137,8 +137,8 @@ interface Parameters {
 /**
  * Applies defaults and rejects parameters that cannot produce a valid code.
  *
- * Bad parameters are a caller mistake rather than a failed verification, so they
- * surface as a `Failure` instead of a silent "code did not match".
+ * Bad parameters are a caller mistake, so resolution surfaces a `Failure`
+ * naming the problem for the caller to fix.
  *
  * @param options Caller-supplied parameters.
  * @returns Resolved parameters, or the reason they are unusable.
@@ -187,11 +187,9 @@ function counterBlock(counter: number): Bytes {
 }
 
 /**
- * Derives the code for one specific step counter.
- *
- * Implements RFC 4226 dynamic truncation: the low nibble of the last MAC byte
- * selects a 4-byte window, its top bit is cleared to keep the value positive, and
- * the remainder modulo `10 ** digits` is left-padded to full width.
+ * Derives the code for one specific step counter, applying RFC 4226 dynamic
+ * truncation: the top bit of the selected MAC window is cleared so the
+ * value stays positive before reducing modulo `10 ** digits`.
  *
  * @param key Decoded shared secret.
  * @param counter Step counter to derive for.
@@ -258,9 +256,8 @@ async function generateCode(
 /**
  * Checks a submitted code against the current step and the drift window.
  *
- * Every step in the window is evaluated even after a match, and each comparison
- * runs in constant time, so neither the total work nor the timing reveals which
- * step matched. A code of the wrong shape is a plain mismatch, not an error.
+ * Every step in the window is compared in constant time even after a match,
+ * so timing never reveals which step matched.
  *
  * @param secret Base32 shared secret.
  * @param code Code submitted by the user.

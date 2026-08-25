@@ -1,7 +1,7 @@
 /**
  * In-memory `KVNamespace` binding with real Workers KV semantics: value encoding per
  * `type`, absolute/TTL expiration, metadata, and cursor-paginated prefix listing. It
- * exists so a test can assert on stored data instead of mocking the module that reads it.
+ * exists so a test can assert directly on stored data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +24,6 @@ const MAXIMUM_LIST_LIMIT = 1000;
 /** Keys accepted by a single bulk `get`/`getWithMetadata` call. */
 const MAXIMUM_BULK_KEYS = 100;
 
-/** Byte budget for a key name. */
 const MAXIMUM_KEY_BYTES = 512;
 
 /** Byte budget for a key's serialized metadata. */
@@ -46,11 +45,9 @@ export interface KVNamespaceMockOptions {
 /** A `KVNamespace` binding whose store a test can empty in place. */
 export interface KVNamespaceMock extends KVNamespace {
 	/**
-	 * Deletes every key, as if the namespace were new.
-	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets an empty namespace without re-creating the `env` the code
-	 * under test already captured.
+	 * Deletes every key, as if the namespace were new, so a `beforeEach` can empty a
+	 * module-scoped binding without re-creating the `env` the code under test already
+	 * captured.
 	 */
 	reset(): void;
 }
@@ -67,11 +64,8 @@ interface KVStoredEntry {
 
 /**
  * Creates an in-memory Workers KV namespace whose `get`, `put`, `delete`, `list`, and
- * `getWithMetadata` follow the platform's observable behavior, including expiration,
- * metadata round-tripping, and prefix/cursor listing.
- *
- * Every call builds an isolated namespace, so tests never share state and no cleanup
- * step can be forgotten.
+ * `getWithMetadata` follow the platform's observable behavior. Each call returns an
+ * isolated namespace, so tests never share state and no cleanup step can be forgotten.
  * @param options Optional clock override used for expiration.
  * @returns A `KVNamespace` binding backed by an in-memory map.
  * @example let kv = createKVNamespace(); await kv.put("a", "1");
@@ -132,7 +126,7 @@ export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace
 
 	/**
 	 * Rejects the bulk read shapes KV itself rejects: more than 100 keys per call, and
-	 * `arrayBuffer`/`stream` types, which the bulk endpoint does not serve.
+	 * `arrayBuffer`/`stream` types, which only a single-key read supports.
 	 */
 	function assertBulkRead(keys: string[], type: KVValueType): void {
 		if (keys.length > MAXIMUM_BULK_KEYS) {
@@ -147,8 +141,8 @@ export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace
 	}
 
 	/**
-	 * Reads many keys at once. Missing and expired keys are present in the map with a
-	 * `null` value, matching the bulk endpoint rather than omitting them.
+	 * Reads many keys at once. Every requested key appears in the result map, with
+	 * missing and expired keys mapped to `null`, matching the bulk endpoint.
 	 */
 	function getMany(keys: string[], type: KVValueType): Map<string, unknown> {
 		assertBulkRead(keys, type);
@@ -182,7 +176,8 @@ export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace
 	}
 
 	/**
-	 * Reads a key, or every key when given an array.
+	 * Reads a key, or every key when given an array. Resolves for every input, so a
+	 * bad request surfaces as a rejected promise, matching how a real KV read reports it.
 	 * @param key Key name, or up to 100 key names for a bulk read.
 	 * @param typeOrOptions Value type (`"text"` by default) or a KV options bag.
 	 * @returns The decoded value, `null` when absent or expired, or a `Map` for a bulk read.
@@ -225,8 +220,6 @@ export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace
 		key: string[],
 		options?: KVNamespaceGetOptions<"json">,
 	): Promise<Map<string, ExpectedValue | null>>;
-	// `async` so a rejected input surfaces as a rejected promise, the way a real KV read
-	// reports a bad request rather than throwing synchronously.
 	async function get(key: string | string[], typeOrOptions?: KVReadArgument): Promise<unknown> {
 		let type = resolveType(typeOrOptions);
 
@@ -237,8 +230,8 @@ export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace
 	}
 
 	/**
-	 * Reads a key together with the metadata stored alongside it. Unlike `get`, this
-	 * always resolves to a result object, with `value: null` for a missing key.
+	 * Reads a key together with the metadata stored alongside it, resolving to a
+	 * value/metadata pair with `value: null` for a missing key.
 	 * @param key Key name, or up to 100 key names for a bulk read.
 	 * @param typeOrOptions Value type (`"text"` by default) or a KV options bag.
 	 * @returns The value/metadata pair, or a `Map` of them for a bulk read.

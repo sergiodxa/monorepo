@@ -1,3 +1,10 @@
+/**
+ * Builds the XML document tree for an RSS 2.0 feed.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { XML } from "@pkg/xml";
 
 import type { RSS } from "../index";

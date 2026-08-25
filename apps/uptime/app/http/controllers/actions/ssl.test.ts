@@ -26,9 +26,8 @@ import routes from "~/routes/web";
 
 /**
  * The action imports `~/app/data/monitor`, which imports `env` from
- * `cloudflare:workers` — a module that doesn't resolve outside the Workers runtime.
- * Install an `env` so the import below can load; it is supplied with no bindings at all,
- * which is the assertion that these paths reach none — reading one would throw by name.
+ * `cloudflare:workers`, so this test installs one before importing below. No
+ * bindings are supplied, so reading one throws by name — proof these paths touch none.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 

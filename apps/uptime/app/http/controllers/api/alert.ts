@@ -91,9 +91,9 @@ export default createController(alertRoutes, {
 					changes.cooldown_minutes = result.data.cooldownMinutes;
 
 				/**
-				 * The scope moves as a unit or not at all: sending either field rewrites both, so
-				 * a request narrowing an alert to a whole type cannot leave the previous monitor's
-				 * id behind it, and one that mentions neither leaves the alert exactly where it is.
+				 * The scope moves as a unit: sending either field rewrites both together, so
+				 * narrowing an alert to a whole type also clears the previous monitor id, and
+				 * omitting both fields keeps the alert's current scope.
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);

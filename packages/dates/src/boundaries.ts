@@ -11,7 +11,7 @@ import type { TimeZone, Weekday } from "./types";
 
 import { calendarDayAt, shiftCalendarDay, startOfDayInstant, weekdayOf } from "./zone";
 
-/** How a week is delimited, which is a product decision rather than a locale one. */
+/** How a week is delimited, a decision the product makes explicitly. */
 export interface StartOfWeekOptions {
 	/** Weekday a week begins on, `0` Sunday through `6` Saturday. */
 	weekStartsOn: Weekday;
@@ -21,7 +21,7 @@ export interface StartOfWeekOptions {
  * The first instant of the calendar day an instant falls on, in a zone.
  *
  * On a day whose DST transition skips midnight, the returned instant is the first
- * one that exists that day rather than a time that never happened.
+ * one that actually exists that day.
  *
  * @param date - Any instant on the day of interest.
  * @param timeZone - IANA zone whose calendar day to open.

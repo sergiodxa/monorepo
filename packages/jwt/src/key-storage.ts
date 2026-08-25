@@ -32,10 +32,8 @@ export interface KeyStorageListResult {
 /**
  * A key/value store of `File` objects, narrowed to what signing-key rotation uses.
  *
- * Every method may be synchronous or return a promise, which is what lets a plain
- * in-memory object satisfy this in a test while a bucket client satisfies it in
- * production. Reading, listing and writing are the whole contract: a key is written
- * once and kept, so that every token it ever signed stays verifiable.
+ * A key, once written, stays kept, so every token it signed stays
+ * verifiable; methods may be sync or a promise, fitting tests and production.
  */
 export interface KeyStorage {
 	/**

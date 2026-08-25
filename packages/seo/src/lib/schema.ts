@@ -462,10 +462,9 @@ function toOfferList(baseUrl: string, offers: SchemaOrg.OfferInput | SchemaOrg.O
 }
 
 /**
- * Creates the schema.org builders bound to one site's origin and identity. Page URLs
- * go through the canonical rules so a node's `url` can never disagree with the
- * canonical link, image and logo paths are made absolute, and optional properties are
- * omitted rather than emitted as `null`, which search engines treat as a broken value.
+ * Creates the schema.org builders bound to one site's origin and identity.
+ * Every URL agrees with the canonical link, and optional properties are
+ * omitted rather than `null`, which search engines treat as broken.
  *
  * @param options - Origin and site identity the builders resolve defaults from.
  * @returns Builders producing one typed node each.

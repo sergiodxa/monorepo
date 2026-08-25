@@ -126,12 +126,8 @@ export function hexColor(message?: string): Check<string> {
 export let LIMITS = {
 	/** Short names: client name, resource name, etc. */
 	name: { min: 1, max: 100 },
-	/** Descriptions */
 	description: { min: 0, max: 500 },
-	/** URLs */
 	url: { min: 1, max: 2048 },
-	/** Scope names */
 	scope: { min: 1, max: 50 },
-	/** Email addresses */
 	email: { min: 3, max: 254 },
 } as const;

@@ -18,10 +18,6 @@ import { is } from "@pkg/u/size";
 
 import { mergeStyle } from "../utils/merge-style";
 
-/**
- * Ratio {@link AspectRatio} falls back to when `ratio` is omitted: a
- * perfect square.
- */
 const DEFAULT_RATIO: AspectRatio.Ratio = "1 / 1";
 
 /**
@@ -29,9 +25,9 @@ const DEFAULT_RATIO: AspectRatio.Ratio = "1 / 1";
  */
 export namespace AspectRatio {
 	/**
-	 * A CSS `aspect-ratio` value: either a bare number expressing
-	 * width divided by height (`1.7778` for a 16:9 box), or a ratio string
-	 * in the same form CSS accepts directly (`"16 / 9"`).
+	 * A CSS `aspect-ratio` value: a bare number of width divided by height
+	 * (`1.7778` for a 16:9 box), or a ratio string CSS accepts directly
+	 * (`"16 / 9"`).
 	 */
 	export type Ratio = number | string;
 
@@ -39,17 +35,15 @@ export namespace AspectRatio {
 	 * Props accepted by {@link AspectRatio}.
 	 */
 	export interface Props extends TagProps<"div"> {
-		/** Width-to-height ratio the host maintains. Defaults to {@link DEFAULT_RATIO}. */
+		/** Width-to-height ratio the host maintains. Defaults to a square. */
 		ratio?: Ratio;
 	}
 }
 
 /**
- * Renders a block that maintains a fixed width-to-height ratio no matter
- * what it contains, filling its container's inline axis and clipping any
- * overflow along the way. The ratio is carried on the `--ui-aspect-ratio`
- * custom property, set per instance from the `ratio` prop, so it can also be
- * overridden from an ancestor's stylesheet without touching this component.
+ * Fills its container's inline axis and clips any overflow. The ratio rides on
+ * the `--ui-aspect-ratio` custom property, set per instance from the `ratio`
+ * prop, so an ancestor's stylesheet can override it on its own.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the ratio-locked box's markup.

@@ -1,14 +1,9 @@
 /**
  * The battle scene: a consumer of the engine's ordered battle events.
  *
- * It never computes rules. Each burst of events (everything between two input
- * requests) is translated into animation tasks that drain in order, HP bars ease
- * toward the values the events report, and when the queue is idle the scene reads
- * the pending request and either opens the command menu (player turn) or fills a
- * forced replacement. Commands are assembled for every requested slot — the
- * player's choice for their side, and a move chosen by the deterministic enemy AI
- * for the opponent's, since the engine has no built-in AI — and dispatched back
- * through the client.
+ * Each event burst becomes animation tasks that drain in order before the
+ * scene opens the command menu or fills a forced replacement, assembling
+ * AI-chosen moves for the opponent's slots.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,11 +81,9 @@ export class BattleScene implements Scene {
 	private readonly switcher = new BattleSwitch();
 
 	/**
-	 * How the switch picker is open, or null when it is closed.
-	 *
-	 * `replacement` fills a forced faint replacement for the player slot in
-	 * `switchSlot` (cancel blocked); `switch` is a voluntary switch from the action
-	 * menu that spends the turn (cancel returns to the action menu).
+	 * How the switch picker is open, or null when closed: `replacement` fills a
+	 * forced faint slot (cancel blocked), `switch` is a voluntary action-menu
+	 * switch that spends the turn (cancel returns to the action menu).
 	 */
 	private switchMode: "replacement" | "switch" | null = null;
 
@@ -140,19 +133,16 @@ export class BattleScene implements Scene {
 	/**
 	 * The atlas creatures are drawn from, or null to draw procedural placeholders.
 	 *
-	 * Prefers a manifest atlas ("overworld") and falls back to the generated demo
-	 * atlas; when neither is available the scene draws the procedural per-species
-	 * blob exactly as before.
+	 * Prefers a manifest atlas, falling back to a generated demo atlas so a
+	 * missing atlas still renders as a procedural per-species blob.
 	 */
 	private atlas: Atlas | null = null;
 
 	/**
 	 * The effect player, captured on enter so `onEngineEvents` can reach it.
 	 *
-	 * Engine events (a level-up rides in on `creature-experience-granted`) arrive
-	 * through `onEngineEvents`, which the scene stack calls without the client, so
-	 * the scene keeps the audio reference from `enter`. Null before enter; every
-	 * play is a safe no-op regardless.
+	 * The scene stack calls `onEngineEvents` without the client, so playback
+	 * relies on this cached reference and stays a safe no-op before `enter`.
 	 */
 	private audio: SfxPlayer | null = null;
 
@@ -173,14 +163,11 @@ export class BattleScene implements Scene {
 	/**
 	 * Reacts to engine-level events a dispatch produced.
 	 *
-	 * Capture and flee end a battle outside the turn resolver, so their outcome
-	 * arrives here as `capture-attempted`/`battle-finished` game events rather than
-	 * in the battle log; this narrates the shakes and records the ending.
+	 * Capture and flee resolve outside the turn resolver, so this narrates their
+	 * outcome directly from `capture-attempted`/`battle-finished` events.
 	 */
 	onEngineEvents(events: GameEvent[]) {
 		for (let event of events) {
-			// A level-up (creature-experience-granted crossing a level) plays its jingle
-			// as it arrives; other engine events carry no sound.
 			let sfx = sfxForGameEvent(event);
 			if (sfx) this.audio?.playSynthSfx(sfx);
 			if (event.type === "capture-attempted") {
@@ -208,7 +195,11 @@ export class BattleScene implements Scene {
 		}
 	}
 
-	/** Initializes HP bars and queues the intro message. */
+	/**
+	 * Initializes HP bars and queues the intro message.
+	 *
+	 * Marks the opening event burst as consumed since it needs no narration.
+	 */
 	enter(game: GameClient) {
 		this.audio = game.audio;
 		this.bag.useAudio(game.audio);
@@ -220,13 +211,19 @@ export class BattleScene implements Scene {
 		let trainerName = this.options.trainerName;
 		if (trainerName) this.message = `${trainerName} wants to battle!`;
 		else if (foe) this.message = `A wild ${foe.name} appeared!`;
-		this.consumed = view.events.length; // the opening burst needs no narration
+		this.consumed = view.events.length;
 	}
 
 	exit() {
 		this.queue.clear();
 	}
 
+	/**
+	 * Drives one battle frame: drains queued animation, then opens input.
+	 *
+	 * Evolutions push before learn-move prompts, and auto-learned moves narrate
+	 * once via a re-queue that stalls this block until playback drains.
+	 */
 	update(game: GameClient, dt: number) {
 		let view = game.engine.selectBattle(this.battleId);
 		for (let bar of this.bars.values()) bar.update(dt);
@@ -234,7 +231,6 @@ export class BattleScene implements Scene {
 		this.processNewEvents(game, view);
 		this.queue.update(dt);
 		if (!this.queue.idle) {
-			// Let the player hurry narration along.
 			if (game.input.isPressed(Button.A) || game.input.isPressed(Button.B)) {
 				this.queue.update(dt * 12);
 			}
@@ -246,14 +242,10 @@ export class BattleScene implements Scene {
 		if (this.finishing) {
 			if (game.input.isPressed(Button.A) || game.input.isPressed(Button.B)) {
 				game.scenes.pop();
-				// Offer any evolutions the level-ups unlocked, back on the overworld. Push
-				// these first so the move prompts pushed after them sit on top and resolve
-				// before evolving, matching the level-up-then-evolve order.
 				for (let pending of this.pendingEvolutions) {
 					let name = game.engine.selectCreatureSummary(pending.creatureId).name;
 					game.scenes.push(new EvolutionScene(pending.creatureId, pending.speciesId, name));
 				}
-				// Prompt the player to replace or skip each move offered on a full moveset.
 				for (let pending of this.pendingLearnMoves) {
 					let name = game.engine.selectCreatureSummary(pending.creatureId).name;
 					game.scenes.push(
@@ -266,9 +258,6 @@ export class BattleScene implements Scene {
 
 		let winnerSide = this.endedWinnerSide ?? view.winnerSide;
 		if (winnerSide !== null) {
-			// Narrate auto-learned moves once, before the closing message. Enqueuing makes
-			// the queue non-idle so this block re-runs (and skips the drained list) only
-			// after those lines have played.
 			if (this.autoLearnedMoves.length > 0) {
 				for (let learned of this.autoLearnedMoves) {
 					let name = game.engine.selectCreatureSummary(learned.creatureId).name;
@@ -317,8 +306,6 @@ export class BattleScene implements Scene {
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
 		let view = game.engine.selectBattle(this.battleId);
 
-		// The switch/replacement picker is a full-screen party list drawn over the
-		// battlefield, mirroring the party screen.
 		if (this.switchMode !== null && this.queue.idle) {
 			this.switcher.render(ctx, this.switcherChoices(view));
 			return;
@@ -390,10 +377,8 @@ export class BattleScene implements Scene {
 	/**
 	 * Drives the open Bag menu for the current turn and routes the chosen item.
 	 *
-	 * A ball routes to the capture attempt, a medicine submits a `use-item` turn on
-	 * the chosen active party member, and cancelling closes the bag back to the
-	 * action menu. Selecting the bag no longer captures on its own — the player picks
-	 * here — which is the behavior the regression tests lock in.
+	 * A ball attempts capture, a medicine submits a `use-item` turn for the
+	 * chosen party member, and cancelling returns to the action menu.
 	 */
 	private updateBag(game: GameClient, view: BattleView, request: BattlePosition[]) {
 		let items = this.battleBagItems(game);
@@ -412,9 +397,8 @@ export class BattleScene implements Scene {
 	/**
 	 * Builds the usable battle items the bag lists from the current inventory.
 	 *
-	 * Each stocked item is classified as a ball or a medicine; balls are dropped when
-	 * capture is disallowed (trainer fights), and everything else the bag cannot use
-	 * in battle is left out. Order follows the inventory so the list is stable.
+	 * Balls are dropped when capture is disallowed, so trainer fights offer
+	 * only usable medicine.
 	 */
 	private battleBagItems(game: GameClient): BattleBagItem[] {
 		let items: BattleBagItem[] = [];
@@ -486,9 +470,8 @@ export class BattleScene implements Scene {
 	/**
 	 * Settles the money stake once, when the winner is first known.
 	 *
-	 * A win (side 0) credits the reward and a loss debits the penalty via
-	 * `change-money`; a draw (any other side) leaves the balance untouched. The
-	 * `rewardSettled` guard keeps the finish loop from paying out every frame.
+	 * A win credits the reward, a loss debits the penalty via `change-money`,
+	 * and the `rewardSettled` guard stops the finish loop paying out per frame.
 	 */
 	private settleReward(game: GameClient, winnerSide: number) {
 		let reward = this.options.reward;
@@ -521,10 +504,8 @@ export class BattleScene implements Scene {
 	/**
 	 * Builds one foe slot's fight command using the deterministic enemy AI.
 	 *
-	 * Move base power and type come from the authored content the client already
-	 * holds; the defender's typing comes from the player's active creature. The AI
-	 * picks the slot, and the engine's own struggle fallback covers the empty/no-PP
-	 * cases, so this always targets the player's lead slot.
+	 * The engine's struggle fallback covers empty or no-PP moves, so this
+	 * always targets the player's lead slot.
 	 */
 	private enemyCommand(game: GameClient, view: BattleView, position: BattlePosition): TurnCommand {
 		let enemy = view.enemies[position.slot];
@@ -548,17 +529,10 @@ export class BattleScene implements Scene {
 	/**
 	 * Resolves the forced replacements requested after a burst of faints.
 	 *
-	 * Enemy slots (side ≠ 0) auto-send their first available bench creature, matching
-	 * the deterministic enemy AI. A player slot (side 0) is decided by
-	 * `decideReplacement`: a lone healthy creature is auto-sent, while two or more open
-	 * a blocking picker so the player chooses which creature to send in — the fainted
-	 * creature is never left active. Because the engine validates one command per
-	 * request, the chosen player creature and the auto enemy creatures are submitted
-	 * together once every player slot has a choice. `playerChoices` caches choices
-	 * across frames while the picker is open.
+	 * Submits every slot together once each player slot has a choice, since the
+	 * engine allows only one command per request.
 	 */
 	private updateReplacement(game: GameClient, view: BattleView, requests: ReplacementSelection[]) {
-		// The first player slot still waiting on a picker choice, if any.
 		let pendingPrompt = requests.find(
 			(request) =>
 				request.side === 0 &&
@@ -584,7 +558,6 @@ export class BattleScene implements Scene {
 			return;
 		}
 
-		// Every player prompt is answered: assemble one command per requested slot.
 		let commands: ReplacementCommand[] = [];
 		for (let selection of requests) {
 			let creature =
@@ -614,7 +587,6 @@ export class BattleScene implements Scene {
 	/** Opens the voluntary switch picker over the action menu (cancel allowed). */
 	private openVoluntarySwitch(view: BattleView) {
 		if (this.voluntarySwitchChoices(view).length === 0) {
-			// Nothing healthy on the bench to switch to; leave the action menu up.
 			this.enqueueMessage("There's no one else to send in!");
 			return;
 		}
@@ -623,12 +595,10 @@ export class BattleScene implements Scene {
 	}
 
 	/**
-	 * Drives the open voluntary switch picker and submits the switch as a turn action.
+	 * Drives the open voluntary switch picker and submits the switch as a turn.
 	 *
-	 * Cancelling returns to the action menu. Confirming submits a `switch` turn
-	 * command for the player's lead slot — an engine turn-action that resolves before
-	 * moves and spends the player's turn, so the foe still acts. The chosen creature is
-	 * the team-local bench index the picker reports.
+	 * The `switch` turn-action resolves before moves and spends the player's
+	 * turn, so the foe still acts on a successful switch.
 	 */
 	private updateVoluntarySwitch(game: GameClient, view: BattleView, request: BattlePosition[]) {
 		this.message = null;
@@ -645,8 +615,7 @@ export class BattleScene implements Scene {
 	/**
 	 * Submits a voluntary switch for the player's lead slot; foe slots still act.
 	 *
-	 * The switch is one player-side turn command (the engine orders it ahead of moves
-	 * by priority), and each foe slot gets its AI-chosen move, so switching consumes
+	 * The engine orders the switch ahead of moves by priority, so it consumes
 	 * the turn exactly like fighting does.
 	 */
 	private submitSwitch(game: GameClient, request: BattlePosition[], creature: number) {
@@ -661,12 +630,15 @@ export class BattleScene implements Scene {
 		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
 	}
 
-	/** The healthy benched creatures the player may voluntarily switch the lead slot to. */
+	/**
+	 * The healthy benched creatures the player may voluntarily switch the lead
+	 * slot to, excluding the active lead itself.
+	 */
 	private voluntarySwitchChoices(view: BattleView): SwitchChoice[] {
 		let active = view.allies[0];
 		let choices: number[] = [];
 		view.allies.forEach((ally, index) => {
-			if (index === 0) return; // the active lead cannot switch to itself
+			if (index === 0) return;
 			if (ally.id === active?.id) return;
 			if (ally.currentHP <= 0) return;
 			choices.push(index);
@@ -714,16 +686,18 @@ export class BattleScene implements Scene {
 		return view.allies[0]?.moves ?? [];
 	}
 
-	/** Ensures an HP bar exists per active slot and refreshes maxima when idle. */
+	/**
+	 * Ensures an HP bar exists per active slot and refreshes maxima when idle.
+	 *
+	 * A slot's bar is reused across replacements: rebinding on a new creature
+	 * sets its HP directly, so only ordinary damage or healing eases afterward.
+	 */
 	private syncBars(view: BattleView) {
 		let refresh = (summary: CreatureSummaryView | undefined, side: number, slot: number) => {
 			if (!summary) return;
 			let key = `${side}:${slot}`;
 			let bar = this.bars.get(key);
 			if (!bar) this.bars.set(key, new HpBar(summary.maxHP, summary.currentHP));
-			// A slot's bar is reused across replacements; bind it to the active creature
-			// so it snaps to a fresh creature's HP (instead of easing up from 0) and only
-			// eases ordinary damage/heal while the animation queue is idle.
 			else if (this.queue.idle) bar.bindTo(summary.id, summary.currentHP, summary.maxHP);
 			if (summary.currentHP > 0) this.fainted.delete(key);
 		};
@@ -742,12 +716,14 @@ export class BattleScene implements Scene {
 			setHp: (position, remaining) => this.barAt(position)?.setTarget(remaining),
 			isSettled: (position) => this.barAt(position)?.settled ?? true,
 			markFainted: (position) => this.fainted.add(`${position.side}:${position.slot}`),
+			/**
+			 * Snaps the reused bar to the incoming creature's max HP so a later HP
+			 * drain eases downward from a full bar.
+			 */
 			switchedIn: (position) => {
 				let key = `${position.side}:${position.slot}`;
 				this.fainted.delete(key);
 				let summary = summaryAt(position);
-				// Snap the reused slot bar onto the fresh creature at a full bar so a
-				// following drain eases down rather than the bar climbing up from 0.
 				if (summary) this.barAt(position)?.bindTo(summary.id, summary.maxHP, summary.maxHP);
 			},
 		};
@@ -769,11 +745,8 @@ export class BattleScene implements Scene {
 	/**
 	 * Draws one combatant from the atlas creature region, or procedurally.
 	 *
-	 * The 32px atlas silhouette is centered on the same spot the procedural blob
-	 * used; the back (ally) sprite is mirrored so the two face each other. The
-	 * species initials are still drawn over the sprite so different species read
-	 * apart even sharing one generic silhouette. When no atlas art is available the
-	 * original per-species colored ellipse is drawn instead.
+	 * The back (ally) sprite mirrors so the two combatants face each other, and
+	 * species initials draw over the sprite so shared silhouettes stay distinct.
 	 */
 	private drawCreature(
 		ctx: CanvasRenderingContext2D,
@@ -805,7 +778,12 @@ export class BattleScene implements Scene {
 		});
 	}
 
-	/** Draws a combatant's name, level, and HP bar. */
+	/**
+	 * Draws a combatant's name, level, and HP bar.
+	 *
+	 * Stacks the rows so the optional HP fraction fits above the bar, keeping
+	 * both inside the frame.
+	 */
 	private drawInfo(
 		ctx: CanvasRenderingContext2D,
 		summary: CreatureSummaryView,
@@ -813,8 +791,6 @@ export class BattleScene implements Scene {
 		y: number,
 		showNumbers: boolean,
 	) {
-		// Stack the rows so the HP fraction (when shown) fits inside the frame above
-		// the bar instead of spilling below it.
 		let layout = statusBoxLayout(showNumbers, HpBar.HEIGHT);
 		Window.frame(ctx, x, y, 104, layout.height);
 		drawText(ctx, `${summary.name}`, x + 6, y + layout.nameY);

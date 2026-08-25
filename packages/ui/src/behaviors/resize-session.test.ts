@@ -1,7 +1,7 @@
 /**
- * Unit tests for the `ResizeSession` behavior class: construct the class,
- * drive it through pointer-session and constraint-solving methods, and
- * assert on its state and dispatched events, with no DOM involved.
+ * Unit tests for the `ResizeSession` behavior class: construct it, drive it
+ * through its pointer-session and constraint-solving methods, and assert on
+ * its state and dispatched events directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -129,7 +129,7 @@ describe("ResizeSession", () => {
 			groupSize: 1000,
 		});
 
-		session.move(50); // +50px / 1000px group = +5 size units
+		session.move(50);
 
 		expect(session.panels).toEqual([
 			{ id: "a", size: 35, min: 0, max: 100 },
@@ -153,7 +153,7 @@ describe("ResizeSession", () => {
 			groupSize: 1000,
 		});
 
-		session.move(-150); // -150px / 1000px group = -15 size units
+		session.move(-150);
 
 		expect(session.panels).toEqual([
 			{ id: "a", size: 30, min: 0, max: 100 },
@@ -179,8 +179,6 @@ describe("ResizeSession", () => {
 		session.move(20);
 		session.move(80);
 
-		// Every move() is relative to pointerPosition 0, so only the final
-		// position's delta (+8 size units) should be reflected, not the sum.
 		expect(session.panels[0]?.size).toBe(38);
 		expect(session.panels[1]?.size).toBe(32);
 	});
@@ -199,12 +197,12 @@ describe("ResizeSession", () => {
 			groupSize: 1000,
 		});
 
-		session.move(200); // request +20 size units
+		session.move(200);
 
 		expect(session.panels).toEqual([
 			{ id: "a", size: 50, min: 0, max: 100 },
-			{ id: "b", size: 32, min: 32, max: 100 }, // bottomed out at its min
-			{ id: "c", size: 18, min: 0, max: 100 }, // absorbed the remainder
+			{ id: "b", size: 32, min: 32, max: 100 },
+			{ id: "c", size: 18, min: 0, max: 100 },
 		]);
 	});
 
@@ -222,7 +220,7 @@ describe("ResizeSession", () => {
 			groupSize: 1000,
 		});
 
-		session.move(200); // request +20 size units, but "a" can only grow by 10
+		session.move(200);
 
 		expect(session.panels).toEqual([
 			{ id: "a", size: 40, min: 0, max: 40 },
@@ -245,12 +243,12 @@ describe("ResizeSession", () => {
 			groupSize: 1000,
 		});
 
-		session.move(-1500); // request -150 size units, far more than the group can give up
+		session.move(-1500);
 
 		expect(session.panels).toEqual([
-			{ id: "a", size: 25, min: 25, max: 100 }, // bottomed out
-			{ id: "b", size: 38, min: 38, max: 100 }, // bottomed out
-			{ id: "c", size: 37, min: 0, max: 100 }, // only absorbed what was available (5 + 2)
+			{ id: "a", size: 25, min: 25, max: 100 },
+			{ id: "b", size: 38, min: 38, max: 100 },
+			{ id: "c", size: 37, min: 0, max: 100 },
 		]);
 	});
 
@@ -310,8 +308,8 @@ describe("ResizeSession", () => {
 			pointerPosition: 0,
 			groupSize: 1000,
 		});
-		session.move(100); // sizes become 40 / 60
-		log.length = 0; // ignore the move()'s change event for this assertion
+		session.move(100);
+		log.length = 0;
 
 		session.cancel();
 

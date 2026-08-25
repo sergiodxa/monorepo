@@ -1,30 +1,24 @@
 /**
- * Tenant-runtime entitlement gate. A suspended tenant (canceled/unpaid billing, or a
- * tenant an operator disabled) must stop serving its OIDC/OAuth2 provider surface even
- * though requests can still reach its Durable Object directly via Cloudflare for SaaS
- * `hostMetadata` (which bypasses the control-plane database). This module classifies a
- * request path as provider traffic vs. an operational path that must stay reachable so
- * the tenant can be re-provisioned or un-suspended, and builds the `402` block response.
+ * Tenant-runtime entitlement gate. A suspended tenant's Durable Object still receives
+ * requests directly via Cloudflare for SaaS `hostMetadata`, bypassing the control-plane
+ * database, so this module blocks its OIDC/OAuth2 provider surface while keeping the
+ * operational paths reachable that let the tenant be re-provisioned or un-suspended.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /**
- * Path prefixes that must stay reachable on a suspended tenant Durable Object: the
- * Management API (used by the control plane to read/manage the tenant and to re-run
- * `/api/setup`) and the internal suspension-control endpoint. Everything else — the
- * OIDC/OAuth2 provider surface (`/authorize`, `/oauth/*`, `/userinfo`, `/webauthn/*`,
- * discovery, magic links, email verification) — is blocked while suspended.
+ * Path prefixes that stay reachable on a suspended tenant Durable Object: the
+ * Management API (to read/manage the tenant and re-run `/api/setup`) and the
+ * suspension-control endpoint. Every other path is blocked while suspended.
  */
 const SUSPENSION_EXEMPT_PREFIXES = ["/api/", "/__control/"];
 
 /**
  * Decides whether a request to a suspended tenant Durable Object should be blocked.
- *
- * Blocks the public OIDC/OAuth2 provider surface while leaving the Management API and
- * the internal control endpoint reachable so the platform can still inspect the tenant
- * and lift the suspension (or re-provision it) without a chicken-and-egg lockout.
+ * Blocks the OIDC/OAuth2 provider surface while leaving the Management API and the
+ * control endpoint reachable, so the platform can inspect or un-suspend the tenant.
  *
  * @param pathname - The request URL pathname (e.g. `/authorize`, `/api/stats`).
  * @returns `true` when the request must be blocked because the tenant is suspended.

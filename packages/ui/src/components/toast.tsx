@@ -2,12 +2,7 @@
  * A transient notification panel that floats above page content to report
  * the outcome of an action, colored by one of five semantic tones and
  * structured like an inline status panel: an optional leading icon or
- * loading graphic, a title/description content block, and trailing actions.
- * {@link Toast.Region} is the fixed viewport that stacks every currently
- * queued toast at one corner of the screen; without hydration a toast still
- * renders in place as a self-contained, already-settled message, and a
- * consumer's own dismiss wiring is what removes it and drives its
- * auto-dismiss timing.
+ * loading graphic, a title/description block, and trailing actions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,9 +78,8 @@ const DEFAULT_GRAPHIC_ARIA_HIDDEN = "true";
 
 /**
  * `type="button"` default applied to {@link Toast.Action} and
- * {@link Toast.Cancel} unless a consumer overrides it — most toast actions
- * run a script-driven command rather than submit a form, but a consumer
- * wiring one to a real form action can still set `type="submit"`.
+ * {@link Toast.Cancel} since most toast actions run a script-driven command
+ * rather than submit a form; either control accepts `type="submit"` instead.
  */
 const DEFAULT_BUTTON_TYPE: NonNullable<Toast.ActionProps["type"]> = "button";
 
@@ -121,10 +115,8 @@ export namespace Toast {
 
 	/**
 	 * Corner of the viewport {@link Toast.Region} renders in. The block side
-	 * (`top`/`bottom`) names a physical edge, since sliding in from the top or
-	 * bottom of the screen doesn't depend on reading direction, while the
-	 * inline edge (`start`/`end`) flips under `dir` so the stack sits in the
-	 * reading-trailing corner in both left-to-right and right-to-left layouts.
+	 * (`top`/`bottom`) names a physical edge, while the inline edge
+	 * (`start`/`end`) flips under `dir` to stay in the reading-trailing corner.
 	 */
 	export type Placement =
 		| "top-start"
@@ -225,26 +217,10 @@ export namespace Toast {
 }
 
 /**
- * Renders a single toast panel: a relatively positioned, flexed container
- * with a rounded border, a color-tinted background, and a soft shadow that
- * lifts it above whatever page content sits behind it, driven entirely by
- * {@link Toast.Props.color}. When its children include {@link Toast.Close} as
- * a direct child, the panel gains inline-end padding to make room for the
- * button's absolute position, detected with a `:has()` selector rather than
- * any prop or children inspection.
- *
- * Where the platform supports it and the user hasn't asked for reduced
- * transparency, the panel's tinted background is blended down and softly
- * blurred instead of rendered fully opaque, matching the same progressive
- * "glass" treatment other floating surfaces in this catalog apply to their
- * own material; the fully opaque tint is what every browser renders as the
- * baseline.
- *
- * `role` defaults to `"status"` and `aria-atomic` defaults to `true`; both
- * stay overridable through their respective props. `aria-live` is computed
- * from {@link Toast.Props.live} unless a consumer sets `aria-live` directly.
- * The panel holds still on its own — compose an `enterExit()`-based factory
- * from the animation layer through `mix` for its entrance and exit motion.
+ * Renders a single toast panel, tinted, bordered, and shadowed by
+ * {@link Toast.Props.color}, with `role` defaulting to `"status"` and
+ * `aria-atomic` to `true` (both overridable); compose a `mix`-driven
+ * `enterExit()` since the panel holds still on its own.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the toast's markup.
@@ -367,12 +343,9 @@ export function Toast(handle: Handle<Toast.Props>) {
 }
 
 /**
- * Renders {@link Toast.IconProps.children} as the toast's leading icon: an
- * inline flex item nudged down slightly so it lines up with the first line
- * of text beside it, colored from the current text color. Hidden from
- * assistive technology by default since the toast's color and text already
- * carry its meaning; swap it out for {@link Toast.Loader} while the toast
- * represents pending work.
+ * Renders {@link Toast.IconProps.children} as the toast's leading icon,
+ * hidden from assistive technology since the toast's color and text already
+ * carry its meaning; swap in {@link Toast.Loader} while pending.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the icon's markup.
@@ -395,10 +368,8 @@ Toast.Icon = function ToastIcon(handle: Handle<Toast.IconProps>) {
 
 /**
  * Renders {@link Toast.LoaderProps.children} as the toast's loading graphic,
- * laid out identically to {@link Toast.Icon} so a toast can swap between the
- * two without the rest of its layout shifting. Holds still on its own — pair
- * the `spin()` factory from the animation layer through `mix` for the
- * rotating loop.
+ * laid out identically to {@link Toast.Icon} so swapping between them causes
+ * no layout shift; pair a `spin()` `mix` factory for its rotating loop.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the loading graphic's markup.
@@ -493,15 +464,9 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
 
 /**
  * Renders {@link Toast.ActionProps.children} as the toast's primary trailing
- * control — e.g. "Undo" or "View" — a small outlined `<button>` colored
- * entirely from the toast's own current text color so it reads correctly
- * against every semantic tone without needing its own color prop. `type`
- * defaults to `"button"`; a consumer wiring the action to a real form sets
- * `type="submit"` instead. The resolved `type` is written before the consumer's
- * own attributes, so an action carrying `command`/`commandfor` can still run its
- * command inside a `<form>`: the platform judges whether an invoker is ambiguous
- * while it parses the command attributes and never revisits that decision for a
- * later `type`.
+ * control, colored from the current text color. `type` defaults to `"button"`
+ * and precedes the consumer's attributes so a `command`/`commandfor` pair
+ * still runs; pass `type="submit"` for a real form.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the action control's markup.
@@ -514,11 +479,6 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 		let resolvedType = type ?? DEFAULT_BUTTON_TYPE;
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type={resolvedType}
 				{...rest}
@@ -552,15 +512,9 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 
 /**
  * Renders {@link Toast.CancelProps.children} as the toast's secondary
- * trailing control — e.g. "Dismiss" — a small outlined `<button>` colored
- * from the neutral semantic tone regardless of the toast's own `color`, so
- * it always reads as the lower-emphasis choice next to {@link Toast.Action}.
- * `type` defaults to `"button"`; a consumer wiring it to a real form sets
- * `type="submit"` instead. The resolved `type` is written before the consumer's
- * own attributes, so a cancel control carrying `command`/`commandfor` can still
- * run its command inside a `<form>`: the platform judges whether an invoker is
- * ambiguous while it parses the command attributes and never revisits that
- * decision for a later `type`.
+ * trailing control, tinted neutral regardless of `color` so it reads as
+ * lower-emphasis next to {@link Toast.Action}; `type` defaults to
+ * `"button"`, written before the consumer's attributes so `command`/`commandfor` still run.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the cancel control's markup.
@@ -573,11 +527,6 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 		let resolvedType = type ?? DEFAULT_BUTTON_TYPE;
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type={resolvedType}
 				{...rest}
@@ -609,18 +558,10 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 };
 
 /**
- * Renders a dismiss control for the ancestor {@link Toast}: a small,
- * icon-only `<button>` carrying a fixed "X" glyph, pinned to the panel's
- * block-start/inline-end corner. Renders no built-in dismiss behavior of its
- * own — a consumer's own mixin (or, absent one, the platform's Command
- * Invoker API through `commandfor`/`command` passed as ordinary button
- * attributes) is what actually removes the toast.
- *
- * `type="button"` is written before the consumer's own attributes, so a dismiss
- * control carrying `command`/`commandfor` can still run its command inside a
- * `<form>`: the platform judges whether an invoker is ambiguous while it parses
- * the command attributes and never revisits that decision for a later `type`. A
- * consumer passing an explicit `type` still overrides the default.
+ * Renders a dismiss control for the ancestor {@link Toast}: an icon-only
+ * `<button>` pinned to the panel's block-start/inline-end corner, removed by
+ * a consumer's mixin or the platform's Command Invoker API via
+ * `commandfor`/`command`; `type="button"` precedes those attributes so the pairing still runs.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the dismiss control's markup.
@@ -632,11 +573,6 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 		let { mix, ...rest } = handle.props;
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type="button"
 				{...rest}
@@ -667,16 +603,9 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 
 /**
  * Renders the fixed viewport that stacks every currently queued
- * {@link Toast}: a non-interactive layer pinned to one corner of the screen
- * through {@link Toast.RegionProps.placement}, its children laid out in a
- * gapped column capped to a comfortable reading width. `pointer-events` stays
- * `none` on the region itself so page content behind an empty stretch of it
- * remains clickable — each {@link Toast} opts back into pointer interaction
- * on its own host.
- *
- * In dev mode, a region rendered without an `aria-label` or
- * `aria-labelledby` logs a `console.warn`, since assistive technology
- * otherwise has no accessible name for the landmark.
+ * {@link Toast} in a gapped column pinned to one corner via
+ * {@link Toast.RegionProps.placement}; `pointer-events` stays `none` on the
+ * region so content behind an empty stretch stays clickable, restored per toast.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the viewport's markup.

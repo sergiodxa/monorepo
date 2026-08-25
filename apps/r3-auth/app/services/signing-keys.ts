@@ -19,13 +19,9 @@ import { env } from "cloudflare:workers";
 import { createR2KeyStorage } from "~/app/services/r2-key-storage";
 
 /**
- * How long a warm isolate reuses the keys it has already read.
- *
- * A rotation adds a key, and this is how long an isolate can go on signing with the
- * previous one before it notices. That window is safe because signing and publishing
- * read through this same cache: an isolate that has not seen the new key is also
- * publishing the set it is signing against, so its tokens verify. The bound exists so
- * a rotation becomes live on its own, without waiting for isolates to recycle.
+ * How long a warm isolate reuses keys before rereading them.
+ * Safe because signing and publishing share this cache: an isolate that has not
+ * seen a new key is also still publishing the old set, so its tokens keep verifying.
  */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -38,16 +34,9 @@ interface CachedKeys {
 let cached: CachedKeys | null = null;
 
 /**
- * Loads the signing key pairs from the R2 bucket, generating and storing them on the
- * very first call.
- *
- * The promise is cached rather than its result, so requests arriving together share
- * one read instead of each starting their own — and, on an empty bucket, so they
- * share the one key that read mints instead of racing to mint several.
- *
- * Never call this against an empty bucket in production: a freshly generated key
- * would replace nothing but would sign tokens no relying party's cached JWKS can
- * verify.
+ * Loads the signing key pairs from R2, caching the promise (not its result) so
+ * concurrent requests share one read, or on an empty bucket share one minted key.
+ * A failed read clears only that same entry, leaving a newer one to keep serving.
  *
  * @returns Every key pair the JWKS publishes, newest usable key first.
  */
@@ -63,9 +52,6 @@ export async function getSigningKey(): Promise<JWK.KeyPair[]> {
 	try {
 		return await entry.keys;
 	} catch (error) {
-		// Dropped so the next request reads again, which is what keeps one unreachable
-		// bucket from deciding the rest of the window. The identity check leaves a newer
-		// entry alone, since a slow failure can outlive its own cache slot.
 		if (cached === entry) cached = null;
 		throw error;
 	}

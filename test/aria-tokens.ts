@@ -1,29 +1,18 @@
 /**
- * Scanner behind the ARIA-token rule: given a module's source, it reports every place
- * a boolean reaches an ARIA attribute whose value is a token.
- *
- * It lives at the repo root, and is imported by both the repo-wide guard beside it and
- * `packages/ui`'s own package-scoped one, so the rule has a single definition. The
- * full account of the failure mode is in the "ARIA values are tokens, never flags"
- * section of `packages/ui/AGENTS.md`; the short version is that these attributes
- * take text, the renderer writes a `true` prop as the bare attribute name, and the
- * empty value that produces is none of the tokens ARIA defines — so the attribute
- * falls back to its default and the state goes unannounced.
- *
- * A plain module rather than a test file: importing a test file to reuse a function
- * out of it registers that file's suites too, and they then run once per importer.
+ * Scanner behind the ARIA-token rule: reports every place a boolean reaches
+ * an ARIA attribute whose value is a token instead of a flag, since such an
+ * attribute renders a boolean as an empty value and falls back to its
+ * default, leaving the state unannounced. A plain module, not a test file,
+ * since importing a test file to reuse a function registers its suites too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /**
- * ARIA attributes whose value is a token rather than a flag.
- *
- * Every one of them accepts text — `"true"`, `"false"`, `"mixed"`, `"page"`,
- * `"menu"`, `"polite"` — and none of them is an HTML boolean attribute, which
- * is the whole distinction this rule turns on. `aria-label` and friends are
- * absent because nobody passes a boolean to a string.
+ * ARIA attributes whose value is a token rather than a flag: each accepts
+ * text such as `"true"`, `"mixed"`, or `"polite"` and none is an HTML
+ * boolean attribute, which is why passing a bare boolean into one is wrong.
  */
 const TOKEN_ATTRIBUTES = [
 	"aria-hidden",
@@ -67,14 +56,9 @@ function booleanConstants(source: string): Set<string> {
 }
 
 /**
- * Blanks every comment in `source`, keeping the text the same length and every
- * newline in place so offsets and line numbers still line up.
- *
- * A docblock has to be free to name the mistake — this file's own prose would
- * otherwise trip the scanner — and so does a trailing `// note` on a real line
- * of code. Strings are tracked while walking so a `//` inside one (a URL) is
- * not mistaken for the start of a comment, which would blank the rest of a line
- * that might hold the very thing being looked for.
+ * Blanks every comment in `source`, preserving length and newlines so
+ * offsets and lines still line up despite this file's own comments. Inside
+ * a tracked string, an escaped character and any `//` are left alone.
  */
 function withoutComments(source: string): string {
 	let out = "";
@@ -124,7 +108,6 @@ function withoutComments(source: string): string {
 			continue;
 		}
 
-		// Inside a string: an escape consumes the next character, whatever it is.
 		if (char === "\\") {
 			out += source.slice(index, index + 2);
 			index += 2;
@@ -139,13 +122,9 @@ function withoutComments(source: string): string {
 }
 
 /**
- * Scans one module's text for booleans reaching a token-valued ARIA attribute.
- *
- * The whole file is scanned at once rather than line by line, which is not a
- * detail: JSX puts one attribute per line as soon as an element has a few, so
- * `aria-hidden` is very often the last thing on its line with the `>` several
- * lines below it. A per-line scan cannot see that far and silently passed eight
- * such sites across this repo.
+ * Scans one module's text for booleans reaching a token-valued ARIA
+ * attribute, scanning the whole file at once since JSX often places an
+ * attribute several lines above the element's closing `>`.
  */
 export function findAriaViolations(file: string, source: string): AriaViolation[] {
 	let violations: AriaViolation[] = [];

@@ -24,7 +24,6 @@ import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
 import { httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks";
 import Subject from "../models/subject";
 
-/** Validation schema for the update-subject request body. */
 let UpdateSubjectSchema = s.object({
 	displayName: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
 	avatarUrl: s.optional(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl())),

@@ -15,7 +15,6 @@ import { Database } from "remix/data-table";
 
 /** Registers the D1-backed data-table database for service-container injection. */
 export class DatabaseService implements ServiceProvider {
-	/** Stores the database factory in the application container. */
 	register(container: Container) {
 		container.singleton(Database, () => {
 			return new Database(createD1DatabaseAdapter(env.DB));

@@ -1,25 +1,9 @@
 /**
- * Unit tests for `CheckTcpJob.perform()`, covering the claim-the-due-monitors pass: which
- * monitors a run picks up (only those their own `interval_seconds` has made due, and each of
- * them once however often the cron is delivered), result recording via
- * `TcpMonitor.recordCheckResult`, the `notify` message it enqueues
- * for an alert-worthy transition (carrying the monitor's pre-update `last_status` so the
- * consumer can tell a recovery from a first-ever result), that a healthy monitor enqueues
- * nothing, and that one monitor's check failure doesn't stop the rest of the sweep.
- *
- * Also covered: what a completed check costs and reports. Each one writes an Analytics
- * Engine point carrying TCP's own `up`/`down`/`timeout` vocabulary, with zero standing in
- * for the latency a refused connection never had, and the sweep bills every check it
- * completed in a single ingestion call — a monitor whose check threw produced no result
- * row, so it produces no ping either.
- *
- * `checkTcpConnection` is mocked — raw TCP connectivity needs `cloudflare:sockets`, which
- * no runtime outside workerd provides — while the `QUEUE` and `PING_RESULTS` bindings are
- * in-memory implementations installed through `cloudflare:workers`, so the enqueued messages
- * and the data points asserted on are the ones that really landed on them. Polar is a real
- * client with its one ingestion call spied on, so the events asserted here are the ones the
- * sweep actually built. Alert delivery itself now happens in `NotifyJob` and has its own
- * tests.
+ * Unit tests for `CheckTcpJob.perform()`: which due monitors a run claims,
+ * result recording via `TcpMonitor.recordCheckResult`, the `notify` message
+ * an alert-worthy transition enqueues, and that one monitor's failure doesn't
+ * stop the sweep. Also covers per-check Analytics Engine points and billing.
+ * `checkTcpConnection` is mocked since raw TCP needs `cloudflare:sockets`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -334,8 +318,6 @@ describe("CheckTcpJob ping reporting", () => {
 
 		await runJob(db);
 
-		// The column is nullable for exactly this, but the dataset's doubles are not, and
-		// zero is how the rest of the dataset already spells "no measurement".
 		expect(pingResults.dataPoints).toContainEqual({
 			blobs: [monitor.id, "tcp", "timeout"],
 			doubles: [0, 1, 0, 0],
@@ -352,7 +334,6 @@ describe("CheckTcpJob ping reporting", () => {
 
 		let job = await runJob(db);
 
-		// One call, three pings — a sweep of eighty monitors costs one subrequest, not eighty.
 		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
 		let events = ingestedEvents();
 		expect(events).toHaveLength(3);
@@ -377,8 +358,6 @@ describe("CheckTcpJob ping reporting", () => {
 
 		await runJob(db);
 
-		// The row id is the only thing about a completed check that is unique and already
-		// persisted, so it is what Polar can deduplicate a re-recorded check on.
 		expect(ingestedEvents()[0]?.externalId).toBe(`ping:${await resultId(db, monitor.id)}`);
 	});
 
@@ -386,7 +365,6 @@ describe("CheckTcpJob ping reporting", () => {
 		let { db } = createTestDatabase();
 		await seedTeam(db, "team-1", "owner-1");
 		let billable = await seedMonitor(db, { host: "billable.example.com" });
-		// A team row that is gone, so there is no Polar customer to ingest against.
 		let orphan = await seedMonitor(db, { host: "orphan.example.com" }, "team-2");
 
 		let job = await runJob(db);
@@ -398,8 +376,6 @@ describe("CheckTcpJob ping reporting", () => {
 		expect(unbillable?.monitorId).toBe(orphan.id);
 		expect(unbillable?.teamId).toBe("team-2");
 
-		// Its check still ran, was still recorded, and still counts as a success — only the
-		// billing is lost.
 		expect(pingedMonitorIds().sort((a, b) => a.localeCompare(b))).toEqual(
 			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
 		);
@@ -422,8 +398,6 @@ describe("CheckTcpJob ping reporting", () => {
 
 		await runJob(db);
 
-		// A connection attempt that threw left no result row, so there is nothing to report
-		// or bill.
 		expect(pingedMonitorIds()).toEqual([healthy.id]);
 		expect(ingestedEvents().map((event) => event.metadata?.monitorId)).toEqual([healthy.id]);
 	});

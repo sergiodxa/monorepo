@@ -1,3 +1,11 @@
+/**
+ * HTTP response helpers covering JSON bodies for the common success and
+ * error status codes, plus a typed redirect helper.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 
 type Init = Omit<ResponseInit, "status" | "statusText">;

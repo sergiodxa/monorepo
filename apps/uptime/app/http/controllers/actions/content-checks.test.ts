@@ -3,7 +3,8 @@
  * row (capped at 10 per monitor, invalid regexes rejected at creation time) and
  * redirects to the monitor's edit page; a successful delete removes the row;
  * validation failure and the monitor-scoped not-found guards leave
- * `monitor_content_checks` untouched. *
+ * `monitor_content_checks` untouched.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -23,10 +24,9 @@ import { memberships, monitorContentChecks, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` (imported by `./content-checks`) reads `env` from
- * `cloudflare:workers` at module load time — install one so importing the module doesn't
- * crash in the test runner. No binding is supplied, so any that these paths reached would
- * fail by name rather than read as `undefined`.
+ * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load
+ * time, so importing `./content-checks` needs one installed here. No binding
+ * is supplied, so any path that reaches it fails by name, not as `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
@@ -56,8 +56,8 @@ async function postContentCheckAction(
 
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
 	/**
-	 * Casts `router.map` itself (rather than its arguments) so this helper can map
-	 * several differently-shaped routes without losing type-checking elsewhere.
+	 * Casts `router.map` itself so this helper can map several differently-shaped
+	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
 		middleware: [teamContextMiddleware(team, membership)],

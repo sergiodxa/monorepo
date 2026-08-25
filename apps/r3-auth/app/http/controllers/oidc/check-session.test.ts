@@ -1,7 +1,8 @@
 /**
- * Router-level tests of the check-session iframe endpoint. The headers are the contract
- * here: the page has to be cacheable, has to be `text/html`, and must carry nothing that
- * stops another origin from framing it — being framed cross-origin is what it is for.
+ * Router-level tests of the check-session iframe endpoint. The headers are the
+ * contract: the page has to be cacheable, has to be `text/html`, and has to leave
+ * framing open to any origin — which HTTP expresses through the absence of any
+ * framing header at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,7 +22,6 @@ beforeEach(async () => {
 	app = await createTestApp();
 });
 
-/** Requests the check-session iframe. */
 async function fetchCheckSession(): Promise<Response> {
 	return await app.fetch(new Request(`${ORIGIN}${routes.oidc.checkSession.href()}`));
 }
@@ -38,8 +38,6 @@ describe("GET /oidc/check-session", () => {
 	test("sends no framing restriction of any kind", async () => {
 		let response = await fetchCheckSession();
 
-		// `X-Frame-Options: ALLOWALL` is not a real header value — its effect is the same
-		// as sending nothing — so the intent is expressed by sending nothing.
 		expect(response.headers.has("x-frame-options")).toBe(false);
 		expect(response.headers.get("content-security-policy") ?? "").not.toContain("frame-ancestors");
 	});

@@ -2,8 +2,8 @@
  * Tests the `/api/v1/cron-jobs` collection endpoints: listing a team's cron-job
  * monitors and creating one, both gated by a real `requireApiKey` bearer-token check
  * baked into the controller. Covers the happy paths, validation failure, invalid cron
- * expressions, missing/garbage auth, missing scope, and that a list never leaks
- * another team's monitors.
+ * expressions, missing/garbage auth, missing scope, and that a list surfaces only the
+ * calling team's own monitors.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -202,8 +202,6 @@ describe("POST /api/v1/cron-jobs", () => {
 		expect(response.status).toBe(400);
 		let body = (await response.json()) as { error: { code: string; message: string } };
 		expect(body.error.code).toBe("VALIDATION_ERROR");
-		// The message names the reason and the index inside the expression the client sent,
-		// so a client can point at the mistake instead of guessing which field was wrong.
 		expect(body.error.message).toContain("field-count");
 		expect(body.error.message).toContain("not a cron expression");
 	});

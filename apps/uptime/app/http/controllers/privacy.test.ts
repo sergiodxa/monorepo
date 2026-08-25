@@ -82,16 +82,15 @@ describe("GET /privacy", () => {
 		let body = await response.text();
 		expect(body).toContain("<title>Privacy Policy | Uptime</title>");
 		expect(body).toContain("<h1>Privacy Policy</h1>");
-		// Anonymous: the header CTA is a sign-in form posting to the auth action.
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
 	});
 
+	/** Canonical resolves through `SEO.baseUrl`, the product's own origin, no matter which host the request arrived on. */
 	test("emits the canonical URL and meta description in <head>", async () => {
 		let response = await getPrivacy(null);
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(
 			`<link rel="canonical" href="${SEO.baseUrl}${routes.legal.privacy.href()}" />`,
 		);
@@ -100,6 +99,7 @@ describe("GET /privacy", () => {
 		);
 	});
 
+	/** Cloudflare requires this disclosure before the Turnstile widget can run in invisible mode. */
 	test("discloses Cloudflare Turnstile and links to its privacy addendum", async () => {
 		let response = await getPrivacy(null);
 
@@ -107,7 +107,6 @@ describe("GET /privacy", () => {
 		let body = await response.text();
 		expect(body).toContain("<h2>9. Bot Protection</h2>");
 		expect(body).toContain("protected by Cloudflare Turnstile");
-		// The disclosure Cloudflare requires before the widget can run in invisible mode.
 		expect(body).toContain(
 			'<a href="https://www.cloudflare.com/en-gb/turnstile-privacy-policy/" target="_blank" rel="noreferrer">Turnstile Privacy Addendum</a>',
 		);
@@ -126,7 +125,6 @@ describe("GET /privacy", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<h1>Privacy Policy</h1>");
-		// Signed in: the header CTA links straight to the dashboard instead.
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 });

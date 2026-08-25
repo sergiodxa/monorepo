@@ -44,17 +44,15 @@ export interface SendEmailMockOptions {
 	verifiedDestinations?: string[];
 }
 
-/** A `SendEmail` binding that records every message instead of delivering it. */
+/** A `SendEmail` binding that captures every message a test can inspect. */
 export interface SendEmailMock extends SendEmail {
 	/** Messages sent so far, oldest first. */
 	readonly messages: SentEmailRecord[];
 
 	/**
-	 * Discards every recorded message, as if nothing had been sent.
-	 *
-	 * A binding installed once at module scope outlives the test that used it, so this is
-	 * how a `beforeEach` gets an empty outbox without re-creating the `env` the code under
-	 * test already captured.
+	 * Discards every recorded message, as if nothing had been sent — the way `beforeEach`
+	 * empties the outbox for a binding installed once at module scope, without
+	 * re-creating the `env` already captured by the code under test.
 	 */
 	reset(): void;
 }
@@ -62,8 +60,8 @@ export interface SendEmailMock extends SendEmail {
 /**
  * Creates a recording email binding.
  *
- * Nothing is delivered: each `send` is normalized into a {@link SentEmailRecord} a test
- * can assert on, which is what makes it usable as the destination for a mail transport.
+ * Each `send` normalizes its message into a {@link SentEmailRecord} a test can assert
+ * on, which is what makes this binding usable as the destination for a mail transport.
  * @param options Verified destination allowlist.
  * @returns A `SendEmail` binding that records messages.
  * @example let mailer = createSendEmail(); await mailer.send({ from: "a@b.c", to: "d@e.f", subject: "Hi" });

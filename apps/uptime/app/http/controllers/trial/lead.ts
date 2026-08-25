@@ -1,57 +1,9 @@
 /**
- * `POST /try/lead` — turns the probe a visitor just watched run into a week of hourly
- * checks, addressed to the email they handed over.
+ * `POST /try/lead` turns a submitted probe into a week of hourly checks for the
+ * email a visitor hands over: a lead row, a watch row, and a confirmation send.
  *
- * Three writes, in one direction: the address becomes a lead (or updates the one it
- * already has), the probed URL becomes a watch under it, and the confirmation goes out
- * reporting the check that was already on screen. Nothing here is billed and no Polar
- * customer is provisioned — a lead is not a user, and only signing up makes one.
- *
- * ## One free week per URL per thirty days
- *
- * The middle write is the one with a condition on it. A free watch is a week of hourly
- * outbound fetches given away for an email address, and without a cap the same person could
- * restart it on the same URL forever by submitting again whenever the last one lapsed. So
- * the pair `(lead, normalized URL)` is looked up first, and finding a row means this URL
- * already had its week — a watch is deleted thirty days after it is created, so the row's
- * existence *is* the window and no date arithmetic happens here.
- *
- * Both halves of that pair are normalized, because both had trivial bypasses: a trailing
- * slash, a fragment or a reordered query string made one URL into three, and a `+tag` made
- * one person into as many leads as they cared to type. `~/app/lib/trial-identity` holds both
- * reductions and the one it deliberately does not make — `http://` and `https://` are two
- * endpoints and get a week each.
- *
- * **A capped submission is answered, not swallowed.** It sends the report of what the
- * existing watch has already found on that URL, which is the one thing we can say that the
- * reader could not have got anywhere else, and the page says plainly that no second week was
- * started. Silence would read as a bug, and a bare refusal would spend the moment on nothing.
- *
- * ## What is trusted
- *
- * The URL, the status and the timings come out of the session, written there by `POST /try`
- * from a probe that went through `guardTrialProbe`. They are not read back from the form,
- * and the form has no hidden fields carrying them, because a watch is an hourly outbound
- * fetch for seven days: a form that named its own URL would let anyone schedule a week of
- * fetches at any target with one request and no probe. A submission arriving with no probe
- * in the session is therefore not an error to explain — it is a page that has nothing to
- * act on, so it goes back to `/try` to run a check first.
- *
- * ## Which answers redirect
- *
- * A rejected address changed nothing, so it re-renders `/try` with the result still on it
- * and the error on the field — the same thing `POST /try` does with its own answer. A
- * successful one has written rows and queued mail, so it redirects and leaves the receipt
- * in the session for `GET /try` to show once, which is what keeps a reload from opening a
- * second watch.
- *
- * ## Consent
- *
- * The marketing opt-in is an unticked checkbox and it is genuinely optional. Handing over
- * an address so we can report on *this URL* is not consent to be marketed to, and the
- * schema keeps those apart: `consented_at` stays null unless the box was ticked, the
- * digest and wrap-up emails go out either way because they are the service that was
- * asked for, and every other send has to read that column first.
+ * A free watch is capped to one per normalized URL every thirty days: the watch
+ * row itself deletes after that window, so finding one live is the whole check.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -97,9 +49,9 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	let back = redirect(routes.trial.check.index.href(), { status: redirect.Status.SeeOther });
 
 	/**
-	 * Removed here rather than by the page that rendered it: this is the request that acts
-	 * on the probe, and taking it now is also what makes a double submit idempotent — the
-	 * second one finds nothing and starts no second watch on the same check.
+	 * Removed from the session at the point that acts on the probe, which makes a
+	 * double submit idempotent: a second submit finds nothing here and any watch
+	 * already created stays the only one.
 	 */
 	let probe = takeTrialState<TrialProbeState>(session, TRIAL_PROBE);
 	if (!probe) return back;
@@ -121,20 +73,18 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	let lead = await Lead.upsertByEmail(db, {
 		email: result.data.email,
 		/**
-		 * Always absent: the form no longer asks for a name. An optional field is a toll
-		 * charged for something we already said we do not need, and nothing we send greets
-		 * anybody by name. `LeadInput` still names the column, so this stays until the
-		 * column itself goes.
+		 * Always absent: the form now asks only for email and consent, and every message
+		 * greets the recipient by email alone. `LeadInput` still names the column, so this
+		 * stays until the column itself goes.
 		 */
 		locale,
 		consented: result.data.consent,
 	});
 
 	/**
-	 * The cap, and the whole of it. A row here means this pair already had its free week, and
-	 * because a watch is deleted thirty days after it was created, a row can only be found
-	 * while that thirty days is still open. The URL is normalized inside the lookup, so a
-	 * trailing slash, a fragment or a reordered query string cannot walk past it.
+	 * The cap, and the whole of it: a row here means this normalized pair already
+	 * had its free week, since a watch is deleted thirty days after creation and
+	 * can only be found within that window.
 	 */
 	let existing = await TrialWatch.findByNormalizedUrl(db, lead.id, probe.url);
 
@@ -146,7 +96,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 			existing.expires_at,
 		);
 
-		// Counted before the send, because a rejected send is a billed one.
+		/** Counted before the send, because a rejected send is a billed one. */
 		recordCost("emailSent");
 		let report = await ctx.email.send(
 			new TrialRepeatReportEmail({
@@ -154,19 +104,16 @@ export default createAction(routes.trial.lead, async (ctx) => {
 				url: existing.url,
 				watchingSince: new Date(existing.created_at),
 				/**
-				 * The watch's own seven days, anchored to when it started rather than to now, so
-				 * the bar reads as the week that was promised. Days it has not reached yet come
-				 * back as `null` and draw as "no data", which is the honest answer for a week
-				 * still in progress.
+				 * Anchored to when the watch itself started, so the bar reads as the promised
+				 * week. Days not yet reached come back as `null` and draw as "no data".
 				 */
 				segments: segmentsOver(results, existing.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
 				stats: watchStats(existing),
 				subscribeUrl: `${APP_ORIGIN}${routes.app.index.href()}`,
 				/**
-				 * The report as a page, which this message wants more than any other: it answers a
-				 * submission somebody made deliberately, and the answer is "here is what the watch
-				 * already found" — so a durable copy of exactly that is what they were reaching for
-				 * when they submitted the URL a second time.
+				 * The report as a durable page: it answers a deliberate second submission with
+				 * exactly what the watch already found, which is what the reader was reaching
+				 * for.
 				 */
 				reportToken: existing.report_token,
 				unsubscribeToken: lead.unsubscribe_token,
@@ -205,10 +152,9 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	});
 
 	/**
-	 * Emitted here rather than in the capped branch above, because this is the only branch that
-	 * started anything: a submission that found an existing watch is answered with a report and
-	 * adds no step to the funnel. Before the send, so a mail provider outage cannot cost the
-	 * event — the watch already exists either way, and that is what this records.
+	 * Emitted from the branch that actually starts a watch: a repeat submission
+	 * earns a report but adds no funnel step. Emitted before the send so a mail
+	 * outage cannot cost the event.
 	 */
 	trackTrialMonitorStarted(ctx.logger, {
 		leadId: lead.id,
@@ -219,17 +165,14 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		consented: result.data.consent,
 	});
 
-	// Counted before the send, because a rejected send is a billed one.
+	/** Counted before the send, because a rejected send is a billed one. */
 	recordCost("emailSent");
 
 	let checkedAt = new Date(probe.checkedAt);
 	/**
-	 * Sent rather than queued with `later()`, because the funnel counts emails a lead actually
-	 * received and only an awaited send says whether one was. It costs the response nothing:
-	 * the mail middleware flushes its queue in a `finally` around the handler, so a deferred
-	 * send is awaited before the response leaves anyway — `later()` moves a send after the
-	 * handler, not out of the request. A rejection is logged and changes nothing else, exactly
-	 * as it did when the middleware was the one logging it.
+	 * Awaited directly so the funnel counts only emails actually received: the mail
+	 * middleware flushes any queued send before the handler returns anyway, so
+	 * awaiting here costs nothing extra.
 	 */
 	let sent = await ctx.email.send(
 		new TrialConfirmationEmail({
@@ -260,10 +203,9 @@ export default createAction(routes.trial.lead, async (ctx) => {
 });
 
 /**
- * The request's language, narrowed to one the schema's enum and the email dictionaries
- * both have. `ctx.locale` is already resolved from the supported set by the i18n
- * middleware; the narrowing exists so the column's type is satisfied without an assertion
- * and so an unexpected value writes English rather than a row the enum rejects.
+ * The request's language, narrowed to one the schema's enum and email
+ * dictionaries both accept. `ctx.locale` already comes from the i18n
+ * middleware's supported set; an unexpected value here becomes English.
  *
  * @param locale - The language the page was served in.
  * @returns A language the `leads.locale` column accepts.

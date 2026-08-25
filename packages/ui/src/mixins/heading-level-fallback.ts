@@ -17,10 +17,8 @@ import type { HeadingLevel } from "../components/heading-scope";
 
 /**
  * Attribute every resolved `HeadingScope` and `Heading` carries with its own
- * resolved depth, mirroring the contract those components already publish
- * on their own host element. {@link headingLevelFallback} reads this
- * attribute off the nearest ancestor to recover an ambient level it can't
- * reach through context.
+ * resolved depth. {@link headingLevelFallback} reads it off the nearest
+ * ancestor to recover an ambient level it can't reach through context.
  */
 const HEADING_LEVEL_ATTRIBUTE = "data-heading-level";
 
@@ -39,12 +37,9 @@ export namespace HeadingLevelFallback {
 	 */
 	export interface Options {
 		/**
-		 * Called once, on attach, with the ancestor level
-		 * {@link headingLevelFallback} recovered from the DOM — clamped to the
-		 * native `1`–`6` range. Never called when no ancestor carries
-		 * {@link HEADING_LEVEL_ATTRIBUTE}, or when its value is missing or
-		 * unparsable. The consuming island stores the reported level and calls
-		 * `handle.update()` to re-render with it corrected.
+		 * Called once, on attach, with the ancestor level clamped to the native
+		 * `1`–`6` range. Never called when no ancestor carries
+		 * {@link HEADING_LEVEL_ATTRIBUTE} or its value is unparsable.
 		 */
 		onLevel: (level: HeadingLevel) => void;
 	}
@@ -63,9 +58,7 @@ function clampLevel(value: number): HeadingLevel {
 /**
  * Reads the nearest ancestor's resolved heading level off the DOM, searching
  * upward from `node`'s parent when `node` itself already carries
- * {@link HEADING_LEVEL_ATTRIBUTE} — so a lookup made from an already-resolved
- * `HeadingScope` or `Heading` root finds the scope wrapping it, never reads
- * back its own value.
+ * {@link HEADING_LEVEL_ATTRIBUTE}, so it finds the scope wrapping `node`.
  *
  * @param node Element to search upward from.
  * @returns The nearest ancestor's clamped level, or `undefined` where no
@@ -89,25 +82,9 @@ function readAncestorLevel(node: Element): HeadingLevel | undefined {
 }
 
 /**
- * Safety net for an independently-hydrated island whose root `HeadingScope`
- * or `Heading` didn't get its ambient level threaded in explicitly as a
- * `level` prop by whoever rendered the island — the preferred path, and the
- * one every other case should reach for instead of this mixin. On attach,
- * this walks up from its host with `Element.closest()`, searching from the
- * host's own parent when the host itself already carries
- * {@link HEADING_LEVEL_ATTRIBUTE} so the search always lands on the nearest
- * outer scope rather than reading back the host's own value, parses the
- * ancestor's level, clamps it into the native `1`–`6` range, and reports it
- * through `options.onLevel`. It no-ops entirely when no ancestor carries the
- * attribute, or when its value is missing or unparsable.
- *
- * This mixin never owns or applies the level itself — it only detects it and
- * hands it back through `onLevel`, mirroring how other first-party mixins
- * report a detected value or state change back to their consumer instead of
- * applying it directly. The consuming island's own Handle-pattern component
- * stores the reported level in its own state and calls `handle.update()` to
- * re-render its `HeadingScope` or `Heading` root with the corrected `level`
- * prop.
+ * Safety net for an independently-hydrated island whose root didn't get its
+ * ambient level threaded in as a `level` prop. Detects the nearest
+ * ancestor's resolved level and reports it through `options.onLevel`.
  *
  * @param options Callback the recovered level is reported through; see {@link HeadingLevelFallback.Options}.
  * @returns A mixin descriptor for an island's outermost `HeadingScope` or `Heading` root's `mix` prop.

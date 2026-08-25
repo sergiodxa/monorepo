@@ -196,10 +196,9 @@ describe("alertHistory", () => {
 	test("falls back to the unknown-monitor label when the event has no resolved monitor name", async () => {
 		let { db, team, membership } = await createFixture();
 		/**
-		 * `alertHistory`'s query only fetches events whose `alert_id` belongs to one of
-		 * the team's current alerts (see `AlertEvent.listByAlertIds`), so the alert here
-		 * always resolves — only `monitor_name` (recorded at delivery time, independent
-		 * of the alerts query) can be missing, exercising the "Unknown Monitor" fallback.
+		 * `alertHistory`'s query only fetches events whose `alert_id` belongs to the team's
+		 * current alerts, so the alert here always resolves; only `monitor_name` (recorded
+		 * at delivery time) can be missing, exercising the "Unknown Monitor" fallback.
 		 */
 		let alert = await db.create(
 			alerts,

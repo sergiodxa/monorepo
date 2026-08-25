@@ -103,7 +103,6 @@ describe("verifySessionToken", () => {
 		let token = await createSessionToken("user-123", "user@example.test", SECRET);
 		let [, signature] = token.split(".");
 
-		// Swap in a forged payload (escalating the subject) while keeping the old signature.
 		let forgedPayload = base64UrlEncode(
 			JSON.stringify({
 				sub: "attacker",
@@ -147,7 +146,6 @@ describe("verifySessionToken", () => {
 	});
 
 	test("rejects an expired token", async () => {
-		// Hand-craft a correctly-signed token whose exp is in the past.
 		let past = Math.floor(Date.now() / 1000) - 10;
 		let payload = {
 			sub: "user-123",
@@ -184,7 +182,6 @@ describe("verifySessionToken", () => {
 	});
 
 	test("rejects a token whose payload is missing required fields", async () => {
-		// Correctly signed but the payload omits `exp`/`iat`, so schema validation fails.
 		let encodedPayload = base64UrlEncode(JSON.stringify({ sub: "user-123" }));
 		let signature = await hmacSign(encodedPayload, SECRET);
 		let result = await verifySessionToken(`${encodedPayload}.${signature}`, SECRET);
@@ -245,7 +242,6 @@ describe("getCookie", () => {
 	});
 
 	test("does not match a name that is only a suffix of another cookie", () => {
-		// "token" must not match "session_token".
 		expect(getCookie("session_token=abc", "token")).toBeNull();
 	});
 
@@ -272,7 +268,6 @@ describe("isPlatformSessionActive", () => {
 			return true;
 		});
 		expect(active).toBe(false);
-		// The store must not even be consulted for a sid-less token.
 		expect(checked).toBe(false);
 	});
 

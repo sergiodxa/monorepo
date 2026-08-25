@@ -1,6 +1,6 @@
 /**
- * Tests the deletion confirmation schema. The point of the literal is that near-misses fail: a
- * lowercase word, a padded one, or a missing field must not queue an account for erasure.
+ * Tests the deletion confirmation schema. The point of the literal is that only an exact
+ * match succeeds, keeping account erasure gated on a deliberate, precisely typed confirmation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

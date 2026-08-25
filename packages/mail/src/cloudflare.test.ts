@@ -46,7 +46,6 @@ function createBinding(respond: () => SendEmailResult) {
 	let payloads: SendEmailMessage[] = [];
 
 	let binding = {
-		/** Records the payload and reports whatever the test's responder decides. */
 		async send(message: SendEmailMessage): Promise<SendEmailResult> {
 			payloads.push(message);
 			return respond();

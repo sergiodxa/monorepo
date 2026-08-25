@@ -9,15 +9,8 @@ export type ScrollBehaviorValue = "auto" | "smooth";
 
 /**
  * Applies `scroll-behavior`, defaulting to `"smooth"`, so anchor jumps and
- * programmatic scrolls (`scrollIntoView`, `scrollTo`) animate instead of
- * teleporting.
- *
- * Accessibility caveat, stated plainly: smooth scrolling is motion, and this
- * utility does not gate itself. Applying it unconditionally overrides the
- * preference of anyone who asked for reduced motion, and a long smooth scroll
- * is exactly the kind of movement that triggers vestibular discomfort. Wrap
- * the call in `u.motionSafe()` so the animation is opt-in for people who
- * tolerate it and the default stays an instant jump.
+ * programmatic scrolls animate. Smooth scrolling is motion: wrap the call in
+ * `u.motionSafe()` to honor a reduced-motion preference with an instant jump.
  *
  * @example u.scrollBehavior()
  * @example css({ scrollBehavior: "smooth" })

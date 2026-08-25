@@ -24,13 +24,9 @@ import routes from "~/routes/web";
 const SUBJECT_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 /**
- * KV key one client's copy of one subject is cached under.
- *
- * **Frozen and shared at runtime** with the other worker serving this same API: the key
- * shape and the stored JSON must stay interchangeable, or one worker starts serving a
- * payload the other wrote and cannot read. The cache is per client rather than global so
- * that widening what a client is allowed to see can never be answered from an entry
- * written for a different one.
+ * Frozen KV key for one client's copy of one subject: a second deployed worker reads and
+ * writes these same entries, so the key shape and the stored JSON stay interchangeable.
+ * Scoping per client guarantees an entry only ever answers the client it was written for.
  */
 function subjectCacheKey(clientId: string, subjectId: string): string {
 	return `clients:${clientId}:subjects:${subjectId}`;
@@ -38,11 +34,8 @@ function subjectCacheKey(clientId: string, subjectId: string): string {
 
 /**
  * GET /api/subjects/:subjectId — returns `{ subject }` for a client-credentials caller.
- *
- * The response envelope, the payload's field names and its ISO-8601 timestamps are a
- * frozen contract: clients parse them directly. A missing subject is a `404` with an
- * `{ error }` envelope, and an unauthenticated request never reaches this handler — the
- * guard answers it.
+ * The envelope, the payload's field names and its ISO-8601 timestamps are a frozen
+ * contract that clients parse directly; a missing subject is a `404` with `{ error }`.
  */
 export default createAction(routes.api.subject, {
 	middleware: [requireApiClient()],

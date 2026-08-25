@@ -1,17 +1,8 @@
 /**
- * Flags an Avatar or Logo image the moment it fails to load, setting an
- * attribute its own styling already keys off to hide itself and reveal the
- * fallback markup — initials, an icon, a placeholder graphic — stacked
- * beneath it. Clears the same attribute again once a later `src` loads
+ * Flags an Avatar or Logo image the moment it fails to load by setting an
+ * attribute its own styling hides behind, revealing the fallback markup
+ * stacked beneath it; clears the attribute again once a later `src` loads
  * successfully.
- *
- * Why JS: the image `error` event is the only reliable signal that a
- * requested image failed to load — no HTML attribute or CSS selector reacts
- * to a broken `src` on its own.
- * No-JS baseline: the image renders in its usual place, stacked above the
- * fallback beneath it; a broken `src` shows the browser's own broken-image
- * treatment (its `alt` text, or a placeholder icon) instead of revealing that
- * fallback.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +14,8 @@ import { createElement, createMixin, on } from "remix/ui";
 
 /**
  * Attribute {@link imageFallback} sets on its host image once it fails to
- * load, and removes again once a later `src` loads successfully — the same
- * attribute the image's own `css()` styling hides itself behind (for
- * example `"&[data-image-error]": { display: "none" }`) to reveal whatever
- * fallback markup renders stacked beneath it.
+ * load, and removes once a later `src` loads successfully; the image's own
+ * `css()` styling hides itself behind this attribute to reveal its fallback.
  */
 export const IMAGE_ERROR_ATTRIBUTE = "data-image-error";
 
@@ -41,8 +30,7 @@ declare global {
 
 /**
  * Dispatched on an Avatar or Logo image by {@link imageFallback} whenever
- * loading it succeeds or fails, so a consumer can react — retry with a
- * different source, report the failure to telemetry — without polling
+ * loading it succeeds or fails, so a consumer can react without polling
  * {@link IMAGE_ERROR_ATTRIBUTE} off the DOM itself.
  */
 export class ImageFallbackEvent extends Event {
@@ -59,20 +47,9 @@ export class ImageFallbackEvent extends Event {
 }
 
 /**
- * Flags an Avatar or Logo image with {@link IMAGE_ERROR_ATTRIBUTE} the moment
- * it fails to load, and clears the attribute again once a later `src` loads
- * successfully. The image's own `css()` styling reacts to that attribute to
- * hide the image and reveal whatever fallback markup (initials, an icon, a
- * placeholder graphic) renders stacked beneath it — this mixin never touches
- * that fallback markup itself, only the image it's applied to.
- *
- * A response the browser already resolved from cache before this mixin's
- * `load`/`error` listeners attached wouldn't fire either event again, so on
- * mount this also reads the image's own `complete`/`naturalWidth` state to
- * catch an already-broken cached image retroactively.
- *
- * Dispatches {@link ImageFallbackEvent} on the image whenever this changes
- * whether its fallback is revealed.
+ * Sets or clears {@link IMAGE_ERROR_ATTRIBUTE} on an Avatar or Logo image
+ * on load, error, and mount — mount also checks `complete`/`naturalWidth`
+ * since an already-cached image never fires either event again.
  *
  * @returns A mixin descriptor for an Avatar or Logo image's `mix` prop.
  * @example
@@ -105,10 +82,6 @@ export const imageFallback: MixinFactory<HTMLImageElement> = createMixin<HTMLIma
 
 		handle.addEventListener("insert", (event) => {
 			let host = event.node;
-			// A cached response may have already settled before this listener
-			// attached; `complete` with no natural size is the retroactive
-			// signal for that, mirroring what the `error` event reports for a
-			// load that fails after mount.
 			if (host.src !== "" && host.complete && host.naturalWidth === 0) {
 				setFallback(host, true);
 			}

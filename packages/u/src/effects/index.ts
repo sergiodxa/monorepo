@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { backdropBlur } from "./backdrop-blur";
 export { backdropBrightness } from "./backdrop-brightness";
 export { backdropContrast } from "./backdrop-contrast";

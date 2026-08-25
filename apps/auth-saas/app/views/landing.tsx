@@ -1,9 +1,9 @@
 /**
  * Public (pre-authentication) `remix/ui` views: the marketing landing page and the
- * onboarding authentication-error page. These pages are shown to signed-out visitors,
- * so they use their own lightweight document shell and `css()` mixins rather than the
- * dashboard {@link import("./document").Document} (which carries authenticated nav
- * chrome). Replaces the former Tailwind-CDN `html()` string templates.
+ * onboarding authentication-error page, shown to signed-out visitors with their own
+ * lightweight document shell and `css()` mixins, keeping the dashboard's authenticated
+ * nav chrome scoped to signed-in routes. Replaces the former Tailwind-CDN `html()`
+ * string templates.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +17,6 @@ import routes from "~/routes/web";
 
 import { RESET_CSS } from "./styles";
 
-// ---- Shared shell ----
-
-/** Page body background for the marketing landing page (blue→indigo gradient). */
 let landingBody = css({
 	margin: "0",
 	minHeight: "100vh",
@@ -29,7 +26,6 @@ let landingBody = css({
 	background: "linear-gradient(to bottom right, #eff6ff, #e0e7ff)",
 });
 
-/** Page body background for the neutral, centered auth-error page. */
 let errorBody = css({
 	margin: "0",
 	minHeight: "100vh",
@@ -41,8 +37,6 @@ let errorBody = css({
 	alignItems: "center",
 	justifyContent: "center",
 });
-
-// ---- Landing layout ----
 
 let navBar = css({ padding: "1.5rem 0" });
 
@@ -76,8 +70,6 @@ let heroLead = css({
 });
 
 let heroActions = css({ display: "flex", gap: "1rem", justifyContent: "center" });
-
-// ---- Buttons ----
 
 let primaryButton = css({
 	display: "inline-block",
@@ -115,8 +107,6 @@ let secondaryButtonLg = css({
 	"&:hover": { background: "#f9fafb" },
 });
 
-// ---- Feature cards ----
-
 let featureGrid = css({
 	display: "grid",
 	gridTemplateColumns: "repeat(auto-fit, minmax(16rem, 1fr))",
@@ -151,8 +141,6 @@ let featureTitle = css({ fontSize: "1.125rem", fontWeight: "600", margin: "0 0 0
 
 let featureText = css({ color: "#4b5563", margin: "0" });
 
-// ---- OIDC capabilities panel ----
-
 let panel = css({
 	background: "#ffffff",
 	borderRadius: "0.75rem",
@@ -177,11 +165,7 @@ let capabilityItem = css({ display: "flex", alignItems: "center", gap: "0.5rem" 
 
 let checkIcon = css({ width: "1.25rem", height: "1.25rem", color: "#22c55e", flexShrink: "0" });
 
-// ---- Footer ----
-
 let footer = css({ padding: "2rem 0", textAlign: "center", color: "#6b7280" });
-
-// ---- Error page ----
 
 let errorWrap = css({ maxWidth: "28rem", width: "100%", padding: "0 1rem" });
 
@@ -209,7 +193,6 @@ let errorLink = css({
 	"&:hover": { textDecoration: "underline" },
 });
 
-/** One OIDC capability rendered with a green check icon in the capabilities panel. */
 let CAPABILITIES: string[] = [
 	"Authorization Code + PKCE",
 	"Client Credentials",
@@ -221,13 +204,6 @@ let CAPABILITIES: string[] = [
 	"Discovery Endpoints",
 ];
 
-/**
- * Renders a green checkmark icon used beside each OIDC capability.
- *
- * @returns A `remix/ui` SVG check icon node.
- * @example
- * <span mix={[capabilityItem]}>{checkIconNode()} JWKS Endpoint</span>
- */
 function checkIconNode(): RemixNode {
 	return (
 		<svg mix={[checkIcon]} fill="currentColor" viewBox="0 0 20 20">
@@ -246,14 +222,12 @@ export interface PublicDocumentProps {
 	title: string;
 	/** Which body background to use: the marketing gradient or the neutral error page. */
 	variant: "landing" | "error";
-	/** Page body content. */
 	children: RemixNode;
 }
 
 /**
- * Minimal HTML document shell for signed-out public pages. Provides the `<head>` and a
- * body styled per {@link PublicDocumentProps.variant}, without the authenticated
- * dashboard navigation.
+ * Minimal HTML document shell for signed-out public pages: the `<head>` and a body
+ * styled per {@link PublicDocumentProps.variant}.
  *
  * @param handle - Component handle exposing the shell props.
  * @returns A render function producing the public document markup.
@@ -393,7 +367,6 @@ export function LandingPage(): () => RemixNode {
 
 /** Props for {@link AuthErrorPage}. */
 export interface AuthErrorPageProps {
-	/** The error message shown to the visitor. */
 	message: string;
 }
 

@@ -86,7 +86,9 @@ export namespace CMSBookmarksActionView {
 }
 
 /**
- * Builds the CMS page that lists bookmarks and row actions.
+ * Builds the CMS page that lists bookmarks and row actions. A fixed table
+ * layout keeps the URL column ellipsized inside the panel, applied raw since
+ * `table-layout` sits outside the `u` utilities.
  */
 export function CMSBookmarksIndexView() {
 	return ({ model }: { model: CMSBookmarksIndexView.Props }) => {
@@ -108,9 +110,6 @@ export function CMSBookmarksIndexView() {
 							<p mix={[m(0), fg("neutral")]}>No bookmarks found in the database yet.</p>
 						) : (
 							<Table.Container>
-								{/* Fixed layout is what lets the URL column ellipsize instead of
-								stretching the table past the panel; there is no `u` utility for
-								`table-layout`, so it stays a raw declaration. */}
 								<Table aria-label="Bookmarks" mix={[raw({ tableLayout: "fixed" })]}>
 									<Table.Header>
 										<Table.Row>
@@ -209,9 +208,6 @@ export function CMSBookmarksActionView() {
 						<Form method="post" action={action}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
-							{/* The field stays nested inside its `Label`, so the control keeps
-							the implicit label association it already had — no `id`/`for` pair
-							needed. */}
 							<Label mix={[grid(), gap(1)]}>
 								Title
 								<Input name="title" value={values.title} required />

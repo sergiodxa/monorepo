@@ -12,11 +12,9 @@ import { color } from "../internal/tokens";
 import type { BorderStyleValue } from "./border";
 
 /**
- * Edge a single-sided divider border sits on — either a logical edge
- * (`"block-start"`, `"block-end"`, `"inline-start"`, `"inline-end"`) or a
- * physical edge (`"left"`, `"right"`, `"top"`, `"bottom"`) for the rare case
- * where the border must stay pinned to a physical side regardless of writing
- * mode.
+ * Edge a single-sided divider border sits on. A logical edge follows writing
+ * mode; a physical edge (`"left"`, `"right"`, `"top"`, `"bottom"`) keeps the
+ * border pinned to that side under every writing mode.
  */
 export type BorderEdge =
 	| "block-start"
@@ -39,11 +37,9 @@ export interface BorderEdgeOptions {
 	 */
 	style?: BorderStyleValue;
 	/**
-	 * Suppresses the `"solid"` default that `width` alone would otherwise
-	 * apply, matching `u.border()`'s own `noStyleDefault`. Use this when a
-	 * separate rule supplies the edge's style/color and this call should
-	 * only ever set the edge's width. Has no effect when `style` is also
-	 * given.
+	 * Suppresses the `"solid"` default that `width` alone would apply, for when
+	 * a separate rule supplies the edge's style and color and this call sets
+	 * the width alone. An explicit `style` still wins.
 	 */
 	noStyleDefault?: boolean;
 }
@@ -60,12 +56,9 @@ const EDGE_PROPERTY: Record<BorderEdge, string> = {
 };
 
 /**
- * Applies a border to a single edge only — a divider between two adjacent
- * elements (e.g. two stepper buttons sharing one frame) rather than a border
- * around all four sides. Accepts either a logical edge (preferred, so the
- * divider follows writing mode) or a physical edge, for the rare case where
- * it must stay pinned to a physical side instead. Only the given keys are
- * set, same as `u.border()`'s options form.
+ * Applies a border to a single edge only, for a divider between two adjacent
+ * elements (e.g. two stepper buttons sharing one frame). Only the given keys
+ * are set; prefer a logical edge so the divider follows writing mode.
  *
  * @example u.borderEdge("inline-start", { width: 1, style: "solid" })
  * @example css({ borderInlineStartWidth: "1px", borderInlineStartStyle: "solid" })

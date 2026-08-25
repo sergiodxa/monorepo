@@ -1,11 +1,8 @@
 import { unwrap } from "@pkg/result";
 /**
- * Verifies the shop system's money and transaction behaviors in isolation from the engine boundary.
- *
- * The tests exercise buying (success, insufficient funds, and missing buy price), selling (success, not-owned,
- * and missing sell price), and the generic money adjustment (positive, negative, and the non-negative clamp).
- * They build a tiny inline content source with priced and unpriced items so the assertions describe the
- * system's rules directly rather than depending on any specific authored catalog.
+ * Verifies the shop system's money and transaction behaviors: buying,
+ * selling, and the generic money adjustment, using a tiny inline content
+ * source so the assertions describe the system's rules directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,14 +27,16 @@ import {
 let PRICED_ITEM_ID = "PRICED_ITEM";
 let FREE_ITEM_ID = "FREE_ITEM";
 
-/** Builds the minimal game data source needed to price shop transactions. */
+/**
+ * Builds the minimal game data source needed to price shop transactions;
+ * the unpriced item exercises paths where a missing price blocks the trade.
+ */
 function createGameData(): GameData {
 	let priced: Item = {
 		category: "misc",
 		attributes: [ItemAttribute.Countable],
 		price: { buy: 100, sell: 40 },
 	};
-	// An item with no `price` cannot be bought or sold.
 	let free: Item = {
 		category: "misc",
 		attributes: [ItemAttribute.Countable],
@@ -92,7 +91,6 @@ test("maxAffordable caps at MAX_PURCHASE_COUNT for a huge balance", () => {
 
 test("maxAffordable hits exact multiples on the boundary", () => {
 	expect(maxAffordable(500, 100)).toBe(5);
-	// A balance of exactly 999 units still tops out at the cap.
 	expect(maxAffordable(999, 1)).toBe(999);
 	expect(maxAffordable(1000, 1)).toBe(999);
 });

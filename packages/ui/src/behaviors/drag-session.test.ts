@@ -1,7 +1,6 @@
 /**
- * Unit tests for {@link DragSession}, constructed and driven directly with no
- * DOM and no rendering: every assertion reads session state or observes
- * dispatched "change" events.
+ * Unit tests for {@link DragSession}, driven directly in memory: every
+ * assertion reads session state or counts dispatched "change" events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +10,6 @@ import { describe, expect, test } from "vitest";
 
 import { DragSession } from "./drag-session";
 
-/** Collects `"change"` event dispatch counts for assertions. */
 function countChanges(session: DragSession): { count(): number } {
 	let calls = 0;
 

@@ -20,19 +20,14 @@ import { hasAccessibleText } from "./has-accessible-text";
  * whatever other props a component's own type carries alongside them.
  */
 export interface AccessibleNameProps {
-	/** The `aria-label` attribute a consumer may set directly on the host element. */
 	"aria-label"?: unknown;
-	/** The `aria-labelledby` attribute a consumer may set directly on the host element. */
 	"aria-labelledby"?: unknown;
 }
 
 /**
  * Logs `message` through `console.warn`, in dev mode only, when `props`
- * carries neither `aria-label` nor `aria-labelledby` and `children` resolves
- * to no visible text of its own — the case where a control's content is
- * entirely icons or other non-text elements and assistive technology has no
- * accessible name to announce for it. A control that already renders visible
- * text, or that carries either ARIA attribute, triggers no warning.
+ * carries neither `aria-label` nor `aria-labelledby` and `children` resolves to
+ * no visible text — leaving assistive technology no accessible name to announce.
  *
  * @param props The component's own props, read for `aria-label` and `aria-labelledby`.
  * @param children The component's own `children` prop, walked by {@link hasAccessibleText} for visible text.
@@ -61,10 +56,8 @@ export function warnIfNoAccessibleName(
 
 /**
  * Logs `message` through `console.warn`, in dev mode only, when `props`
- * carries neither `aria-label` nor `aria-labelledby` — the landmark and group
- * variant of {@link warnIfNoAccessibleName}, for a host with no `children`
- * fallback of its own, such as a navigation landmark or a grouping wrapper
- * whose accessible name always comes from one of the two attributes.
+ * carries neither `aria-label` nor `aria-labelledby` — for a host such as a
+ * navigation landmark or grouping wrapper with no `children` fallback of its own.
  *
  * @param props The component's own props, read for `aria-label` and `aria-labelledby`.
  * @param message The dev-mode warning to log when neither attribute supplies an accessible name.

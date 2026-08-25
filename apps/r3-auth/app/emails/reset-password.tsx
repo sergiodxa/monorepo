@@ -1,11 +1,10 @@
 /**
  * The message that carries a password-recovery link: one action, the window it is good
- * for, and a line telling somebody who did not ask for it that ignoring it is enough.
+ * for, and a line saying an unrequested copy is safe to ignore.
  *
  * It is the only message this server sends that holds a credential, so it holds exactly
- * one and nothing else: no session id — that value *is* the refresh token — no account
- * facts a stranger who intercepted the mail could learn, and no address in the copy. The
- * link goes to a page that asks for a new password and nowhere else.
+ * one and the copy stays anonymous — an interceptor learns the link and its deadline. The
+ * link resolves to a single page, the one that asks for a new password.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +21,7 @@ import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
 export namespace ResetPasswordEmail {
 	/** Everything the message needs, all of it decided when the reset was issued. */
 	export interface Data {
-		/** The subject's own address; a recovery link never goes anywhere else. */
+		/** The subject's own address, the only recipient a recovery link has. */
 		email: string;
 		/** Absolute URL of the reset form, carrying the single-use token. */
 		url: string;
@@ -41,7 +40,7 @@ export namespace ResetPasswordEmail {
  * @example await mailer.send(new ResetPasswordEmail({ email, url, minutes, locale, t }));
  */
 export class ResetPasswordEmail implements EmailContract {
-	/** The issued reset this message was built from; nothing is loaded while rendering. */
+	/** The issued reset this message was built from; rendering reads only from here. */
 	#reset: ResetPasswordEmail.Data;
 
 	/**
@@ -65,12 +64,9 @@ export class ResetPasswordEmail implements EmailContract {
 	}
 
 	/**
-	 * Body tree the mailer renders into both parts.
-	 *
-	 * The deadline is stated in the copy rather than as a timestamp, because a reader in
-	 * another time zone can act on "30 minutes" and has to do arithmetic on an hour. The
-	 * plain link is repeated under the button for the clients that strip one and for the
-	 * readers who want to see where it goes before following it.
+	 * Body tree the mailer renders into both parts. The deadline is a duration, which a
+	 * reader in any time zone can act on directly, and the plain link is repeated under the
+	 * button for clients that strip it and readers who check where a link goes.
 	 */
 	body(): RemixElement {
 		let { t, locale, url, minutes } = this.#reset;

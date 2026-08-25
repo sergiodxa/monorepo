@@ -10,10 +10,9 @@
  */
 
 /**
- * Narrows an `on("command", ...)` handler's event to `CommandEvent`,
- * centralizing the `as unknown as CommandEvent` cast a command-answering
- * mixin would otherwise repeat on its own, so the one unsafe cast this reads
- * from lives in a single reviewable place.
+ * Narrows an `on("command", ...)` handler's event to `CommandEvent`, so the
+ * `as unknown as CommandEvent` cast a command-answering mixin would
+ * otherwise repeat lives in one reviewable place.
  *
  * @param event The event received by an `on("command", ...)` handler.
  * @returns The same event, narrowed to `CommandEvent`.

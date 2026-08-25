@@ -1,7 +1,8 @@
 /**
  * `/account/grants` — the apps a subject has authorized, and the withdrawal of one. A
- * withdrawal removes the consent and the sessions that consent produced, so the person is
- * signed out of that app as well as no longer able to sign back in silently.
+ * withdrawal removes the consent and the sessions it produced, so the person is signed
+ * out of that app and must consent again to return. Every withdrawal is scoped to the
+ * subject the guard resolved, so a forged client id reaches only their own rows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,7 +29,6 @@ import AccountLayout from "~/resources/layouts/account";
 import GrantsView from "~/resources/views/account/grants";
 import routes from "~/routes/web";
 
-/** Renders the authorized-apps list for the subject the guard resolved. */
 async function grantsPage(ctx: RequestContext, db: Database): Promise<Response> {
 	let subject = ctx.subject;
 	let grants = await Grant.findBySubjectId(db, subject.id);
@@ -84,12 +84,9 @@ export default createController(routes.account.grants, {
 		}),
 
 		/**
-		 * POST /account/grants — withdraws one consent and the sessions it produced.
-		 *
-		 * The two deletions are separate statements and this database has no interactive
-		 * transactions, so the consent goes first: a failure in between leaves sessions that
-		 * expire on their own, whereas the reverse order would leave a consent that silently
-		 * re-authorizes the app on its next visit.
+		 * POST /account/grants — withdraws one consent, then the sessions it produced; with
+		 * no interactive transactions, that order leaves at worst sessions that expire on
+		 * their own. This server's own registration stays: it carries the current session.
 		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
@@ -104,16 +101,11 @@ export default createController(routes.account.grants, {
 
 			let clientId = result.data.clientId;
 
-			// This server's own registration is what the browser reading the page is signed in
-			// through: withdrawing it would delete this very session as a side effect of an
-			// action that says nothing about signing out.
 			if (clientId === AUTH_SERVER_CLIENT_ID) {
 				ctx.logger.info("grant_revoke_refused_auth_server", { subjectId: subject.id });
 				return backToList();
 			}
 
-			// Scoped to the guard's subject, so a forged client id can only ever remove this
-			// person's own consent.
 			let removed = await Grant.deleteBySubjectAndClient(db, subject.id, clientId);
 
 			if (removed === 0) {
@@ -130,7 +122,7 @@ export default createController(routes.account.grants, {
 	},
 });
 
-/** Sends the browser back to the list, so a refresh never re-posts the withdrawal. */
+/** Sends the browser back to the list, so a refresh re-runs the GET. */
 function backToList(): Response {
 	return redirect(routes.account.grants.index.href(), { status: redirect.Status.SeeOther });
 }

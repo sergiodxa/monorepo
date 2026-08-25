@@ -1,56 +1,46 @@
 /**
- * View model for the 404 page. Defines the render-ready `Page` contract (title,
- * description, emoji) and a `page` factory that maps caller input into that shape via
- * a direct field copy. It exists so controllers build not-found template data through
- * one canonical mapper instead of constructing ad hoc objects.
+ * View model for the 404 page. Holds the render-ready `Page` contract (title,
+ * description, emoji) and the `page` factory controllers call to build it, so
+ * not-found template data comes from one canonical mapper.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /**
- * Contracts for not-found page data exchanged between controllers and templates.
- *
- * Keeping these types grouped clarifies the public shape used by `NotFoundViewModel`.
+ * Contracts for not-found page data exchanged between controllers and
+ * templates.
  */
 export namespace NotFoundViewModel {
 	/**
 	 * Render-ready 404 page content consumed by the server-rendered template.
 	 */
 	export interface Page {
-		/** Primary heading shown in the not-found page `<title>` and/or hero text. */
+		/** Primary heading, used for both the document title and the hero text. */
 		title: string;
-		/** Short supporting copy explaining the missing resource state. */
 		description: string;
-		/** Decorative or expressive glyph used as the page visual accent. */
 		emoji: string;
 	}
 
 	/**
-	 * Caller-provided values used to construct a `Page` object.
-	 *
-	 * This currently mirrors `Page` to keep call sites explicit about transformation boundaries.
+	 * Caller-provided values used to construct a `Page`. It matches `Page` field
+	 * for field, keeping the transformation boundary explicit at call sites.
 	 */
 	export interface Input {
-		/** Desired page title for the missing-resource response. */
 		title: string;
-		/** Human-readable explanation displayed under the title. */
 		description: string;
-		/** Emoji rendered as part of the page mood and emphasis. */
 		emoji: string;
 	}
 }
 
 /**
- * Factory for 404 page view data.
- *
- * The class centralizes mapping rules so controllers do not construct template models ad hoc.
+ * Factory for 404 page view data, giving controllers one place to build the
+ * template payload.
  */
 export class NotFoundViewModel {
 	/**
-	 * Maps caller input into the canonical not-found page contract.
-	 *
-	 * The method performs a direct field copy and intentionally does not mutate or normalize values.
+	 * Copies every field verbatim, so callers own the exact copy rendered on the
+	 * page.
 	 *
 	 * @param input Values to display on the not-found page.
 	 * @returns Render-ready page payload for the 404 template.

@@ -74,21 +74,19 @@ export function createProviderRouter(
 	requestLogger: Logger,
 	options: ProviderRouterOptions,
 ) {
-	// The provider resolves its Database through the service container (ADR-008 DI)
-	// instead of a context-injection middleware. The container is registered per
-	// request with this request's db and its `scope` wraps the router's fetch below,
-	// so controllers/helpers resolve the correct tenant db via inject/getServiceContainer.
+	/**
+	 * Resolves the provider's Database through a service container (ADR-008): registered
+	 * per request with this request's db, its `scope` wraps the router's fetch below, so
+	 * controllers/helpers reach the correct tenant db via inject/getServiceContainer.
+	 */
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 
-	// Typed as a non-tuple Middleware[] so the router context stays the base
-	// RequestContext (with its global augmentations) instead of a middleware-branded
-	// context; controllers below are typed against that same default context.
-	// `asyncContext()` publishes the request context to AsyncLocalStorage so handlers
-	// wrapped in `inject` can read it via `getContext()`.
-	// `formData()` is cast to the base Middleware to drop its context-transform
-	// brand; the value it provides is surfaced via the global `formData` context
-	// augmentation (see router-context.d.ts), not the transform.
+	/**
+	 * A non-tuple `Middleware[]` keeps the router context at the base
+	 * `RequestContext`, so controllers type against it; `formData()` is cast
+	 * since its value surfaces through the global `formData` augmentation.
+	 */
 	let middleware: Middleware[] = [
 		asyncContext(),
 		logger(requestLogger),
@@ -101,12 +99,13 @@ export function createProviderRouter(
 		defaultHandler: notFound,
 	});
 
-	// The current fetch-router requires one map() per route group: a controller's
-	// `actions` may only reference leaf routes, and nested route-map keys throw at
-	// runtime ("call router.map() for that route map separately").
+	/**
+	 * The fetch-router requires one `map()` per route group: a controller's `actions`
+	 * may only reference leaf routes; nested route-map keys throw at runtime with
+	 * "call router.map() for that route map separately".
+	 */
 	let management: Middleware[] = [managementAuth(options.internalSecret)];
 
-	// Public + WebAuthn + OIDC endpoints.
 	router.map(routes.index, index);
 	router.map(routes.verifyEmail, verifyEmail);
 
@@ -129,9 +128,11 @@ export function createProviderRouter(
 	router.map(routes.discover.oidc, oidc);
 	router.map(routes.discover.oauth, oauth);
 
-	// Management API — every route requires management-client or internal-token auth.
-	// stats/setup are single routes, so they take an action object; the `action`
-	// helper returns the `Action` union, narrowed here to the handler it actually is.
+	/**
+	 * Every Management API route requires management-client or internal-token auth.
+	 * `stats`/`setup` are single routes, so they take a handler directly; the `action`
+	 * helper's `Action` union is narrowed here to the handler it actually is.
+	 */
 	router.map(routes.api.stats, {
 		middleware: management,
 		handler: stats.show as RequestHandler,
@@ -165,10 +166,11 @@ export function createProviderRouter(
 	router.map(routes.api.brand, { middleware: management, actions: brand });
 	router.map(routes.api["signing-keys"], { middleware: management, actions: signingKeys });
 
-	// Run every request inside the container scope so `getServiceContainer()` /
-	// `inject(...)` resolve services (the Database registered above) during handling.
-	// Only `fetch` is used by the caller (see index.ts), so we expose just that,
-	// scoped to this request's container.
+	/**
+	 * Runs every request inside the container scope so `getServiceContainer()` /
+	 * `inject(...)` resolve the request's registered services. Exposes only `fetch`,
+	 * scoped to this request's container, matching what the caller in index.ts uses.
+	 */
 	return {
 		fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
 			return container.scope(() => router.fetch(input, init));

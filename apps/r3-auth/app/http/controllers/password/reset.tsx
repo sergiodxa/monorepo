@@ -1,13 +1,11 @@
 /**
- * `/password/reset` — the page a recovery link opens, and the submission that spends the
- * link and writes a new password. `GET` only checks that the token is still live, so an
- * expired or already-used link becomes a page that says so; `POST` consumes it, replaces
- * the hash, and ends every session on the account.
+ * `/password/reset` — the page a recovery link opens and the submission that spends it. `GET`
+ * checks the token is still live; `POST` consumes it, replaces the hash, and ends every
+ * session on the account, the resetting browser's own cookie included.
  *
- * Ending the sessions is the security point of the endpoint rather than a courtesy: a
- * session row's id *is* the refresh token, so a session left behind after a reset is a live
- * credential in whoever's hands prompted the reset. The new password is derived with the
- * same PBKDF2 policy registration uses; nothing here invents a hash.
+ * Ending the sessions is the security point: a session row's id *is* the refresh token, so one
+ * left behind after a reset stays a live credential in whoever's hands prompted the reset. The
+ * new hash comes from the same PBKDF2 policy registration uses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,11 +40,9 @@ import ResetPasswordView from "~/resources/views/password/reset";
 import routes from "~/routes/web";
 
 /**
- * Headers every page carrying a token in its URL is served with.
- *
- * `no-referrer` keeps the token out of the `Referer` of anything the page loads or links
- * to, and `no-store` keeps the page itself out of shared caches and out of a back-button
- * re-render once the token has been spent.
+ * Headers every page carrying a token in its URL is served with: `no-referrer` keeps the token
+ * out of the `Referer` of anything the page loads or links to, and `no-store` keeps the page
+ * out of shared caches and out of a back-button re-render once the token has been spent.
  */
 const TOKEN_PAGE_HEADERS: HeadersInit = {
 	"Referrer-Policy": "no-referrer",
@@ -88,13 +84,9 @@ function resetPage(
 }
 
 /**
- * The page for a link that cannot be used: expired, already spent, malformed, or issued for
- * a subject that no longer exists.
- *
- * One page for all four, deliberately. Distinguishing them would tell somebody holding a
- * token they did not receive which of those it is, and the reader's next step — ask for a
- * new link — is the same in every case. It is a `400`, not a `500`: nothing went wrong on
- * this server.
+ * The page for a link that cannot be used: expired, already spent, malformed, or issued for a
+ * subject that no longer exists. One page and one `400` for all four, so a token's holder
+ * learns only that it is unusable; the next step, asking for a new link, is the same anyway.
  */
 function invalidPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
@@ -130,13 +122,9 @@ function donePage(ctx: RequestContext): Response | Promise<Response> {
 }
 
 /**
- * Ends every session the subject has, and tells the relying parties that hold one.
- *
- * The notification runs first because it is derived from the session rows: once they are
- * deleted there is nothing left to work out who to notify from. It is best effort and its
- * failure is logged rather than raised — an unreachable relying party must not stop the
- * account's own refresh tokens from being destroyed, which is the part that actually
- * revokes access.
+ * Ends every session the subject has, and tells the relying parties that hold one. The
+ * notification runs first because it is derived from the session rows; its failure is only
+ * logged, so the refresh tokens are destroyed even when a relying party is unreachable.
  *
  * @returns How many sessions were revoked, for the log line.
  */
@@ -162,9 +150,9 @@ function submittedToken(formData: FormData): string | null {
 export default createController(routes.password.reset, {
 	actions: {
 		/**
-		 * GET /password/reset — renders the form when the link is still live, and the
-		 * "unusable link" page otherwise. Reading a token never spends it, so reloading this
-		 * page is safe.
+		 * GET /password/reset — the form when the link is still live, the "unusable link" page
+		 * otherwise; the token survives a read, so reloading is safe. The shape check runs first, so
+		 * only a plausible token spends from the IP budget sign-in shares.
 		 */
 		index: inject([RateLimiters] as const, async (limiters) => {
 			let ctx = getContext();
@@ -175,14 +163,6 @@ export default createController(routes.password.reset, {
 				return invalidPage(ctx);
 			}
 
-			// Spent only once the request presents something that could be a token, and so
-			// only by a request that is about to cost a store read. A page fetched with no
-			// token — a crawler, a monitor, a bodyless probe on the bare path — is answered
-			// out of the shape check above and takes nothing from the budget, which matters
-			// because this is the same budget a person's sign-in attempts come out of and it
-			// is keyed by IP: whoever shares an egress with a prober must not be locked out
-			// of signing in by it. Somebody walking the token space still presents a
-			// well-formed token every time and is still stopped at ten a minute.
 			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
 			if (limited) return limited;
 
@@ -196,11 +176,9 @@ export default createController(routes.password.reset, {
 		}),
 
 		/**
-		 * POST /password/reset — spends the link, writes the new password hash, revokes every
-		 * session, and notifies the subject.
-		 *
-		 * The token is consumed before the password is derived, so the expensive derivation
-		 * only ever runs for a caller who actually held a live link.
+		 * POST /password/reset — spends the link, writes the new hash, revokes every session, and
+		 * notifies the subject. Consuming the token before deriving the hash keeps that cost for
+		 * callers who held a live link; a confirmation mismatch gets its own message.
 		 */
 		action: inject([DatabaseKey, RateLimiters] as const, async (db, limiters) => {
 			let ctx = getContext();
@@ -220,8 +198,6 @@ export default createController(routes.password.reset, {
 				return resetPage(ctx, token, ctx.i18next.t("password.reset.errors.invalid"));
 			}
 
-			// Compared here rather than in the schema so the mismatch has a message of its own:
-			// "these do not match" is a different instruction from "this is too short".
 			if (result.data.password !== result.data.passwordConfirmation) {
 				ctx.logger.info("password_reset_confirmation_mismatch");
 				return resetPage(ctx, result.data.token, ctx.i18next.t("password.reset.errors.mismatch"));
@@ -235,7 +211,6 @@ export default createController(routes.password.reset, {
 
 			let subject = await Subject.findById(db, subjectId);
 			if (!subject) {
-				// Issued for an account that has since been deleted. The token is already spent.
 				ctx.logger.info("password_reset_subject_missing", { subjectId });
 				return invalidPage(ctx);
 			}
@@ -265,8 +240,6 @@ export default createController(routes.password.reset, {
 
 			let revoked = await revokeSessions(ctx, db, subjectId);
 
-			// The browser that performed the reset may itself have been holding a session this
-			// server issued; those tokens are dead now, so the cookie stops claiming otherwise.
 			unsetTokens();
 
 			ctx.email.later(

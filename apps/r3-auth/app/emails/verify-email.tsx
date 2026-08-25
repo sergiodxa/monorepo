@@ -1,12 +1,8 @@
 /**
- * The message that asks a subject to confirm the address their account is registered
- * under: one sentence, one button carrying a single-use token, and how long the link
- * lasts.
- *
- * It is the only message here that carries a secret, so it carries nothing else — no
- * account facts to correlate, and never a session id, which is this server's refresh
- * token. The link is built by the caller, which is also what decides the lifetime the
- * copy quotes, so the sentence and the token can never disagree about it.
+ * Asks a subject to confirm the address their account is registered under, with a
+ * button carrying a single-use token and the minutes it lasts. It carries no other
+ * account facts and never a session id, since that value is this server's refresh
+ * token; the caller builds the link and the lifetime it quotes, so the two agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,11 +67,9 @@ export class VerifyEmailEmail implements EmailContract {
 	}
 
 	/**
-	 * Body tree the mailer renders into both parts.
-	 *
-	 * The lifetime is stated next to the button rather than in the footer, because a
-	 * reader who comes back to an expired link needs to know it expires before they click
-	 * it, and the sentence also tells them where a fresh one comes from.
+	 * Body tree the mailer renders into both parts. The lifetime sits beside the button
+	 * so a reader who returns to an expired link learns it has expired before clicking,
+	 * and that same line tells them where a fresh one comes from.
 	 */
 	body(): RemixElement {
 		let { t, locale, url, expiresInMinutes } = this.#verification;

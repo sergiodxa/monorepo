@@ -1,13 +1,8 @@
 /**
  * Pure numeric and string math behind the color-editing components: parsing
- * a hex, `rgb()`, or `hsl()` color string into its channel values, formatting
- * those values back out in any of the three notations, converting a color
- * between the red/green/blue, hue/saturation/lightness, and hue/saturation/
- * value spaces, and the pointer-geometry math a two-dimensional picking
- * square or a circular hue ring turns a pointer position into. Every export
- * is a plain function operating on numbers and strings, with no knowledge of
- * the DOM or rendering — directly unit-testable and reusable ahead of any
- * markup or drag handling built on top.
+ * a hex, `rgb()`, or `hsl()` string, formatting a color back out in any of
+ * the three notations, converting between RGB, HSL, and HSV, and the
+ * pointer-geometry math a picking square or hue ring turns into a value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,10 +70,9 @@ export interface HSVColor {
 const FULL_TURN_DEGREES = 360;
 
 /**
- * Clamps `value` into an inclusive numeric bound, generalized from a single
- * fixed range (a fill bar's percentage, always held to `0`–`100`) to any
- * bound a color value needs: an RGB channel's `0`–`255`, an alpha channel's
- * `0`–`1`, or a saturation/lightness/value percentage's `0`–`100`.
+ * Clamps `value` into an inclusive numeric bound — an RGB channel's
+ * `0`–`255`, an alpha channel's `0`–`1`, or a saturation/lightness/value
+ * percentage's `0`–`100`.
  *
  * @param value Value to clamp.
  * @param min Lower bound. Defaults to `0`.
@@ -105,11 +99,8 @@ function normalizeAngle(angle: number): number {
 
 /**
  * Computes the hue angle, in degrees `0`–`360`, of a normalized (`0`–`1`)
- * RGB triplet already reduced to its `max` channel and `delta` (`max -
- * min`) — the first step shared by converting to either the hue/saturation/
- * lightness or the hue/saturation/value space, since both share the same
- * hue math and differ only in how they fold `max`/`min` into saturation and
- * a third channel.
+ * RGB triplet reduced to its `max` channel and `delta` (`max - min`) — the
+ * hue math shared by converting to either the HSL or HSV space.
  *
  * @param r Red channel, `0`–`1`.
  * @param g Green channel, `0`–`1`.
@@ -132,12 +123,8 @@ function computeHue(r: number, g: number, b: number, max: number, delta: number)
 
 /**
  * Maps a hue's `0`–`360` sector to the `[first, second, third]` RGB-order
- * triplet built from `chroma` (the color's saturation-scaled span) and `x`
- * (the second-largest channel's share of that span) — the sector
- * assignment shared by converting either lightness- or value-anchored
- * chroma back to concrete red/green/blue channels, before either
- * conversion's own offset (lightness's `m`, value's `v - chroma`) shifts
- * every channel up to its final level.
+ * triplet built from `chroma` and `x` (the second-largest channel's share
+ * of it) — the sector logic shared by both HSL-to-RGB and HSV-to-RGB.
  *
  * @param h Hue, in degrees, already normalized to `0`–`360`.
  * @param chroma The color's chroma for this hue/saturation pairing.
@@ -400,16 +387,13 @@ function parseHslComponents(content: string): RGBAColor | null {
 /**
  * Parses a hex (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`), `rgb()`/`rgba()`,
  * or `hsl()`/`hsla()` color string into its channel values — the shared
- * entry point every color-editing field and swatch reads a raw string value
- * through. Accepts both the classic comma-separated component list and the
- * space-separated list with an optional `/`-prefixed alpha, and tolerates
- * surrounding whitespace. Anything else — a named color, an unsupported
- * notation, or a string that merely resembles one of the three formats
- * without fully matching it — resolves to `null` rather than a partial or
- * best-guess result.
+ * entry point every color-editing field and swatch reads a raw value through.
  *
  * @param input The color string to parse.
- * @returns The parsed {@link RGBAColor}, or `null` when `input` doesn't match a supported notation.
+ * @returns The parsed {@link RGBAColor}, or `null` when `input` doesn't
+ * match a supported notation — a named color, an unsupported notation, or
+ * a string merely resembling one of the three formats without fully
+ * matching it.
  * @example
  * parseColor("#ff0000"); // { r: 255, g: 0, b: 0, a: 1 }
  * @example
@@ -534,15 +518,13 @@ export interface Rect {
 
 /**
  * Maps a pointer position to its `[0, 1]` × `[0, 1]` position within `rect`,
- * clamped so a pointer that has drifted past the rectangle's edges still
- * resolves to a point on its border instead of one beyond it — the shared
- * math behind dragging across a two-dimensional picking surface, where each
- * axis drives one paired value. A zero-width or zero-height `rect` resolves
- * every position on that axis to `0` rather than dividing by zero.
+ * clamped to the rectangle's border for a pointer that has drifted past its
+ * edges — the shared math behind dragging across a picking surface.
  *
  * @param rect The rectangle `point` is measured against.
  * @param point The pointer position to normalize.
- * @returns The normalized, clamped position within `rect`.
+ * @returns The normalized, clamped position within `rect`. A zero-width or
+ * zero-height `rect` resolves every position on that axis to `0`.
  * @example
  * normalizedPointerPosition({ left: 0, top: 0, width: 200, height: 100 }, { x: 100, y: 25 });
  * // { x: 0.5, y: 0.25 }
@@ -560,14 +542,12 @@ export function normalizedPointerPosition(rect: Rect, point: Point): Point {
 /**
  * Computes the clockwise angle, in radians from `0` (straight up, 12
  * o'clock) through the full `[0, 2π)` turn, of `point` as seen from
- * `center` — the shared math behind dragging around a circular control,
- * matching the same clockwise-from-12-o'clock convention a pie or donut
- * wedge's angle span already sweeps through. A `point` exactly on `center`
- * resolves to `0` rather than an undefined direction.
+ * `center` — the shared math behind dragging around a circular control.
  *
  * @param center The circle's center.
  * @param point The pointer position to measure the angle of.
- * @returns The angle, in radians, clockwise from 12 o'clock, `0`–`2π`.
+ * @returns The angle, in radians, clockwise from 12 o'clock, `0`–`2π`. A
+ * `point` exactly on `center` resolves to `0`.
  * @example
  * angleFromCenter({ x: 0, y: 0 }, { x: 0, y: -10 }); // 0 (straight up)
  * @example
@@ -600,8 +580,7 @@ export function angleToHue(angle: number): number {
 /**
  * Converts a hue, in degrees, to its {@link angleFromCenter}-style angle
  * (radians, clockwise from 12 o'clock) on a circular hue control — the
- * inverse of {@link angleToHue}, for placing a control's pointer at the
- * position matching a given hue value.
+ * inverse of {@link angleToHue}, for placing a control's pointer.
  *
  * @param hue The hue, in degrees, to convert.
  * @returns The equivalent angle, in radians, clockwise from 12 o'clock.

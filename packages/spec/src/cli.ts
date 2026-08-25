@@ -67,6 +67,7 @@ Permissions (denied unless granted):
 /**
  * Run the CLI against an argument vector and write through the sink —
  * separated from the entry point so tests can drive it without a process.
+ * Config grants apply only with `--allow-config`, so a clone cannot self-grant.
  *
  * @param argv - Arguments after the program name, e.g. `["run", "spec"]`.
  * @param sink - Where human output goes.
@@ -83,9 +84,6 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		return 2;
 	}
 
-	// `--allow-config` opts into the permissions the project's spec/config.jsonc
-	// declares. It is a bare flag, not a capability family, so it is peeled off
-	// first — before the plugin and permission parsers, which would not know it.
 	let configOptIn = parseConfigOptIn(argv.slice(1));
 	if (isFailure(configOptIn)) {
 		reportFatal(configOptIn.error, sink);
@@ -93,9 +91,6 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let { allowConfig, remaining: afterConfigOptIn } = configOptIn.data;
 
-	// `--concurrency=N` (alias `--jobs=N`) is a scheduling flag, not a permission
-	// family, so it is peeled off before the plugin and permission parsers, which
-	// would otherwise flag it as an unknown flag. Absent, it defaults to 1.
 	let concurrencyParsed = parseConcurrency(afterConfigOptIn);
 	if (isFailure(concurrencyParsed)) {
 		reportFatal(concurrencyParsed.error, sink);
@@ -103,9 +98,6 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let { concurrency, remaining: afterConcurrency } = concurrencyParsed.data;
 
-	// `--allow-plugins` authorizes launching declared plugins; it is not one of
-	// the four capability families, so it is peeled off before the permission
-	// parser (which would reject it as an unknown `--allow-*` flag) sees it.
 	let pluginParsed = parsePluginGrant(afterConcurrency);
 	if (isFailure(pluginParsed)) {
 		reportFatal(pluginParsed.error, sink);
@@ -133,20 +125,12 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let root = remaining[0] ?? "spec";
 
-	// Load the per-project spec/config.jsonc and decide which declared plugins
-	// the caller authorized to launch. Deny-by-default: a suite that imports a
-	// declared-but-unauthorized plugin is refused before any process starts.
 	let config = await loadProjectConfig(root);
 	if (isFailure(config)) {
 		reportFatal(config.error, sink);
 		return 2;
 	}
 
-	// Deny-by-default with declare + opt-in: the config's declared grants apply
-	// only when `--allow-config` is passed, and then they *union* with the CLI's
-	// own flags (flags always add to, never subtract from, the config set).
-	// Without the flag the declaration is inert, so a cloned repo cannot
-	// self-grant. The declared plugin launch grant is folded in the same way.
 	let configEntries = config.data.permissions.allow;
 	let configGrants = grantsFromConfig(configEntries);
 	let grants = allowConfig ? mergeGrants(cliGrants, configGrants) : cliGrants;
@@ -165,8 +149,6 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		let referenced = deniedReferences(loaded.data, deniedNamespaces);
 		if (referenced.length > 0) {
 			let error = launchDeniedError(referenced);
-			// If the caller has not opted in but the config *would* authorize
-			// launching every refused plugin, point at the one-flag path too.
 			if (!allowConfig && referenced.every((ns) => pluginGrantAdmits(configPluginGrant, ns))) {
 				error.hint = CONFIG_HINT;
 			}
@@ -187,16 +169,11 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 
 	let run = await runSuite({ root, grants, plugins: externalPlugins, concurrency });
 	if (isFailure(run)) {
-		// The runner disposes plugins only once it starts executing; a load
-		// failure returns before that, so release the launched plugins here.
 		await disposeAll(externalPlugins);
 		reportFatal(run.error, sink);
 		return 2;
 	}
 
-	// When the caller has not opted in, annotate any denial the config *would*
-	// have granted with the one-flag hint — computed here because the CLI is the
-	// only layer that holds both the run's denials and the loaded config.
 	if (!allowConfig) {
 		for (let result of run.data.results) {
 			let error = result.error;
@@ -207,9 +184,6 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 				familyGate?: boolean;
 			};
 			if (denial.permission === undefined || denial.resource === undefined) continue;
-			// A coarse family-gate denial hides the real resource behind a tool
-			// name, so the hint keys off the family being declared; a scope-level
-			// denial carries a real resource the config's scope must itself cover.
 			if (
 				configWouldAdmit(
 					configGrants,
@@ -224,8 +198,6 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 
 	let sources = new Map<string, SourceFile>();
 	for (let result of run.data.results) {
-		// A failure inside a cross-file command or fixture is anchored to the
-		// defining file, so that file's text is needed alongside the test's own.
 		let paths = [result.file];
 		if (result.error?.file !== undefined) paths.push(result.error.file);
 		for (let path of paths) {
@@ -240,10 +212,9 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 }
 
 /**
- * Peel the bare `--allow-config` flag out of an argument list. It opts into the
- * permissions the project's `spec/config.jsonc` declares; it takes no value, so
- * a `--allow-config=…` form is a usage error. Every other argument passes
- * through untouched for the plugin and permission parsers.
+ * Peel the bare `--allow-config` flag out of an argument list, opting into
+ * the permissions `spec/config.jsonc` declares; `--allow-config=…` is a usage
+ * error since the flag takes no value. Other arguments pass through untouched.
  *
  * @param args - The raw CLI arguments after `run`.
  * @returns Whether the opt-in was given, plus the remaining arguments.
@@ -272,12 +243,9 @@ function parseConfigOptIn(
 }
 
 /**
- * Peel `--concurrency=N` (and its `--jobs=N` alias) out of an argument list. N
- * is how many tests the runner may execute at once; it must be a positive
- * integer. Absent, concurrency defaults to 1 (sequential). A malformed or
- * non-positive value — including the bare flag with no `=value` — is a usage
- * error; a repeated flag takes the last value. Every other argument passes
- * through untouched for the plugin and permission parsers.
+ * Peel `--concurrency=N` (or its `--jobs=N` alias) out of an argument list; N
+ * sets how many tests run at once and defaults to 1. A missing, malformed, or
+ * non-positive value is a usage error; a repeated flag keeps the last value.
  *
  * @param args - The raw CLI arguments after the config opt-in was removed.
  * @returns The chosen concurrency and the remaining arguments.
@@ -308,10 +276,9 @@ function parseConcurrency(
 }
 
 /**
- * Match a concurrency flag and split off its value. Recognizes both spellings,
- * `--concurrency` and its `--jobs` alias, in the `--flag=value` form; the bare
- * `--flag` form matches with an empty value so the caller reports it as the
- * usage error it is (the flag needs a value).
+ * Match a concurrency flag and split off its value, recognizing both
+ * `--concurrency` and `--jobs` in `--flag=value` form. The bare `--flag` form
+ * matches with an empty value so the caller reports the missing-value usage error.
  *
  * @param argument - One raw CLI argument.
  * @returns The matched flag name and its value, or undefined for a non-match.

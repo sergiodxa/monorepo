@@ -1,3 +1,10 @@
+/**
+ * Tests for the TypeID Base32 encode, decode, and validation helpers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Base32 } from "./base32";

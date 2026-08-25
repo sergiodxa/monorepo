@@ -1,22 +1,9 @@
 /**
- * Turns an Attachment.Trigger's whole card surface into a single activation
- * target — following its `href` like a link, or opening the `<dialog>` its
- * `commandfor` names, defaulting to the `"show-modal"` command when none is
- * given — while every Attachment.Action button nested inside the card, or any
- * other native control a consumer places there, keeps answering its own
- * click, tap, or keypress exactly as it would on its own. A primary click or
- * `Enter`/`Space` activates the card in place; a modifier-held click, a
- * middle click, or a `target` attribute already set on the host opens a link
- * destination in a new tab instead.
- *
- * Why JS: making the whole card a link/dialog trigger while Attachment.Action
- * buttons stay independently clickable needs script to tell an action click
- * apart from a card click — no declarative HTML equivalent lets one element
- * react to an activation everywhere in its subtree except inside a
- * particular descendant.
- * No-JS baseline: the card renders fully readable; only the whole-card
- * click-through is unavailable, and actions remain independently clickable
- * via their own normal click/submit behavior.
+ * Turns an Attachment.Trigger's whole card into a single activation target,
+ * following its `href` or opening the `<dialog>` its `commandfor` names.
+ * Nested controls such as Attachment.Action buttons keep answering their
+ * own click, tap, and keypress independently, since script is the only way
+ * to exempt one descendant from a parent's activation handling.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,20 +14,17 @@ import type { MixinFactory } from "remix/ui";
 import { createElement, createMixin, on } from "remix/ui";
 
 /**
- * Selector matching a native interactive control nested anywhere in the
- * card — an Attachment.Action button, a native form control, an editable
- * region — whose own click, tap, or keyboard handling {@link attachmentTrigger}
- * always leaves untouched instead of also activating the card underneath it.
+ * Selector matching a native interactive control nested in the card — an
+ * Attachment.Action button, a form control, an editable region — that
+ * {@link attachmentTrigger} always lets handle its own activation.
  */
 const NATIVE_CONTROL_SELECTOR =
 	'a[href], button, input:not([type="hidden"]), select, textarea, summary, audio[controls], video[controls], [contenteditable=""], [contenteditable="true"]';
 
 /**
- * `command` value {@link attachmentTrigger} acts on when the host carries a
- * `commandfor` reference instead of an `href` — the only Invoker Commands
- * keyword that opens a `<dialog>`, matched against the rest of the catalog's
- * own dialog-opening buttons. Assumed when the host omits `command`
- * altogether, since opening is the only thing a trigger ever does.
+ * `command` value {@link attachmentTrigger} acts on for a `commandfor`
+ * host — the only Invoker Commands keyword that opens a `<dialog>`. Assumed
+ * by default when `command` is omitted, since opening is all a trigger does.
  */
 const DEFAULT_DIALOG_COMMAND = "show-modal";
 
@@ -54,12 +38,9 @@ declare global {
 }
 
 /**
- * Dispatched on an Attachment.Trigger host by {@link attachmentTrigger} right
- * before it follows a link or opens a dialog in response to a card
- * activation, so a consumer can react — log analytics, swap in a custom
- * viewer — before the default effect runs. Canceling it (`preventDefault()`)
- * stops that default effect entirely, leaving the activation otherwise
- * unobserved by the mixin.
+ * Dispatched on an Attachment.Trigger host by {@link attachmentTrigger}
+ * right before it follows a link or opens a dialog, so a consumer can react
+ * — log analytics, swap in a custom viewer — or cancel it with `preventDefault()` to stop the default effect.
  */
 export class AttachmentTriggerEvent extends Event {
 	/** The `href` this activation is about to follow, or `null` when it opens a dialog instead. */
@@ -76,21 +57,17 @@ export class AttachmentTriggerEvent extends Event {
 
 /**
  * What a host configured for {@link attachmentTrigger} does once a card
- * activation reaches it — resolved fresh on every activation from the host's
- * own `href`/`commandfor` attributes rather than cached, so a later render
- * changing them is always honored.
+ * activation reaches it — resolved fresh from the host's own `href`/
+ * `commandfor` attributes on every activation, so a later render changing them is honored.
  */
 type ResolvedAction =
 	| { kind: "link"; href: string }
 	| { kind: "dialog"; dialog: HTMLDialogElement };
 
 /**
- * Reads what a card activation should do from the host's own attributes: an
- * `href` wins as a link activation; otherwise a `commandfor` reference is
- * resolved against {@link DEFAULT_DIALOG_COMMAND} and must name a `<dialog>`
- * element. Returns `undefined` — logging a dev-mode warning explaining why —
- * for a host that names neither, or whose `commandfor` doesn't resolve to a
- * dialog.
+ * Reads what a card activation should do from the host's own attributes:
+ * an `href` wins as a link; otherwise a `commandfor` reference resolves
+ * against {@link DEFAULT_DIALOG_COMMAND} and must name a `<dialog>` element.
  *
  * @param host Element {@link attachmentTrigger} is mixed onto.
  * @returns The resolved action, or `undefined` when the host has nothing configured to do.
@@ -127,9 +104,8 @@ function resolveAction(host: HTMLElement): ResolvedAction | undefined {
 
 /**
  * Reports whether `target` sits inside a {@link NATIVE_CONTROL_SELECTOR}
- * match that isn't `host` itself, so a click bubbling up from an
- * Attachment.Action button (or any other native control nested in the card)
- * is told apart from one landing on the card's own surface.
+ * match that isn't `host` itself, telling a click bubbling up from a nested
+ * native control apart from one landing on the card's own surface.
  *
  * @param host Element {@link attachmentTrigger} is mixed onto.
  * @param target Event target the activation originated from.
@@ -141,11 +117,9 @@ function isNativeControlDescendant(host: HTMLElement, target: Element): boolean 
 }
 
 /**
- * Dispatches {@link AttachmentTriggerEvent} on `host` and, unless a listener
- * cancels it, carries out `action`: opens its dialog, or follows its link —
- * in a new tab when `newTab` is set or the host's own `target` attribute
- * reads `"_blank"`, into the host's named `target` when it names one, or in
- * place otherwise.
+ * Dispatches {@link AttachmentTriggerEvent} on `host` and, unless a
+ * listener cancels it, carries out `action` — opening its dialog, or
+ * following its link in a new tab, a named `target`, or in place, per the host's own attributes.
  *
  * @param host Element {@link attachmentTrigger} is mixed onto.
  * @param action Action resolved by {@link resolveAction} for this activation.
@@ -169,21 +143,9 @@ function performAction(host: HTMLElement, action: ResolvedAction, newTab: boolea
 }
 
 /**
- * Makes an Attachment.Trigger's whole card activatable — by a primary click
- * or tap anywhere on it, or by `Enter`/`Space` while it holds focus — as a
- * link or a dialog trigger, while every Attachment.Action button (or other
- * native control) nested inside keeps handling its own click, tap, and
- * keypress completely on its own; a card activation and an action's own
- * activation never both fire for the same interaction.
- *
- * The host configures which it becomes through the same attributes the rest
- * of the catalog already uses for the same purpose: an `href` makes it a
- * link, opened in place unless the activation held a modifier key, was a
- * middle click, or the host's own `target` attribute says otherwise; a
- * `commandfor` reference makes it a dialog trigger, opening the `<dialog>`
- * it names (`command` defaults to `"show-modal"` when omitted). A host
- * carrying neither, or an `aria-disabled="true"` host, ignores every
- * activation.
+ * Makes an Attachment.Trigger's whole card activatable as a link or dialog
+ * trigger through the same `href`/`commandfor` attributes {@link resolveAction}
+ * reads; an `aria-disabled="true"` host ignores every activation, and nested controls keep answering their own click, tap, and keypress independently.
  *
  * @returns A mixin descriptor for an Attachment.Trigger's `mix` prop.
  * @example

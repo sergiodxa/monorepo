@@ -31,21 +31,27 @@ export interface Workspace {
 	root: string;
 	/**
 	 * Resolve a spec-written path to an absolute host path. Relative paths
-	 * resolve against the root and must stay inside it (symlinks re-resolved);
-	 * escaping paths fail with `WorkspaceEscapeError`, and absolute paths fail
-	 * with `PermissionDeniedError` unless covered by a host-fs grant.
+	 * must stay inside the root, symlinks re-resolved before the check;
+	 * absolute paths delegate to the host-fs permission grant.
+	 *
+	 * @param path - The spec-written path to resolve.
+	 * @returns The absolute host path, or a `WorkspaceEscapeError` when the
+	 * path would escape the root — including when an existing ancestor's
+	 * symlink target cannot be verified — or the host-fs permission's denial
+	 * for absolute paths.
 	 */
 	resolve(path: string): Result<string, SpecError>;
-	/** Remove the workspace directory and everything in it. */
+	/**
+	 * Remove the workspace directory and everything in it; resolves
+	 * unconditionally, keeping removal failures harmless to the test run.
+	 */
 	cleanup(): Promise<undefined>;
 }
 
 /**
- * Create a fresh isolated workspace: a temp directory whose real path (temp
- * dirs are often behind symlinks) is the containment boundary for every
- * relative path a spec writes. Absolute paths delegate to the host-fs
- * permission; relative paths must stay inside the root even after following
- * any symlink among their existing ancestors.
+ * Create a fresh isolated workspace: a temp directory whose real path
+ * (often behind a symlink) bounds every relative path, symlinked
+ * ancestors included; absolute paths delegate to the host-fs permission.
  *
  * @param permissions - The run's permission set, consulted for absolute paths.
  * @returns The workspace, or the error that prevented creating its directory.
@@ -77,8 +83,6 @@ export async function createWorkspace(
 			try {
 				realAncestor = realpathSync(ancestor);
 			} catch {
-				// An existing ancestor whose target cannot be resolved (e.g. a
-				// dangling symlink) points somewhere we cannot verify: refuse.
 				return failure(new WorkspaceEscapeError(path));
 			}
 			let followed = realAncestor + resolved.slice(ancestor.length);
@@ -88,9 +92,7 @@ export async function createWorkspace(
 		async cleanup() {
 			try {
 				await rm(root, { recursive: true, force: true });
-			} catch {
-				// Cleanup is best-effort and must never fail the run.
-			}
+			} catch {}
 			return undefined;
 		},
 	};

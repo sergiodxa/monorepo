@@ -1,13 +1,9 @@
 /**
- * Wires up the app-wide dependency-injection container (ADR-008) and registers the
- * two external clients the funnel talks to: {@link Buttondown} for the newsletter and
- * {@link PolarClient} for products, checkouts, discounts, and orders. Controllers
- * resolve them from here rather than importing a module-level singleton.
- *
- * Both are registered as *scoped* rather than singleton on purpose: their factories
- * read the API secrets, so a missing secret surfaces as a handled failure inside the
- * request that needed the client, not as a module-load throw that takes down every
- * route in the worker — `/healthcheck` keeps answering either way.
+ * Wires up the app-wide dependency-injection container (ADR-008), registering
+ * {@link Buttondown} and {@link PolarClient} as scoped services so each
+ * factory reads its secret per request. A missing secret then fails just
+ * that request, leaving `/healthcheck` and the rest of the worker still
+ * answering.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,9 +16,9 @@ import { env } from "cloudflare:workers";
 import { Buttondown } from "~/app/services/buttondown";
 
 /**
- * The app service container (ADR-008). Registered once per isolate; the worker wraps
- * each request in `container.scope(...)`, so controllers resolve dependencies with
- * `inject([Buttondown, ...])` instead of constructing clients themselves.
+ * The app service container (ADR-008). Registered once per isolate; the worker
+ * wraps each request in `container.scope(...)`, so controllers resolve
+ * dependencies through `inject([Buttondown, ...])`.
  *
  * @example
  * await container.scope(() => router.fetch(request));
@@ -43,8 +39,9 @@ container.scoped(
 );
 
 /**
- * Reads a required secret, failing with the variable's name rather than letting an
- * empty token reach Polar and come back as an opaque 401.
+ * Reads a required secret, throwing with the variable's name when it is
+ * empty, so a missing token is diagnosable immediately, before it reaches
+ * Polar as an opaque 401.
  *
  * @param name - The environment variable to read.
  * @returns The secret's value.

@@ -1,12 +1,9 @@
 /**
  * Tests for the text layout helpers and the typewriter.
  *
- * Covers `Typewriter` reveal over time, `skip`, `done`, and `visibleText`, plus
- * `measureText`/`wrapText` word wrapping to a pixel width and `drawText`
- * alignment. Measurement now comes from the fixed bitmap-font metrics
- * (`GLYPH_ADVANCE` per character) rather than the canvas, so a `ctx` is only needed
- * for its interface; drawing is asserted against a fake context that records
- * `fillRect` calls, without a real canvas.
+ * Measurement uses the fixed bitmap-font metrics (`GLYPH_ADVANCE` per
+ * character), so a `ctx` only needs to satisfy the interface; drawing is
+ * asserted against a fake context recording `fillRect`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,8 +14,8 @@ import { GLYPH_ADVANCE } from "./font";
 import { drawText, measureText, Typewriter, wrapText } from "./text";
 
 /**
- * A fake context recording `fillRect` and `fillStyle`. Measurement no longer reads
- * `ctx.measureText`, so the metrics are fixed at `GLYPH_ADVANCE` (6px) per glyph.
+ * A fake context recording `fillRect` and `fillStyle`, with metrics fixed at
+ * `GLYPH_ADVANCE` (6px) per glyph.
  */
 function fakeContext() {
 	let calls: [number, number, number, number][] = [];
@@ -37,20 +34,20 @@ function fakeContext() {
 let CTX = fakeContext();
 
 test("Typewriter reveals characters over time at its rate", () => {
-	let writer = new Typewriter("hello", 40); // 40 chars/sec -> 25ms/char
+	let writer = new Typewriter("hello", 40);
 	expect(writer.visibleText).toBe("");
-	writer.update(50); // 2 chars
+	writer.update(50);
 	expect(writer.visibleText).toBe("he");
-	writer.update(50); // 4 chars
+	writer.update(50);
 	expect(writer.visibleText).toBe("hell");
 });
 
 test("Typewriter reports done only once the whole string is revealed", () => {
 	let writer = new Typewriter("hi", 40);
 	expect(writer.done).toBe(false);
-	writer.update(25); // 1 char
+	writer.update(25);
 	expect(writer.done).toBe(false);
-	writer.update(25); // 2 chars
+	writer.update(25);
 	expect(writer.visibleText).toBe("hi");
 	expect(writer.done).toBe(true);
 });
@@ -76,12 +73,11 @@ test("Typewriter on an empty string is done from the start", () => {
 });
 
 test("measureText returns a fixed GLYPH_ADVANCE per character", () => {
-	expect(measureText(CTX, "abcd")).toBe(4 * GLYPH_ADVANCE); // 24 at 6px/glyph.
+	expect(measureText(CTX, "abcd")).toBe(4 * GLYPH_ADVANCE);
 	expect(measureText(CTX, "")).toBe(0);
 });
 
 test("wrapText breaks lines on spaces at the pixel-width limit", () => {
-	// At 6px/glyph: "aaa bbb" is 42px (fits a 48px limit), but "aaa bbb ccc" (66px) does not.
 	let lines = wrapText(CTX, "aaa bbb ccc", 48);
 	expect(lines).toEqual(["aaa bbb", "ccc"]);
 });
@@ -97,7 +93,6 @@ test("wrapText preserves explicit newlines as separate lines", () => {
 });
 
 test("wrapText places an over-long single word on its own line", () => {
-	// The word alone exceeds the limit but cannot be broken further.
 	let lines = wrapText(CTX, "short verylongword", 30);
 	expect(lines).toEqual(["short", "verylongword"]);
 });
@@ -106,7 +101,6 @@ test("drawText left-aligns from x and applies the color", () => {
 	let ctx = fakeContext();
 	drawText(ctx, "!", 10, 0, { color: "#abcdef" });
 	expect(ctx.fillStyle).toBe("#abcdef");
-	// "!" lights column 2, so the leftmost rect is at x = 10 + 2.
 	expect(ctx.calls.every(([x]) => x >= 10)).toBe(true);
 	expect(Math.min(...ctx.calls.map(([x]) => x))).toBe(12);
 });
@@ -114,13 +108,11 @@ test("drawText left-aligns from x and applies the color", () => {
 test("drawText right-aligns by shifting the whole run left of x", () => {
 	let ctx = fakeContext();
 	drawText(ctx, "!", 100, 0, { align: "right" });
-	// A one-glyph run is GLYPH_ADVANCE wide, so it starts at x - GLYPH_ADVANCE.
 	expect(Math.min(...ctx.calls.map(([x]) => x))).toBe(100 - GLYPH_ADVANCE + 2);
 });
 
 test("drawText center-aligns around x", () => {
 	let ctx = fakeContext();
 	drawText(ctx, "!", 100, 0, { align: "center" });
-	// One glyph centered: left edge at x - GLYPH_ADVANCE / 2, lit column at +2.
 	expect(Math.min(...ctx.calls.map(([x]) => x))).toBe(Math.round(100 - GLYPH_ADVANCE / 2) + 2);
 });

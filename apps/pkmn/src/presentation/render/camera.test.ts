@@ -1,10 +1,9 @@
 /**
  * Tests for the overworld camera clamping.
  *
- * Covers `Camera.centerOn`: it centers the viewport on a target in the middle of
- * a large map, and clamps to `[0, mapPx - screen]` at both the near and far
- * edges so the view never scrolls past the map. Also covers maps smaller than
- * the screen, where the clamp collapses to a fixed `0` offset.
+ * Covers `Camera.centerOn`: centering the viewport on a target, clamping to
+ * `[0, mapPx - screen]` at both edges so the view never scrolls past the map,
+ * and collapsing to a fixed `0` offset when the map is smaller than the screen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

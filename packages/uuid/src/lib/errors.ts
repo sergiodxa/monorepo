@@ -1,3 +1,8 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 /** Error thrown when a UUID string has an invalid length. */
 export class InvalidUUIDLengthError extends Error {
 	override name = "InvalidUUIDLengthError";

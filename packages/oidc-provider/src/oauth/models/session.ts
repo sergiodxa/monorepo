@@ -17,7 +17,8 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
 
 /**
  * Model for user sessions.
- * Manages session lifecycle including creation, refresh, and revocation.
+ * Touching a session updates its activity timestamp; the 30-day expiry
+ * set at creation stays fixed.
  */
 export default class Session {
 	/** Database table schema for sessions. */

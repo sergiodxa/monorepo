@@ -25,11 +25,8 @@ export interface RateLimitErrorOptions {
 
 /**
  * Error describing a backend that could not produce a decision, returned inside
- * a `Failure` and never thrown.
- *
- * A `RateLimitError` means "unknown", not "denied": the caller decides whether an
- * unavailable backend lets the request through (fail open) or rejects it (fail
- * closed), which is why the error carries no decision of its own.
+ * a `Failure` and never thrown. The caller decides whether an unavailable
+ * backend lets the request through (fail open) or rejects it (fail closed).
  */
 export class RateLimitError extends Error {
 	/** Backend that could not answer, for grouping failures by storage. */

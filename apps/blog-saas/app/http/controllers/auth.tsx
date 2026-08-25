@@ -66,9 +66,9 @@ export const login = createController(routes.auth.login, {
 });
 
 /**
- * `GET /auth/callback` controller: completes the OIDC flow. Validates the returned
- * state against the stored transaction, exchanges the code, verifies the ID token,
- * upserts the local account, and establishes the dashboard session.
+ * `GET /auth/callback` controller: completes the OIDC flow — validates the stored
+ * state, exchanges the code, and verifies the ID token, then opens the dashboard
+ * session holding only the local account id.
  *
  * @returns A redirect to `/dashboard` on success, or back to `/auth/login` if the
  *   transaction is missing or the state/code check fails.
@@ -102,8 +102,6 @@ export const callback = createAction(
 			email: profile.email,
 			displayName: profile.displayName,
 		});
-		// Store only the local account id. The raw ID token is intentionally not kept in
-		// the signed (not encrypted) session cookie; logout uses the client id instead.
 		updateSessionData({ accountId: account.id, auth: undefined });
 		return redirect("/dashboard", { status: redirect.Status.SeeOther });
 	}),
@@ -111,8 +109,8 @@ export const callback = createAction(
 
 /**
  * `/auth/logout` controller: renders the sign-out confirmation on `GET` and, on
- * `POST`, clears the session and redirects through the IdP's end-session endpoint
- * (falling back to `/` when the IdP advertises none).
+ * `POST`, clears the session and ends it at the IdP by `client_id` (the session
+ * holds only the account id), falling back to `/` when the IdP advertises none.
  *
  * @returns The sign-out page (`index`) or a logout redirect (`action`).
  */
@@ -137,9 +135,6 @@ export const logout_ = createController(routes.auth.logout, {
 			let metadata = await discover(env.OIDC_ISSUER).catch(() => null);
 			if (metadata?.end_session_endpoint) {
 				let logoutUrl = new URL(metadata.end_session_endpoint);
-				// Identify the RP by its client id rather than an `id_token_hint`, since the
-				// raw ID token is no longer stored client-side. The end-session endpoint
-				// accepts `client_id` and still honours the post-logout redirect.
 				logoutUrl.searchParams.set("client_id", env.OIDC_CLIENT_ID);
 				logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
 				return redirect(logoutUrl.toString(), { status: redirect.Status.SeeOther });

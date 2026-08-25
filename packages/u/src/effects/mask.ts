@@ -27,16 +27,9 @@ export interface MaskOptions {
 }
 
 /**
- * Applies a CSS mask image, or a full set of mask properties when given an
- * options object instead of a bare image. Every property is mirrored onto its
- * `-webkit-` prefixed twin as well — Safari still requires its own prefixed
- * properties to render an element mask, the same vendor-prefix-mirroring
- * precedent `u.appearance()` already established for form-control resets.
- * `image` accepts anything valid in `mask-image`: a gradient (an edge fade), a
- * `url(...)` reference (an alpha-channel image mask), or any other mask-image
- * value. Called with an options object, only the given keys are set — which is
- * what lets a raster or `url(...)` mask be sized and positioned without
- * dropping to `u.raw()`.
+ * Applies a CSS mask image, or the given subset of mask properties when
+ * passed an options object. Every property is mirrored onto its `-webkit-`
+ * prefixed twin, which Safari requires to render an element mask.
  *
  * @example u.mask("linear-gradient(to bottom, transparent, black)")
  * @example css({ maskImage: "linear-gradient(to bottom, transparent, black)", WebkitMaskImage: "linear-gradient(to bottom, transparent, black)" })

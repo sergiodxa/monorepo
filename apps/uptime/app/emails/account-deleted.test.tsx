@@ -1,8 +1,8 @@
 /**
- * Tests the deletion confirmation as a value: it addresses the account it was constructed for,
- * takes its copy from the locale files, and — the part worth a test rather than a reading — puts
- * all four retention facts into the plain-text alternative as well as the HTML, since that
- * honesty is the substance of the message and the text part is where a lot of people read it.
+ * Tests the deletion confirmation as a value: it addresses the account it was constructed
+ * for, takes its copy from the locale files, and puts all four retention facts into the
+ * plain-text alternative as well as the HTML, since that honesty is the substance of the
+ * message and the text part is where a lot of people read it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

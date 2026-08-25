@@ -1,3 +1,11 @@
+/**
+ * Normalizes `FormData`, `URLSearchParams`, `Request` bodies, and plain
+ * objects into a single value, then runs it through a Standard Schema,
+ * returning a `Result` instead of throwing on failure.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Result } from "@pkg/result";
 import type { JSONValue } from "@pkg/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
@@ -8,9 +16,6 @@ import { ValidationError } from "./validation-error";
 
 export { ValidationError };
 
-/**
- * Convert FormData to object, properly handling arrays (multiple values with same key)
- */
 function formDataToObject(formData: FormData): Record<string, unknown> {
 	let data = new Map<string, FormDataEntryValue | FormDataEntryValue[] | undefined>();
 	let keys = new Set(formData.keys());
@@ -23,9 +28,6 @@ function formDataToObject(formData: FormData): Record<string, unknown> {
 	return Object.fromEntries(data.entries());
 }
 
-/**
- * Convert URLSearchParams to object, properly handling arrays (multiple values with same key)
- */
 function urlSearchParamsToObject(params: URLSearchParams): Record<string, unknown> {
 	let data = new Map<string, string | string[] | undefined>();
 	let keys = new Set(params.keys());
@@ -38,6 +40,11 @@ function urlSearchParamsToObject(params: URLSearchParams): Record<string, unknow
 	return Object.fromEntries(data.entries());
 }
 
+/**
+ * Some schemas (e.g. `remix/data-schema/form-data`'s `object()`) validate
+ * the raw `FormData`/`URLSearchParams` source instead of a flattened plain
+ * object; a raw-source rejection triggers a retry against that raw source.
+ */
 export async function validate<Schema extends StandardSchemaV1>(
 	input: FormData | URLSearchParams | Request | Record<string, unknown> | JSONValue,
 	schema: Schema,
@@ -78,12 +85,6 @@ export async function validate<Schema extends StandardSchemaV1>(
 		let data = input instanceof FormData ? formDataToObject(input) : urlSearchParamsToObject(input);
 		let result = await validate(data, schema);
 
-		// Some schemas (e.g. `remix/data-schema/form-data`'s `object()`) validate the
-		// raw `FormData`/`URLSearchParams` source directly instead of a flattened
-		// plain object, and reject anything else with this exact message. Retry with
-		// the raw source before giving up, so both schema styles work through this
-		// one `validate()` call without changing behavior for schemas that already
-		// succeed against the flattened object.
 		let wantsRawSource =
 			isFailure(result) &&
 			result.error.issues.some((issue) => issue.message === "Expected FormData or URLSearchParams");

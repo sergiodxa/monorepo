@@ -5,11 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies `counter-reset`, creating (or resetting) a CSS counter identified
- * by `name` on the element. `name` is the counter's own identifier, not a
- * custom property, so it's given bare with no `--` prefix. `value` is the
- * integer the counter is set to; omit it to fall back to CSS's own default
- * of `0`.
+ * Applies `counter-reset`, creating or resetting the element's CSS counter
+ * named by the bare counter identifier `name`. `value` is the integer the
+ * counter is set to; omit it to fall back to CSS's own default of `0`.
  *
  * @example u.counterReset("section")
  * @example css({ counterReset: "section" })

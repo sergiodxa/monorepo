@@ -25,7 +25,11 @@ import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/in
 import { recordCost } from "~/app/services/cost";
 import routes from "~/routes/web";
 
-/** POST /actions/:team/create-invite */
+/**
+ * POST /actions/:team/create-invite. The cost is recorded before the send so a rejected send is
+ * still billed. The invite carries no admin locale, so the notification is written in the app's
+ * fallback language, treating the requester's own locale as the last resort (ADR-030 §4).
+ */
 export const createInvite = createAction(routes.teamAdminActions.invite.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateInviteSchema);
 	let session = ctx.get(Session);
@@ -49,12 +53,8 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 
 	let url = new URL(routes.invite.href({ inviteId: invite.id }), ctx.request.url).toString();
 
-	// Counted before the send: a rejected send is a billed one.
 	recordCost("emailSent");
 
-	// The invitee has no stored language and the invite records none, so the copy is
-	// written in the app's fallback rather than in the admin's own language — the
-	// requester's locale is the last resort, not the first (ADR-030 §4).
 	ctx.email.later(
 		new TeamInviteEmail({
 			team: ctx.team.name,

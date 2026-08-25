@@ -1,6 +1,6 @@
 /**
  * Installs a request-scoped `ctx.render(jsx)` helper for the platform dashboard so
- * controllers can return `remix/ui` JSX documents instead of hand-built HTML strings.
+ * controllers can return `remix/ui` JSX documents as complete HTML responses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +16,8 @@ import { renderToString } from "remix/ui/server";
  * Builds the request-scoped renderer. It serializes a `remix/ui` node to a full HTML
  * document (with the `<!doctype html>` prefix) and returns it as an HTML response.
  *
- * @param _context - The router request context (unused; the renderer is stateless).
+ * @param _context - The router request context, supplied to match the `renderWith`
+ * factory signature; the returned renderer behaves identically on every request.
  * @returns The `render` function attached to the context as `ctx.render`.
  * @example
  * return ctx.render(<Document title="Dashboard">…</Document>);

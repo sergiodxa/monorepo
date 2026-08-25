@@ -2,7 +2,8 @@
  * Tests the `/terms` controller: it renders the static Terms of Service page inside
  * the shared document/marketing chrome for both anonymous and signed-in viewers, with
  * the `MarketingLayout` header CTA switching between the two, and emits its canonical
- * URL, meta description, and article Open Graph type in `<head>`.
+ * URL, meta description, and article Open Graph type in `<head>`. The canonical URL is
+ * always built from the product's own origin, regardless of the host a request arrives on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -81,7 +82,6 @@ describe("GET /terms", () => {
 		let body = await response.text();
 		expect(body).toContain("<title>Terms of Service | Uptime</title>");
 		expect(body).toContain("<h1>Terms of Service</h1>");
-		// Anonymous: the header CTA is a sign-in form posting to the auth action.
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
 	});
 
@@ -90,14 +90,12 @@ describe("GET /terms", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(
 			`<link rel="canonical" href="${SEO.baseUrl}${routes.legal.terms.href()}" />`,
 		);
 		expect(body).toContain(
 			'<meta name="description" content="Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí." />',
 		);
-		// A dated legal document, not a product page.
 		expect(body).toContain('<meta property="og:type" content="article" />');
 	});
 
@@ -114,7 +112,6 @@ describe("GET /terms", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<h1>Terms of Service</h1>");
-		// Signed in: the header CTA links straight to the dashboard instead.
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 });

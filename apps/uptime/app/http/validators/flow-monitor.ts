@@ -1,19 +1,14 @@
 /**
  * Form validation schemas for flow monitor create/update/delete actions.
  *
- * Two things are shaped by the form rather than by the table. `interval_seconds` is validated
- * as one of the seven values `FLOW_INTERVALS_SECONDS` lists rather than as a bounded number:
- * the control is a select, so anything else is a hand-built request, and a flow interval is a
- * commercial term with a price beside each option (ADR-027 §7a). And `is_enabled` defaults
- * the opposite way between the two schemas — the create form has no toggle, so a create
- * defaults to enabled like the column does, while the edit form's checkbox is simply absent
- * from the body when unchecked, so an update has to default to `false` for unchecking
- * "Enabled" to actually disable the monitor instead of silently no-op'ing.
+ * `interval_seconds` accepts one of the seven `FLOW_INTERVALS_SECONDS` values instead of a
+ * bounded number, since the control is a select and each option carries its own price
+ * (ADR-027 §7a). `is_enabled` defaults oppositely per schema: create defaults to enabled
+ * like the column does, while update defaults to `false`, since an unchecked checkbox
+ * submits nothing and only an explicit `false` can disable an existing monitor.
  *
- * What a source is *allowed to reach* is deliberately not validated here. It depends on the
- * team's verified domains, which a schema cannot see, so it lives in `inspectFlowSource` and
- * the action calls it — the same function the sweep uses, so the form and the check can never
- * disagree about which monitors are runnable.
+ * What a source may reach is validated by `inspectFlowSource`, shared by the action and the
+ * sweep so the form and the runtime check can never disagree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,11 +30,9 @@ import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib
 const INTERVAL_VALUES = FLOW_INTERVALS_SECONDS.map(String) as [string, ...string[]];
 
 /**
- * How long a spec source may be.
- *
- * Generous relative to any real flow — the 20-request ceiling puts a much tighter bound on
- * what a source can usefully say — and present so a pasted file cannot become a row nothing
- * will render.
+ * How long a spec source may be, generous relative to any real flow since the 20-request
+ * ceiling already bounds what a source can usefully say — present only so a pasted file
+ * cannot become a row that renders nothing.
  */
 const MAX_SOURCE_LENGTH = 20_000;
 

@@ -1,21 +1,9 @@
 /**
- * Adapts the WAI-ARIA tree keyboard pattern onto a Tree's rows: a single
- * roving focus position moves between visible rows with the arrow keys,
- * `ArrowRight`/`ArrowLeft` expand, collapse, or step into and out of a
- * subtree, `Home`/`End` jump to the first/last visible row, and typed text
- * matches row labels — while every selection change delegates to a
- * `SelectionModel` instance shared with the rest of the widget instead of
- * tracking a selected or active row itself.
- *
- * Why JS: the WAI-ARIA tree pattern moves a single logical focus position
- * across a collapsible hierarchy using arrow, home, end, and typeahead keys,
- * and ties expand/collapse to the same arrow keys — a keyboard model no
- * combination of HTML and CSS expresses on its own.
- * No-JS baseline: every row still renders as its own element in document
- * order, so the full hierarchy stays readable and, through a plain
- * disclosure control on each parent row, expandable one `Tab` stop at a
- * time; only the unified roving cursor, arrow-key expand/collapse, and
- * typed search are unavailable.
+ * Adapts the WAI-ARIA tree keyboard pattern onto a Tree's rows: a roving
+ * focus position moves between visible rows, arrow keys expand, collapse, or
+ * step into and out of a subtree, and typed text matches labels, with every
+ * selection change delegated to a shared `SelectionModel`. Each row still
+ * renders in document order behind a disclosure control, staying expandable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,11 +16,10 @@ import type { SelectionModel } from "../behaviors/selection-model";
 import { isPrintableKey, labelFor, setRovingTabindex } from "../utils/keyboard-nav";
 
 /**
- * Attribute every Tree row exposes itself on, its value doubling as the
- * `SelectionModel.Key` {@link treeKeys} toggles, extends a range to, and
- * mirrors `aria-selected` onto. Read alongside `aria-level` and
- * `aria-expanded` to derive each row's parent, children, and visibility from
- * plain document order, with no separate hierarchy kept anywhere.
+ * Attribute every Tree row exposes itself on; its value doubles as the
+ * `SelectionModel.Key` {@link treeKeys} toggles, ranges over, and mirrors
+ * `aria-selected` onto, while `aria-level`/`aria-expanded` derive each row's
+ * place in the tree.
  */
 export const TREE_ITEM_ATTRIBUTE = "data-tree-item";
 
@@ -53,10 +40,9 @@ declare global {
 
 /**
  * Dispatched on a Tree's row list by {@link treeKeys} whenever the bound
- * `SelectionModel`'s selection changes, or the roving keyboard cursor moves
- * to a different row, so a consumer can react — a live-region announcement,
- * syncing a hidden field's value — without reading the model or DOM focus
- * directly.
+ * `SelectionModel`'s selection changes or the roving cursor moves rows, so a
+ * consumer can react — a live-region announcement, syncing a hidden field —
+ * without reading the model or DOM focus directly.
  */
 export class TreeChangeEvent extends Event {
 	/** Keys the bound model currently reports as selected. */
@@ -102,13 +88,9 @@ interface TreeRow {
 }
 
 /**
- * Reads every row beneath `host` carrying {@link TREE_ITEM_ATTRIBUTE} into a
- * flat {@link TreeRow} list, in document order, deriving each row's level,
- * parent, children, and visibility from `aria-level` and `aria-expanded`
- * alone — the same attributes the Tree's own styling keys off — rather than
- * walking nested DOM containment. A single left-to-right pass over the rows
- * with a level-ordered stack resolves every row's nearest enclosing row, so
- * this never re-scans ancestors per row.
+ * Reads rows beneath `host` carrying {@link TREE_ITEM_ATTRIBUTE} into a flat
+ * {@link TreeRow} list, deriving level, parent, children, and visibility from
+ * `aria-level`/`aria-expanded` alone, via one level-ordered stack pass so no row re-scans its ancestors.
  */
 function collectRows(host: HTMLElement): TreeRow[] {
 	let elements = Array.from(host.querySelectorAll<HTMLElement>(`[${TREE_ITEM_ATTRIBUTE}]`));
@@ -165,9 +147,8 @@ function syncSelection(host: HTMLElement, model: SelectionModel): void {
 
 /**
  * Refreshes `model`'s known key universe to the rows currently reachable by
- * keyboard, so range selection and select-all only ever span what's
- * actually visible — a row hidden inside a collapsed subtree is skipped,
- * matching how that same collapse already hides it from arrow-key movement.
+ * keyboard, so range selection and select-all span only what's visible — a
+ * row inside a collapsed subtree is skipped, matching arrow-key movement.
  */
 function refreshKeys(host: HTMLElement, model: SelectionModel): void {
 	model.setKeys(navigableRows(collectRows(host)).map((row) => row.key));
@@ -185,30 +166,9 @@ function dispatchTreeChange(host: HTMLElement, model: SelectionModel): void {
 }
 
 /**
- * Turns a Tree's row list into the ARIA tree keyboard surface for its rows,
- * by delegating every selection change to `model` — a `SelectionModel`
- * instance — rather than tracking a selected or active row itself.
- *
- * Apply it to the row list's host element. Every descendant carrying
- * {@link TREE_ITEM_ATTRIBUTE} is treated as a row, its `SelectionModel.Key`
- * read from that attribute's value, its depth from `aria-level`, and
- * whether it has children from the next row in document order nesting one
- * level deeper — a parent row's own `aria-expanded` then decides whether its
- * children stay reachable, exactly as the Tree's styling already keys off
- * that attribute. `ArrowUp`/`ArrowDown` move the roving cursor between
- * visible rows without wrapping; `ArrowRight` opens a collapsed row with
- * children or, already open, steps into its first enabled child; `ArrowLeft`
- * closes an open row or, already closed (or a leaf), steps out to its
- * parent; `Home`/`End` jump to the first/last visible row; typed text moves
- * the cursor to the next visible row whose label starts with it.
- * `Enter`/`Space` toggle the focused row's selection, `Shift+ArrowUp`/
- * `ArrowDown` extend a range alongside the move, and `Ctrl`/`Cmd+A` select
- * every visible row — each delegated straight to `model`.
- *
- * Every one of those actions mirrors `model`'s known key universe and
- * selected-row set back onto the rows and dispatches {@link TreeChangeEvent}
- * on the host, so a consumer never needs to read `model` or DOM focus
- * directly to stay in sync.
+ * Turns a Tree's row list into the ARIA tree keyboard surface for its rows:
+ * arrow keys move, expand, and collapse; typed text searches labels; and
+ * every selection delegates to `model`, mirroring back and firing {@link TreeChangeEvent}.
  *
  * @param model Behavior class instance owning the tree's selected-key set.
  * @example

@@ -1,8 +1,8 @@
 /**
- * Headless queue of aria-live announcements, decoupled from any rendering so
- * a live-region island can subscribe to its state and re-render on change.
- * Backs transient accessibility announcements such as Command match counts,
- * drag-and-drop position updates, and toast messages.
+ * Headless queue of aria-live announcements: a live-region island subscribes
+ * to its state and re-renders on change. Backs transient accessibility
+ * announcements such as match counts, drag-and-drop position updates, and
+ * toast messages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,10 +17,9 @@ const DEFAULT_PRIORITY: Announcer.Priority = "polite";
  */
 export namespace Announcer {
 	/**
-	 * Politeness setting a queued message announces with, mirrored onto a
-	 * live region's `aria-live` attribute. `"polite"` waits for the current
-	 * utterance to finish; `"assertive"` interrupts it and moves ahead of any
-	 * `"polite"` messages already queued.
+	 * Politeness a queued message announces with, mirrored onto a live
+	 * region's `aria-live` attribute. `"assertive"` interrupts the current
+	 * utterance and moves ahead of any `"polite"` messages already queued.
 	 */
 	export type Priority = "polite" | "assertive";
 
@@ -32,7 +31,6 @@ export namespace Announcer {
 		readonly id: string;
 		/** Announcement copy, read verbatim by the live region. */
 		readonly text: string;
-		/** Politeness setting this message announces with. */
 		readonly priority: Priority;
 	}
 
@@ -40,16 +38,18 @@ export namespace Announcer {
 	 * Events dispatched by {@link Announcer}.
 	 */
 	export interface Events {
-		/** Dispatched after a message is queued, dismissed, advanced past, or the queue is cleared. */
+		/**
+		 * Dispatched after a message is queued, dismissed, advanced past, or
+		 * the queue is cleared.
+		 */
 		change: Event;
 	}
 }
 
 /**
  * Owns a priority-ordered queue of aria-live announcements. A live-region
- * island subscribes to the `"change"` event, renders {@link Announcer.current}
- * into an `aria-live` element, and calls {@link Announcer.next} once the
- * announcement has had time to be read.
+ * island subscribes to `"change"`, renders {@link Announcer.current} into an
+ * `aria-live` element, and calls {@link Announcer.next} once it has been read.
  *
  * @example
  * announcer.addEventListener("change", () => handle.update(), { signal: handle.signal });
@@ -73,10 +73,9 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 	}
 
 	/**
-	 * Queues a message for announcement. Assertive messages are inserted
-	 * ahead of any polite messages already queued, so they interrupt the
-	 * live region, but behind assertive messages queued earlier. Polite
-	 * messages are appended to the end of the queue.
+	 * Queues a message for announcement. Assertive messages are inserted ahead
+	 * of any polite messages already queued so they interrupt the live region,
+	 * and behind assertive messages queued earlier; polite messages append.
 	 *
 	 * @param text Announcement copy, read verbatim by the live region.
 	 * @param priority Politeness setting the message announces with. Defaults to `"polite"`.
@@ -100,8 +99,8 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 	}
 
 	/**
-	 * Removes one queued message by id, wherever it sits in the queue. Does
-	 * nothing if no message with that id is queued.
+	 * Removes one queued message by id, wherever it sits in the queue,
+	 * dispatching `"change"` only when a message with that id was queued.
 	 *
 	 * @param id Id returned by {@link Announcer.announce}.
 	 */
@@ -115,9 +114,9 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 	}
 
 	/**
-	 * Advances past the current message, so the next queued message, if
-	 * any, becomes {@link Announcer.current}. Does nothing when the queue is
-	 * already empty.
+	 * Advances past the current message so the next queued one becomes
+	 * {@link Announcer.current}, dispatching `"change"` only when the queue
+	 * held a message.
 	 */
 	next(): void {
 		if (this.#queue.length === 0) return;
@@ -127,7 +126,7 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 	}
 
 	/**
-	 * Empties the queue. Does nothing when the queue is already empty.
+	 * Empties the queue, dispatching `"change"` only when it held messages.
 	 */
 	clear(): void {
 		if (this.#queue.length === 0) return;

@@ -1,5 +1,13 @@
 /* @jsxImportSource remix/ui */
 
+/**
+ * Renders Markdoc code fences as highlighted `<pre>` blocks with an optional
+ * header showing the file path and title.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";

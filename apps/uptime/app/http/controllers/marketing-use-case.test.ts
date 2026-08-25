@@ -83,7 +83,6 @@ describe("GET /use-cases/:slug", () => {
 		let response = await getUseCase(slug);
 
 		let body = await response.text();
-		// Canonical on the production origin, not the `uptime.test` host that served it.
 		expect(body).toContain(
 			`<link rel="canonical" href="https://uptime.sergiodxa.com/use-cases/${slug}"`,
 		);

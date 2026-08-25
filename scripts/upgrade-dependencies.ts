@@ -1,3 +1,9 @@
+/**
+ * Upgrades outdated dependencies across workspace apps and packages.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 

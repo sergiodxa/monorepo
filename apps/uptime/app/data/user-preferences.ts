@@ -6,8 +6,8 @@
  *
  * Both are stored on one row per subject, and neither has to exist: a user who has never
  * opened the settings page has no row, which reads as "the browser's language" and "every
- * email". That is why {@link UserPreferences.wants} takes a nullable row instead of loading
- * one, and why the writers below upsert.
+ * email". That is why {@link UserPreferences.wants} takes an already-loaded, nullable row,
+ * and why the writers below upsert.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,14 +29,9 @@ export default class UserPreferences {
 	}
 
 	/**
-	 * The preferences of every listed subject, keyed by subject id, in one query.
-	 *
-	 * Exists for the digest job, which resolves a language and an opt-out for every member of
-	 * every team in one run: a lookup per member would be one query per recipient, and the
-	 * majority of them would return nothing at all.
-	 *
-	 * A subject with no row is absent from the map rather than mapped to a default, so the
-	 * caller keeps deciding what "never set any" means.
+	 * The preferences of every listed subject, keyed by subject id, in one query —
+	 * for the digest job, which needs every member's settings without one query
+	 * per mostly-empty recipient. An absent subject simply stays out of the map.
 	 */
 	static async findBySubjectIds(
 		db: Database,
@@ -57,12 +52,9 @@ export default class UserPreferences {
 	}
 
 	/**
-	 * Records which optional emails a subject has turned off, replacing whatever was stored.
-	 *
-	 * The whole list is written rather than one flag toggled, because the settings form posts
-	 * the whole list: an unchecked switch sends no value at all, so the only reading of that
-	 * form that cannot lose a choice is "these are the emails they want, everything else they
-	 * do not".
+	 * Records which optional emails a subject has turned off, replacing whatever
+	 * was stored. The settings form posts the whole list each time, since an
+	 * unchecked switch sends no value at all — writing it whole preserves every choice.
 	 *
 	 * @param unsubscribed - The emails to stop sending; an empty list means send everything.
 	 */
@@ -75,14 +67,9 @@ export default class UserPreferences {
 	}
 
 	/**
-	 * Whether one optional email may be sent to the owner of these preferences.
-	 *
-	 * Takes the row rather than a subject id, so a caller that already loaded it for the
-	 * language — which every digest send does — spends no second query on the question.
-	 *
-	 * Defaults to yes in every uncertain case: no row, no list, or a list holding a string
-	 * that is no longer an email this app sends. An email is stopped only by a stored refusal
-	 * naming it, which is what keeps a retired key from silently muting a live digest.
+	 * Whether one optional email may be sent to the owner of these preferences. Takes
+	 * the full row since the caller already loaded it for the language. Defaults to
+	 * yes unless a stored list names the email, keeping a retired key from muting a live digest.
 	 *
 	 * @param preferences - The subject's row, or `null` when they have none.
 	 * @param email - The email being sent.

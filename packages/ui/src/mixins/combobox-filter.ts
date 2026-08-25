@@ -1,19 +1,10 @@
 /**
  * Adapts `remix/ui/combobox`'s input behavior onto a ComboBox's text input:
- * narrows the popup's option list to whatever has been typed, moves the
- * active option with the arrow keys, and commits or clears the draft on
- * blur and `Escape`, mirroring the result back as `aria-activedescendant`
- * and `aria-expanded` on the input.
- *
- * Why JS: the WAI-ARIA combobox pattern narrows a popup listbox to the text
- * typed so far and moves a single active-option cursor with the arrow keys,
- * `Enter`, and `Escape`, while keeping `aria-expanded`, `aria-controls`, and
- * `aria-activedescendant` in sync — none of which a plain text input or a
- * native list expresses on its own.
- * No-JS baseline: the input renders as an ordinary text field alongside
- * every option, so every option stays in the tab order and readable by
- * assistive technology; only the typed narrowing and the arrow-key cursor
- * are unavailable.
+ * narrows the popup's options to the typed text, moves the active option
+ * with arrow keys, and commits or clears the draft on blur and `Escape`,
+ * mirroring the result as `aria-activedescendant` and `aria-expanded`.
+ * Without JS the input renders as a plain text field beside every option,
+ * so all options stay tabbable and readable by assistive technology.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,10 +26,8 @@ declare global {
 
 /**
  * Dispatched on a ComboBox's input by {@link comboboxFilter} whenever the
- * draft filter text, the active option, or the popup's open state moves, so
- * a consumer can react to live, as-you-type narrowing — an empty-results
- * message, a live-region announcement of the match count — without reading
- * `remix/ui/combobox`'s own context directly.
+ * filter text, active option, or open state moves, letting a consumer
+ * react to live narrowing without reading `remix/ui/combobox`'s context.
  */
 export class ComboboxFilterChangeEvent extends Event {
 	/** Id of the option `Enter` would commit right now, or `null` when none is active. */
@@ -61,21 +50,8 @@ export class ComboboxFilterChangeEvent extends Event {
 
 /**
  * Turns a ComboBox's text input into the as-you-type filter for its popup
- * option list, by delegating typing, arrow-key movement, and blur/`Escape`
- * commit semantics to `remix/ui/combobox`'s own `input()` primitive rather
- * than re-deriving that behavior. Every sibling option that also carries
- * `remix/ui/combobox`'s `option()` primitive reacts to the same shared
- * filter state automatically, hiding itself when it no longer matches and
- * exposing its match through the `hidden` attribute the option's own
- * styling already keys off.
- *
- * Apply it inside an ancestor `combobox.Context` (from
- * `remix/ui/combobox/primitives`) alongside a matching `option()` mixin on
- * every option — `comboboxFilter()` only wires the input side of that
- * shared context.
- *
- * Dispatches {@link ComboboxFilterChangeEvent} on the input whenever the
- * draft filter text, the active option, or the popup's open state moves.
+ * option list by delegating typing, arrow-key movement, and blur/`Escape`
+ * commit to `remix/ui/combobox`'s `input()` primitive.
  *
  * @example
  * <combobox.Context name="airport">

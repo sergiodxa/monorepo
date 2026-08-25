@@ -1,13 +1,9 @@
 /**
- * Tests for the billing checkout entry point. A fake `PolarClient` stands in for the
- * real one, stubbing every method `~/app/data/customer.ts` calls. Whether the owner is
- * subscribed is seeded into the `subscriptions` projection instead of stubbed on the
- * client (ADR-005), since that is where it is read from.
- *
- * No `cloudflare:workers` mock is registered here, but the controller's graph does reach
- * it: `requireTeam` calls `apportionCostByTeam`, and `~/app/services/cost.ts` imports
- * `env` at module load. The virtual module from the preload in `bunfig.toml` is what
- * satisfies that — nothing here reads a binding, so no binding needs faking.
+ * Tests for the billing checkout entry point. A fake `PolarClient` stands in
+ * for the real one, stubbing every `~/app/data/customer.ts` method call.
+ * Subscription status is seeded into the `subscriptions` projection
+ * (ADR-005), the store the controller reads from at request time. The
+ * `bunfig.toml` preload supplies `cloudflare:workers` for `env` on this path.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -167,7 +163,6 @@ describe("checkout page", () => {
 			getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
 			createPortalSession: vi.fn(async () => ({ url: "https://polar.sh/portal/123" })),
 		});
-		// Entitlement comes from the D1 projection now, not from a Polar lookup (ADR-005).
 		await createActiveSubscription(db, team.owner_id);
 
 		let response = await renderCheckout(db, team, membership, polar);

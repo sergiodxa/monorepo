@@ -1,18 +1,13 @@
 /**
- * Polar webhook endpoint: `POST /webhooks/polar`. The single write point for the local
- * projection of subscription state (ADR-005), and the reason the every-minute scheduler
- * asks Polar nothing at all: a billing event lands here once and is applied to the
- * owner's monitors immediately, instead of being re-derived per check.
+ * Polar webhook endpoint: `POST /webhooks/polar`. The single write point for
+ * the local projection of subscription state (ADR-005), and the reason the
+ * every-minute scheduler asks Polar nothing at all: a billing event lands
+ * here once and is applied to the owner's monitors immediately.
  *
- * Unauthenticated by the auth chain's standards — Polar has no session and no
- * `Origin` — so the signature over the raw body *is* the authentication. `parseWebhook`
- * fails closed on a missing secret or a bad signature, and nothing reaches the upsert
- * before it succeeds. See `bootstrap/app.tsx` for how the `/webhooks/` prefix is exempted
- * from cross-origin protection.
- *
- * Both directions of the response matter to Polar: it retries a non-2xx delivery, so an
- * event this app does not model answers 200 (there is nothing to retry) while a rejected
- * signature answers 400.
+ * Unauthenticated by the auth chain's standards — Polar has no session and
+ * no `Origin` — so the signature over the raw body is the authentication.
+ * See `bootstrap/app.tsx` for how the `/webhooks/` prefix is exempted from
+ * cross-origin protection.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +27,6 @@ import TrialConversion from "~/app/data/trial-conversion";
 import { attributionProperties, trackSubscriptionStarted } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
-/** POST /webhooks/polar */
 /** Milliseconds in a day, for the days-to-convert figure the funnel event carries. */
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -54,16 +48,22 @@ export default createAction(routes.webhooks.polar, {
 
 		let subscription = subscriptionFromEvent(result.data);
 
-		// Every other event type Polar sends (orders, checkouts, benefit grants) and any
-		// subscription to a product this app doesn't sell monitoring through.
+		/**
+		 * Every other event type Polar sends (orders, checkouts, benefit grants)
+		 * and any subscription to a product this app doesn't sell monitoring
+		 * through.
+		 */
 		if (!subscription || subscription.productId !== SUBSCRIPTION_PRODUCT_ID) {
 			return ok({ ignored: true });
 		}
 
 		let ownerId = subscription.customer.externalId;
 		if (!ownerId) {
-			// A Polar customer with no external id was never linked to a signed-in subject, so
-			// there is no owner whose monitors this event could apply to.
+			/**
+			 * A Polar customer with no external id was never linked to a
+			 * signed-in subject, so there is no owner whose monitors this event
+			 * could apply to.
+			 */
 			logger.error("webhook.polar.unlinked_customer", {
 				subscriptionId: subscription.id,
 				customerId: subscription.customerId,
@@ -72,9 +72,11 @@ export default createAction(routes.webhooks.polar, {
 		}
 
 		if (!(await Subscription.upsert(db, ownerId, subscription))) {
-			// A newer payload for this subscription is already stored: Polar retries and its
-			// events can arrive out of order, so applying this one would move the projection
-			// backwards and reschedule from a stale status.
+			/**
+			 * A newer payload for this subscription is already stored: Polar's
+			 * retries can arrive out of order, and applying this one would move
+			 * the projection backwards, rescheduling from a stale status.
+			 */
 			logger.info("webhook.polar.stale_event", {
 				type: result.data.type,
 				subscriptionId: subscription.id,
@@ -86,24 +88,16 @@ export default createAction(routes.webhooks.polar, {
 		let monitors = await Subscription.applyEntitlement(db, ownerId, entitled);
 
 		/**
-		 * The end of the trial funnel, and the only place in the app that knows an account has
-		 * started paying. `markPaid` stamps only a row whose `paid_at` is still null, so the
-		 * renewals and plan changes that re-assert entitlement every month cannot move the
-		 * instant a customer converted, and an owner who never came through the free page has no
-		 * row to stamp — which is the ordinary case and a no-op rather than an error.
+		 * The only place that learns an account started paying: `markPaid`
+		 * stamps a row only while `paid_at` is null, so monthly renewals
+		 * can't move the conversion instant; a missing trial row is a routine no-op.
 		 */
 		let firstPayment = entitled && (await TrialConversion.markPaid(db, ownerId));
 
 		/**
-		 * Emitted off `firstPayment` rather than off `entitled`, which is what keeps a conversion
-		 * count from counting every renewal: `markPaid` only stamps a row whose `paid_at` was
-		 * still null, so this is true exactly once per customer.
-		 *
-		 * The conversion row is re-read for the attribution it copied at sign-in — the campaign
-		 * that produced a paying customer is the one number this whole funnel exists to answer,
-		 * and by now the session that captured it is months gone. An owner with no row never came
-		 * through the free page: `fromTrial` is false and the campaign fields are absent, which is
-		 * the honest shape rather than a default.
+		 * Fires once per customer: `markPaid` stamps `paid_at` only the first
+		 * time, so renewals never refire it. Campaign fields reflect the
+		 * sign-in attribution on the conversion row, absent for direct signups.
 		 */
 		if (firstPayment) {
 			let conversion = await TrialConversion.findByOwner(db, ownerId);

@@ -1,10 +1,9 @@
 /**
  * Verifies the per-instance creature component contracts and gender rolling.
- *
- * These tests pin the instance-state defaults (genderless, no held item, zero
- * friendship), confirm `rollGender` is deterministic under a seeded RNG and always
- * yields genderless for species without a ratio, and check that splitting a legacy
- * creature blob seeds the default instance state so older saves keep working.
+ * Pins the instance-state defaults (genderless, no held item, zero
+ * friendship), confirms `rollGender` is deterministic under a seeded RNG and
+ * always genderless without a ratio, and checks that splitting a legacy
+ * creature blob seeds defaults so older saves keep working.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -66,18 +65,20 @@ test("createCreatureInstance fills omitted fields from the default", () => {
 });
 
 test("rollGender always yields genderless for a species with no ratio", () => {
-	// A throwing RNG proves the genderless branch never draws randomness.
 	let random = () => {
 		throw new Error("random should not be called for a genderless species");
 	};
 	expect(rollGender(Gender.Genderless, random)).toBe(Gender.Genderless);
 });
 
+/**
+ * A draw below a ratio's female share yields female and above it yields
+ * male; the common ratio only gives female 12.5%, so a mid draw (0.2)
+ * still resolves to male.
+ */
 test("rollGender partitions the ratio deterministically against the RNG draw", () => {
-	// A low draw lands under the female share; a high draw lands in the male range.
 	expect(rollGender(EVEN_RATIO, () => 0.1)).toBe(Gender.Female);
 	expect(rollGender(EVEN_RATIO, () => 0.9)).toBe(Gender.Male);
-	// The COMMON ratio only gives 12.5% to female, so a mid draw is male.
 	expect(rollGender(COMMON_RATIO, () => 0.2)).toBe(Gender.Male);
 	expect(rollGender(COMMON_RATIO, () => 0.05)).toBe(Gender.Female);
 });
@@ -103,9 +104,12 @@ test("splitCreatureComponents seeds the default instance state", () => {
 	expect(components.instance).toEqual(DEFAULT_CREATURE_INSTANCE);
 });
 
+/**
+ * Regression coverage: the merge must carry the world's held item into
+ * the battle snapshot so held-item effects like Leftovers and type
+ * boosts fire correctly in play.
+ */
 test("mergeCreatureComponents carries the held item into the battle creature", () => {
-	// Regression: the world's stored held item must reach the battle Creature snapshot,
-	// otherwise held-item battle effects (Leftovers, type boosts) never fire in play.
 	let held = splitCreatureComponents({ creatureId: "creature-1", creature: legacyCreature() });
 	held.instance = createCreatureInstance({ heldItemId: "POTION" });
 	expect(mergeCreatureComponents(held).heldItemId).toBe("POTION");

@@ -1,12 +1,9 @@
 /**
  * Save-file persistence for a single local slot.
  *
- * A save envelope pairs the engine's persistent world snapshot with the
- * presentation's own state (map position, script flags, options) — the two
- * halves the engine deliberately keeps separate. `SaveStore` wraps
- * `localStorage`, validates the version on load, and normalises the world
- * through `migrateWorld` so an older payload upgrades to the current shape.
- * Saving is only offered outside battle, because battles are ephemeral.
+ * Pairs the engine's world snapshot with the presentation's own state (map
+ * position, flags, options), and normalises older payloads via `migrateWorld`.
+ * Saving is offered only outside battle, since battles are ephemeral.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,7 +42,7 @@ export class SaveStore {
 	/** @param key - The `localStorage` key backing this slot. */
 	constructor(private readonly key: string) {}
 
-	/** True when a save exists in this slot. */
+	/** True when the slot parses, regardless of its save-version. */
 	has(): boolean {
 		return this.read() !== null;
 	}

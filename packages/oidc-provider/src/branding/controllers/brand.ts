@@ -22,7 +22,6 @@ import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
 import { hexColor, httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks";
 import Brand from "../models/brand";
 
-// Custom CSS max length: 50KB should be plenty
 let CSS_MAX_LENGTH = 50_000;
 
 /** Validation schema for the update-brand request body. */

@@ -40,7 +40,11 @@ interface NewApiKey {
 	key: string;
 }
 
-/** GET /app/:team/api-keys — the team's API keys list. */
+/**
+ * GET /app/:team/api-keys — the team's API keys list. CopyButton sits inside
+ * an IntlProvider because its clientEntry island also renders server-side,
+ * where intl(handle) needs an IntlProvider ancestor to resolve.
+ */
 export default createAction(routes.app.team.apiKeys.index, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],
 	handler: inject([Database] as const, async (db) => {
@@ -86,11 +90,6 @@ export default createAction(routes.app.team.apiKeys.index, {
 								<p>{ctx.i18next.t("page.apiKeys.newKey.description")}</p>
 								<div mix={[hstack({ gap: "12px", align: "center" })]}>
 									<code>{newApiKey.key}</code>
-									{/* CopyButton is a `clientEntry` island: its render function runs
-									server-side too (for the initial HTML), where `intl(handle)` has no
-									module-scoped `setIntl()` fallback to read (that's only ever
-									registered client-side in bootstrap/browser.ts) — it needs an
-									`IntlProvider` ancestor for `intl(handle)` to resolve at all. */}
 									<IntlProvider i18n={ctx.i18next}>
 										<CopyButton
 											value={newApiKey.key}

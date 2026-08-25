@@ -1,3 +1,10 @@
+/**
+ * Error types for TypeID parsing, validation, and generation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 /** Base error class for all TypeID package errors. */
 export class TypeIdError extends Error {
 	override name = "TypeIdError";

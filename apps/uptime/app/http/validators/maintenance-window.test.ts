@@ -4,10 +4,8 @@
  * `.refine()` that requires `ends_at` to be after `starts_at`.
  *
  * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but these are `f.object(...)`
- * form-data schemas that only accept the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * `FormData`, since these `f.object(...)` form-data schemas require a raw `FormData`
+ * or `URLSearchParams` instance for their field-level rules to run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

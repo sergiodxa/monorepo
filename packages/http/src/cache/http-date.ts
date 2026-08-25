@@ -10,8 +10,8 @@
 /**
  * The one date spelling this package reads: `"Wed, 21 Oct 2015 07:28:00 GMT"`.
  *
- * The obsolete RFC 850 and asctime forms are rejected rather than guessed at,
- * because a misread date silently turns into a `304` for content that changed.
+ * Obsolete RFC 850 and asctime forms fail the match, because a misread date
+ * silently turns into a `304` for content that changed.
  */
 const HTTP_DATE_PATTERN =
 	/^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/;
@@ -19,12 +19,8 @@ const HTTP_DATE_PATTERN =
 /**
  * Formats a modification time as the `Last-Modified` validator for a response.
  *
- * HTTP dates carry whole seconds, so sub-second precision is dropped: two writes
- * inside the same second share a validator, which is why a content-derived
- * `ETag` is the better validator whenever one is available.
- *
- * Passing an invalid `Date` is a programming error rather than a runtime
- * failure, and produces whatever `Date#toUTCString` reports for it.
+ * HTTP dates carry whole seconds, so sub-second writes within the same second
+ * share a validator; a content-derived `ETag` is the better one when available.
  *
  * @param date - Modification time, as a `Date` or epoch milliseconds.
  * @returns The time as an HTTP-date.
@@ -41,9 +37,8 @@ export function lastModified(date: Date | number): string {
 /**
  * Parses an HTTP-date header value, such as the one `If-Modified-Since` carries.
  *
- * A missing header and an unparsable one are the same answer, `null`, so callers
- * fall back to sending the full body instead of asserting freshness they cannot
- * prove.
+ * A missing header and an unparsable one both return `null`, so callers fall
+ * back to serving the full body instead of asserting freshness they cannot prove.
  *
  * @param value - Raw header value, or `null` when the header is absent.
  * @returns The parsed date, or `null` when there is nothing valid to compare.

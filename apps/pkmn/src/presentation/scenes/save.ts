@@ -1,11 +1,9 @@
 /**
  * The save screen: confirm and write the local save.
  *
- * On confirm it composes the save envelope from the engine snapshot and the
- * presentation snapshot it was opened with, stamps the current time, and writes
- * it to the single local slot. Saving is only reachable from the pause menu,
- * which is only reachable outside battle, matching the engine's rule that battles
- * are ephemeral.
+ * On confirm it composes the save envelope from the engine and presentation
+ * snapshots, stamps the current time, and writes it to the single local slot,
+ * reachable only outside battle per the engine's rule that battles are ephemeral.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

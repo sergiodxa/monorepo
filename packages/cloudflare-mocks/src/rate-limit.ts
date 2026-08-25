@@ -1,7 +1,7 @@
 /**
  * `RateLimit` binding with real per-key counters over a fixed window, so a test can drive
  * a limiter to its threshold and observe the same allow/deny sequence production would
- * produce instead of stubbing the outcome.
+ * produce.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,9 +46,8 @@ interface RateLimitWindow {
 /**
  * Creates a rate-limit binding that really counts.
  *
- * Counting is per-key over a fixed window, matching how the platform's binding behaves
- * closely enough to test threshold logic: the first `limit` calls in a window succeed and
- * the rest are denied until the window rolls over.
+ * Per-key counts over a fixed window mirror the platform closely enough to test threshold
+ * logic: the first `limit` calls succeed, the rest are denied until the window rolls over.
  * @param options Threshold, window length, and clock override.
  * @returns A `RateLimit` binding with inspectable counters.
  * @example let limiter = createRateLimit({ limit: 2 }); await limiter.limit({ key: "ip" });
@@ -59,7 +58,6 @@ export function createRateLimit(options?: RateLimitMockOptions): RateLimitMock {
 	let now = options?.now ?? Date.now;
 	let windows = new Map<string, RateLimitWindow>();
 
-	/** Index of the window the clock currently falls in. */
 	function currentWindow(): number {
 		return Math.floor(now() / 1000 / period);
 	}

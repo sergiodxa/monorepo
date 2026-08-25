@@ -11,7 +11,6 @@ import { describe, expect, test } from "vitest";
 
 import { panelChrome } from "./panel-chrome";
 
-/** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;
 }

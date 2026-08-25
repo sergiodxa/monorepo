@@ -1,16 +1,14 @@
-import { isFailure, isSuccess } from "@pkg/result";
 /**
- * Verifies the trainer content format's validation and loader. A well-formed
- * definition parses into a typed value; malformed inputs — empty party,
- * over-{@link MAX_PARTY_SIZE} party, missing/malformed quotes, blank ids, bad
- * levels, and too many moves — are each rejected with a {@link TrainerValidationError}.
- * Species/move ids are validated only as non-empty strings (never resolved
- * against a live roster) so an authored trainer stays loadable as content shifts,
- * and the shipped sample trainer is checked to parse.
+ * Verifies the trainer format's validation and loader: a well-formed definition
+ * parses into a typed value, while an empty or oversized party, missing quotes,
+ * blank ids, bad levels, and surplus moves each fail with a
+ * {@link TrainerValidationError}. Unknown ids parse, so authored trainers stay
+ * loadable as content shifts, and the shipped sample trainer is covered too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isFailure, isSuccess } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import {

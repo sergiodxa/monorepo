@@ -1,3 +1,10 @@
+/**
+ * JSON response helpers, one per HTTP status code, pairing a JSON body with
+ * its matching status and status text.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { json } from "../response";
 import * as StatusCode from "../status-code";
 

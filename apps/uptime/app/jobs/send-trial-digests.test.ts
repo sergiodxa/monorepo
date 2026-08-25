@@ -1,8 +1,8 @@
 /**
  * Unit tests for `SendTrialDigestsJob.perform()`: which leads a run picks up, that a lead
- * watching three URLs gets exactly one email covering all three rather than three emails,
- * that a lead with no active watch gets none at all, and that the stamp is what moves the
- * next digest to the following day.
+ * watching three URLs gets exactly one email covering all three, that a lead with no active
+ * watch gets none at all, and that the stamp is what moves the next digest to the following
+ * day.
  *
  * The signup-day rule is tested directly, because it is the one that fails quietly: the
  * window is counted from `created_at` when no digest has been sent, so somebody who tried a
@@ -37,7 +37,7 @@ const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 let transport = new MemoryTransport();
 
-/** A transport that accepts nothing, for the cases about what a failed send must not do. */
+/** A transport that accepts nothing, for exercising what happens after a send fails. */
 class RefusingTransport implements Transport {
 	async send() {
 		return failure(new MailError("provider unavailable"));
@@ -121,6 +121,7 @@ beforeEach(() => {
 });
 
 describe("SendTrialDigestsJob", () => {
+	/** The subject reports a count, not a list — one line has room for a number, not three hostnames. */
 	test("sends one lead watching three URLs exactly one email", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedDueLead(db);
@@ -133,7 +134,6 @@ describe("SendTrialDigestsJob", () => {
 
 		expect(digests()).toHaveLength(1);
 		expect(transport.last?.to).toEqual([{ email: "visitor@example.com" }]);
-		// Three URLs, one reader, one inbox — the subject counts them rather than naming one.
 		expect(transport.last?.subject).toContain("3");
 
 		let completed = job.logger.events.find(
@@ -146,7 +146,7 @@ describe("SendTrialDigestsJob", () => {
 	test("sends a lead with no active watch nothing at all", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedDueLead(db);
-		// A watch whose week is over: `next_due_at` is null, which is what "active" means.
+		/** A watch whose week is over: `next_due_at` is null, which is what "active" means. */
 		await seedWatch(db, lead.id, "https://done.example.com", {
 			next_due_at: null,
 			last_status: "up",
@@ -224,7 +224,7 @@ describe("SendTrialDigestsJob", () => {
 		expect(
 			job.logger.events.find((event) => event.event === "job.send_trial_digests.nothing_to_report"),
 		).toBeDefined();
-		// Nothing was sent, so nothing is stamped and tomorrow's run tries again.
+		/** Nothing was sent, so nothing is stamped and tomorrow's run tries again. */
 		expect((await Lead.findById(db, lead.id))?.last_digest_at).toBeNull();
 	});
 
@@ -238,18 +238,19 @@ describe("SendTrialDigestsJob", () => {
 
 		await runJob(db);
 
-		// Two checks inside the 24-hour window, one of them healthy; the third is older than
-		// the window and is neither counted nor drawn.
+		/**
+		 * Two checks inside the 24-hour window, one of them healthy; the third check, older
+		 * than the window, is excluded from both the count and the bar.
+		 */
 		expect(transport.last?.text).toContain("Checks run 2");
 		expect(transport.last?.text).toContain("Uptime 50.0%");
 		expect(transport.last?.text).toContain("Slowest response 100ms");
 	});
 
 	/**
-	 * The funnel's email counter is read as "emails this person received", so it is gated on
-	 * exactly what the digest stamp is gated on. A counter incremented next to `send()` rather
-	 * than after it would measure what was attempted, which is a different number and the one
-	 * nobody asked for.
+	 * The funnel's email counter is read as "emails this person received," so it increments
+	 * only after the transport accepts the send — the same condition the digest stamp is
+	 * gated on.
 	 */
 	test("counts the digest against the lead once it has been accepted", async () => {
 		let { db } = createTestDatabase();
@@ -277,7 +278,7 @@ describe("SendTrialDigestsJob", () => {
 
 		let row = await Lead.findById(db, lead.id);
 		expect(row?.emails_sent).toBe(0);
-		// And the digest stays owed, which is the existing rule this one is tied to.
+		/** The digest also stays owed here, gated on the same accepted-send condition as the counter. */
 		expect(row?.last_digest_at).toBeNull();
 	});
 });

@@ -1,14 +1,12 @@
 /**
- * Form actions reached from the account page rather than a specific team's URL
- * scope: creating an additional team, leaving a team, changing the UI language
- * preference, choosing which optional emails to receive, downloading everything the app
- * holds about the viewer, and asking for — or calling off — the deletion of the account.
- * Each only requires `requireUser` — none take a `:team` route param.
+ * Form actions reached from the account page, addressed by the viewer's own subject id
+ * and authorized by `requireUser` alone: creating an additional team, leaving a team,
+ * changing the UI language preference, choosing which optional emails to receive,
+ * downloading everything the app holds about the viewer, and asking for — or calling
+ * off — the deletion of the account.
  *
- * Deletion is the odd one out: {@link requestDeletion} deletes nothing at all. It writes a row
- * to the queue the daily sweep works through and signs the person out, which is what buys the
- * grace period {@link cancelDeletion} spends. Doing it on the click would leave no window to
- * change one's mind in, and the queue makes that window free.
+ * {@link requestDeletion} queues the account for the daily sweep to delete and signs the
+ * person out, buying the grace period {@link cancelDeletion} spends before the sweep runs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,16 +85,9 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 });
 
 /**
- * POST /actions/update-emails
- *
- * The form posts one value per switch left on, so this stores the complement: every optional
- * email the app knows about that the viewer did not ask for. Reading the form the other way
- * round — treating the posted values as the refusals — would be impossible, because an
- * unchecked switch posts nothing and a form with everything off is indistinguishable from a
- * request that touched no switch at all.
- *
- * Storing refusals rather than acceptances is also what makes a future digest opt-out for
- * everybody without a backfill; see the column's docblock in `database/schema.ts`.
+ * Stores the complement of what the form posts: an unchecked switch sends nothing, so
+ * storing which emails are missing is the only unambiguous record of an all-off
+ * submission, and it doubles as a future account-wide opt-out with no backfill needed.
  */
 export const updateEmails = createAction(routes.accountActions.updateEmails, async (ctx) => {
 	let viewer = getViewer();
@@ -120,15 +111,9 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
 });
 
 /**
- * POST /actions/export-data
- *
- * Answers with the whole document rather than a link to one: it is assembled in a handful of
- * indexed reads scoped to one person, so there is nothing to schedule and nothing to store —
- * and a stored export would be a second copy of everything sensitive, sitting somewhere with a
- * URL, which is a worse thing to hold than the request that produced it.
- *
- * `no-store` because the response body is an entire account and the browser is the only place
- * it should land.
+ * Assembled from a handful of indexed reads scoped to one person and answered inline,
+ * so the browser's `no-store` response is the only copy of this sensitive document —
+ * there is nothing to schedule, store, or later revoke.
  */
 export const exportData = createAction(routes.accountActions.exportData, async () => {
 	let viewer = getViewer();
@@ -152,16 +137,9 @@ export const exportData = createAction(routes.accountActions.exportData, async (
 });
 
 /**
- * POST /actions/request-account-deletion
- *
- * Queues the account and signs the person out. Nothing is deleted here — the daily sweep does
- * that — but they must not be left browsing an account they have just asked to have erased, so
- * the session is destroyed and they land on the marketing home page.
- *
- * The queued row is written before the session goes, and the two are not atomic: a failure
- * between them leaves a queued request and a live session, which the next page load reports as
- * the queued state. The reverse order would leave somebody signed out with no request recorded
- * and no way to see that nothing happened.
+ * The row is written before the session ends, so a failure between the two still leaves
+ * the request queued and reporting as such on the next page load. The email travels with
+ * the row because the OIDC subject holds no address of its own once the session is gone.
  */
 export const requestDeletion = createAction(routes.accountActions.requestDeletion, async (ctx) => {
 	let viewer = getViewer();
@@ -173,8 +151,6 @@ export const requestDeletion = createAction(routes.accountActions.requestDeletio
 	}
 
 	let db = getServiceContainer().get(Database);
-	// The address is captured here because it exists nowhere else: an account is an OIDC
-	// subject, and this is the only request that can hand the confirmation mail somewhere to go.
 	await AccountDeletion.enqueue(db, viewer.id, viewer.email);
 
 	ctx.get(Session)?.destroy();
@@ -183,15 +159,9 @@ export const requestDeletion = createAction(routes.accountActions.requestDeletio
 });
 
 /**
- * DELETE /actions/cancel-account-deletion
- *
- * Drops the queued request, which is all it takes: the sweep reads the queue, so a row that is
- * gone is a deletion that never runs. Reaching this needs signing back in, which is exactly the
- * check that matters — whoever can still authenticate as the account is whoever gets to keep it.
- *
- * Silent about a viewer who has no queued request. Cancelling nothing leaves the account in the
- * state the person wanted it in either way, and an error page would only be a worse way of
- * saying "you are not being deleted".
+ * Dropping the row is enough, since the sweep only deletes what is still queued. Reaching
+ * this again requires signing back in, which is itself the safeguard — so a viewer with
+ * nothing queued gets the same quiet success as one who just cancelled.
  */
 export const cancelDeletion = createAction(routes.accountActions.cancelDeletion, async (ctx) => {
 	let viewer = getViewer();

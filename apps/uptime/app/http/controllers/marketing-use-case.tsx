@@ -1,14 +1,13 @@
 /**
- * `/use-cases/:slug` controller. Looks up the slug in `resources/content/marketing.ts`'s
- * `useCases` record and renders the shared `MarketingPageView` template; an unknown
- * slug renders the same 404 the router's `defaultHandler` uses. One controller covers
- * all 7 use-case pages instead of one file per page — see the content module's
- * docblock for why.
+ * `/use-cases/:slug` controller. Looks up the slug in
+ * `resources/content/marketing.ts`'s `useCases` record and renders the shared
+ * `MarketingPageView` template; an unknown slug renders the router's
+ * `defaultHandler` 404. One controller covers all 7 use-case pages — see the
+ * content module's docblock for why.
  *
- * Structured data is the page's own `FAQPage`, built from the very questions it
- * renders so it never claims answers a visitor can't find. No
- * `SoftwareApplication` here: a use-case page's subject is a job to be done, not a
- * capability of the product.
+ * Structured data is the page's own `FAQPage`, built from the same questions
+ * it renders, so answers always match what the page shows. A use-case page's
+ * subject is the job to be done.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

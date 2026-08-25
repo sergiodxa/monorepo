@@ -8,10 +8,9 @@ import { utility } from "../internal/descriptor";
 import { boxLength } from "../internal/tokens";
 
 /**
- * Applies `flex-basis`. Defaults to `"auto"`, matching `flex-basis`'s own
- * initial value — the common case of a `flex: N N M` shorthand's remainder,
- * once `u.grow()`/`u.shrink()` have been extracted from it, becoming a real
- * utility call in its own right.
+ * Applies `flex-basis`, defaulting to `"auto"` to match the property's own
+ * initial value — the remainder of a `flex: N N M` shorthand once
+ * `u.grow()`/`u.shrink()` have been extracted from it.
  *
  * @example u.basis()
  * @example css({ flexBasis: "auto" })

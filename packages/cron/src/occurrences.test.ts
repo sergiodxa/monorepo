@@ -112,7 +112,6 @@ describe("nextOccurrence", () => {
 			"2032-02-29T00:00:00.000Z",
 			"2036-02-29T00:00:00.000Z",
 		]);
-		// 2100 is not a leap year, so the run after 2096 is eight years later.
 		expect(nextRuns("0 0 29 2 *", "UTC", "2096-03-01T00:00:00Z")).toEqual([
 			"2104-02-29T00:00:00.000Z",
 		]);
@@ -144,8 +143,6 @@ describe("the day-of-month and day-of-week either-or rule", () => {
 	});
 
 	test("matches either field when both are restricted", () => {
-		// The 13th of any month, plus every Friday: March 2026 has Fridays on the 6th,
-		// 13th, 20th and 27th, and the 13th is one of them.
 		expect(nextRuns("0 0 13 * 5", "UTC", "2026-03-01T00:00:00Z", 6)).toEqual([
 			"2026-03-06T00:00:00.000Z",
 			"2026-03-13T00:00:00.000Z",
@@ -157,8 +154,6 @@ describe("the day-of-month and day-of-week either-or rule", () => {
 	});
 
 	test("counts a starred step in a day field as restricting it", () => {
-		// Odd days of the month, or any Monday: the 2nd is a Monday, the 3rd, 5th and
-		// 7th are odd. Were this read as both fields, only Mondays would match.
 		expect(nextRuns("0 0 */2 * 1", "UTC", "2026-03-01T00:00:00Z", 5)).toEqual([
 			"2026-03-02T00:00:00.000Z",
 			"2026-03-03T00:00:00.000Z",
@@ -169,7 +164,6 @@ describe("the day-of-month and day-of-week either-or rule", () => {
 	});
 
 	test("reaches a day of month that only a weekday could put on the calendar", () => {
-		// February never has a 30th, so every run here comes from the weekday side.
 		expect(nextRuns("0 0 30 2 1", "UTC", "2027-01-01T00:00:00Z", 3)).toEqual([
 			"2027-02-01T00:00:00.000Z",
 			"2027-02-08T00:00:00.000Z",
@@ -261,8 +255,6 @@ describe("previousOccurrence", () => {
 
 describe("daylight saving: spring forward", () => {
 	test("holds a daily schedule at its local time across the jump", () => {
-		// New York moves 02:00 EST to 03:00 EDT on 2026-03-08, so 09:00 local moves
-		// from 14:00Z to 13:00Z and stays 09:00 on the clock the user configured.
 		expect(nextRuns("0 9 * * *", "America/New_York", "2026-03-06T12:00:00Z", 4)).toEqual([
 			"2026-03-06T14:00:00.000Z",
 			"2026-03-07T14:00:00.000Z",
@@ -280,9 +272,6 @@ describe("daylight saving: spring forward", () => {
 	});
 
 	test("runs a schedule set to a skipped hour right after the jump", () => {
-		// 02:30 does not exist on 2026-03-08 in New York. The run is carried forward to
-		// 07:30Z, which reads as 03:30 EDT, rather than being dropped for the day: a
-		// dead man's switch that never fires is worse than one that fires an hour late.
 		expect(nextRuns("30 2 * * *", "America/New_York", "2026-03-07T12:00:00Z", 3)).toEqual([
 			"2026-03-08T07:30:00.000Z",
 			"2026-03-09T06:30:00.000Z",
@@ -302,8 +291,6 @@ describe("daylight saving: spring forward", () => {
 	});
 
 	test("does not report the skipped wall time as a match", () => {
-		// The run happens, but 02:30 is not a time the zone had, so asking whether that
-		// instant matches the fields answers no. Only the search knows it was carried.
 		let carried = nextRuns("30 2 * * *", "America/New_York", "2026-03-07T12:00:00Z")[0] ?? "";
 		expect(carried).toBe("2026-03-08T07:30:00.000Z");
 		expect(
@@ -332,8 +319,6 @@ describe("daylight saving: fall back", () => {
 	});
 
 	test("fires a schedule inside the repeated hour once, on its first pass", () => {
-		// 01:30 happens twice on 2026-11-01 in New York. An appointment is kept once,
-		// at the first pass, so a daily job does not run twice in one day.
 		expect(nextRuns("30 1 * * *", "America/New_York", "2026-10-31T12:00:00Z", 3)).toEqual([
 			"2026-11-01T05:30:00.000Z",
 			"2026-11-02T06:30:00.000Z",
@@ -346,8 +331,6 @@ describe("daylight saving: fall back", () => {
 	});
 
 	test("keeps an hourly schedule on absolute time, so it runs in both passes", () => {
-		// An interval keeps its spacing: 01:00 EDT and 01:00 EST are an hour apart in
-		// real time, and an hourly job is expected in each of them.
 		expect(nextRuns("0 * * * *", "America/New_York", "2026-11-01T04:30:00Z", 4)).toEqual([
 			"2026-11-01T05:00:00.000Z",
 			"2026-11-01T06:00:00.000Z",
@@ -377,8 +360,6 @@ describe("daylight saving: fall back", () => {
 	});
 
 	test("reports the first pass as the previous run, matching the forward search", () => {
-		// A schedule fires once inside a repeated hour, so the instant reported looking
-		// backward is the same one reported looking forward.
 		expect(previousRun("30 1 * * *", "America/New_York", "2026-11-01T12:00:00Z")).toBe(
 			"2026-11-01T05:30:00.000Z",
 		);
@@ -386,15 +367,7 @@ describe("daylight saving: fall back", () => {
 });
 
 describe("a run carried out of a skipped hour stays findable in both directions", () => {
-	// The forward search used to read the wall clock only from where it was asked, and a
-	// wall time the clock skipped names an instant later than the wall times that follow
-	// it. Asked between the jump and the carried run, the search walked past it and
-	// reported the next day, while `prev` still reported it: a dead man's switch left
-	// expecting nothing for a whole day, and two answers that contradicted each other.
-
 	test("finds the carried run when asked from inside the hour that was skipped", () => {
-		// 02:30 does not exist in New York on 2026-03-08; the run lands at 07:30Z, which
-		// reads as 03:30 EDT. Asked from 07:00Z, that run is still ahead.
 		let timeZone = "America/New_York";
 		let carried = "2026-03-08T07:30:00.000Z";
 
@@ -409,24 +382,18 @@ describe("a run carried out of a skipped hour stays findable in both directions"
 		expect(nextRuns("30 1 * * *", "Europe/London", "2026-03-29T01:10:00Z")).toEqual([
 			"2026-03-29T01:30:00.000Z",
 		]);
-		// Troll goes from +00 to +02 in one step, so a whole two hours of wall time is gone.
 		expect(nextRuns("30 2 * * *", "Antarctica/Troll", "2026-03-29T00:30:00Z")).toEqual([
 			"2026-03-29T02:30:00.000Z",
 		]);
 	});
 
 	test("finds it when the hour the clock skips is midnight", () => {
-		// Cairo starts daylight saving at 00:00, so the whole first hour of 2026-04-24 is
-		// missing and only a zone that transitions at midnight shows this at all.
 		expect(nextRuns("30 0 * * *", "Africa/Cairo", "2026-04-23T22:10:00Z")).toEqual([
 			"2026-04-23T22:30:00.000Z",
 		]);
 	});
 
 	test("keeps asking from just before a run cheap for a schedule with many times a day", () => {
-		// Re-reading the day from the top is what makes the carried run findable, and it is
-		// only done on a day whose offset moved. A schedule naming 1,380 times a day would
-		// otherwise pay for that re-read on every call.
 		let fields = fieldsOf("* 0-22 * * *");
 		let started = performance.now();
 		for (let turn = 0; turn < 200; turn++) {
@@ -438,9 +405,6 @@ describe("a run carried out of a skipped hour stays findable in both directions"
 
 describe("the last minute of a day the clock repeats", () => {
 	test("walks back into the second pass of a repeated final hour", () => {
-		// Santiago ends daylight saving at 24:00, so 23:00 on 2026-04-04 happens twice. An
-		// hourly schedule restricted to that date fires 25 times, and the search used to
-		// resume a backward walk at the first pass of 23:59 and lose the last of them.
 		let timeZone = "America/Santiago";
 		let forward = nextRuns("0 * 4 4 *", timeZone, "2026-04-04T00:00:00Z", 26).filter(
 			(run) => run < "2026-04-06",
@@ -455,9 +419,6 @@ describe("the last minute of a day the clock repeats", () => {
 
 describe("the minute the search is asked from", () => {
 	test("counts an occurrence inside it as past for next and as before for prev", () => {
-		// Cron resolves to minutes, so the seconds of the instant asked about only decide
-		// which side of it an occurrence in the same minute falls on. An hour-pinned
-		// schedule used to step off that minute first and lose a whole day.
 		for (let expression of ["0 12 * * *", "0 * * * *"]) {
 			expect(previousRun(expression, "UTC", "2026-06-15T12:00:00.000Z")).not.toBe(
 				"2026-06-15T12:00:00.000Z",

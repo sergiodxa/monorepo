@@ -143,8 +143,6 @@ describe("TrialWeeklyDigestEmail", () => {
 		let { text, html } = await render(email.body());
 
 		expect(text).toContain("https://uptime.sergiodxa.com/try/report/report-tok-123");
-		// In the footer, so the subscribe button is still the only call to action; three links
-		// now, the third being the way out.
 		expect(html.split("<a ").length - 1).toBe(3);
 	});
 

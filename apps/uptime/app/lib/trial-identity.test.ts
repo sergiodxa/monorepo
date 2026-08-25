@@ -4,8 +4,8 @@
  * Every case here is a bypass someone would otherwise use to buy a second free week on a URL
  * they already had one for, or a collision that would be worse than the bypass — a dotted
  * Gmail alias merged onto somebody else's lead, a plaintext origin merged onto a TLS one.
- * Both functions are total and pure, so they are tested as such rather than through a
- * database.
+ * Both functions are total and pure, so plain input/output assertions verify
+ * them completely.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,9 +28,9 @@ describe("normalizeLeadEmail", () => {
 	});
 
 	/**
-	 * The reduction deliberately not made. Gmail ignores dots and almost nobody else does, so
-	 * stripping them would merge two strangers into one lead and hand one of them the other's
-	 * report — a far worse failure than a second free week.
+	 * Dots stay significant: Gmail ignores them but almost nobody else does, so
+	 * stripping them would merge two strangers into one lead and hand one of them
+	 * the other's report — a far worse failure than a second free week.
 	 */
 	test("keeps dots, so two spellings of a local part stay two people", () => {
 		expect(normalizeLeadEmail("he.llo@sergiodxa.com")).not.toBe(
@@ -43,9 +43,9 @@ describe("normalizeLeadEmail", () => {
 	});
 
 	/**
-	 * The domain is whatever follows the last `@`, which is the rule for an address with a
-	 * quoted local part. `TrialLeadSchema` refuses those long before this is reached, so the
-	 * case only matters for the function being total rather than for anything stored.
+	 * The domain is whatever follows the last `@`, the rule for an address with a
+	 * quoted local part. `TrialLeadSchema` refuses those long before this is reached,
+	 * so the case exists to keep the function total, independent of what ends up stored.
 	 */
 	test("splits on the last @, so the domain is never taken from inside the local part", () => {
 		expect(normalizeLeadEmail('"a@b"@sergiodxa.com')).toBe('"a@b"@sergiodxa.com');

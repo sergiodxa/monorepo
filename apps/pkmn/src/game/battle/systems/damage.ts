@@ -1,11 +1,7 @@
 /**
- * Centralizes the battle damage system utilities used to resolve how much harm an action or self-inflicted effect produces.
- * This module defines the context contract for damage lookups and exposes the entry points that translate combat state,
- * move metadata, and effect modifiers into concrete numeric damage values.
- *
- * It also contains the internal calculation pipeline for standard damage resolution, including effect-specific overrides,
- * effectiveness adjustments, and event emission for notable outcomes. The result is a focused module that keeps damage
- * computation consistent, deterministic from its inputs, and isolated from presentation concerns.
+ * Resolves move and self-inflicted damage from combat state, move metadata, and
+ * effect modifiers, keeping the calculation deterministic and free of
+ * presentation concerns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,7 +50,11 @@ export function getMoveHitCount(context: DamageSystemContext, effects: MoveEffec
 	return min + Math.floor(context.random() * (max - min + 1));
 }
 
-/** Resolves one move's actual damage amount after effect-specific overrides. */
+/**
+ * Resolves one move's actual damage amount through effect-specific overrides
+ * before falling back to the standard formula. Type immunity still zeroes
+ * level-based fixed damage even though it bypasses the formula entirely.
+ */
 export function getResolvedMoveDamage(
 	context: DamageSystemContext,
 	user: CombatantState,
@@ -69,20 +69,13 @@ export function getResolvedMoveDamage(
 
 	let fixedDamage = context.findEffect(effects, "fixed-damage");
 	if (fixedDamage) {
-		// Fixed-damage bypasses the stat/power formula entirely: the returned number
-		// is the damage, so the defender's stats and stages never enter into it.
 		if ("value" in fixedDamage) return fixedDamage.value;
 
 		if (fixedDamage.amount === "user-level") {
-			// Level-based damage still honors type immunity: a move whose type does
-			// not affect the target (effectiveness 0) deals nothing, but when it can
-			// connect the damage is exactly the user's level rather than a computed
-			// value. Effectiveness above/below 1 does not scale it.
 			if (context.getTypeEffectiveness(target, move) === 0) return 0;
 			return getCreatureLevel(context.gameData, user.creature);
 		}
 
-		// "half-target-hp": remove half the target's current HP, at least 1.
 		return Math.max(1, Math.floor(context.getRemainingHP(target) / 2));
 	}
 
@@ -110,12 +103,6 @@ export function getResolvedMoveDamage(
 	}
 
 	if (context.findEffect(effects, "power-from-held-item")) {
-		// A held-item-thrown attack has no power of its own: it borrows the power of
-		// the item the user is holding. With nothing to throw (no held item, or an
-		// item that carries no throw power) the move has no power source and fails,
-		// dealing nothing. Otherwise it resolves through the normal formula, where
-		// `getMovePower` reads the same throw power, so effectiveness/immunity, STAB,
-		// stats, and stages all apply exactly as they would to any physical hit.
 		if (getHeldItemPower(context, user) === null) return 0;
 	}
 
@@ -124,13 +111,9 @@ export function getResolvedMoveDamage(
 }
 
 /**
- * Reflects the damage the user took this turn back at the source that dealt it.
- *
- * The returned value is a multiple of the recorded incoming damage, so it bypasses
- * the normal stat/power formula the same way OHKO and fixed-damage do. Passing a
- * `requiredClass` limits the reflection to hits of that damage class; passing null
- * accepts any recorded hit. Nothing is reflected when no qualifying damage was
- * taken this turn, or when the last hit came from a different slot than the target.
+ * Reflects a multiple of the damage the user took this turn back at its source,
+ * bypassing the stat/power formula the way OHKO and fixed-damage do. Nothing is
+ * reflected when no qualifying hit landed this turn, or it came from another slot.
  */
 function getCounterDamage(
 	user: CombatantState,
@@ -197,13 +180,9 @@ function calculateDamage(
 }
 
 /**
- * Multiplies outgoing damage when the attacker holds a type-boost item whose type
- * matches the move being used.
- *
- * The multiplier stacks with STAB, effectiveness, and critical modifiers by applying
- * as one more sequential multiply on the running damage total, flooring the result the
- * same way the surrounding modifiers do. A creature holding nothing, holding an item
- * without a `damageTypeBoost`, or using a move of a non-matching type is unaffected.
+ * Multiplies outgoing damage when the attacker holds a matching type-boost item,
+ * stacking as one more sequential multiply after STAB, effectiveness, and crit,
+ * flooring the same way those modifiers do.
  */
 function applyHeldItemTypeBoost(
 	context: DamageSystemContext,
@@ -222,10 +201,8 @@ function applyHeldItemTypeBoost(
 
 /**
  * Reads the throw power the attacker's held item grants to an item-thrown attack.
- *
- * Returns `null` when the wielder holds nothing or holds an item that carries no
- * throw power, signalling the move has no power source and must fail rather than
- * fall back to a default. A number is the effective move power for that hit.
+ * Returns `null` when the wielder holds nothing or an item with no throw power,
+ * signalling the move has no power source and must fail rather than default.
  */
 function getHeldItemPower(context: DamageSystemContext, user: CombatantState): number | null {
 	let heldItemId = user.creature.heldItemId;
@@ -235,7 +212,6 @@ function getHeldItemPower(context: DamageSystemContext, user: CombatantState): n
 	return power ?? null;
 }
 
-/** Applies direct-damage penalties from major statuses that modify outgoing attacks. */
 function applyMajorStatusDamageModifiers(user: CombatantState, move: Move, damage: number): number {
 	if (user.creature.status.state === State.Burned && move.damageClass === DamageClass.Physical) {
 		return Math.floor(damage * 0.5);
@@ -244,7 +220,11 @@ function applyMajorStatusDamageModifiers(user: CombatantState, move: Move, damag
 	return damage;
 }
 
-/** Computes pre-modifier base damage from stats, power, and field protections. */
+/**
+ * Computes pre-modifier base damage from stats, power, and field protections.
+ * Screens, weather, and terrain stack as sequential multiplies rather than
+ * mutually exclusive early returns, so several can affect the same hit.
+ */
 function getBaseDamage(
 	context: DamageSystemContext,
 	user: CombatantState,
@@ -299,11 +279,7 @@ function getBaseDamage(
 		Math.floor(Math.floor((((2 * level) / 5 + 2) * power * attackStat) / defenseStat) / 50) + 2;
 	let targetSide = context.getCombatantSide(target);
 
-	// Field protections stack: screens, then weather, then terrain are applied
-	// as sequential multiplies (flooring after each step) rather than mutually
-	// exclusive early returns, so a move can be affected by several at once.
 	if (!criticalHit) {
-		// Screens are ignored on a critical hit.
 		if (
 			move.damageClass === DamageClass.Physical &&
 			context.state.sides[targetSide]!.effects.reflectTurns > 0
@@ -364,7 +340,11 @@ function getBaseDamage(
 	return baseDamage;
 }
 
-/** Resolves dynamic power rules before the normal base-damage formula runs. */
+/**
+ * Resolves dynamic power rules before the normal base-damage formula runs.
+ * The held-item power path falls back to the move's own power only
+ * defensively, since a missing throw power already fails the move earlier.
+ */
 function getMovePower(
 	context: DamageSystemContext,
 	user: CombatantState,
@@ -374,9 +354,6 @@ function getMovePower(
 	let effects = context.flattenEffects(move.effect);
 
 	if (context.findEffect(effects, "power-from-held-item")) {
-		// The absent-item failure is handled ahead of the formula in
-		// `getResolvedMoveDamage`; by the time power is read here the item is known to
-		// supply one, so fall back to the move's own power only defensively.
 		return getHeldItemPower(context, user) ?? move.power;
 	}
 

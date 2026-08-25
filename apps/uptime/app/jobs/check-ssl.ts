@@ -1,14 +1,9 @@
 /**
  * Daily background job that re-evaluates SSL certificate status for every HTTP
- * monitor with SSL monitoring enabled. There is no TLS handshake here — Workers can't
- * read certificate details from `fetch()` — it just re-runs `calculateSslStatus`
- * against the manually entered expiry date, so status transitions (and repeated
- * expiry-warning alerts) fire on schedule without the user revisiting the settings
- * form. See `app/services/ssl-info.ts` and `docs/ssl-monitoring.md`.
- *
- * Monitors are re-evaluated in bounded-concurrency batches, and the alerts a warning
- * threshold warrants are handed to the `notify` consumer instead of dispatched inline
- * (ADR-008).
+ * monitor with SSL monitoring enabled. Workers can't read certificate details
+ * from `fetch()`, so it re-runs `calculateSslStatus` against the manually
+ * entered expiry date, keeping status transitions and expiry-warning alerts
+ * on schedule. Monitors run in bounded-concurrency batches; alerts go to the `notify` consumer (ADR-008).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +29,6 @@ export class CheckSslJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let monitors = await Monitor.listSslEnabled(db);
-		// The sweep exists for these monitors, so it is split by how many each team has.
 		apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 
 		let notifications: NotifyMessage[] = [];
@@ -68,10 +62,9 @@ export class CheckSslJob extends Job {
 	}
 
 	/**
-	 * Re-evaluates one monitor's certificate status and persists it, returning the
-	 * notification the new status warrants or `null` when it isn't alert-worthy. Unlike the
-	 * other sweeps this isn't edge-triggered: `shouldAlertOnSslStatus` fires on every day a
-	 * warning threshold covers, and per-alert cooldown is what bounds the repetition.
+	 * Re-evaluates one monitor's certificate status and persists it, returning
+	 * the notification the new status warrants, or `null` when none applies.
+	 * `shouldAlertOnSslStatus` fires every day a warning threshold covers; a per-alert cooldown bounds the repetition.
 	 */
 	private async check(db: Database, monitor: SelectMonitor): Promise<NotifyMessage | null> {
 		let previousStatus = monitor.ssl_status;

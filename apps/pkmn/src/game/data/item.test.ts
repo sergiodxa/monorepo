@@ -1,11 +1,8 @@
 /**
  * Tests for the item data contracts and the authored item catalog.
  *
- * This suite guards the boundary between the content-agnostic item data layer
- * and the authored content that fills it. In particular it verifies that every
- * item exposes a content-defined `category` as a plain, non-empty string. This
- * protects against a franchise-specific enum creeping back into the engine data
- * layer and against items shipping with an empty or missing category value.
+ * Guards the boundary between the content-agnostic item data layer and its
+ * authored content: every item must expose `category` as a non-empty string.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

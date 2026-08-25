@@ -1,10 +1,8 @@
 /**
  * Tests for sprite sheets and frame-sequence animations.
  *
- * Covers `SpriteAnimation` frame stepping by dt, looping vs one-shot `done`, and
- * `reset`. For `SpriteSheet` it exercises the frame-index-to-source math by
- * driving `draw` against a recording fake context that only captures the source
- * rectangle — the real canvas blit is not tested.
+ * Exercises the frame-index-to-source math via a recording fake context that
+ * only captures the source rectangle.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,8 +61,8 @@ test("SpriteAnimation accumulates partial dt across updates before stepping", ()
 
 test("SpriteAnimation loops back to the first frame past the end", () => {
 	let anim = new SpriteAnimation([1, 2], 100, true);
-	anim.update(100); // -> frame 2
-	anim.update(100); // wraps -> frame 1
+	anim.update(100);
+	anim.update(100);
 	expect(anim.frame).toBe(1);
 	expect(anim.done).toBe(false);
 });
@@ -75,7 +73,7 @@ test("SpriteAnimation one-shot holds the last frame and reports done", () => {
 	anim.update(100);
 	expect(anim.frame).toBe(2);
 	expect(anim.done).toBe(true);
-	anim.update(1000); // stays on the last frame
+	anim.update(1000);
 	expect(anim.frame).toBe(2);
 	expect(anim.done).toBe(true);
 });
@@ -86,7 +84,6 @@ test("SpriteAnimation reset returns to the first frame and clears elapsed time",
 	expect(anim.frame).not.toBe(1);
 	anim.reset();
 	expect(anim.frame).toBe(1);
-	// A fresh partial update should not immediately step after reset.
 	anim.update(60);
 	expect(anim.frame).toBe(1);
 });
@@ -103,10 +100,8 @@ test("SpriteSheet with no frames yields 0 as a safe default", () => {
 });
 
 test("SpriteSheet maps a frame index to the right source cell (columns from width)", () => {
-	// 64px wide / 16px frames = 4 columns.
 	let sheet = new SpriteSheet(fakeImage(64), 16, 16);
 	let ctx = fakeContext();
-	// Frame 5 -> column 1, row 1.
 	sheet.draw(ctx as unknown as CanvasRenderingContext2D, 5, 0, 0);
 	expect(ctx.calls[0]).toEqual({ sx: 16, sy: 16 });
 });
@@ -114,7 +109,6 @@ test("SpriteSheet maps a frame index to the right source cell (columns from widt
 test("SpriteSheet clamps a zero-width image to at least one column", () => {
 	let sheet = new SpriteSheet(fakeImage(0), 16, 16);
 	let ctx = fakeContext();
-	// With 1 column, frame 3 -> column 0, row 3.
 	sheet.draw(ctx as unknown as CanvasRenderingContext2D, 3, 0, 0);
 	expect(ctx.calls[0]).toEqual({ sx: 0, sy: 48 });
 });
@@ -127,12 +121,10 @@ test("SpriteSheet flipX wraps the blit in a mirrored transform", () => {
 });
 
 test("gridRegions lays a grid out left-to-right then top-to-bottom", () => {
-	// 3 columns x 2 rows of 16px cells.
 	let regions = gridRegions(3, 2, 16, 16);
 	expect(Object.keys(regions)).toHaveLength(6);
 	expect(regions["frame.0"]).toEqual({ x: 0, y: 0, w: 16, h: 16 });
 	expect(regions["frame.2"]).toEqual({ x: 32, y: 0, w: 16, h: 16 });
-	// Index 3 wraps to the second row's first column.
 	expect(regions["frame.3"]).toEqual({ x: 0, y: 16, w: 16, h: 16 });
 	expect(regions["frame.5"]).toEqual({ x: 32, y: 16, w: 16, h: 16 });
 });

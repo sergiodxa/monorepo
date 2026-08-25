@@ -7,16 +7,9 @@ import { utility } from "../internal/descriptor";
 import type { GridLineValue } from "./grid-column";
 
 /**
- * Applies `grid-row`, placing or spanning a grid item along the block axis.
- * `grid-row` is a shorthand for `grid-row-start` / `grid-row-end`, so a
- * single value sets the start line and lets the end default to spanning one
- * track, while a `"start / end"` string sets both.
- *
- * A number is a line number, not a span count — `u.gridRow(2)` starts the
- * item at the second row line and occupies one track, whereas
- * `u.gridRow("span 2")` leaves the start to auto-placement and occupies two
- * tracks. This is the distinction that most often trips people up, and this
- * utility deliberately does not reinterpret a number as a span.
+ * Applies `grid-row`, placing or spanning a grid item along the block axis. A
+ * number is a line number: `u.gridRow(2)` starts the item at the second row
+ * line and occupies one track, while `u.gridRow("span 2")` occupies two.
  *
  * @example u.gridRow(2)
  * @example css({ gridRow: 2 })

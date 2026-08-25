@@ -15,11 +15,7 @@ import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 
-/**
- * Persistence model for consent grants between a subject and an OAuth client.
- */
 export default class Grant {
-	/** Database table schema for grants. */
 	static table = table({
 		name: "grants",
 		primaryKey: ["id"],

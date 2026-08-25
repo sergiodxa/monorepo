@@ -30,7 +30,6 @@ import Subject from "../../subjects/models/subject";
 import Passkey from "../models/passkey";
 import WebAuthnChallenge from "../models/webauthn-challenge";
 
-/** Validation schema for the authentication-options request body. */
 let RequestSchema = s.object({
 	email: s.string(),
 	clientId: s.optional(s.string()),
@@ -75,8 +74,6 @@ export default createAction(
 			return badRequest({ error: "No passkey found. Please register first." });
 		}
 
-		// Only passkeys with a stored credential_id can be used for authentication;
-		// legacy rows without one (migration 0006) cannot appear in allowCredentials.
 		let passkeys = await Passkey.listForAuthentication(db, subject.id);
 		if (passkeys.length === 0) {
 			log.info("No passkeys found for subject", { subjectId: subject.id });
@@ -95,10 +92,11 @@ export default createAction(
 			scope,
 		});
 
-		// The browser matches allowCredentials against the authenticator's stored
-		// credential id, so this must be the WebAuthn credential_id (base64url), NOT
-		// the database primary key. listForAuthentication already dropped null rows,
-		// so credential_id is present here.
+		/**
+		 * Uses each passkey's WebAuthn credential_id, the identifier authenticators
+		 * match during the ceremony; listForAuthentication already excludes rows
+		 * without one, so passkeys predating migration 0006 cannot authenticate.
+		 */
 		let allowCredentials = passkeys.map((passkey) => ({
 			id: passkey.credential_id!,
 			type: "public-key" as const,
@@ -107,12 +105,14 @@ export default createAction(
 				: undefined,
 		}));
 
+		/**
+		 * The challenge is copied into a Uint8Array backed by a plain ArrayBuffer
+		 * to satisfy the current @simplewebauthn BufferSource typing.
+		 */
 		let authenticationOptions = await generateAuthenticationOptions({
 			rpID: rpId,
 			allowCredentials,
 			userVerification: "preferred",
-			// Copy into a Uint8Array backed by a plain ArrayBuffer to satisfy the
-			// current @simplewebauthn BufferSource typing.
 			challenge: new Uint8Array(base64UrlDecode(challenge)),
 		} satisfies GenerateAuthenticationOptionsOpts);
 

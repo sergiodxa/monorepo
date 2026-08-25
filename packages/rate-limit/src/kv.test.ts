@@ -20,9 +20,7 @@ const WINDOW_START = 1_700_000_000_000;
 
 /** One recorded write, so a case can assert the TTL the adapter asked for. */
 interface RecordedPut {
-	/** Full entry key written. */
 	key: string;
-	/** Stored counter value. */
 	value: string;
 	/** Seconds the adapter asked KV to keep the entry. */
 	expirationTtl: number | undefined;

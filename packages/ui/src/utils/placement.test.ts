@@ -1,10 +1,8 @@
 /**
  * Unit test for the shared anchor placement union in
- * {@link "./placement"}: a runtime check that the literal set every
- * anchored surface's own `Placement` type resolves to is exactly the twelve
- * values this module documents, so a change to the shared union surfaces
- * here instead of silently drifting from what each surface's
- * `data-placement` contract actually handles.
+ * {@link "./placement"}: verifies the twelve-value literal set every
+ * anchored surface's `Placement` type resolves to matches this module's
+ * list, keeping the two in sync automatically.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -6,10 +6,8 @@ import { utility } from "../internal/descriptor";
 
 /**
  * The axis a scroll container snaps along. Prefer the logical `"inline"` and
- * `"block"` — they follow the writing mode, so a carousel stays correct under
- * RTL and vertical writing modes. `"x"` and `"y"` are the physical exception,
- * for the rare case that must stay pinned to the screen axis no matter the
- * writing mode.
+ * `"block"` — they track the writing mode so RTL and vertical layouts stay
+ * correct. `"x"` and `"y"` pin to the physical screen axis regardless.
  */
 export type ScrollSnapAxis = "inline" | "block" | "both" | "x" | "y";
 
@@ -20,11 +18,9 @@ export type ScrollSnapAxis = "inline" | "block" | "both" | "x" | "y";
 export type ScrollSnapStrictness = "mandatory" | "proximity";
 
 /**
- * Applies `scroll-snap-type` to a scroll container, defaulting to
- * `"inline mandatory"` — the paged-carousel case. Pass `"none"` as the axis to
- * disable snapping entirely, which emits the bare `scroll-snap-type: none`
- * with no strictness segment. This goes on the scroll container itself; the
- * children it snaps to need `u.scrollSnapAlign()`.
+ * Applies `scroll-snap-type` to a scroll container, defaulting to `"inline
+ * mandatory"`, the paged-carousel case; pass `"none"` to disable snapping.
+ * Snapped children need `u.scrollSnapAlign()`.
  *
  * @example u.scrollSnapType()
  * @example css({ scrollSnapType: "inline mandatory" })

@@ -19,12 +19,9 @@ import { text } from "@pkg/u/typography";
  */
 export namespace Description {
 	/**
-	 * Every native `<p>` attribute, unchanged, plus the `mix` passthrough.
-	 * A description carries no color, variant, or size prop of its own — it
-	 * always renders at the library's default body-copy size and muted
-	 * foreground color, and its content is whatever `children` the consumer
-	 * supplies. Give it an `id` and reference that `id` from the paired
-	 * control's `aria-describedby` to associate the two.
+	 * Every native `<p>` attribute, unchanged, plus the `mix` passthrough,
+	 * always rendering at the library's default body-copy size and muted
+	 * foreground color. Give it an `id` referenced by the paired control's `aria-describedby` to associate the two.
 	 */
 	export interface Props extends TagProps<"p"> {}
 }
@@ -32,10 +29,7 @@ export namespace Description {
 /**
  * Renders its children inside a `<p>` sized and colored as a small run of
  * supporting copy: the library's default text size paired with the neutral
- * muted foreground color. Place it after a control inside a field wrapper —
- * a format hint under a password field, a constraint note under a username
- * field, or any other passage of explanatory text describing what the
- * control expects.
+ * muted foreground color, placed after a control inside a field wrapper as a format hint or constraint note.
  *
  * @param handle Runtime handle carrying the host `<p>`'s props.
  * @returns The render function producing the description's markup.

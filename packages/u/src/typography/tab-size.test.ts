@@ -13,9 +13,10 @@ describe("tabSize", () => {
 		expect(await declarations(tabSize())).toEqual(["tab-size: 2"]);
 	});
 
-	/* Stringified, not left as a number: a number reaches the style serializer as
-	a length and comes out `2px`, which sizes the tab in pixels rather than in
-	characters. */
+	/**
+	 * A number reaches the style serializer as a length and comes out `2px`,
+	 * so it stays unitless to keep the tab sized in characters.
+	 */
 	test("a number is emitted unitless", async () => {
 		expect(await declarations(tabSize(4))).toEqual(["tab-size: 4"]);
 		expect(await declarations(tabSize(4))).not.toContain("tab-size: 4px");

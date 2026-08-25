@@ -1,8 +1,8 @@
 /**
  * Router-level tests of the session guards. A stub page is mapped onto test-only URLs
- * and protected by the real middleware, so the redirects, the silent access-token
- * refresh, and the role check are exercised through the whole middleware chain rather
- * than called directly, and without observing whichever real page shares a URL.
+ * and protected by the real middleware, exercising the redirects, the silent
+ * access-token refresh, and the role check through the whole middleware chain while
+ * observing only the guard's own behavior at each URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,24 +21,17 @@ import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
 /**
- * The two guards under test, imported after the harness above rather than alongside it.
- *
- * The harness installs the `cloudflare:workers` bindings as it loads, and a module only
- * sees them if it loads afterwards. A static import here would sort before the harness
- * and pull the guards — and every service they reach — in against the default binding
- * stub instead; the app built below would then reuse those same cached modules, and the
- * sign-in the tests drive would fail inside them rather than at any assertion.
+ * A dynamic import loads these guards only after the test harness below installs the
+ * `cloudflare:workers` bindings, so every service they reach binds to the harness's
+ * own stubs from the start.
  */
 let { default: requireSubject } = await import("~/app/http/middleware/require-subject");
 let { default: requireAdmin } = await import("~/app/http/middleware/require-admin");
 
 /**
- * URLs that exist only for these tests.
- *
- * The guards are mapped onto routes of their own rather than onto the real account and
- * admin pages, so what each test observes is the guard's own answer and not whichever
- * page happens to be mapped there. The chain a request passes through is the real one
- * either way — these routes are added to the app's own router.
+ * Dedicated routes for these tests isolate each test's observation to the guard's own
+ * answer, while the request still travels through the app's real router and
+ * middleware chain.
  */
 const guarded = route({
 	subject: get("/__test/require-subject"),
@@ -97,8 +90,10 @@ describe("requireSubject", () => {
 	test("signs the session out when the refresh token no longer resolves", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		// An access token already past its refresh threshold, paired with a session row
-		// that has been revoked: the guard must refresh, fail, and sign out.
+		/**
+		 * An access token already past its refresh threshold, paired with a session row
+		 * that has been revoked, drives the guard through refresh, failure, and sign-out.
+		 */
 		let { default: Session } = await import("~/app/data/session");
 		await Session.deleteById(app.db, tokens.refresh_token);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), tokens.refresh_token);
@@ -125,10 +120,11 @@ describe("requireSubject", () => {
 		let tokens = await signIn(app, fixtures);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), tokens.refresh_token);
 
-		// The first request refreshes. If the new token were not written back to the
-		// session, the second would refresh again — and would still succeed — so the
-		// session row's revocation between them is what makes the assertion sharp: only a
-		// stored, still-valid access token can carry the second request through.
+		/**
+		 * The refreshed token must persist to the session: the row is revoked between
+		 * requests here, so only a previously stored, still-valid token can carry the
+		 * second request through.
+		 */
 		expect((await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`))).status).toBe(200);
 
 		let { default: Session } = await import("~/app/data/session");
@@ -150,9 +146,11 @@ describe("requireSubject", () => {
 
 		await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`));
 
-		// The row the presented token names is still there and was touched, rather than a
-		// new row having been created under a new id. Anything else would silently break
-		// every client holding this refresh token.
+		/**
+		 * The row keyed by the presented token stays in place and only its timestamp
+		 * updates, since replacing it with a new id would silently break every client
+		 * holding this refresh token.
+		 */
 		let after = await Session.findById(app.db, tokens.refresh_token);
 		expect(after).not.toBeNull();
 		expect(after?.updated_at).toBeGreaterThanOrEqual(before?.updated_at ?? 0);
@@ -197,9 +195,8 @@ describe("requireAdmin", () => {
 /**
  * An unsigned access token whose `exp` is already in the past.
  *
- * The guard reads its own session's token without verifying the signature — it never
- * left the signed session record — so a payload is all this needs to drive the
- * "expiring soon" branch.
+ * The guard trusts its own session's token as already verified, since it never left
+ * the signed session record — a bare payload is what drives the "expiring soon" branch.
  */
 function expiredAccessToken(subjectId: string): string {
 	let payload = {

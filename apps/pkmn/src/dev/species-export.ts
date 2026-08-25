@@ -1,22 +1,9 @@
 /**
- * Species export flow: a pure whole-file shaper plus a server-side write handler.
- *
- * The species roster lives in a SINGLE `src/content/species.json` map, so an
- * export replaces one entry inside the whole file rather than writing a
- * per-species file. The shaper ({@link shapeSpeciesExport}) is pure: given the
- * current parsed index, an id, and a validated species record, it returns the
- * full updated `species.json` contents (the current map with that one entry
- * replaced, re-serialized tab-indented with a trailing newline) with no disk,
- * canvas, or network concerns, so the mapping can be unit-tested directly. A
- * single {@link SPECIES_ID_PATTERN} governs which ids are acceptable so a bad id
- * is rejected before any write.
- *
- * The handler ({@link runSpeciesExport}) validates the incoming id and species
- * with the species schema, reads and validates the current `species.json`, shapes
- * the updated contents, re-checks the fixed write path through the shared
- * path-safety guard (defense in depth), and writes scoped to the
- * app root. It reuses the same guard every other dev-tools export uses so no write
- * can escape the allow-list.
+ * Species export: a pure whole-file shaper plus the server-side write handler.
+ * The roster lives in a single `src/content/species.json` map, so an export
+ * replaces one entry inside the whole file; the shaper works from its input
+ * alone so the mapping is unit-testable, and the handler re-checks the fixed
+ * write path through the path-safety guard and resolves it against the app root.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,8 +38,10 @@ export const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "
 /** Relative path (under the app root) of the single species data file. */
 export const SPECIES_CONTENT_PATH = "src/content/species.json";
 
-// Re-exported from ./species-id (browser-safe) so existing importers of this
-// server module keep working while the editor view imports the rules directly.
+/**
+ * Re-exported from the browser-safe id module so importers of this server module
+ * keep a single entry point while the editor view imports the rules directly.
+ */
 export { MAX_SPECIES_ID_LENGTH, SPECIES_ID_PATTERN, SpeciesIdError, validateSpeciesId };
 
 /** The shaped destination and body for a species export. */
@@ -67,23 +56,16 @@ export interface SpeciesExportPayload {
 export interface SpeciesExportResult {
 	/** The validated relative path the JSON was written to. */
 	path: string;
-	/** The resolved on-disk location. */
 	absolutePath: string;
 	/** The species id whose entry was replaced. */
 	id: string;
-	/** Byte count written to disk. */
 	bytesWritten: number;
 }
 
 /**
  * Replaces one entry in the whole species map and shapes the updated
- * `species.json` contents.
- *
- * Pure and disk-free: the caller supplies the current parsed index, the id to
- * write under, and the species record. The id is validated so a bad key never
- * reaches the file; the returned contents are the current map with that one entry
- * set to `species`, serialized tab-indented with a trailing newline (matching the
- * repo's JSON style). All other entries are preserved unchanged.
+ * `species.json` contents, serialized tab-indented with a trailing newline to
+ * match the repo's JSON style. Every other entry is preserved unchanged.
  *
  * @param currentIndex The current parsed `species.json` map (all existing species).
  * @param rawId The species id to write the record under.
@@ -114,15 +96,8 @@ export interface SpeciesExportRequest {
 
 /**
  * Validates an untrusted species export payload and writes the updated
- * `species.json` to disk under {@link APP_ROOT}.
- *
- * The id is validated first, then the species record with the species schema;
- * the current on-disk `species.json` is read and validated with
- * {@link parseSpecies} so a corrupt file fails before any write. The updated
- * contents are shaped by {@link shapeSpeciesExport}, the fixed write path is
- * re-validated with {@link validateWritePath} (defense in depth), and the file is
- * written. The relative path is resolved against {@link APP_ROOT}, never the
- * process cwd, so the write cannot escape the app.
+ * `species.json` under {@link APP_ROOT}: the id, the record, the current
+ * on-disk file, and the write path are all checked before anything is written.
  *
  * @param payload The parsed JSON body from the export request (untrusted).
  * @returns Success with a {@link SpeciesExportResult}, or failure with a
@@ -144,7 +119,6 @@ export async function runSpeciesExport(
 	if (isFailure(validatedId)) return failure(validatedId.error);
 	let id = validatedId.data;
 
-	// Validate the incoming record against the species schema (throws on malformed).
 	let species: Species;
 	try {
 		species = parseSpecies({ [id]: request.species })[id]!;
@@ -152,7 +126,6 @@ export async function runSpeciesExport(
 		return failure(error instanceof Error ? error : new Error(String(error)));
 	}
 
-	// Read and validate the current whole file so a corrupt file fails before writing.
 	let absolutePath = resolve(APP_ROOT, SPECIES_CONTENT_PATH);
 	let currentIndex: Record<SpeciesId, Species>;
 	try {

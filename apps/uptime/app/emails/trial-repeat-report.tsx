@@ -1,32 +1,8 @@
 /**
- * The answer to a URL that was submitted to the free page a second time inside its own
- * thirty days: everything the checks already running on it have found, instead of a second
- * free week.
- *
- * A URL gets one free week per address per thirty days, so a repeat submission cannot start
- * anything. It could have been refused silently, and refusing silently would have thrown
- * away the one moment where the reader is asking about a URL we already hold a week of real
- * measurements for. So the refusal *is* the report.
- *
- * ## Why this is its own class and not `TrialWeeklyDigestEmail` with different data
- *
- * The two render the same bar and the same three numbers, and they are still different
- * emails, because every framing sentence in the wrap-up is false here. Its subject calls
- * itself a seven-day report, its heading says "over the last seven days", its closing says
- * the checks stop now, and its footer says this is the last one — and a repeat submission
- * can arrive on day two of a week that is still running, or three weeks after one ended.
- * Parameterising all four would leave a class whose subject, heading, closing and footer are
- * all supplied by the caller, which is not a shared email but two emails sharing a file.
- *
- * What the two genuinely share is the report itself, and that is already extracted:
- * `TrialReport`, `TrialStats` and `UptimeBar` are components, and ADR-030 asks for exactly
- * that — a helper where real logic is shared, never a base class — so reuse here means
- * importing them rather than inheriting from the other email.
- *
- * The copy is written to be true whether or not the week has finished, which is what keeps
- * this to one class rather than one class with a branch. It never claims checking continues
- * and never claims it has stopped; it reports what was found, states the rule that stopped a
- * second week from starting, and offers the real product.
+ * The report a URL's second submission earns instead of a second free week, since a
+ * URL gets one free week per address per thirty days. Kept separate from
+ * `TrialWeeklyDigestEmail` because that email's framing assumes the week just ended,
+ * while a repeat submission can arrive mid-week or long after.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -66,14 +42,9 @@ export namespace TrialRepeatReportEmail {
 		/** Absolute URL that starts a paid monitor for the same target. */
 		subscribeUrl: string;
 		/**
-		 * The watch's own `report_token`, which turns the week described here into a page the
-		 * reader can reopen or forward.
-		 *
-		 * This message is the one most worth linking: it answers a submission somebody made on
-		 * purpose, and the reply is "here is what the watch already found" — a durable copy of
-		 * exactly that is the thing they were reaching for. Optional for the same reason the
-		 * wrap-up's is: a report link built from a missing token would be a 404 in an inbox
-		 * forever, so a sender with no token sends the mail without the link.
+		 * The watch's own `report_token`, which turns the week into a page the reader can
+		 * reopen or forward. Optional because a report link built from a missing token would
+		 * be a 404 in an inbox forever, so a sender with no token omits the link.
 		 */
 		reportToken?: string;
 		/** The lead's unguessable token, which the footer link and the headers are built from. */
@@ -91,7 +62,7 @@ export namespace TrialRepeatReportEmail {
  * @example ctx.email.send(new TrialRepeatReportEmail({ ...report, subscribeUrl, locale, t }));
  */
 export class TrialRepeatReportEmail implements Email {
-	/** The report this email carries; nothing is loaded while rendering. */
+	/** The already-resolved report this email carries; rendering only formats it. */
 	#report: TrialRepeatReportEmail.Data;
 
 	/**
@@ -110,8 +81,8 @@ export class TrialRepeatReportEmail implements Email {
 	}
 
 	/**
-	 * Subject naming the URL and what is inside, so it reads as the report it is rather than
-	 * as a rejection notice the reader would have no reason to open.
+	 * Subject naming the URL and what is inside, so it reads as the report it is and
+	 * gives the reader reason to open it.
 	 */
 	get subject(): string {
 		return this.#report.t("emails.trial.repeat.subject", {

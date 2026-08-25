@@ -1,3 +1,9 @@
+/**
+ * Deep-clone helpers for RSS channel, item, and extension element data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { RSS } from "../index";
 
 /**

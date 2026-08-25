@@ -1,9 +1,10 @@
 /**
- * Tests for the TCP monitor detail page controller. `~/app/data/tcp-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain. The page's two
- * data fetches now live behind `Frame`s, so what it asserts is the frames themselves.
+ * Tests for the TCP monitor detail page controller. `~/app/data/tcp-monitor` only
+ * touches the database, so these tests run directly against `createTestDatabase`.
+ * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
+ * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain. The
+ * page's two data fetches live behind `Frame`s, so the assertions target the frames
+ * themselves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,7 +68,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
+/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`; `resolveFrame` returns an empty string, since this single-request test only checks each frame's `src`. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
@@ -124,8 +125,6 @@ describe("tcpMonitorShow", () => {
 		let body = await response.text();
 		expect(body).toContain("Database");
 		expect(body).toContain("db.example.com");
-		// The history bar and the result table are their own fragments now, so the page
-		// only promises the frames that will fetch them.
 		expect(body).toContain(
 			routes.app.team.tcpMonitors.cards.uptimeHistory.href({
 				team: team.slug,

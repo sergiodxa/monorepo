@@ -34,21 +34,17 @@ export interface BorderOptions {
 	 */
 	style?: BorderStyleValue;
 	/**
-	 * Suppresses the `"solid"` default that `width` alone would otherwise
-	 * apply. Use this when a separate rule (e.g. a sibling `data-color`
-	 * selector) supplies `border-style`/`border-color`, and this call should
-	 * only ever set `border-width`. Has no effect when `style` is also given.
+	 * Suppresses the `"solid"` default that `width` alone would apply, for when
+	 * a separate rule (e.g. a sibling `data-color` selector) supplies
+	 * `border-style`/`border-color`. An explicit `style` still wins.
 	 */
 	noStyleDefault?: boolean;
 }
 
 /**
- * Applies `border-color`, or a full set of border properties when given an
- * options object instead of a bare color. Called with no argument it
- * resolves the tiny system default (`var(--ui-border, ...)`); called with a
- * bare tone it defaults to that tone's plain `border` weight, promoted to
- * `border-strong` under `prefers-contrast: more` by the theme layer. Called
- * with an options object, only the given keys are set.
+ * Applies `border-color`, or the full set of border properties when given an
+ * options object, of which only the given keys are set. A bare tone resolves
+ * its plain `border` weight, which the theme promotes under high contrast.
  *
  * @example u.border()
  * @example css({ borderColor: "var(--ui-border, color-mix(in oklab, CanvasText 16%, transparent))" })

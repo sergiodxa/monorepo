@@ -1,16 +1,9 @@
 /**
  * Central species data contracts for the game content layer.
  *
- * This module defines the identifiers, enums, structural types, and guards used
- * to describe a species entry as loaded data. It establishes the shape of
- * species records so other parts of the game can read consistent information
- * about typing, progression, breeding, learnsets, and physical traits.
- *
- * By concentrating these contracts in one place, the module provides a stable
- * boundary between raw content and the systems that consume it. It helps keep
- * species-related data normalized, typed, and reusable across validation,
- * battle logic, progression systems, and other game features that depend on the
- * same canonical structure.
+ * Defines the identifiers, enums, structural types, and guards that shape a
+ * species entry, keeping data normalized and reusable across validation,
+ * battle logic, and progression systems.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,10 +20,8 @@ export type SpeciesId = string;
 /**
  * A move a creature learns on reaching a given level.
  *
- * This is the generic level-up variant of {@link LearnsetEntry}, named so
- * progression systems can talk about level-up moves without matching against the
- * whole learnset union. `moveId` is an opaque move identifier string; the engine
- * never depends on any specific move.
+ * The generic level-up variant of {@link LearnsetEntry}, so progression
+ * code can match level-up moves without checking the full learnset union.
  */
 export type LevelUpMove = { level: number; moveId: MoveId };
 
@@ -85,49 +76,35 @@ export interface Size {
 /**
  * Reference to the artwork associated with a species, or `null` for none.
  *
- * A sprite is either a named region inside a shared atlas (`{ atlas, region }`)
- * or a standalone manifest image id (`{ image }`). Both forms hold opaque
- * identifiers the presentation layer resolves against the asset manifest; the
- * data layer never dereferences them. The field is optional and defaults to
- * `null` so existing content stays valid, and the game may ignore it for now —
- * it exists so the dev-tools species editor can associate creature art.
+ * Holds opaque identifiers the presentation layer resolves against the
+ * asset manifest, so the species editor can associate creature art.
  */
 export type SpeciesSprite = { atlas: string; region: string } | { image: string } | null;
 
 export interface Species {
 	/** ID of the creature species */
 	number: number;
-	/** Physical dimensions used by size-based mechanics. */
 	size: Size;
-	/** Type or pair of types of the creature */
 	types: [string] | [string, string];
 	/** Base experience gained for defeating this creature */
 	baseExperience: number;
-	/** Catch rate of the creature */
 	catchRate: number;
-	/** Growth rate of the creature */
 	growthRate: GrowthRate;
-	/** Base stats of the creature */
 	stats: StatSet;
 	/**
-	 * Effort values awarded to each participant when this species faints. A
-	 * partial map keyed by {@link Stat}; a missing stat contributes no EVs.
-	 * Optional on the contract so the award code tolerates its absence (treating
-	 * a missing yield as zero EVs); the content layer guarantees every species
-	 * carries one.
+	 * Effort values awarded to each participant when this species faints, keyed
+	 * by {@link Stat} with a missing stat worth zero EVs. Optional so award code
+	 * tolerates its absence even though content always supplies one.
 	 */
 	evYield?: Partial<StatSet>;
-	/** Evolutions of the creature */
 	evolutions: Evolution[];
-	/** Learnset of the creature */
 	learnset: LearnsetEntry[];
 	/** Genders a creature can be, if any */
 	gender: Gender.Genderless | { [K in Gender.Male | Gender.Female]?: number };
-	/** Breeding compatibility group for this creature. */
 	eggGroup: EggGroups;
 	/**
-	 * Artwork associated with this species, or `null`/absent for none. Set by the
-	 * dev-tools species editor; the game may ignore it for now. See
+	 * Artwork associated with this species, or `null`/absent for none. Set by
+	 * the species editor for presentation code to resolve. See
 	 * {@link SpeciesSprite}.
 	 */
 	sprite?: SpeciesSprite;

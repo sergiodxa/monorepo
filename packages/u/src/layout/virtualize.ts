@@ -5,10 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Applies the `content-visibility: auto` + `contain-intrinsic-size` pair that
- * lets the browser skip rendering work for off-screen rows in a long
- * scrollable list or table body, while reserving `intrinsicSize` as its
- * placeholder size so the scrollbar doesn't jump around as content mounts.
+ * Applies `content-visibility: auto` with `contain-intrinsic-size` so the
+ * browser skips rendering off-screen rows in a long list or table, using
+ * `intrinsicSize` as a placeholder so the scrollbar doesn't jump on mount.
  *
  * @example u.virtualize("auto var(--ui-table-row-size, 2.5rem)")
  * @example css({ contentVisibility: "auto", containIntrinsicSize: "auto var(--ui-table-row-size, 2.5rem)" })

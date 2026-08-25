@@ -1,7 +1,7 @@
 /**
  * Unit tests for {@link "./semantic-color-panel"}: every assertion checks a
- * built style object against its expected `--ui-*` variable references, with
- * no DOM and no rendering involved.
+ * built style object against its expected `--ui-*` variable references as
+ * plain object equality.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

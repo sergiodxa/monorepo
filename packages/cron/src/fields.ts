@@ -53,7 +53,6 @@ const NAME_PATTERN = /^[a-z]+$/i;
 export interface CronFieldSpec {
 	/** Which field this is, carried into failures. */
 	field: CronFieldName;
-	/** Smallest value the field accepts. */
 	min: number;
 	/** Largest value the field accepts, before any folding. */
 	max: number;
@@ -79,7 +78,7 @@ export const FIELD_SPECS: readonly CronFieldSpec[] = [
 /**
  * A parsed expression: the values each field stands for, plus whether the two day
  * fields were written as anything other than `*`. That distinction decides how a
- * date is matched, so it is kept rather than recomputed from the value sets.
+ * date is matched, so parsing records it once alongside the value sets.
  */
 export interface CronFieldSet {
 	minutes: readonly number[];

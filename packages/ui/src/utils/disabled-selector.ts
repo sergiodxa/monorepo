@@ -12,9 +12,8 @@
 
 /**
  * Matches an element carrying the native `disabled` attribute or
- * `aria-disabled="true"`, the pairing that lets one guard cover both a native
- * form control and an ARIA-only widget with a single `.matches()` call or
- * `querySelectorAll` filter.
+ * `aria-disabled="true"`, letting one guard cover both a native form
+ * control and an ARIA-only widget through a single `.matches()` call.
  *
  * @example
  * button.matches(DISABLED_SELECTOR);

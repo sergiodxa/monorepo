@@ -1,12 +1,10 @@
 /**
- * Data-access model for the local projection of Polar subscription state (ADR-005).
- * Owns the three things that projection is for: writing it from a Polar subscription
- * payload, reading an owner's entitlement out of it, and applying that entitlement to
- * whether the owner's monitors are scheduled at all.
+ * Data-access model for the local projection of Polar subscription state (ADR-005). Owns
+ * writing that projection from a Polar subscription payload, reading an owner's entitlement
+ * out of it, and applying that entitlement to whether the owner's monitors are scheduled.
  *
- * Polar is never read here. `PolarClient` appears only in the types of the payloads this
- * module is handed, which come from the webhook and from the daily reconciliation sweep —
- * the two writers of this table.
+ * `PolarSubscription` types only the payloads this module is handed, which come from the
+ * webhook and from the daily reconciliation sweep — this table's two writers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,24 +25,16 @@ import { dnsMonitors, monitors, subscriptions, tcpMonitors, teams } from "~/data
 export const SUBSCRIPTION_PRODUCT_ID = "94161883-14eb-42e2-bb26-b4647199cda1";
 
 /**
- * What this app knows about an owner's entitlement.
- *
- * `"unknown"` is not a third flavour of "no": it means the projection has never learned
- * anything about this owner (no row at all, so neither a webhook nor a reconciliation run
- * has ever mentioned them), and the two behaviours that used to share one `false` need to
- * split on it. A gate that decides whether to *do monitoring work* treats it as allowed —
- * running a check for a lapsed customer costs $0.0000348, while refusing every paying
- * customer's checks costs the product's reason to exist. A gate that decides what to
- * *tell the user about their billing* treats it as not-active, since offering a
- * subscription to someone who might already have one is the recoverable mistake.
+ * What this app knows about an owner's entitlement. `"unknown"` means the projection has
+ * never heard of this owner: a gate on doing monitoring work treats it as allowed, since a
+ * lapsed customer's check costs $0.0000348, while billing copy reads it as unsubscribed.
  */
 export type SubscriptionState = "active" | "inactive" | "unknown";
 
 /**
- * The fields of a Polar subscription this projection stores. A `Pick` rather than the
- * whole `Subscription`, which also carries the product, its prices, its meters and the
- * customer: naming the seven fields that reach a column keeps the mapping's inputs
- * visible, and a full `Subscription` from either writer satisfies it as-is.
+ * The fields of a Polar subscription this projection stores. Naming the seven that reach a
+ * column keeps the mapping's inputs visible, and a full `Subscription` from either writer
+ * satisfies it as-is.
  */
 export type SubscriptionPayload = Pick<
 	PolarSubscription,
@@ -52,13 +42,9 @@ export type SubscriptionPayload = Pick<
 >;
 
 /**
- * Every monitor table whose scheduling follows the owner's entitlement, with the
- * predicate that table uses for "the user wants this monitor checked".
- *
- * All three carry `next_due_at` with the same meaning (ADR-006) but spell "enabled" their
- * own way, so that predicate is the only per-table difference and stays right here rather
- * than becoming three near-copies of the same UPDATE. `cron_job_monitors` is absent on
- * purpose: nothing is scheduled for one, the caller pings it.
+ * Every monitor table whose scheduling follows the owner's entitlement, with the predicate
+ * that table uses for "the user wants this monitor checked": all three carry `next_due_at`
+ * with the same meaning (ADR-006) while spelling "enabled" their own way.
  */
 const SCHEDULED_TABLES: readonly { table: AnyTable; enabled: string }[] = [
 	{ table: monitors, enabled: "enabled_at IS NOT NULL" },
@@ -69,12 +55,8 @@ const SCHEDULED_TABLES: readonly { table: AnyTable; enabled: string }[] = [
 export default class Subscription {
 	/**
 	 * Records a Polar subscription, keyed on `polar_subscription_id` so a redelivered event
-	 * updates the row it already wrote.
-	 *
-	 * Returns whether the row now reflects this payload. `false` means the stored row was
-	 * written from a *newer* payload — Polar retries and its events can arrive out of order,
-	 * so an older payload arriving second must not roll the projection backwards. The caller
-	 * uses that to skip the rescheduling this payload would otherwise imply.
+	 * updates the row it already wrote. Returns whether the row now reflects this payload:
+	 * `false` means a newer payload already landed, so the caller skips its rescheduling.
 	 */
 	static async upsert(
 		db: Database,
@@ -113,8 +95,6 @@ export default class Subscription {
 			],
 		);
 
-		// The guarded DO UPDATE returns no row when it declines to write, which is the only
-		// signal SQLite gives that this payload lost to a newer one.
 		return (result.rows ?? []).length > 0;
 	}
 
@@ -124,16 +104,9 @@ export default class Subscription {
 	}
 
 	/**
-	 * What the projection says about an owner's entitlement.
-	 *
-	 * One indexed read on `subscriptions_customer_status_idx` over the handful of rows one
-	 * customer can have. No product filter is needed: subscriptions to other products are
-	 * never recorded, because the webhook and the reconciliation sweep both ignore them, so
-	 * every row here is one that grants monitoring when its status is active.
-	 *
-	 * Logs the unknown case — a row is expected for anyone billing has ever touched, so a
-	 * miss is either a customer who has never subscribed or a webhook that never arrived,
-	 * and the second one is worth seeing in the logs before reconciliation repairs it.
+	 * What the projection says about an owner's entitlement, from one indexed read. Every row
+	 * here grants monitoring when its status is active, since only subscriptions to this
+	 * product are ever recorded. Logs the unknown case, where a webhook may have gone missing.
 	 */
 	static async stateFor(db: Database, ownerId: string): Promise<SubscriptionState> {
 		let rows = await db.findMany(subscriptions, { where: { external_customer_id: ownerId } });
@@ -156,24 +129,9 @@ export default class Subscription {
 	}
 
 	/**
-	 * Schedules or unschedules every monitor the owner's teams hold, and returns how many
-	 * rows moved.
-	 *
-	 * This is what makes the every-minute scheduler free of subscription work (ADR-005 §3):
-	 * `next_due_at IS NULL` already means "not scheduled", so entitlement is enforced once
-	 * per billing event at write time instead of 43,200 × K times a month at read time, and
-	 * the claim query needs no join and no extra rows read.
-	 *
-	 * Only `next_due_at` moves — each table's own enabled column is the user's intent and
-	 * has to survive a lapse, so that re-activating restores exactly the monitors they had
-	 * running.
-	 *
-	 * Each direction touches only the rows whose effective schedule actually changes: an
-	 * already-scheduled monitor keeps the due time it has, and an already-unscheduled one is
-	 * left alone. That is what makes this safe to run on every subscription event Polar sends
-	 * — `subscription.updated` fires for changes that have nothing to do with entitlement,
-	 * and re-anchoring every monitor's cadence to that would restart the interval of a
-	 * monitor mid-flight for no reason.
+	 * Schedules or unschedules every monitor the owner's teams hold, returning the rows moved.
+	 * Enforcing entitlement at write time keeps the every-minute claim join-free (ADR-005 §3);
+	 * moving only rows whose schedule changes preserves the user's enabled intent and cadence.
 	 */
 	static async applyEntitlement(db: Database, ownerId: string, entitled: boolean): Promise<number> {
 		let nextDueAt = nextDueAtOnEnable(entitled);

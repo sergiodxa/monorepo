@@ -1,3 +1,8 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { InvalidUUIDFormatError, InvalidUUIDLengthError, InvalidUUIDTypeError } from "./lib/errors";
 
 import type { UUID as BaseUUID } from "node:crypto";

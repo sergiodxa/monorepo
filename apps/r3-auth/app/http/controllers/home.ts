@@ -1,7 +1,7 @@
 /**
- * The site root. There is no landing page here — this server exists to answer
- * authorization requests — so a visit to `/` is sent to `/authorize`, which either
- * signs the visitor in to their own account area or shows the sign-in page.
+ * The site root. This server exists to answer authorization requests, so a visit to
+ * `/` is sent to `/authorize`, which either signs the visitor in to their own account
+ * area or shows them the sign-in page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

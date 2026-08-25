@@ -30,7 +30,7 @@ beforeEach(async () => {
 	fixtures = await seed(app);
 });
 
-/** Posts an intent to the grants page without following the redirect. */
+/** Posts an intent to the grants page, returning the redirect response itself. */
 async function post(fields: Record<string, string>): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${routes.account.grants.action.href()}`, {
@@ -86,7 +86,6 @@ describe("GET /account/grants", () => {
 		).text();
 
 		expect(html).toContain(AUTH_SERVER_NAME);
-		// The label that stands in for the control it deliberately does not render.
 		expect(html).toContain("Required");
 		expect(html).not.toContain(`value="${AUTH_SERVER_CLIENT_ID}"`);
 	});

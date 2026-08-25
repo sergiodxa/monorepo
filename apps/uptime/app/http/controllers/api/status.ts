@@ -2,8 +2,8 @@
  * API v1 endpoint reporting the authenticated team's overall status: fetches each
  * enabled HTTP monitor's latest result, derives an up/down/unknown state per
  * monitor, and rolls that up into one of operational/degraded/partial_outage/
- * major_outage/unknown. Requires `monitors:read` via `requireApiKey`. Distinct from
- * `/healthcheck`, which reports the worker's own health, not a team's monitors.
+ * major_outage/unknown. Requires `monitors:read` via `requireApiKey`; `/healthcheck`
+ * separately reports the worker's own runtime health.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,7 +65,7 @@ export const statusShow = createAction(routes.api.v1.status, {
 
 		let enabledMonitors = monitorStatuses.filter((monitor) => monitor.enabled);
 		let downMonitors = enabledMonitors.filter((monitor) => monitor.status === "down");
-		/** Degraded status is not currently tracked per monitor result; reserved for future use. */
+		/** Reserved for a future degraded signal surfaced by monitor results. */
 		let degradedMonitors: MonitorStatusEntry[] = [];
 
 		let overallStatus: "operational" | "degraded" | "partial_outage" | "major_outage" | "unknown";

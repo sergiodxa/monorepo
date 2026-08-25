@@ -1,11 +1,7 @@
 /**
- * Verifies the trainer export: the pure payload shaper derives the
- * `src/content/trainers/<id>.json` write path and a tab-indented JSON body from a
- * definition, and rejects invalid ids (blank, uppercase, dotted, traversal-ish,
- * over-length) before any path work; the derived path always passes the shared
- * path-safety guard. The server handler {@link runTrainerExport} is exercised end
- * to end with a real write into an allow-listed scratch target (removed
- * after), and guards that malformed payloads and unsafe ids fail without writing.
+ * Verifies the trainer export: the pure shaper derives the write path and a
+ * tab-indented JSON body and rejects invalid ids before any path work, and
+ * {@link runTrainerExport} runs end to end against a scratch file it removes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,7 +42,6 @@ describe("shapeTrainerExport", () => {
 			expect(result.data.path).toBe(`${TRAINER_CONTENT_DIR}/rival-blue.json`);
 			expect(result.data.contents.endsWith("\n")).toBe(true);
 			expect(result.data.contents).toContain("\t");
-			// The body round-trips to the original definition.
 			expect(JSON.parse(result.data.contents)).toEqual(validTrainer());
 		}
 	});
@@ -92,7 +87,6 @@ describe("shapeTrainerExport", () => {
 });
 
 describe("runTrainerExport", () => {
-	// A dedicated id so the write lands under the real trainers dir and is removed.
 	let SCRATCH_ID = "export-test-trainer";
 	let SCRATCH_PATH = `${TRAINER_CONTENT_DIR}/${SCRATCH_ID}.json`;
 

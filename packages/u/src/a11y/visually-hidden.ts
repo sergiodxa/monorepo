@@ -1,10 +1,8 @@
 /**
- * The screen-reader-only-but-focusable clipping recipe applied to any
- * element that must stay in the accessibility tree and tab order while
- * rendering no visible pixels of its own — a compound control's native
- * `<input>` while a sibling element paints the visible indicator it
- * actually shows, or a `<label>` whose caption a paired visible control
- * already carries.
+ * The screen-reader-only-but-focusable clipping recipe for elements that must
+ * stay in the accessibility tree and tab order while staying invisible on
+ * screen — a compound control's native `<input>` behind a sibling that paints
+ * the visible indicator, or a `<label>` a paired visible control captions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,14 +10,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Clips the host down to a `1px` by `1px` box positioned absolutely out of
- * layout flow, its padding and border removed, a `-1px` margin pulling its
- * box back to a single point, `clip: rect(0, 0, 0, 0)` and
- * `overflow: hidden` clipping its rendered pixels away, and
- * `whiteSpace: nowrap` keeping its clip rect stable regardless of
- * surrounding text wrapping. The host keeps its native focusability and tab
- * order throughout this recipe, since only its position and rendered pixels
- * are clipped away.
+ * Clips the host to a `1px` box taken out of layout flow, keeping its native
+ * focusability and tab order intact so screen readers and keyboard users
+ * still reach it.
  *
  * @example u.visuallyHidden()
  * @example css({

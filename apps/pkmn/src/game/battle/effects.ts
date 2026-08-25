@@ -1,9 +1,7 @@
 /**
- * Coordinates authored battle effect resolution for this module's effect engine.
- *
- * This module defines the effect dispatch surface used to translate declarative move-effect data into concrete battle-state mutations and emitted battle events. It centralizes the mapping between effect kinds and their resolvers so battle flow can apply secondary behavior consistently without coupling callers to individual effect implementations.
- *
- * It also groups the effect-specific rules that mutate combatant state, status, volatile conditions, and related battle metadata while returning the event stream produced by those changes. The module stays focused on effect resolution concerns for battle execution, leaving broader turn orchestration and presentation handling to adjacent parts of the battle system.
+ * Maps each authored move-effect kind to the resolver that mutates battle
+ * state and emits its events, so secondary-effect behavior stays centralized
+ * and callers stay decoupled from individual effect implementations.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

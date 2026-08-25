@@ -1,8 +1,7 @@
 /**
- * HTTP action for the public `/sponsor` route. It issues a temporary redirect from the
- * stable on-site sponsor URL to the configured GitHub Sponsors profile. It exists so the
- * site can advertise a permanent sponsor link while the actual destination can change
- * later without breaking shared URLs.
+ * HTTP action for the public `/sponsor` route. It redirects a stable on-site URL to the
+ * configured GitHub Sponsors profile, so shared sponsor links keep working when the
+ * destination changes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,16 +14,9 @@ import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
 /**
- * Redirects the short public sponsor URL to Sergio's GitHub Sponsors page.
+ * Redirects the short public sponsor URL to the configured GitHub Sponsors page.
+ * @returns 303 redirect to the sponsor profile.
  */
-export default createAction(
-	routes.sponsor,
-	/**
-	 * Preserves a stable on-site sponsor URL while allowing the destination flow to change later.
-	 *
-	 * @returns Temporary redirect to the current GitHub Sponsors profile.
-	 */
-	async function sponsorAction() {
-		return redirect(PROFILE.github.sponsor, { status: redirect.Status.SeeOther });
-	},
-);
+export default createAction(routes.sponsor, async function sponsorAction() {
+	return redirect(PROFILE.github.sponsor, { status: redirect.Status.SeeOther });
+});

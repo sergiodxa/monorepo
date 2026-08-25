@@ -1,7 +1,7 @@
 /**
  * Serialization of a decision into the IETF draft rate limit response fields,
- * plus the helper that writes them onto a finished response. A field a backend
- * cannot report is left out entirely, because a guessed number is worse than none.
+ * plus the helper that writes them onto a finished response. Output includes
+ * only the fields the backend actually reports, keeping every number accurate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,13 +23,9 @@ const RATE_LIMIT_POLICY_FIELD = "RateLimit-Policy";
 const RETRY_AFTER_FIELD = "Retry-After";
 
 /**
- * Serializes a decision into response header name and value pairs.
- *
- * `RateLimit` carries `remaining` only when the backend reported it, so a
- * Cloudflare binding limit advertises `limit` and `reset` and stays silent about a
- * number it does not have. `Retry-After` is added only when the attempt was
- * denied, matching its meaning: it answers "when may I try again", not "when does
- * my quota refill".
+ * Serializes a decision into header name/value pairs, keeping `remaining`
+ * out when the backend can't report it and adding `Retry-After` only when
+ * the attempt is denied, since that's the only time 'try again' applies.
  *
  * @param decision - The decision to describe.
  * @param window - The adapter's window, needed for the policy field's `w` parameter.

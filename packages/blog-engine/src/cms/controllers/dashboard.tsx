@@ -20,7 +20,6 @@ import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 
-/** CMS home: post counts per type + quick links (any authenticated user). */
 export default createAction(
 	routes.cms.dashboard,
 	inject([Database] as const, async (db) => {

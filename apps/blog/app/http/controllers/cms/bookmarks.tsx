@@ -23,17 +23,13 @@ import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/resources/views
 import routes from "~/routes/web";
 
 /**
- * Handles CMS bookmark CRUD flows used by the admin dashboard.
- *
- * The controller keeps route behavior explicit: redirects for missing auth/ids,
- * and 404 HTML views when an edit/update target no longer exists.
+ * CMS bookmark CRUD. Missing auth or ids answer with redirects, while an edit or update
+ * target that has disappeared answers with a 404 HTML view.
  */
 export default createController(routes.cms.bookmarks, {
 	/**
-	 * Reserved for route-level guards.
-	 *
-	 * Bookmark actions currently perform auth checks inline so each action can
-	 * choose its own redirect fallback.
+	 * Each bookmark action runs its own inline auth check so it can pick the redirect
+	 * fallback that fits its flow.
 	 */
 	middleware: [],
 
@@ -58,8 +54,8 @@ export default createController(routes.cms.bookmarks, {
 		}),
 
 		/**
-		 * Creates a bookmark from submitted form values.
-		 * Validation failures are surfaced by `succeeded(...)` and abort the action.
+		 * Validation failures abort the action through `succeeded(...)`, so persistence runs only
+		 * against a well-formed payload.
 		 * @param ctx Controller context with form data and DB access.
 		 * @returns See Other redirect to login, edit page for the created record, or index fallback.
 		 */
@@ -89,8 +85,7 @@ export default createController(routes.cms.bookmarks, {
 		}),
 
 		/**
-		 * Deletes the bookmark identified by route params.
-		 * Missing ids are treated as a no-op to keep delete flows idempotent.
+		 * A missing id resolves to a plain redirect, keeping delete links idempotent.
 		 * @param ctx Controller context with route params and DB access.
 		 * @returns See Other redirect to the bookmarks index in all cases.
 		 */
@@ -105,8 +100,8 @@ export default createController(routes.cms.bookmarks, {
 		}),
 
 		/**
-		 * Renders the edit form for an existing bookmark id.
-		 * The 404 branch intentionally reuses the action view so CMS users stay in-context.
+		 * The 404 branch reuses the action view so CMS users stay in context when a bookmark has
+		 * disappeared.
 		 * @param ctx Controller context with route params and DB access.
 		 * @returns Bookmark edit view, or a 404 form view when the record is missing.
 		 */
@@ -145,8 +140,8 @@ export default createController(routes.cms.bookmarks, {
 		}),
 
 		/**
-		 * Renders the blank bookmark creation form.
-		 * The total count is included in description text for lightweight CMS context.
+		 * The description carries the current bookmark total to give operators lightweight CMS
+		 * context while creating a record.
 		 * @param ctx Controller context with DB bindings.
 		 * @returns New-mode action view prefilled with empty bookmark values.
 		 */
@@ -166,8 +161,8 @@ export default createController(routes.cms.bookmarks, {
 		}),
 
 		/**
-		 * Updates an existing bookmark with validated form data.
-		 * Authentication and id presence are required; missing prerequisites short-circuit to index.
+		 * Requires an authenticated user and a route id; either one missing sends the editor back
+		 * to the index.
 		 * @param ctx Controller context with params, form data, and DB access.
 		 * @returns See Other redirect to index/edit, or a 404 form view when target is missing.
 		 */

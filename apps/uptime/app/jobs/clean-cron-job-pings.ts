@@ -1,18 +1,9 @@
 /**
- * Daily retention job for cron-job ping history. Two windows, not one (ADR-020):
- *
- * - Rows are kept for `PING_RETENTION_DAYS` (365), because the docs promise a year of
- *   ping history and the monitor detail page reads it.
- * - `source_ip` and `user_agent` are kept for `PING_DETAIL_RETENTION_DAYS` (30) and then
- *   nulled in place, because they answer one question — which caller is misconfigured —
- *   and that question is days old, never a year old. They are also the app's largest
- *   personal-data retention surface, so shortening their window is a privacy improvement
- *   first and a storage one second: a year of retained caller IPs is the kind of thing a
- *   privacy review finds, and unlike a window that turns out too narrow, it cannot be
- *   undone after the fact.
- *
- * Both passes delete or redact in bounded batches, so the first run after this window
- * changed cannot write a year of rows in one invocation.
+ * Daily retention job for cron-job ping history (ADR-020). Ping rows are kept for
+ * `PING_RETENTION_DAYS` since the docs and monitor detail page depend on a year of
+ * history, while `source_ip` and `user_agent` are redacted sooner because they only
+ * answer a days-old debugging question and are the app's largest personal-data
+ * surface. Both passes run in bounded batches so a widened window cannot flood one run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,11 +34,11 @@ export class CleanCronJobPingsJob extends Job {
 	/** The "Clean Old Cron Job Pings" cron monitor this sweep reports itself to when it completes. */
 	static override monitorId = "31db20cb-8736-44fa-9ac7-448d2200befd";
 
+	/** Charges the apportioned per-team monitor count at run time, since cost is billed when the sweep happens rather than accrued continuously. */
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let now = Date.now();
 
-		// Charged when it happens and split by monitors per team, as `CleanJob` explains.
 		apportionCost(await Team.countMonitorsByTeam(db));
 
 		let deleted = await deleteOlderThan(

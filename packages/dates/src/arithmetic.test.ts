@@ -31,8 +31,6 @@ describe("addDays", () => {
 	});
 
 	test("keeps the instant semantics across a DST transition", () => {
-		// 24 hours after Sunday noon in New York is Monday 13:00 local, not noon: this is
-		// instant arithmetic on purpose, and calendar work goes through the zoned helpers.
 		let sundayNoon = new Date("2026-03-08T17:00:00Z");
 		expect(addDays(sundayNoon, 1).toISOString()).toBe("2026-03-09T17:00:00.000Z");
 	});

@@ -1,9 +1,9 @@
 /**
  * Data-access model for `monitor_daily_stats`, the long-term rollup table behind the
- * uptime bars and historical reporting. `AggregateDailyStatsJob` writes one row
- * per monitor per day; the table has no unique constraint on `(monitor_id,
- * monitor_type, date)`, so {@link upsertDay} deletes any existing row for that key
- * before inserting, keeping a re-run idempotent instead of duplicating rows.
+ * uptime bars and historical reporting. `AggregateDailyStatsJob` writes one row per
+ * monitor per day, and uniqueness of `(monitor_id, monitor_type, date)` is enforced by
+ * {@link upsertDay}, which clears that key before inserting so a re-run stays
+ * idempotent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,8 +21,8 @@ export type DailyStatsMonitorType = "http" | "dns" | "tcp" | "cron";
 
 /**
  * How many trailing days of history the app reads and renders. Matches the number of
- * bars `resources/views/shared/uptime-bar.tsx` draws, so the query never loads a day the
- * UI can't show.
+ * bars `resources/views/shared/uptime-bar.tsx` draws, so every day the query loads has
+ * a bar to render it.
  */
 export const UPTIME_WINDOW_DAYS = 90;
 
@@ -46,7 +46,7 @@ export interface DailyStatsInput {
 }
 
 export default class MonitorDailyStats {
-	/** Replaces the day's row for a monitor, so re-running the job never duplicates rows. */
+	/** Replaces the day's row for a monitor, so a re-run leaves exactly one row per day. */
 	static async upsertDay(db: Database, input: DailyStatsInput) {
 		let existing = await db.findMany(monitorDailyStats, {
 			where: and(
@@ -65,12 +65,9 @@ export default class MonitorDailyStats {
 	}
 
 	/**
-	 * Lists a monitor's daily stats for the last {@link UPTIME_WINDOW_DAYS} days (today
-	 * inclusive), oldest first — the window every uptime bar in the app renders.
-	 *
-	 * The cutoff goes into the `WHERE` clause rather than filtering the result set in
-	 * JS, so the `(monitor_id, monitor_type, date)` index bounds the scan and the query
-	 * returns ~90 rows no matter how long the monitor has existed.
+	 * Lists a monitor's daily stats for the last {@link UPTIME_WINDOW_DAYS} days
+	 * (today inclusive), oldest first. The cutoff sits in the `WHERE` clause so
+	 * the `(monitor_id, monitor_type, date)` index bounds the scan regardless of age.
 	 */
 	static async listRecentDays(
 		db: Database,

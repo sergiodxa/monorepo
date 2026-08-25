@@ -79,6 +79,7 @@ beforeEach(async () => {
 });
 
 describe("GET /userinfo", () => {
+	/** The seeded fixture's email is confirmed, so `email_verified` reports that state. */
 	test("returns every claim for openid, email and profile", async () => {
 		let response = await userinfo(await tokenWithScope("openid email profile"));
 
@@ -86,7 +87,6 @@ describe("GET /userinfo", () => {
 		expect(await response.json()).toEqual({
 			sub: fixtures.subjectId,
 			email: "jane@example.com",
-			// The fixture's address is confirmed, and the claim reports the column as it is.
 			email_verified: true,
 			name: "Jane Doe",
 			preferred_username: "jane",
@@ -119,9 +119,10 @@ describe("GET /userinfo", () => {
 		expect(await response.json()).toEqual({ sub: fixtures.subjectId });
 	});
 
-	// A refresh-minted token used to 401 here: the refresh grant issued it with no `scope`
-	// claim, and reading that absent claim threw before the endpoint could answer. The token
-	// now carries `openid`, so the endpoint serves the subject it speaks for.
+	/**
+	 * A token minted by the refresh_token grant carries `openid`, so the endpoint can
+	 * serve the subject it names.
+	 */
 	test("serves the subject for a token minted by the refresh_token grant", async () => {
 		let { refresh_token } = await signIn(app, fixtures);
 
@@ -131,9 +132,11 @@ describe("GET /userinfo", () => {
 		expect(await response.json()).toEqual({ sub: fixtures.subjectId });
 	});
 
-	// A client-credentials token has no end user — its subject is the client — and carries
-	// no `openid` scope, so the endpoint refuses it with the ordinary bearer challenge rather
-	// than crashing on the absent scope or leaking a person's claims to a machine.
+	/**
+	 * A client-credentials token's subject is the client itself and carries no `openid`
+	 * scope, so the endpoint answers with the ordinary bearer challenge, keeping a
+	 * person's claims from reaching a machine caller.
+	 */
 	test("refuses a client-credentials token cleanly, without a 500", async () => {
 		let response = await userinfo(await clientCredentialsToken());
 

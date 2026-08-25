@@ -1,39 +1,9 @@
 /**
- * The entry point for running specs inside a V8-isolate runtime — a Cloudflare
- * Worker and anything else without a process, a filesystem, or a shell.
- *
- * It exists because the difference is what a module may *import*, not what a run
- * may *do*: `plugins/db` imports Bun's SQL client, and `plugins/cli`,
- * `plugins/browser` and the stdio transport reach for the `Bun` global, so any
- * module importing them fails to load here however carefully a run is
- * permissioned. This surface therefore exports the language core plus the three
- * capabilities that are already pure — `http`, `url`, `jwt` — and nothing that
- * assumes a host. There is no `fs`, no `cli`, no `db` and no `env`; a spec naming
- * one gets an unknown-name failure, which is the honest answer, since no grant
- * could ever lift it.
- *
- * A browser capability is deliberately absent rather than missing: driving a
- * browser from here means calling a remote service over HTTP, which is a
- * different implementation of the same tool surface and belongs to whoever
- * chooses that service. Build it as a plugin and pass it to {@link runTests}
- * alongside these.
- *
- * `node:path` and `node:fs` are still reachable through the permission set's
- * host-filesystem check, so this needs the `nodejs_compat` flag; nothing calls
- * into them unless a host grant asks for a path outside a workspace, which a
- * hosted run never does.
- *
- * @example
- * ```ts
- * let loaded = loadSources([{ path: "flow.spec", text: source }]);
- * if (isFailure(loaded)) return loaded;
- * let outcome = await runTests({
- * 	suite: loaded.data,
- * 	plugins: [createHttpPlugin(), createUrlPlugin(), createJwtPlugin()],
- * 	grants: parseGrants(["--allow-net=app.example.com"]).data,
- * 	createWorkspace: createNoFilesystemWorkspace,
- * });
- * ```
+ * The entry point for running specs inside a V8-isolate runtime — a
+ * Cloudflare Worker and anywhere else without a process, filesystem, or
+ * shell. It exports the language core plus the pure `http`, `url`, and `jwt`
+ * capabilities; `db`, `cli`, `browser`, and stdio pull in Bun's SQL client or
+ * the `Bun` global, so importing them would break here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

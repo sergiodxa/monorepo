@@ -136,12 +136,9 @@ function readsBackAs(instant: number, parts: ZonedParts, timeZone: TimeZone): bo
 }
 
 /**
- * Invert a wall clock into the instant it names in a zone.
- *
- * A wall clock is not always a unique instant. When DST repeats an hour the
- * earlier of the two is returned, and when DST skips an hour the wall clock never
- * happened, so the instant just after the gap is returned instead of failing —
- * the same disambiguation a calendar app makes when a meeting lands in the gap.
+ * Invert a wall clock into the instant it names in a zone. A wall clock is not
+ * always unique: when DST repeats an hour the earlier instant is returned, and
+ * when DST skips an hour the instant just after the gap is returned.
  *
  * @param parts - Wall-clock fields as a reader would write them.
  * @param timeZone - IANA zone the clock belongs to.
@@ -209,7 +206,6 @@ export function shiftCalendarDay(day: CalendarDay, count: number): CalendarDay {
  * @returns `0` Sunday through `6` Saturday.
  */
 export function weekdayOf(day: CalendarDay): Weekday {
-	// A day index maps to a UTC midnight, whose UTC weekday is always 0-6.
 	return new Date(epochDayOf(day) * DAY_MS).getUTCDay() as Weekday;
 }
 

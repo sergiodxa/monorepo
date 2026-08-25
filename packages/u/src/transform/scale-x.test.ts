@@ -20,9 +20,6 @@ describe("scaleX", () => {
 	});
 
 	test("the factor stays unitless, so scale() gets a number rather than a length", async () => {
-		// `scale()` takes a unitless factor; a `px` suffix would make the whole
-		// function invalid and drop the transform. Custom properties are exempt
-		// from the serializer's unit-appending, which is what keeps this safe.
 		expect(await declarations(scaleX(1.5))).not.toContain("--ui-scale-x: 1.5px");
 	});
 

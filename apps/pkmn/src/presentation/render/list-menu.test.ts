@@ -1,11 +1,9 @@
 /**
  * Tests for the scrolling vertical list menu.
  *
- * Covers cursor navigation with wrap-around, keeping the selection valid when
- * the list shrinks, empty-list reset, `reset`, and the confirm/cancel edge
- * readers. A scripted fake `InputManager` supplies the `isRepeating`/`isPressed`/
- * `isHeld` booleans the widget queries. `render` needs a real canvas (arc/path
- * drawing) and is not tested; the scroll window it consumes is internal state.
+ * Covers cursor navigation, scroll clamping, and confirm/cancel edges using a
+ * scripted fake `InputManager`. `render` needs a real canvas and is not
+ * tested here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,7 +76,7 @@ test("update clamps the cursor when the list shrinks below the current index", (
 	let menu = new ListMenu();
 	for (let step = 0; step < 4; step++) menu.update(fakeInput({ repeating: [Button.Down] }), 5);
 	expect(menu.selected).toBe(4);
-	menu.update(fakeInput({}), 2); // list shrank to 2 items
+	menu.update(fakeInput({}), 2);
 	expect(menu.selected).toBe(1);
 });
 
@@ -144,7 +142,6 @@ test("cancelled plays menu-cancel on the press and stays silent otherwise", () =
 
 test("without an audio player, moving and confirming are safe no-ops", () => {
 	let menu = new ListMenu(5);
-	// No audio attached: exercising every hooked path must not throw.
 	menu.update(fakeInput({ repeating: [Button.Down] }), 5);
 	expect(menu.confirmed(fakeInput({ pressed: [Button.A] }))).toBe(true);
 	expect(menu.cancelled(fakeInput({ pressed: [Button.B] }))).toBe(true);

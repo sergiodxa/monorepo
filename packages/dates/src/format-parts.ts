@@ -1,7 +1,7 @@
 /**
  * The escape hatch for layouts `Intl` will not produce on its own, plus the
- * standalone weekday name a grid header needs. Callers compose parts themselves
- * rather than this package growing a format pattern language of its own.
+ * standalone weekday name a grid header needs. Callers compose parts themselves,
+ * keeping layout logic outside this package.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,9 +56,9 @@ export function formatParts(date: Date, options: FormatPartsOptions): Intl.DateT
 }
 
 /**
- * The localized name of a weekday, with no date attached: the label a day grid puts
- * above its columns. The index follows `Date#getDay` and `weekStartsOn`, so `0` is
- * always Sunday and no zone is involved.
+ * The localized name of a weekday on its own, the label a day grid puts above its
+ * columns. The index follows `Date#getDay` and `weekStartsOn`, so `0` is always
+ * Sunday, independent of time zone.
  *
  * @param weekday - Weekday index, `0` Sunday through `6` Saturday.
  * @param options - Locale, and how long the name should read.

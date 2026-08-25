@@ -21,9 +21,9 @@ import { formatValue } from "./values";
 const DETAIL_INDENT = "  ";
 
 /**
- * The structured fields a permission denial carries, read structurally so
- * errors reconstructed from the plugin wire protocol degrade gracefully
- * instead of depending on class identity.
+ * The structured fields a permission denial carries, read structurally so a
+ * denial reconstructed from the plugin wire protocol degrades gracefully,
+ * matched by shape alone.
  */
 interface DenialFields {
 	permission?: string;
@@ -76,12 +76,9 @@ interface DenialGroup {
 }
 
 /**
- * Render a finished suite: a status line per passing test and per ungrouped
- * failure (with its indented detail block), then one accumulated block per
- * missing grant — permission denials sharing a remedy are collapsed into a
- * single block that names the grant and lists every affected test — and
- * finally a summary line with the pass/fail counts and the run's wall-clock
- * duration (never the sum of per-test durations, which overcounts overlap).
+ * Render a finished suite: a status line per test, denials sharing a remedy
+ * collapsed into one block naming the grant and its affected tests, and a
+ * summary reporting the run's wall-clock duration, accurate under concurrency.
  *
  * @param suite - The suite roll-up the runner produced.
  * @param sources - Loaded file texts by path, for turning spans into lines.
@@ -129,17 +126,13 @@ export function reportSuite(
 		separated = true;
 	}
 	if (!separated) sink.write("\n");
-	// The run's wall-clock, not the sum of per-test durations: under concurrency
-	// those overlap, so their sum overcounts elapsed time and would climb as the
-	// real run got faster. `wallMs` tracks true elapsed time at every concurrency.
 	sink.write(`${suite.passed} passed, ${suite.failed} failed (${Math.round(suite.wallMs)}ms)\n`);
 }
 
 /**
  * Render a failure that prevented any test from running — an unreadable
- * suite directory, a duplicate definition, a file that failed to parse.
- * Names the file (with line:column when the span is known and the file is
- * readable), the diagnostic code, the message, and the remedy when present.
+ * suite directory, a duplicate definition, or a file that failed to parse —
+ * naming the file (with line:column when known), the code, message, and remedy.
  *
  * @param error - The load-time failure.
  * @param sink - Where the report is written.
@@ -193,10 +186,8 @@ function detailLines(error: SpecError): string[] {
 
 /**
  * The grouping fields of a permission denial the reporter accumulates, or
- * undefined when the error is not a groupable denial. A denial is groupable
- * exactly when {@link denialBlock} would render it — code `permission-denied`
- * with structured `permission`, `resource`, and `remedy` — so a degraded
- * denial missing any field falls back to the inline per-test detail path.
+ * undefined when {@link denialBlock} could not render it — a denial missing
+ * `permission`, `resource`, or `remedy` falls back to the inline detail path.
  */
 function groupableDenial(error: SpecError): DenialGrouping | undefined {
 	if (denialBlock(error) === undefined) return undefined;
@@ -292,9 +283,8 @@ function pushLabeledValue(lines: string[], label: string, value: Value): void {
 
 /**
  * Where a fatal error points: `file:line:column` when the span is known and
- * the file is readable (fatal errors predate any loaded-source map, so the
- * text is re-read from disk), the bare file path when it is not, undefined
- * when the error names no file.
+ * the file is readable — re-read from disk since fatal errors predate any
+ * loaded-source map — the bare file path otherwise, undefined without a file.
  */
 function fatalLocation(error: SpecError): string | undefined {
 	if (error.file === undefined) return undefined;

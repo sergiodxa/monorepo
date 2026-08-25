@@ -1,19 +1,9 @@
 /**
  * Autonomous movement for spawned overworld event entities.
  *
- * The active page of an event carries an `autonomousMovement` config (see
- * `map-schema`); this module advances that movement one tile at a time, on a cadence
- * derived from the page's `speed`/`freq`, against the same collision an actor obeys.
- * `fixed` never moves; `random` occasionally steps in a random direction; `route`
- * loops through the authored `route` steps. The page `options` refine it: `through`
- * ignores collision (walking onto any tile) and `directionFix` locks the facing so a
- * step never turns the graphic. The tile-choice logic (`nextRandomStep`,
- * `nextRouteStep`) is pure over an injected RNG and blocked-tile predicate so it is
- * unit-testable without a canvas, and the per-entity `MovementState` tracks how far a
- * route has advanced and when the next step is due. A step is only committed when its
- * destination tile is free (unless `through`), so an entity never walks through walls
- * or actors; a blocked `route` step still advances the route cursor so the pattern
- * stays in phase.
+ * Advances `fixed`, `random`, and `route` movement one tile at a time,
+ * honoring collision unless `through` is set; a blocked `route` step still
+ * advances its cursor so the pattern stays in phase.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,31 +35,23 @@ export function createMovementState(): MovementState {
 }
 
 /**
- * The milliseconds between steps for a movement config's speed and frequency.
- *
- * A higher `speed` shortens the step (the actor covers ground faster) and a higher
- * `freq` shortens the gap between attempts; both default to a mid value so an omitted
- * field yields the {@link STEP_INTERVAL_MS} baseline. The result is clamped to a
- * small floor so a fast actor still steps on a sane, testable cadence rather than
- * every frame.
+ * The milliseconds between steps for a movement config's speed and
+ * frequency; defaults to {@link STEP_INTERVAL_MS} and is clamped to a
+ * small floor so a fast actor never steps every frame.
  *
  * @param movement - The active page's autonomous-movement config.
  */
 export function stepIntervalFor(movement: AutonomousMovement): number {
 	let speed = movement.speed ?? 3;
 	let freq = movement.freq ?? 3;
-	// Both axes scale the baseline around their mid (3): faster/more-frequent both
-	// shorten the interval. Floored so the cadence never collapses to a per-frame step.
 	let interval = (STEP_INTERVAL_MS * 3 * 3) / (speed * freq);
 	return Math.max(120, Math.round(interval));
 }
 
 /**
- * Picks a random cardinal direction whose destination tile is free, or null.
- *
- * Pure over the injected RNG: it rotates the four directions deterministically from
- * `random` and returns the first whose target tile is not blocked, so a boxed entity
- * that cannot move anywhere yields null instead of picking a wall.
+ * Picks a random cardinal direction whose destination tile is free, or
+ * null when a boxed-in entity has nowhere to go. Rotates the four
+ * directions deterministically from `random`, pure over the injected RNG.
  */
 export function nextRandomStep(
 	x: number,
@@ -77,8 +59,6 @@ export function nextRandomStep(
 	isBlocked: BlockedTile,
 	random: () => number,
 ): Direction | null {
-	// A single roll indexes a rotation of the four directions, then each is tried in
-	// turn, so a fully boxed-in entity deterministically reports "no move".
 	let start = Math.min(
 		RANDOM_STEP_DIRECTIONS.length - 1,
 		Math.floor(random() * RANDOM_STEP_DIRECTIONS.length),
@@ -105,15 +85,9 @@ export interface MovableActor {
 }
 
 /**
- * Advances one actor's autonomous movement by `dt`, committing at most one step.
- *
- * `fixed` movement never moves. For `random` and `route`, the step timer accumulates
- * until the config's {@link stepIntervalFor} interval, then one step is attempted:
- * the actor turns to face the chosen direction (unless `directionFix` locks it) and
- * moves onto the target tile only when it is free — or always, when `through` ignores
- * collision. A `route` cursor always advances so a blocked step keeps the pattern in
- * phase; a `random` step that is blocked just turns without moving. Mutates the
- * actor's `x`/`y`/`facing` and the passed movement state in place.
+ * Advances one actor's autonomous movement by `dt`, at most one step per
+ * {@link stepIntervalFor} interval. A blocked `route` step still advances
+ * the cursor to stay in phase; a blocked `random` step turns without moving.
  *
  * @param actor - The entity's mutable position and facing.
  * @param state - The per-entity movement bookkeeping (timer and route cursor).
@@ -141,7 +115,6 @@ export function tickEventMovement(
 
 	let direction: Direction | null;
 	if (movement.type === "random") {
-		// `through` movement ignores collision, so a random step may pick any direction.
 		direction = options.through
 			? nextRandomStep(actor.x, actor.y, () => false, random)
 			: nextRandomStep(actor.x, actor.y, isBlocked, random);

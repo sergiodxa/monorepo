@@ -144,7 +144,6 @@ describe("Invite.deleteByTeamAndEmail", () => {
 
 	test("is a no-op when no invite matches", async () => {
 		await Invite.deleteByTeamAndEmail(db, "team-1", "nobody@example.com");
-		/** No throw means success — nothing to assert beyond that. */
 		expect(await Invite.findByEmailForTeam(db, "team-1", "nobody@example.com")).toBeNull();
 	});
 

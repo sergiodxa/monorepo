@@ -1,7 +1,7 @@
 /**
  * Unit tests for the `Credential` data-access model: storing a subject's password
- * hash and looking it up again. The create path is checked to actually persist a row,
- * which a fire-and-forget insert would not.
+ * hash and looking it up again. The create path asserts the row exists afterwards,
+ * since an insert that is built but never awaited returns truthy and stores nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,8 +37,6 @@ describe("Credential.create", () => {
 		expect(credential.password_hash).toBe("$2a$10$hash");
 		expect(credential.verified_at).toBe(1_750_000_000_000);
 
-		// Regression: the row has to exist after `create` resolves. An insert that is
-		// built but never awaited returns a truthy value and stores nothing.
 		expect(await Credential.find(db, subjectId)).not.toBeNull();
 	});
 

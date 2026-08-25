@@ -1,10 +1,9 @@
 /**
  * Verifies the {@link SpeciesEditor} pure mutations: base stats, types, growth
- * rate, gender ratio, catch rate/base experience, EV yield, the level-up learnset
- * (add/remove/keep-sorted), evolutions (add/remove/method switch with the right
- * payload fields), and the sprite association (atlas/image/none). Every mutation
- * must return a fresh {@link Species} snapshot the caller cannot use to mutate the
- * editor's internal state, so snapshots are checked for independence too.
+ * rate, gender ratio, catch rate/base experience, EV yield, the level-up
+ * learnset, evolutions with their method-specific payloads, and the sprite
+ * association. Every mutation must return a fresh {@link Species} snapshot
+ * isolated from the editor's internal state, so independence is checked too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,7 +56,6 @@ function makeEditor(): SpeciesEditor {
 describe("createNew (default species factory)", () => {
 	test("produces a schema-valid default species that round-trips through the schema", () => {
 		let created = SpeciesEditor.createNew(151);
-		// parseSpecies throws on an invalid record; a clean round-trip proves validity.
 		let parsed = parseSpecies({ MEW: created });
 		expect(parsed.MEW).toEqual(created);
 	});
@@ -76,7 +74,6 @@ describe("createNew (default species factory)", () => {
 		expect(created.evolutions).toEqual([]);
 		expect(created.evYield).toEqual({});
 		expect(created.sprite).toBeNull();
-		// Every base stat is present and non-negative.
 		for (let stat of Object.values(Stat)) {
 			expect(created.stats[stat]).toBeGreaterThanOrEqual(0);
 		}
@@ -87,7 +84,6 @@ describe("createNew (default species factory)", () => {
 		expect(editor.id).toBe("NEWMON");
 		let next = editor.setStat(Stat.Attack, 120);
 		expect(next.stats[Stat.Attack]).toBe(120);
-		// The default record stays valid after edits.
 		expect(() => parseSpecies({ NEWMON: next })).not.toThrow();
 	});
 
@@ -135,7 +131,6 @@ describe("identity and classification", () => {
 		expect(editor.setNumber(25).number).toBe(25);
 		expect(editor.setCatchRate(190).catchRate).toBe(190);
 		expect(editor.setBaseExperience(112).baseExperience).toBe(112);
-		// Fractional input truncates to a whole number.
 		expect(editor.setNumber(9.9).number).toBe(9);
 	});
 
@@ -155,7 +150,6 @@ describe("base stats", () => {
 	test("sets a stat to a non-negative whole number", () => {
 		let editor = makeEditor();
 		expect(editor.setStat(Stat.Attack, 82).stats[Stat.Attack]).toBe(82);
-		// Negative and fractional input is floored/truncated.
 		expect(editor.setStat(Stat.Speed, -5).stats[Stat.Speed]).toBe(0);
 		expect(editor.setStat(Stat.HP, 45.7).stats[Stat.HP]).toBe(45);
 	});
@@ -261,7 +255,7 @@ describe("learnset add / remove / sort", () => {
 
 	test("sort() reorders explicitly", () => {
 		let editor = makeEditor();
-		editor.setLearnsetLevel(0, 99); // TACKLE -> level 99 (already re-sorts, but assert idempotent sort)
+		editor.setLearnsetLevel(0, 99);
 		let next = editor.sortLearnset();
 		let levels = next.learnset.map((e) => (e as { level: number }).level);
 		expect(levels).toEqual([3, 99]);
@@ -330,7 +324,6 @@ describe("evolutions", () => {
 
 describe("sprite association", () => {
 	test("a freshly loaded species with no sprite reports null on export", () => {
-		// The base species omits sprite; the snapshot should not invent one.
 		expect(makeEditor().toSpecies().sprite).toBeUndefined();
 	});
 

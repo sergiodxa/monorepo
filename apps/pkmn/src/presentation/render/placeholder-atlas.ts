@@ -1,24 +1,9 @@
 /**
- * An original, code-generated demo atlas — no external image files.
- *
- * This module authors its own pixel art the same way `font.ts` authors its
- * glyphs: every sprite is a hand-designed grid of color-keyed cells declared
- * here as string rows, so nothing is copied from any real or proprietary game.
- * At runtime `buildPlaceholderAtlas` paints those grids onto one offscreen
- * canvas and returns an `Atlas` whose named regions point at each sprite's slot,
- * giving the renderer real atlas art to blit while staying entirely original.
- *
- * The art is deliberately simple and generic: flat tiles with a little texture
- * (grass, water, wall, sand), a four-direction blocky character with a two-frame
- * step, a rounded creature silhouette, and a nine-sliceable window frame. The
- * layout (`PLACEHOLDER_LAYOUT`) and the region map (`placeholderRegions`) are
- * pure data/functions so they can be asserted in tests without a canvas, and the
- * builder degrades to `null` when no `document` is available (e.g. under test).
- *
- * How a future openly-licensed pack replaces this: declare an `atlas` entry in
- * `content/manifest.json` pointing at the pack's image plus a region map, and the
- * asset store loads it exactly like this generated one — the renderer code that
- * blits by region name does not change. Commercial/ripped art is never allowed.
+ * Original, code-generated demo atlas: every sprite is a hand-authored grid
+ * of color-keyed rows, so the demo ships fully authored, original art. The
+ * builder returns `null` without a `document` (e.g. under test), so callers
+ * fall back to procedural drawing. A licensed pack can later replace it via
+ * an `atlas` manifest entry, and the renderer keeps blitting by region name.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,39 +20,34 @@ export const CELL = TILE_SIZE;
 export const FRAME_SIZE = 12;
 
 /**
- * The color palette for the generated art, keyed by the single character used in
- * the pixel-grid rows below. `"."` is transparent. Every visible color is pulled
- * from `theme` so the demo art retunes with the rest of the presentation and no
- * raw hex literal lives here.
+ * Palette for the generated art, keyed by the character used in each pixel-grid
+ * row (`"."` is transparent). Colors are pulled from `theme` so the demo art
+ * retunes with the presentation, with no raw hex literal here.
  */
 const PALETTE: Readonly<Record<string, string | null>> = {
 	".": null,
-	// Tiles.
 	g: theme.TILE.walkable,
 	G: theme.TILE.grass,
 	w: theme.TILE.water,
 	W: theme.BATTLE_BACKDROP.sky,
 	s: theme.TILE.solid,
 	S: theme.TILE.ledge,
-	// Character.
 	b: theme.PLAYER.body,
 	k: theme.PLAYER.skin,
 	o: theme.PLAYER.facingNub,
-	// Creature silhouette + window.
 	c: theme.NPC_COLOR.shop,
 	p: theme.WINDOW_COLOR.panel,
 	f: theme.WINDOW_COLOR.border,
 };
 
-/** One hand-authored sprite: a grid of palette-keyed rows drawn at `(x, y)`. */
+/**
+ * One hand-authored sprite: a grid of palette-keyed rows drawn at `(x, y)`.
+ * Row length is the sprite width.
+ */
 interface Sprite {
-	/** Region name this sprite is exposed as. */
 	name: string;
-	/** Top-left of the sprite's slot on the shared sheet, in pixels. */
 	x: number;
-	/** Top-left of the sprite's slot on the shared sheet, in pixels. */
 	y: number;
-	/** Palette-keyed pixel rows; row length is the sprite width. */
 	rows: readonly string[];
 }
 
@@ -88,8 +68,6 @@ function solid(key: string): string[] {
 	return Array.from({ length: CELL }, () => key.repeat(CELL));
 }
 
-// Original tile art: a flat base color plus a sparse, hand-placed speckle so the
-// tiles read as textured rather than plain fills. Coordinates are arbitrary.
 const GRASS = overlay(solid("g"), [
 	"................",
 	"...G......G.....",
@@ -186,11 +164,9 @@ const SAND = overlay(solid("S"), [
 ]);
 
 /**
- * The blocky character, one grid per facing plus a stepped variant per facing.
- *
- * Each facing is a torso (`b`), a head (`k`), and a single facing pixel (`o`);
- * the ".step" variant shifts the legs by a pixel to read as a walk cycle. These
- * are original silhouettes, not traced from any sprite.
+ * The blocky character, one grid per facing plus a stepped variant: a torso
+ * (`b`), a head (`k`), and a facing pixel (`o`), with legs shifted a pixel in
+ * the stepped variant for a walk cycle.
  */
 function character(facing: "down" | "up" | "left" | "right", stepped: boolean): string[] {
 	let head = ["....kkkkkk......", "....kkkkkk......", "....koookk......"];
@@ -277,7 +253,6 @@ export const PLACEHOLDER_LAYOUT: readonly Sprite[] = buildLayout();
 /** Assembles the sprite table, packing tiles/character on a grid of cells. */
 function buildLayout(): Sprite[] {
 	let sprites: Sprite[] = [];
-	// Row 0: tiles.
 	let tiles: Array<[string, readonly string[]]> = [
 		["tile.grass", GRASS],
 		["tile.tall-grass", TALL_GRASS],
@@ -289,7 +264,6 @@ function buildLayout(): Sprite[] {
 		sprites.push({ name, x: column * CELL, y: 0, rows });
 	});
 
-	// Rows 1-2: the four-direction character, base then stepped.
 	let facings: Array<"down" | "up" | "left" | "right"> = ["down", "up", "left", "right"];
 	facings.forEach((facing, column) => {
 		sprites.push({
@@ -306,9 +280,7 @@ function buildLayout(): Sprite[] {
 		});
 	});
 
-	// The creature sits in its own 32x32 slot below the character rows.
 	sprites.push({ name: "creature.body", x: 0, y: CELL * 3, rows: CREATURE });
-	// The window frame sits to the right of the creature.
 	sprites.push({ name: "ui.window", x: CELL * 2 + 4, y: CELL * 3, rows: WINDOW_FRAME });
 
 	return sprites;
@@ -367,11 +339,9 @@ export function placeholderAnimations(): Record<
 }
 
 /**
- * Paints the generated art to an offscreen canvas and returns its `Atlas`.
- *
- * Returns `null` when there is no `document` to create a canvas (under test or
- * before the DOM is ready), so callers treat a missing generated atlas exactly
- * like a missing loaded one and fall back to procedural drawing.
+ * Paints the generated art to an offscreen canvas and returns its `Atlas`,
+ * or `null` without a `document` (under test or pre-DOM), so callers fall
+ * back to procedural drawing exactly as for a missing loaded atlas.
  */
 export function buildPlaceholderAtlas(): Atlas | null {
 	let canvas = globalThis.document?.createElement("canvas");

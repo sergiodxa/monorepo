@@ -57,11 +57,8 @@ const CONTAINER_NAME = "ui-navigation-menu-content";
 
 /**
  * `role="list"` applied to {@link NavigationMenu.List} through {@link attrs}
- * unless a consumer supplies its own `role`. A plain `<ul>` already carries
- * this role implicitly, but restating it explicitly keeps the row reading as
- * a list to assistive technology that otherwise drops list semantics once an
- * author stylesheet clears `list-style`, the way this catalog's own reset
- * does for every list.
+ * unless a consumer supplies its own `role`, restoring list semantics that a
+ * stylesheet clearing `list-style` otherwise drops for assistive technology.
  */
 const DEFAULT_LIST_ROLE = "list";
 
@@ -74,8 +71,7 @@ const DEFAULT_ORIENTATION: NavigationMenu.Orientation = "horizontal";
 /**
  * `type` {@link NavigationMenu.TriggerProps.type} falls back to when a
  * consumer doesn't supply one, keeping a click on the trigger from
- * submitting a surrounding `<form>` the way a bare `<button>`'s default type
- * otherwise would.
+ * submitting a surrounding `<form>`.
  */
 const DEFAULT_TRIGGER_TYPE: NonNullable<NavigationMenu.TriggerProps["type"]> = "button";
 
@@ -112,8 +108,7 @@ export namespace NavigationMenu {
 	/**
 	 * Panel width {@link NavigationMenu.Content} renders at: sized to its own
 	 * content (`"default"`), or a fixed, generously wide measure that still
-	 * clamps to the viewport on narrow screens (`"wide"`), for a panel holding
-	 * a multi-column layout.
+	 * clamps to the viewport on narrow screens (`"wide"`).
 	 */
 	export type ContentSize = "default" | "wide";
 
@@ -160,8 +155,7 @@ export namespace NavigationMenu {
 	/**
 	 * Every native `<button>` attribute, plus the `mix` passthrough.
 	 * `commandfor` and `command` both default from the enclosing
-	 * {@link NavigationMenu.Item}'s context rather than requiring a consumer
-	 * to repeat the panel's id.
+	 * {@link NavigationMenu.Item}'s context.
 	 */
 	export interface TriggerProps extends TagProps<"button"> {}
 
@@ -180,11 +174,9 @@ export namespace NavigationMenu {
 	}
 
 	/**
-	 * Every native `<a>` attribute, plus the `mix` passthrough. Built as an
-	 * intersection rather than an interface extension because the underlying
-	 * anchor prop type is a union keyed on `href`, which an
-	 * `interface … extends` clause cannot carry; `href` is narrowed to
-	 * required here, since a link that goes nowhere isn't a link.
+	 * Every native `<a>` attribute, plus the `mix` passthrough. Uses an
+	 * intersection because the underlying anchor prop type is a union keyed on
+	 * `href`, narrowed here to required since a link needs a destination.
 	 */
 	export type LinkProps = TagProps<"a"> & {
 		/** Destination the link navigates to. */
@@ -227,8 +219,7 @@ export namespace NavigationMenu {
 /**
  * Renders the menu's root host: a native `<nav>` landmark establishing a
  * positioning context for whatever floating panels its
- * {@link NavigationMenu.Content} instances anchor against. Compose
- * {@link NavigationMenu.List} inside it for the row of triggers.
+ * {@link NavigationMenu.Content} instances anchor against.
  *
  * @param handle Runtime handle carrying the host `<nav>`'s props.
  * @returns The render function producing the menu's markup.
@@ -252,10 +243,7 @@ export function NavigationMenu(handle: Handle<NavigationMenu.Props>) {
 /**
  * Renders the row of top-level triggers: a native `<ul>` laying its
  * {@link NavigationMenu.Item}s out horizontally by default, switching to a
- * single start-aligned column when `orientation` is `"vertical"`. `role`
- * defaults to `"list"`, restoring list semantics that a stylesheet clearing
- * `list-style` — this catalog's own reset does, for every list — otherwise
- * drops in some assistive technology.
+ * single start-aligned column when `orientation` is `"vertical"`.
  *
  * @param handle Runtime handle carrying the host `<ul>`'s props.
  * @returns The render function producing the row's markup.
@@ -297,10 +285,7 @@ NavigationMenu.List = function NavigationMenuList(handle: Handle<NavigationMenu.
 /**
  * Renders a single top-level entry: a native `<li>` holding either a
  * standalone {@link NavigationMenu.Link} or a {@link NavigationMenu.Trigger}
- * paired with the {@link NavigationMenu.Content} it opens. The item generates
- * a stable id and provides it through component context, so whichever
- * {@link NavigationMenu.Trigger} and {@link NavigationMenu.Content} nest
- * inside pair up on their own.
+ * paired with the {@link NavigationMenu.Content} it opens.
  *
  * @param handle Runtime handle carrying the host `<li>`'s props and providing {@link NavigationMenu.Context}.
  * @returns The render function producing the item's markup.
@@ -329,13 +314,8 @@ NavigationMenu.Item = function NavigationMenuItem(
 
 /**
  * Renders a native `<button>` that opens the enclosing
- * {@link NavigationMenu.Item}'s {@link NavigationMenu.Content}: `commandfor`
- * defaults to that item's generated id and `command` defaults to
- * `"toggle-popover"`, so nesting a bare `<NavigationMenu.Trigger>` next to a
- * `<NavigationMenu.Content>` is enough to wire the two together. A supporting
- * browser computes `aria-expanded` on the trigger automatically from this
- * same invoker relationship, mirroring the panel's shown state with no
- * script of this library's own.
+ * {@link NavigationMenu.Item}'s {@link NavigationMenu.Content} through the
+ * Invoker Commands API, so `aria-expanded` reflects the panel automatically.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the trigger's markup.
@@ -385,22 +365,8 @@ NavigationMenu.Trigger = function NavigationMenuTrigger(
 
 /**
  * Renders {@link NavigationMenu.Content}, the floating panel a
- * {@link NavigationMenu.Trigger} opens: a {@link Popover} whose `id` defaults
- * to the enclosing {@link NavigationMenu.Item}'s generated id and whose
- * `placement` defaults to reading down and start-ward from the trigger. The
- * panel sizes itself to its own content by default; set `size="wide"` for a
- * fixed, generously wide measure — still clamped to the viewport on narrow
- * screens — suited to a multi-column layout built from
- * {@link NavigationMenu.ContentGrid} and {@link NavigationMenu.ContentColumn}.
- * The panel declares the `ui-navigation-menu-content` named container so
- * {@link NavigationMenu.ContentGrid} can adapt to its own width rather than
- * the page's, and every {@link NavigationMenu.Link} nested directly inside
- * stretches to the panel's full width instead of the trigger row's
- * inline-sized look.
- *
- * The panel fades and scales in as it's shown and back out as it's hidden,
- * reading the platform's own `:popover-open` state — no script tracks the
- * transition.
+ * {@link NavigationMenu.Trigger} opens: a {@link Popover} that fades and
+ * scales itself using the platform's own `:popover-open` state.
  *
  * @param handle Runtime handle carrying the host's {@link Popover} props.
  * @returns The render function producing the panel's markup.
@@ -469,17 +435,9 @@ NavigationMenu.Content = function NavigationMenuContent(
 };
 
 /**
- * Renders {@link NavigationMenu.LinkProps.children} as a native `<a>`,
- * usable as a standalone {@link NavigationMenu.Item}'s entry or nested inside
- * {@link NavigationMenu.Content} as one of its panel's entries — the
- * enclosing panel stretches it to the panel's full width automatically. The
- * link's current-page state reads directly off `aria-current` — set
- * `aria-current="page"` (or any value other than `"false"`) on the host from
- * whatever routing layer determines the active path server-side. Setting
- * `aria-disabled="true"` mutes the link's color and swaps its cursor to
- * signal it shouldn't be followed, keeping in mind that only omitting or
- * neutralizing `href` actually stops the navigation, since a plain link has
- * no native disabled state.
+ * Renders {@link NavigationMenu.LinkProps.children} as a native `<a>`.
+ * `aria-current` marks the active page; `aria-disabled="true"` only mutes it
+ * visually, since a plain `<a>` has no native disabled state to block clicks.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
@@ -527,16 +485,9 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 };
 
 /**
- * Renders a shared, independently animated surface for a multi-item menu
- * that swaps one active item's content into a single sized frame instead of
- * each {@link NavigationMenu.Content} floating on its own: a plain `<div>`
- * reading its own inline size and block size from the
- * `--ui-navigation-menu-viewport-inline-size` and
- * `--ui-navigation-menu-viewport-block-size` custom properties, transitioning
- * smoothly between values as they change. It carries no behavior of its
- * own — pair it with a mixin that measures the active item's panel, writes
- * those two custom properties, and toggles `data-visible` to fade and scale
- * the frame in and out as the menu opens and closes.
+ * Renders a shared, animated surface that swaps in the active
+ * {@link NavigationMenu.Item}'s content, sized by the custom properties a
+ * pairing mixin writes as it measures the active panel and toggles visibility.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the shared frame's markup.
@@ -581,8 +532,7 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 /**
  * Renders {@link NavigationMenu.ContentListProps.children} as a plain
  * vertical run of {@link NavigationMenu.Link}s inside
- * {@link NavigationMenu.Content} — the panel's simplest layout, for a
- * dropdown that's just a short list of destinations.
+ * {@link NavigationMenu.Content}, for a dropdown that's just a short list.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the list's markup.
@@ -605,9 +555,7 @@ NavigationMenu.ContentList = function NavigationMenuContentList(
 /**
  * Renders {@link NavigationMenu.ContentGridProps.children} as a
  * multi-column layout inside {@link NavigationMenu.Content}: a single column
- * while the panel's own `ui-navigation-menu-content` container is narrower
- * than `40rem`, switching to two side-by-side columns once it grows past
- * that width. Nest a {@link NavigationMenu.ContentColumn} per column.
+ * while the panel's own container is narrower than `40rem`, else two columns.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the grid's markup.

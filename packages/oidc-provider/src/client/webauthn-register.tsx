@@ -45,7 +45,6 @@ export let WebAuthnRegister = clientEntry(
 			await handle.update();
 
 			try {
-				// Use the modern API that handles base64url encoding automatically
 				let credential = await navigator.credentials.create({
 					publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options),
 				});
@@ -54,7 +53,6 @@ export let WebAuthnRegister = clientEntry(
 					throw new Error("Registration was cancelled");
 				}
 
-				// Use toJSON() for automatic serialization
 				let res = await fetch(verifyUrl, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -69,7 +67,6 @@ export let WebAuthnRegister = clientEntry(
 					throw new Error(errData.error ?? "Registration failed");
 				}
 
-				// Success - follow the redirect from server
 				let successData = (await res.json()) as { redirect?: string };
 
 				status = "success";
@@ -85,7 +82,6 @@ export let WebAuthnRegister = clientEntry(
 			}
 		}
 
-		// Start registration immediately on mount
 		handle.queueTask(() => {
 			void register();
 		});

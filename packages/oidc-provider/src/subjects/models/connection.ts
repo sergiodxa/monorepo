@@ -19,7 +19,6 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
  * Persistence model for a subject's linked external identity providers.
  */
 export default class Connection {
-	/** Database table schema for connections. */
 	static table = table({
 		name: "connections",
 		primaryKey: ["id"],

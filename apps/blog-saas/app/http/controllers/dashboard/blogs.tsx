@@ -111,6 +111,10 @@ export default createController(routes.dashboard.blogs, {
 			);
 		}),
 
+		/**
+		 * A failed provisioning attempt leaves the row in `provisioning` so the
+		 * owner can retry from the blog's page.
+		 */
 		create: inject([BlogProvisioner] as const, async (provisioner) => {
 			let ctx = getContext();
 			let accountId = getAccountId();
@@ -119,20 +123,20 @@ export default createController(routes.dashboard.blogs, {
 			let name = fieldText(ctx.formData, "name").trim();
 			if (!name) return badRequest("Blog name is required");
 
-			// Validate the region against the known list rather than casting arbitrary
-			// form input to a DurableObjectLocationHint.
 			let regionInput = fieldText(ctx.formData, "region", "wnam");
 			if (!REGIONS.includes(regionInput as Region)) return badRequest("Invalid region");
 			let region: Region = regionInput as Region;
 
 			try {
 				await provisioner.create({ accountId, name, region });
-			} catch {
-				// The blog row remains in `provisioning`; the owner can retry from its page.
-			}
+			} catch {}
 			return redirect("/dashboard", { status: redirect.Status.SeeOther });
 		}),
 
+		/**
+		 * The admin link always targets the subdomain because the OIDC callback
+		 * is registered there, even once a custom domain is active.
+		 */
 		show: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { id } = ds.parse(ds.object({ id: ds.string() }), ctx.params);
@@ -141,8 +145,6 @@ export default createController(routes.dashboard.blogs, {
 			let { blog } = result;
 
 			let subdomain = `${blog.slug}.${env.PLATFORM_DOMAIN}`;
-			// Admin auth (the OIDC callback) is registered on the subdomain, so the CMS
-			// link always targets the subdomain — even after a custom domain is active.
 			let adminHost = subdomain;
 
 			let stats = "—";
@@ -150,9 +152,7 @@ export default createController(routes.dashboard.blogs, {
 				let stub = env.BLOG.getByName(blog.id) as unknown as DurableObjectStub<Blog>;
 				let info = await stub.getStats();
 				stats = `${Math.round(info.databaseSize / 1024)} KB`;
-			} catch {
-				// Stats are best-effort.
-			}
+			} catch {}
 
 			return ctx.render(
 				<Page title={blog.name}>
@@ -250,9 +250,9 @@ export default createController(routes.dashboard.blogs, {
 });
 
 /**
- * Custom-domain controller for `/dashboard/blogs/:blogId/domain`: `index` shows the
- * current hostname and DNS instructions; `action` registers a new domain with
- * Cloudflare and persists it, rolling back the CF hostname if the local write fails.
+ * Custom-domain controller for `/dashboard/blogs/:blogId/domain`. Registering a
+ * domain checks local uniqueness before calling Cloudflare and rolls back the
+ * created hostname on a failed write, so a duplicate never leaves an orphan behind.
  *
  * @returns The domain page (`index`), or a redirect/`badRequest` (`action`).
  */
@@ -314,9 +314,6 @@ export const domain = createController(routes.dashboard.blogDomain, {
 			if (!hostname || hostname.endsWith(`.${env.PLATFORM_DOMAIN}`))
 				return badRequest("Invalid domain");
 
-			// Pre-check the local unique constraints (one hostname per blog, globally
-			// unique hostname) before calling Cloudflare, so a duplicate cannot leave an
-			// orphaned custom hostname behind.
 			if (await Hostname.findByBlog(db, blog.id))
 				return badRequest("This blog already has a custom domain.");
 			if (await Hostname.findByHostname(db, hostname))
@@ -338,7 +335,6 @@ export const domain = createController(routes.dashboard.blogDomain, {
 					validationTxtValue: created.validationTxtValue,
 				});
 			} catch {
-				// Roll back the Cloudflare hostname so we do not leak an orphan resource.
 				await service.delete(created.id).catch(() => {});
 				return badRequest("Could not save the domain. Please try again.");
 			}

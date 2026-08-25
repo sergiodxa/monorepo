@@ -19,7 +19,7 @@ import { createCookie } from "remix/cookie";
  */
 export const returnTo = createCookie("uptime:return-to", {
 	path: "/",
-	maxAge: 60 * 5, // 5 minutes
+	maxAge: 60 * 5,
 	httpOnly: true,
 	sameSite: "Lax",
 	secure: import.meta.env.PROD,

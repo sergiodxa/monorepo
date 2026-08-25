@@ -17,13 +17,11 @@ export interface DailyPageViews {
 /**
  * Queries the Analytics Engine SQL API for per-blog page-view sums on a date.
  * The write shape (see the worker) is `blobs: [blogId, "page_view", host, date]`.
+ * Rejects any date not shaped like `YYYY-MM-DD` to keep the interpolated SQL injection-safe.
  * @param date - UTC day as `YYYY-MM-DD`.
  * @returns Per-blog totals (empty on query failure; the cron retries next run).
  */
 export async function queryDailyPageViews(date: string): Promise<DailyPageViews[]> {
-	// The Analytics Engine SQL API takes a raw string, so guard the interpolated
-	// `date` to a literal `YYYY-MM-DD` (callers pass `yesterday()`). Anything else
-	// is rejected fail-soft rather than risking SQL injection.
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
 
 	let query =

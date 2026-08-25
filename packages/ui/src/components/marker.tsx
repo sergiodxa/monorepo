@@ -1,9 +1,9 @@
 /**
  * An inline row calling out a small event between two message rows — a
  * delivery status, a system note, a highlighted callout, or a labeled
- * divider — colored by a semantic tone and shaped by a variant rather than
- * a wall of nested parts. {@link Marker.Icon} and {@link Marker.Content}
- * compose beneath it for a glyph-plus-caption row.
+ * divider — colored by a semantic tone and shaped by a variant.
+ * {@link Marker.Icon} and {@link Marker.Content} compose beneath it for a
+ * glyph-plus-caption row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,12 +27,9 @@ const DEFAULT_VARIANT: Marker.Variant = "default";
 const DEFAULT_COLOR: Marker.Color = "neutral";
 
 /**
- * Default `aria-hidden` value applied to {@link Marker.Icon} through
- * {@link attrs} unless a consumer overrides it, keeping a purely decorative
- * glyph out of the accessibility tree. A consumer nesting a control that
- * carries its own accessible name and role — {@link Marker.Icon}'s own JSDoc
- * covers the progress-marker case — overrides this to `aria-hidden={false}`
- * so that control still reaches assistive technology.
+ * Default `aria-hidden` applied to {@link Marker.Icon} through
+ * {@link attrs}, keeping a decorative glyph out of the accessibility tree
+ * unless a consumer overrides it for a control with its own name and role.
  */
 const DEFAULT_ICON_ARIA_HIDDEN = "true";
 
@@ -45,8 +42,8 @@ const DEFAULT_SEPARATOR_ROLE = "separator";
 
 /**
  * `aria-orientation` applied through {@link attrs} alongside
- * {@link DEFAULT_SEPARATOR_ROLE}. A labeled separator between message rows
- * always reads as a horizontal divider, so no vertical variant is exposed.
+ * {@link DEFAULT_SEPARATOR_ROLE}, since a labeled separator between message
+ * rows always reads as a horizontal divider.
  */
 const DEFAULT_SEPARATOR_ORIENTATION = "horizontal";
 
@@ -55,12 +52,9 @@ const DEFAULT_SEPARATOR_ORIENTATION = "horizontal";
  */
 export namespace Marker {
 	/**
-	 * Visual shape the row renders with: `"default"` is a plain, centered
-	 * caption suited to an inline status update or a system note; `"border"`
-	 * frames the row in a bordered, tinted panel for a callout that deserves
-	 * more visual weight; `"separator"` flanks the caption with a hairline on
-	 * either side, reading as a labeled divider between groups of message
-	 * rows.
+	 * Visual shape the row renders with: `"default"` for a plain, centered
+	 * caption, `"border"` for a bordered, tinted callout panel, and
+	 * `"separator"` for a caption flanked by a hairline divider on either side.
 	 */
 	export type Variant = "default" | "border" | "separator";
 
@@ -99,14 +93,9 @@ export namespace Marker {
 }
 
 /**
- * Renders the row's host element: a centered flex line whose framing comes
- * entirely from the `data-variant` and `data-color` attribute contract.
- * `variant="separator"` also renders a hairline on either side of the row's
- * content through `::before`/`::after`, and picks up `role="separator"` plus
- * `aria-orientation="horizontal"` by default so it reads as a divider
- * between groups of content even though it carries a label. `variant`
- * defaults to a plain, unframed row and `color` defaults to the neutral
- * tone; compose {@link Marker.Icon} and {@link Marker.Content} inside it.
+ * Renders the row's host element: a centered flex line framed through the
+ * `data-variant` and `data-color` attributes, with `variant="separator"`
+ * also picking up `role="separator"`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -205,18 +194,9 @@ export function Marker(handle: Handle<Marker.Props>) {
 }
 
 /**
- * Renders {@link Marker.IconProps.children} as the row's leading glyph slot:
- * an inline-flex, shrink-proof `<span>` sizing any direct SVG child to a
- * single em box so it scales with {@link Marker.Content}'s font size, tinted
- * by the current text color inherited from the {@link Marker} root. Hidden
- * from assistive technology by default since a decorative glyph's meaning is
- * already carried by {@link Marker.Content}'s caption.
- *
- * Composing a control that carries its own accessible name and role instead
- * of a decorative glyph — {@link Spinner}, for a progress marker — calls for
- * overriding the default: set `aria-hidden={false}` so the nested control's
- * own role and label reach assistive technology instead of being hidden
- * along with the rest of the slot.
+ * Renders {@link Marker.IconProps.children} as the row's glyph slot,
+ * hidden from assistive technology unless a consumer overrides it for a
+ * nested accessible control like {@link Spinner}.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the icon slot's markup.
@@ -252,13 +232,8 @@ Marker.Icon = function MarkerIcon(handle: Handle<Marker.IconProps>) {
 
 /**
  * Renders {@link Marker.ContentProps.children} as the row's caption: a
- * `<span>` carrying no color, size, or weight of its own beyond what it
- * inherits from the {@link Marker} root, so a single `data-color` on the
- * root drives the icon and the caption together. A streaming caption —
- * "Generating response…" while a reply is still arriving — composes the
- * `textShimmer()` animation from the animation layer through `mix` for its
- * sweeping highlight; the caption renders as plain, fully readable text on
- * its own, the sweep is additive.
+ * `<span>` inheriting its color, size, and weight from the {@link Marker}
+ * root so a single `data-color` drives the icon and caption together.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the caption's markup.

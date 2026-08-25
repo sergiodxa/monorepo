@@ -1,3 +1,10 @@
+/**
+ * Tests for the metadata codec: per-kind value encode/decode and the
+ * serialize/deserialize round trip produced by {@link createMetaCodec}.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import type { SelectPostMeta } from "../../database/schema";

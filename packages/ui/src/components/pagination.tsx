@@ -54,34 +54,21 @@ export namespace Pagination {
 
 	/**
 	 * Every native `<a>` attribute, plus the `mix` passthrough. A type alias
-	 * rather than an interface, since the native anchor props resolve through
-	 * a conditional type that an `interface extends` clause can't statically
-	 * extend. Set `aria-current="page"` directly on the link representing the
-	 * page the consumer is currently rendering — the emphasized, filled
-	 * treatment reads straight from that attribute, with no separate boolean
-	 * prop tracking it. Set `aria-disabled="true"` to mute a link that
-	 * shouldn't be followed (an ellipsis placeholder, for instance).
+	 * rather than an interface, since native anchor props resolve through a
+	 * conditional type an `interface extends` clause can't statically extend.
 	 */
 	export type LinkProps = TagProps<"a">;
 
 	/**
 	 * Every native `<button>` attribute, unchanged, plus the `mix` passthrough.
-	 * A previous/next control rendering only a directional icon needs an
-	 * `aria-label` (e.g. `"Previous"`, `"Next"`) — the component ships no
-	 * built-in copy, so a consumer's own localized string always drives what's
-	 * announced. `type` is defaulted only for a control carrying an Invoker
-	 * Command, which cannot be a submit button; left off otherwise, so a control
-	 * inside a `<form>` keeps the native submit default.
 	 */
 	export interface ButtonProps extends TagProps<"button"> {}
 }
 
 /**
- * Renders the pagination's `<nav>` root, laying its single
- * {@link Pagination.List} child out as a centered row. In dev mode, a root
- * rendered without an `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no way to
- * distinguish this navigation landmark from any other on the page.
+ * Renders the pagination's `<nav>` root, laying its single {@link
+ * Pagination.List} child out as a centered row. In dev mode, a root missing
+ * `aria-label`/`aria-labelledby` logs a `console.warn` for assistive tech.
  *
  * @param handle Runtime handle carrying the host `<nav>`'s props.
  * @returns The render function producing the navigation landmark's markup.
@@ -159,16 +146,9 @@ Pagination.Item = function PaginationItem(handle: Handle<Pagination.ItemProps>) 
 };
 
 /**
- * Renders a page-number destination as a native `<a>`, sized as a small
- * square control and colored in the neutral foreground until hovered or
- * marked current. Setting `aria-current="page"` (server-rendered for
- * whichever page the consumer is currently showing) fills the link with the
- * primary solid background and its on-solid foreground, reading as the
- * active page with no client-side route tracking involved. Setting
- * `aria-disabled="true"` mutes the link's color, drops its underline
- * affordance, and blocks pointer interaction — useful for a non-interactive
- * ellipsis placeholder between distant page numbers. A keyboard
- * focus-visible ring reads in the primary color.
+ * Renders a page-number destination as a native `<a>`. Setting
+ * `aria-current="page"` fills it with the active-page treatment, and
+ * `aria-disabled="true"` mutes it and blocks pointer interaction.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
@@ -216,26 +196,9 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 };
 
 /**
- * Renders a previous/next control as a native `<button>`, sized and shaped
- * to match {@link Pagination.Link} so page numbers and directional controls
- * line up in the same row. Hover and pressed states ride the native `:hover`
- * and `:active` pseudo-classes, a keyboard focus-visible ring reads in the
- * primary color, and the native `disabled` attribute mutes the control and
- * blocks pointer and keyboard activation alike.
- *
- * A control carrying `command` or `commandfor` renders `type="button"` unless
- * it's given a `type` of its own, and renders it before the consumer's own
- * attributes: inside a `<form>` an untyped button would default to `"submit"`,
- * and the platform then refuses to run its command at all, calling the pairing
- * ambiguous — the control would look wired up and do nothing. It judges that
- * while it parses the command attributes, so a `type` written after them is
- * refused the same way. A control with no command is left untyped, which keeps a
- * previous/next control that a consumer wired to a real form submitting it, the
- * way it always has.
- *
- * In dev mode, a control whose content carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since a directional
- * icon alone gives assistive technology no accessible name to announce.
+ * Renders a previous/next control as a native `<button>`. A control with
+ * `command`/`commandfor` renders `type="button"` first, since the platform's
+ * ambiguity check can't see a `type` written after those attributes.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the control's markup.
@@ -261,11 +224,6 @@ Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonPr
 		);
 
 		return (
-			// `type` is written before the spread on purpose. The rendered attribute order
-			// is the JSX order, and the platform decides whether an invoker is ambiguous
-			// while parsing `command`/`commandfor` — a `type` that arrives after them has
-			// not been seen yet, so the button still counts as a submit button and the
-			// command is refused even though the attribute is right there in the markup.
 			<button
 				type={resolvedType}
 				{...rest}

@@ -28,11 +28,9 @@ export default createAction(
 	/**
 	 * Builds the RSS payload for tutorials visible to the public.
 	 *
-	 * Contract:
-	 * - include only records considered published by `Post.isPublishedAt`
-	 * - emit absolute item and channel links using the current request origin
-	 * - provide stable fallback values when optional metadata is missing
-	 * @param ctx Request context exposing container bindings and canonical request URL.
+	 * Item and channel links are absolute against the current request origin so feed
+	 * readers resolve them off-site; optional metadata falls back to stable values.
+	 * @param db Database client used to load published tutorials.
 	 * @returns XML response for feed readers polling the tutorials channel.
 	 */
 	inject([Database] as const, async (db) => {

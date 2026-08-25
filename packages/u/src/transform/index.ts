@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { perspective } from "./perspective";
 export { perspectiveOrigin } from "./perspective-origin";
 export { rotate } from "./rotate";

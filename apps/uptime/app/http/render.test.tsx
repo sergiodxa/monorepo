@@ -1,8 +1,8 @@
 /**
- * Tests the request-scoped renderer's response contract, as opposed to the markup its
- * nodes produce. Chiefly the doctype: it is not part of the JSX tree — the renderer
- * prepends it to the byte stream — so no page or layout test can see it, and without it
- * every page in the app parses in quirks mode.
+ * Tests the request-scoped renderer's response contract: the doctype the renderer
+ * prepends to the byte stream ahead of the JSX-rendered markup. The doctype lives
+ * outside the JSX tree, so verifying it here is what keeps every page in the app
+ * parsing in standards mode.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,9 +16,8 @@ import DocumentLayout from "~/resources/layouts/document";
 import { createHtmlRenderer } from "./render";
 
 /**
- * Fetches a full document through the real renderer. Routed rather than called with a
- * hand-built context, so the renderer is handed the same `RequestContext` production
- * gives it.
+ * Fetches a full document by routing a real request through the renderer, so it
+ * receives the same `RequestContext` production hands it.
  */
 async function renderDocument() {
 	let router = createRouter();

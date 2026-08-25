@@ -4,8 +4,8 @@
  * regardless of which level it renders. An explicit `level` prop fixes the
  * depth outright; otherwise, the nearest ancestor `HeadingScope` supplies
  * it, and a heading with no scope wrapping it at all renders as `<h1>`.
- * Choosing a level changes the document outline the element contributes to
- * assistive technology, not the rendered size, so nesting sections
+ * Choosing a level changes only the document outline the element contributes to
+ * assistive technology; its rendered size stays fixed, so nesting sections
  * correctly never requires a visual trade-off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -47,9 +47,8 @@ export namespace Heading {
 
 /**
  * Renders its children inside the native heading element matching `level`,
- * styled as a single fixed emphasis size — a semibold, tight-tracked line
- * set at the emphasized neutral foreground color, with its line height
- * collapsed so multi-line wrapping stays compact.
+ * styled at one fixed emphasis size — semibold, tight-tracked, and colored for
+ * emphasis, with line height collapsed for compact wrapping.
  *
  * @param handle Runtime handle carrying the host heading element's props.
  * @returns The render function producing the heading's markup.

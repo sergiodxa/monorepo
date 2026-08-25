@@ -29,7 +29,9 @@ declare module "remix/router" {
 }
 
 /**
- * Resolves `:team` to a team the current viewer is a member of.
+ * Resolves `:team` to a team the current viewer is a member of, looking up the
+ * viewer's teams concurrently since that lookup is independent of it, and
+ * apportioning the cost of all three lookups to the resolved team (ADR-007 §5).
  *
  * @returns The downstream response, or a 404 when the team is missing or the viewer
  * is not a member.
@@ -43,8 +45,6 @@ export let requireTeam: Middleware = async (ctx, next) => {
 	let viewer = getViewer();
 	if (!viewer) return notFound("Not Found");
 
-	// `listBySubjectId` doesn't depend on `idOrSlug` resolving to anything, so it
-	// runs alongside `findByIdOrSlug` instead of after it.
 	let [team, teams] = await Promise.all([
 		Team.findByIdOrSlug(db, idOrSlug),
 		Team.listBySubjectId(db, viewer.id),
@@ -58,8 +58,6 @@ export let requireTeam: Middleware = async (ctx, next) => {
 	ctx.membership = membership;
 	ctx.teams = teams;
 
-	// The request is for this team, so everything it costs — including the three lookups
-	// above — belongs to it (ADR-007 §5).
 	apportionCostByTeam([team.id]);
 
 	return next();

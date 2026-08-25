@@ -50,7 +50,6 @@ describe("SigningKey per-Database cache isolation", () => {
 		let keysB = await SigningKey.getAll(dbB);
 
 		expect(keysA).toHaveLength(1);
-		// dbB has no keys of its own, and must not see dbA's cached keys.
 		expect(keysB).toHaveLength(0);
 	});
 
@@ -63,7 +62,6 @@ describe("SigningKey per-Database cache isolation", () => {
 
 		expect(keysA).toHaveLength(1);
 		expect(keysB).toHaveLength(1);
-		// Independently generated key pairs -> different key ids.
 		expect(keysA[0]!.id).not.toBe(keysB[0]!.id);
 	});
 
@@ -73,7 +71,6 @@ describe("SigningKey per-Database cache isolation", () => {
 		let first = await SigningKey.getAll(dbA);
 		let second = await SigningKey.getAll(dbA);
 
-		// A cache hit returns the very same array reference.
 		expect(second).toBe(first);
 	});
 
@@ -89,13 +86,11 @@ describe("SigningKey per-Database cache isolation", () => {
 		let afterA = await SigningKey.getAll(dbA);
 		let afterB = await SigningKey.getAll(dbB);
 
-		// dbA was rebuilt (new array), dbB still served from its untouched cache.
 		expect(afterA).not.toBe(cachedA);
 		expect(afterB).toBe(cachedB);
 	});
 
 	test("a fresh Database sees keys created before its first cache read", async () => {
-		// No getAll call yet -> nothing cached; the first read must hit the database.
 		await SigningKey.generate(dbA);
 		expect(await SigningKey.getAll(dbA)).toHaveLength(1);
 	});

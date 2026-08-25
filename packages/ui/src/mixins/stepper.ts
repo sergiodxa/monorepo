@@ -1,16 +1,9 @@
 /**
  * Press-and-hold repeat for a NumberField group's increment/decrement
- * buttons: wires each button's custom `--step-up`/`--step-down` Invoker
- * Command to the field's native `stepUp()`/`stepDown()` methods, then keeps
- * calling the same method on an interval for as long as the button stays
- * pressed.
- *
- * Why JS: `stepUp()` and `stepDown()` are script-only methods with no
- * declarative HTML equivalent yet, and holding a pointer down to repeat an
- * action has no native repeat semantics on `<button>` at all.
- * No-JS baseline: the number input keeps its own native spinner arrows and
- * `ArrowUp`/`ArrowDown` keyboard stepping; only the group's external
- * increment/decrement buttons and their hold-to-repeat go silent.
+ * buttons, calling the field's native `stepUp()`/`stepDown()` on an
+ * interval for as long as a button stays pressed. `stepUp()`/`stepDown()`
+ * are script-only with no native repeat semantics on `<button>`; without
+ * JS the input keeps its native spinner arrows and arrow-key stepping.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,9 +48,8 @@ declare global {
 
 /**
  * Dispatched on the number input immediately after `stepper()` applies a
- * step. Carries the direction and the freshly stepped value so a consumer
- * can react to the change without diffing two `input`/`change` events
- * against the previous value itself.
+ * step, carrying the direction and freshly stepped value so a consumer can
+ * react without diffing `input`/`change` events against the prior value.
  */
 export class NumberFieldStepEvent extends Event {
 	/** Which direction the value just moved. */
@@ -95,9 +87,8 @@ export interface StepperOptions {
 
 /**
  * Resolves which direction a step button's own custom command names,
- * returning `undefined` for any command string that isn't one of the two
- * `stepper()` recognizes (so a group holding unrelated Invoker Command
- * buttons is left alone).
+ * returning `undefined` for a command string that isn't one of the two
+ * `stepper()` recognizes, so unrelated Invoker Command buttons are ignored.
  *
  * @param command The `command` attribute value read off a button, or a
  * dispatched `CommandEvent`'s `command` property.
@@ -110,9 +101,8 @@ function directionForCommand(command: string | null): NumberFieldStepDirection |
 
 /**
  * Finds the number input a step button's `commandfor` targets, preferring
- * the live `commandForElement` reference and falling back to an
- * `id` lookup for runtimes that parse the `commandfor` attribute without yet
- * reflecting the IDL property.
+ * the live `commandForElement` reference and falling back to an `id` lookup
+ * for runtimes that haven't reflected the attribute onto that IDL property.
  *
  * @param button A step button found inside the group.
  */
@@ -130,12 +120,11 @@ function resolveStepTarget(button: HTMLButtonElement): HTMLInputElement | undefi
  * Steps a number input one unit in the given direction using its native
  * `stepUp()`/`stepDown()` method, then dispatches the `input`, `change`, and
  * {@link NumberFieldStepEvent} events those methods don't fire on their own.
- * Does nothing — and reports no step taken — when the input is disabled,
- * read-only, or already at the boundary the direction would cross.
  *
  * @param input The number input to step.
  * @param direction Which direction to step it.
- * @returns Whether the value actually changed.
+ * @returns Whether the value actually changed; `false` when the input is
+ * disabled, read-only, or already at the boundary the direction would cross.
  */
 function applyStep(input: HTMLInputElement, direction: NumberFieldStepDirection): boolean {
 	if (input.disabled || input.readOnly) return false;
@@ -157,20 +146,9 @@ function applyStep(input: HTMLInputElement, direction: NumberFieldStepDirection)
 }
 
 /**
- * Adds press-and-hold repeat to a NumberField group's increment/decrement
- * buttons. Each button declares its own step as a custom Invoker Command —
- * `command={NUMBER_FIELD_STEP_UP_COMMAND}` or
- * `command={NUMBER_FIELD_STEP_DOWN_COMMAND}` with `commandfor` pointing at
- * the group's number input — and `stepper()` reads that same command string
- * back to know which direction to step, so the group needs no separate
- * data attribute to coordinate its parts.
- *
- * A single activation (click, or `Enter`/`Space` while a button is focused)
- * steps once through the native `command` event. Holding a button down with
- * a pointer starts a delay timer; once it elapses, the input steps
- * repeatedly on an interval for as long as the button stays pressed, and the
- * trailing click that follows release is absorbed so it doesn't add one
- * extra step on top of the repeat.
+ * Adds press-and-hold repeat to a NumberField group's Invoker-Command
+ * increment/decrement buttons. The trailing click after a hold-repeat
+ * gesture is absorbed so it doesn't add one extra step atop the repeat.
  *
  * @param options Hold-to-repeat timing overrides.
  * @example
@@ -241,9 +219,6 @@ export const stepper = createMixin<HTMLElement, [options?: StepperOptions]>((han
 						let direction = directionForCommand(commandEvent.command);
 						if (!direction) return;
 
-						// A completed hold-repeat gesture already applied its steps;
-						// swallow the trailing click's own command so it doesn't add
-						// one more on top of what the repeat already did.
 						if (repeatFiredForGesture) {
 							repeatFiredForGesture = false;
 							return;

@@ -1,12 +1,9 @@
 /**
  * The dashboard session middleware and its typed accessors: a signed-cookie session
  * holding the authenticated account id and the in-flight OIDC PKCE transaction, with
- * defensive read/write helpers used across the auth flow.
- *
- * The cookie is signed but not encrypted, so it deliberately never holds the raw IdP
- * ID token (whose claims would then be readable by the browser and could push the
- * cookie past size limits). RP-initiated logout identifies the client by its
- * configured `client_id` instead of an `id_token_hint`.
+ * defensive read/write helpers used across the auth flow. The cookie is signed, so
+ * its payload is visible to the browser; only the local account id lives there, and
+ * RP-initiated logout identifies the client by its configured `client_id`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,9 +34,8 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
 /**
  * Builds the dashboard session middleware backed by Remix's signed-cookie session
- * storage (`remix/middleware/session` + `createCookieSessionStorage`). The cookie is
- * signed with the platform secret, so a tampered payload fails verification and reads
- * back as an empty session.
+ * storage, signed with the platform secret so a tampered payload fails verification
+ * and reads back as an empty session.
  *
  * @param secret The signing secret for the session cookie.
  * @param isProd When `true`, marks the cookie `Secure` (HTTPS-only).
@@ -70,8 +66,8 @@ function current(): Session {
 }
 
 /**
- * Reads the current session data, validating each field's runtime shape defensively
- * so a malformed cookie cannot inject unexpected values.
+ * Reads the current session data, validating each field's runtime shape so callers
+ * always receive well-formed values, even from a malformed cookie.
  *
  * @returns The validated session data (fields absent when missing or invalid).
  */

@@ -10,44 +10,27 @@
  */
 
 /**
- * The zone a cron job falls back to, in the spelling the database column, the
- * validators and every existing row already use.
- *
- * It is listed separately from the IANA enumeration on purpose, and the exception
- * must stay: `Intl.supportedValuesOf("timeZone")` does not return `"UTC"` at all in
- * the Workers runtime — it returns 418 region-prefixed zones and no `Etc/*` entries,
- * so neither `"UTC"` nor its sometimes-canonical alias `Etc/UTC` appears. Meanwhile
- * `"UTC"` is the column default, the validator default, and the value every stored
- * cron job holds. Validating against the enumeration alone would therefore reject
- * the exact value this app documents as the default.
+ * The zone a cron job falls back to, matching the database column, the
+ * validator, and every stored row — kept as a literal because the Workers
+ * runtime's `Intl.supportedValuesOf("timeZone")` omits `"UTC"` outright.
  */
 export const DEFAULT_TIMEZONE = "UTC";
 
 /**
- * Zones, and the lookup set over them, computed once per isolate.
- *
- * Deliberately not computed at module scope: a Worker's global scope runs during
- * upload validation, where doing real work is a failure mode a dry run doesn't
- * catch. The first request pays for the enumeration and every later one reads the
- * cache.
+ * Zones and their lookup set, computed once per isolate on first use — a
+ * Worker's global scope runs during upload validation, where doing real work
+ * fails the dry run. The first request computes it; later ones read the cache.
  */
 let cache: { zones: readonly string[]; lookup: ReadonlySet<string> } | undefined;
 
+/**
+ * The exact zone membership follows the host's ICU build, so Workers and
+ * test runtimes can differ. That's fine here: the picker and validator both
+ * read this one function, so within any single runtime they always agree.
+ */
 function load() {
 	if (cache) return cache;
 
-	/*
-	 * `Intl.supportedValuesOf` returns a sorted, deduplicated, canonical list, but the
-	 * exact membership follows the host's ICU build — the Workers runtime returns 418
-	 * zones while the test runtime returns more, including some `Etc/GMT±N` entries.
-	 * That is fine because the picker and the validator both read this one function, so
-	 * within any single runtime they agree exactly; only a test asserting a zone that
-	 * one of the two runtimes lacks would notice.
-	 *
-	 * `DEFAULT_TIMEZONE` leads the list rather than being sorted into it, so the picker
-	 * can offer it above the regional groups, and it is filtered out of the enumeration
-	 * first so a runtime that does include it doesn't produce a duplicate option.
-	 */
 	let zones = [
 		DEFAULT_TIMEZONE,
 		...Intl.supportedValuesOf("timeZone").filter((zone) => zone !== DEFAULT_TIMEZONE),
@@ -58,12 +41,9 @@ function load() {
 }
 
 /**
- * Rejection message for a `timezone` the runtime's IANA database doesn't know.
- *
- * Shared by the form and API schemas so a client sees one wording whichever surface it
- * posts to. The form path never renders it — a failed parse there flashes the action's
- * own generic error toast — so it is written for the API client that reads it verbatim
- * in a `VALIDATION_ERROR` body, like every other message in those schemas.
+ * Rejection message for a `timezone` the runtime's IANA database doesn't
+ * know, shared by the form and API schemas for one consistent wording that
+ * the API client reads verbatim in a `VALIDATION_ERROR` body.
  */
 export const UNKNOWN_TIMEZONE_MESSAGE = "Expected a valid IANA time zone";
 

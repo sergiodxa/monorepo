@@ -75,7 +75,6 @@ describe("requireTenantRole", () => {
 	describe("safe methods always pass through regardless of role", () => {
 		for (let method of ["GET", "HEAD", "OPTIONS"]) {
 			test(`${method} passes even when the role is not allowed`, async () => {
-				// Owner-only route, but a viewer issuing a read must still be let through.
 				let middleware = requireTenantRole("owner");
 				let next = passthroughNext();
 
@@ -101,7 +100,6 @@ describe("requireTenantRole", () => {
 		let middleware = requireTenantRole("owner");
 		let next = passthroughNext();
 
-		// Lowercase "get" must still be treated as a safe method.
 		let response = await middleware(buildContext("get", "viewer"), next);
 
 		expect(next).toHaveBeenCalledTimes(1);
@@ -109,7 +107,6 @@ describe("requireTenantRole", () => {
 	});
 
 	test("a mutating method other than POST/DELETE is still enforced", async () => {
-		// PATCH is not in the safe set, so the role gate applies.
 		let middleware = requireTenantRole("owner", "admin");
 		let next = passthroughNext();
 
@@ -140,7 +137,6 @@ describe("requireTenantRole", () => {
 	});
 
 	test("admin is denied on an owner-only mutation (e.g. billing)", async () => {
-		// Admins have full access except billing, which is owner-gated.
 		let middleware = requireTenantRole("owner");
 		let next = passthroughNext();
 

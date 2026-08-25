@@ -7,9 +7,9 @@ import { utility } from "../internal/descriptor";
 import type { OverflowValue } from "./overflow";
 
 /**
- * Applies `overflow-inline`, independently of the block axis. Unlike
- * `u.overflowX()`, this follows the inline axis as defined by writing mode
- * and direction, so it stays correct under RTL and vertical writing modes.
+ * Applies `overflow-inline`, independently of the block axis. The inline axis
+ * follows writing mode and direction, so the utility stays correct under RTL
+ * and vertical writing modes.
  *
  * @example u.overflowInline("auto")
  * @example css({ overflowInline: "auto" })

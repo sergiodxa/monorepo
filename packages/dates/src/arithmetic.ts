@@ -14,12 +14,9 @@ import { toMs } from "@pkg/duration";
 import { DAY_MS } from "./zone";
 
 /**
- * Move an instant forward by whole 24-hour days.
- *
- * This is instant arithmetic, not calendar arithmetic: across a DST transition the
- * result lands an hour off the original wall clock, which is correct for "24 hours
- * later" and wrong for "the same time tomorrow". Use `eachDayOfInterval` or
- * `startOfDay` when the calendar day is what matters.
+ * Move an instant forward by whole 24-hour days. Across a DST transition the
+ * result lands an hour off the original wall clock, matching "24 hours later";
+ * `eachDayOfInterval` or `startOfDay` keep the same wall-clock time instead.
  *
  * @param date - Instant to move.
  * @param count - Days to add; negative moves back.
@@ -49,7 +46,7 @@ export function subDays(date: Date, count: number): Date {
 
 /**
  * Move an instant forward by a duration, written with its unit at the call site so
- * the shift is readable and the unit is never implied.
+ * the shift is readable and the unit is stated outright.
  *
  * @param date - Instant to move.
  * @param duration - A duration string, or a number of milliseconds.
@@ -78,9 +75,8 @@ export function subtract(date: Date, duration: DurationInput): Date {
 
 /**
  * Milliseconds between an instant and now, positive once the instant is in the
- * past. The current time is an argument with a default so a caller measuring real
- * elapsed time writes nothing extra, while a test passes both ends and needs no
- * frozen clock.
+ * past. The current time defaults to now so ordinary callers measure real
+ * elapsed time for free, and a test can supply both ends explicitly.
  *
  * @param since - The earlier instant, as a `Date` or a timestamp.
  * @param now - The instant to measure to; defaults to the current time.

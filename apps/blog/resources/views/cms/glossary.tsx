@@ -195,9 +195,6 @@ export function CMSGlossaryActionView() {
 						<Form method="post" action={action}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
-							{/* Every field stays nested inside its `Label`, so the controls keep
-							the implicit label association they already had — no `id`/`for` pair
-							needed — and each one's original `aria-label` rides along untouched. */}
 							<Label mix={[grid(), gap(1)]}>
 								Term
 								<Input name="term" aria-label="Term" value={values.term} required />

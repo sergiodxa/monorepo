@@ -1,17 +1,8 @@
 /**
- * Drag-and-drop file acceptance for a DropZone: tracks a file drag hovering
- * the host through a shared `DragSession`, mirrors its target onto the host
- * as a `data-*` attribute for the drag-over highlight, and turns a
- * completed drop into a typed custom event carrying the dropped files.
- *
- * Why JS: `dragenter`/`dragover`/`dragleave`/`drop` and reading `File`
- * objects off a drag payload are JavaScript-only APIs — nothing in markup
- * or CSS can tell a file being dragged over an element apart from dragged
- * text or an in-page selection, or read the files it carries.
- * No-JS baseline: the zone still renders a native `<input type="file">`
- * control, so picking files through the system file picker keeps working
- * without a script; only accepting files dragged in from outside the page,
- * and the drag-over highlight while one hovers, are unavailable.
+ * Drag-and-drop file acceptance for a DropZone: tracks a file drag over
+ * the host through a shared `DragSession`, mirrors its target onto the
+ * host as a `data-*` attribute for the drag-over highlight, and turns a
+ * completed drop into a typed event carrying the dropped files.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,19 +13,16 @@ import { createElement, createMixin, on } from "remix/ui";
 import type { DragSession } from "../behaviors/drag-session";
 
 /**
- * `data-*` attribute {@link dropZone} toggles on its host for as long as a
- * file drag from outside the page is hovering over it — present with an
- * empty string value while hovering, absent otherwise — so a DropZone's own
- * styling can render the drag-over highlight from this attribute alone.
+ * `data-*` attribute {@link dropZone} toggles on its host while a file
+ * drag from outside the page hovers over it, so a DropZone's styling can
+ * render the drag-over highlight from this attribute alone.
  */
 export const DROP_TARGET_ATTRIBUTE = "data-drop-target";
 
 /**
- * Stable `DragSession` key identifying the drop surface a `dropZone()` host
- * represents. A drop zone only ever tracks one candidate — itself — so
- * every call into the session reuses this same key instead of reading a
- * per-element identifier the way a multi-item widget coordinating several
- * drop candidates would.
+ * Stable `DragSession` key identifying the single drop surface a
+ * `dropZone()` host represents, reused by every call into the session
+ * since the host itself is the only drop candidate being tracked.
  */
 const DROP_ZONE_KEY = "drop-zone";
 
@@ -48,10 +36,9 @@ declare global {
 }
 
 /**
- * Dispatched on a DropZone's host by {@link dropZone} once a drag ending in
- * a drop carries at least one file, carrying those files so a consumer can
- * start uploading them without reaching into the originating `DragEvent`'s
- * `dataTransfer` itself.
+ * Dispatched on a DropZone's host by {@link dropZone} once a drop carries
+ * at least one file, carrying those files directly so a consumer can
+ * start uploading from the event detail.
  */
 export class DropFilesEvent extends Event {
 	/** Files carried by the drop that triggered this event. */
@@ -67,10 +54,9 @@ export class DropFilesEvent extends Event {
 }
 
 /**
- * Whether `dataTransfer` is carrying at least one file rather than dragged
- * text, a link, or an in-page selection. Checked by scanning its `types`
- * list for `"Files"`, since the actual `File` objects an OS-level drag
- * carries aren't readable until the drop itself fires.
+ * Whether `dataTransfer` carries at least one file, checked via its
+ * `types` list for `"Files"` — the one signal available before a drop
+ * reveals the actual `File` objects.
  *
  * @param dataTransfer Drag payload from a `dragenter`, `dragover`, or `drop` event.
  * @returns Whether the drag carries files.
@@ -80,25 +66,9 @@ function isFileDrag(dataTransfer: DataTransfer | null): boolean {
 }
 
 /**
- * Adds drag-and-drop file acceptance to a DropZone. Delegates the drag
- * itself to `session` — a `DragSession` instance the consumer constructs and
- * can share with a DropIndicator observing the same drag — so this mixin
- * only ever translates native `dragenter`, `dragover`, `dragleave`, and
- * `drop` events into calls against it, never tracking the drag-over state
- * itself.
- *
- * A drag carrying files that enters the host starts (or re-targets)
- * `session` against the zone's own stable key; leaving the host outright —
- * checked against the leave event's `relatedTarget` so moving over a child
- * element inside the host never registers as leaving — cancels it. Every
- * resulting `"change"` on `session` mirrors its current target onto the host
- * as the {@link DROP_TARGET_ATTRIBUTE} attribute, so the zone's styling can
- * render the drag-over highlight from CSS alone. A drag carrying anything
- * other than files is ignored throughout, leaving the platform's default
- * handling in place.
- *
- * Dropping ends `session` and, when the drop's drag payload carries at least
- * one file, dispatches {@link DropFilesEvent} on the host with those files.
+ * Adds drag-and-drop file acceptance to a DropZone, driving `session`
+ * through native `dragenter`/`dragover`/`dragleave`/`drop` events and
+ * mirroring its target onto the host as {@link DROP_TARGET_ATTRIBUTE}.
  *
  * @param session `DragSession` instance the mixin drives; share the same
  * instance with a DropIndicator or another mixin that needs to observe the

@@ -1,9 +1,8 @@
 /**
- * Content-layer matchup data for elemental type interactions used by the app.
+ * Authored type-effectiveness chart for the content layer.
  *
- * This module centralizes the authored effectiveness chart that describes how each attacking type performs against every defending type. It serves as the canonical source for matchup content so game logic can consume a stable, explicit matrix without embedding franchise-specific balance rules in the engine layer.
- *
- * By keeping this table in the content layer, the rest of the system can remain mechanics-driven while still rendering accurate matchup guidance, calculations, and educational UI based on curated content values.
+ * Keyed by attacking type then defending type, with every pairing spelled out so
+ * a lookup always resolves and the engine reads its balance values from content.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

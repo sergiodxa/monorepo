@@ -1,9 +1,9 @@
 /**
  * Tests for the keyset cursor codec.
  *
- * Cursors come back from clients, so every way one can be wrong has to be a value
- * rather than a throw: bad base64url, bad UTF-8, bad JSON, and a payload that is
- * merely plausible all have to land on the same failure.
+ * Cursors come back from clients, so every way one can be wrong resolves to a
+ * returned value: bad base64url, bad UTF-8, bad JSON, and a payload that is
+ * merely plausible all land on the same failure.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

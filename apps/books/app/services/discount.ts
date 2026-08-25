@@ -20,23 +20,13 @@ import { Discounts, Product } from "~/app/data/product";
 const PAGE_SIZE = 12;
 
 /**
- * Finds the discount that currently applies to the Complete package.
- *
- * A discount qualifies only when all of the following hold, because each one guards a
- * different way an expired or misconfigured campaign could quietly discount a sale:
- *
- * - it is one of the three launch-window campaigns (never the upgrade discount, which is
- *   handed out deliberately rather than applied automatically);
- * - its start date has passed, if it has one;
- * - its end date has not, if it has one;
- * - it has redemptions left, if it is capped;
- * - it is scoped to at least one product, and every product it is scoped to is Complete
- *   — a campaign that also covers Essentials is not this endpoint's to apply.
+ * Finds the discount that currently applies to the Complete package, checking only
+ * the three launch-window campaigns against date window, redemption cap, and product
+ * scope — since each guard blocks a different way a stale campaign could quietly apply.
  *
  * @param polar - The Polar client to read discounts through.
- * @returns `success` with the applicable discount, or with `undefined` when none applies
- * — no applicable discount is a normal outcome, not an error. `failure` only when Polar
- * itself could not be read.
+ * @returns `success` with the applicable discount, or `undefined` when none applies;
+ * `failure` only when Polar could not be read.
  */
 export async function findApplicableDiscount(
 	polar: PolarClient,

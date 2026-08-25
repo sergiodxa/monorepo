@@ -2,7 +2,7 @@
  * Test-only fake billing client plus the fixture builders the funnel's tests need.
  * Records every checkout it was asked to create and answers customer, order, discount,
  * and webhook lookups from a script, so a test can assert what a buyer is charged and
- * where they are sent without a network layer.
+ * where they are sent using only scripted answers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,12 +55,9 @@ export interface DiscountFixture {
 }
 
 /**
- * Builds a discount fixture.
- *
- * Polar's `Discount` carries around forty fields (currency amounts, timestamps,
- * organization ids, per-product metadata) that no selection rule reads. Spelling all of
- * them out would bury the one or two fields each test is actually about, so the fixture
- * declares just those and is asserted through the client's public type.
+ * Builds a discount fixture with only the fields a selection rule reads —
+ * Polar's `Discount` carries about forty unrelated fields that would
+ * otherwise bury the one or two each test is actually about.
  *
  * @param fixture - The fields under test.
  * @returns A discount the selection rules can be run against.
@@ -79,8 +76,8 @@ export function makeDiscount(fixture: DiscountFixture): Discount {
 }
 
 /**
- * Builds an order fixture. Only the product it is for matters: every caller asks whether
- * a customer has *any* order for a product, never what the order contained.
+ * Builds an order fixture. Only the product it is for matters, since every
+ * caller checks whether a customer holds any order for that product.
  *
  * @param productId - The Polar product the order is for.
  * @returns An order the fake's `listOrders` can filter on.
@@ -132,8 +129,8 @@ export function makeOrderPaidEvent(fixture: OrderPaidFixture = {}): PolarWebhook
 }
 
 /**
- * Builds a webhook event of some other type, for asserting that an event the funnel does
- * not handle is still accepted rather than retried forever.
+ * Builds a webhook event of an unrecognized type, so a test can confirm the
+ * funnel answers it with success and Polar considers the delivery complete.
  *
  * @param type - The Polar event type to model.
  * @returns An event the webhook handler can be run against.
@@ -156,19 +153,20 @@ export interface FakePolarClientOptions {
 	checkoutUrl?: string;
 	/** The result `parseWebhook` returns, letting a test script a rejected signature. */
 	webhook?: Result<PolarWebhookEvent, Error>;
-	/** When set, every read throws this instead of answering. */
+	/** When set, every read raises this error. */
 	throws?: Error;
 	/**
-	 * When set, only `listDiscounts` throws. The sales page reads products and discounts in
-	 * one pass, and its degraded path is precisely "the campaign lookup failed but the prices
-	 * came back", which a fake that fails every read cannot express.
+	 * When set, only `listDiscounts` throws, letting a test model the sales
+	 * page's degraded path — prices load but the campaign lookup fails — as
+	 * its own scripted case.
 	 */
 	discountsThrow?: Error;
 }
 
 /**
- * A {@link PolarClient} stand-in. Extends the real class so it satisfies the container's
- * class key, but overrides every method the funnel calls and never reaches the network.
+ * A {@link PolarClient} stand-in. Extends the real class so it satisfies the
+ * container's class key, but overrides every method the funnel calls and
+ * answers entirely from the script above.
  */
 export class FakePolarClient extends PolarClient {
 	/** Checkout options passed to `createCheckout`, in order. */

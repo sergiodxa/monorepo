@@ -1,11 +1,9 @@
 /**
- * Tests the report a repeat submission earns as a value: it reports the watch that already
- * covers the URL, says plainly that no second free week was started, and carries the same
- * one call to action and the same one-click unsubscribe every other trial email does.
- *
- * The copy assertions are the point of the class existing at all — see its docblock. Each of
- * the four sentences here is one the wrap-up would have got wrong for a reader whose week is
- * still running or ended three weeks ago.
+ * Tests the report a repeat submission earns: it reports the watch that already covers
+ * the URL, states that the original week continues unchanged, and carries the one call
+ * to action and one-click unsubscribe every trial email carries. The copy assertions are
+ * the point of the class existing at all, since each one is a sentence the wrap-up email
+ * would get wrong for a reader whose week is still running or ended weeks ago.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,10 +44,9 @@ async function makeEmail(overrides: Partial<TrialRepeatReportEmail.Data> = {}) {
 
 describe("TrialRepeatReportEmail", () => {
 	/**
-	 * The message this link matters most on. A repeat submission is somebody asking a second
-	 * time about a URL we already hold real measurements for, so the durable copy of those
-	 * measurements is what they were reaching for — and unlike the wrap-up, this can arrive on
-	 * day two of a week still running, when the page has more to say later than the email does.
+	 * A repeat submission means real measurements already exist for the URL, so the
+	 * durable report page is the reachable record. It can arrive on day two of a week
+	 * still running, when the page still has more to say than the email does.
 	 */
 	test("links the report's own page when the sender supplies the watch's token", async () => {
 		let email = await makeEmail({ reportToken: "report-tok-123" });
@@ -119,8 +116,8 @@ describe("TrialRepeatReportEmail", () => {
 	});
 
 	/**
-	 * The sentence the wrap-up cannot say. It states the rule rather than claiming either that
-	 * checking continues or that it has stopped, both of which are false for some readers.
+	 * States the neutral renewal rule, accurate for a reader whose free week is still
+	 * running and for one whose free week already ended.
 	 */
 	test("says the request did not start a second free week", async () => {
 		let email = await makeEmail();

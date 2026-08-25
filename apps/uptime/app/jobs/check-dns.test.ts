@@ -1,28 +1,9 @@
 /**
- * Unit tests for `CheckDnsJob.perform()`, covering the claim-the-due-monitors pass (which
- * monitors a run picks up, and each of them once however often the cron is delivered) and
- * the domain sweep itself: the names it resolves, the diff it applies, the counters it
- * records, and the `notify` message an alert-worthy transition enqueues — carrying the
- * monitor's pre-update `last_status` so the consumer can tell a recovery from a first-ever
- * result.
+ * Unit tests for `CheckDnsJob.perform()`: which monitors a run claims, the domain sweep's
+ * diff and counters, and the `notify` message an alert-worthy transition enqueues.
  *
- * The two rules that would be silently wrong if untested are asserted directly: a query
- * that failed is omitted from the diff rather than passed as an empty answer, so a resolver
- * having a bad minute never reads as "your records vanished"; and a sweep the invocation's
- * query budget cut short is recorded as partial through `queries_failed`, or deferred to the
- * next delivery, never as missing records.
- *
- * Also covered: what a completed check costs and reports. Each one writes an Analytics
- * Engine point carrying DNS's own `ok`/`changed`/`error` vocabulary rather than a remap onto
- * HTTP's, and the sweep bills one ping per monitor per check — not one per query — in a
- * single ingestion call.
- *
- * `sweepDnsName` is mocked — DNS resolution has its own tests — while the `QUEUE` and
- * `PING_RESULTS` bindings are in-memory implementations installed through
- * `cloudflare:workers`, so the enqueued messages and the data points asserted on are the
- * ones that really landed on them. Polar is a real client with its one ingestion call spied
- * on, so the events asserted here are the ones the job actually built. Alert delivery itself
- * happens in `NotifyJob`.
+ * A failed query is left out of the diff, keeping a resolver's bad minute from reading
+ * as vanished records.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -100,7 +81,7 @@ let sweepDnsNameMock = vi.fn(async (name: string): Promise<DnsNameSweep> => swee
 /**
  * The queue the sweep notifies through and the dataset it reports checks to. Both live at
  * module scope because the module under test captures `env` on import, so `beforeEach`
- * empties them rather than re-creating them.
+ * clears them between tests, reusing the instances the import captured.
  */
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
@@ -390,8 +371,10 @@ describe("CheckDnsJob", () => {
 
 		expect(sweepDnsNameMock.mock.calls).toEqual([["unimported.example.com"]]);
 
-		// A domain nobody pasted a zone file for legitimately covers its apex and nothing
-		// else, which is a different situation from an import that produced nothing.
+		/**
+		 * A domain nobody pasted a zone file for legitimately covers its apex and nothing
+		 * else, which is a different situation from an import that produced nothing.
+		 */
 		let event = job.logger.events.find((entry) => entry.event === "job.check_dns.no_tracked_names");
 		expect(event?.monitorId).toBe(monitor.id);
 		expect(event?.zoneFileImported).toBe(false);
@@ -416,8 +399,10 @@ describe("CheckDnsJob failed queries", () => {
 		await runJob(db);
 
 		let result = await onlyResult(db, monitor.id);
-		// Nothing was diffed, so nothing is missing: the check reports that it did not find
-		// out, and the record is left exactly as it was found.
+		/**
+		 * Nothing was diffed, so nothing is missing: the check reports uncertainty, and the
+		 * record is left exactly as it was found.
+		 */
 		expect(result.status).toBe("error");
 		expect(result.queries_failed).toBe(1);
 		expect(result.records_missing).toBe(0);
@@ -460,8 +445,10 @@ describe("CheckDnsJob failed queries", () => {
 
 		await runJob(db);
 
-		// An incomplete answer must not be reported as "everything is fine except these
-		// findings", so `error` outranks `changed`. The counters still carry what was found.
+		/**
+		 * An incomplete answer is reported as `error`, which outranks `changed` — the honest
+		 * summary for a check that came back partial. The counters still carry what was found.
+		 */
 		let result = await onlyResult(db, monitor.id);
 		expect(result.status).toBe("error");
 		expect(result.records_changed).toBe(1);
@@ -498,7 +485,7 @@ describe("CheckDnsJob failed queries", () => {
 
 		await runJob(db);
 
-		// The column feeds a latency chart; summing would quietly make it a cost chart.
+		/** The column feeds a latency chart; summing would quietly make it a cost chart. */
 		expect((await onlyResult(db, monitor.id)).response_time_ms).toBe(42);
 	});
 });
@@ -511,7 +498,7 @@ describe("CheckDnsJob query budget", () => {
 	test("sweeps at most the per-check name cap and records the rest as unanswered queries", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
-		// Past the cap an import would have refused, which is the only way a monitor gets here.
+		/** Past the cap an import would have refused, which is the only way a monitor gets here. */
 		await seedNames(db, monitor.id, 105, "capped.example.com");
 
 		let job = await runJob(db);
@@ -519,8 +506,10 @@ describe("CheckDnsJob query budget", () => {
 		expect(sweepDnsNameMock).toHaveBeenCalledTimes(MAX_NAMES_PER_CHECK);
 
 		let result = await onlyResult(db, monitor.id);
-		// Six names never looked at (105 tracked plus the apex, capped at 100), six types
-		// each: partial, and reported as partial.
+		/**
+		 * Six names left unswept (105 tracked plus the apex, capped at 100), six types each:
+		 * partial, and reported as partial.
+		 */
 		expect(result.queries_failed).toBe(6 * QUERIES_PER_NAME);
 		expect(result.status).toBe("error");
 		expect(result.records_missing).toBe(0);
@@ -543,19 +532,21 @@ describe("CheckDnsJob query budget", () => {
 
 		let job = await runJob(db);
 
-		// 600 queries is 100 names: three monitors are swept (two whole, one truncated) and
-		// the fourth is not swept at all.
+		/**
+		 * 600 queries is 100 names: three monitors are swept, two in full and one truncated,
+		 * and the fourth waits for the next delivery.
+		 */
 		expect(sweepDnsNameMock).toHaveBeenCalledTimes(100);
 
 		let deferred = job.logger.events.filter((event) => event.event === "job.check_dns.deferred");
 		expect(deferred).toHaveLength(1);
 
 		let deferredId = deferred[0]?.monitorId;
-		// Not checked at all: no result row, no cached status, and nothing billed for it.
+		/** Deferred entirely: no result row, no cached status, and nothing billed for it. */
 		expect(await DnsMonitor.listResults(db, String(deferredId))).toHaveLength(0);
 		let row = await DnsMonitor.findByIdForTeam(db, "team-1", String(deferredId));
 		expect(row?.last_status).toBeNull();
-		// Re-armed for the next delivery rather than waiting out a whole interval.
+		/** Re-armed so the very next cron delivery gets another try, keeping the retry close. */
 		expect(row?.next_due_at).not.toBeNull();
 		expect(row!.next_due_at!).toBeLessThanOrEqual(Date.now());
 
@@ -582,8 +573,8 @@ describe("CheckDnsJob ping reporting", () => {
 
 	/**
 	 * The monitor each data point was written for, in the order the sweep wrote them. A
-	 * blob that is not text reads as empty, so it fails an assertion instead of sorting
-	 * as an opaque value.
+	 * non-string blob reads as empty text, turning a mismatch into a visible assertion
+	 * failure.
 	 */
 	function pingedMonitorIds(): string[] {
 		return pingResults.dataPoints.map((point) => {
@@ -611,8 +602,10 @@ describe("CheckDnsJob ping reporting", () => {
 
 		await runJob(db);
 
-		// `changed` is not in HTTP's vocabulary at all: nothing reads a status without
-		// filtering to one ping type first, so the two never have to agree.
+		/**
+		 * `changed` is DNS's own vocabulary; every reader filters to one ping type before
+		 * comparing statuses, so each vocabulary stays independent of the other.
+		 */
 		expect(pingResults.dataPoints).toEqual([
 			{
 				blobs: [monitor.id, "dns", "changed"],
@@ -630,8 +623,10 @@ describe("CheckDnsJob ping reporting", () => {
 
 		await runJob(db);
 
-		// Twelve tracked names plus the apex is 78 queries and exactly one ping: the public
-		// resolver charges us nothing per query, so a sweep costs what any other check costs.
+		/**
+		 * Twelve tracked names plus the apex is 78 queries and exactly one ping: the public
+		 * resolver charges per lookup at zero, so a sweep costs what any other check costs.
+		 */
 		expect(sweepDnsNameMock).toHaveBeenCalledTimes(13);
 		let events = ingestedEvents();
 		expect(events).toHaveLength(1);
@@ -647,7 +642,7 @@ describe("CheckDnsJob ping reporting", () => {
 
 		let job = await runJob(db);
 
-		// One call, three pings — a sweep of eighty monitors costs one subrequest, not eighty.
+		/** One call, three pings — a sweep of eighty monitors still costs a single subrequest. */
 		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
 		let events = ingestedEvents();
 		expect(events).toHaveLength(3);
@@ -672,9 +667,10 @@ describe("CheckDnsJob ping reporting", () => {
 
 		await runJob(db);
 
-		// The row id is the only thing about a completed check that is unique and already
-		// persisted, so it is what Polar can deduplicate a re-recorded check on. No ordinal:
-		// one check is one ping.
+		/**
+		 * The row id is the only thing about a completed check that is unique and already
+		 * persisted, so it's what Polar dedupes a re-recorded check on: one check, one ping.
+		 */
 		expect(ingestedEvents()[0]?.externalId).toBe(`ping:${await resultId(db, monitor.id)}`);
 	});
 
@@ -682,7 +678,7 @@ describe("CheckDnsJob ping reporting", () => {
 		let { db } = createTestDatabase();
 		await seedTeam(db, "team-1", "owner-1");
 		let billable = await seedMonitor(db, { domain: "billable.example.com" });
-		// A team row that is gone, so there is no Polar customer to ingest against.
+		/** A team row that's gone, leaving the ping without a Polar customer to bill. */
 		let orphan = await seedMonitor(db, { domain: "orphan.example.com" }, "team-2");
 
 		let job = await runJob(db);
@@ -694,8 +690,10 @@ describe("CheckDnsJob ping reporting", () => {
 		expect(unbillable?.monitorId).toBe(orphan.id);
 		expect(unbillable?.teamId).toBe("team-2");
 
-		// Its check still ran, was still recorded, and still counts as a success — only the
-		// billing is lost.
+		/**
+		 * Its check still ran, was still recorded, and still counts as a success; the missing
+		 * customer costs it just the ping's billing.
+		 */
 		expect(pingedMonitorIds().sort((a, b) => a.localeCompare(b))).toEqual(
 			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
 		);
@@ -721,7 +719,7 @@ describe("CheckDnsJob ping reporting", () => {
 		try {
 			await runJob(db);
 
-			// A check that threw left no result row, so there is nothing to report or bill.
+			/** A check that threw leaves no result row, so the ping report has nothing to key on. */
 			expect(pingedMonitorIds()).toEqual([healthy.id]);
 			expect(ingestedEvents().map((event) => event.metadata?.monitorId)).toEqual([healthy.id]);
 		} finally {

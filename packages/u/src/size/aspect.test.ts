@@ -25,9 +25,11 @@ describe("aspect", () => {
 	});
 
 	test("the ratio survives the serializer as a bare pair, with no px appended", async () => {
-		// `aspect-ratio` is unitless: the width/height pair is already a string
-		// by the time it reaches the serializer, so its px-appending never sees
-		// a bare number to corrupt.
+		/**
+		 * `aspect-ratio` is unitless: the width/height pair is already a string
+		 * by the time it reaches the serializer, so its px-appending never sees
+		 * a bare number to corrupt.
+		 */
 		expect(await declarations(aspect(16, 9))).not.toContain("aspect-ratio: 16px / 9px");
 	});
 });

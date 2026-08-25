@@ -41,10 +41,8 @@ export interface Grants {
 
 /**
  * One already-validated entry of a `spec/config.jsonc` `permissions.allow`
- * list: the family it grants and its scopes. An empty `scopes` is a
- * whole-family grant (the bare-string form, e.g. `"run"`); a non-empty one is
- * the scoped-tuple form (e.g. `["run", "echo"]`). The `"plugins"` family rides
- * along here but maps to the plugin launch grant, not a capability family.
+ * list: the family it grants and its scopes, empty `scopes` meaning the
+ * whole family and `"plugins"` mapping to the plugin launch grant.
  */
 export interface ConfigPermissionEntry {
 	/** The family this entry grants: a {@link PermissionKind} or `"plugins"`. */
@@ -54,10 +52,9 @@ export interface ConfigPermissionEntry {
 }
 
 /**
- * The runtime's single enforcement authority. Constructed once per `spec run`
- * from the caller's flags; handed to tools through their context so scoped
- * checks happen in runtime-owned code. Every failure names the permission,
- * the resource, and the exact flag that would grant it.
+ * The runtime's single enforcement authority: built once per `spec run`,
+ * handed to tools through context so checks run in runtime-owned code, and
+ * every failure names the permission, resource, and flag that grants it.
  */
 export interface PermissionSet {
 	/**
@@ -92,10 +89,8 @@ const ALLOW_FLAGS = new Map<string, keyof Grants>([
 
 /**
  * Parse the `--allow-*` flags out of a `spec run` argument list. A bare flag
- * grants its whole family, `--allow-x=a,b` grants an explicit scope list, and
- * an absent flag leaves the family denied. Repeated scoped flags union their
- * scopes; a bare flag absorbs any scopes for that family. Arguments that are
- * not permission flags pass through in `remaining`, order preserved.
+ * grants its whole family, `--allow-x=a,b` scopes it, and an absent flag
+ * leaves the family denied; other arguments pass through in `remaining`.
  *
  * @param args - The raw CLI arguments to scan.
  * @returns The parsed grants plus the untouched arguments, or a usage error
@@ -190,9 +185,6 @@ export function createPermissionSet(grants: Grants): PermissionSet {
 			let resolved = resolve(path);
 			if (grants.hostFs.mode === "all") return success(undefined);
 			if (grants.hostFs.mode === "scoped") {
-				// A lexical prefix test alone would let a pre-existing symlink
-				// inside a granted directory reach outside it: compare real
-				// paths on both sides, refusing what cannot be resolved.
 				let followed = followExistingAncestors(resolved);
 				if (followed !== undefined) {
 					for (let scope of grants.hostFs.scopes) {
@@ -224,11 +216,9 @@ const GRANT_KEYS = {
 } as const satisfies Record<PermissionKind, keyof Grants>;
 
 /**
- * Fold a validated `permissions.allow` list into a {@link Grants} set. A bare
- * family entry grants the whole family; a scoped entry widens with the same
- * logic repeated CLI flags use, so a config tuple and an `--allow-*` flag merge
- * identically. `"plugins"` entries are skipped — plugin launch is not a
- * capability family and is threaded through the project-config loader instead.
+ * Fold a validated `permissions.allow` list into a {@link Grants} set,
+ * widening each family the way `--allow-*` flags do so config and CLI grants
+ * merge identically; `"plugins"` entries map to the plugin launch grant.
  *
  * @param entries - The validated allow-list entries.
  * @returns The grants the config declares, families it never names left denied.
@@ -250,14 +240,9 @@ export function grantsFromConfig(entries: readonly ConfigPermissionEntry[]): Gra
 }
 
 /**
- * Whether opting into the config's declared grants would lift a denial — the
- * test behind the `--allow-config` DX hint. A denial arrives in one of two
- * shapes. A coarse family-gate denial refused the whole family before the
- * resource was known, so its resource is a placeholder tool name: the hint
- * applies whenever the config declares that family at all, mirroring a
- * whole-family grant whose `all` mode already admits that placeholder. A
- * scope-level denial carries a real resource the family granted but did not
- * cover: the hint applies only when the config's own declared scope covers it.
+ * Whether opting into the config's declared grants would lift a denial: the
+ * test behind the `--allow-config` DX hint. A family-gate denial checks only
+ * whether the config declares the family; any other denial checks its scope.
  *
  * @param config - The grants the config declares.
  * @param permission - The denied family.
@@ -277,9 +262,8 @@ export function configWouldAdmit(
 
 /**
  * Union two grant sets family by family: the wider mode wins and two scoped
- * grants merge their scope lists. Used to combine the caller's CLI grants with
- * the config's declared grants when `--allow-config` opts in — CLI flags only
- * ever add to the config set, never subtract from it.
+ * grants merge their scope lists. Combines the caller's CLI grants with the
+ * config's declared grants when `--allow-config` opts in, always widening.
  *
  * @param base - The caller's CLI grants.
  * @param extra - The config's declared grants to fold in.
@@ -302,10 +286,9 @@ function mergeGrant(base: Grant, extra: Grant): Grant {
 }
 
 /**
- * Whether a grant set would admit a denied resource. Used only to decide the
- * `--allow-config` DX hint: the CLI asks whether the project's declared grants
- * would have covered a denial, dispatching on the family and reusing the exact
- * checks enforcement runs, so the hint matches what `--allow-config` would do.
+ * Whether a grant set would admit a denied resource, deciding the
+ * `--allow-config` DX hint by dispatching on the family and reusing the
+ * exact checks enforcement runs, so the hint matches what the flag would do.
  *
  * @param grants - The grant set to test against (the config's declared grants).
  * @param permission - The denied family.
@@ -369,9 +352,8 @@ function netScopeAdmits(scope: string, host: string, port: number | undefined): 
 
 /**
  * Re-resolve the symlinks among a path's existing ancestors: the deepest
- * component that exists on disk is realpathed and the not-yet-existing
- * remainder is appended back untouched — so a symlink planted inside a
- * granted directory cannot smuggle the containment check outside it.
+ * component that exists on disk is realpathed and the remainder is appended
+ * back untouched, so a symlink inside a granted directory stays contained.
  *
  * @param path - An absolute, syntactically resolved path.
  * @returns The symlink-free spelling, or undefined when the existing ancestor

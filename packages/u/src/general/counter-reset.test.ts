@@ -1,4 +1,7 @@
 /**
+ * Unit tests for `counterReset()`. The value is folded into the string so the
+ * serializer emits a bare integer.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -18,8 +21,6 @@ describe("counterReset", () => {
 	});
 
 	test("a non-zero starting value", async () => {
-		// The value is folded into the string here rather than left as a number,
-		// which is what keeps the serializer from emitting `chapter 5px`.
 		expect(await declarations(counterReset("chapter", 5))).toEqual(["counter-reset: chapter 5"]);
 	});
 });

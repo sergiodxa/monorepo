@@ -1,21 +1,8 @@
 /**
- * Sprite tool view — a working pixel editor built on the canonical editor
- * pattern. The component constructs a {@link SpriteEditor} once in setup and
- * hands it the canvas via the `ref` mixin when the canvas mounts; every control
- * (color, tool, size, undo/redo, clear, import, export) drives that single editor
- * instance. There are no framework hooks: local state lives in setup-scope
- * variables and the component re-renders through `handle.update()` when a control
- * changes it.
- *
- * On top of the pen/eraser it exposes a fill bucket and an eyedropper, bounded
- * undo/redo (buttons plus Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z), a recent-color
- * palette of clickable swatches, and importing an existing PNG back into the grid
- * for editing. Export has two flavours: a flat image ({@link exportSprite} → the
- * sprite export action, `src/assets/<name>.png` + an `images` manifest entry) and
- * an atlas region ({@link exportAtlas} → the atlas export action, which also
- * assigns the sprite as a named region of a sprite atlas so renderers can blit it
- * by name). Success and failure are surfaced inline so the author sees where the
- * file landed.
+ * Sprite tool view. Builds a {@link SpriteEditor} in setup and drives every
+ * control — color, tool, size, undo/redo, clear, import, export — through the
+ * canvas `ref`. Exports write a flat image or assign the sprite as a named
+ * atlas region, reporting success or failure inline.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,12 +16,9 @@ import { css, on, ref } from "remix/ui";
 type CssMixinStyles = Parameters<typeof css>[0];
 
 /**
- * The style-object shape the `css()` mixin accepts, used for shared base styles.
- *
- * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
- * carries that interface's `Symbol.iterator` member and reads as an iterable.
- * Dropping the symbol keys leaves the same plain property bag the base styles
- * actually are, so they can be spread into an override object.
+ * The style-object shape the `css()` mixin accepts, used for shared base
+ * styles. Its parameter type carries `CSSStyleDeclaration`'s `Symbol.iterator`
+ * member; dropping the symbol keys leaves a plain bag spreadable into overrides.
  */
 type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
@@ -129,10 +113,9 @@ const TOOLS: Array<{ id: SpriteTool; label: string }> = [
 ];
 
 /**
- * Working sprite-drawing tool. Builds a {@link SpriteEditor} in setup, renders the
- * palette / tool / size / name controls around a canvas bound to the editor via
- * `ref`, and exports the drawn sprite to disk (as a flat image or an atlas region)
- * on demand.
+ * Working sprite-drawing tool. Builds a {@link SpriteEditor} in setup, renders
+ * the palette / tool / size / name controls around a canvas bound to the editor
+ * via `ref`, and exports the sprite as a flat image or atlas region on demand.
  *
  * @param handle Component handle used to schedule re-renders on control changes.
  * @returns The render function for the sprite tool.
@@ -140,7 +123,6 @@ const TOOLS: Array<{ id: SpriteTool; label: string }> = [
 export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 	let editor = new SpriteEditor();
 
-	// Local UI state, mirrored back into the view on `handle.update()`.
 	let colorHex = "#000000";
 	let tool: SpriteTool = "pen";
 	let sizeId: string = "16x16";
@@ -150,8 +132,10 @@ export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 	let status = "";
 	let statusIsError = false;
 
-	// Atlas-assignment state. The rect defaults to the whole sprite; a manual edit
-	// pins it so a later resize does not silently clobber the author's numbers.
+	/**
+	 * A manual edit to the rect pins it, so a later resize preserves the
+	 * author's numbers instead of resetting to the whole sprite.
+	 */
 	let atlasId = "";
 	let region = "";
 	let rectX = 0;
@@ -160,7 +144,7 @@ export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 	let rectH = editor.height;
 	let rectPinned = false;
 
-	// Mirror the editor's undo/redo availability so the buttons can disable.
+	/** Re-renders on every editor change so the undo/redo buttons reflect its history. */
 	editor.onStateChange(() => {
 		if (!rectPinned) {
 			rectW = editor.width;
@@ -168,7 +152,6 @@ export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 		}
 		void handle.update();
 	});
-	// Follow the eyedropper: when it picks a color, sync the color input to match.
 	editor.onColorPicked((color) => {
 		colorHex = rgbToHex(color);
 		void handle.update();
@@ -225,7 +208,6 @@ export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 		report("Importing…", false);
 		try {
 			await editor.importImage(file);
-			// The grid may have resized to the image; reflect that in the controls.
 			customWidth = editor.width;
 			customHeight = editor.height;
 			sizeId = CUSTOM_SIZE_ID;
@@ -492,7 +474,6 @@ export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 						editor.attach(element);
 						editor.setColor(hexToRgb(colorHex));
 						editor.setTool(tool);
-						// Undo/redo keyboard shortcuts, scoped to the canvas lifetime.
 						window.addEventListener(
 							"keydown",
 							(event) => {
@@ -521,7 +502,7 @@ export function SpriteDrawingTool(handle: Handle<Record<string, never>>) {
 								let input = event.target as HTMLInputElement;
 								let file = input.files?.[0];
 								if (file) void importFile(file);
-								// Reset so re-selecting the same file fires `change` again.
+								/** Clears the value so re-selecting the same file still fires `change`. */
 								input.value = "";
 							}),
 						]}

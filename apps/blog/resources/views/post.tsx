@@ -1,11 +1,9 @@
 /**
- * View for the blog post detail page. Renders the post's tags, eyebrow, title,
- * a "View as Markdown" link, and the Markdown-rendered body inside the shared
- * BlogLayout, plus a GitHub sponsor call-to-action and, for tutorials, an
- * embedded related-posts frame. The body's prose rhythm comes from the design
- * system's `Typeset` layer rather than from local type declarations, while the
- * code-block theme keeps overriding it from `prism.css`. Exists to present a
- * single article or tutorial.
+ * View for the blog post detail page: tags, eyebrow, title, a "View as Markdown"
+ * link, and the Markdown body, followed by a sponsor call-to-action and, for
+ * tutorials, an embedded related-posts frame. Prose rhythm comes from the design
+ * system's `Typeset` layer, with the code-block theme layered on top from
+ * `prism.css`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +25,7 @@ import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**
- * Groups PostView types used by the post page renderer.
+ * Types used by the post page renderer.
  */
 export namespace PostView {
 	/**
@@ -37,7 +35,9 @@ export namespace PostView {
 }
 
 /**
- * Builds a page renderer for a blog post detail view.
+ * Builds a page renderer for a blog post detail view. The body panel bleeds over
+ * the layout's inline padding and matches the sponsor card's fixed `lg` radius;
+ * sponsor copy uses the darker tone weights to clear AA on the tint.
  */
 export function PostView() {
 	return ({ model }: { model: PostView.Model }) => {
@@ -98,20 +98,10 @@ export function PostView() {
 						</hgroup>
 					</header>
 
-					{/* `bleed(4)` cancels the layout wrapper's own inline padding exactly, so
-					the tinted body panel runs edge to edge while its own padding puts the
-					prose back on the same measure as the header above it. Corners now stay
-					rounded at every width instead of collapsing to square below 800px. Type
-					size, leading, and block rhythm are delegated to `Typeset` inside, so
-					this element only owns the surface. */}
 					<article
 						mix={[
 							p(4),
 							border({ width: 1, color: "neutral" }),
-							/* `lg`, not the `xl` a panel this size would otherwise take: the
-							sponsor `Card` below is a sibling panel and its own radius is not
-							overridable from a call site, so the article matches the component
-							rather than sitting a step apart from the panel directly beneath it. */
 							rounded("lg"),
 							bg("neutral.bg-tint-hover"),
 							bleed(4),
@@ -139,9 +129,6 @@ export function PostView() {
 						]}
 					>
 						<div mix={[minIs(0), grow(1), shrink(1), basis("30rem")]}>
-							{/* `emphasis`/`fg`, not `muted`: the muted weight is the tone's 500 step,
-							which lands around 3.5:1 on this tinted background — under AA for copy at
-							this size. The two darker weights clear it at 15.6:1 and 5.3:1. */}
 							<p mix={[m(0), fg("brand.emphasis"), text("base"), weight("bold")]}>
 								Do you like my content?
 							</p>

@@ -1,44 +1,9 @@
 /**
- * Assembles everything a signed-in person is entitled to take with them, as one JSON document
- * the account page serves as a download: who they are as far as this app knows, what they have
- * chosen, the teams they belong to, and the full monitoring configuration of the teams they
- * own.
+ * Assembles everything a signed-in subject is entitled to take with them — identity,
+ * preferences, team memberships, and the monitoring configuration of teams they own.
  *
- * ## What is in it, and why that line
- *
- * The document answers "what do you hold about me, and what have I built here". So it carries
- * the subject's own identity and preferences, one entry per membership with the team's name and
- * their role in it, and — for owned teams only — the monitors of all four kinds, their content
- * checks and, for DNS monitors, the records they track, alerts, maintenance windows, status
- * pages and the services attached to them, and the team's verified domains. The DNS records
- * matter twice over: a domain monitor's configuration *is* its record list, and the zone file
- * those records were imported from is never stored, so this file is the only way back to it.
- * Owned teams get the configuration because the owner is the person who would need it to
- * rebuild the setup elsewhere; a team they merely joined is somebody else's configuration and
- * appears as the membership only.
- *
- * ## What is deliberately left out
- *
- * - **Secrets.** No API key hashes or prefixes (a hash is a credential's shadow and useless to
- *   its owner), no webhook signing secrets, and no Slack or Discord webhook URLs — those URLs
- *   *are* the credential, so an alert exported with one is an alert channel handed to whoever
- *   later opens the file. What survives per alert is the strategy and, where it is configuration
- *   rather than a credential, the destination: an HTTP webhook's URL, an email alert's address,
- *   a Slack channel name.
- * - **Other people.** No other member's subject id, name or address, no invitee addresses, and
- *   no per-member digest stamps. A team's membership appears as a count, which is what the
- *   exporter is entitled to know about their own team without being handed a roster.
- * - **Session and auth state.** Nothing from the session store and no ID token; the export is a
- *   record of stored data, not a set of live credentials.
- * - **Check history.** Individual results, pings and daily roll-ups are excluded. They are the
- *   configuration's output rather than anything the reader supplied, they run to millions of
- *   rows for a busy team, and the authoritative stream lives in an append-only analytics
- *   dataset this app cannot read back per person anyway. The document says so in `excluded` so
- *   a reader knows the omission is a decision and not a bug.
- *
- * The service reads only through the database handle it is given and imports nothing that
- * touches a Worker binding, so the settings page may link to it without dragging
- * `cloudflare:workers` into the client bundle.
+ * Secrets, other members' identities, session state, and check history are excluded;
+ * DNS records beyond a cap are truncated and disclosed via `dnsRecordsTruncated`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -84,17 +49,9 @@ export const ACCOUNT_EXPORT_FORMAT = "uptime.account-export";
 export const ACCOUNT_EXPORT_VERSION = 1;
 
 /**
- * How many tracked DNS records one team may contribute before the export stops reading them.
- *
- * Everything else in this document is bounded by something a person typed one at a time —
- * monitors, alerts, status pages — while a DNS monitor's records come from a pasted zone,
- * so one team's records can outnumber the rest of the file by orders of magnitude. This is
- * the only cap in the export, and it is disclosed rather than silent: the team object
- * carries {@link ExportedOwnedTeam.dnsRecordsTruncated} when it was reached, because a
- * subject-access export that quietly drops rows is worse than one that says it stopped.
- *
- * The figure is deliberately far above a real zone's six-record-type footprint, so reaching
- * it means something pathological rather than a large customer.
+ * How many tracked DNS records one team may contribute before the export stops reading
+ * them. Records come from a pasted zone rather than typed entries, so one team can dwarf
+ * the file; reaching the cap is disclosed via {@link ExportedOwnedTeam.dnsRecordsTruncated}.
  */
 export const MAX_EXPORTED_DNS_RECORDS_PER_TEAM = 5_000;
 
@@ -171,11 +128,9 @@ export interface AccountExportDocument {
 }
 
 /**
- * What the document tells its reader is missing.
- *
- * Written into the file rather than only into this module's docblock: the person holding the
- * download has no access to the source, and "my monitors are here but their history is not" is
- * exactly the kind of gap that reads as a broken export unless the file says otherwise.
+ * What the document tells its reader is missing, written into the file itself rather than
+ * only documented here: the person holding the download cannot see the source, so an
+ * omission must say so or it reads as a broken export.
  */
 const EXCLUSIONS = [
 	"API keys: the stored hash of a key is a credential's shadow and cannot be turned back into a usable key, so no key material or prefix is included.",
@@ -251,9 +206,9 @@ export function accountExportFilename(subjectId: string, now: Date = new Date())
 }
 
 /**
- * Everything one owned team contributes. Monitors and status pages are exported as their stored
- * rows minus `team_id`/`status_page_id` bookkeeping, because every column on them is a setting
- * the owner chose or a cached last-known state that helps them read the file.
+ * Everything one owned team contributes, as stored rows minus `team_id`/`status_page_id`
+ * bookkeeping. DNS records are read once for the team in a stable order, one row past the
+ * cap, so a truncated read is detected without a second counting query.
  */
 async function exportOwnedTeam(
 	db: Database,
@@ -282,9 +237,6 @@ async function exportOwnedTeam(
 					),
 				});
 
-	// One read for the whole team rather than one per monitor, ordered so that a truncated
-	// export is still the same rows in the same places every time it is taken. Reading one
-	// row past the cap is how truncation is detected without a second counting query.
 	let dnsRecords =
 		dns.length === 0
 			? []
@@ -315,17 +267,12 @@ async function exportOwnedTeam(
 			hostname: domain.hostname,
 			verified: domain.verified_at !== null,
 		})),
-		// `team_id` is the team this object already sits under, and `author_id` is a subject id
-		// — the exporter's own on their monitors, somebody else's on a team member's. Neither
-		// belongs in the file, so both are dropped by name rather than filtered afterwards.
 		httpMonitors: http.map(({ team_id: _team, author_id: _author, ...monitor }) => ({
 			...monitor,
 			contentChecks: contentChecks
 				.filter((check) => check.monitor_id === monitor.id)
 				.map(({ monitor_id: _monitor, ...check }) => check),
 		})),
-		// A monitor without its records would describe a domain being watched and never say
-		// what is watched at it, which is precisely the configuration the owner built.
 		dnsMonitors: dns.map(({ team_id: _team, ...monitor }) => ({
 			...monitor,
 			records: exportedDnsRecords
@@ -350,13 +297,9 @@ async function exportOwnedTeam(
 }
 
 /**
- * The part of an alert's configuration that is a setting rather than a credential.
- *
- * Slack and Discord answer `null` because their entire configuration is a webhook URL that acts
- * as the credential — anyone holding it can post to the channel — and a Slack channel name,
- * when one was given, is the readable half of that pair. An HTTP webhook's URL is exported and
- * its `secret` never is: the URL says where alerts go, the secret is what proves they came from
- * here.
+ * The part of an alert's configuration that is a setting rather than a credential. Slack
+ * and Discord return `null` because their configuration is itself a webhook URL — the
+ * credential — while an HTTP webhook exports its URL and keeps its `secret` out of the file.
  */
 function alertDestination(config: AlertConfig): string | null {
 	if (config.strategy === "webhook") return config.config.url;

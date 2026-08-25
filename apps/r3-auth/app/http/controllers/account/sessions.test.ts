@@ -2,7 +2,7 @@
  * Router-level tests of the device list and its two revocations. The cases that matter
  * most are the ones where a session id is a live refresh token: revoking the current one
  * must end the browser session too, and a submitted id belonging to somebody else must
- * delete nothing at all.
+ * leave it alone and answer exactly as an already-revoked id does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +27,7 @@ beforeEach(async () => {
 	fixtures = await seed(app);
 });
 
-/** Posts an intent to the sessions page without following the redirect. */
+/** Posts an intent to the sessions page, returning the redirect response itself. */
 async function post(fields: Record<string, string>): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${routes.account.sessions.action.href()}`, {
@@ -96,8 +96,6 @@ describe("GET /account/sessions", () => {
 		let tokens = await signIn(app, fixtures);
 		await Session.deleteById(app.db, tokens.refresh_token);
 
-		// The guard only refreshes when the access token is near expiry, so a freshly
-		// issued one still resolves the subject after its session row is gone.
 		let html = await (
 			await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`))
 		).text();
@@ -131,7 +129,6 @@ describe("POST /account/sessions intent=revoke", () => {
 		expect(response.headers.get("clear-site-data")).toBeNull();
 		expect(await Session.findById(app.db, other)).toBeNull();
 
-		// Still signed in: the next request renders the page instead of redirecting.
 		let after = await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`));
 		expect(after.status).toBe(200);
 	});
@@ -182,8 +179,6 @@ describe("POST /account/sessions intent=revoke", () => {
 		let response = await post({ intent: "revoke", sessionId: victimSession.id });
 
 		expect(response.status).toBe(303);
-		// The other subject's session is untouched, and the answer is the same one an
-		// already-revoked id gets, so nothing is learned from the difference.
 		expect(await Session.findById(app.db, victimSession.id)).not.toBeNull();
 	});
 

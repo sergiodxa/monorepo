@@ -1,8 +1,7 @@
 /**
  * Unit tests for the scroll-driven animation factories in {@link "./scroll"}.
  * Each factory returns a `css()` mixin descriptor whose `args[0]` is the raw
- * style object passed to `css()`, so assertions read that object directly —
- * no DOM, frame runtime, or stylesheet insertion is involved.
+ * style object passed to `css()`, so assertions read that plain object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +26,10 @@ function supportedRules(descriptor: CSSMixinDescriptor): Record<string, unknown>
 	return stylesOf(descriptor)[SUPPORTS_SCROLL_TIMELINE] as Record<string, unknown>;
 }
 
-/** Reads a rule's value as the string it must be, so a missing or nested rule fails loudly instead of interpolating as `undefined`. */
+/**
+ * Reads a rule's value as the string it must be, so a missing or nested rule
+ * fails loudly at the assertion site.
+ */
 function stringRule(rules: Record<string, unknown>, name: string): string {
 	let value = rules[name];
 

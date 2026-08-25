@@ -1,17 +1,10 @@
 /**
- * Enforces the "Component Purity" rule from this package's `AGENTS.md`:
- * every module under `src/components/` (aside from the barrel and test
- * files) may import `css`, `attrs`, and types from `remix/ui` — never `on`,
- * `ref`, or `createMixin`, the three bindings that carry behavior. Those
- * belong in a mixin (`src/mixins/`) or behavior class (`src/behaviors/`)
- * the consumer attaches explicitly, never inside a component module itself.
- *
- * The check regex-scans each real file's own `import ... from "remix/ui"`
- * statements rather than trusting convention, so it fails the moment a
- * future component reaches for a behavior-carrying import. A handful of
- * fixture-based cases exercise the scanner itself first, since a codebase
- * with zero current violations can't otherwise prove the scanner would
- * catch one.
+ * Enforces the package's "Component Purity" rule: modules under
+ * `src/components/` may import `css`, `attrs`, and types from `remix/ui`,
+ * never `on`, `ref`, or `createMixin` — those carry behavior and belong in
+ * a mixin or behavior class the consumer attaches explicitly. Fixture-based
+ * cases exercise the scanner before it runs over real files, since a
+ * codebase with zero current violations can't otherwise prove it works.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,12 +29,9 @@ interface RemixUiBinding {
 }
 
 /**
- * Regex-scans `source` for every `import ... from "remix/ui"` statement —
- * single- or multi-line, `import type {...}` or plain, aliased with `as` or
- * not — and returns the individual bindings it names. A namespace import
- * (`import * as X from "remix/ui"`) reports back as a single `"*"` entry,
- * since whatever it accesses afterward (`X.on(...)`) can't be verified
- * statically and is treated as a violation on its own.
+ * Scans `source` for `import ... from "remix/ui"` statements, stripping
+ * comment trivia first so it can't corrupt the comma split, and returns
+ * the bindings it names — a namespace import reports as a single `"*"`.
  */
 function extractRemixUiBindings(source: string): RemixUiBinding[] {
 	let bindings: RemixUiBinding[] = [];
@@ -54,15 +44,12 @@ function extractRemixUiBindings(source: string): RemixUiBinding[] {
 	let namedPattern = /import\s+(?:type\s+)?\{([\s\S]*?)\}\s*from\s*["']remix\/ui["'];?/g;
 	for (let match of source.matchAll(namedPattern)) {
 		let statement = match[0].trim();
-		// Strip comments trivia can place inside the specifier list before splitting on commas.
 		let body = (match[1] ?? "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 		for (let rawEntry of body.split(",")) {
 			let entry = rawEntry.trim();
 			if (entry === "") continue;
 
-			// Matches an optional per-specifier `type` modifier, then the imported
-			// name — the binding `as`-aliased locally, not the alias itself.
 			let entryMatch = entry.match(/^(?:type\s+)?([A-Za-z_$][\w$]*)/);
 			let name = entryMatch?.[1];
 			if (name === undefined) continue;
@@ -127,7 +114,6 @@ describe("findPurityViolations (scanner self-check)", () => {
 	});
 
 	test("does not mistake a same-prefixed identifier for a banned binding", () => {
-		// `RefObject`/`onSomething`-shaped names must not match `ref`/`on` by substring.
 		let source = 'import { type RefObject, onSomethingElse } from "remix/ui";';
 
 		expect(findPurityViolations(source)).toEqual([]);
@@ -159,8 +145,6 @@ function listComponentModules(): string[] {
 describe("component purity (src/components/**)", () => {
 	let modules = listComponentModules();
 
-	// Guards against the glob pattern or exclusion rules silently matching
-	// nothing, which would otherwise make every test below vacuously pass.
 	test("scanned the real component catalog, not an empty or filtered-out directory", () => {
 		expect(modules.length).toBeGreaterThan(50);
 		expect(modules).not.toContain("index.ts");

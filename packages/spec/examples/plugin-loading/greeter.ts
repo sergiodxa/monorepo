@@ -1,13 +1,11 @@
 #!/usr/bin/env bun
 /**
- * A self-contained example plugin, shown end-to-end with the config file that
- * loads it (`config.jsonc`) and the spec that uses it (`greet.spec`).
- * It is what a third-party plugin looks like: a Bun script that calls
- * `servePlugin` from `@pkg/spec` to speak the NDJSON-over-stdio line protocol,
- * exposing namespace "greet" with two permissionless observable tools.
- *
- * The writing-plugins guide (packages/spec/docs/writing-plugins.md) walks
- * through this file.
+ * A self-contained example of what a third-party plugin looks like: a Bun
+ * script that calls `servePlugin` from `@pkg/spec` to speak the
+ * NDJSON-over-stdio line protocol, exposing namespace "greet" with two
+ * permissionless observable tools. It ships with the config file that loads
+ * it (`config.jsonc`), the spec that uses it (`greet.spec`), and the
+ * writing-plugins guide that walks through it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +17,6 @@ import type { Plugin, ToolArg, ToolDescriptor, Value } from "@pkg/spec";
 import { failure, success } from "@pkg/result";
 import { servePlugin, ToolError } from "@pkg/spec";
 
-/** The tools "greet" exposes, stable for the plugin's lifetime. */
 const GREET_TOOLS: ToolDescriptor[] = [
 	{
 		name: "hello",
@@ -55,7 +52,6 @@ export function createGreetPlugin(): Plugin {
 	};
 }
 
-/** Greet the single string argument by name. */
 function hello(args: ToolArg[]): Result<Value, ToolError> {
 	let text = stringArgument(args);
 	if (text === null) {
@@ -64,7 +60,6 @@ function hello(args: ToolArg[]): Result<Value, ToolError> {
 	return success(`Hello, ${text}!`);
 }
 
-/** Uppercase the single string argument. */
 function shout(args: ToolArg[]): Result<Value, ToolError> {
 	let text = stringArgument(args);
 	if (text === null) {

@@ -50,9 +50,8 @@ export interface Translation {
 	t: TFunction;
 	/**
 	 * The instance {@link t} is fixed from, initialized over every supported
-	 * language's bundle. Read it to translate into another supported language
-	 * (`i18n.getFixedT(other)`) or to hand a live instance to something that
-	 * expects one, such as `context.i18next` or `IntlProvider`.
+	 * language. Read it to translate into another language or hand a live
+	 * instance to something that expects one, like `context.i18next`.
 	 */
 	i18n: i18n;
 }
@@ -69,15 +68,8 @@ export interface Translator {
 
 /**
  * Creates a translator over a fixed set of bundles, for use outside a request.
- *
- * Instances are cached by resolved language, not per call: the bundles are
- * static, so a second instance for the same language would only repeat the same
- * initialization. An unsupported language resolves to the fallback before the
- * cache is consulted, so it shares the fallback's instance rather than earning
- * one of its own.
- *
- * The cache belongs to the returned translator, so two translators configured
- * with different bundles never hand each other's instances out.
+ * Instances are cached by resolved language, so an unsupported language shares
+ * the fallback's cached instance, and each translator keeps its cache private.
  *
  * @param options - Bundles, supported languages, and fallback; see {@link TranslatorOptions}.
  * @returns A translator that resolves one {@link Translation} per language.

@@ -2,8 +2,8 @@
  * Tests for secret normalization and rotation resolution.
  *
  * The prefixed and unprefixed forms must produce identical key material, and an
- * absent, empty, or non-base64 secret must fail closed rather than key an HMAC
- * with something the sender never used.
+ * absent, empty, or non-base64 secret must fail closed, keeping HMAC
+ * verification keyed only on secret material the sender actually provided.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

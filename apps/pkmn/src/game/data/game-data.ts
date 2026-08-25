@@ -1,7 +1,7 @@
 /**
- * This module defines the runtime container and source contract for the game's authored data. It provides the types that describe incoming records and the validated structure consumed by the engine once that content has been indexed for efficient access.
- *
- * It also centralizes cross-reference validation for this data set, ensuring the module can reject inconsistent authored records before they are used at runtime. By keeping the loading, indexing, and validation responsibilities together, the module establishes a single boundary between raw authored data and trusted runtime data.
+ * Runtime container and source contract for the game's authored data: the
+ * shape of incoming records, and the validated, indexed structure the
+ * engine consumes after cross-reference checks reject invalid content.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,15 +20,10 @@ import { EvolutionMethod } from "./evolution";
 
 /** Raw authored content before reference validation. */
 export interface GameDataSource<T extends string | number | symbol = string> {
-	/** Authored species records keyed by identifier. */
 	species: Record<string, Species>;
-	/** Authored move records keyed by identifier. */
 	moves: Record<string, Move>;
-	/** Authored item records keyed by identifier. */
 	items: Record<string, Item>;
-	/** Authored nature records keyed by identifier. */
 	natures: Record<string, Nature>;
-	/** Authored type chart. */
 	typeChart: Matchup<T>;
 }
 

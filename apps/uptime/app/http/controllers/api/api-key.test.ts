@@ -1,7 +1,8 @@
 /**
  * Tests `DELETE /api/v1/api-keys/:apiKeyId`: revokes an API key belonging to the
- * calling team, 404s (never leaking) for another team's key, and is itself gated by
- * `requireApiKey("api-keys:write")` like every other `/api/v1/*` endpoint.
+ * calling team, returns 404 for another team's key to keep its existence
+ * private, and is itself gated by `requireApiKey("api-keys:write")` like every
+ * other `/api/v1/*` endpoint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

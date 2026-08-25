@@ -45,8 +45,6 @@ describe("Markdown", () => {
 	});
 
 	test("drops the paragraph markdown wraps a loose list item in", async () => {
-		// Without it a five-item list is five blocks: the paragraph's bottom margin is
-		// designed to separate paragraphs, not the lines of a list.
 		let { html } = await render(<Markdown>{"- One\n\n- Two"}</Markdown>);
 
 		expect(html).toContain("<li");

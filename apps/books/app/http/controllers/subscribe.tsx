@@ -23,8 +23,8 @@ import routes from "~/routes/web";
 
 /**
  * Copy for the two Buttondown rejections a visitor can act on. Everything else gets the
- * generic message: the provider's own error text is written for API consumers, not for
- * readers, and surfacing it verbatim leaked upstream wording onto the page.
+ * generic message: the provider's own error text targets API consumers, and showing it
+ * verbatim once put upstream wording in front of readers.
  */
 const BLOCKED_MESSAGE =
 	"My upstream provider is blocking you for some reason.\nPlease try with another email address and sorry for the inconvenience.";

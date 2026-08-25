@@ -1,8 +1,8 @@
 /**
  * View model for the tutorials index. Maps tutorial repository list records into
  * render-ready rows, building each `/tutorials/:slug` link from canonical routes and
- * deriving preview state from publish-date semantics. It exists to keep tutorial
- * listing controllers thin; it only maps and annotates records without sorting or filtering.
+ * deriving preview state from publish-date semantics. It keeps tutorial listing
+ * controllers thin and preserves the order records arrive in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +25,6 @@ export namespace TutorialsViewModel {
 	export interface Item {
 		/** Absolute app route to `/tutorials/:slug` for this tutorial. */
 		href: string;
-		/** Human-readable tutorial title displayed as the list label. */
 		label: string;
 		/**
 		 * Effective display date for this tutorial row.
@@ -35,9 +34,8 @@ export namespace TutorialsViewModel {
 		 */
 		date: string;
 		/**
-		 * Whether this tutorial should be marked as preview content.
-		 *
-		 * `false` includes both explicitly published posts and `published_at === null`.
+		 * Marks preview content; `false` covers explicitly published posts and
+		 * `published_at === null`.
 		 */
 		preview: boolean;
 	}
@@ -52,17 +50,14 @@ export namespace TutorialsViewModel {
 }
 
 /**
- * Builds tutorials page view models from repository list items.
- *
- * This class only maps and annotates records; it does not sort or filter them.
+ * Builds tutorials page view models from repository list items, mapping and
+ * annotating each row while preserving the order they arrive in.
  */
 export class TutorialsViewModel {
 	/**
-	 * Maps tutorial records into route-aware listing data.
-	 *
-	 * Each input row becomes one output item, preserving input order.
-	 * Preview state is derived from `Post.isPublishedAt`, so future dates are preview,
-	 * while `null` is treated as published.
+	 * Each input row becomes one output item, preserving input order. Preview state
+	 * comes from `Post.isPublishedAt`, so future dates are preview while `null`
+	 * counts as published.
 	 *
 	 * @param tutorials Tutorial rows returned by the tutorials repository.
 	 * @returns Page payload ready for the tutorials index template.

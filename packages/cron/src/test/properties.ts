@@ -45,15 +45,14 @@ export function rejectionOf(expression: string): InvalidCronExpression {
 }
 
 /**
- * Whether the zone's offset moves within a day of an instant. On such a day a run can
- * be carried out of a wall time the clock skipped, and a carried run does not match
- * the fields it came from, so the properties that read the wall clock do not hold
- * there. Which instant is carried is pinned by name in `occurrences.test.ts`; here the
- * day is simply excluded from those two checks and still held to the rest.
+ * Whether the zone's offset moves within a day of an instant, since on such a day a run
+ * can be carried out of a wall time the clock skipped and no longer matches the fields
+ * it came from. That day is excluded from the wall-clock checks here, and held to the rest.
  *
  * @param instant - Milliseconds since the epoch.
  * @param timeZone - IANA time zone name.
  * @returns `true` when the offset differs anywhere in the surrounding day.
+ * @see occurrences.test.ts pins which instant is carried, by name.
  */
 function offsetMovesAround(instant: number, timeZone: string): boolean {
 	let before = offsetAt(instant - 12 * 60 * MINUTE_MS, timeZone);
@@ -62,10 +61,9 @@ function offsetMovesAround(instant: number, timeZone: string): boolean {
 }
 
 /**
- * Normalization is stable: an expression written back reads as itself, and it reads
- * back into the same field sets, which is what makes the two fire on the same minutes.
- * Storage depends on both, since what a repository keeps is the normalized text rather
- * than what the user typed.
+ * Normalization is stable: an expression written back reads as itself, and reads back
+ * into the same field sets, which is what lets the two fire on the same minutes. Storage
+ * depends on both, since a repository persists only the normalized text.
  *
  * @param expression - Any expression the package accepts.
  *
@@ -84,18 +82,9 @@ export function expectStableNormalization(expression: string): void {
 }
 
 /**
- * Every invariant an occurrence search owes its caller, checked against one schedule
- * from one instant:
- *
- * - occurrences come back in strictly increasing order and never repeat;
- * - each one lands on a whole minute, seconds and milliseconds zero;
- * - asking for `count` of them gives the same answers as asking one at a time;
- * - each one is reachable again from a millisecond before it, and from the occurrence
- *   before it, so `next` and `prev` agree on which instants are occurrences;
- * - each one matches the schedule, and the minutes either side match exactly when they
- *   are themselves occurrences;
- * - `expectedBy` is the next occurrence plus the grace period, and `isDue` turns true
- *   on that instant and not a millisecond earlier.
+ * Every invariant an occurrence search owes its caller, checked against one schedule from
+ * one instant — strictly increasing whole-minute results, batch-versus-single agreement,
+ * `next`/`prev` reachability, schedule-matching at each occurrence, and `expectedBy`/`isDue` timing.
  *
  * @param expression - Any expression the package accepts.
  * @param options - Where to start, the zone to evaluate in, and how many to take.
@@ -193,12 +182,9 @@ export function expectOccurrenceInvariants(
 }
 
 /**
- * Walking a window forward and walking it backward find the same instants. It is the
- * sharpest thing that can be asked of an occurrence search without naming a single
- * expected value: the two directions are separate code paths, so any instant one of
- * them invents or loses shows up as a difference rather than as agreement with a
- * transcript. A run missing from the backward walk is a monitor computing lateness
- * from the wrong baseline.
+ * Walking a window forward and backward finds the same instants, since the two directions
+ * are separate code paths and any instant either one invents or loses shows up as a
+ * difference — a run missing from the backward walk is a monitor computing lateness from the wrong baseline.
  *
  * @param expression - Any expression the package accepts.
  * @param options - The window as two ISO instants, and the zone to walk it in.
@@ -239,10 +225,9 @@ export function expectWalksAgree(
 }
 
 /**
- * The descriptor a schedule reports is the one its fields call for. The shape is
- * derived here from the field sets rather than from `describe()`, so a schedule that
- * quietly starts falling back to the raw expression fails instead of passing: that
- * fallback is a sentence a user stops being shown.
+ * The descriptor a schedule reports is the one its fields call for, computed independently
+ * of `describe()` so a schedule that quietly starts falling back to the raw expression
+ * fails instead of passing — that fallback is a sentence a user stops being shown.
  *
  * @param expression - Any expression the package accepts.
  *
@@ -258,7 +243,6 @@ export function expectDescriptorShape(expression: string): void {
 	let where = { expression, kind: descriptor.kind };
 
 	if (fields.dayOfMonthRestricted && fields.dayOfWeekRestricted) {
-		// The either-or rule cannot be said in one sentence, so there is nothing to report.
 		expect(where).toEqual({ expression, kind: "expression" });
 		return;
 	}
@@ -280,19 +264,15 @@ export function expectDescriptorShape(expression: string): void {
 	}
 
 	if (!everyMonth) {
-		// Only the month is narrowed, and no descriptor carries a month on its own.
 		expect(where).toEqual({ expression, kind: "expression" });
 		return;
 	}
 
 	if (fields.hours.length === 24) {
-		// Firing in every hour is either a spacing or a set of minutes past the hour.
 		expectOneOf(where, ["interval", "hourly"]);
 		return;
 	}
 
-	// A day's worth of named times reads as a spacing of hours or a list of times;
-	// past that the list stops explaining anything and the expression reads better.
 	if (spelled) expectOneOf(where, ["interval", "daily"]);
 	else expect(where).toEqual({ expression, kind: "expression" });
 }

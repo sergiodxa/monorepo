@@ -35,7 +35,10 @@ const ACTIVATION_MONITOR_COUNT = 2;
 
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
-/** POST /actions/:team/create-monitor */
+/**
+ * POST /actions/:team/create-monitor. The first check is skipped without a
+ * subscription, like every check.
+ */
 export const createMonitor = createAction(routes.actions.monitor.http.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateMonitorSchema);
 	let session = ctx.get(Session);
@@ -54,14 +57,12 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 
 	let db = getServiceContainer().get(Database);
 	let monitor = await Monitor.create(db, ctx.team.id, viewer.id, result.data);
-	// Kicks off a first check right away; skipped without a subscription, like every check.
 	await Monitor.ping(db, monitor.id, ctx.team.owner_id);
 
 	/**
-	 * Counted after the creation, so the number is the team's total including this one, and
-	 * compared for equality rather than `>=` so the event fires exactly once per team however
-	 * many monitors they go on to add. The count is one indexed aggregate on a path that has
-	 * already done two writes.
+	 * Counted after creation, so the number is the team's total including this one, and
+	 * compared for equality rather than `>=` so the event fires exactly once per team no
+	 * matter how many monitors they go on to add.
 	 */
 	let monitorCount = await Monitor.countByTeam(db, ctx.team.id);
 	if (monitorCount === ACTIVATION_MONITOR_COUNT) {
@@ -142,7 +143,10 @@ export const deleteMonitor = createAction(routes.actions.monitor.http.delete, as
 	});
 });
 
-/** POST /actions/:team/play-monitor — triggers an on-demand check. */
+/**
+ * POST /actions/:team/play-monitor — triggers an on-demand check. The toast reflects
+ * whether the check was actually queued, since nothing runs without a subscription.
+ */
 export const playMonitor = createAction(routes.actions.monitor.http.play, async (ctx) => {
 	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
@@ -160,18 +164,14 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 	let queued = await Monitor.ping(db, monitor.id, ctx.team.owner_id);
 
 	/**
-	 * A caller that asked for JSON is a hydrated page that isn't going to navigate, so it
-	 * gets the outcome in the body instead of a redirect and a flash it would never render
-	 * (the flash would surface on some later, unrelated navigation). The reported status is
-	 * the one *before* the queued check runs — the check completes asynchronously, so the
-	 * only thing this request can hand back is the baseline to compare against. Gated on an
-	 * explicit `Accept`, so the browser form post and every other caller keep the redirect.
+	 * A JSON caller is a hydrated page that won't navigate, so the outcome goes in the
+	 * body instead of a redirect and flash that would surface on some later, unrelated
+	 * navigation. The status returned is the baseline before the queued check runs.
 	 */
 	if (ctx.request.headers.get("accept")?.includes("application/json")) {
 		return ok({ queued, status: monitor.last_status, checkedAt: monitor.last_checked_at });
 	}
 
-	// Nothing was enqueued without a subscription, so don't claim a check is coming.
 	session?.flash(
 		"toast",
 		queued

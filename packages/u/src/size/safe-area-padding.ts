@@ -1,11 +1,8 @@
 /**
- * `@pkg/u` is logical-property-first everywhere else in the `size/` family
- * (`u.p()`, `u.pi()`, `u.pbs()`, ...), but the safe-area insets the platform
- * exposes through `env(safe-area-inset-*)` are defined in physical terms —
- * there's no logical equivalent, since the notch/home-indicator geometry
- * they describe doesn't flip with writing mode. This utility is a
- * deliberate, narrow exception scoped to that one use case: it sets the
- * single physical padding property matching `side`.
+ * The `size/` family is logical-property-first (`u.p()`, `u.pi()`,
+ * `u.pbs()`, ...), but `env(safe-area-inset-*)` describes physical
+ * notch/home-indicator geometry that doesn't flip with writing mode, so this
+ * utility sets the single physical padding property matching `side`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,11 +1,7 @@
 /**
- * Central battle state contracts and factory helpers for the turn-based combat engine.
- * This module defines the transient data shapes used to track combatant-specific,
- * side-wide, and field-wide effects while a battle is in progress.
- *
- * It also provides fresh-state constructors so battle flows can initialize and reset
- * runtime state consistently without coupling callers to inline object literals or
- * duplicated defaults.
+ * Transient combatant, side-wide, and field-wide effect shapes for the turn-based
+ * combat engine, plus their fresh-state constructors, so every battle flow
+ * initializes and resets from one set of defaults.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

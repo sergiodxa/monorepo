@@ -1,9 +1,8 @@
 /**
  * Content sanity checks for the authored move set.
  *
- * These guard against move records that silently do nothing — most importantly
- * the one-hit-KO moves, which carry `power: 0` and therefore deal no damage
- * unless they declare the `ohko` effect. Regression coverage for the bug where
+ * One-hit-KO moves carry `power: 0`, so they deal damage only through the `ohko`
+ * effect; this suite pins that and the other effect declarations after
  * Fissure/Guillotine/Sheer Cold shipped with `kind: "none"`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -157,10 +156,12 @@ test("counter/reflect moves declare their reflecting effect and ratio", () => {
 	}
 });
 
+/**
+ * Moves with power 0 and a `none` effect resolve to a no-op. The baseline only
+ * shrinks as moves gain effects, so a rise means a modeled move regressed to
+ * `none`.
+ */
 test("power-0 moves still lacking an effect stays at or below the known baseline", () => {
-	// Coverage guard: counts status/utility moves that deal no damage AND carry no
-	// authored effect, so they resolve to a no-op. The baseline can only shrink as
-	// more moves gain effects; a rise means a modeled move regressed to `none`.
 	let stranded = Object.entries(movesById).filter(
 		([, move]) => move.power === 0 && move.effect.kind === "none",
 	);

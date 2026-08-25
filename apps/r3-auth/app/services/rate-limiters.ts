@@ -13,10 +13,9 @@ import type { CloudflareAdapterOptions } from "@pkg/rate-limit";
 import { CloudflareAdapter } from "@pkg/rate-limit";
 
 /**
- * Limit and window of every binding, mirroring the `simple: { limit, period }` blocks
- * in `wrangler.jsonc`. The platform reports neither value back, so this table is the
- * only source for the `RateLimit` response headers: drift does not weaken the
- * limiting, it makes every emitted header wrong, which is worse than sending none.
+ * Limit and window of every binding, mirroring the `simple: { limit, period }`
+ * blocks in `wrangler.jsonc`. The platform never reports these values back, so
+ * drift here silently makes every `RateLimit` response header wrong.
  */
 const POLICIES = {
 	token: { limit: 20, window: "1 minute" },

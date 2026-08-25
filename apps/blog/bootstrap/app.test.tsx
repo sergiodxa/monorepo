@@ -1,8 +1,7 @@
 /**
- * Tests the composition root's request-scoped renderer — the response it builds around a
- * view, rather than the markup the view produces. Chiefly the doctype: it is not part of
- * the JSX tree, the renderer prepends it to the byte stream, so no view or layout test
- * can see it, and without it every page in the app parses in quirks mode.
+ * Tests the response the composition root's request-scoped renderer builds
+ * around a view. Chiefly the doctype: the renderer prepends it to the byte
+ * stream, and every page needs it to parse in standards mode.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +14,6 @@ import DocumentLayout from "~/resources/layouts/document";
 
 import { createHtmlRenderer } from "./app";
 
-/** The smallest thing shaped like an app view: a factory returning a model-taking component. */
 function TestView() {
 	return function TestPage({ model }: { model: { title: string } }) {
 		return (
@@ -27,9 +25,8 @@ function TestView() {
 }
 
 /**
- * Fetches a full document through the real renderer. Routed rather than called with a
- * hand-built context, so the renderer is handed the same `RequestContext` production
- * gives it.
+ * Fetches a full document through the real renderer, routed so the renderer is
+ * handed the same `RequestContext` production gives it.
  */
 async function renderDocument() {
 	let router = createRouter();

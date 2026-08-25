@@ -1,15 +1,15 @@
 /**
- * The failure value `parseDate()` reports for input the platform cannot read as a
- * date. It exists so an unparseable value is a named failure at the boundary
- * instead of an `Invalid Date` that spreads `NaN` through later arithmetic.
+ * The failure value `parseDate()` reports for malformed date input. Surfacing
+ * it as a named failure at the boundary keeps a silent `NaN` from an `Invalid
+ * Date` reaching later arithmetic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /**
- * Error describing input that does not name an instant. Returned inside a
- * `Failure` and never thrown.
+ * Error for input rejected during date parsing, carried inside a `Failure`
+ * value for the caller to inspect.
  */
 export class InvalidDateError extends Error {
 	/** The rejected input, kept verbatim for diagnostics. */
@@ -19,7 +19,7 @@ export class InvalidDateError extends Error {
 	 * Builds an error whose message quotes the rejected input, so whitespace and
 	 * empty strings stay visible in logs.
 	 *
-	 * @param input - Value that could not be read as a date.
+	 * @param input - The date-like value rejected by the parser.
 	 */
 	constructor(input: string | number) {
 		super(`Invalid date: ${JSON.stringify(input)}`);

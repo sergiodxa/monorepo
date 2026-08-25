@@ -1,6 +1,6 @@
 /**
  * Tests the weekly team digest as a value. It carries the same subject and the same monitor list
- * as the daily one, plus the thing no single day can show: the team's week as seven segments, each
+ * as the daily one, plus what only a full week can show: the team's week as seven segments, each
  * the worst status any monitor reported that day, captioned with the two ends of the window.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -19,13 +19,13 @@ import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 /** Fill of a day every check passed; `--ui-color-success-600`. */
 let UP = "#107f04";
 
-/** Fill of a day that answered but not well; `--ui-color-warning-600`. */
+/** Fill of a day that came back degraded; `--ui-color-warning-600`. */
 let DEGRADED = "#925d00";
 
 /** Fill of a day something failed; `--ui-color-danger-600`. */
 let DOWN = "#ba2b2e";
 
-/** Where the digest sends a reader who wants the detail it leaves out. */
+/** Where the digest sends a reader who wants the full detail behind the summary. */
 let DASHBOARD_URL = "https://uptime.test/acme";
 
 /** The reader's own email settings, anchored at the switches. */
@@ -34,14 +34,14 @@ let PREFERENCES_URL = "https://uptime.test/acme/account#emails";
 /**
  * How many of the bar's own segments carry `fill`, or how many there are in total.
  *
- * Matched on the segment cell's height rather than on the colour alone, because the monitor
- * list paints its status column from the same palette and would otherwise count as days.
+ * Matched on both the segment cell's height and its color, since the monitor list's status
+ * column reuses the same palette and only the cell height tells the two apart.
  */
 function days(html: string, fill = ""): number {
 	return html.split(`height:32px;background-color:${fill}`).length - 1;
 }
 
-/** One monitor's week, clean and HTTP unless the test says otherwise. */
+/** One monitor's week, defaulting to clean and HTTP; `overrides` covers every other case. */
 function monitor(
 	name: string,
 	status: UptimeBar.Status = "up",

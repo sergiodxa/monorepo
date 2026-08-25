@@ -174,6 +174,11 @@ export default createController(routes.dashboard.tenants.hostname, {
 			);
 		}),
 
+		/**
+		 * Deleting or activating a hostname can change which one is canonical, so
+		 * the tenant issuer is re-pointed to keep discovery, tokens, and WebAuthn
+		 * RP resolving against a hostname that is still valid.
+		 */
 		action: inject([Database] as const, async (db) => {
 			let { request, formData, tenant, tenantApi, logger } = getContext();
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/hostname`);
@@ -188,9 +193,6 @@ export default createController(routes.dashboard.tenants.hostname, {
 					if (hostname && hostname.tenant_id === tenant.id && !hostname.is_default) {
 						await Hostname.destroy(db, hostnameId);
 						log.info("Hostname deleted", { tenantId: tenant.id, hostnameId });
-						// If the removed hostname may have been the canonical issuer, re-point the
-						// tenant at the best remaining hostname (another active custom, else default)
-						// so discovery/tokens/WebAuthn RP stay on a hostname that still resolves.
 						if (hostname.status === "active") {
 							let remaining = await Hostname.listByTenant(db, tenant.id);
 							let nextIssuer =
@@ -213,8 +215,6 @@ export default createController(routes.dashboard.tenants.hostname, {
 					if (hostname && hostname.tenant_id === tenant.id) {
 						let refreshed = await Hostname.refresh(db, hostnameId);
 						log.info("Hostname refreshed", { tenantId: tenant.id, hostnameId });
-						// A newly active custom hostname becomes the canonical issuer, so re-point
-						// tenant discovery/tokens/WebAuthn RP at it.
 						if (!refreshed.is_default && refreshed.status === "active") {
 							await tenantApi.setup({ issuer: refreshed.hostname, region: tenant.region });
 							log.info("Tenant issuer updated to custom hostname", {
@@ -233,7 +233,6 @@ export default createController(routes.dashboard.tenants.hostname, {
 					return new Response("Validation error", { status: 400 });
 				}
 
-				// Check if hostname already exists in our database
 				let existing = await Hostname.findByHostname(db, result.data.hostname);
 				if (existing) {
 					log.info("Hostname already exists", { hostname: result.data.hostname });
@@ -241,7 +240,6 @@ export default createController(routes.dashboard.tenants.hostname, {
 				}
 
 				try {
-					// Create hostname via Cloudflare API
 					await Hostname.createCustom(
 						db,
 						tenant.id,

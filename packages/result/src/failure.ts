@@ -1,3 +1,10 @@
+/**
+ * Provides `failure`, a constructor for Result failures.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Failure } from "./types.js";
 
 /**

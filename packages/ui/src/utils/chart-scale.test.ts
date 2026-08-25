@@ -73,7 +73,6 @@ describe(bandScale.name, () => {
 	test("paddingInner shrinks the bandwidth and leaves a gap between bands", () => {
 		let scale = bandScale(["a", "b", "c"], [0, 250], { paddingInner: 0.5 });
 
-		// step = 250 / (3 - 0.5) = 100, bandwidth = 100 * (1 - 0.5) = 50
 		expect(scale.bandwidth).toBe(50);
 		expect(scale.position("a")).toBe(0);
 		expect(scale.position("b")).toBe(100);
@@ -83,7 +82,6 @@ describe(bandScale.name, () => {
 	test("paddingOuter insets the first and last bands from the range's edges", () => {
 		let scale = bandScale(["a", "b"], [0, 100], { paddingOuter: 0.5 });
 
-		// step = 100 / (2 - 0 + 0.5*2) = 100 / 3 = 33.333...
 		expect(scale.bandwidth).toBeCloseTo(33.333, 2);
 		expect(scale.position("a")).toBeCloseTo(16.667, 2);
 		expect(scale.position("b")).toBeCloseTo(50, 2);

@@ -29,7 +29,7 @@ export default createAction(
 	/**
 	 * Builds the bookmarks channel and serializes each liked URL as one RSS item.
 	 *
-	 * @param ctx Route action context with DI access and request URL data.
+	 * @param db Database service resolved via dependency injection.
 	 * @returns XML response ready for RSS clients and aggregators.
 	 */
 	inject([Database] as const, async (db) => {

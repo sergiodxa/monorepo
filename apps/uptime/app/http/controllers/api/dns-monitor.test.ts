@@ -3,7 +3,7 @@
  * single DNS monitor and its check-result history, all gated by a real
  * `requireApiKey` bearer-token check baked into the controller. Covers the happy
  * paths, validation failure, missing/garbage auth, missing scope, and that a monitor
- * belonging to another team always 404s rather than 403ing or leaking the row.
+ * belonging to another team draws a uniform 404, keeping the row and its existence hidden.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

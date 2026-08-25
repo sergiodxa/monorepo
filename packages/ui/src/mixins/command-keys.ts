@@ -1,18 +1,9 @@
 /**
  * Arrow-key and Enter navigation for a Command root already paired with
- * `commandFilter(model)`: ArrowDown/ArrowUp move `model`'s active match
- * across the currently visible items, wrapping at both ends, mirrored back
- * onto the DOM as `aria-selected` and the paired search input's
- * `aria-activedescendant`; Enter clicks whatever button or link the active
- * item's own children nest for activation.
- *
- * Why JS: moving a logical "active" position across a rendered option list
- * with the arrow keys, and translating Enter into an activation of whichever
- * control an item nests for its own click handling, has no native HTML/CSS
- * equivalent.
- * No-JS baseline: every item stays reachable and independently activatable
- * in ordinary Tab order through whatever button or link a consumer nests
- * inside it — the same no-JS baseline `commandFilter()` itself holds.
+ * `commandFilter(model)`: arrow keys move `model`'s active match across the
+ * visible items, mirrored onto `aria-selected` and `aria-activedescendant`;
+ * Enter clicks whatever control the active item nests. Without JS every
+ * item stays independently activatable in ordinary Tab order.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,10 +30,8 @@ const ENTER_KEY = "Enter";
 
 /**
  * Mirrors `model`'s active match onto every item beneath `root` as
- * `aria-selected`, and onto the paired search input as
- * `aria-activedescendant`, and scrolls the active item into view so arrow-key
- * navigation never leaves it hidden past {@link Command.List}'s own scroll
- * boundary.
+ * `aria-selected` and onto the search input as `aria-activedescendant`,
+ * scrolling the active item into view past {@link Command.List}'s scroll boundary.
  *
  * @param root Command root element the items and search input are read from.
  * @param model Model whose current active match gets mirrored onto the DOM.
@@ -85,14 +74,9 @@ function activateCurrent(root: HTMLElement, model: FilterModel): void {
 }
 
 /**
- * Adds ArrowDown/ArrowUp/Enter keyboard navigation to a Command root already
- * paired with `commandFilter(model)`: arrow keys move `model`'s active match
- * across the currently visible items — wrapping at both ends — mirrored back
- * onto the DOM as `aria-selected` and the search input's
- * `aria-activedescendant`, and Enter clicks whatever button or link the
- * active item's own children nest for activation. Since `commandFilter()`
- * already keeps the sole remaining match active as soon as typing narrows
- * down to it, Enter activates that match with no arrow press required.
+ * Adds ArrowDown/ArrowUp/Enter navigation to a Command root already paired
+ * with `commandFilter(model)`, mirroring the active match onto
+ * `aria-selected` and `aria-activedescendant`, and activating it on Enter.
  *
  * @param model The same `FilterModel` instance passed to `commandFilter()`.
  * @example

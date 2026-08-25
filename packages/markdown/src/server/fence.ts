@@ -1,10 +1,8 @@
 /**
- * The Markdoc node for fenced code blocks: it normalizes the language written on
- * the fence to a Prism grammar identifier, highlights the body when a grammar
- * answers to that name, and emits a `Fence` tag the client renderer draws. The
- * alias table is a plain object rather than a schema because it is never
- * validated against — it is only read as a lookup and as the source of the
- * supported-language type.
+ * The Markdoc node for fenced code blocks: it normalizes the language written
+ * on the fence to a Prism grammar identifier, highlights the body when a
+ * grammar answers to that name, and emits a `Fence` tag for the client
+ * renderer to draw.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,7 +40,9 @@ const AttributesSchema = s.object({
 });
 
 /**
- * Maps common code fence aliases to Prism grammar identifiers.
+ * Maps common code fence aliases to Prism grammar identifiers. As a plain
+ * object, it doubles as the source of the supported-language type while
+ * serving as a simple lookup table.
  */
 const LANGUAGE_ALIASES = {
 	dotenv: "plain",
@@ -50,10 +50,11 @@ const LANGUAGE_ALIASES = {
 	erb: "html",
 	gql: "graphql",
 	js: "javascript",
-	/* Prism ships no `jsonc` grammar, and its JSON one already tokenizes both
-	comment forms, so the alias is the whole fix. Without it every ```jsonc fence —
-	which is every `wrangler.jsonc` listing — falls through untokenized and renders
-	as one undifferentiated run of plain text. */
+	/**
+	 * Prism ships no `jsonc` grammar, and its JSON grammar already tokenizes
+	 * both comment forms, so aliasing to `json` keeps every `wrangler.jsonc`
+	 * fence highlighted.
+	 */
 	jsonc: "json",
 	jsx: "jsx",
 	md: "markdown",
@@ -115,21 +116,19 @@ export const fence = {
 } satisfies Schema;
 
 /**
- * Normalizes user-provided language names to the Prism identifiers used by fences.
+ * Normalizes user-provided language names to the Prism identifiers used by
+ * fences, checking alias membership with `Object.hasOwn` so only the table's
+ * own entries can satisfy a lookup for names like `constructor` or `toString`.
  *
  * @param language - Raw language value from markdown
- * @returns Normalized language identifier used for highlighting
+ * @returns The aliased Prism identifier, or the lowercased input unchanged
+ * when no alias applies — Prism highlights it when a grammar is registered
+ * under that exact name, and the fence renders as plain text otherwise.
  */
 export function normalizeLanguage(language: string): fence.SupportedLanguage {
 	let lang = language.toLowerCase();
-	/* The language comes off the fence, so it is user input indexing an object:
-	`hasOwn` rather than `in` keeps a fence tagged `constructor` or `toString` from
-	resolving to something off `Object.prototype` instead of an alias. */
 	if (Object.hasOwn(LANGUAGE_ALIASES, lang)) {
 		return LANGUAGE_ALIASES[lang as keyof typeof LANGUAGE_ALIASES];
 	}
-	/* A language with no alias is already the identifier Prism would be asked for,
-	so it passes through: either a grammar is registered under that exact name and
-	the fence highlights, or none is and the fence renders as plain text. */
 	return lang as fence.SupportedLanguage;
 }

@@ -1,8 +1,7 @@
 /**
- * Cloudflare Worker entry point for the books app. Its single `fetch` handler opens a
- * service-container scope, builds the application router, and forwards the request.
- * There is no `scheduled` or `queue` handler and no storage binding: the app's only
- * state lives in Buttondown and Polar.
+ * Cloudflare Worker entry point for the books app. Its single `fetch` handler
+ * opens a service-container scope, builds the application router, and
+ * forwards the request — the app's only state lives in Buttondown and Polar.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

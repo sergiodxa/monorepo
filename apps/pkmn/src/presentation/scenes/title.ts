@@ -1,12 +1,9 @@
 /**
  * The title scene: New Game or Continue.
  *
- * It offers the two classic entry points and constructs the world the rest of the
- * game runs on. New Game builds a fresh world from content and swaps it into the
- * client's engine; Continue loads the save, rebuilds the engine from its
- * persistent world, and resumes at the saved map position. Either way it pushes
- * the overworld once a world exists, so no other scene has to know how a game
- * begins.
+ * Builds the world the game runs on: New Game creates one from content,
+ * Continue restores the save and resumes its position. It then pushes the
+ * overworld, so no other scene needs to know how a game begins.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,10 +27,8 @@ const OPTIONS = ["New Game", "Continue"] as const;
 
 /** Renders the start menu and boots a world when the player chooses. */
 export class TitleScene implements Scene {
-	/** Selected menu index. */
 	private index = 0;
 
-	/** Whether a save exists, checked on enter. */
 	private canContinue = false;
 
 	enter(game: GameClient) {
@@ -68,7 +63,6 @@ export class TitleScene implements Scene {
 		}
 	}
 
-	/** Builds a fresh world, installs it, and enters the overworld. */
 	private startNewGame(game: GameClient) {
 		game.engine = Engine.create({
 			content: game.content,
@@ -77,7 +71,6 @@ export class TitleScene implements Scene {
 		game.scenes.replace(new OverworldScene(SAMPLE_SPAWN));
 	}
 
-	/** Loads the save, rebuilds the engine, and resumes at the saved position. */
 	private continueGame(game: GameClient) {
 		let file = game.save.load();
 		if (!file) return;

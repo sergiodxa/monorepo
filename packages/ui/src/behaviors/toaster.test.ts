@@ -1,9 +1,8 @@
 /**
- * Unit tests for {@link Toaster}, constructed and driven directly with no
- * DOM and no rendering: `Date.now`, `setTimeout`, and `clearTimeout` are
- * faked so every timer assertion advances a virtual clock instead of
- * waiting on real time, and every other assertion reads queue state or
- * observes dispatched "toast"/"change" events.
+ * Unit tests for {@link Toaster}, driven directly against its queue API:
+ * `Date.now`, `setTimeout`, and `clearTimeout` are faked so timer
+ * assertions advance a virtual clock, and the rest read queue state or
+ * observe dispatched "toast"/"change" events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -152,7 +151,6 @@ describe(Toaster.name, () => {
 		expect(toaster.get("shared")?.data).toBe("second");
 		expect(toaster.get("shared")?.duration).toBe(5000);
 
-		// The first toast's 1000ms timer must have been cleared, not just outlived.
 		advance(1000);
 		expect(toaster.get("shared")).toBeDefined();
 
@@ -215,7 +213,6 @@ describe(Toaster.name, () => {
 		toaster.addEventListener("change", () => changeCount++);
 		advance(1000);
 
-		// Nothing left to fire: the timer was cleared, not just orphaned.
 		expect(changeCount).toBe(0);
 	});
 
@@ -265,14 +262,12 @@ describe(Toaster.name, () => {
 		toaster.pause(id);
 		expect(toaster.get(id)?.paused).toBe(true);
 
-		// Paused: advancing well past the original duration must not dismiss it.
 		advance(10_000);
 		expect(toaster.get(id)).toBeDefined();
 
 		toaster.resume(id);
 		expect(toaster.get(id)?.paused).toBe(false);
 
-		// 600ms were left when paused.
 		advance(599);
 		expect(toaster.get(id)).toBeDefined();
 

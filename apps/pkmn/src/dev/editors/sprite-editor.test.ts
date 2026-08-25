@@ -1,11 +1,8 @@
 /**
- * Verifies the pure, canvas-free helpers the {@link SpriteEditor} builds its
- * higher-level tools on: the bounded {@link GridHistory} undo/redo stack (cursor
- * movement, forking on push, capacity trimming), {@link pushRecentColor} palette
- * behaviour (front promotion, de-dup, cap, channel clamping), and
- * {@link imageDataToGrid} decoding a plain RGBA buffer into a grid. The canvas
- * side of the editor (pointer handling, rendering, PNG encode/decode) needs a DOM
- * and is exercised by the running dev tool, not here.
+ * Covers the pure, canvas-free helpers of the sprite editor: the bounded
+ * {@link GridHistory} undo/redo stack, {@link pushRecentColor} palette
+ * behaviour, and {@link imageDataToGrid} decoding an RGBA buffer into a grid.
+ * The canvas side needs a DOM and is exercised by the running dev tool.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,8 +61,8 @@ describe("GridHistory", () => {
 		history.push(snapshotWithTag(1));
 		history.push(snapshotWithTag(2));
 		history.push(snapshotWithTag(3));
-		history.undo(); // back to 2
-		history.push(snapshotWithTag(9)); // forks the timeline
+		history.undo();
+		history.push(snapshotWithTag(9));
 
 		expect(history.canRedo).toBe(false);
 		expect(tagOf(history.undo())).toBe(2);
@@ -77,12 +74,11 @@ describe("GridHistory", () => {
 		history.push(snapshotWithTag(1));
 		history.push(snapshotWithTag(2));
 		history.push(snapshotWithTag(3));
-		history.push(snapshotWithTag(4)); // 1 is dropped
+		history.push(snapshotWithTag(4));
 
 		expect(history.length).toBe(3);
 		expect(tagOf(history.undo())).toBe(3);
 		expect(tagOf(history.undo())).toBe(2);
-		// Cannot reach the dropped state 1.
 		expect(history.canUndo).toBe(false);
 	});
 

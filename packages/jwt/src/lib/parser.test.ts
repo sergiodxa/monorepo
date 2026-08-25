@@ -47,8 +47,6 @@ describe("ObjectParser", () => {
 	});
 
 	test("sees writes made to the wrapped object after construction", () => {
-		// The token proxy writes unknown claims straight into the payload, so the
-		// parser has to read through the same reference rather than a copy.
 		let claims: Record<string, unknown> = {};
 		let parser = new ObjectParser(claims);
 
@@ -97,9 +95,6 @@ describe("ObjectParser, on a wrong type", () => {
 	});
 
 	test("does not coerce a stringified boolean", () => {
-		// An identity provider sending `email_verified: "true"` is sending something
-		// the token class does not model; coercing it would turn that into a trusted
-		// `true`.
 		expect(() => parser.boolean("active")).toThrow(InvalidTypeError);
 	});
 

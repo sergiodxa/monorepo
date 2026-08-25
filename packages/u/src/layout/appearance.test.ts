@@ -1,7 +1,7 @@
 /**
- * Unit tests for `appearance()`'s default and explicit `appearance` value,
- * mirrored onto both vendor-prefixed properties, asserted against the CSS the
- * mixin actually serializes to.
+ * Unit tests for `appearance()`'s default and explicit value, mirrored onto
+ * both vendor-prefixed properties. The capitalized `WebkitAppearance` and
+ * `MozAppearance` keys are what kebab-case to a leading `-webkit-`/`-moz-`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,9 +42,6 @@ describe("appearance", () => {
 	});
 
 	test("the vendor prefixes keep their leading dash, which a camelCase key would lose", async () => {
-		// `WebkitAppearance`/`MozAppearance` only kebab-case to `-webkit-…`/`-moz-…`
-		// because of the capital first letter; a lowercase spelling would emit
-		// `webkit-appearance`, a property no browser knows.
 		let result = await declarations(appearance());
 
 		expect(result.filter((line) => line.startsWith("-"))).toEqual([

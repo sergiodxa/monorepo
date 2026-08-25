@@ -2,9 +2,8 @@
  * Database schema for the authorization server, declared with remix/data-table:
  * subjects and their password/social credentials, refresh-token sessions, registered
  * OAuth clients, and consent grants. It mirrors the live D1 database exactly — the
- * files in `database/migrations/` are the physical truth and this module only
- * describes them — so column names stay snake_case and every timestamp is
- * `c.integer()` holding epoch milliseconds, which is what the existing rows store.
+ * files in `database/migrations/` are the physical truth, so column names stay
+ * snake_case and every timestamp is `c.integer()` holding epoch milliseconds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,10 +77,9 @@ export type SelectConnection = TableRow<typeof connections>;
 export type InsertConnection = InsertRow<typeof connections>;
 
 /**
- * A subject's live session with one client. **`id` is the refresh token value** that
- * clients send to the token endpoint, so it must never be logged, listed, or
- * regenerated casually. `expires_at` carries no database default: every insert
- * computes it.
+ * A subject's live session with one client. `id` is the refresh token value
+ * clients send to the token endpoint, so treat it as a secret. `expires_at`
+ * carries no database default — every insert computes it.
  */
 export const sessions = table({
 	name: "sessions",
@@ -102,12 +100,9 @@ export type SelectSession = TableRow<typeof sessions>;
 export type InsertSession = InsertRow<typeof sessions>;
 
 /**
- * A registered relying party. `secret` is stored in plaintext because it is the only
- * copy each client holds, and `redirect_uri` is unique — exactly one per client, and
- * an authorization request must match it exactly.
- *
- * The two `*_session_required` columns are text holding `"true"`/`"false"` rather than
- * booleans, matching the physical schema.
+ * A registered relying party. `secret` stays plaintext since the client
+ * holds the only copy, and `redirect_uri` is unique, so an authorization
+ * request must match it exactly.
  */
 export const clients = table({
 	name: "clients",

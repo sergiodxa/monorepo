@@ -41,12 +41,9 @@ export interface WindowDecisionInput {
 }
 
 /**
- * Window length in milliseconds, normalized to a whole positive number.
- *
- * A `DurationInput` may be a bare number, so zero, a negative value, and `NaN`
- * (only reachable when the duration string type was bypassed) are all possible.
- * They collapse to a 1 ms window, which resets immediately and therefore lets
- * traffic through: a misconfigured window must not lock every client out.
+ * Window length in milliseconds, normalized to a whole positive number. A
+ * zero, negative, or `NaN` duration collapses to a 1 ms window that resets
+ * immediately, so a misconfigured window fails open instead of locking clients.
  *
  * @param window - The configured window length.
  * @returns Whole milliseconds, never below 1.

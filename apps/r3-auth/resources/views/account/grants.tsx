@@ -1,10 +1,9 @@
 /**
- * The authorized-apps page: one table row per standing consent, showing the client as it
- * registered itself and when consent was given, with a revoke control that also signs the
- * person out of that app.
+ * The authorized-apps page: one row per standing consent, with a revoke control
+ * that also signs the person out of that app.
  *
- * This server's own registration is listed without a control: withdrawing it would delete
- * the session this very page is being read with, and the action refuses it server-side too.
+ * This server's own registration renders read-only, since revoking it would end
+ * the session reading this page; the revoke action refuses it server-side too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,8 +28,8 @@ namespace GrantsView {
 	/**
 	 * A row plus the confirmation sentence naming its client.
 	 *
-	 * The sentence is interpolated by the controller rather than here, so the view holds
-	 * no copy and the person confirms against the app they actually picked.
+	 * The controller interpolates the sentence before the view renders it, so the
+	 * person confirms against the exact app they picked.
 	 */
 	export interface Row extends GrantRow {
 		confirmDescription: string;
@@ -48,7 +47,7 @@ namespace GrantsView {
 		/** Row labels and the accessible name for the table. */
 		labels: {
 			revoke: string;
-			/** Shown in place of the control for the consent that cannot be withdrawn. */
+			/** Shown in place of the control for the auth server's own consent. */
 			cannotRevoke: string;
 			tableLabel: string;
 		};
@@ -59,7 +58,12 @@ namespace GrantsView {
 	}
 }
 
-/** Renders the signed-in subject's authorized apps and their revoke controls. */
+/**
+ * Renders the signed-in subject's authorized apps and their revoke controls.
+ *
+ * Each revoke button opens a dialog whose own form performs the submission,
+ * posting the revoke intent directly to the server.
+ */
 export default function GrantsView(handle: Handle<GrantsView.Props>) {
 	return () => {
 		let { title, description, empty, columns, labels, confirm, grants } = handle.props;
@@ -157,8 +161,6 @@ export default function GrantsView(handle: Handle<GrantsView.Props>) {
 																{confirm.cancel}
 															</AlertDialog.Cancel>
 
-															{/* A real form inside the dialog: the library's own action
-															button closes the panel rather than submitting anything. */}
 															<Form method="post" action={routes.account.grants.action.href()}>
 																<input type="hidden" name="intent" value="revoke" />
 																<input type="hidden" name="clientId" value={grant.clientId} />

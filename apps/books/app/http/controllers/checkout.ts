@@ -1,14 +1,9 @@
 /**
- * Checkout controller. Starts a Polar checkout for the requested package and sends the
- * visitor straight to Polar's hosted page: Essentials at list price with discount codes
- * allowed, Complete with whichever launch campaign currently applies and no codes. The
- * URL is linked from the pricing page and shareable, which is why it stays a GET.
- *
- * Because it is a GET with no other precondition, anything that walks links — a crawler,
- * a link checker, a `HEAD` probe the chain rewrites into a `GET` — reaches this handler.
- * So `:type` is checked against the two published package names before any billing call
- * is made, and anything else renders the 404 page: a stray probe must never leave a real
- * checkout object behind at the provider.
+ * Checkout controller. Starts a Polar checkout for the requested package and
+ * redirects to Polar's hosted checkout: list price for Essentials, the
+ * current launch campaign for Complete. Because the URL is a shareable GET,
+ * `:type` is checked against the published package names before any billing
+ * call, keeping every checkout tied to a package the visitor actually chose.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,16 +23,16 @@ import { findApplicableDiscount } from "~/app/services/discount";
 import routes from "~/routes/web";
 
 /**
- * The two package names the URL is published with. Nothing outside this set reaches the
- * billing client: a mistyped or stale link gets the 404 page rather than a checkout for
- * a package the visitor never asked for.
+ * The two package names the URL is published with. Values outside this set
+ * reach the 404 page before the billing client, keeping every checkout tied
+ * to a package the visitor actually requested.
  */
 const TypeSchema = s.object({ type: s.enum_(["essentials", "complete"]) });
 
 /**
- * The `?email=` pass-through, pre-filled on Polar's checkout. An address that does not
- * parse is dropped rather than forwarded: Polar would reject the checkout outright, and
- * losing a pre-filled field is better than losing the sale.
+ * The `?email=` pass-through, pre-filled on Polar's checkout. An address
+ * that fails to parse is dropped before reaching Polar, since Polar would
+ * reject the whole checkout — a pre-filled field is worth less than the sale.
  */
 const EmailSchema = s.object({ email: s.optional(s.string().pipe(email())) });
 

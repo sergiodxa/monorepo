@@ -13,29 +13,21 @@ import { env } from "cloudflare:workers";
 
 import AnalyticsService from "~/app/services/analytics";
 
-/** Database row for subscription data with Polar customer ID. */
 interface SubscriptionRow {
-	/** Tenant identifier. */
 	tenant_id: string;
-	/** Polar customer ID for billing, null if not subscribed. */
+	/** Present only for tenants with an active Polar subscription. */
 	polar_customer_id: string | null;
 }
 
 /**
- * Daily scheduled job to report Monthly Active Users (MAU) to Polar for usage-based billing.
- *
- * This job runs daily at 1:00 AM UTC via cron trigger and:
- * 1. Queries Analytics Engine for MAU counts per tenant
- * 2. Fetches subscription data from D1 to get Polar customer IDs
- * 3. Reports MAU to Polar meters API for each tenant with an active subscription
- *
- * Tenants without Polar subscriptions are skipped. Failed reports are logged but
- * do not prevent other tenants from being processed.
+ * Runs daily at 1:00 AM UTC via cron trigger. A tenant with an active Polar
+ * subscription gets its MAU reported; a per-tenant report failure is logged
+ * and counted, letting the run continue for the remaining tenants.
  *
  * @param controller - Cloudflare scheduled controller with cron metadata
  * @returns A promise that resolves when the reporting run completes.
- * @throws Re-throws any error from the MAU query or D1 lookup (per-tenant Polar
- * report failures are caught and logged, not thrown).
+ * @throws Propagates any error from the MAU query or D1 lookup; per-tenant
+ * Polar report failures are caught and logged instead.
  * @example
  * // Wired from the worker's scheduled handler:
  * if (controller.cron === "0 1 * * *") await reportMAU(controller);

@@ -33,14 +33,15 @@ namespace DashboardView {
 	}
 }
 
-/** One count as a card: caption, the number, then the explanation. */
+/**
+ * One count as a card: caption, the number, then the explanation. The caption
+ * renders as `Text` and the count as `Card.Title`, keeping each at its
+ * component's default type scale since `mix` overrides depend on stylesheet order.
+ */
 function StatCard(handle: Handle<DashboardView.Stat>) {
 	return () => {
 		let { label, value, description } = handle.props;
 
-		// The caption is a `Text` and the number is the card's own title: the component
-		// defaults already read as a statistic, and overriding a component's own type
-		// mixin through `mix` resolves by stylesheet order rather than reliably.
 		return (
 			<Card>
 				<Card.Header>

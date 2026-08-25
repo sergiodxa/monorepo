@@ -51,11 +51,9 @@ export default class Passkey {
 	}
 
 	/**
-	 * Lists a subject's passkeys that can be used for authentication, i.e. those
-	 * with a stored WebAuthn `credential_id`. Legacy rows migrated before the
-	 * credential id was persisted (see migration 0006) have a null `credential_id`
-	 * and are excluded, since they cannot appear in `allowCredentials` nor be matched
-	 * against an assertion.
+	 * Lists a subject's authentication-eligible passkeys — those with a stored
+	 * `credential_id`. Rows migrated before migration 0006 added the column have
+	 * a null `credential_id`, so only passkeys with one are eligible here.
 	 * @param db - Database instance.
 	 * @param subjectId - Subject ID to filter by.
 	 * @returns Passkeys for the subject that have a non-null `credential_id`.

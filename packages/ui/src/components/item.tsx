@@ -35,17 +35,14 @@ import { fontSize, leading, text, truncate, weight } from "@pkg/u/typography";
 /**
  * Named container {@link Item} declares on its own host, so
  * {@link Item.Actions} can adapt to the row's own width instead of the
- * page's — the same row width whether it renders at the full page measure
- * or inside a narrower embedded panel.
+ * page's, keeping the same row width in a full page or a narrow panel.
  */
 const CONTAINER_NAME = "ui-item";
 
 /**
- * `@container` max-width threshold gating the point past which the row's own
- * width is too narrow to hold {@link Item.Media}, {@link Item.Content}, and
- * {@link Item.Actions} on one line without crowding {@link Item.Content}'s
- * text out of room; below it {@link Item} wraps and {@link Item.Actions}
- * drops to a second line of its own.
+ * `@container` max-width threshold below which the row can't hold
+ * {@link Item.Media}, {@link Item.Content}, and {@link Item.Actions} on one
+ * line without crowding {@link Item.Content}'s text out of room.
  */
 const NARROW_CONTAINER_SIZE = "20rem";
 
@@ -104,11 +101,8 @@ export namespace Item {
 
 /**
  * Renders the row's host: a `<div>` laying {@link Item.Media},
- * {@link Item.Content}, and {@link Item.Actions} out along one
- * vertically centered flex line. Declares the `ui-item` named container so
- * {@link Item.Actions} can drop to a second line once the row itself
- * renders too narrow to hold every part on one — a file row inside a
- * sidebar rail, for instance, rather than the row's full page measure.
+ * {@link Item.Content}, and {@link Item.Actions} on one flex line, dropping
+ * {@link Item.Actions} to a second line once the row narrows past threshold.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
@@ -161,13 +155,8 @@ export function Item(handle: Handle<Item.Props>) {
 
 /**
  * Renders {@link Item.MediaProps.children} as the row's leading slot: a
- * shrink-proof, centered `<div>` sized to a modest square, colored from the
- * neutral foreground so a nested icon inherits it through `currentcolor`.
- * Nest a decorative icon, an image thumbnail, an Avatar instance, or a
- * checkbox inside it — this slot imposes only its own size and centering,
- * never a fixed shape of its own, so a circular Avatar or a square thumbnail
- * both render as that part's own shape rather than being clipped to one this
- * slot picks for it.
+ * shrink-proof, centered `<div>` colored from the neutral foreground so a
+ * nested icon inherits it through `currentcolor`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the media slot's markup.
@@ -207,11 +196,8 @@ Item.Media = function ItemMedia(handle: Handle<Item.MediaProps>) {
 
 /**
  * Renders {@link Item.ContentProps.children} as the row's text column: a
- * `<div>` stacking {@link Item.Title} and an optional {@link Item.Description}
- * in a tight column, growing to fill whatever inline space
- * {@link Item.Media} and {@link Item.Actions} leave it, with its minimum
- * inline size collapsed to `0` so its children's own text-overflow
- * truncation actually takes effect inside the row's flex line.
+ * `<div>` stacking {@link Item.Title} and {@link Item.Description} with its
+ * minimum inline size collapsed to `0` so their truncation takes effect.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the text column's markup.
@@ -238,12 +224,9 @@ Item.Content = function ItemContent(handle: Handle<Item.ContentProps>) {
 };
 
 /**
- * Renders {@link Item.TitleProps.children} as the row's label, in a plain
- * `<div>` rather than a native heading element: a row repeats once per list
- * entry, and a document outline gains nothing from multiplying an entry for
- * every file, notification, or setting a list happens to render. Truncated
- * to a single line with an ellipsis rather than wrapping, in the neutral
- * foreground's most emphasized tone so it reads as the row's primary text.
+ * Renders {@link Item.TitleProps.children} as the row's label in a plain
+ * `<div>`, since a document outline gains nothing from a heading entry per
+ * repeated row, truncated to one line in the foreground's emphasized tone.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the title's markup.
@@ -268,10 +251,8 @@ Item.Title = function ItemTitle(handle: Handle<Item.TitleProps>) {
 
 /**
  * Renders {@link Item.DescriptionProps.children} as the row's supporting
- * detail, in a native `<p>` muted to the neutral foreground's quieter tone
- * and truncated to a single line with an ellipsis rather than wrapping,
- * matching {@link Item.Title}'s own truncation so the pair reads as one
- * compact two-line block regardless of how long either runs.
+ * detail in a native `<p>`, truncated to one line to match
+ * {@link Item.Title} so the pair reads as one compact two-line block.
  *
  * @param handle Runtime handle carrying the host `<p>`'s props.
  * @returns The render function producing the description's markup.
@@ -301,15 +282,9 @@ Item.Description = function ItemDescription(handle: Handle<Item.DescriptionProps
 };
 
 /**
- * Renders {@link Item.ActionsProps.children} as the row's trailing slot: a
- * shrink-proof `<div>` laying its children out in a single row with a small
- * gap, pushed to the row's inline-end edge with `margin-inline-start: auto`
- * so it stays pinned there even when {@link Item.Content} is absent or
- * narrower than the row itself. Once the ancestor {@link Item} renders too
- * narrow to hold every part on one line, this slot drops to a second line
- * of its own, right-aligned and indented past where {@link Item.Media}
- * would sit, so it reads as trailing the content above it rather than
- * restarting flush with the row's own edge.
+ * Renders {@link Item.ActionsProps.children} as the row's trailing slot,
+ * pinned to the inline-end edge; once {@link Item} wraps narrow, it drops
+ * to its own line, indented past {@link Item.Media} to read as trailing.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action slot's markup.

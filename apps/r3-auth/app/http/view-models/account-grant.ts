@@ -1,7 +1,7 @@
 /**
  * Shapes a consent grant for the account area's authorized-apps list: the client's own
  * identity as it registered it, the date consent was given already formatted for the
- * request's language, and whether the grant is the one that cannot be withdrawn.
+ * request's language, and whether the grant is this server's own and stays permanent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,17 +25,15 @@ export interface GrantRow {
 	 * Whether this grant is this server's own registration.
 	 *
 	 * Withdrawing it would delete the session the person is reading the page with, so
-	 * the row offers no revoke control and the action refuses it server-side too.
+	 * the row locks out revocation and the server refuses the request too.
 	 */
 	isAuthServer: boolean;
 }
 
 /**
- * Maps a stored grant onto its row.
- *
- * A grant whose client row has disappeared still renders: the consent exists and is
- * worth being able to withdraw, so the client id stands in for the missing name rather
- * than the row being dropped.
+ * Maps a stored grant onto its row. A grant whose client row has disappeared still
+ * renders, with the client id standing in for the missing name so the consent stays
+ * visible and revocable.
  *
  * @param authServerClientId - This server's own client registration.
  * @param locale - Language the consent date is formatted for.

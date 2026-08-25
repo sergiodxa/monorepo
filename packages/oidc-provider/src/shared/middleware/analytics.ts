@@ -12,8 +12,11 @@ import type { AnalyticsSink } from "../../index";
 
 import middleware from "../lib/middleware";
 
-// Declared here (an imported module, not an ambient .d.ts) so the augmentation is
-// applied in consuming projects that compile the provider's source.
+/**
+ * Reaches consuming projects through their own compilation of this
+ * imported file, keeping the `RequestContext` extension available
+ * wherever this middleware is used.
+ */
 declare module "remix/router" {
 	interface RequestContext {
 		/** Host-provided analytics sink (no-op when none was configured). */

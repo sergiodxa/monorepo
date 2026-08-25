@@ -1,7 +1,7 @@
 /**
- * Tests for the Analytics Engine mock: data points are recorded as written, snapshots are
- * detached from the caller's objects, and the platform's cardinality and size limits are
- * enforced rather than silently swallowed.
+ * Tests for the Analytics Engine mock: data points are recorded as written, snapshots
+ * are detached from the caller's objects, and the platform's cardinality and size
+ * limits raise real errors here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

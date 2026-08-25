@@ -1,27 +1,9 @@
 /**
- * `remix/ui` context provider that publishes a live i18next instance to every
- * descendant component, the render-tree counterpart to `context.i18next` from
- * `@pkg/i18n/middleware`. Render the same per-request instance the middleware
- * already initialized server-side, or one created directly with i18next's own
- * `createInstance()` for a page that renders entirely client-side.
- *
- * Client-side, `IntlProvider` re-renders its whole subtree on its own
- * whenever the instance's language changes or a namespace finishes loading,
- * so every descendant's `i18n.t()`/`Trans` call reflects it without any of
- * them subscribing to anything themselves. It does this through
- * `handle.queueTask`, which the server renderer never runs — so server-side,
- * `IntlProvider` subscribes to nothing at all, matching how `context.locale`
- * is meant to stay fixed for the lifetime of a request instead of changing
- * mid-render.
- *
- * `setIntl` registers a module-scoped default for the case `IntlProvider`
- * itself can't reach: each independently hydrated island mounts its own
- * runtime tree, with no ancestor context from the server-rendered page around
- * it. Client-side, unlike server-side, one instance per page load is safe —
- * there's exactly one user, not many concurrent requests sharing an isolate —
- * so registering one default once and skipping `IntlProvider` in every island
- * is the normal case; reach for `IntlProvider` there only to override the
- * default for one specific subtree.
+ * `remix/ui` context provider that publishes a live i18next instance to
+ * descendants, the render-tree counterpart to `context.i18next` from
+ * `@pkg/i18n/middleware`. Re-renders its subtree client-side when the
+ * instance's language changes or a namespace loads, and stays inert
+ * server-side so `context.locale` stays fixed for a request's lifetime.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,11 +21,9 @@ export namespace IntlProvider {
 }
 
 /**
- * Publishes `i18n` to every descendant through context and renders `children`
- * unchanged. Re-renders its whole subtree when the instance's language
- * changes or a namespace finishes loading — client-side only; see the module
- * doc comment for why `handle.queueTask` is what makes that client-only
- * without an explicit environment check.
+ * Publishes `i18n` to every descendant through context and renders
+ * `children` unchanged. Re-renders its whole subtree client-side when the
+ * instance's language changes or a namespace finishes loading.
  *
  * @example
  * <IntlProvider i18n={ctx.i18next}>
@@ -54,9 +34,11 @@ export function IntlProvider(handle: Handle<IntlProvider.Props, I18n>) {
 	handle.queueTask(() => {
 		let i18n = handle.props.i18n;
 
+		/**
+		 * Fires-and-forgets: i18next's emitter calls listeners synchronously and
+		 * drops what they return, so this settles the re-render after the event.
+		 */
 		function onChange() {
-			// i18next's emitter calls listeners synchronously and drops what they
-			// return, so the re-render settles on its own after the event.
 			void handle.update();
 		}
 
@@ -78,16 +60,9 @@ export function IntlProvider(handle: Handle<IntlProvider.Props, I18n>) {
 let defaultI18n: I18n | undefined;
 
 /**
- * Registers a module-scoped default i18next instance for {@link intl} to fall
- * back to when there's no ancestor {@link IntlProvider} — every independently
- * hydrated island's own case, since none of them can see context from the
- * server-rendered page around it. Call this once, before mounting anything,
- * from the client bootstrap, so every island's `intl(handle)`/`Trans` picks it
- * up with no `IntlProvider` of its own.
- *
- * Browser-only — throws when called outside of one. A module-scoped instance
- * is shared by every concurrent request in a Workers isolate, exactly what
- * `@pkg/i18n/middleware`'s per-request instance exists to avoid.
+ * Registers a module-scoped default i18next instance for {@link intl} to
+ * fall back to when there is no ancestor {@link IntlProvider}, so each
+ * independently hydrated island can call `intl(handle)`/`Trans` without one.
  *
  * @example
  * setIntl(i18n);
@@ -105,10 +80,8 @@ export function setIntl(i18n: I18n): void {
 
 /**
  * Reads the i18next instance published by the nearest ancestor
- * {@link IntlProvider}, a wrapper over `handle.context.get(IntlProvider)` so
- * call sites don't need to import `IntlProvider` just to look it up. Falls
- * back to the module-scoped default {@link setIntl} registered when there's
- * no ancestor `IntlProvider`, and throws when neither exists.
+ * {@link IntlProvider}, falling back to the module-scoped default
+ * registered via {@link setIntl}, and throws when neither exists.
  *
  * @example
  * let i18n = intl(handle);

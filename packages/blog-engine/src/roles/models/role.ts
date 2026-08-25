@@ -29,7 +29,7 @@ export interface RoleWithPermissions {
 	builtin: boolean;
 }
 
-/** Input for creating/updating a role. */
+/** Fields accepted by {@link Role.create} and {@link Role.update}; `permissions` must be catalog keys. */
 export interface RoleInput {
 	name: string;
 	label: string;
@@ -190,8 +190,8 @@ export class Role {
 	}
 
 	/**
-	 * Deletes a custom role (built-ins cannot be deleted; the caller is responsible
-	 * for reassigning users first). No-op when missing.
+	 * Deletes a custom role; the caller is responsible for reassigning its users
+	 * first. No-op when the role is missing.
 	 * @param db - Database handle.
 	 * @param id - The role id to delete.
 	 * @throws {Role.InvalidError} When the target is a built-in role.

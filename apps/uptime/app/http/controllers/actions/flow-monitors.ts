@@ -1,20 +1,8 @@
 /**
- * Form actions for flow monitor create/update/delete. Each follows the validate → mutate →
- * flash → redirect pattern: on validation failure the visitor is sent back to the form with an
- * error toast; on success, to the list.
- *
- * One thing here is not shaped like the other monitor types' actions. A flow's source has to be
- * checked against the team's **verified domains** before it is stored, because a spec reaching a
- * domain the team does not own is a monitor that can never run — so saving it would mean an
- * hourly `error` result and a customer wondering why. That check is `inspectFlowSource`, the
- * same function the sweep applies, and its message is flashed verbatim: it already names the
- * host and the policy, and rewording it here would give the form and the check two vocabularies
- * for one rule.
- *
- * {@link checkFlowMonitor} is the one action here that performs billable work: it runs the flow
- * inline, so unlike the HTTP monitors' "run check" — which only enqueues, and is billed by the
- * job that later carries it out — nothing downstream of this request would ever meter it. The
- * entitlement gate, the Analytics Engine data point, and the meter events all live there.
+ * Form actions for flow monitor create/update/delete, each following validate → mutate →
+ * flash → redirect. A flow's source is checked against the team's verified domains before
+ * storage, using the same `inspectFlowSource` the sweep applies, so form and sweep share one
+ * message for one rule. {@link checkFlowMonitor} runs the flow inline and meters it directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -157,23 +145,9 @@ export const deleteFlowMonitor = createAction(routes.actions.monitor.flow.delete
 });
 
 /**
- * POST /actions/:team/check-flow-monitor — runs the flow now.
- *
- * A run this performs is the same work the scheduled sweep performs, so it is gated the same way
- * and metered the same way: one ping per HTTP request it made, keyed on the result row this run
- * wrote. Everything that returns before {@link runFlowCheck} — a rejected form, a monitor this
- * team does not own, an owner without entitlement — performed no requests and bills nothing.
- *
- * Unlike the create and update actions, this does **not** pre-check the source with
- * `inspectFlowSource`. It does not need to: `runFlowCheck` applies the same rule and records the
- * refusal as an `error` result, which is the more useful outcome here — somebody who asked to run
- * a broken monitor gets a stored result explaining why, rather than only a toast.
- *
- * A caller that asked for JSON gets the outcome in the body rather than a redirect and a flash it
- * would never render. That is the path that matters here: a flow can take most of thirty seconds,
- * so the hydrated page keeps its button pending and toasts the result when it lands, instead of
- * holding a navigation open for half a minute. The redirect below is the no-JS baseline, and the
- * two report the same thing.
+ * POST /actions/:team/check-flow-monitor — runs the flow now, gated and metered like the
+ * scheduled sweep, so nothing before {@link runFlowCheck} bills. JSON callers get the outcome
+ * inline since a run can take near thirty seconds, and the hydrated page toasts it directly.
  */
 export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, async (ctx) => {
 	let result = await validate(ctx.formData, FlowMonitorIdSchema);
@@ -192,9 +166,9 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	});
 
 	/**
-	 * `stateFor`, not `isActive`: an owner whose entitlement cannot be determined still gets their
-	 * run, because refusing a paying customer over an inconclusive lookup is the worse of the two
-	 * mistakes. The same reading every other manual check takes.
+	 * `stateFor` lets an owner whose entitlement cannot be determined still get their run, since
+	 * refusing a paying customer over an inconclusive lookup is the worse mistake — the same
+	 * reading every other manual check takes.
 	 */
 	if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
 		if (wantsJson(ctx.request)) {
@@ -222,9 +196,8 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	let resultId = await FlowMonitor.recordCheckResult(db, monitor.id, checkResult);
 
 	/**
-	 * Written here, between the history row and the meter, exactly where the sweep writes it — a
-	 * run the visitor asked for is the same event as one the cron asked for, so nothing reading the
-	 * dataset should be able to tell which produced a row.
+	 * Written here, between the history row and the meter, exactly where the sweep writes it, so a
+	 * manual run and a scheduled one land as the same event and look identical in the dataset.
 	 */
 	writePingResult({
 		monitorId: monitor.id,
@@ -235,10 +208,9 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	});
 
 	/**
-	 * One event per request the run made, keyed exactly as the sweep keys them, so a manual run and
-	 * a scheduled one can never be handed the same id and neither can be billed twice. Deferred
-	 * rather than awaited, like every meter event on a response path — the visitor is waiting on a
-	 * result this request already has, and ingestion is best-effort and logs its own failures.
+	 * One event per request made, keyed exactly as the sweep keys them, so a manual run and a
+	 * scheduled one can never collide or double-bill. The call is deferred past the response
+	 * because the visitor already has the result, and ingestion is best-effort, logging failures.
 	 */
 	if (checkResult.requestsMade > 0) {
 		let pings: BillablePing[] = [];
@@ -255,9 +227,9 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	}
 
 	/**
-	 * The whole result, not a summary: the hydrated page renders the failing test and its line
-	 * into the toast, which is the one thing a flow knows that no other monitor type does. The
-	 * result row already holds the same values, so nothing here is the only copy.
+	 * The whole result: the hydrated page renders the failing test and its line into the toast,
+	 * detail unique to a flow's check. The result row already holds the same values, so the two
+	 * stay identical.
 	 */
 	if (wantsJson(ctx.request)) {
 		return ok({

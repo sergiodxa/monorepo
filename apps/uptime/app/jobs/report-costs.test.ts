@@ -1,17 +1,9 @@
 /**
- * Unit tests for `ReportCostsJob.perform`: the day it reports, the event shape Polar
- * receives, which teams are skipped and why, and the failure modes that must ask the queue
- * to redeliver rather than lose a day.
- *
- * Polar is intercepted with MSW rather than faked through the container, because the two
- * properties that matter most about this job are on the wire: that `_cost.amount` is a
- * decimal **string** (a small `number` would serialise as `1e-7` and be unparseable), and
- * that `external_customer_id` and `external_id` are the fields Polar deduplicates on. A
- * double registered in the container would assert the arguments, not the request.
- *
- * The Analytics Engine SQL API is stubbed through the same server, since the job reads the
- * cost dataset back through it, while the `COSTS` binding it would write its own run's cost
- * to is an in-memory dataset that enforces the platform's per-point limits.
+ * Unit tests for `ReportCostsJob.perform`, run against Polar intercepted with MSW.
+ * `_cost.amount` must serialise as a decimal **string** — a small `number` would
+ * print as `1e-7` and be unparseable. The Analytics Engine SQL API is stubbed the
+ * same way, while `COSTS` is an in-memory dataset enforcing the platform's
+ * per-point limits.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -161,7 +153,6 @@ describe("ReportCostsJob", () => {
 		let [event] = batch!;
 		expect(event?.name).toBe("infra.cost.daily");
 		expect(event?.external_customer_id).toBe("owner-1");
-		// Team and day and nothing time-dependent, which is what makes a re-run a no-op.
 		expect(event?.external_id).toMatch(new RegExp(`^infra_cost:${team.id}:\\d{4}-\\d{2}-\\d{2}$`));
 		expect(event?.customer_id).toBeUndefined();
 	});
@@ -173,11 +164,8 @@ describe("ReportCostsJob", () => {
 		await run();
 
 		let cost = ingested[0]?.[0]?.metadata?._cost as { amount: unknown; currency: string };
-		// A `number` this small serialises as "0.003018" here but as "1e-7" two orders of
-		// magnitude down, which Polar cannot parse. Nine decimals, always a string.
 		expect(typeof cost.amount).toBe("string");
 		expect(cost.amount).toMatch(/^\d+\.\d{9}$/);
-		// 20,180 rows read at $0.001/M plus 10 written at $1.00/M, in cents.
 		expect(Number(cost.amount)).toBeCloseTo(0.003018, 9);
 		expect(cost.currency).toBe("usd");
 	});
@@ -192,7 +180,6 @@ describe("ReportCostsJob", () => {
 		expect(metadata?.team_id).toBe(team.id);
 		expect(metadata?.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		expect(metadata?.rate_card).toBe(RATE_CARD_VERSION);
-		// snake_case resource names, derived from the rate card rather than listed here.
 		expect(metadata?.d1_row_read).toBe(20_180);
 		expect(metadata?.email_sent).toBe(2);
 	});
@@ -204,15 +191,12 @@ describe("ReportCostsJob", () => {
 		await run();
 
 		let event = ingested[0]?.[0];
-		// A run that is late by two days must still book cost to the day it happened.
 		expect(event?.timestamp?.slice(0, 10)).toBe(String(event?.metadata?.day));
 		expect(event?.timestamp).toContain("23:59:59");
 	});
 
 	test("re-prices a current-rate-card day from its quantities", async () => {
 		let team = await createBilledTeam("owner-1");
-		// A recorded total that disagrees with the quantities: pricing at read time is what
-		// lets a rate-card correction be re-applied across the whole retained window.
 		serve([costRow(team.id, { reportedCents: 999 })]);
 
 		await run();
@@ -227,7 +211,6 @@ describe("ReportCostsJob", () => {
 
 		await run();
 
-		// A price change adds a rate-card version; it must not restate history.
 		let cost = ingested[0]?.[0]?.metadata?._cost as { amount: string };
 		expect(Number(cost.amount)).toBeCloseTo(12.5, 9);
 	});
@@ -242,7 +225,6 @@ describe("ReportCostsJob", () => {
 
 		let logger = await run();
 
-		// Nothing sent: one event naming a customer Polar cannot resolve rejects the batch.
 		expect(ingested).toHaveLength(0);
 		expect(
 			logger.events.find((entry) => entry.event === "job.report_costs.unreportable_team"),
@@ -294,7 +276,6 @@ describe("ReportCostsJob", () => {
 		let estimated = logger.events.find(
 			(entry) => entry.event === "job.report_costs.storage_estimated",
 		);
-		// Five rows at the modelled 200 bytes each: a GB-day figure, not a byte count.
 		expect(estimated?.teams).toBe(1);
 		expect(estimated?.d1Gb).toBeCloseTo((5 * 200) / 1_000_000_000, 12);
 	});
@@ -312,7 +293,6 @@ describe("ReportCostsJob", () => {
 		let team = await createBilledTeam("owner-1");
 		serve([costRow(team.id)], { ingestStatus: 500 });
 
-		// Safe to redeliver precisely because `externalId` deduplicates.
 		await expect(run()).rejects.toThrow(Job.RetryError);
 	});
 

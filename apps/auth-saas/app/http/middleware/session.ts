@@ -29,24 +29,18 @@ import routes from "~/routes/web";
 declare module "remix/router" {
 	interface RequestContext {
 		platformSession: {
-			/** The unique identifier for the authenticated subject */
 			subjectId: string;
-			/** The email address of the authenticated user */
 			email: string;
-			/** The tenant session ID (for identifying current session in platform tenant) */
+			/** Checked against the platform tenant's live session state on every request. */
 			sessionId?: string;
 		};
 	}
 }
 
 /**
- * Session middleware for the platform dashboard.
- *
- * Validates the signed session token and attaches user info to context.
- * The session token is self-contained and cryptographically signed,
- * so no database lookup is needed for validation.
- *
- * Redirects to onboarding if no valid session exists.
+ * Validates the signed session token, then confirms the session is still live against
+ * the platform tenant's session store so a copied token stops working once the user
+ * logs out; a token without a `sid` is rejected outright.
  *
  * @returns The downstream response when authenticated, or a redirect to onboarding
  * (clearing the cookie when the token is invalid/expired).
@@ -75,11 +69,6 @@ export default middleware(async (context, next) => {
 		});
 	}
 
-	// The signed token is self-contained, but that alone cannot be revoked: a copied
-	// token would stay valid for its full 30-day life even after logout. Validate the
-	// embedded `sid` against the platform tenant's live session state so logout and
-	// server-side revocation take effect. A token without a `sid` cannot be revoked, so
-	// it is rejected (fail closed); all tokens minted by the callback carry one.
 	let active = await isPlatformSessionActive(session.sessionId, (sid) =>
 		new TenantApiService(PLATFORM_TENANT).sessionExists(session.subjectId, sid),
 	);

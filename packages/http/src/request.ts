@@ -1,3 +1,10 @@
+/**
+ * Request builders that pair a serialized body with its matching
+ * Content-Type header, so callers don't have to set headers by hand.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import * as ContentType from "./content-type";
 
 type Init = Omit<RequestInit, "body" | "headers"> & {

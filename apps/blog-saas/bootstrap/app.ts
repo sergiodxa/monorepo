@@ -37,17 +37,21 @@ import routes from "~/routes/web";
  *   platform-domain route, falling back to a 404 for unmatched paths.
  */
 export function createDashboardRouter() {
+	/**
+	 * Runs `headRequests()` first so everything after it — the session,
+	 * cross-origin protection, the dashboard guards — sees a plain `GET` and
+	 * treats a `HEAD` probe exactly as it would the request behind it.
+	 */
 	let middleware: Middleware[] = [
-		// First, so everything after it — the session, cross-origin protection, the
-		// dashboard guards — sees a plain `GET` and treats a `HEAD` probe exactly as it
-		// would the request behind it.
 		headRequests(),
 		asyncContext(),
 		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),
-		// Tokenless cross-origin protection: rejects unsafe cross-origin/same-site
-		// requests (tenant subdomains are same-site). The Polar webhook is server-to-
-		// server and authenticated by its signature, so it is exempted.
+		/**
+		 * Rejects unsafe cross-origin/same-site requests; tenant subdomains are
+		 * same-site. Exempts the Polar webhook path, which authenticates itself
+		 * via its own request signature.
+		 */
 		cop({ insecureBypassPatterns: ["/api/webhooks/"] }),
 		formData() as Middleware,
 		methodOverride(),

@@ -1,12 +1,9 @@
 /**
- * Web Audio playback for music, sound effects, and creature cries.
- *
- * Three gain channels (bgm, sfx, cries) route through a master gain so volume is
- * adjustable per category. Music crossfades on change and honours intro-then-loop
- * points from the manifest; effects and cries are fire-and-forget. Browsers block
- * audio until a user gesture, so `unlock()` resumes the context from the Boot
- * scene's "press any button" screen. Every method is a safe no-op when a buffer
- * is missing, so the game runs before any audio assets exist.
+ * Three gain channels (bgm, sfx, cries) route through a master gain, each
+ * independently adjustable. Music crossfades on change and honours
+ * intro-then-loop points from the manifest. Browsers block audio until a user
+ * gesture, so `unlock()` resumes the context from the Boot scene. Every method
+ * is a safe no-op when a buffer is missing, so the game runs before assets exist.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +13,6 @@ import type { SfxNameInput } from "./sfx";
 
 import { playSfx } from "./sfx";
 
-/** A mixable audio category. */
 type Channel = "bgm" | "sfx" | "cries";
 
 /** Owns the audio context, channel mixing, and music/effect playback. */
@@ -51,13 +47,17 @@ export class AudioManager {
 		if (this.context.state === "suspended") void this.context.resume();
 	}
 
-	/** Plays a looping music track, crossfading out the previous one. */
+	/**
+	 * Plays a looping music track, crossfading out the previous one. Remembers
+	 * the track id even when its buffer is missing, so a later call with the
+	 * same id does not retry the lookup.
+	 */
 	playBgm(id: string, fadeMs = 400) {
 		if (this.currentBgmId === id) return;
 		let buffer = this.assets.audioBuffer(id);
 		this.stopBgm(fadeMs);
 		if (!buffer) {
-			this.currentBgmId = id; // remember intent even without the asset
+			this.currentBgmId = id;
 			return;
 		}
 
@@ -73,7 +73,11 @@ export class AudioManager {
 		this.currentBgmId = id;
 	}
 
-	/** Stops the current music track with a short fade. */
+	/**
+	 * Stops the current music track with a short fade, then restores channel
+	 * gain after the fade so the next track is audible. Ramp and stop failures
+	 * are ignored: the context may be suspended, or the source already stopped.
+	 */
 	stopBgm(fadeMs = 400) {
 		let source = this.currentBgm;
 		this.currentBgm = null;
@@ -84,15 +88,10 @@ export class AudioManager {
 		try {
 			gain.setValueAtTime(gain.value, now);
 			gain.linearRampToValueAtTime(0.0001, now + fadeMs / 1000);
-		} catch {
-			// ignore ramp failures on a suspended context
-		}
+		} catch {}
 		try {
 			source.stop(now + fadeMs / 1000);
-		} catch {
-			// already stopped
-		}
-		// restore channel gain after the fade so future tracks are audible
+		} catch {}
 		globalThis.setTimeout(() => gain.setValueAtTime(1, this.context.currentTime), fadeMs + 20);
 	}
 
@@ -102,15 +101,11 @@ export class AudioManager {
 	}
 
 	/**
-	 * Plays an original, procedurally-synthesized sound effect on the sfx channel.
-	 *
-	 * The effect is synthesized on the fly (no asset buffer needed) and routed
-	 * through the sfx channel so its volume follows `setVolume("sfx", ...)`. A
-	 * zero sfx-channel volume schedules nothing; an unknown name is a no-op.
+	 * Plays a procedurally-synthesized effect on the sfx channel. Passes
+	 * gain: 1 since the channel node already scales volume, avoiding double
+	 * attenuation, and skips scheduling entirely when the channel is muted.
 	 */
 	playSynthSfx(name: SfxNameInput) {
-		// The sfx channel gain node already scales volume, so pass gain: 1 to avoid
-		// double-attenuating; gate on the channel volume so a muted channel schedules nothing.
 		if (this.channels.sfx.gain.value <= 0) return;
 		playSfx(name, { context: this.context, destination: this.channels.sfx, gain: 1 });
 	}

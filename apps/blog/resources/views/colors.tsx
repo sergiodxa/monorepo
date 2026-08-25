@@ -26,7 +26,7 @@ import routes from "~/routes/web";
  */
 export namespace ColorsView {
 	/**
-	 * Represents a single CSS custom property token.
+	 * A single CSS custom property token.
 	 */
 	export interface Token {
 		name: string;
@@ -41,7 +41,7 @@ export namespace ColorsView {
 	}
 
 	/**
-	 * Placeholder view model for the colors page.
+	 * The page renders from the design tokens alone, leaving the model empty.
 	 */
 	export interface Model {}
 }
@@ -54,18 +54,16 @@ export namespace ColorsView {
 const TONES = ["neutral", "brand", "success", "warning", "danger"] as const;
 
 /**
- * The eleven steps every raw palette scale exposes, lightest to darkest. Kept as
- * a list rather than generated from a range so the two irregular ends (`50` and
- * `950`, which break the otherwise-even hundreds) stay visible at a glance.
+ * The eleven steps every raw palette scale exposes, lightest to darkest.
+ * Spelled out as a literal list so the two irregular ends (`50` and `950`)
+ * stay visible beside the even hundreds.
  */
 const PALETTE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
 /**
- * Every property suffix a semantic tone carries. The four interaction states
- * (`-hover`, `-pressed`) come from the component library's theme rather than the
- * lower-level token contract, since how far a color shifts on hover is a
- * component-design decision — they are listed here because this page documents
- * what an app can actually reference, not which file declares it.
+ * Every property suffix a semantic tone carries, including the interaction
+ * states the component library's theme contributes, since this page documents
+ * what an app can reference from a call site.
  */
 const TONE_PROPERTIES = [
 	"bg-tint",
@@ -83,22 +81,16 @@ const TONE_PROPERTIES = [
 	"fg-on-solid",
 ] as const;
 
-/**
- * Props for the per-tone worked example.
- */
 namespace TonePreview {
 	export interface Props {
-		/** Tone whose tokens the card demonstrates. */
 		tone: (typeof TONES)[number];
 	}
 }
 
 /**
- * Renders one tone as a worked example: a tinted card showing the three tint
- * steps as chips and the three solid steps as buttons, so each token is seen in
- * the role it was designed for rather than as an abstract swatch. The five cards
- * are identical apart from their tone, which is the point — a tone swap should
- * be the only difference between two otherwise-matching surfaces.
+ * Shows each token in the role it was designed for: tint steps as chips, solid
+ * steps as buttons. The ring sample paints `ringShadow()` so the ring token is
+ * visible at rest, matching what `ring()` shows on focus.
  */
 function TonePreview(handle: Handle<TonePreview.Props>) {
 	return () => {
@@ -166,9 +158,6 @@ function TonePreview(handle: Handle<TonePreview.Props>) {
 					>
 						Pressed
 					</span>
-					{/* `ring()` only ever paints on :focus-visible, and a focus ring nobody
-					can focus is invisible documentation — so this sample uses the
-					always-on `ringShadow()` against the same ring token instead. */}
 					<span
 						mix={[
 							mis("auto"),

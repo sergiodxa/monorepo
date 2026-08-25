@@ -1,8 +1,7 @@
 /**
  * Router-level tests of revocation and introspection. Both endpoints authenticate the
- * caller over HTTP Basic and both are deliberately uninformative about tokens: RFC
- * 7009 requires a `200` whatever the token was, and RFC 7662 requires
- * `{ active: false }` rather than a reason.
+ * caller over HTTP Basic and both answer opaquely: RFC 7009 requires a `200` whatever
+ * the token was, and RFC 7662 requires a bare `{ active: false }`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -147,6 +146,10 @@ describe("POST /oauth/introspect", () => {
 		expect(await response.json()).toMatchObject({ active: true, sub: fixtures.subjectId });
 	});
 
+	/**
+	 * Bounded on both sides: a value in the wrong unit still reads as a number, so
+	 * seconds land just ahead of now while milliseconds land in the year 58000.
+	 */
 	test("reports expiry as the seconds since the epoch RFC 7662 asks for", async () => {
 		let tokens = await signIn(app, fixtures);
 		app.resetCookies();
@@ -160,9 +163,6 @@ describe("POST /oauth/introspect", () => {
 		let body = (await response.json()) as { exp: number; iat: number };
 		let now = Math.floor(Date.now() / 1000);
 
-		// Bounded on both sides, since a value in the wrong unit still reads as a number:
-		// seconds put the expiry just ahead of now, milliseconds put it in the year 58000,
-		// and dividing seconds by a thousand again puts it in 1970.
 		expect(body.exp).toBeGreaterThan(now);
 		expect(body.exp).toBeLessThan(now + 24 * 60 * 60);
 		expect(body.iat).toBeLessThanOrEqual(now);
@@ -187,6 +187,10 @@ describe("POST /oauth/introspect", () => {
 		expect(await response.json()).toMatchObject({ error: "invalid_client" });
 	});
 
+	/**
+	 * The credentials fail inside the engine, so introspection reports the token as
+	 * inactive and the endpoint stays opaque either way.
+	 */
 	test("refuses a caller whose secret is wrong", async () => {
 		let response = await post(
 			routes.oauth.introspect.href(),
@@ -194,8 +198,6 @@ describe("POST /oauth/introspect", () => {
 			{ Authorization: basic(fixtures.clientId, "wrong") },
 		);
 
-		// The credentials fail inside the engine, which introspection reports as inactive
-		// rather than as an authentication error — the endpoint reveals nothing either way.
 		expect(await response.json()).toEqual({ active: false });
 	});
 });

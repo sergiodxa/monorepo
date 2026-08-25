@@ -22,15 +22,12 @@ describe("GET /", () => {
 		expect(body).toContain("Get early access &amp; special pricing");
 		expect(body).toContain('action="/api/subscribe"');
 		expect(body).toContain('type="email"');
-		// Native constraint validation replaced the client-side checks entirely.
 		expect(body).toContain("required");
 	});
 
 	test("starts the document with the doctype, so the page parses in standards mode", async () => {
 		let body = await fetchApp("/").then((response) => response.text());
 
-		// The doctype is not part of the JSX tree — the renderer prepends it to the
-		// response body — so only a test that reads the whole response can see it.
 		expect(body.startsWith("<!DOCTYPE html>")).toBe(true);
 		expect(body.indexOf("<html")).toBe("<!DOCTYPE html>".length);
 	});
@@ -54,7 +51,6 @@ describe("GET /", () => {
 	test("loads no first-party JavaScript", async () => {
 		let body = await fetchApp("/").then((response) => response.text());
 
-		// The only script on the page is Cloudflare's analytics beacon.
 		expect(body).not.toContain("clientEntry");
 		expect(body).toContain("static.cloudflareinsights.com");
 	});

@@ -1,3 +1,11 @@
+/**
+ * `DatabaseDriver` implementation for `remix/data-table` backed by Cloudflare D1,
+ * compiling operations to SQLite-dialect SQL and normalizing D1's response shapes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type {
 	DataManipulationOperation,
 	DataManipulationRequest,
@@ -12,14 +20,9 @@ import type {
 import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "remix/data-table";
 
 /**
- * What one executed statement cost, as reported by D1 itself.
- *
- * Every D1 response already carries these numbers and the adapter already reads
- * `meta` to normalize `affectedRows`/`insertId`, so surfacing them costs nothing —
- * no extra statement, no extra billable operation. They are the per-statement
- * breakdown Cloudflare's own analytics cannot give: the dashboard reports rows read
- * per _database_, while a cost regression has to be traced to the _query_ that
- * caused it.
+ * What one executed statement cost, as reported by D1 itself. Surfacing it is free:
+ * the adapter already reads `meta` to normalize `affectedRows`/`insertId`, and this
+ * reuses that same read to give the per-query breakdown a cost regression needs.
  */
 export interface D1StatementObservation {
 	/** Operation kind the statement came from (`select`, `insert`, `raw`, …). */
@@ -35,12 +38,9 @@ export interface D1StatementObservation {
 }
 
 /**
- * Receives one {@link D1StatementObservation} per executed statement.
- *
- * This runs on the hot path, once per statement, so an implementation must stay
- * cheap. It may throw without consequence — the adapter swallows anything it throws
- * rather than failing the statement it was only measuring — but a throwing observer
- * silently records nothing.
+ * Receives one {@link D1StatementObservation} per executed statement. This runs
+ * on the hot path, once per statement, so an implementation must stay cheap and
+ * may throw without consequence — the adapter swallows the error and moves on.
  */
 export type D1StatementObserver = (observation: D1StatementObservation) => void;
 
@@ -48,9 +48,8 @@ interface D1AdapterOptions {
 	capabilities?: Partial<DatabaseCapabilities>;
 	/**
 	 * Optional observer called after every statement the adapter executes, with the
-	 * row counts D1 reported for it. Purely additive: leave it out and the adapter
-	 * behaves exactly as before, which is why this package needs no logging
-	 * dependency of its own to make per-query cost attribution possible.
+	 * row counts D1 reported for it. Leaving it out keeps the adapter's behavior
+	 * unchanged, so per-query cost attribution stays entirely up to the caller's own logging.
 	 */
 	onStatement?: D1StatementObserver;
 }
@@ -77,26 +76,9 @@ interface D1PreparedQuery {
 }
 
 /**
- * Creates a `DatabaseDriver` backed by a Cloudflare D1 database.
- *
- * SQL generation follows SQLite semantics to match D1 behavior.
- *
- * IMPORTANT — transactions are NOT atomic on D1. Cloudflare D1 has no interactive
- * transactions: it exposes no `BEGIN`/`COMMIT`/`ROLLBACK`, and its only atomic
- * primitive, `db.batch([...])`, requires every statement up front and defers all
- * results until the batch runs. The `remix/data-table` adapter contract instead
- * requires each statement to execute and return its result (rows, `RETURNING`
- * output, `insertId`) synchronously within the `transaction()` callback — for
- * example `Database.update()` reads the `RETURNING` row and throws if it is
- * missing. Those two models are incompatible, so this adapter cannot buffer a
- * scope into a single `batch()` without breaking result-returning callers or
- * fabricating results. It therefore tracks transaction tokens logically and runs
- * each statement immediately; every statement auto-commits on its own and a later
- * failure leaves the earlier statements committed. Callers that need atomic
- * multi-row writes on D1 must express them as a single SQL statement (for example
- * an `insertMany`, a single `UPDATE`, or an `INSERT ... ON CONFLICT`) rather than
- * relying on `transaction()`. The Durable Object adapter
- * (`@pkg/data-table-sqlstorage`) does provide real atomic transactions.
+ * Creates a `DatabaseDriver` backed by a Cloudflare D1 database, compiling operations
+ * to SQLite-dialect SQL. D1 commits each statement independently and immediately, so
+ * atomic multi-row writes must be a single SQL statement, not a `transaction()` scope.
  * @param db D1 binding used to prepare and execute SQL.
  * @param options Optional capability overrides for adapter feature flags, plus an
  * optional {@link D1StatementObserver} for per-statement row counts.
@@ -139,10 +121,6 @@ export function createD1DatabaseAdapter(
 				};
 			}
 
-			// `c.json()` columns hold JS objects/arrays at the model layer, but D1's
-			// binder accepts only strings/numbers/booleans/null — encode them to JSON
-			// text before binding. `decodeColumns` undoes this, and the boolean-to-integer
-			// narrowing SQLite forces, on every row read back.
 			operation = encodeJsonColumns(operation);
 
 			let statement = compileSqliteStatement(operation);
@@ -210,15 +188,9 @@ export function createD1DatabaseAdapter(
 		},
 
 		/**
-		 * Starts a logical transaction scope.
-		 *
-		 * WARNING — this does NOT provide atomicity. Cloudflare D1 has no interactive
-		 * transactions, so no `BEGIN` is issued; statements executed within the scope
-		 * each auto-commit independently and a later failure will not roll back the
-		 * earlier ones. The token exists only to satisfy the `remix/data-table`
-		 * adapter contract for scoped operations. See the note on
-		 * {@link createD1DatabaseAdapter} for why real transactions are not possible
-		 * here and what to use instead.
+		 * Starts a logical transaction scope: each statement within it commits
+		 * independently and immediately, so the token exists to satisfy the
+		 * `remix/data-table` scope contract. See {@link createD1DatabaseAdapter}.
 		 * @param options Transaction hints; `read uncommitted` toggles the matching
 		 * pragma.
 		 * @returns A logical token identifying the scope.
@@ -236,8 +208,8 @@ export function createD1DatabaseAdapter(
 		},
 
 		/**
-		 * Ends a logical transaction scope. No `COMMIT` is issued because statements
-		 * were already committed as they ran; this only discards the logical token.
+		 * Ends a logical transaction scope by discarding the token: each statement
+		 * already committed independently the moment it ran.
 		 * @param token Token returned by {@link beginTransaction}.
 		 */
 		async commitTransaction(token: TransactionToken): Promise<void> {
@@ -246,9 +218,9 @@ export function createD1DatabaseAdapter(
 		},
 
 		/**
-		 * Ends a logical transaction scope after an error. This CANNOT undo statements
-		 * that already ran within the scope — D1 has no `ROLLBACK` — so partial writes
-		 * may remain. It only discards the logical token.
+		 * Ends a logical transaction scope after an error by discarding the token.
+		 * Statements already committed independently as they ran, so writes made
+		 * before the error remain in the database.
 		 * @param token Token returned by {@link beginTransaction}.
 		 */
 		async rollbackTransaction(token: TransactionToken): Promise<void> {
@@ -269,36 +241,26 @@ export function createD1DatabaseAdapter(
 		},
 
 		/**
-		 * Rejects: a D1 database is provisioned by Cloudflare and reached through a
-		 * binding, so a Worker can drop the tables it knows about but cannot recreate
-		 * the database itself. Callers that want an empty schema should run migrations
-		 * down, or provision a fresh database.
+		 * Throws: Cloudflare alone provisions and owns the D1 database behind this
+		 * binding, so a Worker can drop the tables it knows about through it. Callers
+		 * wanting an empty schema should run migrations down or provision a fresh database.
 		 */
 		async wipe(): Promise<void> {
 			throw new Error("D1 adapter wipe is not supported");
 		},
 
 		/**
-		 * The binding is owned by the Worker runtime and outlives every adapter built
-		 * on it, so there is no handle to release.
+		 * The binding is owned and released by the Worker runtime itself, independent
+		 * of any adapter built on top of it.
 		 */
 		close(): void {},
 	};
 }
 
-// Statement observation
-
 /**
- * Reports one executed statement's D1-reported cost to `onStatement`.
- *
- * Only ever called when an observer was configured, so an adapter without one
- * allocates nothing extra. Anything the observer throws is swallowed: it exists to
- * measure the statement, and instrumentation that fails the query it was measuring
- * would be worse than no instrumentation at all.
- *
- * Statements that throw are not reported, because D1 returns no `meta` for them, and
- * neither are the adapter's own schema probes (`hasTable`, `hasColumn`,
- * `executeScript`) which run at migration time rather than on a request path.
+ * Reports one executed statement's D1-reported cost to `onStatement`, without
+ * allocating when no observer is configured. Anything the observer throws is
+ * swallowed, since it exists to measure a statement rather than fail it.
  * @param onStatement Observer configured on the adapter.
  * @param operation Operation the statement was compiled from.
  * @param meta D1's metadata for the statement, if it reported any.
@@ -316,12 +278,8 @@ function observeStatement(
 			rowsWritten: typeof meta?.rows_written === "number" ? meta.rows_written : 0,
 			durationMs: typeof meta?.duration === "number" ? meta.duration : 0,
 		});
-	} catch {
-		// Instrumentation must never fail the statement it was measuring.
-	}
+	} catch {}
 }
-
-// SQL Compilation
 
 type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
 type UpsertOperation = Extract<DataManipulationOperation, { kind: "upsert" }>;
@@ -819,8 +777,6 @@ function collectColumns(rows: Record<string, unknown>[]): string[] {
 	return columns;
 }
 
-// Result normalization
-
 function normalizeRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
 	return rows.map((row) => {
 		if (typeof row !== "object" || row === null) {
@@ -850,37 +806,23 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 }
 
 /**
- * Returns `true` when a `db.exec()`/raw SQL statement's text looks like a `SELECT`
- * (including a `WITH` CTE or a `PRAGMA` read). A `"raw"` operation's kind carries no
- * structural read/write signal — unlike `select`/`insert`/etc., which the query
- * builder already knows — so this sniffs the leading keyword to decide whether the
- * statement needs `.all()` (to get rows back) or `.run()`. Without this, a raw
- * `SELECT` silently gets no rows: D1's `.run()` never returns `results`.
+ * Returns `true` when a raw SQL statement's text looks like a `SELECT`
+ * (including a `WITH` CTE or a `PRAGMA` read), since a `"raw"` operation's kind
+ * carries no read/write signal of its own for the adapter to dispatch on.
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);
 }
 
 /**
- * Whether a raw statement carries a `RETURNING` clause, and therefore yields rows even
- * though it starts with a write keyword.
- *
- * Without this, a raw `UPDATE … RETURNING` would be dispatched to `run()` and silently
- * drop the rows it was written to produce — which makes an atomic claim (a write that
- * both computes per-row values and reports which rows it touched) impossible to express
- * through the escape hatch. The typed builder cannot express one either, because its
- * `changes` are bound values rather than expressions.
- *
- * A false positive is harmless: `all()` executes a write exactly as `run()` does and
- * returns no rows for a statement that produces none. So the loose word-boundary test is
- * deliberate — being wrong costs nothing, while missing a real `RETURNING` loses data the
- * caller asked for.
+ * Reports whether a raw statement carries a `RETURNING` clause, so it
+ * dispatches to `.all()` and returns the rows the write produced. The loose
+ * word-boundary match favors catching every real `RETURNING` clause over precision.
  */
 function hasRawReturningClause(sql: string): boolean {
 	return /\breturning\b/i.test(sql);
 }
 
-/** Returns the names of a table's `c.json()`-typed columns. */
 function getJsonColumnNames(table: StatementTable): Set<string> {
 	let definitions = getTableColumnDefinitions(table);
 	let names = new Set<string>();
@@ -976,22 +918,9 @@ function getDecodableColumnNames(table: StatementTable): DecodableColumns {
 }
 
 /**
- * Restores, on every row read back, the JS types SQLite cannot store natively.
- *
- * `c.json()` columns go in as JSON text and must come back as the objects the model
- * layer works with. `c.boolean()` columns are the same problem with a quieter failure:
- * SQLite has no boolean storage class, so `normalizeBoundValue` writes `true`/`false`
- * as `1`/`0` and, without this decode, the column reads back as a number while the
- * generated row type still claims `boolean`. That lie corrupts data rather than
- * crashing — `<input checked={0}>` renders `checked="0"`, and an HTML boolean
- * attribute is on whenever it is merely present, so a stored `false` came back ticked
- * and re-saving the form flipped it to true; a JSON API serializing the same field
- * promised `boolean` and emitted `1`. Decoding here, where the table definition is in
- * hand, is what makes the row type honest for every caller at once, instead of asking
- * each call site to remember a `Boolean(...)` wrapper.
- *
- * `null` is left alone: a nullable boolean column's `null` is a third state, and the
- * `?? true` defaults callers write over it depend on telling it apart from `false`.
+ * Restores, on every row read back, the JS types SQLite cannot store natively:
+ * `c.json()` text becomes objects again and `c.boolean()` integers become real
+ * booleans, leaving a nullable column's `null` alone as the third state distinct from `false`.
  */
 function decodeColumns(
 	operation: DataManipulationOperation,
@@ -1012,9 +941,7 @@ function decodeColumns(
 			if (typeof value === "string") {
 				try {
 					decoded[column] = JSON.parse(value);
-				} catch {
-					// Leave the raw string in place if it somehow isn't valid JSON.
-				}
+				} catch {}
 			}
 		}
 
@@ -1028,7 +955,6 @@ function decodeColumns(
 	});
 }
 
-/** Returns `true` when an operation asks for a `returning` clause. */
 function hasReturningClause(operation: DataManipulationOperation): boolean {
 	return (
 		(operation.kind === "insert" ||
@@ -1040,6 +966,15 @@ function hasReturningClause(operation: DataManipulationOperation): boolean {
 	);
 }
 
+/**
+ * Computes `affectedRows` for a statement whose rows were already read. A raw
+ * statement lands here read-only or as a write with `RETURNING`; reporting
+ * `meta.changes` for it matches `run()`'s count for the same statement without the clause.
+ * @param kind Operation kind driving the affected-rows rule.
+ * @param rows Rows already read for this statement.
+ * @param meta D1's metadata for the statement, if it reported any.
+ * @returns Affected row count, or `undefined` when none applies.
+ */
 function normalizeAffectedRowsForReader(
 	kind: DataManipulationOperation["kind"],
 	rows: Record<string, unknown>[],
@@ -1051,10 +986,6 @@ function normalizeAffectedRowsForReader(
 		}
 		return rows.length;
 	}
-	// A raw statement reaches this path either read-only or as a write with `RETURNING`.
-	// Reporting `meta.changes` keeps `affectedRows` identical to what the `run()` path
-	// gives the same statement without the clause, so adding `RETURNING` to a raw write
-	// never changes what the caller reads back.
 	if (kind === "raw") {
 		return meta?.changes;
 	}

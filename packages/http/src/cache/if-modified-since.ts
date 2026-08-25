@@ -15,9 +15,8 @@ const SECOND_MS = 1000;
 /**
  * Truncates a time to whole seconds, the only precision an HTTP-date carries.
  *
- * Comparing raw milliseconds would report a resource as modified whenever it was
- * written in the same second the client stored it, which produces a full body
- * for a copy that is byte-identical.
+ * Comparing raw milliseconds would flag a same-second write as modified,
+ * forcing a full body for a copy that is already byte-identical.
  */
 function toWholeSeconds(value: Date | number): number {
 	let time = value instanceof Date ? value.getTime() : value;
@@ -42,9 +41,8 @@ export function ifModifiedSince(headers: Headers): Date | null {
 /**
  * Whether a resource changed after the copy a client already holds.
  *
- * Both times are compared as whole seconds, and a modification in the very same
- * second as the client's copy counts as unmodified, which is the comparison the
- * caching specification defines and the one that keeps repeat requests cheap.
+ * Both times are compared as whole seconds, so a modification in the same
+ * second as the client's copy counts as unmodified, keeping repeat requests cheap.
  *
  * @param modifiedAt - When the resource last changed.
  * @param since - The date the client sent in `If-Modified-Since`.

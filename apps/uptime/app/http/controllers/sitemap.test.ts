@@ -17,7 +17,6 @@ import routes from "~/routes/web";
 
 import sitemap from "./sitemap";
 
-/** Dispatches a real GET request through the sitemap action, router, and route table. */
 async function getSitemap() {
 	let router = createRouter();
 	router.map(routes.sitemap, sitemap);

@@ -1,11 +1,9 @@
 /**
- * This server's own OAuth callback. The account area is reached by signing in through
- * the same authorization flow relying parties use, so this endpoint redeems the code
- * that flow issued and stores the resulting tokens in the browser session.
- *
- * It is the one place where this server acts as a client of itself, which is why the
- * `state` and the client id are checked against the parked request before the exchange:
- * a code arriving here for any other client is not a session this server may adopt.
+ * This server's own OAuth callback: the account area is reached through the same
+ * authorization flow relying parties use, so this endpoint redeems that code and
+ * stores the tokens in the browser session. It is the one place this server acts as a
+ * client of itself, so the `state` and the client id are checked against the parked
+ * request first — a code for any other client belongs to somebody else's session.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +22,11 @@ import Client from "~/app/data/client";
 import { getAuthz, setTokens, unsetAuthz } from "~/app/http/middleware/session";
 import routes from "~/routes/web";
 
-/** GET /auth/callback — redeems this server's own authorization code and starts a session. */
+/**
+ * GET /auth/callback — redeems this server's own authorization code and starts a
+ * session. The exchange authenticates with the client secret, the session begins only
+ * once a refresh token comes back, and a failure logs the OAuth reason alone.
+ */
 export default createAction(
 	routes.auth.callback,
 	inject([Database] as const, async (db) => {
@@ -61,9 +63,6 @@ export default createAction(
 		}
 
 		try {
-			// Authenticated as its own client, like any other relying party: the
-			// registration carries a secret and the grant refuses an unauthenticated
-			// exchange, so skipping it here would make this the one privileged path.
 			let tokens = await createOidcProvider(db).token({
 				type: "authorization_code",
 				code,
@@ -72,8 +71,6 @@ export default createAction(
 				clientSecret: client.secret,
 			});
 
-			// Narrowed rather than asserted: `token()` answers three grants and only two
-			// of them mint a refresh token, and this session is unusable without one.
 			if (!("refresh_token" in tokens) || typeof tokens.refresh_token !== "string") {
 				ctx.logger.error("auth_callback_missing_refresh_token");
 				return badRequest({ message: "Failed to exchange authorization code" });
@@ -88,7 +85,6 @@ export default createAction(
 				status: redirect.Status.SeeOther,
 			});
 		} catch (error) {
-			// The message is the engine's own OAuth reason, never the code or the tokens.
 			ctx.logger.error("auth_callback_token_exchange_failed", {
 				error: error instanceof Error ? error.message : "Unknown error",
 			});

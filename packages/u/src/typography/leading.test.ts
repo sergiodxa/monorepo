@@ -28,9 +28,11 @@ describe("leading", () => {
 		]);
 	});
 
+	/**
+	 * `line-height` is one of the properties the serializer leaves unitless, so
+	 * a bare number survives as the ratio it was meant to be, not as `1.8px`.
+	 */
 	test("a raw number passes through unchanged as a unitless multiplier", async () => {
-		// `line-height` is one of the properties the serializer leaves unitless, so
-		// a bare number survives as the ratio it was meant to be, not as `1.8px`.
 		expect(await declarations(leading(1.8))).toEqual(["line-height: 1.8"]);
 	});
 

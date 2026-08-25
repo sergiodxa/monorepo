@@ -30,7 +30,6 @@ describe(Switch.name, () => {
 		expect(html).toContain("<label");
 		expect(html).toContain("<input");
 		expect(html).toContain("Notifications");
-		// The input renders inside the label, not before/outside it.
 		expect(html.indexOf("<label")).toBeLessThan(html.indexOf("<input"));
 	});
 
@@ -45,17 +44,9 @@ describe(Switch.name, () => {
 	});
 
 	/**
-	 * The checked state is the native control's, and only the native control's.
-	 *
-	 * An authored `aria-checked` takes precedence over the checkedness assistive
-	 * technology would otherwise read off the input, and it can only hold the value
-	 * this render produced — so it would start out valid and turn into a lie the
-	 * first time somebody flipped the switch, which is the entire purpose of a
-	 * switch. Rendering none keeps the announced state and the drawn state (`&:checked`)
-	 * the same fact. Both directions are asserted because the failure that prompted
-	 * this looked fine in one of them: a boolean `true` serialized as the bare
-	 * attribute name and a boolean `false` vanished, so neither state was ever a
-	 * token ARIA recognizes.
+	 * Asserts no `aria-checked` is rendered: an authored value can only hold
+	 * what this render produced, so it would turn stale — and misleading —
+	 * the instant somebody flips the switch, which is the switch's whole point.
 	 */
 	describe("checked state", () => {
 		test("carries no aria-checked of its own, whichever way it is rendered", async () => {

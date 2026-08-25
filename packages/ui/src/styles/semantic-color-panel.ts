@@ -3,7 +3,7 @@
  * tinted panel — a full-width status message or placeholder panel — takes on
  * for each of the five semantic color roles, one `&[data-color="..."]`
  * branch per role, every branch driven by that color's own `--ui-*`
- * variables rather than a hardcoded value.
+ * variables.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,12 +32,7 @@ const SEMANTIC_COLORS: readonly SemanticColor[] = [
 /**
  * Composes every `&[data-color="..."]` branch a tinted panel keys its
  * border, background, and foreground on, one branch per {@link SemanticColor},
- * as its own mixin built from `@pkg/u`'s `border()`/`bg()`/`fg()` color
- * utilities nested under `when()`. Compose the call directly in a host's
- * `mix` array, alongside a `css()` call for
- * whatever border radius, layout, or other declarations are genuinely local
- * to that panel, rather than folding its properties into another `css()`
- * call.
+ * built from `@pkg/u`'s `border()`/`bg()`/`fg()` utilities nested under `when()`.
  *
  * @returns A `css()` mixin ready for a host element's `mix` prop.
  * @example

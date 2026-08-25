@@ -1,3 +1,11 @@
+/**
+ * Tests covering `success` result construction for objects, primitives,
+ * null, and undefined values.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { success } from "./success.js";

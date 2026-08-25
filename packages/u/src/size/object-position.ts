@@ -17,18 +17,9 @@ export type ObjectPositionValue =
 	| (string & {});
 
 /**
- * Applies `object-position`, which decides which part of a replaced element's
- * content survives the crop `u.fit("cover")` performs — so it is what keeps a
- * subject's face in frame when a portrait photo is squeezed into a wide
- * thumbnail, instead of framing the middle of the image and cutting the head
- * off.
- *
- * It does nothing on its own: without `u.fit()` establishing a crop there is
- * no overflow to position, and it has no effect at all on non-replaced
- * elements (a `div` ignores it).
- *
- * The keywords are physical, not logical — `left` and `right` stay put under a
- * right-to-left writing mode.
+ * Applies `object-position`, choosing which part of a replaced element's
+ * cropped content stays visible, keeping a subject's face in frame once
+ * `u.fit("cover")` crops it. Only works with `u.fit()` on replaced elements.
  *
  * @example u.objectPosition()
  * @example css({ objectPosition: "center" })

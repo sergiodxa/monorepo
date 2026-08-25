@@ -21,10 +21,12 @@ describe("timelineScope", () => {
 		]);
 	});
 
+	/**
+	 * Regression: an empty value serialized to `timeline-scope: ;`, which
+	 * browsers drop. `none` is the property's initial value, so it says the same
+	 * thing in CSS a browser accepts.
+	 */
 	test("emits the initial value when called with no names", async () => {
-		// Regression: an empty value used to serialize to `timeline-scope: ;`,
-		// an invalid declaration. `none` is the property's initial value, so it
-		// says the same thing in CSS a browser accepts.
 		expect(await declarations(timelineScope())).toEqual(["timeline-scope: none"]);
 	});
 });

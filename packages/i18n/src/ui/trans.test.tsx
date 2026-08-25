@@ -1,3 +1,10 @@
+/**
+ * Tests `Trans`'s tag splicing and its fallback to an ancestor `IntlProvider`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createInstance } from "i18next";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";

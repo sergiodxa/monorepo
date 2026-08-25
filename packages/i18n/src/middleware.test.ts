@@ -68,7 +68,6 @@ describe("i18next middleware", () => {
 		let context = makeContext("/?lng=es");
 		await middleware(context, passthroughNext());
 
-		// The key only exists in English, so resolving it proves the fallback chain
 		expect(context.i18next.t("onlyEnglish")).toBe("English only");
 	});
 
@@ -145,8 +144,6 @@ describe("i18next middleware", () => {
 		let context = makeContext("/?lng=es");
 		await middleware(context, passthroughNext());
 
-		// Initialization awaits the initial namespace load, so a backend that answers
-		// asynchronously has still populated the store by the time a handler runs.
 		expect(context.i18next.t("greeting")).toBe("es:translation");
 	});
 
@@ -159,14 +156,10 @@ describe("i18next middleware", () => {
 		let context = makeContext("/?lng=es");
 		await middleware(context, passthroughNext());
 
-		// Only the detected language and the fallback are attached; every other
-		// supported language's bundle stays out of this request's resource store.
 		expect(context.i18next.hasResourceBundle("es", "translation")).toBe(true);
 		expect(context.i18next.hasResourceBundle("en", "translation")).toBe(true);
 		expect(context.i18next.hasResourceBundle("fr", "translation")).toBe(false);
 
-		// Dropping the other bundles must not cost the fallback chain: a key the
-		// detected language is missing still resolves through the fallback.
 		expect(context.i18next.t("hello")).toBe("Hola");
 		expect(context.i18next.t("onlyEnglish")).toBe("English only");
 	});

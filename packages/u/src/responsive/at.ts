@@ -9,21 +9,9 @@ import { compose, nest } from "../internal/descriptor";
 import { containerLength } from "../internal/tokens";
 
 /**
- * A container query, never a viewport media query — the nearest ancestor
- * with `container-type: inline-size` (or `container-type: size`) is what
- * `size` is compared against, so a component embedded in a narrow column
- * adapts to that column's width instead of the page's. Called with a third
- * argument, `name` targets a specific named container — established on an
- * ancestor via `container-name` or the `container` shorthand (e.g.
- * `container: sidebar / inline-size`) — instead of whichever one is
- * nearest; useful once more than one ancestor establishes a container and
- * a query needs to skip past the closest one.
- *
- * A named step resolves to its literal length here, not to the
- * `var(--ui-container-*)` reference the same step gets in a property value:
- * an at-rule condition is evaluated before custom properties are
- * substituted, so a `var()` in the condition would emit a rule that never
- * matches at any width.
+ * `size` compares against the nearest ancestor with `container-type` set.
+ * A named step resolves here to a literal length, since at-rule
+ * conditions evaluate before custom properties resolve.
  *
  * @example u.at("md", [u.p(6), u.hstack({ gap: 4 })])
  * @example css({ "@container (min-width: 36rem)": { padding: "...", display: "flex" } })
@@ -52,10 +40,9 @@ export function at<Node extends Element = Element>(
 }
 
 /**
- * The `max-width` counterpart to {@link at}: applies the given utilities
- * while the nearest container's inline size is at most `size`, instead of
- * at least. Same named-scale/literal-length resolution and optional
- * container-name targeting as {@link at}.
+ * The `max-width` counterpart to {@link at}: applies while the nearest
+ * container's inline size is at most `size`. Shares {@link at}'s
+ * named-scale/literal-length resolution and named-container targeting.
  *
  * @example u.atMax("md", [u.p(2), u.flexCol()])
  * @example css({ "@container (max-width: 36rem)": { padding: "...", flexDirection: "column" } })

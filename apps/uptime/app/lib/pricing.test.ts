@@ -63,8 +63,6 @@ describe("monthlyCost", () => {
 	});
 
 	test("bills a ping past a full block as another whole block", () => {
-		// The stated example: 110,001 pings is $5 base, $1 for the first 10,000 over,
-		// and $1 more for the single ping past that block.
 		let cost = monthlyCost(110_001);
 
 		expect(cost.additionalPings).toBe(10_001);
@@ -73,16 +71,17 @@ describe("monthlyCost", () => {
 	});
 
 	test("charges nothing extra for the last ping of a block", () => {
-		// Exactly two blocks, so the second one isn't a third.
 		let cost = monthlyCost(INCLUDED_PINGS + 20_000);
 
 		expect(cost.billedBlocks).toBe(2);
 		expect(cost.totalUsd).toBe(7);
 	});
 
+	/**
+	 * 3,000 over is three tenths of a block, and still costs a full dollar —
+	 * dividing the block price by its size would understate this by $0.70.
+	 */
 	test("rounds a partial block up rather than prorating it", () => {
-		// 3,000 over is three tenths of a block, and still costs a full dollar —
-		// dividing the block price by its size would understate this by $0.70.
 		let cost = monthlyCost(INCLUDED_PINGS + 3_000);
 
 		expect(cost.additionalPings).toBe(3_000);
@@ -90,9 +89,11 @@ describe("monthlyCost", () => {
 		expect(cost.totalUsd).toBe(6);
 	});
 
+	/**
+	 * 100 monitors every 5 minutes: 806,400 pings, 706,400 over the allowance,
+	 * which is 70.64 blocks and therefore 71 of them.
+	 */
 	test("prices a heavy setup by whole blocks", () => {
-		// 100 monitors every 5 minutes: 806,400 pings, 706,400 over the allowance,
-		// which is 70.64 blocks and therefore 71 of them.
 		let cost = monthlyCostForUsage({ monitors: 100, intervalMinutes: 5 });
 
 		expect(cost.additionalPings).toBe(706_400);
@@ -123,17 +124,17 @@ describe("the English copy formatters", () => {
 		expect(formatPings(10_000)).toBe("10,000");
 	});
 
+	/**
+	 * These four are the only values `resources/content/marketing.ts` interpolates,
+	 * matched against what `toLocaleString("en-US", …)` returned for them — including
+	 * grouping past one separator, which no real input reaches yet.
+	 */
 	test("produces the exact strings the copy quoted before the formatters dropped Intl", () => {
-		// These four are the only values `resources/content/marketing.ts` interpolates,
-		// and the literals are what `toLocaleString("en-US", …)` returned for them. The
-		// formatters group digits by hand now — to keep ICU out of Worker startup — so
-		// this asserts the swap was byte-for-byte, not merely close.
 		expect(formatUsd(BASE_PRICE_USD)).toBe("$5");
 		expect(formatUsd(PRICE_PER_BLOCK_USD)).toBe("$1");
 		expect(formatPings(INCLUDED_PINGS)).toBe("100,000");
 		expect(formatPings(PINGS_PER_BLOCK)).toBe("10,000");
 
-		// Grouping has to survive past one separator, which no real input reaches yet.
 		expect(formatPings(1_234_567)).toBe("1,234,567");
 		expect(formatUsd(1_234_567.5)).toBe("$1,234,567.50");
 	});

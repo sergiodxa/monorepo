@@ -1,7 +1,7 @@
 /**
- * Tenant client logout-URIs controller: renders the add form and creates a logout URI,
- * then redirects back to the client. Edit/update are unsupported (redirect no-ops) and
- * destroy removes a URI. Rendering uses `remix/ui` JSX via `ctx.render`.
+ * Tenant client logout-URIs controller: renders the add form, creates a logout
+ * URI, and removes one via destroy. Edit and update redirect back to the
+ * client, leaving existing logout URIs unchanged.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

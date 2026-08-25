@@ -1,3 +1,7 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 export { at, atMax } from "./at";
 export { atQuery } from "./at-query";
 export { contrastLess } from "./contrast-less";

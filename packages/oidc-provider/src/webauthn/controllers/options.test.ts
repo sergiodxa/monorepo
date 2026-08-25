@@ -1,12 +1,9 @@
 /**
- * Integration tests for the WebAuthn options endpoints, driven through the real
- * provider router's `fetch` path (the same service-container scope the host uses).
+ * Integration tests for the WebAuthn options endpoints.
  *
- * They guard two fixed correctness bugs: registration options must not persist a
- * subject (so the options->verify flow works for a genuinely new email), and
- * authentication options must return each authenticator's WebAuthn `credential_id`
- * (base64url) in `allowCredentials` — never the database primary key — while
- * excluding legacy passkeys that have no stored credential id.
+ * The register/options endpoint defers subject creation to the verify step,
+ * so a new email can complete the options->verify flow; auth/options returns
+ * each passkey's WebAuthn credential_id, excluding legacy rows with none.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +31,6 @@ let analytics: AnalyticsSink = {
 	trackRegistration() {},
 };
 
-/** Shape of the successful options response envelope. */
 interface OptionsResponse {
 	challengeId: string;
 	options: {
@@ -101,9 +97,6 @@ describe("WebAuthn options endpoints", () => {
 			expect(payload.challengeId).toBeTypeOf("string");
 			expect(payload.options.challenge).toBeTypeOf("string");
 
-			// The core regression: options must NOT create the subject. If it did, the
-			// follow-up register/verify would reject with "subject already exists" and the
-			// normal options->verify flow could never complete for a new email.
 			let subject = await Subject.findByEmail(db, email);
 			expect(subject).toBeNull();
 		});
@@ -131,7 +124,6 @@ describe("WebAuthn options endpoints", () => {
 		test("returns the WebAuthn credential_id (base64url) in allowCredentials, not the db id", async () => {
 			let subject = await createSubject(db, { verified: true });
 
-			// A realistic unpadded base64url credential id, distinct from any UUID pk.
 			let credentialId = "AQIDBAUGBwgJCgsMDQ4PEA";
 			await Passkey.create(db, {
 				subjectId: subject.id,
@@ -151,7 +143,6 @@ describe("WebAuthn options endpoints", () => {
 			let payload = (await response.json()) as OptionsResponse;
 			let allow = payload.options.allowCredentials ?? [];
 			expect(allow).toHaveLength(1);
-			// The id must be the credential_id, not the database primary key (UUID).
 			expect(allow[0]!.id).toBe(credentialId);
 			expect(allow[0]!.id).not.toBe(stored.id);
 			expect(allow[0]!.transports).toEqual(["internal", "hybrid"]);
@@ -160,7 +151,6 @@ describe("WebAuthn options endpoints", () => {
 		test("excludes passkeys that have no stored credential_id", async () => {
 			let subject = await createSubject(db, { verified: true });
 
-			// Usable passkey with a credential id.
 			let usableCredentialId = "dXNhYmxlLWNyZWQtaWQ";
 			await Passkey.create(db, {
 				subjectId: subject.id,
@@ -169,7 +159,7 @@ describe("WebAuthn options endpoints", () => {
 				counter: 0,
 			});
 
-			// Legacy passkey migrated before credential_id was persisted (migration 0006).
+			/** Legacy passkey migrated before credential_id was persisted (migration 0006). */
 			await db.create(Passkey.table, {
 				id: crypto.randomUUID(),
 				subject_id: subject.id,

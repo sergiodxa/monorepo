@@ -1,8 +1,8 @@
 /**
  * The theme model and CSS generator: the {@link ThemeSettings} knobs, their defaults,
  * and {@link renderThemeStyle}, which derives an OKLCH palette and emits the `:root`
- * variables the components consume — so the palette is a runtime artifact of settings
- * rather than a shipped stylesheet.
+ * variables the components consume, computing the palette fresh from settings on
+ * every render.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,9 +49,12 @@ export const DEFAULT_THEME: ThemeSettings = {
 
 /** A color in the OKLCH space. */
 interface Oklch {
-	l: number; // 0..1
-	c: number; // chroma
-	h: number; // degrees
+	/** Lightness, 0..1. */
+	l: number;
+	/** Chroma. */
+	c: number;
+	/** Hue, in degrees. */
+	h: number;
 }
 
 /**
@@ -64,10 +67,9 @@ export function resolveTheme(theme: Partial<ThemeSettings> | undefined): ThemeSe
 }
 
 /**
- * Renders a complete `:root { … }` style block from theme settings. Colors are
- * derived to an OKLCH lightness ladder (hue/chroma held from the inputs) and
- * mapped onto the `--ui-*` semantic tokens the components consume, so no static
- * stylesheet ships — the palette is a runtime artifact of settings.
+ * Renders a complete `:root { … }` style block from theme settings, deriving an
+ * OKLCH lightness ladder from the accent and background colors; the neutral ramp
+ * inherits the background's hue and a low chroma so it reads as a tinted gray.
  * @param settings - Partial or complete theme settings.
  * @returns CSS text for a single `:root` rule.
  */
@@ -77,8 +79,6 @@ export function renderThemeStyle(settings: Partial<ThemeSettings> | undefined): 
 	let background = hexToOklch(theme.background);
 	let foreground = hexToOklch(theme.foreground);
 
-	// Neutral hue/chroma track the background (very low chroma) so the neutral
-	// ramp harmonizes with the chosen background instead of being pure gray.
 	let neutralHue = background.h;
 	let neutralChroma = Math.min(background.c, 0.02);
 
@@ -102,7 +102,6 @@ export function renderThemeStyle(settings: Partial<ThemeSettings> | undefined): 
 		);
 	}
 
-	// Semantic tokens the components consume (kept on --ui-*).
 	lines.push(`--ui-bg: var(--blog-bg);`);
 	lines.push(`--ui-fg: var(--blog-fg);`);
 	lines.push(`--ui-muted: var(--color-neutral-500);`);
@@ -132,6 +131,7 @@ function oklch({ l, c, h }: Oklch): string {
 /**
  * Converts a `#rgb`/`#rrggbb` hex color to OKLCH (via linear sRGB and OKLab), falling
  * back to a neutral gray on malformed input so rendering never throws on bad settings.
+ * The sRGB-to-OKLab step uses Björn Ottosson's published conversion matrices.
  * @param hex - The hex color string.
  * @returns The equivalent OKLCH color.
  */
@@ -140,7 +140,6 @@ export function hexToOklch(hex: string): Oklch {
 	if (!rgb) return { l: 0.5, c: 0, h: 0 };
 	let [r, g, b] = rgb.map(srgbToLinear) as [number, number, number];
 
-	// linear sRGB -> OKLab (Björn Ottosson's matrices)
 	let l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
 	let m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
 	let s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;

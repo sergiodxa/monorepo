@@ -1,3 +1,10 @@
+/**
+ * Tests for parsing XML documents into plain document data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure, isSuccess } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 

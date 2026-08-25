@@ -80,9 +80,9 @@ export namespace ImagePlaceholder {
 		/** Image source URL. */
 		src: string;
 		/**
-		 * Accessible text description of the image. Required — the component
-		 * ships no built-in copy, so a consumer's own localized description
-		 * always drives what assistive technology announces.
+		 * Accessible text description of the image. Required, since a
+		 * consumer's own localized description drives what assistive
+		 * technology announces.
 		 */
 		alt: string;
 	}
@@ -120,18 +120,9 @@ export namespace ImagePlaceholder {
 }
 
 /**
- * Renders the placeholder host: a fixed-size, centered box tinted with the
- * neutral tint background and emphasis foreground, sized through the
- * `data-size` attribute contract (`"sm"`, `"md"`, or `"lg"`) and shaped
- * through `data-shape` (`"circle"` or `"square"`). The shape choice also
- * governs the corner rounding of any {@link ImagePlaceholder.Image} or
- * {@link ImagePlaceholder.Fallback} nested directly inside it, so a consumer
- * sets the shape once on the host rather than on every part.
- *
- * The host itself carries no `overflow: hidden`, leaving room for
- * {@link ImagePlaceholder.Badge} to sit on its corner unclipped while
- * {@link ImagePlaceholder.Image} and {@link ImagePlaceholder.Fallback} clip
- * themselves to the chosen shape independently.
+ * Renders the placeholder host: a fixed-size, centered box whose `data-shape`
+ * attribute styles it, its image, and its fallback together, leaving room
+ * for {@link ImagePlaceholder.Badge} to sit unclipped on the corner.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the placeholder's markup.
@@ -201,12 +192,9 @@ export function ImagePlaceholder(handle: Handle<ImagePlaceholder.Props>) {
 }
 
 /**
- * Renders the placeholder's image layer: an absolutely positioned `<img>`
- * filling its host edge to edge and cropped with `object-fit: cover`, clipped
- * to the shape {@link ImagePlaceholder} chose through its own `data-shape`
- * attribute. Stack it above or below {@link ImagePlaceholder.Fallback} —
- * whichever a consumer renders decides which layer shows, since this
- * component carries no image-load detection of its own.
+ * Renders the placeholder's image layer: an `<img>` cropped with
+ * `object-fit: cover`, clipped to {@link ImagePlaceholder}'s `data-shape`.
+ * Stacking above or below {@link ImagePlaceholder.Fallback} decides what shows.
  *
  * @param handle Runtime handle carrying the host `<img>`'s props.
  * @returns The render function producing the image layer's markup.
@@ -238,13 +226,9 @@ ImagePlaceholder.Image = function ImagePlaceholderImage(
 };
 
 /**
- * Renders the placeholder's fallback layer: an absolutely positioned
- * `<span>` filling its host edge to edge, centering whatever content a
- * consumer supplies (typically initials) in uppercase, medium-weight text,
- * tinted with the neutral pressed-tint background. Its font size is never
- * fixed on its own — it inherits {@link ImagePlaceholder}'s `data-size`-driven
- * font size through ordinary CSS inheritance, so initials stay in proportion
- * at every size instead of rendering at one fixed scale.
+ * Renders the placeholder's fallback layer: a `<span>` centering a consumer's
+ * content in uppercase text. Font size inherits {@link ImagePlaceholder}'s
+ * `data-size` via CSS, keeping initials proportional at every size.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the fallback layer's markup.
@@ -282,10 +266,7 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 /**
  * Renders a small status dot pinned to the host's block-end/inline-end
  * corner, always fully rounded regardless of {@link ImagePlaceholder}'s own
- * shape, ringed with a border the width of the neutral tint background so it
- * reads as cut out from whatever sits beneath it. Its fill color defaults to
- * the neutral strong border tone; override it (a presence color, for
- * example) through `style` or an additional `mix`.
+ * shape, and ringed to read as cut from whatever sits beneath it.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the badge's markup.
@@ -319,12 +300,9 @@ ImagePlaceholder.Badge = function ImagePlaceholderBadge(
 };
 
 /**
- * Renders a row of overlapping placeholders: a flex container that pulls
- * every child but the first back over its predecessor and rings each direct
- * {@link ImagePlaceholder} child in the neutral tint background color, so the
- * overlap reads as stacked cutouts rather than flat overlapping edges.
- * Trail it with {@link ImagePlaceholder.GroupCount} for a "+N" overflow
- * indicator that picks up the same overlap and ring treatment.
+ * Renders a row of overlapping placeholders: a flex container that pulls each
+ * child back over the previous one and rings each in the neutral tint background,
+ * so the overlap reads as stacked cutouts.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.
@@ -359,11 +337,9 @@ ImagePlaceholder.Group = function ImagePlaceholderGroup(
 };
 
 /**
- * Renders the "+N" overflow indicator that trails
- * {@link ImagePlaceholder.Group}: a fixed medium-size box matching
- * {@link ImagePlaceholder}'s default dimensions, ringed the same way a
- * grouped placeholder is, shaped through its own `shape` prop since it
- * renders as a sibling rather than nesting inside a placeholder host.
+ * Renders the "+N" overflow indicator trailing {@link ImagePlaceholder.Group}:
+ * a fixed medium-size box matching {@link ImagePlaceholder}'s dimensions and
+ * ring treatment, taking its own `shape` prop to match the sibling placeholders.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the overflow indicator's markup.

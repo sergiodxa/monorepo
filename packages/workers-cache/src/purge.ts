@@ -68,9 +68,8 @@ function describe(selector: PurgeSelector): string {
 /**
  * Invalidates cached entries by tag, by URL prefix, or entirely.
  *
- * Purging is eventually consistent, so a success means the platform accepted the
- * request, not that the next read misses. Purging everything is an operational
- * escape hatch for incidents; content writes should purge the tags they own.
+ * Purging is eventually consistent: a success confirms platform acceptance, with
+ * edge reads converging shortly after; reserve `everything` for incident response.
  *
  * @param cache - The platform cache interface, or a double in tests.
  * @param options - Exactly one of tags, a prefix, or everything.

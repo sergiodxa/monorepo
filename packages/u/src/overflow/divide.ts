@@ -19,12 +19,9 @@ const DEFAULT_BORDER_COLOR = varUtility(
 );
 
 /**
- * Applies a divider border between every child except the last, along
- * `axis`. Called with no color, the divider resolves the tiny system default
- * the same way `u.border()` does; called with a color name, it resolves
- * through the semantic and palette token layers. A number in the color
- * position is instead read as the border width, so a width can be given
- * without an explicit color.
+ * Applies a divider border between every child except the last, along `axis`.
+ * A number in the color position is read as the border width, so a width can
+ * be set alone; a color name resolves through the semantic and palette tokens.
  *
  * @example u.divide()
  * @example css({ "& > *:not(:last-child)": { borderStyle: "solid", borderBlockEndWidth: "1px", borderBlockEndColor: "var(--ui-border, color-mix(in oklab, CanvasText 16%, transparent))" } })

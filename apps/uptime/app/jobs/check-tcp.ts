@@ -1,24 +1,8 @@
 /**
- * Background job that claims the TCP monitors whose configured `interval_seconds` has come
- * round and checks those, rather than sweeping every enabled monitor on a cadence of its
- * own (ADR-006). Attempts a raw TCP connection to each host:port, records the outcome via
- * `TcpMonitor.recordCheckResult`, and enqueues a `notify` message for a down/timeout result
- * or a recovery back to up.
- *
- * Delivered every minute, which is the finest interval a monitor can be configured with.
- * Running that often is cheaper than the old 5-minute full sweep, not more expensive: the
- * claim is an indexed range that matches nothing in most minutes, and it is also what stops
- * the several deliveries a single minute's cron produces from checking the same monitor
- * more than once.
- *
- * Monitors are checked in bounded-concurrency batches rather than one at a time, and
- * alerts are dispatched by the `notify` consumer rather than inline, so the sweep's wall
- * time is no longer the sum of every monitor's connection timeout plus every email send
- * it triggers (ADR-008).
- *
- * Every check the sweep completes is also a ping: it is metered against the team's
- * allowance and written to Analytics Engine, both after the fact and both for the checks
- * that finished. A connection attempt that threw left no result row, so it bills nothing.
+ * Background job that claims the TCP monitors whose `interval_seconds` has come round,
+ * checks each via a raw TCP connection, and enqueues a `notify` message on a down/timeout
+ * result or a recovery back to up (ADR-006). Runs every minute; the batch's cost is
+ * apportioned by team and billed only for checks that completed (ADR-007, ADR-008).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,11 +30,8 @@ import { checkTcpConnection } from "~/app/services/tcp-check";
 
 /**
  * What one completed check produced, beyond the row it wrote: the alert its outcome
- * warrants, if any, and the id of the result row that alert-independent billing keys on.
- *
- * The two travel together because they have the same precondition — a check that ran to
- * completion — and separating them would mean either running the sweep's fan-out twice or
- * matching results back to monitors by index.
+ * warrants (or `null`) and the result row's id. Both share one precondition — a check
+ * that ran to completion — so returning both avoids a second pass over the sweep.
  */
 interface CheckedMonitor {
 	notification: NotifyMessage | null;
@@ -65,10 +46,9 @@ export class CheckTcpJob extends Job {
 		let db = getServiceContainer().get(Database);
 		let polar = getServiceContainer().get(PolarClient);
 		/**
-		 * Claimed as of now rather than as of the cron's `scheduledTime`: the claim advances
-		 * each monitor from its own previous due time, so what this instant decides is only
-		 * which monitors are owed a check, and the queue hop between the trigger and here is
-		 * seconds. Nothing downstream keys off it, unlike the HTTP sweep's per-minute job id.
+		 * Claimed as of now rather than the cron's `scheduledTime`: the claim advances each
+		 * monitor from its own previous due time, so this instant only decides which monitors
+		 * are owed a check, tolerating the seconds of queue hop between trigger and execution.
 		 */
 		let monitors = await TcpMonitor.claimDue(db, Date.now());
 		/**
@@ -145,13 +125,9 @@ export class CheckTcpJob extends Job {
 	}
 
 	/**
-	 * Checks one monitor and records its result, returning what the sweep needs from a
-	 * completed check: the notification its outcome warrants (`null` when it isn't
-	 * alert-worthy) and the result row's id. The previous status is read before the write,
-	 * since that's what makes a recovery detectable.
-	 *
-	 * Throwing here is what marks a monitor as failed, so everything this returns describes
-	 * a check that finished — which is why the caller can bill for it unconditionally.
+	 * Checks one monitor and records its result. The previous status is read before the
+	 * write since that's what makes a recovery detectable, and throwing here is what marks
+	 * the monitor failed, so everything this returns describes a check that finished.
 	 */
 	private async check(db: Database, monitor: ClaimedTcpMonitor): Promise<CheckedMonitor> {
 		/** The column is declared as a plain text enum, so its value set is asserted here. */

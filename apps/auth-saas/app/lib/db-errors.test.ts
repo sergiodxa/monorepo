@@ -1,8 +1,8 @@
 /**
  * Behavioural tests for the database error classes: each carries a stable `name`,
  * preserves the table/column/value that triggered it, and formats a descriptive
- * message embedding the table name and offending value. Pure logic over an
- * in-code table definition; no database connection required.
+ * message embedding the table name and offending value. Pure logic that runs
+ * entirely against an in-code table definition.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

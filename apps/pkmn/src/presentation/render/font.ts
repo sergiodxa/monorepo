@@ -1,17 +1,9 @@
 /**
  * An original 5×7 pixel bitmap font and a low-level glyph blitter.
  *
- * The presentation targets a crisp, integer-scaled retro look, where the
- * browser's anti-aliased `fillText` renders blurry. This module supplies a
- * hand-authored monospaced font — every glyph is designed here from scratch as a
- * grid of lit/unlit pixels, so nothing is copied from any real or proprietary
- * typeface. Each glyph is `GLYPH_WIDTH`×`GLYPH_HEIGHT` and encoded as an array of
- * row bit-strings (`"0"` empty, any other char lit) for compact, readable data.
- * `blitGlyph` paints one glyph by filling a 1×1 rect per lit pixel in the
- * context's current `fillStyle`; `blitString` walks a string, advancing by
- * `GLYPH_ADVANCE` (glyph width plus one pixel of letter spacing) and falling back
- * to a box glyph for characters the font does not define. Higher-level layout,
- * color, and alignment live in `text.ts`; this module only knows pixels.
+ * Every glyph is authored here from scratch as a grid of lit/unlit pixels, kept
+ * crisp at integer scale where the browser's `fillText` renders blurry.
+ * Higher-level layout, color, and alignment live in `text.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,14 +35,12 @@ export const FALLBACK_GLYPH: readonly string[] = [
 /**
  * The bitmap glyph table, keyed by character.
  *
- * Every entry is exactly `GLYPH_HEIGHT` rows of `GLYPH_WIDTH` characters; a `"0"`
- * is an empty pixel and anything else is lit. Space is intentionally all-empty so
- * it advances the cursor without drawing. Designed by hand for this game.
+ * Each entry is `GLYPH_HEIGHT` rows of `GLYPH_WIDTH` characters — `"0"` empty,
+ * any other character lit; the space glyph stays empty to only advance the cursor.
  */
 export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
 	" ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
 
-	// Uppercase letters.
 	A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
 	B: ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
 	C: ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
@@ -78,7 +68,6 @@ export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
 	Y: ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
 	Z: ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
 
-	// Lowercase letters.
 	a: ["00000", "00000", "01110", "00001", "01111", "10001", "01111"],
 	b: ["10000", "10000", "10110", "11001", "10001", "10001", "11110"],
 	c: ["00000", "00000", "01110", "10001", "10000", "10001", "01110"],
@@ -106,7 +95,6 @@ export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
 	y: ["00000", "10001", "10001", "01111", "00001", "00001", "01110"],
 	z: ["00000", "00000", "11111", "00010", "00100", "01000", "11111"],
 
-	// Digits.
 	"0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
 	"1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
 	"2": ["01110", "10001", "00001", "00110", "01000", "10000", "11111"],
@@ -118,7 +106,6 @@ export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
 	"8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
 	"9": ["01110", "10001", "10001", "01111", "00001", "00010", "01100"],
 
-	// Punctuation.
 	".": ["00000", "00000", "00000", "00000", "00000", "01100", "01100"],
 	",": ["00000", "00000", "00000", "00000", "01100", "00100", "01000"],
 	"!": ["00100", "00100", "00100", "00100", "00100", "00000", "00100"],
@@ -136,7 +123,6 @@ export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
 	"×": ["00000", "10001", "01010", "00100", "01010", "10001", "00000"],
 	"…": ["00000", "00000", "00000", "00000", "00000", "00000", "10101"],
 
-	// Gender signs and game-specific symbols.
 	"♂": ["00111", "00011", "00101", "01000", "10100", "01010", "00100"],
 	"♀": ["00100", "01010", "01010", "00100", "01110", "00100", "00100"],
 	"₽": ["11110", "10001", "11110", "10000", "11100", "10000", "10000"],
@@ -160,9 +146,8 @@ export function glyphFor(char: string): readonly string[] {
 /**
  * Blits one glyph's lit pixels at `(x, y)` as 1×1 rects in the current fill color.
  *
- * `x` and `y` are the top-left of the glyph cell in device pixels. Unknown
- * characters render the fallback box. Returns nothing; the caller advances the
- * cursor by `GLYPH_ADVANCE`.
+ * `(x, y)` is the glyph cell's top-left in device pixels; unknown characters
+ * render the fallback box, and the caller advances the cursor by `GLYPH_ADVANCE`.
  */
 export function blitGlyph(ctx: GlyphContext, char: string, x: number, y: number) {
 	let rows = glyphFor(char);
@@ -176,8 +161,8 @@ export function blitGlyph(ctx: GlyphContext, char: string, x: number, y: number)
 
 /**
  * Blits a whole string starting at `(x, y)`, advancing one `GLYPH_ADVANCE` per
- * character. Each glyph is drawn in the context's current fill color; newlines are
- * not handled here (callers pre-split into lines).
+ * character in the context's current fill color. Callers pre-split multi-line
+ * text into individual lines before calling.
  */
 export function blitString(ctx: GlyphContext, text: string, x: number, y: number) {
 	for (let index = 0; index < text.length; index++) {

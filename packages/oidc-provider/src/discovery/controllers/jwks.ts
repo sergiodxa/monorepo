@@ -20,7 +20,6 @@ import SigningKey from "../../signing-keys/models/signing-key";
 
 /**
  * JSON Web Key Set (JWKS) endpoint (RFC 7517).
- * Provides the public keys used to verify JWTs issued by this authorization server.
  * @returns A JSON `Response` containing the public JWK set.
  */
 export default createAction(

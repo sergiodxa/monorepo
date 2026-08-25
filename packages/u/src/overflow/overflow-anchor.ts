@@ -8,23 +8,9 @@ import { utility } from "../internal/descriptor";
 export type OverflowAnchorValue = "auto" | "none";
 
 /**
- * Applies `overflow-anchor`, opting an element out of scroll anchoring.
- *
- * Scroll anchoring is a browser behaviour most people have never had to name.
- * By default the browser picks an on-screen element as an anchor and quietly
- * adjusts the scroll position to keep that element visually still whenever
- * content above it changes size. It is what stops the page yanking out from
- * under a reader when an image finishes loading, a font swaps in, or a banner
- * injects itself above the current reading position. `"auto"` is that default
- * behaviour; `"none"` says this element must never be chosen as the anchor.
- *
- * Opting out is the unusual choice, and the `"none"` default here is aimed at
- * the one case that genuinely needs a utility: a sentinel or spacer element at
- * the tail of an infinite-scroll list, where the browser anchoring to the very
- * element that grows and moves as pages load fights the loading logic instead
- * of helping it. For ordinary content `"auto"` is what you want, and the right
- * move is to make no call at all, since `"auto"` is already the initial value;
- * pass it only when being loud about the intent is worth a declaration.
+ * Applies `overflow-anchor`, the browser's choice of which element holds the
+ * scroll position steady as content above it resizes. The `"none"` default
+ * suits infinite-scroll sentinels, whose own growth fights anchoring.
  *
  * @example u.overflowAnchor()
  * @example css({ overflowAnchor: "none" })

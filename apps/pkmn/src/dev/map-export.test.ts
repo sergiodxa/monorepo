@@ -1,21 +1,18 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-
-import { isFailure, isSuccess } from "@pkg/result";
 /**
- * Verifies the map export: the pure payload shaper derives the
- * `src/content/maps/<id>.json` write path, the `/content/maps/<id>.json` served
- * URL, and a tab-indented JSON body from a validated map, and rejects invalid ids
- * (blank, uppercase, dotted, traversal-ish, over-length) before any path work; the
- * derived path always passes the shared path-safety guard; and manifest
- * registration adds the map without mutating the input or clobbering other kinds.
- * The server handler {@link runMapExport} is exercised end to end with a real
- * write into an allow-listed scratch target (map JSON removed after, manifest
- * restored), and guards that malformed maps and unsafe ids fail without writing.
+ * Verifies the map export: the pure shaper derives the write path, the served
+ * URL, and a tab-indented JSON body from a validated map, and rejects invalid
+ * ids before any path work; the derived path always passes the shared
+ * path-safety guard; and manifest registration adds the map to a copy.
+ * {@link runMapExport} runs end to end against a scratch target it cleans up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { isFailure, isSuccess } from "@pkg/result";
 import { afterAll, describe, expect, test } from "vitest";
 
 import { EMPTY_CELL, type MapData } from "~/presentation/render/map-schema";
@@ -32,9 +29,9 @@ import {
 } from "./map-export";
 import { validateWritePath } from "./path-safety";
 
-/** A minimal, valid map tests clone and mutate to exercise one rule. */
+/** A minimal, valid 2x2 map tests clone and mutate to exercise one rule. */
 function validMap(): MapData {
-	let cells = 4; // 2x2
+	let cells = 4;
 	return {
 		id: "test-route",
 		width: 2,
@@ -143,7 +140,6 @@ describe("registerMap", () => {
 });
 
 describe("runMapExport", () => {
-	// A dedicated id so the write lands under the real maps dir and is removed.
 	let SCRATCH_ID = "export-test-map";
 	let SCRATCH_PATH = `${MAP_CONTENT_DIR}/${SCRATCH_ID}.json`;
 	let MANIFEST_ABS = resolve(APP_ROOT, MANIFEST_PATH);
@@ -151,7 +147,6 @@ describe("runMapExport", () => {
 
 	afterAll(async () => {
 		await rm(resolve(APP_ROOT, SCRATCH_PATH), { force: true });
-		// Restore the manifest so the scratch map id is not left registered.
 		if (manifestBackup !== null) await writeFile(MANIFEST_ABS, manifestBackup);
 	});
 
@@ -162,7 +157,7 @@ describe("runMapExport", () => {
 
 	test("rejects a map whose layer length disagrees with the size", async () => {
 		let bad = { ...validMap(), id: SCRATCH_ID };
-		bad.layers = { ...bad.layers, ground: [0] }; // wrong length for 2x2
+		bad.layers = { ...bad.layers, ground: [0] };
 		let result = await runMapExport(bad);
 		expect(isFailure(result)).toBe(true);
 	});

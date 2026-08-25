@@ -2,11 +2,10 @@
  * The origin every link inside an email points at, and the one helper that builds those
  * links from a route's `href()`.
  *
- * A constant rather than something derived from a request, because the senders that need it
- * have no request: the check jobs, the queue consumer and the scheduled digests all run with
- * no `Host` header to trust and no `ctx.url` to read. Keeping it in one module is what stops
- * an alert, a digest and an unsubscribe footer pointing at three different hostnames after a
- * domain change.
+ * Fixed as a constant because the senders that need it have no request: the check jobs,
+ * the queue consumer and the scheduled digests all run with no `Host` header to trust and
+ * no `ctx.url` to read. Keeping it in one module gives an alert, a digest and an
+ * unsubscribe footer the same hostname even after a domain change.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -26,14 +26,12 @@ import DocumentLayout from "~/resources/layouts/document";
 import UpgradeView from "~/resources/views/upgrade";
 import routes from "~/routes/web";
 
-/** The page's title and its own description, since it is not the homepage's pitch. */
+/** The page's own title and description, aimed at the upgrade offer. */
 const TITLE = "Upgrade to the Complete Package";
 const DESCRIPTION =
 	"Move from The Book to the Complete Package: every chapter, the sample application, and the Discord community.";
 
 /**
- * Renders the upgrade document.
- *
  * @param ctx - The request context, for its URL and renderer.
  * @param options - `error` shows a validation failure under the email field, and `status`
  * lets the form endpoint answer 400 while still returning the page.
@@ -53,9 +51,9 @@ function renderUpgrade(ctx: RequestContext, options: { error?: string; status?: 
 }
 
 /**
- * Builds the full-price Complete checkout URL for an address, used whenever the reader
- * turns out not to own Essentials. The address rides along so Polar's checkout is
- * pre-filled and the visitor does not retype it.
+ * Builds the full-price Complete checkout URL for an address, used for anyone
+ * besides an Essentials owner. The address rides along so Polar's checkout
+ * arrives pre-filled for the visitor.
  *
  * @param email - The address the reader submitted.
  * @returns The relative checkout URL to redirect to.
@@ -86,7 +84,6 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 	let polar = getServiceContainer().get(PolarClient);
 	let customer = await polar.findCustomerByEmail(email);
 
-	// Never bought anything, so there is nothing to upgrade from.
 	if (!customer) {
 		log.info("upgrade_customer_not_found", { email });
 		return redirect(completeCheckoutUrl(email), { status: redirect.Status.SeeOther });
@@ -97,7 +94,6 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 		productId: Product.Essentials,
 	});
 
-	// A customer, but never of Essentials — the upgrade discount is not theirs to use.
 	if (orders.length === 0) {
 		log.info("upgrade_order_not_found", { email });
 		return redirect(completeCheckoutUrl(email), { status: redirect.Status.SeeOther });

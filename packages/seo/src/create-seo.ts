@@ -70,7 +70,8 @@ export interface SeoService {
 	robotsTag(options?: RobotsOptions): string;
 	/**
 	 * Serializes nodes for an `application/ld+json` script body, escaped so content can
-	 * never close the script early. For JSX that isn't `remix/ui`; `Seo.JsonLd` otherwise.
+	 * never close the script early. For JSX outside `remix/ui`; `remix/ui` pages use
+	 * `Seo.JsonLd`.
 	 */
 	jsonLdString(schema: SchemaOrg.Node | SchemaOrg.Node[]): string;
 }
@@ -78,7 +79,7 @@ export interface SeoService {
 /**
  * Creates the SEO instance a site resolves all of its head metadata through. The
  * configured `baseUrl` is reduced to its origin once, and every URL the instance
- * returns is built from that origin rather than from the host that served the request.
+ * returns is built from that fixed origin, no matter which host served the request.
  *
  * @param config - The site's origin, name, default description, and Twitter handles.
  * @returns An instance exposing canonical URLs, schema builders, and serialization.

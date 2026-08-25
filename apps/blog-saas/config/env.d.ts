@@ -7,18 +7,15 @@
  */
 declare namespace Cloudflare {
 	interface Env {
-		// Bindings
 		BLOG: DurableObjectNamespace;
 		PLATFORM_DB: D1Database;
 		SLUG_CACHE: KVNamespace;
 		ANALYTICS: AnalyticsEngineDataset;
 		ASSETS: Fetcher;
 
-		// Vars
 		PLATFORM_DOMAIN: string;
 		OIDC_ISSUER: string;
 
-		// Secrets
 		COOKIE_SESSION_SECRET: string;
 		OIDC_CLIENT_ID: string;
 		OIDC_CLIENT_SECRET: string;

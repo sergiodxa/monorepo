@@ -5,10 +5,9 @@
 import { utility } from "../internal/descriptor";
 
 /**
- * Sets the host element's `z-index` from a plain number. Only numbers are
- * accepted — this package doesn't define named component layers such as
- * `"toast"` or `"modal"`, since stacking order for those is an app or
- * component concern, not a lower-level styling primitive.
+ * Sets the host element's `z-index` from a plain number. Named component
+ * layers such as `"toast"` or `"modal"` are an app or component concern,
+ * so this primitive stays scoped to raw numeric values.
  *
  * @example u.z(10)
  * @example css({ zIndex: 10 })

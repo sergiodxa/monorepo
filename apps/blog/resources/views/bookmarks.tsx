@@ -72,7 +72,9 @@ function formatDate(value: string) {
 }
 
 /**
- * Creates the bookmarks page renderer using the provided view model.
+ * Creates the bookmarks page renderer. The archive suffix is a native anchor
+ * so the lone glyph renders free of the underline `@pkg/ui`'s Link always
+ * applies.
  */
 export function BookmarksView() {
 	return ({ model }: { model: BookmarksView.Model }) => (
@@ -94,11 +96,6 @@ export function BookmarksView() {
 				) : (
 					<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
 						{model.items.map((item) => (
-							/* The shared list-row treatment used by every public index page: a
-							tinted, hairline-bordered card on the `lg` radius, one padding step
-							on all sides, with the title claiming the free track and the date
-							sitting in an auto track beside it. Baseline alignment replaces the
-							old hand-tuned nudge that pushed the date down to meet the title. */
 							<li
 								key={item.href}
 								mix={[
@@ -120,17 +117,11 @@ export function BookmarksView() {
 										</Badge>
 									)}
 								</p>
-								{/* The date and the optional archive link share the row's auto
-								track, so they stay glued together on one line no matter how far
-								the title beside them wraps. */}
 								<div mix={[hstack({ gap: 2, align: "center" }), nowrap()]}>
 									<time mix={[text("sm"), fg("neutral.muted"), tabularNums()]}>
 										{formatDate(item.date)}
 									</time>
 									{item.suffixHref && item.suffixLabel && (
-										/* The suffix is a bare glyph rather than prose, so it keeps
-										native anchor markup: `@pkg/ui`'s Link always underlines, which
-										would draw a rule under a lone icon. */
 										<a
 											href={normalizeBookmarkHref(item.suffixHref)}
 											aria-label={item.suffixAriaLabel}

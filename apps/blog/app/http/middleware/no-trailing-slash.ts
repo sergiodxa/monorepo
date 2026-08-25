@@ -1,8 +1,7 @@
 /**
- * HTTP middleware factory that enforces no-trailing-slash URLs. Any non-root path
- * ending in `/` is permanently redirected to the same URL without the trailing
- * slash; other requests pass through. Exists to keep URLs canonical for SEO and
- * consistent routing.
+ * Canonical-URL middleware: a non-root path ending in `/` gets a permanent
+ * redirect to the slash-free form, so every page answers on a single address
+ * for search engines and routing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +12,8 @@ import type { Middleware } from "remix/router";
 import { redirect } from "@pkg/http/response";
 
 /**
- * Redirects any non-root path ending with `/` to its canonical no-trailing-slash URL.
+ * Permanently redirects a non-root path ending with `/` to its canonical
+ * slash-free URL.
  */
 export default function createNoTrailingSlashMiddleware(): Middleware {
 	return async (ctx, next) => {

@@ -16,8 +16,6 @@ import { css } from "remix/ui";
  * in a `:root` block); the CMS admin mixins use a fixed palette.
  */
 
-// ---- Public site ----
-
 export const container = css({
 	maxWidth: "var(--blog-measure)",
 	margin: "0 auto",
@@ -73,8 +71,6 @@ export const tag = css({
 	fontSize: "0.85em",
 });
 
-// ---- CMS admin (fixed palette) ----
-
 export const cmsShell = css({
 	display: "grid",
 	gridTemplateColumns: "220px 1fr",
@@ -119,12 +115,9 @@ export const control = css({
 	font: "inherit",
 });
 /**
- * Re-types a `css()` mixin for a specific host element. `css()` binds its mixin to
- * the global `Element`, but `@cloudflare/workers-types` shadows `Element` with
- * HTMLRewriter's (whose `remove()` returns `Element`), so a plain `Element` mixin is
- * not assignable to the `mix` prop once JSX resolves an element to its concrete DOM
- * type (`<select>`, or `<input>` with a computed `type`). Only the compile-time type
- * changes; the runtime value is identical.
+ * Re-types a `css()` mixin for a specific host element. `css()` binds to the global
+ * `Element`, which `@cloudflare/workers-types` shadows, so a concrete DOM type from
+ * JSX (e.g. `<select>`) rejects the mixin as unassignable; only the compile-time type changes.
  * @param mixin - The `css()` mixin to re-type.
  * @returns The same mixin value, typed for the given host element.
  */
@@ -167,8 +160,6 @@ export const notice = css({
 });
 export const help = css({ color: "#6b7280", fontSize: "0.8rem", margin: "0.25rem 0 0" });
 
-// ---- Auth pages ----
-
 export const authBody = css({
 	fontFamily: "system-ui, sans-serif",
 	maxWidth: "24rem",
@@ -182,9 +173,9 @@ export const errorText = css({ color: "#b91c1c", marginBottom: "1rem" });
 export const RESET_CSS = "*,*::before,*::after{box-sizing:border-box}";
 
 /**
- * Typography defaults for content-flow elements the engine cannot reach with a
- * mixin — chiefly the markdown output rendered by `MarkdownView`. Chrome and
- * component styling use `css()` mixins above; only content typography is a rule set.
+ * Typography defaults for markdown-rendered content-flow elements (chiefly
+ * `MarkdownView`'s output), applied as a global rule set; chrome and components are
+ * styled with the `css()` mixins above.
  */
 export const CONTENT_CSS = [
 	"a{color:var(--ui-accent)}a:hover{color:var(--ui-accent-hover)}",

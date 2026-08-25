@@ -136,9 +136,9 @@ describe("CreateAlertSchema", () => {
 	});
 
 	/**
-	 * 0 stays accepted rather than being raised to the dispatch-time floor, because the edit
-	 * form posts back what the row already stores and rows storing 0 exist. What it now
-	 * means is "as often as allowed"; `app/services/alerts.ts` decides that.
+	 * 0 stays accepted because the edit form posts back what the row already stores, and
+	 * rows storing 0 exist. It now means "as often as allowed"; `app/services/alerts.ts`
+	 * decides that.
 	 */
 	test("still accepts an explicit cooldown of 0", () => {
 		let result = s.parseSafe(CreateAlertSchema, baseFormData({ cooldown_minutes: "0" }));

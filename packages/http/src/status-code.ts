@@ -1,4 +1,11 @@
 /**
+ * HTTP status code constants, each pairing a numeric status with its
+ * standard status text for use as a `Response` init.
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * HTTP 100 Continue status.
  * Indicates the initial part of a request has been received and the client
  * should continue with the request or ignore if already complete.
@@ -144,7 +151,6 @@ export const NotModified = { status: 304, statusText: "Not Modified" } as const;
 /**
  * HTTP 307 Temporary Redirect status.
  * Indicates a temporary redirect that preserves the request method.
- * Unlike 302, the request method must not change.
  * @example
  * return new Response(null, { ...TemporaryRedirect, headers: { Location: "/temp" } });
  * @example
@@ -155,7 +161,6 @@ export const TemporaryRedirect = { status: 307, statusText: "Temporary Redirect"
 /**
  * HTTP 308 Permanent Redirect status.
  * Indicates a permanent redirect that preserves the request method.
- * Unlike 301, the request method must not change.
  * @example
  * return new Response(null, { ...PermanentRedirect, headers: { Location: "/new" } });
  * @example

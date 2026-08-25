@@ -1,11 +1,10 @@
 /**
  * A preset of {@link Dialog} docked flush against one physical edge of the
- * viewport instead of centered on it, sized to fill that edge and sliding
- * into place from it on open, back out on close. Every other detail —
- * the dimming, blurrable `::backdrop`, the `ui-dialog` named container its
- * compound parts query, and the missing-`id` dev-mode contract check —
- * rides along unchanged from {@link Dialog}, since this component composes
- * it directly instead of duplicating its markup or styling.
+ * viewport, sized to fill that edge and sliding into place from it on open,
+ * back out on close. Every other detail — the dimming, blurrable
+ * `::backdrop`, the `ui-dialog` named container its compound parts query,
+ * and the missing-`id` dev-mode contract check — carries over from
+ * {@link Dialog}, since this component composes it directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,18 +31,15 @@ import { Dialog } from "./dialog";
 const DEFAULT_PLACEMENT: Drawer.Placement = "bottom";
 
 /**
- * Prop types for {@link Drawer} and its compound parts. Every compound part
- * is an alias of {@link Dialog}'s matching part, since {@link Drawer} renders
- * straight through to {@link Dialog} rather than declaring an independent
- * markup shape of its own.
+ * Prop types for {@link Drawer} and its compound parts. Each compound part
+ * aliases {@link Dialog}'s matching part, since {@link Drawer} renders
+ * straight through to {@link Dialog}'s markup.
  */
 export namespace Drawer {
 	/**
-	 * Physical edge of the viewport the panel docks against and slides in
-	 * from. `"left"` and `"right"` name that edge regardless of `dir`, the
-	 * same fixed side a docked panel keeps attaching to under any reading
-	 * direction; `"top"` and `"bottom"` name the block axis, which already
-	 * stays put under `dir` in a horizontal writing mode.
+	 * Physical edge of the viewport the panel docks against and slides in from.
+	 * `"left"`/`"right"` name that fixed edge regardless of `dir`;
+	 * `"top"`/`"bottom"` name the block axis, which already tracks `dir` on its own.
 	 */
 	export type Placement = "top" | "right" | "bottom" | "left";
 
@@ -73,25 +69,9 @@ export namespace Drawer {
 }
 
 /**
- * Renders {@link Dialog} pinned to one edge of the viewport — full block-size
- * and a fixed inline-size for `"left"`/`"right"`, full inline-size and a
- * fixed block-size for `"top"`/`"bottom"` — with the panel's own `transform`
- * carrying it in from that edge and back out again. The same `::backdrop`
- * treatment {@link Dialog} already renders keeps dimming (and, where
- * supported, blurring) the page behind it, unchanged.
- *
- * The slide rides entirely on the native `open` attribute: the resting
- * (closed) rule sets the panel's transform off the docked edge, the
- * `[open]` rule transitions it to identity, and `@starting-style` paired
- * with `transition-behavior: allow-discrete` lets that same pair of rules
- * animate the close too — the platform holds the panel in place for the
- * transition's duration instead of unmounting it the instant `open` is
- * removed. Under `prefers-reduced-motion: reduce` the transition is dropped
- * entirely, so the panel snaps to its open or closed position instead of
- * sliding.
- *
- * A `mix` passed to {@link Drawer} itself layers alongside this placement
- * styling rather than replacing it.
+ * Renders {@link Dialog} pinned to one edge of the viewport, animating a
+ * `transform` off the native `open` attribute so `@starting-style` can
+ * animate the close; a `mix` prop composes alongside this placement styling.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props, plus `placement`.
  * @returns The render function producing the docked panel's markup.
@@ -196,9 +176,8 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 }
 
 /**
- * Renders {@link Drawer.HeaderProps.children} as the panel's header slot:
- * identical to {@link Dialog.Header}, since {@link Drawer} shares its panel
- * markup with {@link Dialog} rather than declaring its own header.
+ * Renders {@link Drawer.HeaderProps.children} as the panel's header slot,
+ * routed straight through to {@link Dialog.Header}'s markup.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the header slot's markup.

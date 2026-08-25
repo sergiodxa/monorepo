@@ -1,9 +1,8 @@
 /**
- * The package root: markdown transformations that are neither parsing nor
- * rendering, and that carry no runtime beyond the parser. Plain-text extraction
- * lives here rather than in a string utility because it needs the markdown AST,
- * and it is reached from this entrypoint so an excerpt or a search index can use
- * it without pulling in a renderer or a syntax highlighter.
+ * The package root holds markdown transformations that need the parsed AST
+ * but carry no rendering runtime. Plain-text extraction sits here because it
+ * operates directly on that AST, and this entrypoint lets an excerpt or a
+ * search index reach it while depending only on the parser.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

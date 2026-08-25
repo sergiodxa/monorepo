@@ -23,21 +23,15 @@ export const AUTH_SERVER_CLIENT_ID = "d12d3901-3cbe-468b-adf5-ac3d3e015728";
 
 /**
  * The `iss` claim written into every ID and access token, and the `issuer`
- * advertised by discovery.
- *
- * Frozen and deliberately scheme-less: relying parties compare this exact string
- * when they verify an ID token, so adding the scheme would reject every token they
- * receive. Changing it is a coordinated client release, not a server decision.
+ * advertised by discovery. Frozen and scheme-less: relying parties compare this
+ * exact string, so changing it requires a coordinated client release.
  */
 export const ISSUER = "auth.sergiodxa.com";
 
 /**
- * Origin every published endpoint URL is built against. Separate from {@link ISSUER}
- * because the issuer string carries no scheme and a URL needs one.
- *
- * Exported because mail needs it too: a relative href in an inbox resolves against
- * nothing, and a link in a security notice has to name the production server rather than
- * whichever host the request that triggered the send happened to arrive on.
+ * Origin every published endpoint URL is built against, since {@link ISSUER} carries
+ * no scheme. Exported for mail: a security notice's link must always name the
+ * production server, regardless of which host the triggering request reached.
  */
 export const ISSUER_HOST = "https://auth.sergiodxa.com";
 
@@ -64,29 +58,22 @@ export type SupportedScope = (typeof SCOPES_SUPPORTED)[number];
 
 /**
  * The public description of how to connect to and use this authorization server,
- * served at both `.well-known` discovery paths.
- *
- * Some entries are purely informational for clients, but the endpoint URLs are also
- * the server's own record of where each endpoint lives, so a route move must be
- * reflected here or discovery starts lying.
+ * served at both `.well-known` discovery paths. Endpoint URLs double as this
+ * server's routing record, so a route move must be reflected here too.
  */
 export const WELL_KNOWN = {
 	issuer: ISSUER,
 	authorization_endpoint: new URL("/authorize", ISSUER_HOST),
 	claims_supported: [
-		// Standard JWT claims
 		"aud",
 		"exp",
 		"iat",
 		"iss",
 		"sub",
-		// OIDC Core claims
 		"auth_time",
 		"nonce",
-		// email scope
 		"email",
 		"email_verified",
-		// profile scope
 		"name",
 		"preferred_username",
 		"picture",
@@ -99,7 +86,6 @@ export const WELL_KNOWN = {
 	request_uri_parameter_supported: false,
 	response_modes_supported: ["query", "fragment", "form_post"],
 	response_types_supported: ["code"],
-	// OIDC Prompt Values, including `create` from OIDC Prompt Create 1.0
 	prompt_values_supported: ["none", "login", "consent", "select_account", "create"],
 	revocation_endpoint: new URL("/oauth/revoke", ISSUER_HOST),
 	revocation_endpoint_auth_methods_supported: ["client_secret_basic"],
@@ -108,19 +94,17 @@ export const WELL_KNOWN = {
 	scopes_supported: SCOPES_SUPPORTED,
 	subject_types_supported: ["public"],
 	authorization_response_iss_parameter_supported: true,
-	// Both methods are advertised because the token endpoint accepts both: credentials
-	// in an HTTP Basic header, and credentials in the form body. Advertising only the
-	// first told clients to use the one path, while the other has always worked.
+	/**
+	 * Advertises both methods: the token endpoint accepts client credentials
+	 * equally from an HTTP Basic header and from the form body.
+	 */
 	token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post"],
 	token_endpoint: new URL("/oauth/token", ISSUER_HOST),
 	userinfo_endpoint: new URL("/userinfo", ISSUER_HOST),
 	end_session_endpoint: new URL("/oidc/logout", ISSUER_HOST),
-	// OIDC Back-Channel Logout 1.0
 	backchannel_logout_supported: true,
 	backchannel_logout_session_supported: true,
-	// OIDC Front-Channel Logout 1.0
 	frontchannel_logout_supported: true,
 	frontchannel_logout_session_supported: true,
-	// OIDC Session Management 1.0
 	check_session_iframe: new URL("/oidc/check-session", ISSUER_HOST),
 };

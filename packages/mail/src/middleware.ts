@@ -1,8 +1,9 @@
 /**
- * Remix fetch-router middleware that builds a mailer for the request and publishes
- * it on the request context, so handlers send mail without resolving a client or
- * knowing which provider the app uses. Messages queued with `later()` are flushed
- * after the handler returns and their failures are logged, never thrown.
+ * Remix fetch-router middleware that builds a mailer for the request and
+ * publishes it on the request context, so handlers send mail by calling
+ * `context.email`, using whichever transport the app configured. Messages
+ * queued with `later()` flush after the handler returns, with failures
+ * recorded through the logger.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,22 +17,24 @@ import type { Address, Transport } from "./types";
 
 import { Mailer } from "./mailer";
 
-// Declared here (an imported module, not an ambient .d.ts) so the augmentation
-// is applied in consuming projects that import the middleware.
+/**
+ * Declared here, in an imported module rather than an ambient .d.ts, so the
+ * augmentation is applied in consuming projects that import the middleware.
+ */
 declare module "remix/router" {
 	interface RequestContext {
 		/**
-		 * Mailer for the current request, configured by the mail middleware. This is
-		 * the object that sends mail, not the current user's email address.
+		 * The object that sends mail for the current request, configured by the
+		 * mail middleware.
 		 */
 		email: Mailer;
 	}
 }
 
 /**
- * The part of a logger this middleware needs. It is structural so the package
- * reports deferred-send failures through whichever logger an app installed on the
- * context, without depending on a logging library itself.
+ * The part of a logger this middleware needs, kept structural so the package
+ * reports deferred-send failures through whichever logger an app already
+ * exposes on the context.
  */
 export interface MailLogger {
 	/**
@@ -74,13 +77,9 @@ function contextLogger(context: RequestContext): MailLogger | undefined {
 }
 
 /**
- * Creates a middleware that publishes a request-scoped mailer as `context.email`.
- *
- * The mailer is built per request so that a transport resolved from a container is
- * resolved once per request and so the `later()` queue belongs to that request
- * alone. The queue is flushed in a `finally` block around `next()`: the response
- * has already been produced by then, so a deferred send cannot influence it, and a
- * failed one is logged instead of surfacing as a rejected promise.
+ * Creates a middleware that publishes a request-scoped mailer as `context.email`,
+ * resolving a container-based transport once per request. The `later()` queue
+ * flushes in a `finally` after `next()`, recording each failure through the logger.
  *
  * @param options - Transport and sender configuration; see {@link MailMiddlewareOptions}.
  * @returns A middleware that populates `context.email`.

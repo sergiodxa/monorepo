@@ -1,3 +1,12 @@
+/**
+ * Tests for Accept-header content negotiation: parsing quality values,
+ * resolving shorthand types, and picking the handler that matches the
+ * client's preferred representation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { accepts, respond, AcceptList } from "./negotiate";

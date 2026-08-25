@@ -63,8 +63,8 @@ function asObject(data: Value): ValueObject {
 /**
  * Run every end-to-end scenario against `dbPath` and return the observations as plain JSON.
  *
- * The shape mirrors the assertions in `db.test.ts` one-for-one, so a new expectation there
- * needs a new field here rather than a reinterpretation of an existing one.
+ * The shape mirrors the assertions in `db.test.ts` one-for-one: a new
+ * expectation there gets a new field here, each field carrying one fixed meaning.
  */
 async function observe(dbPath: string): Promise<Record<string, unknown>> {
 	process.env.DATABASE_URL = `sqlite://${dbPath}`;
@@ -108,7 +108,7 @@ async function observe(dbPath: string): Promise<Record<string, unknown>> {
 		),
 	);
 
-	// The failure path: a missing table must surface the database's own message.
+	/** The failure path: a missing table must surface the database's own message. */
 	let errorResult = await plugin.call(
 		"query",
 		[{ kind: "value", value: "SELECT * FROM does_not_exist" }],
@@ -121,8 +121,10 @@ async function observe(dbPath: string): Promise<Record<string, unknown>> {
 		message: errorResult.error.message,
 	};
 
-	// Connection reuse: two writes landing in one table is the observable proof that the
-	// same handle served every call.
+	/**
+	 * Connection reuse: two writes landing in one table is the observable
+	 * proof that the same handle served every call.
+	 */
 	expectSuccess(
 		await plugin.call(
 			"query",
@@ -150,7 +152,7 @@ async function observe(dbPath: string): Promise<Record<string, unknown>> {
 		),
 	);
 
-	// dispose is idempotent and best-effort: calling it twice never throws.
+	/** dispose is idempotent and best-effort: calling it twice never throws. */
 	let disposeThrew = false;
 	if (plugin.dispose !== undefined) {
 		try {

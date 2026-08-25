@@ -1,3 +1,11 @@
+/**
+ * Unit tests for `succeeded`, covering the throw/no-throw behavior for
+ * failure and success results and the type narrowing it performs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import type { Result } from "./types.js";
@@ -42,7 +50,6 @@ describe(succeeded, () => {
 		let result: Result<number, Error> = success(42);
 
 		succeeded(result);
-		// After this point, TypeScript knows result is Success<number>
 		let value: number = result.data;
 		expect(value).toBe(42);
 	});

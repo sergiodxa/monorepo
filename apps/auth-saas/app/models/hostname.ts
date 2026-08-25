@@ -140,7 +140,8 @@ export default class Hostname {
 
 	/**
 	 * Create a custom hostname via Cloudflare for SaaS API.
-	 * This calls the real Cloudflare API and stores the result locally.
+	 * This calls the real Cloudflare API and stores the result locally, keyed
+	 * by Cloudflare's own hostname id so the two records stay correlated.
 	 *
 	 * @param db - The platform database handle.
 	 * @param tenantId - The owning tenant id (attached as Cloudflare metadata).
@@ -155,17 +156,14 @@ export default class Hostname {
 		hostname: string,
 		region?: HostMetadata["region"],
 	) {
-		// Call Cloudflare API to create the custom hostname
 		let cfHostname = await client.create(hostname, tenantId, region);
 
-		// Extract validation record if present
 		let validationRecord = HostnameClient.getValidationTxtRecord(cfHostname);
 
 		let now = new Date().toISOString();
 
-		// Store in local D1 database
 		await db.create(Hostname.table, {
-			id: cfHostname.id, // Use Cloudflare's hostname ID
+			id: cfHostname.id,
 			tenant_id: tenantId,
 			hostname: cfHostname.hostname,
 			is_default: false,
@@ -181,8 +179,9 @@ export default class Hostname {
 	}
 
 	/**
-	 * Refresh hostname status from Cloudflare API.
-	 * Updates local D1 record with latest status from Cloudflare.
+	 * Refreshes a hostname's status from Cloudflare into the local record and
+	 * invalidates the cached resolution since the status may have flipped.
+	 * Default hostnames are skipped since Cloudflare never registers them.
 	 *
 	 * @param db - The platform database handle.
 	 * @param id - The hostname id to refresh.
@@ -193,14 +192,11 @@ export default class Hostname {
 		let hostname = await db.findOne(Hostname.table, { where: { id } });
 		if (!hostname) throw new RecordNotFoundError(Hostname.table, { id });
 
-		// Default hostnames don't need refresh (they're not in Cloudflare)
 		if (hostname.is_default) return hostname;
 
-		// Fetch latest status from Cloudflare
 		let cfHostname = await client.status(id);
 		let validationRecord = HostnameClient.getValidationTxtRecord(cfHostname);
 
-		// Update local record
 		await db.update(
 			Hostname.table,
 			{ id },
@@ -213,14 +209,14 @@ export default class Hostname {
 			},
 		);
 
-		// Status may have flipped (e.g. active -> pending), so drop any cached mapping.
 		await invalidateHostnameCache(hostname.hostname);
 		return (await db.findOne(Hostname.table, { where: { id } }))!;
 	}
 
 	/**
-	 * Activate a hostname (update local status to active).
-	 * Called after Cloudflare reports the hostname is active.
+	 * Activates a hostname after Cloudflare reports it as active, invalidating
+	 * the cached resolution so the next request re-reads the active mapping
+	 * from D1.
 	 *
 	 * @param db - The platform database handle.
 	 * @param id - The hostname id to activate.
@@ -242,13 +238,14 @@ export default class Hostname {
 			},
 		);
 
-		// Force the next request to re-read the now-active mapping from D1.
 		await invalidateHostnameCache(hostname.hostname);
 		return (await db.findOne(Hostname.table, { where: { id } }))!;
 	}
 
 	/**
-	 * Delete a hostname from both Cloudflare and local D1.
+	 * Deletes a hostname from Cloudflare (when custom) and the local record,
+	 * tolerating a 404 since Cloudflare may already show it gone, then evicts
+	 * the cached resolution so it stops routing to its former tenant.
 	 *
 	 * @param db - The platform database handle.
 	 * @param id - The hostname id to delete.
@@ -260,12 +257,10 @@ export default class Hostname {
 		let hostname = await db.findOne(Hostname.table, { where: { id } });
 		if (!hostname) throw new RecordNotFoundError(Hostname.table, { id });
 
-		// Delete from Cloudflare if it's a custom hostname
 		if (!hostname.is_default) {
 			try {
 				await client.delete(id);
 			} catch (error) {
-				// Ignore 404 errors (hostname already deleted from Cloudflare)
 				if (!(error instanceof HostnameApiError && error.statusCode === 404)) {
 					throw error;
 				}
@@ -273,7 +268,6 @@ export default class Hostname {
 		}
 
 		let result = await db.delete(Hostname.table, { id });
-		// Stop routing the deleted hostname to its former tenant.
 		await invalidateHostnameCache(hostname.hostname);
 		return result;
 	}

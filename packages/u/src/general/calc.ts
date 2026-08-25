@@ -4,10 +4,9 @@
  */
 
 /**
- * Wraps a CSS `calc()` expression: `calc({expression})`. A plain string
- * builder, not a mixin — use it anywhere a utility accepts a raw CSS value,
- * typically together with `u.var()` to combine a custom property with an
- * arithmetic operation.
+ * Wraps a CSS `calc()` expression: `calc({expression})`. Returns a plain
+ * string, usable anywhere a utility accepts a raw CSS value, typically with
+ * `u.var()` to combine a custom property with an arithmetic operation.
  *
  * @example u.calc(`${u.var("overlay-arrow-offset", "0.5rem")} * -1`)
  * @example "calc(var(--ui-overlay-arrow-offset, 0.5rem) * -1)"

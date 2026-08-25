@@ -11,12 +11,6 @@ import { fail } from "remix/data-table";
 
 let ISO_UTC_MILLIS_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
-/**
- * Checks whether a value is a valid ISO-8601 UTC timestamp with milliseconds.
- *
- * @param value Timestamp candidate in `YYYY-MM-DDTHH:mm:ss.sssZ` format.
- * @returns `true` when the value matches the expected shape and parses as a date.
- */
 function isIsoUtcMillis(value: string) {
 	if (!ISO_UTC_MILLIS_REGEX.test(value)) return false;
 	return !Number.isNaN(Date.parse(value));

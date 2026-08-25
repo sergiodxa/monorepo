@@ -57,11 +57,9 @@ function provider(ctx: { request: Request }) {
 }
 
 /**
- * Narrowed shape of `remix/router`'s `RequestContext` this helper
- * actually reads. `i18next` is declared here only to keep this file's
- * dependency surface explicit — the global `i18n` middleware (see
- * `bootstrap/app.tsx`) already populates `ctx.i18next` for every action this
- * controller's `createController` call handles.
+ * Narrowed shape of `remix/router`'s `RequestContext` this helper reads.
+ * `i18next` is declared explicitly even though the global `i18n` middleware
+ * already populates `ctx.i18next` for every action this controller handles.
  */
 interface AuthErrorContext {
 	render: Renderer<RemixNode>;
@@ -69,16 +67,9 @@ interface AuthErrorContext {
 }
 
 /**
- * The team this sign-in lands in: an existing membership, then a domain join, then a fresh
- * personal team.
- *
- * Returns the team rather than only ensuring one exists, because the trial conversion that
- * runs next has to be told where to create monitors. A subject who belongs to several is
- * given the one they own, and that preference is the point: a domain-joined team is their
- * employer's, and the URLs someone probed anonymously on a public page are not something to
- * publish to their colleagues on their behalf. Falling back to the first membership when
- * they own none keeps the offer working for a subject whose only team is a shared one, which
- * is the team they would have been reading the dashboard of anyway.
+ * The team this sign-in lands in: their own membership first, then a domain
+ * join, then a fresh personal team — because a domain-joined team belongs to
+ * the employer, and only an owned team should receive their anonymous history.
  */
 async function resolveTeam(db: Database, idToken: IdToken) {
 	let teams = await Team.listBySubjectId(db, idToken.subject);
@@ -90,13 +81,9 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 	if (joined) return joined;
 
 	/**
-	 * A brand-new personal team, which is the one branch that means an account was just created.
-	 * The trial's own `account_created` is emitted by `convertTrialWatches` for somebody who came
-	 * through the free page; this covers everybody else, so a count of all new accounts is the
-	 * union of the two and neither double-counts the other.
-	 *
-	 * Emitted here rather than after the sign-in completes because this is the only place that
-	 * knows a team was *created* rather than resolved — a returning user reaches neither branch.
+	 * Emits `account_created` here because reaching this branch means a team was
+	 * just created for a brand-new account; `convertTrialWatches` emits its own
+	 * for the free-page path, so summing the two counts every new account once.
 	 */
 	let created = await Team.createTeam(db, idToken);
 
@@ -112,17 +99,11 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 }
 
 /**
- * Seeds the `language` cookie from the subject's stored preference, so the page this sign-in
- * redirects to is already in their language.
+ * Seeds the `language` cookie from the subject's stored preference so the
+ * page this redirects to loads already in their language — the cookie is the
+ * only signal a normal request's language resolution reads before its database fallback.
  *
- * The cookie is the only thing language resolution reads on a normal request (see
- * `~/app/http/middleware/i18n.ts`), and a new browser has none — without this, somebody with a
- * stored preference would land on one page in whatever `Accept-Language` says before the
- * middleware's database fallback corrects it. One read on a path that already makes several is
- * not worth avoiding; a first page in the wrong language is.
- *
- * Returns no header at all for a subject who has never chosen a language: there is nothing to
- * say, and writing an empty cookie would only claim otherwise.
+ * @returns Headers carrying the cookie, or undefined when there is no stored preference.
  */
 async function languageHeaders(db: Database, subjectId: string): Promise<Headers | undefined> {
 	let preferences = await UserPreferences.findBySubjectId(db, subjectId);
@@ -207,23 +188,18 @@ export default createController(routes.auth, {
 				let team = await resolveTeam(db, idToken);
 
 				/**
-				 * After the team exists and before the session is written, because it needs
-				 * somewhere to put the monitors it creates and the person must find them already
-				 * there when the redirect lands them on the dashboard. It never throws — see the
-				 * service — so sign-in cannot fail on it.
+				 * Runs after the team exists and before the session is written, so its monitors
+				 * land in the team the dashboard redirect will already show. The service always
+				 * resolves normally, so sign-in completes regardless of the conversion outcome.
 				 */
 				await convertTrialWatches(db, {
 					email: idToken.email,
 					teamId: team.id,
 					authorId: idToken.subject,
 					/**
-					 * Read here rather than inside the service, because this is the last request that
-					 * still has the anonymous session the record was written into: `attribution`
-					 * captured it on whichever page they first landed on, and after this redirect it
-					 * has served its purpose. Left in the session rather than unset — a
-					 * repeat sign-in finds the conflict and writes nothing, so there is nothing to
-					 * protect against, and clearing it would lose the attribution of somebody whose
-					 * first sign-in raced a second tab.
+					 * Read here because this request is the last one holding the anonymous
+					 * session `attribution` was captured into. Left in the session afterward,
+					 * so a sign-in racing in a second tab still finds its own attribution intact.
 					 */
 					attribution: ctx.get(Session)?.get(TRIAL_ATTRIBUTION) as TrialAttribution | undefined,
 				});

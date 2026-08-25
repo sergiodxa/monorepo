@@ -15,16 +15,16 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { Customer, Discount, Order, Subscription } from "./index";
 
-// Captured before the module is mocked below, so the cross-check runs against the
-// verifier the SDK actually ships rather than against this file's stand-in.
+/**
+ * Captured before the module is mocked below, so the cross-check runs against
+ * the verifier the SDK actually ships.
+ */
 let { validateEvent: sdkValidateEvent, WebhookVerificationError: SDKWebhookVerificationError } =
 	await import("@polar-sh/sdk/webhooks.js");
 
 /** Stands in for the error the SDK raises when it cannot model an event's payload. */
 class MockSDKValidationError extends Error {}
 
-// Captures the last arguments passed to validateEvent so tests can assert on them,
-// plus a controllable behaviour for the mocked parser.
 let validateEventCalls: Array<{ body: string; headers: Record<string, string>; secret: string }> =
 	[];
 let validateEventImpl: (
@@ -45,10 +45,10 @@ vi.doMock("@polar-sh/sdk/models/errors/polarerror.js", () => ({
 	PolarError: class PolarError extends Error {},
 }));
 
-// A recording fake of the pieces of the Polar SDK the client touches. Each method
-// records its input and returns a canned response.
-// Use a null-prototype object so recorded keys (e.g. "new") never collide with
-// inherited members like Object.prototype.constructor.
+/**
+ * Uses a null-prototype object so recorded keys (e.g. "new") never collide
+ * with inherited members like Object.prototype.constructor.
+ */
 let calls: Record<string, unknown[]> = Object.create(null);
 function record(method: string, arg: unknown) {
 	(calls[method] ??= []).push(arg);
@@ -105,7 +105,6 @@ vi.doMock("@polar-sh/sdk", () => ({
 			},
 			list: async (arg: unknown) => {
 				record("subscriptions.list", arg);
-				// Async-iterable of pages, mirroring the SDK's paginated response.
 				return {
 					async *[Symbol.asyncIterator]() {
 						for (let items of subscriptionsListImpl()) yield { result: { items } };
@@ -160,7 +159,7 @@ vi.doMock("@polar-sh/sdk", () => ({
 	},
 }));
 
-// Import after mocks are registered so the client picks up the fakes.
+/** Imported after mocks are registered so the client picks up the fakes. */
 let {
 	ACTIVE_SUBSCRIPTION_STATUSES,
 	isActiveSubscriptionStatus,
@@ -188,13 +187,9 @@ interface DeliveryOptions {
 }
 
 /**
- * Signs a delivery the way Polar's senders do, computed here with WebCrypto directly
- * rather than through either implementation under test, so the fixtures are an
- * independent oracle rather than a restatement of the code they exercise.
- *
- * The two rules that matter: the HMAC key is the secret's **UTF-8 bytes** (Polar's
- * secret is text, not base64 key material), and the signed content is
- * `id.timestamp.body`.
+ * Signs a delivery the way Polar's senders do, computed independently with
+ * WebCrypto so the fixtures act as an oracle for the code under test. The
+ * HMAC key is the secret's UTF-8 bytes; the signed content is `id.timestamp.body`.
  *
  * @param options - The delivery to sign.
  * @returns The three Standard Webhooks headers, as a plain record.
@@ -244,10 +239,9 @@ async function delivery(
 }
 
 /**
- * The verdict the SDK's own verifier reaches, reduced to the authentic/not-authentic
- * answer the old `verifyWebhook` derived from it: only a `WebhookVerificationError`
- * counted as a rejected signature, and any other throw meant the signature had already
- * passed and only the typing failed.
+ * The verdict the SDK's own verifier reaches: only a `WebhookVerificationError`
+ * counts as a rejected signature, so any other throw means the signature passed
+ * and only the typing failed.
  *
  * @param body - The raw delivery body.
  * @param headers - The delivery headers, flattened as the SDK expects them.
@@ -685,8 +679,11 @@ describe("PolarClient", () => {
 	test("ingestEvents keys on externalCustomerId when that is the id given", async () => {
 		let polar = new PolarClient({ accessToken: "t" });
 		await polar.ingestEvents([{ externalCustomerId: "owner-1", name: "infra.cost.daily" }]);
-		// `customerId` must be absent, not undefined: the SDK picks the payload variant from
-		// which field is present, and sending both is a validation error.
+		/**
+		 * `customerId` must be absent, not undefined: the SDK picks the payload
+		 * variant from which field is present, and sending both is a
+		 * validation error.
+		 */
 		expect(calls["events.ingest"]).toEqual([
 			{
 				events: [
@@ -715,7 +712,7 @@ describe("PolarClient", () => {
 		let [call] = calls["events.ingest"] as { events: { metadata: unknown }[] }[];
 		expect(call?.events[0]?.metadata).toEqual({
 			team_id: "team-1",
-			// A string, because `(1e-7).toString()` is `"1e-7"` and Polar cannot parse that.
+			/** A string, because `(1e-7).toString()` is `"1e-7"` and Polar cannot parse that. */
 			_cost: { amount: "0.003476700", currency: "usd" },
 		});
 	});
@@ -880,7 +877,7 @@ describe("PolarClient", () => {
 		test("returns true when the signature is valid but the body is unmodelled", async () => {
 			let { request, body } = await delivery({ body: '{"type":"nothing.models.this"}' });
 			let polar = new PolarClient({ accessToken: "t" });
-			// The security boundary passed; typing the payload is the caller's problem.
+			/** The security boundary passed; typing the payload is the caller's problem. */
 			expect(await polar.verifyWebhook(request, body, WEBHOOK_SECRET)).toBe(true);
 		});
 
@@ -974,21 +971,20 @@ describe("PolarClient", () => {
 		});
 	});
 
-	// WebhookVerificationError is deliberately type-only: its module is the schema-heavy
-	// webhook parser, so re-exporting the class would undo the lazy SDK load.
+	/**
+	 * WebhookVerificationError is deliberately type-only: its module is the
+	 * schema-heavy webhook parser, so re-exporting the class would undo the
+	 * lazy SDK load.
+	 */
 	test("re-exports PolarError as a value", () => {
 		expect(typeof PolarError).toBe("function");
 	});
 });
 
 /**
- * The check ADR-026 makes mandatory before the SDK stops being the security boundary:
- * on the same bytes, the SDK's verifier and `verifyWebhook` must reach the same
- * accept/reject verdict, because a silent mismatch would reject legitimate billing
- * events. It stays here for as long as the SDK is installed.
- *
- * Every fixture is signed by {@link signLikePolar}, which computes the MAC with
- * WebCrypto directly, so neither implementation is being compared against itself.
+ * ADR-026 requires the SDK's verifier and `verifyWebhook` to reach the same
+ * accept/reject verdict on identical bytes, since a silent mismatch would
+ * reject legitimate billing events. Fixtures are signed independently.
  */
 describe("webhook verification cross-check against the vendor SDK", () => {
 	/**
@@ -1014,8 +1010,10 @@ describe("webhook verification cross-check against the vendor SDK", () => {
 	});
 
 	test("both accept an authentic body neither can model", async () => {
-		// The distinction ADR-026 preserves: the signature is what authenticates, so an
-		// event type nothing here knows is not an attack.
+		/**
+		 * The distinction ADR-026 preserves: the signature authenticates the
+		 * delivery, independent of whether the event type here is recognized.
+		 */
 		let body = '{"type":"nothing.models.this","data":{}}';
 		let headers = await signLikePolar({ body });
 		expect(await verdicts(headers, body)).toEqual({ sdk: true, pkg: true });
@@ -1028,8 +1026,11 @@ describe("webhook verification cross-check against the vendor SDK", () => {
 	});
 
 	test("both accept a good signature presented beside an unreadable one", async () => {
-		// A sender mid-rotation sends several space-separated values, and a scheme
-		// neither side reads must not invalidate the one it does.
+		/**
+		 * During secret rotation, a sender may present multiple space-separated
+		 * signature schemes; the scheme actually read stays authoritative
+		 * alongside the others.
+		 */
 		let headers = await signLikePolar();
 		headers["webhook-signature"] = `v1a,AAAA ${headers["webhook-signature"]}`;
 		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: true, pkg: true });
@@ -1076,9 +1077,11 @@ describe("webhook verification cross-check against the vendor SDK", () => {
 	});
 
 	test("`Webhooks.sign()` reproduces the header a Polar sender produces", async () => {
-		// Pins the secret handling in the signing direction too: `@pkg/webhooks` keys on
-		// the base64-decoded secret, and Polar's secret is text, so the value handed to
-		// the package has to be the secret's UTF-8 bytes re-encoded as base64.
+		/**
+		 * Pins secret handling for signing too: `@pkg/webhooks` keys on the
+		 * base64-decoded secret, so Polar's plain-text secret must be
+		 * re-encoded as base64 before being handed to the package.
+		 */
 		let id = "wh_pinned";
 		let timestamp = 1614265330;
 		let expected = await signLikePolar({ id, timestamp });
@@ -1094,9 +1097,11 @@ describe("webhook verification cross-check against the vendor SDK", () => {
 	});
 
 	test("verifying against the raw, undecoded secret would reject a genuine delivery", async () => {
-		// The mismatch this migration had to find: Polar's secret is arbitrary text, so
-		// handing it to a Standard Webhooks verifier unchanged keys on the wrong bytes and
-		// silently rejects every legitimate billing event.
+		/**
+		 * Polar's secret is arbitrary text; handing it to a Standard Webhooks
+		 * verifier unchanged keys on the wrong bytes and rejects every
+		 * legitimate billing event.
+		 */
 		let headers = await signLikePolar();
 		let request = new Request("https://app/webhook", { method: "POST", headers });
 
@@ -1124,9 +1129,9 @@ describe("isActiveSubscriptionStatus", () => {
 
 describe("subscriptionFromEvent", () => {
 	/**
-	 * Events are built by round-tripping through `parseWebhook` rather than as object
-	 * literals: that is where a real caller gets one, and the union is 35 payload types
-	 * wide, so a literal would need a cast to stand in for any of them.
+	 * Events are built by round-tripping through `parseWebhook`, the way a
+	 * real caller obtains one. The union spans 35 payload types, too wide
+	 * for a literal without a cast.
 	 */
 	async function parse(event: { type: string; data: unknown }) {
 		validateEventImpl = () => event;

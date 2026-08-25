@@ -1,26 +1,7 @@
 /**
- * Background job that sends the free trial's daily digest: for every lead owed one, a single
- * email covering every URL they are watching.
- *
- * The unit is the person, not the target, and that is the whole reason this job exists apart
- * from the hourly sweep. Someone who tried three URLs is one reader with one inbox, so they
- * get one email a day with three sections in it rather than three emails — which is why the
- * schedule lives on `leads.last_digest_at` and why `Lead.listDueForDigest` is driven off an
- * `EXISTS` against their watches instead of a join that would return them once per URL.
- *
- * Idempotence is the stamp. `Lead.listDueForDigest` selects only leads whose last digest
- * predates today's UTC midnight, and `Lead.markDigestSent` moves that date, so a redelivered
- * message finds nothing to do. The stamp is written only after a send the transport accepted:
- * a digest that failed to render or to deliver leaves the lead due, and the next delivery of
- * the same day's trigger retries it.
- *
- * A lead with no active watches gets nothing, and the query already says so — but a watch can
- * finish between the query and the read, so the "nothing to report" branch is real and exits
- * without stamping rather than sending an empty email.
- *
- * Nothing here is billed. A lead is not a Polar customer and never becomes one by being
- * written to; the only cost recorded is the send itself and this delivery's own share of the
- * platform, which the ledger attributes to nobody — see the note in `perform`.
+ * Background job that sends the free trial's daily digest: one email per lead
+ * covering every URL they are watching, keyed off `leads.last_digest_at` so a
+ * redelivered trigger finds nothing left to do.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,13 +30,9 @@ import { trackTrialProgressEmailSent } from "~/app/services/funnel-events";
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 /**
- * How many hours one digest reports, one segment of its bar per hour.
- *
- * A rolling twenty-four hours ending now, rather than the UTC calendar day the once-a-day
- * bound is counted in. The two would disagree by however long after midnight the trigger
- * runs, and a calendar-day window would leave those hours unreported until the following
- * day's email; a rolling window run once a day tiles the time with no gap and no overlap. It
- * is also what the bar's own captions promise, since they read "24 hours ago" and "Now".
+ * How many hours one digest reports, one segment of its bar per hour: a rolling
+ * window ending now rather than the UTC calendar day, so a run shortly after
+ * midnight tiles the prior day with no gap and matches the bar's own captions.
  */
 const DIGEST_WINDOW_HOURS = 24;
 
@@ -72,10 +49,9 @@ export class SendTrialDigestsJob extends Job {
 		let leads = await Lead.listDueForDigest(db, now);
 
 		/**
-		 * Deliberately no `apportionCost` call. A lead belongs to no team, so with no weights
-		 * recorded the ledger puts this delivery on `PLATFORM_TEAM_ID` with a `platform`
-		 * attribution — the truth — where naming that id as a weight would record the spend as
-		 * a `direct` attribution to a team that does not exist.
+		 * A lead belongs to no team, so this cost is recorded with no weights: the ledger
+		 * attributes it to `PLATFORM_TEAM_ID` under a `platform` attribution, the accurate
+		 * account, since naming a team id here would misattribute it as `direct` spend.
 		 */
 
 		let settled = await mapWithConcurrency(leads, (lead) => this.digest(db, mailer, lead, now));
@@ -108,7 +84,8 @@ export class SendTrialDigestsJob extends Job {
 
 	/**
 	 * Sends one lead their whole day: every target they are still watching, in the language
-	 * they were browsing in when they handed the address over.
+	 * they were browsing in when they handed the address over. Cost is recorded before the
+	 * send attempt, since a rejected send is still billed.
 	 *
 	 * @returns Whether a digest went out, which is what the stamp and the counters key on.
 	 */
@@ -132,7 +109,6 @@ export class SendTrialDigestsJob extends Job {
 
 		let { locale, t } = await emailTranslator(lead.locale);
 
-		// Counted before the send, because a rejected send is still a billed one.
 		recordCost("emailSent");
 		let result = await mailer.send(
 			new TrialDailyDigestEmail({
@@ -154,7 +130,7 @@ export class SendTrialDigestsJob extends Job {
 
 		/** Only now: the stamp is what moves this lead's next digest to tomorrow. */
 		await Lead.markDigestSent(db, lead.id, now);
-		/** And on the same condition, because the funnel counts what landed, not what was tried. */
+		/** And on the same condition, since the funnel counts sends that landed. */
 		await Lead.recordEmailSent(db, lead.id, now);
 
 		/**
@@ -174,14 +150,9 @@ export class SendTrialDigestsJob extends Job {
 }
 
 /**
- * One watched target as its section of the digest, or `null` when there is nothing to say
- * about it.
- *
- * A target with no checks in the window still has a section — an all-empty bar reading zero
- * checks is itself the report, and dropping it would silently shrink an email that names how
- * many URLs it covers. What is dropped is a target whose status is unknown *and* unrecorded,
- * which is a watch that has never completed a check: the digest reports a state per URL and
- * there is no honest one to print.
+ * One watched target as its section of the digest, or `null` for a watch that has
+ * never completed a check and so has no honest status to print. A target with no
+ * checks in the window still gets a section, since an all-empty bar is itself the report.
  */
 function toTarget(
 	entry: TrialWatchDigestEntry,
@@ -200,12 +171,9 @@ function toTarget(
 }
 
 /**
- * The three numbers under a daily bar, derived from the window's rows rather than from the
- * watch's running totals: those totals cover the target's whole life, and a seven-day figure
- * printed under a one-day bar would describe something the reader is not looking at.
- *
- * A slowest response of zero means nothing answered, since a response that was measured has a
- * duration and one that was not is stored as `NULL`.
+ * The three numbers under a daily bar, derived from the window's rows rather than the
+ * watch's lifetime totals, which would describe a span the reader isn't looking at. A
+ * slowest response of zero means nothing answered, since a measured response has a duration.
  */
 function windowStats(results: SelectTrialWatchResult[]): TrialStats {
 	let healthy = results.filter((result) => isHealthyTrialStatus(result.status)).length;

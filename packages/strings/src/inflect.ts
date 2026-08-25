@@ -43,11 +43,8 @@ export interface HumanizeOptions {
 export interface Inflector {
 	/** Plural form of a word, or the singular form when `count` is exactly 1. */
 	pluralize(word: string, count?: number): string;
-	/** Singular form of a word. */
 	singularize(word: string): string;
-	/** camelCase form of an identifier. */
 	camelize(value: string, options?: CamelizeOptions): string;
-	/** snake_case form of an identifier. */
 	underscore(value: string): string;
 	/** kebab-case form of an underscored identifier. */
 	dasherize(value: string): string;
@@ -170,10 +167,9 @@ function anyCasePattern(value: string): string {
 }
 
 /**
- * Expands one irregular pair into the rules that map either form to the plural
- * and either form to the singular, preserving the first letter's case. Pairs
- * that share a first letter capture it, pairs that do not get one rule per case
- * because the replacement's first letter is fixed.
+ * Expands one irregular pair into the rules that map either form to the
+ * plural and either form to the singular, preserving the first letter's case;
+ * pairs that share a first letter capture it, others get one rule per case.
  */
 function irregularRules(pair: IrregularPair): {
 	plural: InflectionRule[];

@@ -34,8 +34,8 @@ const AUTHZ_CODE_KEY_PREFIX = "authz-code:";
 
 /**
  * Shape of a stored authorization code. It is written and read by more than one
- * deployment against a shared namespace, so the property names and their nesting are
- * part of the storage contract and cannot be renamed for convenience.
+ * deployment against a shared namespace, so the property names and their nesting
+ * are part of the storage contract and stay fixed.
  */
 const AUTHZ_CODE_SCHEMA = s.object({
 	clientId: s.string(),
@@ -50,8 +50,8 @@ const AUTHZ_CODE_SCHEMA = s.object({
 });
 
 /**
- * Reshapes a client row into what the engine needs to authenticate it and validate a
- * redirect, dropping every column the protocol has no business reading.
+ * Reshapes a client row into the engine's client: the columns the protocol reads to
+ * authenticate it and validate a redirect.
  */
 function toEngineClient(client: SelectClient) {
 	return {
@@ -166,11 +166,9 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 		},
 
 		/**
-		 * Consumes an authorization code: the entry is deleted before its data is
-		 * returned, which is what makes a code single-use (RFC 6749).
-		 *
-		 * A code that is missing, expired, or unreadable yields `null` rather than an
-		 * exception, so the token endpoint answers `invalid_grant` instead of failing.
+		 * Deleting the entry before returning its data is what makes a code single-use
+		 * (RFC 6749). A code that is missing, expired, or unreadable yields `null`, so
+		 * the token endpoint answers `invalid_grant`.
 		 */
 		async findAuthorizationCodeData(code) {
 			let stored = await env.KV.get(`${AUTHZ_CODE_KEY_PREFIX}${code}`);
@@ -249,7 +247,7 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 			await Credential.create(db, subjectId, passwordHash, verifiedAt?.getTime() ?? null);
 		},
 
-		/** Rewrites an existing credential's hash, never creating one. */
+		/** Rewrites the password hash of a credential that already exists. */
 		async updateCredentialPasswordHash(subjectId, passwordHash) {
 			await Credential.updatePasswordHash(db, subjectId, passwordHash);
 		},
@@ -268,11 +266,12 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 
 		/**
 		 * Stores an authorization code for {@link AUTHZ_CODE_TTL}, after which KV drops
-		 * it and redeeming it fails as an expired grant.
+		 * it and redeeming it fails as an expired grant. The TTL is milliseconds and KV
+		 * counts in seconds.
 		 */
 		async storeAuthorizationCode(code, data) {
 			await env.KV.put(`${AUTHZ_CODE_KEY_PREFIX}${code}`, JSON.stringify(data), {
-				expirationTtl: AUTHZ_CODE_TTL / 1000, // KV counts in seconds
+				expirationTtl: AUTHZ_CODE_TTL / 1000,
 			});
 		},
 
@@ -291,8 +290,8 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 /**
  * Builds the OIDC engine for this authorization server, bound to the given database.
  *
- * The issuer is fixed to {@link ISSUER} rather than derived from the request, because
- * the value is written into every token relying parties verify against a pinned string.
+ * The issuer is fixed to {@link ISSUER} because it is written into every token and
+ * relying parties verify it against a pinned string.
  *
  * @param db - The database the engine's storage reads and writes through.
  */

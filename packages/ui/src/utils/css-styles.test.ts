@@ -1,11 +1,8 @@
 /**
  * Unit test for the shared `css()` style-object type in
- * {@link "./css-styles"}: a runtime check that a value built up from
- * separately-typed `CSSStyles` blocks — the pattern every animation factory
- * composing a nested selector or at-rule ahead of its own `css()` call relies
- * on — reaches `css()` with every nested block intact, so a change to the
- * underlying alias surfaces here instead of silently drifting from what
- * `css()` itself accepts.
+ * {@link "./css-styles"}: confirms a value built from separately-typed
+ * `CSSStyles` blocks reaches `css()` with every nested block intact, so a
+ * change to the underlying alias surfaces here directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +15,6 @@ import { describe, expect, test } from "vitest";
 
 import type { CSSStyles } from "./css-styles";
 
-/** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
 	return descriptor.args[0] as Record<string, unknown>;
 }

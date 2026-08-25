@@ -106,7 +106,11 @@ function SectionRule() {
 	return () => <hr mix={[is("100%"), border({ color: "color.neutral.300", width: 1 })]} />;
 }
 
-/** The hero: the title, the pitch, and the jump link down to the packages. */
+/**
+ * The hero: the title, the pitch, and the jump link down to the packages.
+ * The jump link is a literal `#pricing` fragment, pointing to a section
+ * within this same page.
+ */
 function Hero() {
 	return () => (
 		<div id="hero" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), p(5)]}>
@@ -129,7 +133,6 @@ function Hero() {
 					{HERO.pitchAfter}
 				</p>
 
-				{/* An in-page anchor, so it stays a plain href rather than a typed route. */}
 				<a
 					href="#pricing"
 					mix={[textTransform("capitalize"), textDecoration({ line: "underline", offset: 6 })]}
@@ -161,7 +164,11 @@ function Description() {
 	);
 }
 
-/** The single testimonial: portrait, quote, and attribution. */
+/**
+ * The single testimonial: portrait, quote, and attribution. Quotation marks
+ * render as pseudo-elements, keeping the quoted text itself plain and
+ * reusable elsewhere.
+ */
 function Testimonial() {
 	return () => (
 		<section
@@ -188,8 +195,6 @@ function Testimonial() {
 					media(LARGE, textAlign("left")),
 				]}
 			>
-				{/* The quotation marks are pseudo-elements, so the quote itself stays plain text
-				and can be reused wherever it is not being set as a quotation. */}
 				<blockquote
 					mix={[
 						balance(),
@@ -262,7 +267,11 @@ function PurchaseButton(handle: Handle<{ href: string; price: PriceView }>) {
 	};
 }
 
-/** The pricing section: both packages with live prices, then the upgrade call-out. */
+/**
+ * The pricing section: both packages with live prices, then the upgrade
+ * call-out. Its radius and inline margin use raw lengths, keeping the corner
+ * rounded and the panel overhanging the section on wide viewports.
+ */
 function Pricing(handle: Handle<Omit<ReleaseView.Props, "attribution">>) {
 	return () => {
 		let { links, prices } = handle.props;
@@ -328,14 +337,10 @@ function Pricing(handle: Handle<Omit<ReleaseView.Props, "attribution">>) {
 					mix={[
 						vstack({ gap: 4, align: "start", justify: "between" }),
 						p(6),
-						// A raw length, not a scale step: the radius scale tops out below this, and a
-						// name it does not know resolves to a square corner.
 						rounded("1rem"),
 						border({ color: "color.neutral.800", width: 1 }),
 						bg("color.neutral.100"),
 						media(SMALL, hstack({ gap: 4, align: "center", justify: "between" })),
-						// Pulled out past the section's own padding, so the call-out reads as a panel
-						// laid over the page rather than another paragraph in the column.
 						media(LARGE, mi(-6)),
 						dark(bg("color.neutral.950")),
 					]}
@@ -374,7 +379,11 @@ function Pricing(handle: Handle<Omit<ReleaseView.Props, "attribution">>) {
 	};
 }
 
-/** The author bio. Its prose carries inline links, which is why the copy lives here. */
+/**
+ * The author bio. Its prose carries inline links, which is why the copy
+ * lives here. The portrait leads the section on a phone and frames it
+ * beside the text on a wide viewport.
+ */
 function Author() {
 	return () => (
 		<section
@@ -415,8 +424,6 @@ function Author() {
 				</p>
 			</div>
 
-			{/* Above the bio on a phone, beside it on a wide viewport: the portrait introduces
-			the section when the text is stacked, and frames it when it is not. */}
 			<img
 				src={AUTHOR.photo}
 				alt={AUTHOR.photoAlt}

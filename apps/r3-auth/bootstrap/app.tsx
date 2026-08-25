@@ -65,13 +65,9 @@ import { MailTransport } from "~/app/services/mail-transport";
 import routes from "~/routes/web";
 
 /**
- * Paths cross-origin protection must not apply to.
- *
- * Every one of them is a cross-origin `POST` by design: a relying party exchanging a
- * code, a resource server introspecting a token, and a client's back-channel logout
- * call all arrive from another origin with credentials of their own — a client secret,
- * a signed token — which is a stronger claim than an `Origin` header. Getting this list
- * wrong does not fail loudly: it fails as every relying party's login breaking at once.
+ * Paths exempt from cross-origin protection, each authenticated by its own
+ * credential — a client secret or signed token — so misconfiguring this list
+ * breaks every relying party's login at once.
  */
 const COP_BYPASS_PATTERNS = ["/oauth/{path...}", "/api/{path...}", "/oidc/logout"];
 
@@ -88,17 +84,13 @@ namespace application {
 	}
 }
 
-/** Builds the app's fetch-router: global middleware, then every route mapped to its controller. */
+/**
+ * Builds the app's fetch-router: global middleware, then every route mapped
+ * to its controller. Middleware order matters: normalizing `HEAD` to `GET`
+ * runs first so every downstream check treats it like the request it probes.
+ */
 export default function application(options: application.Options) {
-	// A non-tuple `Middleware[]`: the values these middleware publish are declared with
-	// `declare module "remix/router"` in their own modules rather than carried
-	// through the chain's transform types.
 	let middleware: Middleware[] = [
-		// First, so everything after it — the session, cross-origin protection with its
-		// bypass list, and each controller's own guard — sees a plain `GET` and treats a
-		// `HEAD` probe exactly as it would the request behind it. The bypass list is
-		// unaffected: it matches on path, and the machine endpoints it names are `POST`
-		// routes a rewritten `HEAD` cannot reach.
 		headRequests(),
 		asyncContext(),
 		logger,
@@ -110,15 +102,7 @@ export default function application(options: application.Options) {
 			options.secure,
 			options.cookieDomain,
 		) as Middleware,
-		// After the session middleware, whose session a stored language preference would
-		// be read from, and before rendering, which is what translates.
 		i18n,
-		// Publishes `ctx.email` on every surface, the machine endpoints included: the notice
-		// a new session produces is queued by the login paths, and a login path is answered
-		// under `/authorize` as well as under `/auth/*`. The transport is resolved from the
-		// container so the provider is chosen in exactly one place, and the mailer is built
-		// per request so its `later()` queue belongs to that request alone and is flushed
-		// once the response has already been produced.
 		mail({
 			transport: () => getServiceContainer().get(MailTransport),
 			from: MAIL_FROM,
@@ -134,12 +118,8 @@ export default function application(options: application.Options) {
 	router.map(routes.healthcheck, healthcheck);
 	router.map(routes.userinfo, userinfo);
 	router.map(routes.authorize, authorizeController);
-	// Outside `/account`: the link is followed from an inbox, so the token is what authorizes
-	// the write and a session guard here would refuse a valid one.
 	router.map(routes.verifyEmail, verifyEmail);
 
-	// Unauthenticated by definition — a person who cannot sign in is the only caller — so
-	// both stay inside cross-origin protection and carry their own rate limiting.
 	router.map(routes.password.forgot, passwordForgot);
 	router.map(routes.password.reset, passwordReset);
 
@@ -164,8 +144,6 @@ export default function application(options: application.Options) {
 	router.map(routes.wellKnown.oauthAuthorizationServer, oauthAuthorizationServer);
 	router.map(routes.wellKnown.jwks, jwks);
 
-	// One call per route map: middleware does not cascade between them, so each admin
-	// controller carries `requireAdmin` in its own chain rather than relying on a parent.
 	router.map(routes.admin.dashboard, adminDashboard);
 	router.map(routes.admin.clients, adminClients);
 	router.map(routes.admin.clientNew, adminClientNew);
@@ -180,7 +158,12 @@ export default function application(options: application.Options) {
 	return router;
 }
 
-/** Creates a request-scoped renderer for server-side HTML responses. */
+/**
+ * Creates a request-scoped renderer for server-side HTML responses.
+ *
+ * Uses `createHtmlResponse` to prepend `<!DOCTYPE html>` onto the stream's
+ * first chunk, since JSX serializes text as escaped content.
+ */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, {
@@ -193,12 +176,6 @@ function createHtmlRenderer(ctx: RequestContext) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 
-		// `createHtmlResponse` rather than `new Response`, because it prepends
-		// `<!DOCTYPE html>` to the stream's first chunk — the only place the doctype
-		// can go, since JSX escapes text and the renderer exposes no option for it.
-		// Without it every page parses in quirks mode. Fragment responses get one
-		// too, which is harmless: `remix/ui` strips any doctype out of frame content
-		// before inserting it, on the server and in the browser alike.
 		return createHtmlResponse(stream, { ...init, headers });
 	};
 }
@@ -229,7 +206,7 @@ async function resolveFrame(
 	return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`;
 }
 
-/** Follows SSR frame redirects without letting fetch auto-follow with changed headers. */
+/** Follows SSR frame redirects manually, keeping the original request headers on each hop. */
 async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
 	let currentUrl = url;
 	let redirectsRemaining = 10;

@@ -10,10 +10,8 @@ import { color } from "../internal/tokens";
 import { focusVisible } from "../state/focus-visible";
 
 /**
- * Applies a focus ring. Composes `u.focusVisible()` itself — a ring never
- * shows on plain `:focus`, only on keyboard/assistive-tech focus — so this
- * utility already wraps the state a component would otherwise have to add
- * by hand.
+ * Applies a focus ring already scoped to `&:focus-visible`, so it shows for
+ * keyboard and assistive-tech focus and a component can apply it directly.
  *
  * @example u.ring()
  * @example css({ "&:focus-visible": { outlineWidth: "2px", outlineStyle: "solid", outlineOffset: "2px", outlineColor: "var(--ui-ring, Highlight)" } })

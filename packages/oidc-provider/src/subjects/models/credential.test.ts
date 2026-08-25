@@ -21,10 +21,8 @@ import { createSubject } from "../../shared/test/fixtures";
 
 import Credential from "./credential";
 
-/** Cost factor every stored bcrypt hash was written with. */
 const LEGACY_BCRYPT_COST = 10;
 
-/** Prefix identifying the format written for new hashes. */
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
 describe("Credential", () => {
@@ -142,12 +140,10 @@ describe("Credential", () => {
 			let upgraded = (await Credential.findBySubject(db, subject.id))?.password_hash;
 			expect(upgraded?.startsWith(CURRENT_PREFIX)).toBe(true);
 
-			// The password itself did not change, so its timestamp must not move.
 			expect((await Credential.findBySubject(db, subject.id))?.updated_at).toBe(
 				before?.updated_at ?? "",
 			);
 
-			// The rewritten hash is the one the next login will be checked against.
 			expect(await Credential.verify(db, subject.id, "correctPassword123")).toBe(true);
 			expect((await Credential.findBySubject(db, subject.id))?.password_hash).toBe(upgraded);
 		});

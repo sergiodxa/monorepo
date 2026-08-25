@@ -1,7 +1,7 @@
 /**
  * API v1 item endpoints for a single status page: get/update/delete
  * (`status-pages:read`/`status-pages:write`) and replacing its HTTP-monitor and
- * cron-job attachments in one call. DNS/TCP attachments have no API surface.
+ * cron-job attachments in one call — the only attachment types the API exposes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

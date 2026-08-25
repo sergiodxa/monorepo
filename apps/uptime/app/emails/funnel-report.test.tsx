@@ -1,11 +1,8 @@
 /**
- * Tests the funnel report as a value: the headline it puts in the subject, the five counters
- * it tabulates, and what it says about each account that converted.
- *
- * The unsubscribe case is here rather than only in the job's suite because it is the one
- * thing this email must not inherit from the four beside it. Those go to strangers and carry
- * a one-click opt-out; this goes to an operator, and a report offering to delete its own
- * reporting is a bug that would look like consistency.
+ * Tests the funnel report as a value: the headline in its subject, the five
+ * counters it tabulates, what it says about each converted account, and why
+ * the unsubscribe case lives here — reaching the operator who configured the
+ * deployment, where an opt-out link would be circular.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,7 +34,10 @@ const PAID: FunnelReportEmail.Conversion = {
 	attribution: "outreach/agencies-august → /for/agencies",
 };
 
-/** A signup that has not paid. */
+/**
+ * A signup that has not paid, whose blank attribution is the ordinary case
+ * for a session that never carried a campaign, printed as "unknown".
+ */
 const FREE: FunnelReportEmail.Conversion = {
 	urls: ["https://grace.example"],
 	watchCount: 1,
@@ -45,7 +45,6 @@ const FREE: FunnelReportEmail.Conversion = {
 	leadCreatedAt: new Date("2026-07-30T09:00:00.000Z"),
 	signedUpAt: new Date("2026-08-01T09:00:00.000Z"),
 	paidAt: null,
-	// The ordinary case for a session that never carried a campaign, printed as "unknown".
 	attribution: null,
 };
 
@@ -70,11 +69,9 @@ function makeEmail(overrides: Partial<FunnelReportEmail.Data> = {}) {
 }
 
 /**
- * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
- * The runner's ICU differs between a developer machine and CI, so the separator is
- * normalised here rather than asserted. What these tests are about is the email's
- * content — the host's Unicode data is not the subject, and production renders on
- * the Workers runtime's own ICU regardless of what built it.
+ * ICU 72 (CLDR 42) joins a date to a time with " at "; older builds use ", ".
+ * Normalising the separator here keeps the test about the email's content,
+ * since the runner's ICU version varies between a developer machine and CI.
  */
 function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
@@ -134,16 +131,17 @@ describe("FunnelReportEmail", () => {
 	test("leaves out a section it has nothing to put in", async () => {
 		let { text } = await render(makeEmail({ paid: [], signups: [] }).body());
 
-		// The counter rows still name both, so the absence is the itemisation, not the words.
 		expect(text).not.toContain("https://ada.example");
 		expect(text).not.toContain("https://grace.example");
 		expect(text).not.toContain("Days to");
 	});
 
-	/** Internal mail. The opt-out the other four carry would be nonsense here. */
+	/**
+	 * Internal mail: the opt-out the other four carry would be nonsense here. `email` is
+	 * typed as `Email`, since the class itself declares no `headers` member — reading it
+	 * as `undefined` here is the assertion the test makes.
+	 */
 	test("carries no unsubscribe header and no unsubscribe link", async () => {
-		// Typed as the contract, because the class declares no `headers` member at all — which
-		// is the assertion, and is why this cannot be read off the class type.
 		let email: Email = makeEmail();
 		let { html } = await render(email.body());
 

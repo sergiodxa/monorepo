@@ -22,10 +22,8 @@ const REALM = `Bearer realm="${ISSUER}"`;
 
 /**
  * The `401` this endpoint answers with, carrying the challenge RFC 6750 §3 requires.
- *
- * The description is deliberately the same for a missing, malformed, expired and
- * forged token: distinguishing them tells an attacker which of their guesses was
- * closer.
+ * The description stays the same for a missing, malformed, expired or forged token:
+ * distinguishing them tells an attacker which of their guesses was closer.
  */
 function invalidToken(description: string, challenge: string): Response {
 	return unauthorized(
@@ -34,7 +32,11 @@ function invalidToken(description: string, challenge: string): Response {
 	);
 }
 
-/** GET /userinfo — returns the signed-in subject's claims for a bearer access token. */
+/**
+ * GET /userinfo — returns the signed-in subject's claims for a bearer access token.
+ * `sub` is unconditional per OIDC Core §5.4; every other claim is gated on the scope
+ * the access token was issued with.
+ */
 export default createAction(
 	routes.userinfo,
 	inject([Database] as const, async (db) => {
@@ -61,9 +63,6 @@ export default createAction(
 
 			ctx.logger.info("userinfo_success", { subjectId: subject.id });
 
-			// `sub` is unconditional per OIDC Core §5.4; everything else is gated on the
-			// scope the access token was actually issued with, not on what the client asks
-			// for now.
 			let claims: Record<string, unknown> = { sub: subject.id };
 
 			if (scope.includes("email")) {

@@ -26,9 +26,6 @@ describe("transformStyle", () => {
 	});
 
 	test("never emits a composite transform declaration", async () => {
-		// `transform-style` is its own property; emitting the shared composite
-		// `transform` alongside it would create a stacking/containing-block
-		// context the caller never asked for.
 		let css = await declarations(transformStyle());
 
 		expect(css.some((line) => line.startsWith("transform:"))).toBe(false);

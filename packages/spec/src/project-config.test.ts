@@ -47,8 +47,8 @@ const CLI_TIMEOUT_MS = 60_000;
 
 /**
  * The Bun executable, found on PATH. The CLI and the demo plugin are Bun
- * programs, so they are spawned by name rather than through `process.execPath`,
- * which names whichever runtime happens to be running this file.
+ * programs, so spawning them by name keeps the invocation pinned to Bun no
+ * matter which runtime is running this file.
  */
 const BUN_EXECUTABLE = "bun";
 
@@ -74,7 +74,6 @@ function makeContext(root: string): ToolContext {
 	return { workspace, permissions };
 }
 
-/** Run the `spec` CLI as a child and collect its output and exit code. */
 async function runCli(args: string[]): Promise<{ stdout: string; exitCode: number }> {
 	let child = spawn(BUN_EXECUTABLE, [join(PACKAGE_DIR, "src", "cli.ts"), ...args], {
 		cwd: PACKAGE_DIR,
@@ -155,8 +154,10 @@ test("loadProjectConfig parses JSONC and resolves relative command paths", async
 		expect(config.data.plugins).toHaveLength(1);
 		let declaration = config.data.plugins[0];
 		expect(declaration?.namespace).toBe("demo");
-		// The executable stays as written; the relative path is made absolute
-		// against the config directory so the command is cwd-independent.
+		/**
+		 * The executable stays as written; the relative path is made absolute
+		 * against the config directory so the command is cwd-independent.
+		 */
 		expect(declaration?.command).toEqual(["bun", join(dir, "plugins", "demo.ts")]);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
@@ -267,12 +268,14 @@ test(
 		let before = await plugin.call("upper", [{ kind: "value", value: "hi" }], context);
 		expect(isSuccess(before) && before.data).toBe("HI" as Value);
 
-		// The transport must give the connected plugin a dispose that terminates
-		// its child — the runner calls it after every run.
+		/**
+		 * The transport must give the connected plugin a dispose that terminates
+		 * its child — the runner calls it after every run.
+		 */
 		expect(typeof plugin.dispose).toBe("function");
 		await plugin.dispose?.();
 
-		// After dispose the child is gone, so a further call cannot be served.
+		/** After dispose the child is gone, so a further call cannot be served. */
 		let after = await plugin.call("upper", [{ kind: "value", value: "again" }], context);
 		expect(isFailure(after)).toBe(true);
 	},
@@ -296,8 +299,10 @@ test(
 		expect(call !== undefined && isSuccess(call) && call.data).toBe("X" as Value);
 		for (let plugin of ok.data) await plugin.dispose?.();
 
-		// A command that cannot serve the handshake fails the launch, and the
-		// error names the offending namespace.
+		/**
+		 * A command that cannot serve the handshake fails the launch, and the
+		 * error names the offending namespace.
+		 */
 		let bad = await connectDeclaredPlugins([
 			{
 				namespace: "nope",
@@ -447,7 +452,7 @@ test("pluginGrantFromConfig reads the plugins family, bare and scoped", () => {
 		mode: "scoped",
 		namespaces: ["greet"],
 	});
-	// A non-plugins family contributes nothing to the launch grant.
+	/** A non-plugins family contributes nothing to the launch grant. */
 	expect(pluginGrantFromConfig([{ family: "run", scopes: [] }])).toEqual({ mode: "denied" });
 });
 

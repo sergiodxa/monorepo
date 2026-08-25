@@ -22,7 +22,7 @@ const DAY_KEY_PATTERN = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/;
 /**
  * The day key for the calendar day an instant falls on in a zone. The same instant
  * yields different keys in different zones, which is the point: the key names a day
- * on someone's calendar, not a moment in time.
+ * on someone's calendar, independent of the moment measured.
  *
  * @param date - Any instant on the day of interest.
  * @param timeZone - IANA zone whose calendar day to name.
@@ -41,9 +41,9 @@ export function toDayKey(date: Date, timeZone: TimeZone): string {
 }
 
 /**
- * Read a day key into its calendar fields, with no zone involved. Days that do not
- * exist are rejected, so `"2026-02-30"` is a failure rather than a silent rollover
- * into March the way `new Date()` would treat it.
+ * Reads a day key into its calendar fields, with no zone involved. Because the
+ * regex only checks digit counts, a UTC round-trip confirms the day exists on
+ * that month, turning `"2026-02-30"` into a named failure identifying the input.
  *
  * @param key - Text that should be a `"YYYY-MM-DD"` day key.
  * @returns The calendar day, or an `InvalidDayKeyError` naming the rejected text.
@@ -61,8 +61,6 @@ export function parseDayKey(key: string): Result<CalendarDay, InvalidDayKeyError
 	let month = Number(groups.month);
 	let day = Number(groups.day);
 
-	// Round-tripping through UTC rejects a day the month does not have, which the
-	// pattern alone cannot: it only knows the digits are two long.
 	let candidate = new Date(Date.UTC(year, month - 1, day));
 	if (
 		candidate.getUTCFullYear() !== year ||
@@ -77,8 +75,8 @@ export function parseDayKey(key: string): Result<CalendarDay, InvalidDayKeyError
 
 /**
  * The instant a day key's day starts at in a zone, the inverse of `toDayKey`. It
- * returns a `Result` because the key is usually untrusted input, and a malformed
- * one must not become an `Invalid Date` that poisons later arithmetic.
+ * returns a `Result` because the key is usually untrusted input, so a malformed key
+ * surfaces as a named failure before it can reach arithmetic on the result.
  *
  * @param key - Text that should be a `"YYYY-MM-DD"` day key.
  * @param timeZone - IANA zone the day belongs to.

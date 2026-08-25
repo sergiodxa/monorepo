@@ -37,7 +37,7 @@ describe("StatusPage.create", () => {
 		expect(page.slug).toBe("acme");
 		/**
 		 * SQLite (and the production D1 adapter, identically) round-trips boolean
-		 * columns as 0/1, not real booleans — assert truthiness, not strict `true`.
+		 * columns as 0/1, so this asserts truthiness.
 		 */
 		expect(page.is_public).toBeTruthy();
 	});
@@ -50,7 +50,7 @@ describe("StatusPage.listByTeam", () => {
 		let first = await StatusPage.create(db, teamId, statusPageInput());
 		/**
 		 * Force a distinct `created_at` so the ordering assertion below is
-		 * deterministic — two creates in the same millisecond would otherwise tie.
+		 * deterministic; two creates in the same millisecond would tie.
 		 */
 		await db.update(statusPages, first.id, { created_at: first.created_at - 1000 });
 		let second = await StatusPage.create(db, teamId, statusPageInput());

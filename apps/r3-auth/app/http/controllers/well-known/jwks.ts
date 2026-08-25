@@ -16,10 +16,8 @@ import { createOidcProvider } from "~/app/auth/repository";
 import routes from "~/routes/web";
 
 /**
- * GET /.well-known/jwks.json — the public keys.
- *
- * Only public key material is ever serialized here; the private half stays in the key
- * store the provider reads from and never reaches a response.
+ * GET /.well-known/jwks.json — the public keys. Only public key material is serialized
+ * here; the private half stays in the key store the provider reads from.
  */
 export default createAction(
 	routes.wellKnown.jwks,

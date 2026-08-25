@@ -1,21 +1,9 @@
 /**
  * New alert page controller. Requires `requireUser` + `requireTeam`.
  *
- * The fields are grouped into three bordered cards — what the alert watches, which
- * channel it notifies through, and how repeats are paced — inside a single `<form>`,
- * so the page reads as distinct settings groups while still submitting as one request.
- * The submit control sits at the foot of the last card rather than loose under the
- * fields.
- *
- * Most of the field markup is spelled out here instead of coming from a shared fragment,
- * because carding the form means rendering the fields across three separate boxes and a
- * fragment that emitted all of them at once would have no way to be asked for a subset.
- * The channel card is the exception: its contents are identical to the edit page's down
- * to the last attribute, so they come from `AlertChannelFields`, which also owns the
- * CSS-only disclosure that shows one channel's settings at a time.
- *
- * The scope picker offers every monitor of every type, plus a per-type "all of them"
- * choice, from the one control `MonitorScopeField` owns.
+ * The fields sit in three bordered cards — scope, channel, and delivery —
+ * inside one `<form>`, with the submit control anchored to the last card's
+ * footer; the channel card comes from `AlertChannelFields`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,7 +31,11 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** GET /app/:team/alerts/new — the new alert form. */
+/**
+ * GET /app/:team/alerts/new — the new alert form.
+ *
+ * Field copy comes from `page.alerts.form.fields`, shared with the edit page's form.
+ */
 export default createAction(routes.app.team.alerts.new, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -53,8 +45,6 @@ export default createAction(routes.app.team.alerts.new, {
 
 		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 
-		// The create and edit pages describe the same form, so the field copy lives in one
-		// shared namespace instead of a per-page one.
 		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
 
 		return ctx.render(
@@ -134,12 +124,9 @@ export default createAction(routes.app.team.alerts.new, {
 												type="number"
 												name="cooldown_minutes"
 												/**
-												 * `min` stays 0 even though a repeat is never spaced closer than
-												 * {@link MIN_REPEAT_COOLDOWN_MINUTES}. Raising it would make every alert already
-												 * storing a smaller value unsaveable — the field is prefilled from the row, so
-												 * the form would refuse to submit until somebody noticed why. The floor is
-												 * enforced at dispatch, where it reaches stored rows too, and the description
-												 * says so.
+												 * Raising `min` above 0 would block saving any alert already stored below
+												 * {@link MIN_REPEAT_COOLDOWN_MINUTES}, since this field is prefilled from the
+												 * row; dispatch enforces the real floor on every stored value regardless.
 												 */
 												min={0}
 												max={1440}

@@ -13,12 +13,9 @@ import { overflowY } from "./overflow-y";
 export type OverflowValue = "visible" | "hidden" | "auto" | "clip" | "scroll";
 
 /**
- * Applies `overflow`, defaulting to `"hidden"`. Called with an axis object
- * instead of a bare value, it composes `u.overflowX()`/`u.overflowY()` for
- * whichever of `x`/`y` is given, and `u.overflowInline()`/`u.overflowBlock()`
- * for whichever of `inline`/`block` is given, leaving the other axes
- * untouched. Prefer `inline`/`block` over `x`/`y` when the element needs to
- * stay correct under RTL or vertical writing modes.
+ * Applies `overflow`, defaulting to `"hidden"`. An axis object sets only the
+ * axes it names and leaves the rest untouched; prefer its `inline`/`block`
+ * keys over `x`/`y` to stay correct under RTL and vertical writing modes.
  *
  * @example u.overflow()
  * @example css({ overflow: "hidden" })

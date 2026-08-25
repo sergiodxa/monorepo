@@ -431,7 +431,6 @@ test("Effects.heal restores a fraction of the user's max HP", () => {
 test("Effects.heal clamps restored HP at the user's maximum", () => {
 	let context = createHealContext();
 	let maxHP = getCreatureStat(context.gameData, context.user.creature, Stat.HP);
-	// Missing less HP than the heal would restore, so healing tops out at full.
 	context.user.creature.status.damage = 1;
 
 	expect(Effects.heal({ kind: "heal", ratio: 0.5 }, context)).toEqual([

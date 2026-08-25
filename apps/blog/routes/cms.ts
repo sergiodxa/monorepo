@@ -1,7 +1,6 @@
 /**
- * Route definitions for the blog CMS. Declares the dashboard endpoint plus
- * RESTful resource routes for articles, tutorials, bookmarks, glossary, and
- * redirects, tuning each with include/exclude sets to match its editorial CRUD.
+ * Route definitions for the blog CMS: the dashboard endpoint plus RESTful
+ * resource routes for articles, tutorials, bookmarks, glossary, and redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +9,8 @@
 import { get, resources, route } from "remix/routes";
 
 /**
- * Maps CMS endpoints for dashboard metrics and editorial resource CRUD routes.
+ * Typed CMS endpoint helpers; each resource is narrowed to the actions its
+ * editorial flow exposes.
  */
 export default route({
 	dashboard: get("/"),

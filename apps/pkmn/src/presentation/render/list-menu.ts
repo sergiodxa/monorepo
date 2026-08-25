@@ -1,10 +1,8 @@
 /**
  * A reusable vertical list menu with a scrolling window.
  *
- * Menus across the game (pause root, party, bag, bestiary, storage) share the
- * same behavior: move a cursor with the D-pad (wrapping, with key-repeat), keep
- * the selection inside a fixed number of visible rows, and confirm or cancel with
- * A/B. This widget owns only that selection state and its drawing, so each scene
+ * Menus across the game share cursor, scroll, and confirm/cancel behavior;
+ * this widget owns only that selection state and its drawing, so each scene
  * supplies the item labels and decides what confirming means.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -44,18 +42,20 @@ export class ListMenu {
 	) {}
 
 	/**
-	 * Attaches (or replaces) the effect player after construction.
-	 *
-	 * Scenes build the menu as a field initializer, before their `enter(game)` gives
-	 * them the client, so they call this from `enter` to add sound. It returns the
-	 * menu for chaining and is a plain assignment — passing nothing leaves it silent.
+	 * Attaches (or replaces) the effect player after construction, since scenes
+	 * build the menu as a field initializer before `enter(game)` supplies the
+	 * client, and call this from `enter` once it does.
 	 */
 	useAudio(audio: SfxPlayer): this {
 		this.audio = audio;
 		return this;
 	}
 
-	/** Moves the cursor from input, clamped and scrolled to a list of `count` items. */
+	/**
+	 * Moves the cursor from input, clamped and scrolled to a list of `count`
+	 * items. Scroll tracks the visible window in row units, and in grid mode a
+	 * row is the index divided by the column count.
+	 */
 	update(input: InputManager, count: number) {
 		if (count === 0) {
 			this.index = 0;
@@ -64,7 +64,6 @@ export class ListMenu {
 		}
 		let before = this.index;
 		if (this.columns > 1) {
-			// Grid mode: horizontal keys step within a row, vertical between rows.
 			if (input.isRepeating(Button.Right))
 				this.index = gridNavigate(this.index, "right", this.columns, count);
 			if (input.isRepeating(Button.Left))
@@ -80,8 +79,6 @@ export class ListMenu {
 		if (this.index >= count) this.index = count - 1;
 		if (this.index !== before) this.audio?.playSynthSfx("menu-move");
 
-		// Scroll tracks the visible window in row units; in grid mode the cursor's
-		// row is its index divided by the column count.
 		let cursorRow = Math.floor(this.index / this.columns);
 		let totalRows = Math.ceil(count / this.columns);
 		if (cursorRow < this.scroll) this.scroll = cursorRow;

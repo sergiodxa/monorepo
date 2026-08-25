@@ -1,3 +1,11 @@
+/**
+ * Exercises the `RSS` class against the RSS 2.0 spec and common namespace
+ * extensions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { XML } from "@pkg/xml";
 import { http, HttpResponse } from "msw";
@@ -6,10 +14,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { RSS } from "./index";
 
-/** The feed URL `RSS.fetch` is pointed at. */
 let FEED_URL = "https://example.com/feed.xml";
 
-/** MSW server intercepting the feed request. */
 let server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));

@@ -41,12 +41,13 @@ interface Signer {
 interface JwksServer {
 	/** The absolute `.well-known/jwks.json` URL. */
 	url: string;
-	/** Stop the server. */
+	/**
+	 * Stop the server, dropping live sockets first: the plugin's fetch may
+	 * leave a keep-alive connection open, which `close` alone would wait on.
+	 */
 	stop(): void;
 }
 
-// A first keypair (kid "k1") signs the happy-path tokens; a second (kid "k2")
-// backs the wrong-key / multi-key selection tests. Both are generated once.
 let signerOne: Signer;
 let signerTwo: Signer;
 
@@ -127,8 +128,6 @@ async function serveJwks(keys: object[]): Promise<JwksServer> {
 	return {
 		url: `http://localhost:${port}/.well-known/jwks.json`,
 		stop: () => {
-			// Drop live sockets before closing: the plugin's fetch may leave a
-			// keep-alive connection open, which `close` alone would wait on.
 			server.closeAllConnections();
 			server.close();
 		},
@@ -162,7 +161,7 @@ function denyNet(calls: { host: string; port: number | undefined }[]): Permissio
 	};
 }
 
-/** A workspace stub; jwt tools never touch the filesystem. */
+/** A workspace stub; jwt tools operate entirely on the token and JWKS URL. */
 function stubWorkspace(): Workspace {
 	return {
 		root: "/tmp/spec-jwt-tests",
@@ -211,8 +210,6 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("decode splits a known token into its header and payload, no signature check", async () => {
-		// A literal token; the signature segment is arbitrary because decode never
-		// checks it. header={alg:ES256,kid:k1}, payload={sub:user-1,aud:client-1}.
 		let token = `${segments({ alg: "ES256", kid: "k1" }, { sub: "user-1", aud: "client-1" })}.c2ln`;
 		let decoded = asObject(unwrap(await PLUGIN.call("decode", [value(token)], buildContext())));
 		expect(asObject(decoded.header)).toEqual({ alg: "ES256", kid: "k1" });
@@ -226,7 +223,6 @@ describe(createJwtPlugin.name, () => {
 			unwrap(await PLUGIN.call("decode", [value(token)], buildContext(denyNet(calls)))),
 		);
 		expect(asObject(decoded.payload).sub).toBe("x");
-		// It never reached a network check, so the deny-net set was never consulted.
 		expect(calls).toEqual([]);
 	});
 
@@ -266,9 +262,6 @@ describe(createJwtPlugin.name, () => {
 		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerOne, "k1", { sub: "user-1", exp: epoch(3600) });
-			// Flip the last character of the payload segment; the header (and thus the
-			// kid) is untouched, so key selection still succeeds and the mismatch is
-			// caught by the signature check, not by a lookup failure.
 			let parts = token.split(".");
 			let payloadSeg = parts[1] ?? "";
 			let flipped = payloadSeg.slice(0, -1) + (payloadSeg.endsWith("A") ? "B" : "A");
@@ -314,8 +307,6 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify rejects a token whose kid is not in the JWKS", async () => {
-		// Two published keys, neither matching the token's kid: the sole-key fallback
-		// cannot apply, so a named-but-absent kid is a hard error.
 		let jwks = await serveJwks([
 			{ ...signerOne.jwk, kid: "k1" },
 			{ ...signerTwo.jwk, kid: "k2" },
@@ -333,8 +324,6 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify selects the right key by kid among several", async () => {
-		// signerTwo signs, and its key is published under kid k2 alongside k1; the
-		// token names k2, so verification must pick k2 and succeed.
 		let jwks = await serveJwks([
 			{ ...signerOne.jwk, kid: "k1" },
 			{ ...signerTwo.jwk, kid: "k2" },
@@ -353,7 +342,6 @@ describe(createJwtPlugin.name, () => {
 	test("verify rejects a non-ES256 algorithm", async () => {
 		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
-			// Claim HS256 in the header; verify must refuse before touching the JWKS.
 			let token = await sign(signerOne, "k1", { sub: "user-1", exp: epoch(3600) }, "HS256");
 			let error = unwrapError(
 				await PLUGIN.call("verify", [value(token), value(jwks.url)], buildContext()),
@@ -366,8 +354,6 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify wrong signing key fails the signature check", async () => {
-		// Publish signerOne under kid k1, but sign the token with signerTwo's private
-		// key under the same kid: selection picks k1's public key, signature fails.
 		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerTwo, "k1", { sub: "user-1", exp: epoch(3600) });

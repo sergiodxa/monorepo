@@ -1,13 +1,11 @@
 /**
- * The notice a subject receives when a session is opened on their account: which
- * browser, which system, which kind of device, and the address it came from, with a link
- * to the page that can end it.
+ * The notice a subject receives when a session is opened on their account: which browser,
+ * which system, which kind of device, the address it came from, and a link to the page
+ * that can end it.
  *
- * It is the one message this server sends that nobody asked for, which is the point — a
- * sign-in the owner did not perform is only discoverable if somebody tells them about
- * it. So it carries facts and a way to act, and no token of any kind: the session's id
- * *is* the refresh token, and the account page authenticates the reader on its own
- * before it will list anything.
+ * It is unsolicited by design — an owner learns of an unrecognized sign-in only because
+ * something tells them. It carries facts and a way to act; the account page authenticates
+ * the reader itself, keeping every credential out of the mail.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,11 +24,9 @@ import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
 import routes from "~/routes/web";
 
 /**
- * Locale key holding the word a device class is reported with.
- *
- * Written out per class rather than interpolated, so every key the message can ask for
- * is greppable in the catalog, and total over the union so an unnamed class is
- * impossible.
+ * Locale key holding the word a device class is reported with. Each class is written out
+ * literally so every key the message can ask for is greppable in the catalog, and the
+ * function is total over the union so every class has a name.
  */
 export function deviceLabelKey(deviceType: DeviceType): string {
 	if (deviceType === "desktop") return "emails.newSignIn.devices.desktop";
@@ -60,12 +56,13 @@ export namespace NewSignInEmail {
 }
 
 /**
- * Tells a subject that somebody signed in as them, and where to look if it was not them.
+ * Tells a subject that somebody signed in as them, and where to look when the sign-in is
+ * unfamiliar.
  *
  * @example await mailer.send(new NewSignInEmail({ email, browser, os, deviceType, ip, locale, t }));
  */
 export class NewSignInEmail implements EmailContract {
-	/** The sign-in this notice was built from; nothing is loaded while rendering. */
+	/** The sign-in this notice was built from; rendering reads only from here. */
 	#signIn: NewSignInEmail.Data;
 
 	/**
@@ -78,7 +75,7 @@ export class NewSignInEmail implements EmailContract {
 		this.#signIn = signIn;
 	}
 
-	/** The subject's own address; a security notice never goes anywhere else. */
+	/** The subject's own address, the only recipient a security notice has. */
 	get to(): Address {
 		return { email: this.#signIn.email };
 	}
@@ -89,13 +86,9 @@ export class NewSignInEmail implements EmailContract {
 	}
 
 	/**
-	 * Body tree the mailer renders into both parts.
-	 *
-	 * The three facts are a table rather than three sentences, because a reader deciding
-	 * whether this was them scans for the one line that looks wrong, and a table gives
-	 * them a column to scan. A missing address is reported as such instead of being
-	 * dropped: a row that quietly disappears reads as a shorter notice, not as a fact
-	 * nobody recorded.
+	 * Body tree the mailer renders into both parts. The facts sit in a table so a reader
+	 * checking whether this was them has one column to scan, and a missing address keeps its
+	 * row with an explicit label, so the absence itself reads as a recorded fact.
 	 */
 	body(): RemixElement {
 		let { t, locale, browser, os, deviceType, ip } = this.#signIn;
@@ -133,13 +126,9 @@ export class NewSignInEmail implements EmailContract {
 }
 
 /**
- * Absolute URL of the account area's device list, which is where the notice sends
- * somebody who does not recognize the sign-in.
- *
- * Built from the typed route so the path cannot drift from the route table, against the
- * published issuer host because a relative href in mail resolves against nothing. The
- * page names no session until it has authenticated the reader, so the link is safe to
- * put in an inbox in a way a link carrying a session id never would be.
+ * Absolute URL of the account area's device list, where the notice sends a reader who
+ * wants to end the session. Built from the typed route so it tracks the route table, and
+ * against the published issuer host because mail needs an absolute href.
  */
 function sessionsUrl(): string {
 	return new URL(routes.account.sessions.index.href(), ISSUER_HOST).toString();

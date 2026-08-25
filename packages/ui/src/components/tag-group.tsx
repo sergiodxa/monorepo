@@ -67,9 +67,7 @@ export namespace TagGroup {
 	/**
 	 * Props accepted by {@link TagGroup.Tag}. Set `aria-selected="true"` to
 	 * mark a tag as the active member of a selectable set, and
-	 * `aria-disabled="true"` to mute one that shouldn't be interacted with —
-	 * both read straight from their native ARIA attributes, with no
-	 * client-tracked selection state anywhere in this module.
+	 * `aria-disabled="true"` to mute one, both read from native ARIA state.
 	 */
 	export interface TagProps extends ElementProps<"li"> {
 		/** Semantic color role. Defaults to {@link DEFAULT_COLOR}. */
@@ -80,10 +78,8 @@ export namespace TagGroup {
 
 	/**
 	 * Props accepted by {@link TagGroup.Remove}: every {@link Button.Props}
-	 * field except the ones this component fixes on the consumer's behalf.
-	 * Every native `<button>` attribute otherwise still applies unchanged —
-	 * `name` and `value` are what a consumer sets to tell an enclosing form
-	 * which tag was submitted for removal.
+	 * field except the ones this component fixes, plus every native
+	 * `<button>` attribute — `name`/`value` tell the form which tag to remove.
 	 */
 	export interface RemoveProps extends Omit<
 		Button.Props,
@@ -99,10 +95,8 @@ export namespace TagGroup {
 
 /**
  * Renders the group's `<div>` host, laying its {@link TagGroup.List} child
- * (and any preceding `Label`) out in a column with a small gap. In dev mode,
- * a group rendered without an `aria-label` or `aria-labelledby` logs a
- * `console.warn`, since assistive technology otherwise has no accessible
- * name to announce for the set.
+ * (and any preceding `Label`) out in a column with a small gap. Dev mode
+ * warns when it lacks an accessible name for assistive technology.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.
@@ -163,17 +157,7 @@ TagGroup.List = function TagGroupList(handle: Handle<TagGroup.ListProps>) {
 /**
  * Renders a single pill-shaped `<li>`, colored through the `data-color`
  * attribute contract shared with {@link Badge} and sized through
- * `data-size`. Compose a {@link TagGroup.Remove} as a trailing child for a
- * dismissible tag — the pill itself carries no remove control unless one is
- * placed inside it explicitly.
- *
- * Setting `aria-selected="true"` fills the pill with the primary solid
- * background, its on-solid foreground, and a heavier label weight, marking
- * it the active member of a selectable set with no client-tracked selection
- * state involved. Setting `aria-disabled="true"` mutes the pill. A keyboard
- * focus-visible ring reads in the tag's own semantic color, for a consumer
- * that makes the pill itself focusable (a filter tag toggled through the
- * `pressToggle()` mixin, for instance).
+ * `data-size`. Compose {@link TagGroup.Remove} inside it for a dismissible tag.
  *
  * @param handle Runtime handle carrying the host `<li>`'s props.
  * @returns The render function producing the pill's markup.
@@ -231,12 +215,8 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 
 /**
  * Renders a dismiss control for the tag it's composed inside: a small,
- * ghost-styled {@link Button} carrying a fixed "X" glyph, submitting as
- * `type="submit"` so a click removes the tag by posting the enclosing
- * form — no JavaScript required. Its own foreground and hover/pressed/
- * focus-visible colors read from the ambient {@link TagGroup.Tag}'s
- * `data-color` rather than a color of its own, so the control always matches
- * the pill it sits inside.
+ * ghost-styled {@link Button} with an "X" glyph submitting as
+ * `type="submit"`, colored from the ambient {@link TagGroup.Tag}'s `data-color`.
  *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the dismiss control's markup.

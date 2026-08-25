@@ -1,6 +1,4 @@
 /**
- * Unit tests for `block()`'s fixed `display: block` declaration.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -2,7 +2,7 @@
  * Behavioural tests for `checkRateLimit`: which limiter binding each request path is
  * routed to, how the client-IP rate-limit key is derived, and the 429 response
  * (status, body, Retry-After) returned when a limiter denies a request. Limiters are
- * injected fakes that record their calls; no Cloudflare binding is used.
+ * injected fakes that record their calls in place of a Cloudflare binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,9 +90,6 @@ describe("checkRateLimit routing", () => {
 		expect(limiters.authLimiter.calls).toEqual([{ key: "unknown:/authorize" }]);
 	});
 
-	// Regression: the limiter previously targeted /oauth/authorize and /oidc/userinfo,
-	// which never matched the real OIDC routes (/authorize, /userinfo), leaving those
-	// high-traffic identity endpoints uncovered. Pin the concrete provider paths here.
 	for (let path of [
 		"/authorize",
 		"/oauth/token",
@@ -120,7 +117,6 @@ describe("checkRateLimit routing", () => {
 		let limiters = buildLimiters();
 		let result = await checkRateLimit(request("/oauth/authorize", "2.2.2.2"), limiters as never);
 
-		// /oauth/authorize is NOT a real route; the auth limiter must not fire for it.
 		expect(result).toBeNull();
 		expect(limiters.authLimiter.calls).toHaveLength(0);
 	});
@@ -129,7 +125,6 @@ describe("checkRateLimit routing", () => {
 		let limiters = buildLimiters();
 		let result = await checkRateLimit(request("/oidc/userinfo", "2.2.2.2"), limiters as never);
 
-		// /oidc/userinfo is NOT a real route; the auth limiter must not fire for it.
 		expect(result).toBeNull();
 		expect(limiters.authLimiter.calls).toHaveLength(0);
 	});

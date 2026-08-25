@@ -1,20 +1,9 @@
 /**
- * `/vs/:slug` controller. Looks up the slug in `resources/content/marketing.ts`'s
- * `comparisons` record and renders the generic marketing page shape (hero, features,
- * how it works, FAQ, final CTA) extended with the sections a head-to-head page needs:
- * a comparison table against the named competitor, an honest take on where that
- * competitor genuinely wins, a "perfect for" banner, and a same-setup cost table. An
- * unknown slug renders the same 404 the router's `defaultHandler` uses. One controller
- * covers all 10 comparison pages instead of one file per page — see the content
- * module's docblock for why.
- *
- * The honest take, the banner, and the cost table are all optional in the content
- * shape, so each renders only for a competitor whose record supplies it — a page
- * missing one is a page with nothing to say there, not a broken page.
- *
- * Colors come from the semantic tone tokens (`brand`, `neutral`, `warning`,
- * `success`) rather than the raw `oklch()` literals this page used to carry, so the
- * light/dark pairing is the theme's job instead of a per-section media query.
+ * `/vs/:slug` controller. Renders the comparison page for the slug found in
+ * `resources/content/marketing.ts`'s `comparisons` record, extending the
+ * generic marketing page shape with a comparison table plus the optional
+ * honest-take, "perfect for", and cost-table sections a competitor's record
+ * supplies. An unknown slug renders the standard 404.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,10 +75,9 @@ function marketingContainer() {
 }
 
 /**
- * Narrower variant of {@link marketingContainer} for the prose-shaped sections —
- * the honest take, the "perfect for" banner, and the cost table all read as a
- * single column of argument, which at 1152px wide would stretch past a
- * comfortable measure.
+ * Narrower variant of {@link marketingContainer} for the prose-shaped sections
+ * (honest take, "perfect for" banner, cost table), which read as a single
+ * column of argument and would stretch past a comfortable measure at 1152px.
  */
 function narrowContainer() {
 	return [
@@ -102,17 +90,9 @@ function narrowContainer() {
 }
 
 /**
- * The one/two/three-column ladder every content grid on this page shares.
- *
- * The breakpoints are deliberately identical across sections rather than tuned per
- * grid: `css()` emits each mixin into its own `@layer rmx.<class>`, and layer order
- * follows each class's *first* appearance in the document — so between two
- * overlapping media rules on the same element, the one whose class the page happened
- * to emit later wins, regardless of which breakpoint is narrower. A grid asking for
- * two columns at ≥640px and three at ≥1024px therefore renders two columns at
- * 1280px whenever some earlier section already emitted the 1024px rule. Sharing one
- * ladder keeps every grid's rules in ascending breakpoint order, which is the order
- * the cascade needs them in.
+ * The one/two/three-column ladder every grid on this page shares. `css()`
+ * layers each mixin's class by first appearance in the document, so sharing
+ * one ladder keeps every grid's media rules in matching ascending order.
  */
 function responsiveGrid() {
 	return [
@@ -123,10 +103,9 @@ function responsiveGrid() {
 }
 
 /**
- * Background for the alternating sections. One palette step off the page's own
- * `--ui-neutral-bg-tint` body color in each scheme, rather than the semantic
- * `bg("neutral.tint")` — that resolves to the *same* token the body already uses,
- * so the alternation it's meant to express renders as no change at all.
+ * Background for the alternating sections: one palette step off the page's own
+ * `--ui-neutral-bg-tint` body color, since the semantic `bg("neutral.tint")`
+ * token resolves to that same body color and would hide the alternation.
  */
 function tintedSection() {
 	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
@@ -143,11 +122,9 @@ function formatMonthlyUsd(locale: string, amount: number): string {
 }
 
 /**
- * What we charge for a cost-comparison row, priced through `app/lib/pricing.ts` from
- * the row's own `usage` — so these tables restate the pricing model rather than
- * carrying their own copy of it. Falls back to the row's authored `ourCost` for the
- * rows whose scenario isn't a ping volume (seat pricing), and to an em dash for a row
- * that supplies neither, which the content types make unreachable.
+ * What we charge for a cost-comparison row: computed from `app/lib/pricing.ts`
+ * using the row's own `usage`, so every table tracks the live pricing model.
+ * Falls back to the row's authored `ourCost` for seat-priced scenarios.
  */
 function ourCostFor(row: MarketingContent.PricingScenario, locale: string): string {
 	if (row.usage) return `${formatMonthlyUsd(locale, monthlyCostForUsage(row.usage).totalUsd)}/mo`;
@@ -229,9 +206,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 			seo={{
 				description: content.metaDescription,
 				canonical: SEO.canonical(ctx.url),
-				// Two schemas, both describing what this page actually renders: the
-				// product (its `featureList` is the "why teams switch" grid, verbatim)
-				// and the FAQ accordion further down.
 				schema: [
 					getSoftwareApplicationSchema({
 						name: t("landing.comparison.tableProductHeader"),
@@ -330,12 +304,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</div>
 				</section>
 
-				{/* No trust-indicator strip here, deliberately: a comparison page's job is
-				the head-to-head table, and the pages this one was ported from went straight
-				from hero to table. `ComparisonPage` inherits the optional `trustIndicators`
-				field from `Page`, but no comparison record fills it — rendering a band that
-				every real page leaves empty would be dead markup. */}
-
 				<section mix={[...sectionPadding()]}>
 					<div mix={[...marketingContainer()]}>
 						<SectionHeader
@@ -358,10 +326,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 									{rows.map((row) => (
 										<Table.Row key={row.label}>
 											<Table.Cell mix={[weight(500)]}>{row.label}</Table.Cell>
-											{/* `textAlign` rather than the `<td align>` attribute the
-											header cells use: `Table.Column` styles itself off its
-											`align` prop, but `Table.Cell` forwards `align` to the
-											deprecated presentational attribute. */}
 											<Table.Cell mix={[textAlign("center"), weight(600), fg("brand")]}>
 												{row.us}
 											</Table.Cell>
@@ -390,8 +354,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</div>
 				</section>
 
-				{/* The concession, and the reason the rest of the page is believable: the
-				scenarios where the competitor is the better tool, stated plainly. */}
 				{honestTake && honestTake.length > 0 && (
 					<section mix={[...sectionPadding()]}>
 						<div mix={[...narrowContainer()]}>
@@ -456,9 +418,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 									media("(min-width: 640px)", p(12)),
 								]}
 							>
-								{/* `fg` restated on the heading itself: `Heading` sets
-								`neutral.emphasis` on its own host, which would otherwise beat the
-								banner's inherited on-solid color and render near-black on green. */}
 								<Heading
 									level={2}
 									mix={[
@@ -488,9 +447,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 													gap(2),
 													p(2, 4),
 													rounded("999px"),
-													// A wash of the banner's own foreground rather than a
-													// palette step: the pills sit on a gradient, so any
-													// fixed color would match it at one end only.
 													bg("color-mix(in oklab, currentColor 15%, transparent)"),
 													fontSize("sm"),
 												]}
@@ -506,8 +462,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</section>
 				)}
 
-				{/* The same monitoring setup priced against both products. Costs are copy,
-				not arithmetic — the content record decides what each scenario costs. */}
 				{pricingScenarios && pricingScenarios.length > 0 && (
 					<section mix={[...sectionPadding()]}>
 						<div mix={[...narrowContainer()]}>
@@ -610,8 +564,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					]}
 				>
 					<div mix={[...marketingContainer()]}>
-						{/* Same as the banner above: `Heading`'s own `neutral.emphasis` would
-						win over the section's inherited on-solid color. */}
 						<Heading
 							level={2}
 							mix={[m(0), fontSize("3xl"), weight(700), tracking("tight"), fg("brand.onSolid")]}
@@ -623,8 +575,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 						</p>
 
 						<div mix={[...ctaRow()]}>
-							{/* `neutral` on this brand-filled band: a brand-toned button on a
-							brand fill reads only by its border. */}
 							<AuthCta
 								isSignedIn={isSignedIn}
 								startLabel={chrome.startLabel}

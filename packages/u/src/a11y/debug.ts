@@ -5,13 +5,9 @@
 import { merge, nest, utility } from "../internal/descriptor";
 
 /**
- * Applies a clearly visible red outline to the host in development only, so
- * the call can be left in code without affecting production output. Passing
- * `"nested"` extends the same outline to every descendant through a `"& *"`
- * descendant rule, which is useful for inspecting a layout's full box model
- * rather than just its outer boundary. Outside development, this utility
- * resolves to an empty style tree rather than relying on tree-shaking to
- * remove it.
+ * Outlines the host in red during development and resolves to an empty style
+ * tree elsewhere, so the call is safe to leave in committed code. `"nested"`
+ * extends the outline to every descendant to inspect a full box model.
  *
  * @example u.debug()
  * @example css({ outline: "2px solid red", outlineOffset: "-2px" })

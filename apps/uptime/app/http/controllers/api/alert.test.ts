@@ -1,9 +1,8 @@
 /**
  * Tests the `/api/v1/alerts/:alertId` item endpoints: get/update/delete a single
- * alert scoped to the calling team (never leaking another team's alert, always a
- * 404 instead) and its delivery-event history. Every action is guarded by
- * `requireApiKey`, so each test authenticates with a real bearer key minted through
- * `ApiKey.create` rather than a fake middleware.
+ * alert scoped to the calling team, returning 404 for any other team's alert, and
+ * its delivery-event history. Every action is guarded by `requireApiKey`, so each
+ * test authenticates with a real bearer key minted through `ApiKey.create`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,11 +22,9 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { alertEvents, alerts, teams } from "~/database/schema";
 
 /**
- * `~/app/data/monitor` (imported transitively by `./alert`, for its `monitorId`
- * validation) reads `env` from `cloudflare:workers` at module load, so the module has to
- * resolve here as well as through the repo-root `bunfig.toml` preload. These endpoints
- * touch no binding, and the empty strict env proves it: any read would throw by the
- * binding's name instead of quietly answering a stand-in value.
+ * `~/app/data/monitor`, imported transitively for `monitorId` validation, reads `env`
+ * from `cloudflare:workers` at module load, so this mock must resolve here too. The
+ * endpoints touch no binding — the empty strict env would throw by name if they did.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
@@ -169,7 +166,6 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(updated?.name).toBe("Renamed");
 		expect(updated?.cooldown_minutes).toBe(15);
-		// The channel strategy/config are immutable via this endpoint.
 		expect(updated?.config).toEqual({
 			strategy: "email",
 			config: { to: "ops@example.com", subjectPrefix: "" },
@@ -229,7 +225,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		expect(updated?.monitor_id).toBeNull();
 	});
 
-	/** The pair moves together, so a type-wide scope can't keep the old monitor's id. */
+	/** The pair moves together, so narrowing to a type alone resets the monitor id to keep the scope consistent. */
 	test("clears a monitor id when the update names only a type", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

@@ -1,16 +1,14 @@
 /**
- * New status page page controller. Requires `requireUser` + `requireTeam`.
+ * New status page controller. Requires `requireUser` + `requireTeam`.
  *
- * The fields are grouped into three bordered cards — how the page is branded, who
- * can see it, and what it lists — inside a single `<form>`, so the page reads as
- * distinct settings groups while still submitting as one request. The submit control
- * sits at the foot of the last card rather than loose under the fields.
+ * The fields group into three bordered cards — branding, visibility, and
+ * services — in one `<form>`, so each reads as its own settings group while
+ * still submitting as a single request; the submit control sits at the foot
+ * of the last card.
  *
- * The field markup is spelled out here instead of coming from the shared status-page
- * field component, because carding the form means rendering the identity fields in one
- * box, the toggles in another and the checkbox lists in a third, and that component
- * emits all of them as one fragment with no way to ask for a subset. The edit page
- * still renders it unchanged.
+ * The markup is spelled out here because the shared status-page field
+ * component always renders the complete set of fields as one fragment. The
+ * edit page still renders that component unchanged.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,8 +49,9 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
- * The page renders once per request, so the checkbox groups can label themselves through
- * fixed ids instead of generated ones — there is never a second instance to collide with.
+ * The page renders once per request, so the checkbox groups label themselves
+ * through fixed ids: each id stays unique since only one instance of the page
+ * ever exists at a time.
  */
 const MONITORS_LABEL_ID = "status-page-monitors-label";
 const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
@@ -191,8 +190,10 @@ export default createAction(routes.app.team.statusPages.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										{/* Both toggles answer "who sees this page", so they read as one group on
-										    the tighter within-group rhythm rather than as two separate fields. */}
+										{/**
+										 * Both toggles answer "who sees this page," so they share the tighter
+										 * within-group rhythm as a single group.
+										 */}
 										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 											<div mix={[fieldStackLayout()]}>
 												<Switch name="is_public" value="true" defaultChecked>
@@ -223,10 +224,9 @@ export default createAction(routes.app.team.statusPages.new, {
 									<SettingsSection.Body>
 										{selectableMonitors.length > 0 && (
 											<div mix={[vstack({ gap: "8px" })]}>
-												{/*
-												 * The group's caption reads as a heading over the list rather than as
-												 * another row in it, with its description directly beneath — the same
-												 * order every single field on this page puts the two in.
+												{/**
+												 * The group's caption stands as a heading above the list, with its
+												 * description directly beneath, matching every other field on this page.
 												 */}
 												<div mix={[fieldStackLayout()]}>
 													<Label
@@ -238,9 +238,11 @@ export default createAction(routes.app.team.statusPages.new, {
 													<Description>{t("monitors.description")}</Description>
 												</div>
 
-												{/* The island reads its copy through `intl(handle)`, which server-side has no
-												    module-scoped `setIntl()` default to fall back on, so it needs an
-												    `IntlProvider` ancestor to resolve against at all. */}
+												{/**
+												 * The island resolves copy through `intl(handle)`, which has no
+												 * module-scoped `setIntl()` default on the server, so it needs an
+												 * `IntlProvider` ancestor to resolve against.
+												 */}
 												<IntlProvider i18n={ctx.i18next}>
 													<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
 												</IntlProvider>
@@ -285,7 +287,7 @@ export default createAction(routes.app.team.statusPages.new, {
 											</div>
 										)}
 
-										{/* A team with nothing to list still gets the card, so the submit control keeps its place. */}
+										{/** A team with nothing to list still gets the card, so the submit control keeps its place. */}
 										{!hasSomethingToList && (
 											<Description>
 												{ctx.i18next.t("page.createStatusPage.form.sections.services.empty")}

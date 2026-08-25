@@ -1,7 +1,7 @@
 /**
- * Data-access model for API keys: creation (returning the plaintext key exactly
- * once), team-scoped listing/lookup for the UI, and the hash-based lookup Phase 8's
- * `requireApiKey` middleware will use to authenticate requests.
+ * Data-access model for API keys: creation hands back the plaintext key exactly once,
+ * team-scoped listing and lookup serve the UI, and the hash-based lookup authenticates
+ * incoming requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,10 +1,9 @@
 /**
  * Unit tests for the `Team` data-access model: team/slug lookup, membership
- * resolution and listing (including `isOwner` derivation), domain auto-join,
- * team provisioning (`createTeam`/`createAdditional`) with `uniqueSlug` collision
- * handling, role/membership management, and — the highest-value case —
- * `deleteById`'s full cascade across every team-owned table, verified against a
- * second, untouched team to prove the cascade never leaks across teams.
+ * resolution and listing, domain auto-join, provisioning with `uniqueSlug`
+ * collision handling, role management, and — the highest-value case —
+ * `deleteById`'s full cascade across every team-owned table, checked against a
+ * second team that must come through it intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,11 +46,9 @@ import {
 } from "~/database/schema";
 
 /**
- * `~/app/data/monitor` imports `env` from `cloudflare:workers`, which doesn't resolve
- * outside the Workers runtime — supply an in-memory queue so the module loads, and import
- * `Monitor` dynamically afterwards so the binding is registered before that import
- * evaluates. Nothing here reaches the queue; the seed only creates monitors and reads them
- * back, so a send that did happen would surface as an unexpected recorded message.
+ * `~/app/data/monitor` imports `env` from `cloudflare:workers`, which resolves only
+ * inside the Workers runtime — supply an in-memory queue so the module loads, and
+ * import `Monitor` dynamically afterwards so the binding registers first.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
 
@@ -77,10 +74,9 @@ function buildIdToken(
 }
 
 /**
- * Creates a team owned by `ownerSubjectId` with one row in every team-owned
- * table `Team.deleteById` must cascade, plus the histories/attachments hanging
- * off those rows. Returns every created row so callers can assert on presence
- * (before delete) or absence (after delete).
+ * Creates a team owned by `ownerSubjectId` with one row in every team-owned table
+ * `Team.deleteById` must cascade, plus the histories and attachments hanging off
+ * those rows, and returns them all so callers can assert on each side of a delete.
  */
 async function seedFullTeam(db: Database, ownerSubjectId: string) {
 	let team = await Team.createTeam(db, buildIdToken({ subject: ownerSubjectId }));
@@ -180,7 +176,7 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 			/**
 			 * The test adapter binds SQLite parameters directly, so a `c.json()` column's
 			 * value must already be a string — stringify it and cast past the column's
-			 * declared object type (`AlertConfig`) rather than fighting the type system.
+			 * declared object type (`AlertConfig`).
 			 */
 			config: JSON.stringify({
 				strategy: "webhook",

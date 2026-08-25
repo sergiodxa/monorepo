@@ -1,8 +1,8 @@
 /**
- * Spending a rate limiter's budget and turning a refusal into the published `429`.
- * Wraps `@pkg/rate-limit`'s adapters so every protected endpoint answers with the same
- * body and headers, and so a limiter outage lets traffic through instead of stopping
- * token issuance.
+ * Spending a rate limiter's budget and turning a refusal into the published
+ * `429`. Wraps `@pkg/rate-limit`'s adapters so every protected endpoint
+ * answers with the same body and headers, and a limiter outage still lets
+ * token issuance proceed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,22 +23,16 @@ const LIMITED_ERROR = "too_many_requests";
 const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
 
 /**
- * Spends one unit of a limiter's budget for a key.
- *
- * Returns the response to send when the budget is gone and `null` when the request may
- * continue, so a caller cannot read the decision and forget to act on it.
- *
- * Fails open: a binding that cannot answer is logged and the request proceeds, because
- * a limiter outage must not take down logins.
- *
- * `Retry-After` reports the limiter's full window rather than the time left in the
- * current one. It is the value published to relying parties, and a client that waits
- * the whole window is always safe, whereas one that waits a shorter estimate of a
- * boundary the platform never actually reports may not be.
+ * Spends one unit of a limiter's budget for a key, returning a response to
+ * send when it's gone. Fails open: a binding that cannot answer is logged and
+ * the request proceeds, since a limiter outage must not take down logins.
  *
  * @param adapter - The limiter to spend from.
  * @param key - Identity the budget belongs to, such as a client id or a client IP.
- * @returns A `429` to return immediately, or `null` when the request is allowed.
+ * @returns A `429` to return immediately — its `Retry-After` reports the
+ * limiter's full window, the value published to relying parties and always
+ * safe for a client to wait out in full — or `null` when the request may
+ * continue, so a caller always acts on the returned decision.
  */
 export async function spendRateLimit(adapter: Adapter, key: string): Promise<Response | null> {
 	let result = await adapter.consume(key);

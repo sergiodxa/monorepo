@@ -1,8 +1,8 @@
 /**
  * GET/POST /admin/subjects/:subjectId/edit — updates an account's profile, its role, and
- * whether its address counts as verified. The email address itself is not editable: it
- * is what a provider identity is matched against on first sign-in, so re-pointing it
- * from here would change who an account belongs to.
+ * whether its address counts as verified. The email address stays fixed: a provider
+ * identity is matched against it on first sign-in, so it decides who the account
+ * belongs to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -99,7 +99,11 @@ export default createController(routes.admin.subjectEdit, {
 			);
 		}),
 
-		/** POST /admin/subjects/:subjectId/edit — persists the edit and returns to the detail page. */
+		/**
+		 * POST /admin/subjects/:subjectId/edit — persists the edit and returns to the
+		 * detail page. The verified checkbox round trips: ticking it stamps the
+		 * verification time, clearing it drops the stamp.
+		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let subjectId = ctx.params.subjectId!;
@@ -127,8 +131,6 @@ export default createController(routes.admin.subjectEdit, {
 
 			let input = result.data;
 
-			// Ticking the box stamps the verification now; clearing it removes the stamp,
-			// which is what makes the checkbox a real round trip rather than one-way.
 			await Subject.update(db, subjectId, {
 				display_name: input.displayName,
 				username: input.username,

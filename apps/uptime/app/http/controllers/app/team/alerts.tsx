@@ -40,9 +40,9 @@ export default createAction(routes.app.team.alerts.index, {
 		let atLimit = alerts.length >= MAX_ALERTS_PER_TEAM;
 
 		/**
-		 * Names for the monitor-scoped rows, keyed across every type: a scope's id is unique
-		 * on its own, and pairing it with its type here would only make the lookup below
-		 * restate what {@link storedMonitorScope} already resolved.
+		 * Maps monitor ids to names for the scoped rows in the table. A scope's id is
+		 * unique across every monitor type, so keying on id alone is enough for
+		 * {@link storedMonitorScope}'s resolved scope to look up its name.
 		 */
 		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 		let monitorNamesById = new Map(

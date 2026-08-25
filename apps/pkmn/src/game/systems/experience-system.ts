@@ -1,12 +1,7 @@
 /**
- * Coordinates experience and effort value updates for creature progression within the game
- * systems layer. This module applies earned experience and a fainted species' EV yield to the
- * world state and exposes the before-and-after level information callers react to.
- *
- * The logic here stays focused on progression bookkeeping for a single creature. It bridges
- * immutable game data, mutable world storage, and derived level calculations so other parts
- * of the engine can award experience and effort values without duplicating state update, cap,
- * or comparison logic.
+ * Applies earned experience and a fainted species' effort-value yield to
+ * world state, exposing the before-and-after level so callers can react to
+ * level-ups without duplicating the update, cap, or comparison logic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,10 +16,8 @@ import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "../battle
 import { Stat } from "../data/stat";
 import { createCreatureFromWorld, getCreatureComponentSet } from "../world/world";
 
-/** Highest effort value a single stat may hold. */
 const MAX_EV_PER_STAT = 255;
 
-/** Highest combined effort value across every stat. */
 const MAX_EV_TOTAL = 510;
 
 /** One creature's experience gain and resulting level delta. */
@@ -57,13 +50,9 @@ export function grantCreatureExperience(
 }
 
 /**
- * Adds a fainted species' effort value yield to a creature's stored EVs.
- *
- * Each stat is clamped to {@link MAX_EV_PER_STAT} and the running total to
- * {@link MAX_EV_TOTAL}; once the total cap is reached no further EVs are added,
- * so a partially-trained creature only gains the remaining headroom. A missing
- * or empty yield is a no-op. Writes back the whole progress component to match
- * the mutation style used elsewhere in this module.
+ * Clamps each stat to {@link MAX_EV_PER_STAT} and the running total to
+ * {@link MAX_EV_TOTAL}, so a partially-trained creature gains only the
+ * remaining headroom; a missing or empty yield is a no-op.
  */
 export function grantCreatureEvYield(
 	world: World,
@@ -101,16 +90,9 @@ function sumEffortValues(ev: StatSet): number {
 }
 
 /**
- * Awards experience and effort values for defeated enemies to the surviving party.
- *
- * Uses the Gen 3 base formula `floor(baseExperience * enemyLevel / 7)` split
- * evenly among non-fainted participants. Each survivor also gains the fainted
- * species' `evYield` (per-stat and total caps enforced by
- * {@link grantCreatureEvYield}); EVs are awarded on faint even when the split
- * experience rounds down to zero. Fainted party members earn nothing, and
- * enemies must still exist (call this before despawning uncaptured wild creatures).
- * Returns one grant per creature that gained experience so the caller can emit the
- * matching progression events.
+ * Splits `floor(baseExperience * enemyLevel / 7)` evenly among survivors and
+ * grants each the fainted species' EV yield even when experience rounds to
+ * zero. Call before despawning uncaptured wild creatures.
  */
 export function awardBattleExperience(
 	gameData: GameData,

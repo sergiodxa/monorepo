@@ -1,7 +1,7 @@
 /**
- * Platform tenant controller: shows a tenant dashboard, and renders/handles the
- * create and edit forms. Rendering is done with `remix/ui` JSX via `ctx.render`;
- * all validation, access checks, and redirect behavior are preserved as-is.
+ * Platform tenant controller: shows a tenant dashboard, and renders/handles
+ * the create and edit forms. Rendering is done with `remix/ui` JSX via
+ * `ctx.render`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,11 +28,10 @@ import routes from "~/routes/web";
 let CreateTenantSchema = ds.object({
 	name: ds.string(),
 	region: ds.enum_(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
-	// HTML checkbox: present ("on") when the tenant should skip billing.
+	/** An HTML checkbox submits `"on"` when checked, so this parses as a string. */
 	internal: ds.optional(ds.string()),
 });
 
-/** Maps region codes to user-friendly display names. */
 let REGION_NAMES: Record<string, string> = {
 	wnam: "Western North America",
 	enam: "Eastern North America",
@@ -49,7 +48,6 @@ let UpdateTenantSchema = ds.object({
 	name: ds.optional(ds.string()),
 });
 
-/** The set of tenant regions, rendered as options in the create form. */
 let REGION_OPTIONS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
 export default {
@@ -246,6 +244,11 @@ export default {
 		}),
 	),
 
+	/**
+	 * Creates the tenant, provisions its default hostname and management
+	 * client, and best-effort creates its Polar subscription — a failure here
+	 * is logged but does not fail tenant creation.
+	 */
 	create: createAction(
 		routes.dashboard.tenants.create,
 		inject([Database] as const, async (db) => {
@@ -274,9 +277,9 @@ export default {
 			}
 
 			let slug = Tenant.generateSlug(result.data.name);
+			/** Internal tenants (the platform owner's own tenants) skip Polar billing entirely. */
 			let internal = Boolean(result.data.internal);
 
-			// Create the tenant record in platform DB
 			let tenant = await Tenant.create(db, {
 				name: result.data.name,
 				slug,
@@ -285,25 +288,25 @@ export default {
 				internal,
 			});
 
-			// Create default hostname
 			await Hostname.createDefault(db, tenant.id, slug, env.PLATFORM_DOMAIN);
 
-			// Initialize the tenant DO by calling it (with location hint for region)
+			/** Fetching the stub (HEAD) triggers Durable Object instantiation in the given region. */
 			let stub = env.TENANT.get(env.TENANT.idFromName(tenant.id), {
 				locationHint: result.data.region,
 			});
 			await stub.fetch("https://tenant.internal/", { method: "HEAD" });
 
-			// Provision tenant metadata (issuer + region). The issuer starts as the
-			// default hostname; the hostname controller re-runs setup when a custom
-			// domain is activated, so the issuer tracks the hostname clients use.
+			/**
+			 * The issuer starts as the default hostname; the hostname controller
+			 * re-runs setup when a custom domain is activated, so the issuer stays
+			 * in sync with the hostname clients use.
+			 */
 			let tenantApi = new TenantApiService(tenant.id);
 			await tenantApi.setup({
 				issuer: `${slug}.${env.PLATFORM_DOMAIN}`,
 				region: result.data.region,
 			});
 
-			// Create default management client via the tenant API
 			let managementClient = await tenantApi.createClient({
 				name: "Management Client",
 				type: "m2m",
@@ -311,8 +314,6 @@ export default {
 				isManagementClient: true,
 			});
 
-			// Create subscription with Polar customer. Internal tenants (the owner's
-			// own tenants) are exempt from billing and skip this entirely.
 			try {
 				if (internal) {
 					log.info("Skipping subscription for internal tenant", { tenantId: tenant.id });
@@ -321,7 +322,6 @@ export default {
 					log.info("Subscription created", { tenantId: tenant.id });
 				}
 			} catch (error) {
-				// Log but don't fail tenant creation if Polar is unavailable
 				log.error("Failed to create subscription", {
 					tenantId: tenant.id,
 					error: error instanceof Error ? error.message : String(error),
@@ -359,7 +359,6 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
-			// Only owners and admins can edit
 			if (tenant.role === "viewer") {
 				return new Response("Forbidden", { status: 403 });
 			}
@@ -427,7 +426,6 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
-			// Only owners and admins can update
 			if (tenant.role === "viewer") {
 				return new Response("Forbidden", { status: 403 });
 			}

@@ -1,10 +1,9 @@
 /**
  * Test-only helpers that render a utility mixin through `remix/ui`'s server
- * renderer and hand back the CSS text it actually produced, so a test can
- * assert on the declarations a browser will see instead of on the style tree
- * the mixin was built from. The two differ: the serializer rewrites values on
- * the way out (most notably it appends `px` to unitless numbers), so a green
- * assertion against the style tree can sit on top of broken CSS.
+ * renderer and hand back the CSS text it produced, so a test asserts on the
+ * declarations a browser will see. The serializer rewrites values on the way
+ * out — most notably appending `px` to unitless numbers — so the emitted CSS
+ * is the only sound assertion surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,9 +24,8 @@ export async function serialize(mixin: UtilityMixin): Promise<string> {
 
 /**
  * Renders `mixin` and returns its declarations as `"property: value"` strings,
- * flattened across nested blocks and normalized to single spaces. This is the
- * assertion surface for "what CSS does this mixin actually emit" — prefer it
- * over reading `descriptor.args[0]`, which shows the input, not the output.
+ * flattened across nested blocks and normalized to single spaces — the
+ * assertion surface for what CSS a mixin actually emits.
  *
  * @example expect(await declarations(lineClamp(3))).toContain("-webkit-line-clamp: 3")
  */

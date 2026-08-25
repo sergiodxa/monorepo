@@ -1,13 +1,9 @@
 /**
- * Data-access model for HTTP monitors. Exposes CRUD over the `monitors` table scoped
- * to a team, enqueuing a subscription-gated on-demand check, the claim the `scheduled`
- * handler runs every minute to take the monitors that are due for a check, the write that
- * caches a completed check's status back onto the monitor row,
- * and the two monthly ping-consumption figures the usage cards show side by side: the
- * pings already consumed, counted from the daily rollup plus the days it hasn't
- * reached yet, and the consumption current intervals project over the whole month —
- * each available team-wide across every monitor type (HTTP, DNS, TCP, cron) and
- * scoped to a single HTTP monitor.
+ * Data-access model for HTTP monitors: team-scoped CRUD, the subscription-gated
+ * on-demand check, the claim the `scheduled` handler runs every minute over the monitors
+ * due for a check, the write caching a check's status onto the monitor row, and the two
+ * monthly ping figures the usage cards show side by side — consumption already recorded
+ * and consumption current intervals project — team-wide and per HTTP monitor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,17 +31,15 @@ import {
 	tcpMonitors,
 } from "~/database/schema";
 
-/** Milliseconds in a minute, the bucket size for a scheduled check's job id. */
+/** The bucket size for a scheduled check's job id. */
 const MS_PER_MINUTE = 60_000;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * How many recent days {@link Monitor.countConsumedPingsByTeam} and
- * {@link Monitor.countConsumedPingsByMonitor} count from the raw result tables instead
- * of the daily rollup: today plus yesterday, so the count holds whether or not the
- * 01:00 UTC aggregation job has run. Must stay well below `CleanJob`'s 7-day
- * `monitor_results` retention, which is what keeps those rows around to be counted.
+ * Today plus yesterday, so the monthly ping counts hold whether or not the 01:00 UTC
+ * aggregation job has run. Must stay well below `CleanJob`'s 7-day `monitor_results`
+ * retention, which is what keeps those rows around to be counted.
  */
 const RAW_PING_WINDOW_DAYS = 2;
 
@@ -62,10 +56,9 @@ export interface MonitorStats {
 	uptime: number | null;
 	lastCheck: number | null;
 	/**
-	 * The 99th-percentile response time in milliseconds over the **last 24 hours** — the
-	 * one figure here that comes from Analytics Engine rather than D1. `null` when the
-	 * window holds no checks, or when the Analytics Engine query failed, in which case
-	 * callers show a placeholder instead of a number.
+	 * The 99th-percentile response time in milliseconds over the **last 24 hours**, from
+	 * Analytics Engine rather than D1. `null` when the window holds no checks or the query
+	 * failed, in which case callers show a placeholder.
 	 */
 	p99: number | null;
 }
@@ -78,10 +71,9 @@ interface StatsRow {
 
 export default class Monitor {
 	/**
-	 * Creates a monitor for a team, enabled immediately and scheduled for its first
-	 * check on the next cron tick — `next_due_at` is stamped with now rather than with
-	 * now plus the interval, so a new monitor reports a status straight away instead of
-	 * after one silent interval.
+	 * Creates a monitor for a team, enabled immediately with `next_due_at` stamped at now,
+	 * so the very next cron tick claims it and a new monitor reports a status straight
+	 * away.
 	 */
 	static async create(db: Database, teamId: string, authorId: string, input: InsertMonitor) {
 		return await db.create(
@@ -130,16 +122,13 @@ export default class Monitor {
 	}
 
 	/**
-	 * Updates a monitor's editable fields, keeping `next_due_at` consistent with them.
-	 *
-	 * Scheduling lives entirely in `next_due_at` (see {@link findDue}), so an update that
-	 * changes whether or how often a monitor should be checked has to move it in the same
-	 * write — otherwise a re-enabled monitor would never be picked up and a disabled one
-	 * would keep being claimed.
+	 * Updates a monitor's editable fields. Scheduling lives entirely in `next_due_at` (see
+	 * {@link findDue}), so a change to whether or how often a monitor is checked moves it
+	 * in the same write and takes effect on the next tick.
 	 */
 	static async updateById(db: Database, monitorId: string, changes: Partial<InsertMonitor>) {
 		let patch = await nextDueAtPatch(db, monitors, monitorId, {
-			/** This table spells "enabled" as a nullable timestamp rather than a flag. */
+			/** The scheduling helper takes a boolean; this table stores a nullable timestamp. */
 			enabled: changes.enabled_at === undefined ? undefined : changes.enabled_at !== null,
 			intervalSeconds: changes.interval_seconds,
 		});
@@ -153,15 +142,12 @@ export default class Monitor {
 	}
 
 	/**
-	 * Enqueues an on-demand check for a monitor, unless `ownerId` is known not to be
-	 * entitled — billing is settled here rather than in the consumer, so a queued check is
-	 * always one that's allowed to run. Returns whether it was enqueued, which is what lets
-	 * the caller tell the visitor their check isn't going to happen.
+	 * Enqueues an on-demand check for a monitor, settling billing here so a queued check is
+	 * always one that's allowed to run. Reads the D1 projection and **fails open**: only a
+	 * positively-known `inactive` state refuses.
 	 *
-	 * Reads the D1 projection rather than asking Polar, and **fails open**: only a
-	 * positively-known `inactive` state refuses. A missed webhook leaves the state unknown,
-	 * and refusing a manual check on that basis would be the read-time subscription gate
-	 * ADR-005 exists to remove.
+	 * @returns Whether the check was enqueued, which is what lets the caller tell the
+	 * visitor their check is going to happen.
 	 */
 	static async ping(db: Database, monitorId: string, ownerId: string): Promise<boolean> {
 		if ((await Subscription.stateFor(db, ownerId)) === "inactive") return false;
@@ -176,67 +162,27 @@ export default class Monitor {
 	}
 
 	/**
-	 * The job id for a scheduled check, which is also the `monitor_results` primary key
-	 * the consumer dedupes on.
-	 *
-	 * Keyed on the minute containing `scheduledAt` rather than on `scheduledAt` itself,
-	 * because the every-minute cron is delivered more than once per minute with a
-	 * different `scheduledTime` each time (observed ~7s apart in production), and a raw
-	 * timestamp would hand the two deliveries different ids and let both run. One id per
-	 * minute makes the second collide with the first instead. Safe because the minimum
-	 * `interval_seconds` is 60, so no monitor can legitimately owe two checks inside the
-	 * same minute.
-	 *
-	 * {@link findDue}'s claim is what normally stops the second delivery from enqueuing
-	 * anything at all, so this collision should never fire. It stays as the correctness
-	 * backstop for a delivery that raced the claim, and costs nothing when it doesn't.
+	 * The job id for a scheduled check, and the `monitor_results` primary key the consumer
+	 * dedupes on. Keyed on the minute containing `scheduledAt`, so the several deliveries
+	 * one minute's cron produces share one id; the 60s minimum interval makes that safe.
 	 */
 	static scheduledJobId(monitorId: string, scheduledAt: number): string {
 		return `${monitorId}:${Math.floor(scheduledAt / MS_PER_MINUTE)}`;
 	}
 
 	/**
-	 * Claims every monitor due for a check as of `scheduledAt` and returns them, having
-	 * already advanced each one's next due time — see {@link claimDue} for the claim's
-	 * semantics, which every monitor type shares.
-	 *
-	 * The claim replaced a query that recomputed each monitor's last completion from
-	 * `monitor_results` (`MAX(completed_at) … GROUP BY monitor_id`), which no index can
-	 * satisfy — SQLite had to read every row of a table holding 7 days of history, once per
-	 * cron delivery, and that was 97% of the app's D1 rows read. It also compared against
-	 * `completed_at`, stamped *after* the probe returns, so every check's due time slid
-	 * forward by its own latency and a 1-minute monitor quietly became a 2-minute one.
-	 *
-	 * Because the due time moves in the claim rather than when the check completes, the
-	 * second and later deliveries of the same minute's cron (this trigger fires more than
-	 * once per minute — see {@link scheduledJobId}) find nothing due and enqueue nothing.
-	 *
-	 * One statement, and only the monitor id and its team. It used to resolve each claimed
-	 * monitor's team owner too, so the scheduler could ask Polar whether that owner was still
-	 * paying — but entitlement now lives in `next_due_at` itself, set and cleared by the
-	 * Polar webhook, so an unentitled owner's monitors are never claimed in the first place
-	 * and there is nobody left to look up. `team_id` comes back because the scheduler's own
-	 * cost is apportioned across the teams whose monitors were due (ADR-007 §5), and the
-	 * `RETURNING` projection is where that denominator is free.
-	 *
-	 * The `monitor_results` primary-key dedupe stays as the backstop for a delivery that
-	 * races the claim in some way this does not cover — see {@link scheduledJobId}.
+	 * Claims every monitor due as of `scheduledAt`, advancing each one's next due time in
+	 * the same statement (see {@link claimDue}), so later deliveries of the same minute's
+	 * cron find nothing due. `team_id` comes back to apportion the scheduler's own cost.
 	 */
 	static async findDue(db: Database, scheduledAt: number) {
 		return await claimDue(db, monitors, ["id", "team_id"], scheduledAt);
 	}
 
 	/**
-	 * Caches a completed check's outcome on the monitor row, which is where the next check
-	 * reads the status it is transitioning from and where the monitors list reads each
-	 * badge. The counterpart of `DnsMonitor.recordCheckResult`'s cached-column update, and
-	 * the only write path for these columns, so a change to what a check caches is one edit
-	 * here.
-	 *
-	 * Deliberately not part of {@link findDue}'s claim: that advances `next_due_at` once per
-	 * cron tick for every monitor that is due, while this runs once per check and only after
-	 * that check's result is committed, so a job that fails earlier can't leave a row
-	 * claiming a check happened. Two triggers, two writes.
+	 * Caches a completed check's outcome on the monitor row, the only write path for these
+	 * columns and where the next check reads the status it transitions from and the list
+	 * reads each badge. Runs once the result is committed, so the row records real checks.
 	 */
 	static async recordCheckStatus(
 		db: Database,
@@ -280,21 +226,9 @@ export default class Monitor {
 	}
 
 	/**
-	 * One stats card, two stores:
-	 *
-	 * - `total`, `uptime` and `lastCheck` come from D1's `monitor_results`, because they
-	 *   are aggregates over "every check ever recorded" and each one costs a single row
-	 *   read: the query returns one row no matter how many it summarises.
-	 * - `p99` comes from Analytics Engine over a stated 24-hour window. As a D1 query it
-	 *   had to ship every stored response time to the Worker to index into the sorted
-	 *   array — tens of thousands of rows read per call, growing linearly with the team's
-	 *   monitor count, and a Worker memory ceiling at a few hundred monitors. Analytics
-	 *   Engine answers it as one query, and the fixed window makes the number comparable
-	 *   with itself instead of silently meaning "whatever `CleanJob` has not purged yet".
-	 *
-	 * The split means the p99 is the one figure here that depends on Analytics Engine, so
-	 * a failed query degrades it to `null` (callers render "—") rather than failing the
-	 * whole card.
+	 * One stats card from two stores: `total`, `uptime` and `lastCheck` are D1 aggregates
+	 * costing one row read each, while `p99` is a single Analytics Engine query over a
+	 * fixed 24-hour window. A failed p99 degrades to `null` and the card still renders.
 	 */
 	private static async getStats(
 		db: Database,
@@ -327,33 +261,9 @@ export default class Monitor {
 	}
 
 	/**
-	 * Counts a team's pings actually consumed during the calendar month containing
-	 * `date`, across every monitor type. Unlike
-	 * {@link estimateConsumedPingsByTeam}'s projection of current settings, this
-	 * measures what has already run.
-	 *
-	 * Reads two stores, because neither one covers a whole month on its own:
-	 *
-	 * - `monitor_daily_stats.total_checks`, the per-monitor-per-day rollup
-	 *   `AggregateDailyStatsJob` writes at 01:00 UTC for the day before, which is the
-	 *   only durable record of an HTTP check once `CleanJob` has purged its
-	 *   `monitor_results` row (7-day retention, so raw counting alone would silently
-	 *   truncate the month to its last week).
-	 * - the raw result tables (`monitor_results`, `dns_monitor_results`,
-	 *   `tcp_monitor_results`, `cron_job_pings`) for the {@link RAW_PING_WINDOW_DAYS}
-	 *   most recent days, which the rollup hasn't reached yet.
-	 *
-	 * The two windows are cut so they can't overlap: the rollup half stops the day
-	 * before the raw half starts. That also makes the figure independent of whether
-	 * today's aggregation job has run yet, and the raw window stays well inside the
-	 * 7-day retention that keeps those rows around to be counted.
-	 *
-	 * A day the aggregation job failed for is missing from the rollup and therefore
-	 * undercounts, which is preferred over the double counting that overlapping the
-	 * two windows to compensate would cause.
-	 *
-	 * Runs as one query of eight team-scoped sub-counts, since the dashboard's usage
-	 * card blocks on it.
+	 * Counts a team's pings actually consumed in the calendar month containing `date`,
+	 * over every monitor type: the daily rollup for the earlier part plus the raw result
+	 * tables for the most recent {@link RAW_PING_WINDOW_DAYS}; each day counts once.
 	 */
 	static async countConsumedPingsByTeam(db: Database, teamId: string, date: Date): Promise<number> {
 		let monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
@@ -417,26 +327,12 @@ export default class Monitor {
 	}
 
 	/**
-	 * Counts one HTTP monitor's pings actually consumed during the calendar month
-	 * containing `date`, the single-monitor counterpart of
-	 * {@link countConsumedPingsByTeam} and read the same two stores in the same
-	 * non-overlapping windows: `monitor_daily_stats.total_checks` for the earlier part
-	 * of the month, and raw `monitor_results` rows for the
-	 * {@link RAW_PING_WINDOW_DAYS} most recent days the rollup hasn't reached yet.
+	 * Counts one HTTP monitor's pings actually consumed in the calendar month containing
+	 * `date`, over the same two windows {@link countConsumedPingsByTeam} reads. This is the
+	 * app's own count of recorded checks; billing settles from the metered ping events.
 	 *
-	 * This is the app's own count of checks it recorded, not the figure the customer is
-	 * billed for: billing is settled from the ping events ingested into the billing
-	 * meter, and the two can diverge whenever an event was ingested without a check row
-	 * landing here, or the reverse.
-	 *
-	 * It undercounts in one known case, inherited from the same retention caveat: a day
-	 * the aggregation job failed for is missing from the rollup, and once `CleanJob` has
-	 * purged that day's `monitor_results` rows (7-day retention) nothing is left to
-	 * count it from. Overlapping the windows to compensate would double count, which is
-	 * worse.
-	 *
-	 * Returns 0 — never `null` — for a monitor with no checks in the month, since the
-	 * card renders a real zero differently from an unavailable figure.
+	 * @returns The count, and 0 for a month with no checks, since the card renders a real
+	 * zero differently from an unavailable figure.
 	 */
 	static async countConsumedPingsByMonitor(
 		db: Database,
@@ -471,13 +367,9 @@ export default class Monitor {
 	}
 
 	/**
-	 * Estimates a team's total ping consumption for the calendar month containing
-	 * `date`, across every monitor type: HTTP/DNS/TCP monitors are projected as
-	 * `monthMilliseconds / intervalMs` (how many checks their interval would produce
-	 * over the whole month), and cron jobs are counted by walking their schedule's
-	 * occurrences through the month. This is a projection based on
-	 * current settings, not what the team has actually consumed so far (which is what
-	 * {@link countConsumedPingsByTeam} counts) — the dashboard shows both side by side.
+	 * Projects a team's ping consumption over every monitor type for the calendar month
+	 * containing `date`, from current intervals and cron schedules. Occurrences are walked
+	 * one at a time so the walk stops at month end; an unusable schedule counts zero.
 	 */
 	static async estimateConsumedPingsByTeam(
 		db: Database,
@@ -508,7 +400,6 @@ export default class Monitor {
 		let endTime = end.getTime();
 		let cronPings = 0;
 		for (let job of teamCronJobs) {
-			// Skip jobs whose expression no longer parses rather than fail the whole estimate.
 			let parsed = Schedule.parse(job.cron_expression);
 			if (isFailure(parsed)) continue;
 
@@ -516,11 +407,8 @@ export default class Monitor {
 			let cursor = start.getTime();
 			let occurrences = 0;
 
-			// Walked one run at a time so the search stops at the end of the month: asking
-			// for the cap up front would step a daily job over a century of occurrences.
 			while (occurrences < MAX_CRON_OCCURRENCES_PER_MONTH) {
 				let next = parsed.data.next({ from: new Date(cursor), timeZone }).getTime();
-				// An unknown stored zone yields an invalid date, and counts as no runs.
 				if (Number.isNaN(next) || next > endTime) break;
 				occurrences++;
 				cursor = next;
@@ -533,10 +421,9 @@ export default class Monitor {
 	}
 
 	/**
-	 * Estimates one HTTP monitor's ping consumption for the calendar month containing
-	 * `date`, projected from its current check interval — the same
-	 * `monthMilliseconds / intervalMs` projection {@link estimateConsumedPingsByTeam}
-	 * sums across every monitor. Returns 0 when the monitor doesn't exist.
+	 * Projects one HTTP monitor's ping consumption for the calendar month containing
+	 * `date` from its current interval, the same figure
+	 * {@link estimateConsumedPingsByTeam} sums across a team. Returns 0 for a missing id.
 	 */
 	static async estimateConsumedPingsByMonitor(
 		db: Database,

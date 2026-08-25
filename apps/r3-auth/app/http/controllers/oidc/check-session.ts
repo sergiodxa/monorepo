@@ -1,16 +1,9 @@
 /**
- * The OpenID Connect Session Management 1.0 check-session endpoint. It serves a page
- * relying parties embed in a hidden iframe: the RP posts `"<client_id> <session_state>"`
- * to it, the page recomputes the expected `session_state` from the `op_browser_state`
- * cookie it can read on this origin, and answers `"unchanged"` or `"changed"` — which
- * lets an RP notice a sign-out without polling this server over the network.
- *
- * **This module is deliberately exempt from the "no HTML strings" rule.** The artifact
- * this endpoint publishes *is* a browser-side script page defined by the specification,
- * running in the relying party's frame rather than in any page this app renders. It has
- * no server-side data interpolated into it, so expressing it as `remix/ui` JSX would
- * only obscure the one thing that matters here — that the bytes match the spec — and
- * would put a component tree between this app and a contract other origins depend on.
+ * The OpenID Connect Session Management 1.0 check-session endpoint: a page relying
+ * parties embed in a hidden iframe, which recomputes the expected `session_state` from
+ * the `op_browser_state` cookie readable on this origin and answers `"unchanged"` or
+ * `"changed"`, so an RP learns of a sign-out from the browser alone. The document stays
+ * a literal string so its bytes match the specification exactly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,16 +14,14 @@ import { createAction } from "remix/router";
 import routes from "~/routes/web";
 
 /**
- * How long a browser may reuse this page. It is a static document with no per-request
- * content, and RPs load it on every page view of theirs.
+ * How long a browser may reuse this page. The document is static and every relying
+ * party loads it on every page view of theirs.
  */
 const CACHE_CONTROL = "public, max-age=3600";
 
 /**
- * The check-session iframe document.
- *
- * Entirely static, with no interpolation of any kind: nothing about the request reaches
- * this string, which is why it can be served as-is without an escaping concern.
+ * The check-session iframe document. Every byte of it is fixed here, independent of the
+ * request, so it is safe to serve verbatim.
  */
 const CHECK_SESSION_HTML = `<!DOCTYPE html>
 <html>
@@ -115,11 +106,9 @@ const CHECK_SESSION_HTML = `<!DOCTYPE html>
 </html>`;
 
 /**
- * GET /oidc/check-session — serves the RP-embeddable session-checking iframe.
- *
- * No framing header is sent, and none should be: being loaded cross-origin in another
- * site's iframe is the entire point of this endpoint, so an `X-Frame-Options` or a
- * `frame-ancestors` policy here would break every relying party that uses it.
+ * GET /oidc/check-session — serves the RP-embeddable session-checking iframe. Every
+ * relying party loads it cross-origin, so framing stays open to any origin: an
+ * `X-Frame-Options` or `frame-ancestors` policy here would break all of them.
  */
 export default createAction(routes.oidc.checkSession, () => {
 	return new Response(CHECK_SESSION_HTML, {

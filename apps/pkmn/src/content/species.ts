@@ -1,17 +1,8 @@
 /**
- * Species content for the `pkmn` app's content layer — a thin loader over the
- * authored `species.json` data file.
- *
- * The species roster now lives in {@link ./species.json} as plain data. This
- * module imports that file and validates it back into the exact
- * `Record<SpeciesId, Species>` shape the game consumes via {@link parseSpecies},
- * so every consumer keeps importing `{ SPECIES }` from `~/content/species`
- * unchanged. Validation runs once at module load; a malformed data file fails
- * loudly here rather than surfacing as a confusing error deep in the engine.
- *
- * Keeping the data in JSON lets the dev-tools species editor read and rewrite it
- * as structured data, while this loader remains the single content-layer entry
- * point the rest of the app depends on.
+ * Loads the authored `species.json` roster and validates it into the
+ * `Record<SpeciesId, Species>` shape the game consumes. Validation runs once at
+ * module load so a malformed data file fails loudly here, and holding the
+ * roster as JSON lets the species editor read and rewrite it as structured data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

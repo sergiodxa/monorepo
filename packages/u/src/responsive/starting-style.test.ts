@@ -18,9 +18,11 @@ describe("startingStyle", () => {
 		);
 	});
 
+	/**
+	 * A `0px` opacity is invalid, and a dropped starting opacity means the
+	 * entry transition begins from the element's final value — no animation.
+	 */
 	test("a zero opacity survives the serializer as a unitless number", async () => {
-		// A `0px` opacity is invalid, and a dropped starting opacity means the
-		// entry transition begins from the element's final value — no animation.
 		expect(await declarations(startingStyle(opacity(0)))).toEqual(["opacity: 0"]);
 	});
 });

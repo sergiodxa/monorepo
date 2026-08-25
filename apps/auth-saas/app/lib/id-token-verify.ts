@@ -1,10 +1,9 @@
 /**
- * Verifies platform-issued ID tokens for the onboarding callback. The dashboard dogfoods
- * its own OIDC provider, so after the OAuth token exchange it must verify the returned ID
- * token the way any relying party would: fetch the platform tenant's JWKS, check the
- * ES256 signature, and require the issuer, audience, and time claims — before trusting any
- * claim to mint a dashboard session. The nonce echoed back is returned so the caller can
- * bind it to the value stored when the flow started.
+ * Verifies platform-issued ID tokens for the onboarding callback: fetches the
+ * platform tenant's JWKS, checks the ES256 signature, and requires the issuer,
+ * audience, and time claims before trusting any claim to mint a dashboard
+ * session. The echoed nonce lets the caller match it against the value stored
+ * when the flow started.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,18 +23,13 @@ const ID_TOKEN_CLOCK_TOLERANCE = 60;
 export interface VerifiedIdToken {
 	/** The full, verified claim set (safe to read from once verification succeeds). */
 	claims: JSONValue;
-	/** The `nonce` claim, or `null` when absent. */
 	nonce: string | null;
 }
 
 /**
- * Verifies a platform-issued ID token against the platform tenant's JWKS.
- *
- * Fetches the JWKS from the platform tenant's discovery endpoint, then verifies the
- * token's ES256 signature and requires the given issuer and audience plus valid
- * `exp`/`nbf` (with a small clock tolerance). Returns the verified claims and nonce, or
- * `null` if the JWKS is unavailable or verification fails. The caller still checks the
- * nonce against the value it stored.
+ * Fetches the platform tenant's JWKS, then verifies the token's ES256
+ * signature, issuer, audience, and time claims, confirming the algorithm
+ * before any key is chosen. The caller still checks the returned nonce.
  *
  * @param idToken - The raw ID token (JWT) from the token response.
  * @param options - JWKS location and expected issuer/audience.
@@ -60,9 +54,6 @@ export async function verifyIdToken(
 
 		let publicKeys = await JWK.importLocal(jwks as Parameters<typeof JWK.importLocal>[0]);
 
-		// jose validates signature + iss + aud + exp + nbf and throws on any failure. The
-		// algorithm is pinned rather than inferred from whichever key the set offers, so a
-		// token naming another one is refused before a key is even chosen for it.
 		let verified = await JWT.verify(idToken, publicKeys, {
 			issuer: options.issuer,
 			audience: options.audience,

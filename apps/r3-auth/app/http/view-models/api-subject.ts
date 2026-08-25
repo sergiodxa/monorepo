@@ -14,10 +14,8 @@ import * as s from "remix/data-schema";
 import type { SelectSubject } from "~/database/schema";
 
 /**
- * A subject as the API returns it.
- *
- * Deliberately not the database row: the columns are snake_case and the timestamps are
- * epoch-millisecond integers, while this payload is what clients have always parsed.
+ * A subject as the API returns it: camelCase fields and ISO-8601 timestamps, the shape
+ * clients have always parsed.
  */
 export interface ApiSubject {
 	id: string;
@@ -32,12 +30,9 @@ export interface ApiSubject {
 }
 
 /**
- * Shape a cached payload must have to be served.
- *
- * The cache is shared with another worker, so an entry may have been written by code
- * this app does not contain; validating it means an unreadable or reshaped entry falls
- * back to the database instead of being handed to a client as-is. Unknown keys are
- * stripped rather than refused, so an entry carrying extra fields is still usable.
+ * Shape a cached payload must have to be served. The cache is shared with another
+ * worker, so validating a stored entry against this schema decides whether to trust
+ * it or fall back to the database.
  */
 export const ApiSubjectSchema = s.object({
 	id: s.string(),
@@ -52,10 +47,9 @@ export const ApiSubjectSchema = s.object({
 });
 
 /**
- * Maps a subject row onto the published payload.
- *
- * Timestamps are serialized as ISO-8601 strings, which is what a `Date` produced by the
- * other worker's ORM serializes to — the two payloads have to be interchangeable.
+ * Maps a subject row onto the published payload, serializing timestamps to ISO-8601 to
+ * match what the shared cache's other writer produces, and narrowing an unrecognized
+ * role to `user`.
  *
  * @param subject - A subject row, timestamps in epoch milliseconds.
  */
@@ -68,8 +62,6 @@ export function toApiSubject(subject: SelectSubject): ApiSubject {
 			subject.email_verified_at === null ? null : new Date(subject.email_verified_at).toISOString(),
 		displayName: subject.display_name,
 		avatar: subject.avatar,
-		// Narrowed rather than trusted: the column is a text enum, so a row written by
-		// hand could hold anything, and an unknown role must never read as `admin`.
 		role: subject.role === "admin" ? "admin" : "user",
 		username: subject.username,
 		emailAddress: subject.email_address,

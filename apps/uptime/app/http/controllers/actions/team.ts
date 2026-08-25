@@ -1,9 +1,8 @@
 /**
  * Form actions for team settings and membership: update/delete a team, and
  * remove/promote/demote a member. All require `requireRole("admin")`, which also
- * admits the owner (see `app/http/middleware/require-role.ts`). The owner can never
- * be removed or have their role changed — they're demoted/removed only by deleting
- * the team itself.
+ * admits the owner (see `app/http/middleware/require-role.ts`). The owner keeps
+ * their membership and role until the team itself is deleted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

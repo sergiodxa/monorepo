@@ -3,9 +3,6 @@
  * the alert and maintenance-window forms use to offer choices, and the per-type existence
  * check those form actions and the API both run before storing a scope.
  *
- * Separate from `~/app/lib/monitor-scope`, which stays import-free so the views can render
- * scope options; everything here reaches into the four monitor tables.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -33,11 +30,9 @@ export interface ScopeMonitorGroup {
 }
 
 /**
- * The four monitor models behind the four scope types.
- *
- * They share a `listByTeam`/`findByIdForTeam` signature, so the whole per-type branch is
- * this table plus an index — a `switch` in each of the three call sites would say the same
- * thing three times and go stale one at a time.
+ * The four monitor models behind the four scope types. They share a
+ * `listByTeam`/`findByIdForTeam` signature, so the whole per-type branch is this table
+ * plus an index, and a new scope type is one entry here.
  */
 const SCOPE_MONITOR_MODELS: Record<
 	MonitorScopeType,
@@ -71,12 +66,9 @@ export async function listScopeMonitors(
 }
 
 /**
- * Whether `scope` names something the team still owns.
- *
- * A team-wide or type-wide scope is always storable — a type with no monitors yet is a
- * standing instruction for the ones that come later, not an error. A monitor-scoped one is
- * checked against that type's own table, so an id belonging to another type or another
- * team is rejected instead of stored as a scope that can never match.
+ * Whether `scope` names something the team still owns. A team-wide or type-wide scope is
+ * always storable, a standing instruction for monitors created later; a monitor-scoped one
+ * is checked against that type's own table, so it can only name a monitor the team owns.
  */
 export async function isResolvableScope(
 	db: Database,

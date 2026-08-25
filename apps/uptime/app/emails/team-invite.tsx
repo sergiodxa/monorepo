@@ -1,7 +1,7 @@
 /**
  * The email a team admin's invite produces: the recipient, the translated subject,
  * and the body all derive from the one object the invite was created with, so the
- * address can never disagree with the team the copy names (ADR-030).
+ * address always agrees with the team the copy names (ADR-030).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,14 +30,14 @@ export namespace TeamInviteEmail {
 }
 
 /**
- * Invitation to join a team, addressed to the invitee rather than to the admin who
- * created it. The translator arrives through the constructor because the reader's
- * language is not the requester's, and choosing it is the application's decision.
+ * Invitation to join a team, addressed to the invitee it names. The translator arrives
+ * through the constructor because choosing the reader's language is the application's
+ * own decision, made independently of the requester's language.
  *
  * @example ctx.email.later(new TeamInviteEmail({ team, email, url, locale, t }));
  */
 export class TeamInviteEmail implements Email {
-	/** The invite this email was built from; nothing is loaded while rendering. */
+	/** The invite this email was built from; rendering reads only from here. */
 	#invite: TeamInviteEmail.Data;
 
 	/**

@@ -1,8 +1,7 @@
 /**
- * View for the login page. Renders a centered heading, explanatory copy, an
- * optional error message, and a form whose submit button kicks off the OAuth
- * login action to authenticate for CMS access. Exists as the entry point users
- * hit before reaching admin-only routes.
+ * View for the login page: a centered heading, explanatory copy, an optional
+ * error message, and a single-submit form that starts the OAuth login action
+ * for CMS access.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,7 +30,10 @@ export namespace LoginView {
 }
 
 /**
- * Builds the login page renderer used by the auth route.
+ * Builds the login page renderer used by the auth route. The form's only
+ * control is the submit that hands off to the OAuth provider, so it renders as
+ * `display: contents` and the button sits directly in the centered grid.
+ *
  * @returns A view function that renders the login screen from the route model.
  */
 export function LoginView() {
@@ -56,9 +58,6 @@ export function LoginView() {
 					</p>
 				)}
 
-				{/* The form carries no fields of its own — the whole flow is one submit
-				that hands off to the OAuth provider — so it stays `display: contents` and
-				lets the button sit directly in the page's centered grid. */}
 				<Form
 					action={routes.auth.login.action.href()}
 					method={routes.auth.login.action.method}

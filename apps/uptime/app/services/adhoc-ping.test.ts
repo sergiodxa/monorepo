@@ -1,18 +1,8 @@
 /**
- * Tests `recordAdhocPing`, the half of an ad-hoc ping that is the same whoever asked for
- * it: one Analytics Engine data point and one billed event. Both callers — the public
- * ping endpoint and the dashboard's quick check — go through this, so what is pinned here
- * is the shape neither of them may drift from: the point is written under the shared
- * `adhoc` monitor id and indexed by team, and the meter event is keyed on the ping's own
- * id, charged to the team's owner, and carries no `monitorId` key at all. That last one is
- * asserted as an absent key rather than a null, because a present-but-null key is what
- * would make the ping show up on a monitor's usage card that has no monitor behind it.
- *
- * The remaining two cases are about what a caller is made to wait for. Both callers are
- * holding a connection open for a result they already have, so the ingest goes out under
- * `waitUntil`: the double collects the deferred work instead of dropping it, which lets a
- * test assert the call returned while the ingest was still pending, and lets a rejected
- * ingest be shown to cost the caller nothing.
+ * Tests `recordAdhocPing`: one Analytics Engine data point under the shared `adhoc`
+ * monitor id, and one billed event keyed on the ping's own id and charged to the team's
+ * owner, with no `monitorId` key so it never surfaces on a monitor's usage card. Both
+ * are handed to `waitUntil` rather than awaited, since the caller already has its result.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,8 +128,6 @@ describe("recordAdhocPing billing", () => {
 		record();
 		await Promise.all(deferred.splice(0));
 
-		// A present-but-null key would put an ad-hoc ping on a monitor's usage card, which
-		// filters the meter by `monitorId`; an absent one keeps it in the team total only.
 		let [event] = ingestedEvents();
 		expect(ingestedEvents()).toHaveLength(1);
 		expect(event?.metadata).not.toHaveProperty("monitorId");
@@ -159,8 +147,6 @@ describe("recordAdhocPing billing", () => {
 
 		record();
 
-		// The call is back with the data point already written while the meter event is
-		// still in flight — which is the whole reason it goes out under `waitUntil`.
 		expect(pingResults.dataPoints).toHaveLength(1);
 		expect(deferred).toHaveLength(1);
 		expect(settled).toBe(false);
@@ -175,7 +161,7 @@ describe("recordAdhocPing billing", () => {
 			throw new Error("polar unavailable");
 		});
 
-		// A billing outage must not turn a check the caller already paid for into an error.
+		/** The check the caller already paid for stays successful even when billing itself fails. */
 		expect(() => record()).not.toThrow();
 		expect(pingResults.dataPoints).toHaveLength(1);
 
@@ -187,7 +173,7 @@ describe("recordAdhocPing billing", () => {
 
 		expect(() => record()).not.toThrow();
 
-		// Best-effort by design: a refused event is logged and dropped, never retried.
+		/** A refused event is logged once and the outcome stands as final. */
 		await expect(Promise.all(deferred.splice(0))).resolves.toBeDefined();
 		expect(pingResults.dataPoints).toHaveLength(1);
 	});

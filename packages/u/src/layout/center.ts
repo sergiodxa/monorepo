@@ -10,8 +10,8 @@ import { justify } from "./justify";
 
 /**
  * A zero-argument convenience pattern that centers content both ways.
- * Composes `u.flex()`, `u.items("center")`, and `u.justify("center")` —
- * no declaration of its own beyond what those three already produce.
+ * Composes `u.flex()`, `u.items("center")`, and `u.justify("center")`, so its
+ * output is exactly the declarations those three produce.
  *
  * @example u.center()
  * @example css({ display: "flex", alignItems: "center", justifyContent: "center" })

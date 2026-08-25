@@ -1,17 +1,9 @@
 /**
- * Walks the tag AST `html-parse-stringify` parses out of an already-`t()`-ed
- * translation string (e.g. `"Hello <0>Bob</0>, click <articleLink>here</articleLink>"`)
- * and rebuilds it as a `RemixNode` tree, splicing each tag's own children in
- * as the matching `components` entry's children. A tag name with no matching
- * `components` entry renders its children unwrapped instead of disappearing
- * or throwing, so an un-mapped tag degrades to plain text.
- *
- * A tag name that matches a real HTML void element (`link`, `br`, `img`,
- * `hr`, ...) is parsed as self-closing regardless of how the translation
- * actually wrote it — `html-parse-stringify` checks tag names against the
- * real HTML void-element list, not against `components`. Pick a `components`
- * key that isn't one of those names (`articleLink`, not `link`) for a tag
- * meant to wrap children.
+ * Walks the tag AST `html-parse-stringify` parses out of a translation
+ * string and rebuilds it as a `RemixNode` tree, splicing each tag's own
+ * children into the matching `components` entry; an unmatched tag renders
+ * unwrapped as plain text. A `components` key matching a real HTML void
+ * element (`link`, `br`, ...) parses as self-closing regardless of intent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

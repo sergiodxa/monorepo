@@ -1,3 +1,9 @@
+/**
+ * Tests for the immediate logger's console output formatting.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Logger } from "./logger";

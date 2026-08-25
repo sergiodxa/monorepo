@@ -15,11 +15,9 @@ import { MAX_CACHE_TAG_HEADER_LENGTH, TAG_SEPARATOR } from "./platform";
 import { validateTag } from "./validate-tag";
 
 /**
- * Builds the header value for a tag list, dropping repeats while keeping the
- * order the caller wrote so the header stays readable in a response dump.
- *
- * An empty list is rejected rather than serialized to an empty header, because
- * an empty `Cache-Tag` reads as "tagged" while purging nothing.
+ * Builds the header value for a tag list, dropping repeats while preserving
+ * caller order. An empty list is rejected instead of being serialized into a
+ * header that would read as tagged while purging nothing.
  *
  * @param tags - Tags from a vocabulary; repeats are collapsed.
  * @returns The comma-separated header value.

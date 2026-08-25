@@ -1,11 +1,7 @@
 /**
  * View model for the verification signal on the profile page: the badge beside the
- * address, and — while the address is unconfirmed — the panel offering a resend and the
- * sentence reporting what the last resend did.
- *
- * The outcome arrives as a query parameter, so this is also where an unrecognized value is
- * dropped: the parameter is in a URL anybody can retype, and a page must not render a
- * message because somebody put one in their own address bar.
+ * address, the resend panel shown while unconfirmed, and the sentence reporting the
+ * last resend's outcome, recognizing only values this app's own redirects produce.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,10 +17,9 @@ import { VERIFICATION_TTL_MS } from "~/app/services/email-verification";
 export const RESEND_OUTCOME_PARAM = "resend";
 
 /**
- * The outcomes the profile page has a sentence for.
- *
- * `not_needed` is absent on purpose: it means the address was already confirmed, and the
- * page reached with it renders the confirmed state, which says so on its own.
+ * The outcomes the profile page has a sentence for: only the ones where the reader
+ * still needs feedback. A `not_needed` result lands on the confirmed page, which
+ * states its own status.
  */
 const REPORTED_OUTCOMES: readonly VerificationSendOutcome[] = ["sent", "suppressed", "failed"];
 
@@ -50,7 +45,7 @@ export namespace EmailVerificationViewModel {
 		action: string;
 		/** Where the resend button posts. */
 		actionHref: string;
-		/** What the last resend did, or `null` when this is not a redirect from one. */
+		/** What the last resend did; `null` outside a resend redirect. */
 		notice: string | null;
 	}
 }
@@ -58,6 +53,9 @@ export namespace EmailVerificationViewModel {
 export default class EmailVerificationViewModel {
 	/**
 	 * Builds the profile page's verification props.
+	 *
+	 * The `minutes` value quotes `VERIFICATION_TTL_MS`, the same constant that sizes the
+	 * token and the resend cooldown, so the notice always names the window the token backs.
 	 *
 	 * @param t - The request's translator.
 	 * @param emailVerifiedAt - `subjects.email_verified_at`, as epoch milliseconds or null.
@@ -82,8 +80,6 @@ export default class EmailVerificationViewModel {
 			description: t.t("profile.view.emailVerification.description"),
 			action: t.t("profile.view.emailVerification.action"),
 			actionHref,
-			// The lifetime the sentence quotes comes from the same constant the token and the
-			// resend window are cut from, so the page cannot promise a window they do not share.
 			notice: reported
 				? t.t(OUTCOME_KEYS[outcome as string]!, { minutes: VERIFICATION_TTL_MS / 60_000 })
 				: null,

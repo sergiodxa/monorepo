@@ -1,9 +1,8 @@
 /**
- * Auth middleware and session-identity helpers. The whole viewer profile (subject id,
- * name, email, avatar) is written into the session at login — there is no local users
- * table to verify against — so the session auth scheme simply reads those keys back.
- * Exposes helpers to read the current viewer, log in/out, and get/set the upstream
- * OIDC id token used for SSO logout. Exists as the app's identity access layer.
+ * Auth middleware and session-identity helpers. The whole viewer profile (subject id, name,
+ * email, avatar) is written into the session at login, making the session itself the source
+ * of truth the auth scheme reads back. Exposes helpers to read the current viewer, log
+ * in/out, and get/set the upstream OIDC id token used for SSO logout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

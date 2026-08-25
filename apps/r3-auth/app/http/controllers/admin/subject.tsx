@@ -2,7 +2,7 @@
  * GET/POST /admin/subjects/:subjectId — one account with its live sessions and provider
  * links, plus the three intents that act on it: delete the account, revoke one session,
  * or revoke them all. Every session id handled here is that session's refresh token, so
- * it is read from the form, used to delete by, and never logged.
+ * it travels from the form straight into the delete while the logs record only counts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -141,10 +141,8 @@ export default createController(routes.admin.subject, {
 
 		/**
 		 * POST /admin/subjects/:subjectId — deletes the account, or revokes one or all of
-		 * its sessions.
-		 *
-		 * A revocation redirects back to this page rather than answering with a body, so
-		 * the list the administrator is looking at is the list that now exists.
+		 * its sessions. A delete removes sessions and grants first, so an interrupted run
+		 * leaves every remaining row pointing at a subject that still exists.
 		 */
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
@@ -161,7 +159,6 @@ export default createController(routes.admin.subject, {
 
 			if (intent.intent === "revoke-session") {
 				await Session.deleteById(db, intent.sessionId);
-				// The session id is the refresh token: the count is logged, never the value.
 				ctx.logger.info("admin_subject_session_revoked", { subjectId });
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
@@ -172,8 +169,6 @@ export default createController(routes.admin.subject, {
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
-			// Sessions and grants first: with no transactions, a deletion interrupted
-			// halfway must never leave rows pointing at a subject that is gone.
 			await Session.deleteBySubjectId(db, subjectId);
 			await Grant.deleteBySubjectId(db, subjectId);
 			await Subject.delete(db, subjectId);

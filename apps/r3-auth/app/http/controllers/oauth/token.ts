@@ -35,7 +35,7 @@ const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
  * Turns an engine failure into the OAuth error envelope its `error` code names.
  *
  * A protocol error is the client's to fix and answers `400` with its own code; anything
- * else is this server's fault and answers `server_error`, never leaking why.
+ * else is this server's fault and answers an opaque `server_error`.
  */
 function tokenError(error: unknown): Response {
 	let ctx = getContext();
@@ -58,7 +58,11 @@ function tokenError(error: unknown): Response {
 	);
 }
 
-/** POST /oauth/token — runs one of the three supported grants. */
+/**
+ * POST /oauth/token — runs one of the three supported grants. Client-credentials
+ * callers are server-to-server, so their budget is spent per client; browser-driven
+ * grants are budgeted per address, all an unauthenticated code exchange offers.
+ */
 export default createAction(
 	routes.oauth.token,
 	inject([Database, RateLimiters] as const, async (db, limiters) => {
@@ -76,9 +80,6 @@ export default createAction(
 		let body = result.data;
 		let credentials = readClientCredentials(ctx.request.headers, body);
 
-		// Client-credentials callers are server-to-server and share no address worth
-		// budgeting, so they are counted per client; browser-driven grants are counted
-		// per address, which is all an unauthenticated code exchange offers.
 		let limited = await spendRateLimit(
 			limiters.token,
 			body.grant_type === "client_credentials" && credentials

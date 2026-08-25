@@ -134,8 +134,6 @@ export default createAction(routes.app.team.alerts.history, {
 												</Table.Cell>
 												<Table.Cell>
 													<Badge {...badgeVariant(STATUS_BADGE_TONE[event.status] ?? "neutral")}>
-														{/* A status with no label of its own falls back to the generic
-														    "Skipped" one rather than rendering its key. */}
 														{ctx.i18next.t([
 															`page.alertHistory.table.status.${event.status}`,
 															"page.alertHistory.table.status.skipped",

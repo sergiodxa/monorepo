@@ -1,7 +1,7 @@
 /**
  * Tests for slug generation, covering diacritics folded through NFKD, non-Latin
- * input that must survive instead of collapsing to an empty slug, and the
- * separator handling that keeps a slug free of leading, trailing, or repeated
+ * input that keeps its letters instead of an empty slug, and the separator
+ * handling that keeps a slug free of leading, trailing, or repeated
  * separators.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

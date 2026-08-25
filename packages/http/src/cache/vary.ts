@@ -10,15 +10,9 @@
 import { Vary } from "remix/headers";
 
 /**
- * Adds request header names to a response's `Vary`, keeping whatever is there.
- *
- * Every listed header multiplies the number of variants a shared cache stores
- * for the URL, so the list is a cost, not documentation: varying on `Cookie`
- * effectively disables shared caching for any request that carries one, and a
- * response that genuinely differs per user wants `Policies.private()` instead.
- *
- * The `Headers` object is mutated in place and returned, and names are
- * normalized to lowercase, which the specification treats as equivalent.
+ * Adds request header names to a response's `Vary`, keeping whatever is
+ * there. Each header multiplies the cache variants stored for the URL, so
+ * varying on `Cookie` disables shared caching; prefer `Policies.private()`.
  *
  * @param headers - Response headers to merge into; mutated in place.
  * @param names - Request header names the response depends on.

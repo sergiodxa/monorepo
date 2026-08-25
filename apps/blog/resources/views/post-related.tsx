@@ -1,8 +1,7 @@
 /**
  * View for the "Related tutorials" section shown at the bottom of a post page.
- * Defines the `PostRelatedView.Item`/`Model` shapes and returns a renderer that
- * builds a responsive grid of related-tutorial cards, collapsing to an empty
- * fragment when there are no related items to display.
+ * Renders a responsive grid of related-tutorial cards, collapsing to an empty
+ * fragment when the model carries no items.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,7 +19,7 @@ import { Heading, Link } from "@pkg/ui";
  */
 export namespace PostRelatedView {
 	/**
-	 * Represents one related tutorial entry shown in the section.
+	 * One related tutorial entry shown in the section.
 	 */
 	export interface Item {
 		href: string;
@@ -29,7 +28,7 @@ export namespace PostRelatedView {
 	}
 
 	/**
-	 * Supplies the list of related entries rendered by the view.
+	 * The related entries rendered by the view.
 	 */
 	export interface Model {
 		items: Array<Item>;

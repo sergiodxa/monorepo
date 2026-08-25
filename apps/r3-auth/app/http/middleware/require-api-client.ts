@@ -47,28 +47,21 @@ export interface ApiClient {
 const CLIENT_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 /**
- * Shape a cached client entry must have to be used.
- *
- * Only `id` is required and unknown keys are stripped, because this cache is shared with
- * another worker serving the same API: an entry written there carries that worker's whole
- * client row, one written here carries nothing else, and the id is all either side reads.
+ * Only `id` is required and unknown keys are stripped, since this cache entry is shared
+ * with another worker whose record carries its own whole client row — the id is the
+ * only field either side reads.
  */
 const CachedClientSchema = s.object({ id: s.string() });
 
-/** KV key a resolved client is cached under. Shared at runtime; do not reshape it. */
+/** KV key a resolved client is cached under, shared at runtime: its shape must stay exactly this. */
 function clientCacheKey(clientId: string): string {
 	return `clients:${clientId}`;
 }
 
 /**
- * Verifies a request's bearer token and resolves the client it was issued to.
- *
- * The token must verify against this server's own keys **and** name this server as its
- * audience, which is true only of a `client_credentials` token: a person's access token
- * is issued for the relying party's client id, so an end-user token can never read the
- * machine API. The resolved client is cached in KV for a week, which is what keeps a hot
- * API path off the database — and is also how long a deleted client keeps working, the
- * behavior this cache has always had.
+ * The audience check accepts only a `client_credentials` token, since a person's access
+ * token carries the relying party's client id as its audience. The resolved client stays
+ * cached in KV for a week, so a deleted client keeps answering that long.
  *
  * @returns The calling client, or `null` for a missing, malformed or unverifiable token.
  */
@@ -128,12 +121,9 @@ async function resolveClient(
 }
 
 /**
- * Requires a valid client-credentials bearer token, publishing `ctx.apiClient` and
- * `ctx.timing` for the endpoint behind it.
- *
- * A refusal is a bare `401 {"error":"Unauthorized"}` with no detail about which check
- * failed: every legitimate caller is a machine holding a working credential, so a more
- * specific message would only ever be read by someone probing.
+ * A bare `401 {"error":"Unauthorized"}` answers every failure path alike, staying
+ * opaque to anyone probing which check tripped it. `Server-Timing` merges in after
+ * `next()` resolves, capturing the endpoint's own work.
  */
 export function requireApiClient(): Middleware {
 	return async (ctx, next) => {
@@ -153,9 +143,6 @@ export function requireApiClient(): Middleware {
 
 		ctx.apiClient = client;
 
-		// Written after the endpoint has answered, so its own measurements are included.
-		// Every response under `/api` is constructed by this app, so its headers are
-		// mutable.
 		let response = await next();
 		collector.toHeaders(response.headers);
 		return response;

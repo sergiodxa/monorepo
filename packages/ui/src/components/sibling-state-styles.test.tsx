@@ -17,16 +17,18 @@ import { RadioGroup } from "./radio-group";
 import { Tooltip } from "./tooltip";
 
 /**
- * The fingerprint of the bug this file exists for: the style serializer only
- * accepts a style-tree key as a nested selector when it starts with `&`, `@`,
- * `:`, `[` or `.`. A key leading with an element name (`input:checked ~ &`)
- * falls through to the declaration path instead, where its object of styles is
- * stringified — so the rule reaches the stylesheet as
- * `input:checked ~ &: [object Object];` and every browser drops it.
+ * The fingerprint of the bug this file exists for: a style-tree key not
+ * starting with `&`, `@`, `:`, `[`, or `.` falls through to the declaration
+ * path, where the rule serializes as `input:checked ~ &: [object Object];`.
  */
 const DROPPED_RULE_FINGERPRINT = "[object Object]";
 
 describe("styles driven by a preceding sibling's state", () => {
+	/**
+	 * The filled dot, the ring, and the focus outline are three separate
+	 * rules; asserting all three catches a fix that only restores one and
+	 * still leaves the radio looking unchecked.
+	 */
 	test("a radio's indicator carries real checked and focus rules", async () => {
 		let html = await renderToString(
 			<RadioGroup aria-label="Shipping">
@@ -37,9 +39,6 @@ describe("styles driven by a preceding sibling's state", () => {
 		expect(html).not.toContain(DROPPED_RULE_FINGERPRINT);
 		expect(html).toContain(":is(input:checked) ~ &");
 		expect(html).toContain(":is(input:focus-visible) ~ &");
-		// The filled dot, the ring around it, and the focus outline are three
-		// separate rules; a fix that only restored one would still leave a radio
-		// looking unchecked.
 		expect(html).toContain("background-color: var(--ui-brand-bg-solid)");
 		expect(html).toContain("border-color: var(--ui-brand-bg-solid)");
 		expect(html).toContain("outline-color: var(--ui-brand-ring)");
@@ -58,13 +57,15 @@ describe("styles driven by a preceding sibling's state", () => {
 		expect(html).toContain("--ui-box-shadow-ring: 0 0 0 2px var(--ui-brand-bg-solid)");
 	});
 
+	/**
+	 * The hover path is the only one gated on pointer capability, so a
+	 * coarse-pointer device falls back to the focus/popover path instead.
+	 */
 	test("a tooltip opens on its trigger's hover under a fine pointer", async () => {
 		let html = await renderToString(<Tooltip id="tip">Copy</Tooltip>);
 
 		expect(html).not.toContain(DROPPED_RULE_FINGERPRINT);
 		expect(html).toContain(":is(*:hover) ~ &");
-		// The hover path is deliberately the only one gated on pointer capability,
-		// so the coarse-pointer fallback stays the focus/popover path.
 		expect(html).toContain("@media (hover: hover)");
 	});
 });

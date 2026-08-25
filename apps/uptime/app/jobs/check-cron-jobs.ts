@@ -5,10 +5,8 @@
  * message on every transition into `late`/`missed`, per `docs/cron-job-monitoring.md`.
  *
  * This is the tightest budget of any sweep — one minute — so monitors are evaluated in
- * bounded-concurrency batches and notification is handed to the `notify` consumer instead
- * of dispatched inline. An incident that transitions many monitors at once no longer
- * serialises an email send per monitor inside the sweep, which used to make the system
- * slower to notice further incidents exactly when it mattered most (ADR-008).
+ * bounded-concurrency batches, with notifications handed off to the `notify` consumer for
+ * delivery, keeping a burst of transitions from slowing down the sweep itself (ADR-008).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -76,10 +74,8 @@ export class CheckCronJobsJob extends Job {
 
 	/**
 	 * Applies the grace-period arithmetic to one monitor, returning `null` when it stays
-	 * where it is. A transition persists the new status and reports the notification it
-	 * warrants — with the status the monitor held *before* the update, which is what makes
-	 * a recovery detectable. Two batches never touch the same monitor, so running these
-	 * concurrently introduces no race the sequential version didn't have.
+	 * where it is. A transition persists the new status and reports the notification with
+	 * the status the monitor held *before* the update, which is what makes a recovery detectable.
 	 */
 	private async evaluate(
 		db: Database,
@@ -87,14 +83,9 @@ export class CheckCronJobsJob extends Job {
 		now: number,
 	): Promise<{ notification: NotifyMessage | null } | null> {
 		/**
-		 * A row with no expected-arrival time cannot be judged, and until recently it was
-		 * also never selected — which is how five monitors reported healthy for ten days
-		 * while nothing pinged them. The sweep repairs it from the schedule rather than
-		 * skipping it, so the next pass has something to measure against and the monitor
-		 * rejoins the population that can go late.
-		 *
-		 * No transition this pass: the recomputed time is in the future by construction, so
-		 * there is nothing yet to be late for.
+		 * A row with no expected-arrival time can't be judged, so the sweep repairs it from the
+		 * schedule instead of skipping it — closing the gap where such a monitor read healthy
+		 * indefinitely because nothing ever forced a next-expected time to exist.
 		 */
 		if (monitor.next_expected_at === null) {
 			let repaired = CronJobMonitor.calculateNextExpected(
@@ -105,7 +96,7 @@ export class CheckCronJobsJob extends Job {
 			if (repaired === null) {
 				/**
 				 * An enabled monitor whose expression no longer parses can never be measured,
-				 * and nothing else in the system will say so. Left alone rather than guessed at.
+				 * and nothing else in the system says so; logging it here surfaces the problem.
 				 */
 				this.logger.error("job.check_cron_jobs.unschedulable", {
 					monitorId: monitor.id,
@@ -123,22 +114,15 @@ export class CheckCronJobsJob extends Job {
 		}
 
 		/**
-		 * The grace period is the tolerance, so nothing is late until it has elapsed. It used
-		 * to gate only `missed`, with `late` triggering the instant the expected time passed
-		 * — which made an every-minute monitor flap `healthy` -> `late` -> `healthy` on most
-		 * cycles, because the sweep runs on the same cadence as the ping and regularly got
-		 * there first. It also disagreed with the ping endpoint, which has always judged its
-		 * own `wasOnTime` against this same deadline: a ping could be recorded on time by one
-		 * half of the feature and late by the other.
+		 * The grace period is the tolerance, so nothing is late until it elapses — matching
+		 * the ping endpoint's own `wasOnTime` deadline judgment, so a ping is never on time by
+		 * one half of the system and late by the other.
 		 */
 		let lateThreshold = monitor.next_expected_at + monitor.grace_period_seconds * 1000;
 		/**
-		 * Missed is a whole skipped run, not merely a later shade of late: the deadline for
-		 * the *following* occurrence has also passed. Deriving it from the schedule rather
-		 * than from a multiple of the grace period keeps the meaning the same whether a job
-		 * runs every minute or once a week. A schedule that no longer parses leaves it
-		 * `null`, and the monitor stays late rather than being called missed on arithmetic
-		 * nobody could do.
+		 * Missed means the deadline for the *following* occurrence has also passed, computed
+		 * from the schedule itself so the meaning holds whether a job runs every minute or once
+		 * a week. An unparseable schedule leaves it `null`, keeping the monitor merely late.
 		 */
 		let followingExpected = CronJobMonitor.calculateNextExpected(
 			monitor.cron_expression,

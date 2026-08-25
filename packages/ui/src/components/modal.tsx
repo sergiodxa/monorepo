@@ -3,8 +3,7 @@
  * its `::backdrop` treatment, and every compound part, with the panel's own
  * pop-in and pop-out motion — a fade paired with a scale, entering from
  * slightly smaller and less opaque than rest and exiting back down to it —
- * already wired onto the host instead of left for a consumer to compose
- * through `mix` themselves.
+ * already wired onto the host.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,10 +33,9 @@ const PANEL_EXIT_SCALE = "0.95";
 const PANEL_ENTERED_SCALE = "none";
 
 /**
- * Prop types for {@link Modal} and its compound parts. Every part is an
- * alias of {@link Dialog}'s matching part, since {@link Modal} renders
- * straight through to {@link Dialog} rather than declaring an independent
- * markup shape of its own.
+ * Prop types for {@link Modal} and its compound parts. Every part aliases
+ * {@link Dialog}'s matching part, since {@link Modal} renders straight
+ * through to {@link Dialog}'s own markup.
  */
 export namespace Modal {
 	/** Every prop {@link Dialog.Props} accepts, unchanged. */
@@ -60,17 +58,9 @@ export namespace Modal {
 }
 
 /**
- * Renders {@link Dialog} with its panel's pop-in/pop-out motion already
- * applied through `mix`: the panel scales and fades between
- * {@link PANEL_EXIT_SCALE}/transparent and its resting size/full opacity
- * across the platform's own `open` state, timed by the animation layer's
- * `normal` duration and `standard` easing, and collapsing to an opacity-only
- * fade under `prefers-reduced-motion: reduce`. Every other detail (the
- * `::backdrop` treatment, the `ui-dialog` named container its compound parts
- * query, and the missing-`id` dev-mode contract check) rides along unchanged
- * from {@link Dialog}, since this component composes it directly instead of
- * duplicating its markup or styling. A `mix` passed to {@link Modal} itself
- * layers alongside the built-in motion rather than replacing it.
+ * Renders {@link Dialog} with its panel's pop-in/pop-out motion pre-wired
+ * through `mix`, collapsing to an opacity-only fade under reduced motion.
+ * A `mix` passed to {@link Modal} layers alongside the built-in motion.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props.
  * @returns The render function producing the animated panel's markup.
@@ -124,7 +114,7 @@ export function Modal(handle: Handle<Modal.Props>) {
 /**
  * Renders {@link Modal.HeaderProps.children} as the panel's header slot:
  * identical to {@link Dialog.Header}, since {@link Modal} shares its panel
- * markup with {@link Dialog} rather than declaring its own header.
+ * markup with {@link Dialog}.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the header slot's markup.

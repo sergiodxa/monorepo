@@ -2,9 +2,8 @@
  * Ordering rules and seek predicates for keyset paging.
  *
  * Keyset paging is only correct when the ordering is total, so the ordering is
- * validated before any query runs, and the seek predicate is built as an explicit
- * lexicographic comparison over every sort key rather than a single `>` on the
- * first one.
+ * validated before any query runs, and the seek predicate compares every sort key
+ * in lexicographic order.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,10 +48,7 @@ export interface SeekKey {
  * Rejects orderings that cannot page deterministically.
  *
  * A single sort key is refused unless the caller declares it unique, because rows
- * sharing a sort value straddle the page boundary and are then skipped or served
- * twice. Uniqueness itself cannot be observed from here, so it is the caller's
- * declaration that is enforced, and duplicates are caught because a repeated
- * column adds no tiebreaking at all.
+ * sharing that value would straddle a page boundary and be skipped or served twice.
  *
  * @param orderBy Sort keys, most significant first; the last one is the tiebreaker.
  * @param unique Whether a one-column ordering is already unique, such as a primary key.
@@ -132,11 +128,8 @@ export function zipSeekKeys(
 /**
  * Builds the strict lexicographic comparison that seeks past a page boundary.
  *
- * For keys `(a, b)` the result is `a > va OR (a = va AND b > vb)`, with each
- * operator flipped for a descending key and flipped again when seeking backward.
- * Predicates are constructed directly rather than through `gt`/`eq`, because those
- * helpers reinterpret a dotted string value as a column reference, which would
- * turn a cursor value like `"a.b"` into a column-to-column comparison.
+ * Every comparison predicate carries an explicit column and value, keeping a cursor
+ * value that contains a dot, like `"a.b"`, safe as a literal in every comparison.
  *
  * @param keys Sort keys paired with the boundary values, most significant first.
  * @param direction Whether to seek forward past the boundary or backward before it.
@@ -192,9 +185,8 @@ function seekOperator(key: OrderDirection, seek: CursorDirection): "gt" | "lt" {
 /**
  * Flips every direction in an ordering.
  *
- * Backward paging runs the query in reverse so the rows nearest the cursor are the
- * ones the limit keeps; the caller reverses the rows again before returning them,
- * so a page always reads in the requested order.
+ * Backward paging runs the query in reverse so the limit keeps the rows nearest the
+ * cursor; the caller reverses them again, so a page always reads in requested order.
  *
  * @param orderBy Ordering to invert.
  * @returns A new ordering with each direction flipped.
@@ -209,10 +201,8 @@ export function reverseOrdering(orderBy: readonly OrderByTuple[]): OrderByTuple[
 /**
  * Reads a sort key's value off a result row.
  *
- * A qualified ordering column (`"pings.created_at"`) arrives on the row under its
- * unqualified name, so both spellings are tried; a column absent from the
- * projection reads as `undefined` and fails cursor encoding rather than silently
- * producing a cursor that seeks from nothing.
+ * A qualified column, like `"pings.created_at"`, is read under its unqualified name;
+ * an unprojected column reads as `undefined`, which fails cursor encoding.
  *
  * @param row A row returned by the query.
  * @param column Ordering column name, qualified or not.

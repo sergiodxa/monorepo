@@ -15,10 +15,8 @@ import { Discounts, Product } from "~/app/data/product";
 import { FakePolarClient, makeDiscount } from "~/app/lib/test/polar";
 import { findApplicableDiscount } from "~/app/services/discount";
 
-/** An hour, as milliseconds, for building dates either side of "now". */
 const HOUR = 60 * 60 * 1000;
 
-/** Runs the rules against a single scripted discount and returns the chosen one. */
 async function select(discount: ReturnType<typeof makeDiscount>) {
 	let result = await findApplicableDiscount(new FakePolarClient({ discounts: [discount] }));
 	if (!isSuccess(result)) throw new Error("expected the lookup to succeed");

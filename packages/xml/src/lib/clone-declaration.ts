@@ -1,3 +1,10 @@
+/**
+ * Provides a helper for cloning XML declaration data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { XML } from "../index";
 
 /**

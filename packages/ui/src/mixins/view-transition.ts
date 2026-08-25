@@ -1,23 +1,9 @@
 /**
  * Bridges a SharedElement's enclosing Frame to the native View Transition
- * API: every time that Frame reloads — the mechanism this framework uses to
- * update the page's content without a full navigation — the reload now runs
- * inside a `document.startViewTransition()`, so elements sharing a
- * `view-transition-name` across the reload's old and new content morph
- * between their old and new positions and sizes instead of popping. A Frame
- * reloaded by more than one SharedElement shares a single transition between
- * them, rather than opening one per element.
- *
- * Why JS: a cross-document navigation gets a view transition automatically
- * from the browser once the page declares `@view-transition { navigation: auto; }`
- * in CSS — no script involved. A Frame reload never gets that treatment: it
- * updates the same document in place, and the platform only opens a view
- * transition when script explicitly asks for one around the update, which a
- * Frame reload's own fetch-then-patch cycle does not do on its own.
- * No-JS baseline: the Frame still reloads and shows its new content exactly
- * as it would without this mixin; only the cross-fade/morph animation between
- * old and new state is unavailable, and a SharedElement inside the reload
- * simply swaps in place instead of appearing to move.
+ * API: each Frame reload now runs inside `document.startViewTransition()`,
+ * since the platform only opens one when script explicitly wraps an
+ * in-place update, so elements sharing a `view-transition-name` morph
+ * across the reload instead of popping, one transition shared per Frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,9 +19,8 @@ import { trackHostNode } from "./track-host-node";
 
 /**
  * `data-*` attribute {@link viewTransition} sets on a SharedElement's host
- * for as long as its Frame's transition is in flight, so the element's own
- * styling (or an app's) can suppress hover affordances or pointer input for
- * the span of the morph.
+ * while its Frame's transition is in flight, so styling can suppress hover
+ * affordances or pointer input for the span of the morph.
  */
 export const TRANSITIONING_ATTRIBUTE = "data-transitioning";
 
@@ -56,13 +41,9 @@ declare global {
 type NativeViewTransition = ReturnType<Document["startViewTransition"]>;
 
 /**
- * Dispatched on a SharedElement's host by {@link viewTransition} each time its
- * Frame starts reloading, carrying the native transition the reload now runs
- * inside so a consumer can await its `ready`/`finished` promises or call
- * `skipTransition()` — or `null` when no transition could be opened, because
- * the browser has no `document.startViewTransition()` to call, or the
- * visitor prefers reduced motion, in which case the reload still proceeds
- * plainly.
+ * Dispatched on a SharedElement's host by {@link viewTransition} each time
+ * its Frame starts reloading, carrying the native transition so a consumer
+ * can await it or call `skipTransition()` — or `null` when the browser lacks `startViewTransition()` or the visitor prefers reduced motion.
  */
 export class ViewTransitionEvent extends Event {
 	/** The transition the reload now runs inside, or `null` when none could be opened. */
@@ -78,10 +59,9 @@ export class ViewTransitionEvent extends Event {
 }
 
 /**
- * Bookkeeping {@link viewTransition} keeps per Frame for the span of one
- * reload, shared by every SharedElement mixin instance whose closest Frame is
- * the same one, so a Frame reloaded by many of them opens exactly one native
- * transition instead of one per element.
+ * Bookkeeping {@link viewTransition} keeps per Frame for one reload's span,
+ * shared by every SharedElement instance on that Frame, so many of them
+ * open exactly one native transition instead of one each.
  */
 interface FrameTransitionState {
 	/** The transition the current reload runs inside, or `null` when none could be opened. */
@@ -101,10 +81,8 @@ const frameTransitions = new WeakMap<FrameHandle, FrameTransitionState>();
 
 /**
  * Opens (or reuses) the native transition wrapping `frame`'s current reload,
- * skipping `document.startViewTransition()` entirely when the browser
- * doesn't implement it or the visitor prefers reduced motion. The transition
- * stays open until {@link settleFrameTransition} reports the reload complete,
- * regardless of how many callers observe the same reload.
+ * skipping `startViewTransition()` when unsupported or reduced motion is
+ * preferred, staying open until {@link settleFrameTransition} reports it done.
  *
  * @param frame Frame whose reload this transition wraps.
  */
@@ -130,11 +108,9 @@ function ensureFrameTransition(frame: FrameHandle): FrameTransitionState {
 }
 
 /**
- * Marks `frame`'s in-flight transition state complete, resolving its update
- * callback right away if the browser already invoked it, or leaving
- * {@link ensureFrameTransition}'s promise executor to resolve it immediately
- * once the browser does invoke it, then clears the state so the next reload
- * opens a fresh transition.
+ * Marks `frame`'s in-flight transition complete, resolving its update
+ * callback now if already invoked, or leaving {@link ensureFrameTransition}'s
+ * executor to resolve it once invoked, then clears state for the next reload.
  *
  * @param frame Frame whose reload just finished.
  */
@@ -148,29 +124,9 @@ function settleFrameTransition(frame: FrameHandle): void {
 }
 
 /**
- * Wraps a SharedElement's enclosing Frame reload in a native view transition:
- * as soon as the Frame's reload starts, this opens a
- * `document.startViewTransition()` whose update resolves only once the
- * reload's fetched content has actually committed — the "old" snapshot lands
- * before the reload's network round-trip, the "new" one after, exactly the
- * window a Frame reload's own asynchrony provides. Elements sharing a
- * `view-transition-name` across the old and new content, set through CSS,
- * morph between their old and new positions and sizes instead of popping.
- *
- * A Frame reloaded by several SharedElement instances shares this same
- * transition between them: only the first instance to observe a given
- * reload's start opens it, and the rest read the one already open.
- *
- * Opens no transition — letting the reload proceed exactly as it would
- * without this mixin — when the browser has no
- * `document.startViewTransition()`, or when the visitor's system requests
- * `prefers-reduced-motion: reduce`. Either way {@link ViewTransitionEvent}
- * still reports `null`, so a consumer can tell the two apart from a
- * transition that actually opened.
- *
- * While its Frame's transition is in flight the host carries
- * {@link TRANSITIONING_ATTRIBUTE}, so its own styling (or an app's) can
- * suppress hover affordances or pointer input for the span of the morph.
+ * Wraps a SharedElement's enclosing Frame reload in one native view
+ * transition, shared by every SharedElement on that Frame, so elements
+ * sharing a `view-transition-name` morph instead of popping — settling `finished` on success and failure alike keeps a skipped transition from stranding the host or surfacing as an unhandled rejection.
  *
  * @returns A mixin descriptor for a SharedElement's `mix` prop.
  * @example
@@ -194,10 +150,6 @@ export const viewTransition: MixinFactory<HTMLElement> = createMixin<HTMLElement
 			let stopTransitioning = () => getHostNode()?.removeAttribute(TRANSITIONING_ATTRIBUTE);
 
 			hostNode?.toggleAttribute(TRANSITIONING_ATTRIBUTE, true);
-			// `finished` rejects when the browser skips or aborts the transition,
-			// which still ends it. Settling both ways drops the attribute whichever
-			// happens, and keeps a skipped transition from stranding the host as
-			// transitioning or surfacing as an unhandled rejection.
 			void state.transition.finished.then(stopTransitioning, stopTransitioning);
 		},
 		{ signal: handle.signal },

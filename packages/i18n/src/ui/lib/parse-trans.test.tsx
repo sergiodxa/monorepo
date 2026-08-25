@@ -1,3 +1,10 @@
+/**
+ * Tests `parseTrans`'s tag-splicing and unmatched-tag fallback behavior.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, RemixElement } from "remix/ui";
 
 import { renderToString } from "remix/ui/server";

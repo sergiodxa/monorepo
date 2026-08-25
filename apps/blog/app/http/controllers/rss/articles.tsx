@@ -38,9 +38,7 @@ export default createAction(
 		let articles = await ArticlePost.findAll(db, { includePreview: false });
 
 		/**
-		 * Channel metadata used by clients to identify this feed.
-		 *
-		 * `link` points to the human-readable articles index, not to a single post.
+		 * Channel `link` targets the human-readable articles index page.
 		 */
 		let rss = new RSS({
 			title: "Articles — Sergio Xalambrí",

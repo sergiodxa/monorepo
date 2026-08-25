@@ -1,3 +1,9 @@
+/**
+ * Exercises createURLChildren's node ordering per the sitemap protocol.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { createURLChildren } from "./create-url-children";

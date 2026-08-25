@@ -53,9 +53,8 @@ export interface SignOptions {
 export interface SignedDelivery {
 	/**
 	 * The three signature headers, freshly constructed and owned by the caller:
-	 * add a content type, a user agent, or anything else by mutating it. Spreading
-	 * a `Headers` instance yields no entries, so copy it with `new Headers(...)`
-	 * instead of spreading it into a literal.
+	 * mutate freely to add a content type or user agent. Copy it with
+	 * `new Headers(...)`; spreading a `Headers` instance yields no entries.
 	 */
 	headers: Headers;
 
@@ -78,9 +77,8 @@ export interface SignedDelivery {
 /**
  * Converts a caller's timestamp into the whole seconds the header carries.
  *
- * Fractional seconds are floored, matching how receivers read the header, and an
- * invalid `Date` or a non-integer number is rejected rather than silently
- * becoming `NaN` in the signed content.
+ * Fractional seconds are floored to match how receivers read the header,
+ * so only a valid, whole-second timestamp reaches the signed content.
  */
 function toEpochSeconds(timestamp: Date | number): number | null {
 	if (timestamp instanceof Date) {
@@ -95,11 +93,9 @@ function toEpochSeconds(timestamp: Date | number): number | null {
 }
 
 /**
- * Turns a payload into the body text to sign, passing strings through untouched.
- *
- * A string is assumed to already be the serialized body, which is how a caller
- * signs bytes it did not build itself; anything else is JSON encoded once, here,
- * so the signed text and the sent text cannot diverge.
+ * Turns a payload into the body text to sign, passing strings through
+ * untouched since a caller may sign bytes it did not build itself;
+ * anything else is JSON encoded once, here, so the signed and sent text match.
  */
 function serializeBody(payload: unknown): Result<string, InvalidDeliveryError> {
 	if (typeof payload === "string") return success(payload);
@@ -150,7 +146,6 @@ export async function sign(
 
 	let signature = formatSignature(mac.data);
 
-	// Built per call so the caller can mutate it without touching a shared value.
 	let headers = new Headers();
 	headers.set(ID_HEADER, options.id);
 	headers.set(TIMESTAMP_HEADER, String(timestamp));

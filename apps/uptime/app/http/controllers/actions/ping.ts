@@ -1,21 +1,9 @@
 /**
- * The dashboard's quick-check action: `POST /actions/:team/run-ping`. Takes a URL typed
- * into the dashboard form, probes it once with the same `HttpCheck` a monitor's
- * scheduled check uses, and hands the result back through the session so the dashboard
- * can render it. Nothing is stored, no monitor is created or touched, and no alert is
- * evaluated — the same contract `POST /api/v1/ping` offers, reached from the UI instead
- * of from a key.
- *
- * Only HTTP. The API surface also offers DNS and TCP pings, but a URL box is the shape
- * of an HTTP question, and asking one control to also accept a bare domain or a
- * `host:port` would make the field mean three things depending on what was typed into
- * it.
- *
- * The result travels through the session rather than as a rendered response, because
- * this is a plain form post: the action redirects back to the dashboard, so a refresh
- * cannot re-run (and re-bill) the check, and the quick-check fragment is the one place
- * that knows how to render the result next to the form that asked for it. See
- * {@link QUICK_PING_RESULT} for why it is a plain value and not a flash.
+ * The dashboard's quick-check action: `POST /actions/:team/run-ping`. Probes a
+ * submitted URL once with the same `HttpCheck` a monitor's scheduled check
+ * uses, matching `POST /api/v1/ping`'s contract without storing anything or
+ * touching a monitor. HTTP only: a URL box asks an HTTP question, so DNS and
+ * TCP targets stay on the API surface that takes them explicitly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,15 +30,9 @@ import { HttpCheck } from "~/app/services/http-check";
 import routes from "~/routes/web";
 
 /**
- * Defaults the quick check probes with. Deliberately not configurable from the
- * dashboard: the form asks one question — "does this URL answer?" — and every control
- * added to it is a control that makes the answer slower to get. A caller who needs to
- * vary the method, the expected status or the region has `POST /api/v1/ping`, which
- * takes all of them.
- *
- * `GET` rather than the monitors' `HEAD` default, because a URL typed in by hand is
- * usually a page or a healthcheck endpoint, and some of those answer `HEAD` with a 405
- * that says nothing about whether the service is up.
+ * Fixed defaults for the quick check; `POST /api/v1/ping` exposes the tunable
+ * version for a caller that needs another method, status, or region. GET
+ * matches what a hand-typed URL usually is: a page or health endpoint that answers GET.
  */
 const QUICK_CHECK = {
 	method: "GET",
@@ -80,22 +62,16 @@ export interface QuickPingResult {
 export type QuickPingErrorCode = "invalidUrl" | "subscriptionRequired";
 
 /**
- * A refusal, reported where a result would have been.
- *
- * It travels the same way a result does — stored for the quick-check fragment to render —
- * rather than being flashed for the page shell to draw, because that fragment is the only
- * thing the scripted path re-renders: the form island reloads its own frame and nothing
- * else, so a message flashed here would go unseen and then surface, stale, on whatever
- * page happened to load next. Carrying a code rather than a message keeps the stored value
- * free of a language choice made in a different request.
+ * A refusal, reported where a result would have been. The quick-check
+ * fragment renders it straight from storage on the scripted path, and it
+ * carries a code so the message text is chosen at render time.
  */
 export interface QuickPingError {
 	kind: "error";
 	/**
-	 * This submission's id. It is what tells one answer apart from the answer before it,
-	 * which the fragment needs because the toast it renders is patched into a bar that is
-	 * already on screen rather than built fresh: two answers that read the same would
-	 * otherwise be the same element, still holding the finished state of its own fade.
+	 * This submission's id, distinguishing one answer from the one before it:
+	 * the toast patches into a bar already on screen, so two answers that read
+	 * the same would reuse the same element and its already-finished fade.
 	 */
 	id: string;
 	code: QuickPingErrorCode;
@@ -106,23 +82,15 @@ export type QuickPingOutcome = QuickPingResult | QuickPingError;
 
 /**
  * Session key the quick-check fragment reads a {@link QuickPingOutcome} from.
- *
- * Deliberately a plain session value rather than a flash, even though "show it once" is
- * exactly what a flash is for. A delivered flash marks the session dirty the moment it
- * is loaded, and the session middleware saves after the handler returns — which, for the
- * no-JavaScript path, is the *dashboard document* request, whose save runs before its
- * streamed frames have resolved. The flash would be cleared before the fragment that
- * needs it ever ran, and the check's answer would never reach the page. A plain value leaves
- * that request clean, so it saves nothing, and the fragment removes the value itself.
+ * A plain value: the no-JavaScript path's session save finishes before the
+ * streamed dashboard frames resolve, so the value survives for the fragment to read.
  */
 export const QUICK_PING_RESULT = "pingResult";
 
 /**
- * POST /actions/:team/run-ping — probes one URL and hands the result to the dashboard.
- *
- * Bakes its own `requireUser`/`requireTeam` chain in rather than taking one from the
- * router, because this is a single `Route` and not a `RouteMap` — the same shape
- * `setDashboardTab` uses for the same reason.
+ * POST /actions/:team/run-ping — probes one URL and hands the result to the
+ * dashboard. Defined as a standalone `Route` — the same shape `setDashboardTab`
+ * uses — so it supplies its own `requireUser`/`requireTeam` chain directly.
  */
 export const runPing = createAction(routes.actions.runPing, {
 	middleware: [requireUser, requireTeam],
@@ -145,9 +113,9 @@ export const runPing = createAction(routes.actions.runPing, {
 		}
 
 		/**
-		 * A quick check is billed exactly like a scheduled one, so it is gated exactly like
-		 * one: `stateFor`, not `isActive`, so an owner whose subscription state cannot be
-		 * determined still gets their check. Matches the manual "run check" button.
+		 * A quick check is billed exactly like a scheduled one, so it is gated with
+		 * `stateFor`: an owner whose subscription state can't be determined still
+		 * gets their check, matching the manual "run check" button.
 		 */
 		let db = getServiceContainer().get(Database);
 		if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {

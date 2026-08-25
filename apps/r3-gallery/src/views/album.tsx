@@ -74,6 +74,8 @@ function overlayArrowMix(side: "start" | "end") {
 
 /**
  * Renders one album and keeps the grid visible behind optional photo overlays.
+ * The backdrop's blur uses `raw()` to preserve its existing Safari rendering,
+ * and its open state follows router navigation with a single visual panel.
  *
  * @param handle Component handle carrying album, photos, and optional overlay photo.
  * @returns Album route UI.
@@ -165,9 +167,6 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							place({ items: "center" }),
 							p("1rem"),
 							bg("rgb(36 27 22 / 0.62)"),
-							// `backdropBlur()` would additionally set `WebkitBackdropFilter`, a
-							// vendor-prefixed property this backdrop never had — kept as a raw
-							// one-off to avoid introducing a rendering change on Safari.
 							boxSizing("border-box"),
 							raw({ backdropFilter: "blur(16px)" }),
 							on<HTMLDivElement, "click">("click", (event) => {
@@ -175,13 +174,6 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							}),
 						]}
 					>
-						{/*
-						 * Not `@pkg/ui`'s Dialog: this overlay's open/close state comes from
-						 * router navigation (the masked photo URL), not commandfor Invoker
-						 * Commands, so a plain backdrop fits without fighting that model.
-						 * The white card itself is PhotoPreview's own Card — no extra panel
-						 * wraps it, so only one surface reads as "the card".
-						 */}
 						<Button
 							type="button"
 							color="neutral"

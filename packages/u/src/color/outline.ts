@@ -23,25 +23,20 @@ export type OutlineStyleValue =
 	| "auto";
 
 export interface OutlineOptions {
-	/** Sets `outline-color`. Accepts the same shapes as `u.border()`'s color; defaults to the system ring color when omitted. */
+	/** Defaults to the system ring color. */
 	color?: ColorValue | (string & {});
-	/** Sets `outline-width`. A bare number is treated as pixels; a string passes through unchanged. Defaults to `2`. */
+	/** A bare number is treated as pixels; a string passes through unchanged. Defaults to `2`. */
 	width?: number | (string & {});
-	/** Sets `outline-style`. Defaults to `"solid"`. */
+	/** Defaults to `"solid"`. */
 	style?: OutlineStyleValue;
-	/** Sets `outline-offset`, the gap between the outline and the element's border edge — always a separate property from `outline`, never part of its shorthand. A bare number is treated as pixels; a string passes through unchanged. */
+	/** The gap between the outline and the element's border edge, emitted as its own declaration. A bare number is treated as pixels; a string passes through unchanged. */
 	offset?: number | (string & {});
 }
 
 /**
- * Applies an outline: `outline-color`/`outline-width`/`outline-style`
- * together with `outline-offset` — a property CSS's `outline` shorthand
- * never includes, so setting it always takes a separate declaration. Unlike
- * `u.ring()`, this is unconditional — it doesn't nest under
- * `&:focus-visible`, so use it for a persistent or decorative outline
- * rather than a focus indicator. A bare string is a color, a bare number is
- * a width (in pixels), the two together set both, and an options object
- * sets every property at once.
+ * Applies an outline unconditionally, for a persistent or decorative edge. A
+ * bare string is a color, a bare number is a width in pixels, the two together
+ * set both, and an options object sets every property at once.
  *
  * @example u.outline()
  * @example css({ outlineColor: "var(--ui-ring, Highlight)", outlineWidth: "2px", outlineStyle: "solid" })

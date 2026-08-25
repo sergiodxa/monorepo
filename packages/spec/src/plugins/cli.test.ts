@@ -151,7 +151,6 @@ describe("run", () => {
 	});
 });
 
-/** Grant configuration for the stubbed permission set. */
 interface StubGrants {
 	/** `"all"` admits any executable; a list admits those basenames only. */
 	run?: "all" | string[];
@@ -159,7 +158,6 @@ interface StubGrants {
 	envNames?: string[];
 }
 
-/** Build a tool context over the test's temp workspace and stubbed grants. */
 function makeContext(grants: StubGrants = { run: "all" }): ToolContext {
 	return { workspace: createWorkspaceStub(root), permissions: createPermissionsStub(grants) };
 }
@@ -178,7 +176,6 @@ function createWorkspaceStub(base: string): Workspace {
 	};
 }
 
-/** A permission set stub honoring the configured run and env grants. */
 function createPermissionsStub(grants: StubGrants): PermissionSet {
 	return {
 		checkRun(executable: string) {
@@ -197,12 +194,10 @@ function createPermissionsStub(grants: StubGrants): PermissionSet {
 	};
 }
 
-/** Shorthand for a value argument. */
 function value(data: Value): ToolArg {
 	return { kind: "value", value: data };
 }
 
-/** Shorthand for a bare-word argument. */
 function word(name: string): ToolArg {
 	return { kind: "word", word: name };
 }

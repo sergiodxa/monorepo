@@ -27,11 +27,10 @@ import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
 /**
- * The scope a request asks for, from the two fields that express it.
+ * The scope a request asks for, derived from the two fields that express it.
  *
- * A `monitorId` with no `monitorType` is read as HTTP rather than rejected: that pair
- * shipped as the only scoping this endpoint had, when an id could not mean anything else,
- * and every client sending one today means the same thing it always did.
+ * A `monitorId` sent with no `monitorType` resolves to an HTTP monitor, preserving what
+ * every client sending only that field has always meant.
  */
 export function apiScopeFrom(input: {
 	monitorType?: MonitorScopeType;
@@ -69,11 +68,10 @@ const CreateMaintenanceSchema = s
 	.object({
 		name: s.string().refine((value: string) => value.length > 0, "Name is required."),
 		/**
-		 * Which monitor table `monitorId` names, or — on its own — the whole type to cover.
+		 * Which monitor table `monitorId` names, or, alone, the whole type it covers.
 		 *
-		 * Optional beside an id purely for compatibility: `monitorId` shipped before this
-		 * field existed and could only ever mean an HTTP monitor, so a request that still
-		 * sends one alone keeps meaning exactly that (see {@link apiScopeFrom}).
+		 * Stays optional beside an id for compatibility: `monitorId` alone meant an HTTP monitor
+		 * before this field existed, and requests still sending just that resolve the same way.
 		 */
 		monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
 		monitorId: s.optional(s.nullable(s.string())),

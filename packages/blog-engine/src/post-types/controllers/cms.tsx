@@ -275,14 +275,16 @@ export default createController(routes.cms.postTypes, {
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
 		}),
 
+		/**
+		 * Returns to the list whether the delete succeeds or fails, since the
+		 * model layer rejects deletion of built-in post types.
+		 */
 		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
 				await PostType.destroy(db, id);
-			} catch {
-				// Built-in types cannot be deleted; ignore and return to the list.
-			}
+			} catch {}
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
 		}),
 	},

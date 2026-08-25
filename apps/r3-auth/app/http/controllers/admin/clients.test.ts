@@ -1,8 +1,9 @@
 /**
  * Router-level tests for the four client-administration pages: the paginated listing,
- * registration with its one-time secret reveal, the detail page (which must never show
- * an existing secret), the editor including both logout channels, and both delete
- * intents.
+ * registration with its one-time secret reveal, the detail page with the secret kept
+ * hidden, the editor including both logout channels, and both delete intents. The
+ * session-required columns hold the text "true" or "false", which the logout fan-out
+ * compares against exactly, so the editor tests assert on those strings.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,12 +30,12 @@ async function signInAsAdmin(): Promise<void> {
 	await signIn(app, fixtures);
 }
 
-/** Fetches an admin URL without following redirects. */
+/** Fetches an admin URL, returning a redirect response as-is. */
 async function get(path: string): Promise<Response> {
 	return await app.fetch(new Request(`${ORIGIN}${path}`, { redirect: "manual" }));
 }
 
-/** Posts a form to an admin URL without following redirects. */
+/** Posts a form to an admin URL, returning a redirect response as-is. */
 async function post(path: string, body: Record<string, string>): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${path}`, {
@@ -46,7 +47,6 @@ async function post(path: string, body: Record<string, string>): Promise<Respons
 	);
 }
 
-/** A complete, valid client registration payload. */
 const VALID_CLIENT = {
 	name: "Third Party",
 	description: "A brand new relying party",
@@ -85,7 +85,6 @@ describe("GET /admin/clients", () => {
 	});
 
 	test("paginates at ten rows and page two shows the rest", async () => {
-		// Eleven clients in total with the seeded one, so the second page holds exactly one.
 		for (let index = 0; index < 10; index++) {
 			await Client.create(app.db, {
 				name: `Filler ${index}`,
@@ -99,7 +98,6 @@ describe("GET /admin/clients", () => {
 		expect(first).toContain("?page=2");
 
 		let second = await (await get(`${routes.admin.clients.index.href()}?page=2`)).text();
-		// Newest first, so the seeded client is the last row and lands alone on page two.
 		expect(second).toContain("Client App");
 		expect(second).not.toContain("Filler 9");
 	});
@@ -174,7 +172,6 @@ describe("/admin/clients/new", () => {
 		expect(client.name).toBe(VALID_CLIENT.name);
 		expect(client.redirect_uri).toBe(VALID_CLIENT.redirectUri);
 
-		// The generated secret is on this page and nowhere else afterwards.
 		expect(html).toContain(client.secret);
 		expect(html).toContain("Copy this secret now");
 
@@ -209,8 +206,6 @@ describe("/admin/clients/new", () => {
 		});
 		let html = await response.text();
 
-		// The form component takes the raw issue list, but a field renders only the
-		// message handed to it — so the visible text is what proves the wiring.
 		expect(html).toContain('aria-invalid="true"');
 		expect(html).toMatch(/Invalid URL|url/i);
 	});
@@ -312,7 +307,6 @@ describe("/admin/clients/:clientId/edit", () => {
 		expect(client?.redirect_uri).toBe("https://renamed.example.com/callback");
 		expect(client?.backchannel_logout_uri).toBe("https://renamed.example.com/backchannel");
 		expect(client?.logo_url).toBeNull();
-		// The secret is untouched by an edit that did not ask for a rotation.
 		expect(client?.secret).toBe(fixtures.clientSecret);
 	});
 
@@ -327,8 +321,6 @@ describe("/admin/clients/:clientId/edit", () => {
 		});
 
 		let client = await Client.findById(app.db, fixtures.clientId);
-		// The columns are text, not booleans, and the fan-out compares against these
-		// exact strings — a boolean here would silently stop sending `sid`.
 		expect(client?.backchannel_logout_session_required).toBe("true");
 		expect(client?.frontchannel_logout_session_required).toBe("false");
 
@@ -337,7 +329,6 @@ describe("/admin/clients/:clientId/edit", () => {
 		).text();
 		expect(form).toContain('name="backchannelLogoutSessionRequired"');
 
-		// Unticking sends the box's name not at all, which has to read back as "false".
 		await post(routes.admin.clientEdit.action.href({ clientId: fixtures.clientId }), {
 			name: "Client App",
 			redirectUri: "https://client.example.com/callback",

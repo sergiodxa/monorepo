@@ -1,13 +1,10 @@
 /**
  * Tests for the dashboard tab-panel fragment controller. `cloudflare:workers` is
- * mocked so the HTTP tab's `getTeamHttpSummaries`/`getTeamHttpSparklines` (which hit
- * the Analytics Engine SQL HTTP API, using `env.CLOUDFLARE_ACCOUNT_ID`/
- * `env.CLOUDFLARE_ANALYTICS_TOKEN`) never touch real Cloudflare bindings; MSW
- * intercepts that API so the queries never leave the process either.
- * `requireUser`/`requireTeam`/`i18n` are bypassed the same way as the other
- * page-controller tests in this directory: `ctx.team`/`ctx.membership`/`ctx.i18next`
- * are seeded directly, and `ctx.render` is stood in for with a minimal renderer
- * mirroring `bootstrap/app.tsx`'s own `createHtmlRenderer`.
+ * mocked so the HTTP tab's Analytics Engine SQL queries never touch real
+ * Cloudflare bindings, and MSW intercepts that API so they never leave the
+ * process either. `requireUser`/`requireTeam`/`i18n` are bypassed by seeding
+ * `ctx.team`/`ctx.membership`/`ctx.i18next` directly, with `ctx.render` stood
+ * in for by a minimal renderer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,10 +40,9 @@ import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * The bindings the page reads, real enough to answer for themselves: an empty KV is a
- * cache miss, so every test starts uncached without arranging one. They live at module
- * scope because the modules under test capture `env` on import; each test's team id is
- * fresh, so the cache keys derived from it never collide across tests.
+ * The bindings the page reads, real enough that an empty KV starts every test
+ * uncached without arranging one. They live at module scope because the modules
+ * under test capture `env` on import; each test's fresh team id keeps its cache keys from colliding.
  */
 let kv = createKVNamespace();
 let queue = createQueue();
@@ -150,10 +146,8 @@ async function fetchPanel(
 	return container.scope(() => router.fetch(request));
 }
 
-/** The Analytics Engine SQL API endpoint the HTTP tab's summary queries POST to. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
 
-/** MSW server intercepting the Analytics Engine SQL API, answering with no rows. */
 let server = setupServer(http.post(SQL_URL, () => HttpResponse.json({ data: [] })));
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));

@@ -13,11 +13,6 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import { ONE_YEAR_SECONDS, writeCookie } from "./write-cookie";
 
-/**
- * Stands a minimal `document` in for the test's duration, exposing a
- * `cookie` property that records the last string assigned to it, and
- * returns a reader for that string.
- */
 function stubDocumentCookie(): () => string {
 	let written = "";
 

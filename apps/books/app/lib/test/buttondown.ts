@@ -1,7 +1,8 @@
 /**
- * Test-only fake newsletter client. Records what it was asked to do and answers from a
- * scripted state, so a controller test can assert on the funnel's behavior — who gets
- * subscribed, who gets tagged, which error copy a visitor sees — without a network layer.
+ * Test-only fake newsletter client. Records what it was asked to do and
+ * answers from scripted, in-memory state, so a controller test can assert
+ * on the funnel's behavior — who gets subscribed, who gets tagged, which
+ * error copy a visitor sees.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,13 +18,14 @@ export interface FakeButtondownOptions {
 	subscribed?: string[];
 	/** When set, `subscribe` throws a {@link ButtondownError} with this code. */
 	failWith?: string;
-	/** When set, `subscribe` throws this error instead of a provider error. */
+	/** When set, `subscribe` throws this error, for scripting a raw transport failure. */
 	throws?: Error;
 }
 
 /**
- * A {@link Buttondown} stand-in. Extends the real class so it satisfies the container's
- * class key, but overrides every method and never constructs a request.
+ * A {@link Buttondown} stand-in. Extends the real class so it satisfies the
+ * container's class key, and every overridden method answers from the
+ * scripted state below.
  */
 export class FakeButtondown extends Buttondown {
 	/** Addresses passed to `subscribe`, in order. */

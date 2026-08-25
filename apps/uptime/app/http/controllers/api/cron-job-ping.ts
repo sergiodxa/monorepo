@@ -1,29 +1,9 @@
 /**
- * Cron-job ping endpoint: `POST /api/v1/cron-jobs/:cronJobId/ping`. A scheduled job
- * reports that it ran by calling this; the monitor goes late or missed when it doesn't.
- *
- * It requires an API key carrying `cron-jobs:ping`, and it did not always. The endpoint
- * used to be deliberately open, with the monitor id in the URL serving as the secret —
- * the model most cron-monitoring services use, because it keeps the integration to a
- * bare `curl` with no header. The reason it changed is that a URL is a poor secret: it
- * leaks into CI logs, shell history, shared crontabs and screenshots, and once leaked
- * there was nothing to revoke short of deleting the monitor. A key can be scoped to this
- * one capability and rotated on its own.
- *
- * The cost of that is real and was accepted knowingly: every crontab pinging this
- * endpoint has to carry an `Authorization` header, and one that doesn't gets a 401 and
- * eventually a missed-check alert.
- *
- * Two independent limits apply, for two different reasons. The product rule is one
- * accepted ping per minute per monitor, enforced from `last_ping_at` in the handler
- * below. The abuse rule is a budget per caller, enforced by middleware *before*
- * authentication so that a flood is refused without spending a database read on looking
- * up whatever key it presented, and the product rule alone bounds what is *recorded*,
- * not what is *charged*.
- *
- * A ping this endpoint accepts is billed as one ping against the team's allowance, and
- * only an accepted one is: a request refused as unknown, disabled, or too frequent
- * performed no work, so it never reaches the ingestion below.
+ * Cron-job ping endpoint: `POST /api/v1/cron-jobs/:cronJobId/ping`. A scheduled
+ * job reports that it ran by calling this; the monitor goes late or missed
+ * when it doesn't. Callers authenticate with an API key scoped to
+ * `cron-jobs:ping`; a per-monitor rate limit and a per-caller abuse budget
+ * apply independently, and only an accepted ping is billed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,37 +31,16 @@ import { ingestPings } from "~/app/services/ping-meter";
 import routes from "~/routes/web";
 
 /**
- * Minimum time between accepted pings for a single monitor.
- *
- * Half the finest cadence a monitor can be scheduled with, not the whole minute it used
- * to be. A job on a `* * * * *` schedule cannot ping at exactly 60.000s intervals — queue
- * latency and dispatch jitter put consecutive pings a second or two either side of the
- * minute — and against a hard 60s floor every gap that landed at 59s was refused. In
- * production that rejected roughly 40% of one monitor's pings, so it recorded about
- * three runs in five and looked intermittently unreliable while running perfectly.
- *
- * Halving it keeps what the rule is for: no schedule is finer than a minute, so two pings
- * inside 30s still cannot be two separate runs, and a runaway loop is still bounded (and
- * bounded again by the per-caller budget below, which is the abuse limit proper).
- *
- * The rule this approximates is one accepted ping per *scheduled run*, which would derive
- * the window from the monitor's own schedule rather than from the finest one any monitor
- * could have. That is the better rule and a larger change; this is the floor that stops
- * the every-minute case from silently dropping two runs in five.
+ * Minimum time between accepted pings for a single monitor: half a minute
+ * rather than a full one, since queue latency and dispatch jitter put a
+ * job's consecutive pings a second or two either side of the schedule.
  */
 const RATE_LIMIT_MS = 30_000;
 
 /**
- * Requests one caller may spend on one monitor per {@link CALLER_WINDOW}, mirroring
- * the `simple.limit` declared for the `RATE_LIMITER` binding in `wrangler.jsonc`
- * (the binding reports neither, so the two are kept in step by hand and drift shows
- * up only in the response headers).
- *
- * Sixty is deliberately far above any legitimate use: {@link RATE_LIMIT_MS} already
- * caps useful throughput at one ping per minute per monitor, so this only has to
- * stop a flood, not shape traffic. A job that retries, runs on several replicas, or
- * has a skewed clock stays well inside it, while a caller hammering a ping URL is
- * cut from unbounded to one request per second.
+ * Requests one caller may spend on one monitor per {@link CALLER_WINDOW},
+ * mirroring the `RATE_LIMITER` binding's `simple.limit`. Set well above
+ * legitimate use, since {@link RATE_LIMIT_MS} already caps useful throughput.
  */
 const CALLER_LIMIT = 60;
 
@@ -92,18 +51,15 @@ const CALLER_WINDOW = "1 minute";
 const CALLER_PREFIX = "cron-ping";
 
 /**
- * Stand-in for a key part the request did not supply, so those callers share one
- * bucket rather than escaping the limit by being unidentifiable.
+ * Stand-in for a missing key part, so unidentified callers share one bucket
+ * and count against the same limit.
  */
 const UNKNOWN_BUCKET = "unknown";
 
 /**
- * The `RATE_LIMITER` binding, when the running deployment declares one.
- *
- * It is read structurally rather than off the generated `Cloudflare.Env`, which is
- * what lets an absent binding be a supported state instead of a crash: a deploy
- * predating the `ratelimits` entry, or a local runtime configured without it, still
- * serves pings.
+ * The `RATE_LIMITER` binding, when the running deployment declares one. Read
+ * structurally rather than off the generated `Cloudflare.Env`, so a deploy
+ * predating the `ratelimits` entry still serves pings instead of crashing.
  *
  * @returns The binding, or `undefined` when this deployment has none.
  */
@@ -115,21 +71,15 @@ function rateLimiterBinding(): RateLimiterBinding | undefined {
 }
 
 /**
- * Backend counting the caller budget.
- *
- * The binding is the only backend cheaper than the request it protects: it bills
- * nothing per call. KV is deliberately not the fallback — a read plus a write per
- * counted request costs several times the ping itself, so protecting the endpoint
- * that way would cost more than the abuse. Without the binding the count falls back
- * to the isolate's own memory, which is weaker (each isolate gets its own budget)
- * but free and still bounds a single connection's flood.
+ * Backend counting the caller budget: the binding costs nothing per call,
+ * cheaper than KV's read-plus-write, which would cost more than the abuse it
+ * prevents. Falls back to the isolate's own memory without a binding.
  *
  * @returns The adapter to count with.
  */
 function createAdapter(): Adapter {
 	let binding = rateLimiterBinding();
-	// `as const` keeps the window a duration literal rather than widening it to `string`,
-	// which is what both adapters' options accept.
+	/** `as const` keeps `window` typed as the literal duration the adapters expect. */
 	let options = { limit: CALLER_LIMIT, window: CALLER_WINDOW } as const;
 
 	if (binding === undefined) return new MemoryAdapter(options);
@@ -137,20 +87,16 @@ function createAdapter(): Adapter {
 }
 
 /**
- * The caller budget, built on the first request and reused by the isolate after
- * that: the adapter reads a binding off `env`, which is not module-scope work.
+ * The caller budget, built on the first request and reused by the isolate
+ * after that, since the adapter can only read a binding off `env` once
+ * request-scoped code is running.
  */
 let limiter: Middleware | undefined;
 
 /**
- * Spends one caller's budget before the handler runs.
- *
- * The key is the calling address *and* the monitor being pinged. Both halves are
- * load-bearing: an address alone lets one noisy job behind a shared egress IP (a CI
- * provider, say) exhaust the budget of every other job behind it, and a monitor id
- * alone would let anyone spend that monitor's whole budget from anywhere. Only
- * `CF-Connecting-IP` is read — `X-Forwarded-For` is client-supplied, so keying on it
- * would let a caller mint a fresh bucket per request.
+ * Spends one caller's budget before the handler runs, keyed on the calling
+ * address plus the monitor being pinged, so neither a shared egress IP nor a
+ * bare monitor id lets one caller exhaust another's budget.
  */
 const limitByCaller: Middleware = (context, next) => {
 	limiter ??= rateLimit({
@@ -159,6 +105,10 @@ const limitByCaller: Middleware = (context, next) => {
 		key(ctx) {
 			let params = s.parseSafe(s.object({ cronJobId: s.string() }), ctx.params);
 			let monitor = params.success ? params.value.cronJobId : UNKNOWN_BUCKET;
+			/**
+			 * Only `CF-Connecting-IP`: `X-Forwarded-For` is client-supplied, so keying on
+			 * it would let a caller mint a fresh bucket per request.
+			 */
 			let address = ctx.request.headers.get("CF-Connecting-IP") ?? UNKNOWN_BUCKET;
 			return `${address}:${monitor}`;
 		},
@@ -175,13 +125,9 @@ export default createAction(routes.api.cronJobPing, {
 
 		let { cronJobId } = s.parse(s.object({ cronJobId: s.string() }), ctx.params);
 		/**
-		 * Scoped to the key's own team, not looked up by id alone. Authenticating the caller
-		 * only says who they are; without this a key from any team could ping any monitor
-		 * whose id it had, which is the same hole the id-as-secret model had, reopened one
-		 * step later.
-		 *
-		 * A monitor belonging to someone else answers 404 rather than 403, so the endpoint
-		 * cannot be used to discover which ids exist.
+		 * Scoped to the key's own team: authentication alone says who the caller is,
+		 * not which monitors they may ping. A monitor belonging to someone else
+		 * answers 404 rather than 403, so ids can't be discovered by probing.
 		 */
 		let monitor = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
 		if (!monitor) return notFound({ error: "Not Found" });
@@ -205,11 +151,9 @@ export default createAction(routes.api.cronJobPing, {
 		});
 
 		/**
-		 * A cron ping is a report, not a measurement: it carries no latency of its own — the
-		 * job already ran, elsewhere — and the only thing observed about it is whether it
-		 * arrived by its deadline. So on time is `up`, late is `degraded`, and the response
-		 * time is zero rather than a number nothing measured. A job that never pings at all
-		 * produces no row here; the scheduled sweep is what notices that silence.
+		 * A cron ping reports that the job already ran elsewhere: arrival against
+		 * its deadline is what's observed, so on time is `up`, late is `degraded`,
+		 * and response time is recorded as a flat zero.
 		 */
 		writePingResult({
 			monitorId: monitor.id,
@@ -233,10 +177,9 @@ export default createAction(routes.api.cronJobPing, {
 			});
 		} else {
 			/**
-			 * Deferred rather than awaited, unlike the queue sweeps: those already run
-			 * outside a request and their wall time costs nobody a wait, while this one is
-			 * on the response path of a caller whose job is blocked on it. Ingestion is
-			 * best-effort either way, so the round trip belongs after the response.
+			 * Deferred past the response, since this call sits on the path of a caller
+			 * whose job is blocked waiting for it, and ingestion is best-effort, so its
+			 * round trip belongs after the caller is already answered.
 			 */
 			waitUntil(
 				ingestPings(getServiceContainer().get(PolarClient), [

@@ -1,19 +1,11 @@
 /**
  * Edit TCP monitor page controller: settings form, posting to `update-tcp-monitor`.
- * Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong to the
- * current team.
- *
- * The settings live in one bordered card with its own heading and action row, and the
- * destructive action gets a second, danger-toned card below it, so the page reads as
- * distinct settings groups rather than one continuous column. The two stay on separate
- * `<form>` elements exactly as before: the update form and the delete form each post to
- * their own action. The TCP fields render as a single group because the field markup is
- * shared with the create page, which renders them as one block too — splitting them here
- * would mean the two pages no longer draw the same form.
- *
- * The delete confirmation is `@pkg/ui`'s `AlertDialog` composed directly rather than
- * through the `Confirm` convenience wrapper, since the confirming control is a real
- * `<form method="post">` submit button rather than a `command="close"` action.
+ * Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong to
+ * the current team. Settings and the destructive action each sit in their own
+ * bordered card, the destructive one danger-toned, each posting through its own
+ * `<form>`. The TCP fields render as a single block shared with the create page,
+ * so both pages draw the same form. The delete confirmation composes `@pkg/ui`'s
+ * `AlertDialog` directly because confirming submits a real `<form method="post">`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

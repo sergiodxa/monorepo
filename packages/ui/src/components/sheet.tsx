@@ -48,12 +48,9 @@ const DEFAULT_SIDE: Sheet.Side = "right";
  */
 export namespace Sheet {
 	/**
-	 * Physical side of the viewport the panel docks to and slides in from.
-	 * Each value names a fixed physical side rather than a reading-direction-
-	 * relative one, so the panel keeps docking to that same edge under any
-	 * `dir` value instead of mirroring for reading direction — the same fixed
-	 * edge a device's notch and home indicator sit at, which is what the
-	 * panel's safe-area padding tracks.
+	 * Physical side of the viewport the panel docks to and slides in from,
+	 * fixed rather than reading-direction-relative so it keeps docking to the
+	 * same edge under any `dir` value, matching the safe-area padding's edge.
 	 */
 	export type Side = "left" | "right";
 
@@ -80,41 +77,9 @@ export namespace Sheet {
 }
 
 /**
- * Renders the panel through {@link Dialog}, overriding only its position and
- * size: fixed to the viewport instead of centered in it, stretched flush
- * against the block-start and block-end edges, and pinned to whichever
- * inline edge `side` names. The panel's native `margin: auto` centering is
- * cleared so the edge anchor is unambiguous, and the inline edge opposite the
- * dock is explicitly released to `auto` rather than left at the `inset: 0`
- * the platform's own modal-dialog default already sets on every side — left,
- * right, and an explicit `inlineSize` are otherwise over-constrained, and
- * clearing the far edge is what lets the near edge and the size resolve
- * cleanly instead.
- *
- * The inline measure itself is a fluid cap rather than a fixed breakpoint
- * jump: `90vw` of the viewport up to `--ui-sheet-size` (`24rem` by default),
- * so the panel fills most of the screen on the narrowest phones and settles
- * at a comfortable reading measure everywhere wider, with no viewport
- * breakpoint doing the switching. Every edge that meets the physical screen
- * boundary — the block-start and block-end edges always, plus whichever
- * inline edge `side` docks to — carries `env(safe-area-inset-*)` on top of
- * its base padding, so content never sits under a device's notch or home
- * indicator.
- *
- * The slide rides entirely on the native `open` attribute: the resting
- * (closed) rule sets the panel's `transform` off its docked edge, the
- * `[open]` rule transitions it to identity, and `@starting-style` paired
- * with `transition-behavior: allow-discrete` lets that same pair of rules
- * animate the close too — the platform holds the panel in place for the
- * transition's duration instead of unmounting it the instant `open` is
- * removed. Under `prefers-reduced-motion: reduce` the transition is dropped
- * entirely, so the panel snaps to its open or closed position instead of
- * sliding. Every other detail — the `::backdrop` treatment, the `ui-dialog`
- * named container, and the missing-`id` dev-mode check — rides along
- * unchanged from {@link Dialog}.
- *
- * A `mix` passed to {@link Sheet} itself layers alongside this placement
- * styling rather than replacing it.
+ * Renders the panel through {@link Dialog}: fixed, pinned to whichever
+ * inline edge `side` names with the far edge released to `auto`, and slid
+ * via `@starting-style`/`allow-discrete` so the close animates too.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props, plus `side`.
  * @returns The render function producing the panel's markup.
@@ -199,9 +164,8 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 
 /**
  * Renders {@link Sheet.HeaderProps.children} as the panel's header slot: a
- * tightly-stacked column holding {@link Sheet.Title} and
- * {@link Sheet.Description}, always start-aligned rather than centering at
- * narrow widths the way {@link Dialog.Header} does for a centered panel.
+ * tightly-stacked column of {@link Sheet.Title} and {@link Sheet.Description},
+ * start-aligned at every width rather than centering like {@link Dialog.Header}.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the header slot's markup.
@@ -255,9 +219,8 @@ Sheet.Description = function SheetDescription(handle: Handle<Sheet.DescriptionPr
 
 /**
  * Renders {@link Sheet.FooterProps.children} as the panel's action row: a
- * single end-aligned row pinned to the panel's block-end edge at every
- * width, rather than {@link Dialog.Footer}'s narrow-panel column that only
- * becomes a row once its container grows.
+ * single end-aligned row pinned to the block-end edge at every width, unlike
+ * {@link Dialog.Footer}'s column that only becomes a row as its container grows.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action row's markup.

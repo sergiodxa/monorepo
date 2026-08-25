@@ -1,13 +1,9 @@
 /**
  * Builds the initial world for a new game from authored content.
  *
- * The presentation composes a starting world without hardcoding any franchise
- * ids: it derives the starter and the wild-encounter pool from the loaded
- * content registries (first species for the starter, the next few for wilds) and
- * each creature's moves from its own learnset. Wild creatures are pre-seeded as
- * entities owned by a dedicated "wild" player so the overworld can start real
- * battles with the shipped `start-battle` command; a future `spawn-encounter`
- * command (planned in ADR-001 2.6) will replace the pool with rolled encounters.
+ * Derives the starter and wild-encounter pool from the loaded content
+ * registries and seeds wild creatures under a dedicated "wild" player so the
+ * overworld can start battles immediately.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,11 +44,16 @@ const STARTER_LEVEL = 1;
  * Starting money the hero is seeded with.
  *
  * Deliberately large so the shop and trainer NPCs are immediately exercisable
- * without a grind — the overworld ships as a sandbox, not a balanced economy.
+ * without a grind, matching the overworld's role as a sandbox.
  */
 const STARTING_MONEY = 100000;
 
-/** Builds a migrated new-game world from content, or throws if content is empty. */
+/**
+ * Builds a migrated new-game world from content, or throws if content is empty.
+ *
+ * The starter is seeded as already seen and caught, since the hero owns it
+ * from the start.
+ */
 export function createNewGameWorld(content: GameDataSource): World {
 	let ids = Object.keys(content.species);
 	if (ids.length === 0) throw new RangeError("Content has no species to start a game.");
@@ -76,7 +77,6 @@ export function createNewGameWorld(content: GameDataSource): World {
 			[WILD_ID]: { items: {} },
 		},
 		bestiary: {
-			// The player owns the starter from the start, so it is already seen and caught.
 			[HERO_ID]: { seen: [starterSpeciesId], caught: [starterSpeciesId] },
 			[WILD_ID]: { seen: [], caught: [] },
 		},
@@ -135,11 +135,8 @@ function makeStatSet(value: number): StatSet {
 
 /**
  * Returns the moves a fresh creature knows: the most recent level-up moves it
- * would have learned by `STARTER_LEVEL`, newest last, capped at four.
- *
- * Only level-up entries count — tutor, machine, and egg moves are excluded, since
- * a starting creature has not been taught them. This mirrors the planned
- * `spawn-encounter` rule ("last four learnset moves at that level").
+ * would have learned by `STARTER_LEVEL`, newest last, capped at four. Only
+ * level-up entries count, since a starting creature has leveled up alone.
  */
 function deriveMoveset(content: GameDataSource, species: Species): string[] {
 	let learnable = species.learnset

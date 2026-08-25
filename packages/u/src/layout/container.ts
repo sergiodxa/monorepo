@@ -10,10 +10,7 @@ export type ContainerTypeValue = "size" | "inline-size" | "normal";
 /**
  * Declares the host as a named container query context via the `container`
  * shorthand (`container-name` and `container-type` together), so a
- * descendant's `u.at(size, name, ...)` query can target it by name. This is
- * the declaring half of the container-query pair — `u.at()` is the querying
- * half, reading the `size` argument against whichever ancestor establishes a
- * matching container.
+ * descendant's `u.at(size, name, ...)` query can target it by name.
  *
  * @example u.container("sidebar")
  * @example css({ container: "sidebar / inline-size" })

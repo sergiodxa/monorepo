@@ -37,7 +37,6 @@ describe("safeNext", () => {
 	});
 
 	test("rejects an absolute URL even when the host matches (scheme differs)", () => {
-		// It does not start with "/", so it is refused before any origin comparison.
 		expect(safeNext("https://blog.example.com/cms/posts", request)).toBeUndefined();
 	});
 

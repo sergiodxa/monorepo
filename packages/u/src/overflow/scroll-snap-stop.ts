@@ -8,12 +8,9 @@ import { utility } from "../internal/descriptor";
 export type ScrollSnapStopValue = "normal" | "always";
 
 /**
- * Applies `scroll-snap-stop` to a snap item, defaulting to `"always"`. With
- * `"always"` a single fast flick cannot skip past the item — the scroll is
- * forced to come to rest on it, which is what a paged carousel needs so one
- * swipe advances exactly one page. `"normal"` lets momentum carry the scroll
- * over any number of snap positions. Pair with `u.scrollSnapAlign()` on the
- * same item.
+ * Applies `scroll-snap-stop` to a snap item, defaulting to `"always"` so a fast
+ * flick rests on the item and one swipe advances exactly one page. `"normal"`
+ * lets momentum carry past it. Pair with `u.scrollSnapAlign()`.
  *
  * @example u.scrollSnapStop()
  * @example css({ scrollSnapStop: "always" })

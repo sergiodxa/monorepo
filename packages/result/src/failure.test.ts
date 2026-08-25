@@ -1,3 +1,10 @@
+/**
+ * Tests for `failure`, the Failure Result constructor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "vitest";
 
 import { failure } from "./failure.js";

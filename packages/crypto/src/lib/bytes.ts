@@ -35,9 +35,8 @@ export type Bytes = Uint8Array<ArrayBuffer>;
 /**
  * Normalizes any accepted input into bytes WebCrypto will accept.
  *
- * Strings are encoded as UTF-8 and an `ArrayBuffer` is wrapped rather than cloned,
- * so callers must not mutate a buffer they have handed over. The one case that
- * copies is a view over a `SharedArrayBuffer`, which WebCrypto rejects outright.
+ * An `ArrayBuffer` is wrapped directly, so callers must not mutate a buffer once
+ * handed over; only a `SharedArrayBuffer` view is copied.
  *
  * @param data Text or binary payload.
  * @returns Bytes backing the payload.
@@ -50,10 +49,10 @@ export function toBytes(data: BinaryLike): Bytes {
 }
 
 /**
- * Decodes bytes as UTF-8 text, replacing invalid sequences instead of failing.
+ * Decodes bytes as UTF-8 text, substituting the replacement character for invalid sequences.
  *
  * Authenticated decryption already proves the bytes are the ones that were
- * sealed, so a lossy decode here can only mean the plaintext was not UTF-8.
+ * sealed, so a lossy decode here means the plaintext held non-UTF-8 bytes.
  *
  * @param bytes Bytes to read as text.
  * @returns Decoded string.

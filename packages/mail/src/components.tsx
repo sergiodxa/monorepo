@@ -45,25 +45,9 @@ const CONTENT_WIDTH = 600;
 const HEADING_SIZES: Record<1 | 2 | 3, number> = { 1: 24, 2: 20, 3: 16 };
 
 /**
- * The dark counterpart of every color above, as the rules a client applies when the
- * reader is in dark mode.
- *
- * It exists because declaring a color scheme without shipping one is worse than
- * declaring nothing: Apple Mail reads `color-scheme: light dark` as a promise that the
- * message paints its own dark mode, so it stops remapping colors and leaves the copy
- * exactly as authored. On macOS it darkens the card anyway and the near-black body copy
- * on it becomes unreadable; on iOS it honours the promise in full and a dark inbox gets
- * a white email. Both are the same missing half.
- *
- * The rules are keyed on classes rather than on elements so they only reach what this
- * kit painted, and they are `!important` because the light values they replace are
- * inline styles, which is the only place a mail client is guaranteed to read them from.
- * Every element therefore carries both: the inline style is the light baseline and the
- * one clients that strip `<style>` keep, and the class is the dark override.
- *
- * A class is emitted only when the caller left that color to the kit — pass a color and
- * the element opts out of the dark rule for it, since the kit has no dark counterpart
- * for a color it has never seen.
+ * The dark counterpart of every color above. A declared color scheme with no
+ * dark rules leaves Apple Mail's promise half kept, so these `!important` classes
+ * override every inline light value for colors the caller left to the kit.
  */
 const DARK_RULES = [
 	".mail-page{background-color:#09090b !important;}",
@@ -73,9 +57,6 @@ const DARK_RULES = [
 	".mail-rule{border-color:#3f3f46 !important;}",
 	".mail-action{background-color:#fafafa !important;}",
 	".mail-action-label{color:#18181b !important;}",
-	// Code is painted by `Email.CodeInline` here and by `CodeBlock` in the markdown
-	// subpath, but the rules stay in this one list because the layout renders the only
-	// stylesheet the document has. Unused rules cost a few bytes and nothing else.
 	".mail-code{background-color:#27272a !important;color:#fafafa !important;}",
 	".mail-tok-comment{color:#8b949e !important;}",
 	".mail-tok-keyword{color:#ff7b72 !important;}",
@@ -86,11 +67,9 @@ const DARK_RULES = [
 ].join("");
 
 /**
- * Builds the document stylesheet: the kit's dark mode, then whatever the caller adds.
- *
- * The result is a text node, so the renderer escapes it — CSS written here or passed in
- * cannot use `>` or `&`, which rules out child combinators. Descendant and class
- * selectors are enough for everything a mail body contains.
+ * Builds the document stylesheet: the kit's dark mode, then whatever the caller
+ * adds. The result is a text node, so the renderer escapes it, ruling out `>` and
+ * `&` and any child combinator; descendant and class selectors cover everything.
  */
 function stylesheet(fonts: Font[], extra: string | undefined): string {
 	let faces = fonts.map(fontFace).join("");
@@ -99,13 +78,9 @@ function stylesheet(fonts: Font[], extra: string | undefined): string {
 }
 
 /**
- * A web font to load, and what to use instead everywhere it does not arrive.
- *
- * It is a prop of {@link Layout} rather than a component of its own because `@font-face`
- * is only honoured inside `<head>`, and the layout is the only component that renders
- * one. A `<Font>` placed in the body would look like it worked — the rule would be in
- * the document — and would be ignored by every client that sanitises stray style
- * elements out of a message body.
+ * A web font to load, and what to use instead everywhere it does not arrive. It
+ * is a prop of {@link Layout} instead of its own component because `@font-face`
+ * only works inside `<head>`, which only the layout renders in the document.
  */
 export interface Font {
 	/** Family name, as the `@font-face` rule declares it and the copy asks for it. */
@@ -130,11 +105,9 @@ export interface Font {
 }
 
 /**
- * One `@font-face` rule.
- *
- * `mso-font-alt` is Outlook's own fallback declaration: Word ignores the rule entirely
- * but reads that one property, and without it an unavailable family lands on Times New
- * Roman rather than on the stack the email chose.
+ * One `@font-face` rule. `mso-font-alt` is Outlook's own fallback declaration:
+ * Word ignores the `@font-face` rule but reads that property, keeping an
+ * unavailable family on the stack's chosen fallback instead of Times New Roman.
  */
 function fontFace(font: Font): string {
 	let { family, fallback, src, weight = 400, style = "normal" } = font;
@@ -144,12 +117,9 @@ function fontFace(font: Font): string {
 }
 
 /**
- * The font stack a set of web fonts asks for: the first family, then its fallbacks.
- *
- * The family is not quoted, even when it has a space in it. The stack ends up in a
- * `style` attribute, where the renderer escapes a quote to `&#39;` and leaves the
- * declaration naming a family no font has — and CSS has allowed an unquoted family name
- * to be a sequence of identifiers since 2.1, so the quotes buy nothing to begin with.
+ * The font stack a set of web fonts asks for: the first family, then its
+ * fallbacks, left unquoted because a `style` attribute escapes a quote to
+ * `&#39;`, naming a family no font has — CSS has allowed bare names since 2.1.
  */
 function fontStack(fonts: Font[]): string | undefined {
 	let first = fonts[0];
@@ -168,14 +138,9 @@ const PREVIEW_LENGTH = 200;
 const BLANKS = " ‌​‍‎‏﻿";
 
 /**
- * Pads a preheader out to the length a client reads, with characters that render as
- * nothing.
- *
- * Without it the snippet is the preheader followed by whatever the body starts with,
- * because a client fills its preview line from the document and does not stop at the
- * hidden block. An alert whose preheader is six words arrives in the inbox reading
- * `... is RECOVERED Monitor Book Landing http Status`, which is the layout's first table
- * leaking into the one line the reader decides from.
+ * Pads a preheader to the length a client reads, with characters that render as
+ * nothing, so the inbox snippet stops at the block instead of spilling into the
+ * body — an unpadded six-word preheader reads `... RECOVERED Monitor Book Landing`.
  */
 function previewPadding(preview: string): string {
 	let missing = PREVIEW_LENGTH - preview.length;
@@ -224,13 +189,9 @@ export namespace Layout {
 }
 
 /**
- * Wraps an email body in a centered, fixed-width card inside a full HTML document.
- * Every rule is an inline style on a table, which is the only layout mail clients
- * agree on; the card and page colors are props so the kit stays unbranded.
- *
- * It also carries the one stylesheet the document has: the dark counterpart of the
- * kit's colors, which is why the layout is the only component that renders a `<head>`.
- * See {@link DARK_RULES} for why an email that declares a color scheme has to ship one.
+ * Wraps an email body in a centered, fixed-width card of inline-styled tables,
+ * with colors as props so the kit stays unbranded, and renders the document's
+ * only stylesheet — the dark counterpart of its colors; see {@link DARK_RULES}.
  *
  * @example <Email.Layout preview="Your invite is ready"><Email.Text>Hi</Email.Text></Email.Layout>
  */
@@ -266,12 +227,6 @@ export function Layout(handle: Handle<Layout.Props>) {
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<meta name="color-scheme" content="light dark" />
 					<meta name="supported-color-schemes" content="light dark" />
-					{/*
-					 * Stops iOS Mail auto-scaling the copy. It resizes text it judges too small
-					 * for the screen, which it does by rewriting font sizes the layout has
-					 * already chosen, and the result is a card whose type no longer relates to
-					 * its padding.
-					 */}
 					<meta name="x-apple-disable-message-reformatting" />
 					{title ? <title>{title}</title> : null}
 					<style>{stylesheet(fonts, darkStyles)}</style>
@@ -299,12 +254,6 @@ export function Layout(handle: Handle<Layout.Props>) {
 					>
 						<tbody>
 							<tr>
-								{/*
-								 * The body's own colour and font are repeated here because Yahoo and AOL
-								 * rewrite `<body>` as a `<div>` and drop its styles on the way, leaving the
-								 * document with no font stack at all. This is the outermost cell that
-								 * survives that rewrite.
-								 */}
 								<td
 									align="center"
 									class={inkClass}
@@ -453,15 +402,9 @@ export namespace Button {
 }
 
 /**
- * Renders a call-to-action as a link inside a single-cell table, the only button
- * construction that keeps its fill in clients that drop CSS backgrounds on anchors.
- * The link is a real `<a href>`, so the plain-text part keeps its target.
- *
- * The padding is on the cell rather than on the link, which is what makes the button a
- * button in Outlook. Word, which renders it, supports neither `display:inline-block`
- * nor padding on an inline element, so a padded anchor arrives as bare text on a
- * coloured strip exactly as wide as the words. A padded cell is a table cell, which
- * Word has always been able to do.
+ * Renders a call-to-action as a link inside a single-cell table so the fill
+ * survives in clients that drop CSS backgrounds on anchors, with the padding
+ * on the cell since Word supports neither inline-block nor padding on an anchor.
  *
  * @example <Email.Button href={url}>Accept invite</Email.Button>
  */
@@ -514,17 +457,9 @@ export namespace Table {
 }
 
 /**
- * A set of facts as a two-column table: label on the left, value hard against the
- * right, hairlines between the rows.
- *
- * It exists because the alternative every email reaches for first — one paragraph per
- * fact reading `Label: value` — gives a reader no column to run their eye down, and
- * turns five short facts into five full-width lines of prose. A table is also the one
- * layout primitive mail clients agree on, so the alignment survives where a flex row
- * or a definition list would not.
- *
- * Values are nodes rather than strings so a row can hold a link without this component
- * knowing which rows are links.
+ * A set of facts as a two-column table: label on the left, value against the
+ * right, with hairlines between rows — a scannable column beats one paragraph
+ * per fact, and stays a layout every mail client renders alike.
  *
  * @example <Email.Table rows={[{ label: "Status", value: "Up" }]} />
  */
@@ -545,8 +480,6 @@ export function Table(handle: Handle<Table.Props>) {
 			>
 				<tbody>
 					{rows.map((row, index) => {
-						// Hairlines go between rows, so the first one does without a top border and
-						// the block sits flush against whatever precedes it.
 						let border = index === 0 ? "none" : `1px solid ${borderColor ?? BORDER_COLOR}`;
 
 						return (
@@ -632,11 +565,9 @@ export namespace Section {
 }
 
 /**
- * A full-width band of content, as a single-cell table.
- *
- * The padding goes on the cell and everything else on the table, which is the split
- * Outlook needs — it drops padding declared on a `<table>` — and which keeps a
- * background painting the whole band rather than stopping at the content.
+ * A full-width band of content, as a single-cell table. Padding sits on the
+ * cell and the fill on the table — the split Outlook needs, since it drops
+ * padding declared directly on a `<table>`, so the fill paints the whole band.
  *
  * @example <Email.Section padding="24px 0"><Email.Text>Grouped copy</Email.Text></Email.Section>
  */
@@ -679,13 +610,9 @@ export namespace Row {
 }
 
 /**
- * Puts its columns side by side, as one table row.
- *
- * This is how an email does what a page would do with flex or grid: those collapse to
- * a single stacked column in Outlook, whose renderer implements neither, whereas a
- * table row is the one horizontal arrangement no client has ever got wrong. The cost
- * is that it does not wrap — a row of four on a phone stays a row of four, so keep the
- * count low or give the narrow case its own layout.
+ * Puts its columns side by side as one table row, the one horizontal
+ * arrangement no client gets wrong, since Outlook supports neither flex nor
+ * grid; width stays fixed, so keep the column count low for phones.
  *
  * @example <Email.Row><Email.Column width="50%">Left</Email.Column><Email.Column>Right</Email.Column></Email.Row>
  */
@@ -739,8 +666,6 @@ export namespace Column {
 export function Column(handle: Handle<Column.Props>) {
 	return () => {
 		let { children, width, align = "left", valign = "top", padding } = handle.props;
-		// The attribute takes the bare number Outlook wants; the style needs a unit or the
-		// declaration is invalid and every other client falls back to dividing the row.
 		let length = typeof width === "number" ? `${width}px` : width;
 
 		return (
@@ -771,13 +696,9 @@ export namespace Link {
 }
 
 /**
- * An inline link, opening in a new tab.
- *
- * The colour is inherited rather than set, which is deliberate: a link inside body copy
- * that declares its own colour is a colour the dark rules have to know about, whereas
- * an inherited one is already whatever the copy around it became. That leaves the
- * underline to say it is a link, which is what a reader in a mail client expects
- * anyway.
+ * An inline link, opening in a new tab, whose color is inherited so it always
+ * matches the copy around it and never needs its own entry in the dark rules;
+ * the underline alone marks it as a link, as a mail reader expects.
  *
  * @example <Email.Link href={url}>the settings page</Email.Link>
  */
@@ -805,10 +726,9 @@ export namespace Img {
 		/** Absolute URL of the image; a relative one resolves against nothing in an inbox. */
 		src: string;
 		/**
-		 * What the image says, for the reader who never sees it. Required rather than
-		 * optional because most readers are that reader: every major client blocks remote
-		 * images until asked, so the alt text is the first thing shown and often the only
-		 * thing. Pass an empty string for an image that carries no meaning.
+		 * What the image says, for the reader who never sees it. Required since most
+		 * readers are that reader — every major client blocks remote images until
+		 * asked — so pass an empty string for an image that carries no meaning.
 		 */
 		alt: string;
 		/** Width in pixels. */
@@ -825,7 +745,7 @@ export namespace Img {
 /**
  * An image with the four resets an inbox needs: `display:block` so no line-height gap
  * opens underneath it, and a cleared border, outline and underline so a client that
- * inherits link styling does not frame it.
+ * inherits link styling leaves it unframed.
  *
  * @example <Email.Img src="https://acme.com/logo.png" alt="Acme" width={120} />
  */
@@ -856,9 +776,9 @@ export namespace Hr {
 }
 
 /**
- * A horizontal rule drawn as a top border rather than as the element's own border,
- * because clients disagree about what an `<hr>` looks like by default and several
- * render the native one as an inset two-tone groove.
+ * A horizontal rule drawn as a top border, since clients disagree about what an
+ * `<hr>` looks like by default and several render the native one as an inset
+ * two-tone groove.
  *
  * @example <Email.Hr />
  */

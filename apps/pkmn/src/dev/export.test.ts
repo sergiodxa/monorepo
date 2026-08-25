@@ -1,10 +1,8 @@
 /**
  * Verifies the dev-tools export logic: payload schema validation, path-safety
- * enforcement before any disk write, and a real write round-trip into an
- * allow-listed target under a temporary root. Covers text, binary (base64), and
- * sprite (PNG + manifest registration) exports. Guards that malformed payloads
- * and unsafe paths fail without ever touching disk, and restores the real asset
- * manifest so the sprite test leaves no trace.
+ * enforcement ahead of any disk write, and real text, binary, and sprite
+ * round-trips into allow-listed targets. Scratch files and the real asset
+ * manifest are restored, so the tree ends as it started.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,15 +25,12 @@ import {
 } from "./export";
 import { PathSafetyError } from "./path-safety";
 
-// runExport writes relative to the app root (src/content, src/assets). Tests
-// target a dedicated scratch directory under src/content that is removed after.
+/** Scratch target under the allow-listed `src/content` root, removed in `afterAll`. */
 let SCRATCH_DIR = "src/content/__export_test__";
 
-// The sprite export test writes a PNG here and registers it in the real
-// manifest; both are undone in afterAll so no scratch files or entries remain.
+/** The sprite test writes into the real asset tree and manifest, then undoes both. */
 let SPRITE_NAME = "export-test-sprite";
 let SPRITE_ASSET_PATH = `src/assets/${SPRITE_NAME}.png`;
-// A 1×1 transparent PNG, base64-encoded, used as the sprite export body.
 let ONE_PX_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
@@ -136,7 +131,6 @@ describe("runSpriteExport", () => {
 
 	test("writes the PNG to src/assets and registers it in the manifest", async () => {
 		let manifestFile = resolve(APP_ROOT, MANIFEST_PATH);
-		// Snapshot the real manifest so we can restore it after the write.
 		let original = existsSync(manifestFile) ? await readFile(manifestFile, "utf8") : null;
 
 		try {
@@ -148,18 +142,14 @@ describe("runSpriteExport", () => {
 				expect(result.data.url).toBe(`/assets/${SPRITE_NAME}.png`);
 				expect(result.data.bytesWritten).toBeGreaterThan(0);
 
-				// The PNG landed on disk with the expected magic bytes.
 				let pngBytes = new Uint8Array(await readFile(resolve(APP_ROOT, SPRITE_ASSET_PATH)));
 				expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
 
-				// The manifest now maps the id to the served URL. Read through a fresh
-				// file handle so we see the post-write contents, not a cached blob.
 				let manifestText = await readFile(resolve(APP_ROOT, MANIFEST_PATH), "utf8");
 				let manifest = JSON.parse(manifestText) as { images: Record<string, string> };
 				expect(manifest.images[SPRITE_NAME]).toBe(`/assets/${SPRITE_NAME}.png`);
 			}
 		} finally {
-			// Restore the manifest and delete the scratch PNG — leave no trace.
 			if (original !== null) await writeFile(resolve(APP_ROOT, MANIFEST_PATH), original);
 			await rm(resolve(APP_ROOT, SPRITE_ASSET_PATH), { force: true });
 		}

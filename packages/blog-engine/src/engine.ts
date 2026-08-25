@@ -48,10 +48,9 @@ export interface EngineRouterDeps {
 }
 
 /**
- * Builds the engine's fetch-router. Each request gets a fresh router so the
- * request-scoped logger can be injected (matching `@pkg/oidc-provider`). Each CMS
- * controller carries its own permission middleware, so the router just maps
- * route→controller (one group per `map()`; nested route-map keys throw).
+ * Builds the engine's fetch-router, fresh per request so the request-scoped
+ * logger can be injected. Route groups map in call order — dynamic public
+ * routes go last so fixed routes win, and nested `map()` groups throw.
  * @param deps - The request-scoped logger, session middleware, and OIDC config.
  * @returns A configured fetch-router ready to handle the request.
  */
@@ -64,8 +63,6 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 		asyncContext(),
 		deps.sessionMiddleware,
 		authMiddleware as Middleware,
-		// Tokenless cross-origin protection: rejects unsafe cross-origin/same-site
-		// requests (sibling blog subdomains are same-site) using Sec-Fetch-Site/Origin.
 		cop(),
 		formData() as Middleware,
 		methodOverride(),
@@ -73,7 +70,6 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 
 	let router = createRouter({ middleware: globalMiddleware, defaultHandler: notFound });
 
-	// Public + feeds + assets.
 	router.map(routes.feed, feed);
 	router.map(routes.rss, rss.feedRss);
 	router.map(routes.typeRss, rss.typeRss);
@@ -81,12 +77,10 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 	router.map(routes.robots, robots);
 	router.map(routes.assets, assets);
 
-	// Auth.
 	router.map(routes.auth.login, login);
 	router.map(routes.auth.logout, logout);
 	router.map(routes.auth.callback, callback);
 
-	// CMS (each controller declares its own permission middleware).
 	router.map(routes.cms.dashboard, dashboard);
 	router.map(routes.cms.posts, posts);
 	router.map(routes.cms.postTypes, postTypes);
@@ -95,7 +89,6 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 	router.map(routes.cms.settings, settings);
 	router.map(routes.cms.appearance, appearance);
 
-	// Dynamic public routes registered last so fixed routes win.
 	router.map(routes.typeIndex, typeIndex);
 	router.map(routes.post, post);
 

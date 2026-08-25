@@ -1,18 +1,10 @@
 /**
- * Unit tests for the two team-digest jobs' shared `perform()`: which digest each class sends, that the
- * unit of delivery is the membership rather than the person or the team, that a member who
- * turned one digest off still receives the other, and that the stamp — the only thing standing
- * between a redelivered trigger and a second copy — moves for exactly the sends the transport
- * accepted.
+ * Tests for the two team-digest jobs' shared `perform()`: which class sends which digest, that
+ * a membership is the unit of delivery, and that the send stamp moves only for the sends the
+ * transport accepted.
  *
- * The two windows are tested against seeded `monitor_daily_stats` rows on specific UTC days,
- * because a window is the one part of a digest a reader cannot check: an email reporting eight
- * days, or reporting today, looks exactly like a correct one.
- *
- * A fake `AuthSDK` stands in for the auth server, since a member's address is the one thing this
- * job cannot read from its own database, and a subject the fake refuses is how the "no address,
- * no email" rule is exercised.
- *
+ * A fake `AuthSDK` stands in for the auth server, since a member's address is the one thing
+ * this job cannot read from its own database.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -55,7 +47,7 @@ let transport = new MemoryTransport();
  */
 let addresses = new Map<string, string>();
 
-/** A transport that accepts nothing, for the cases about what a failed send must not do. */
+/** A transport that accepts nothing, for exercising what happens after a send fails. */
 class RefusingTransport implements Transport {
 	async send() {
 		return failure(new MailError("provider unavailable"));
@@ -184,9 +176,8 @@ function dayLabel(daysAgo: number): string {
 /**
  * Disables a monitor the moment `TeamDigest.listDue` has answered.
  *
- * The only way to stand in the race the job guards against: both of its queries require an
- * enabled monitor, so a monitor disabled before the run is a team that never comes up at all,
- * and the branch under test is the one where the first query said yes and the second says no.
+ * The only way to reach the race the job guards against, since both queries require an
+ * enabled monitor: this is the branch where the first query said yes and the second says no.
  */
 function disableAfterListDue(db: Database, monitorId: string): void {
 	let original = (db.exec as (...args: unknown[]) => Promise<unknown>).bind(db);
@@ -194,8 +185,6 @@ function disableAfterListDue(db: Database, monitorId: string): void {
 	(db as unknown as { exec: unknown }).exec = async (statement: unknown, values?: unknown[]) => {
 		let result = await original(statement, values);
 
-		// Only the raw recipient query; everything else — including the update below, which
-		// dispatches through this same method with a non-string argument — falls through.
 		if (typeof statement === "string" && statement.includes("subjectId")) {
 			await db.update(monitors, monitorId, { enabled_at: null }, { touch: false });
 		}
@@ -206,12 +195,8 @@ function disableAfterListDue(db: Database, monitorId: string): void {
 
 /**
  * Whether a rendered digest is the one about `teamName`, read off its heading and footer.
- *
- * The team is asserted on the body and not on the subject because the English subject lines
- * currently render as their own translation keys: `app/locales/en.ts` writes the digest
- * subjects and summaries as i18next plurals (`subject_one`/`subject_other`, interpolating
- * `{{count}}`), while both email classes — and every other locale file — call the flat keys
- * with `{{total}}`. Asserting on the subject here would only record that mismatch.
+ * The body carries the team name as plain text, while the subject line renders through
+ * i18next's plural keys with an interpolated `{{count}}`, so only the body is checked here.
  */
 function namesTeam(text: string | undefined, teamName: string): boolean {
 	return (text ?? "").includes(teamName);
@@ -245,9 +230,6 @@ describe("SendTeamDigestsJob period", () => {
 		expect(dailyDigests()).toHaveLength(1);
 		expect(weeklyDigests()).toHaveLength(0);
 		expect(transport.last?.to).toEqual([{ email: "ada@example.com" }]);
-		// The team is named in the copy, since a reader in several teams needs to know which
-		// one this is about. Asserted on the body rather than the subject: see the note above
-		// `namesTeam` about the English subject line.
 		expect(namesTeam(transport.last?.text, "Acme")).toBe(true);
 
 		let completed = job.logger.events.find(
@@ -272,14 +254,9 @@ describe("SendTeamDigestsJob period", () => {
 	});
 
 	/**
-	 * The two schedules are two classes so each can report to its own cron-job monitor: a
-	 * monitor holds one cron expression, and `Job.run` reads `monitorId` off the class it was
-	 * handed, so one class serving both periods could only ever ping one of them and the other
-	 * digest would fail unwatched.
-	 *
-	 * Both realistic ways to get this wrong are caught here — leaving an id unset, which
-	 * silently skips the ping, and pasting one id into both classes, which leaves one monitor
-	 * pinged twice and the other never.
+	 * Two classes exist so each can report to its own cron-job monitor: a monitor holds one cron
+	 * expression and `Job.run` reads `monitorId` off the class it was handed, so one class serving
+	 * both periods could only ever ping one of them, leaving the other digest unwatched.
 	 */
 	test("gives each schedule its own cron-job monitor to report to", () => {
 		let daily = SendTeamDailyDigestsJob.monitorId;
@@ -307,7 +284,6 @@ describe("SendTeamDigestsJob recipients", () => {
 
 		let digests = dailyDigests();
 		expect(digests).toHaveLength(2);
-		// One person, one address, two teams: the emails differ only by the team they name.
 		expect(digests.every((message) => message.to[0]?.email === "ada@example.com")).toBe(true);
 		expect(digests.filter((message) => namesTeam(message.text, "Acme"))).toHaveLength(1);
 		expect(digests.filter((message) => namesTeam(message.text, "Beta"))).toHaveLength(1);
@@ -351,7 +327,6 @@ describe("SendTeamDigestsJob recipients", () => {
 		expect(
 			job.logger.events.find((event) => event.event === "job.send_team_digests.nobody_due"),
 		).toBeDefined();
-		// The refusal names one email, so nothing about the other's schedule may move either.
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 
 		await runJob(db, "weekly");
@@ -359,6 +334,7 @@ describe("SendTeamDigestsJob recipients", () => {
 		expect(weeklyDigests()).toHaveLength(1);
 	});
 
+	/** Left unstamped since the address may resolve tomorrow, and the digest itself was never sent. */
 	test("skips a member whose profile does not resolve, without stamping it", async () => {
 		let { db } = createTestDatabase();
 		let team = await seedTeam(db, "Acme");
@@ -372,12 +348,15 @@ describe("SendTeamDigestsJob recipients", () => {
 		expect(
 			job.logger.events.find((event) => event.event === "job.send_team_digests.profile_missing"),
 		).toBeDefined();
-		// Still due, because the address may resolve tomorrow and the digest was never sent.
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 	});
 });
 
 describe("SendTeamDigestsJob stamp", () => {
+	/**
+	 * The weekly digest is a different schedule with its own stamp, so it stays untouched here and
+	 * Monday's run still finds this membership due.
+	 */
 	test("stamps only the period that was sent, so a second run the same day sends nothing", async () => {
 		let { db } = createTestDatabase();
 		let team = await seedTeam(db, "Acme");
@@ -392,8 +371,6 @@ describe("SendTeamDigestsJob stamp", () => {
 
 		let row = await db.find(memberships, membership.id);
 		expect(row?.last_daily_digest_at).not.toBeNull();
-		// The weekly digest is a different switch on a different schedule, so its stamp is
-		// untouched and Monday's run still has this membership to do.
 		expect(row?.last_weekly_digest_at).toBeNull();
 	});
 
@@ -411,7 +388,6 @@ describe("SendTeamDigestsJob stamp", () => {
 		).toBeDefined();
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 
-		// And the retry the untouched stamp buys actually delivers.
 		await runJob(db, "daily");
 
 		expect(dailyDigests()).toHaveLength(1);
@@ -436,25 +412,31 @@ describe("SendTeamDigestsJob stamp", () => {
 });
 
 describe("SendTeamDigestsJob window", () => {
+	/**
+	 * A window of just yesterday reads "Up 100.0%"; folding in the day before, which was fully
+	 * down, would read "Down 50.0%" instead — the whole difference a one-day window makes.
+	 */
 	test("reports yesterday in the daily digest and nothing before it", async () => {
 		let { db } = createTestDatabase();
 		let team = await seedTeam(db, "Acme");
 		await seedMember(db, team.id, "subject-1", "ada@example.com");
 		let monitor = await seedMonitor(db, team.id, "Api");
 		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
-		// The day before the window: a bad day that must not reach this email at all.
 		await seedDay(db, monitor.id, utcDay(2), { checks: 10, successful: 0, status: "down" });
 
 		await runJob(db, "daily");
 
 		let text = transport.last?.text ?? "";
-		// The monitor's row, status then uptime. Counting the older day as well would read
-		// "Down 50.0%", which is the whole difference a one-day window makes.
 		expect(text).toContain("Up 100.0%");
 		expect(text).not.toContain("50.0%");
 		expect(text).not.toContain("Down");
 	});
 
+	/**
+	 * Fifteen of twenty checks across the two included days reads 75.0%; the eighth day would
+	 * pull it to 50.0% and dropping the seventh would read 100.0%. The bar's captions are the
+	 * window's own ends — seven days ago and yesterday — never today or the eighth day back.
+	 */
 	test("reports the seven days ending yesterday in the weekly digest", async () => {
 		let { db } = createTestDatabase();
 		let team = await seedTeam(db, "Acme");
@@ -462,18 +444,13 @@ describe("SendTeamDigestsJob window", () => {
 		let monitor = await seedMonitor(db, team.id, "Api");
 		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
 		await seedDay(db, monitor.id, utcDay(7), { checks: 10, successful: 5, status: "degraded" });
-		// One day past the far edge of the window.
 		await seedDay(db, monitor.id, utcDay(8), { checks: 10, successful: 0, status: "down" });
 
 		await runJob(db, "weekly");
 
 		let text = transport.last?.text ?? "";
-		// Fifteen of twenty checks over the two days inside the window; counting the eighth
-		// day as well would read 50.0%, and dropping the seventh would read 100.0%.
 		expect(text).toContain("75.0%");
 		expect(text).not.toContain("50.0%");
-		// The bar's captions are the two ends of the window itself: seven days ago and
-		// yesterday, never today and never the eighth day back.
 		expect(text).toContain(dayLabel(7));
 		expect(text).toContain(dayLabel(1));
 		expect(text).not.toContain(dayLabel(0));

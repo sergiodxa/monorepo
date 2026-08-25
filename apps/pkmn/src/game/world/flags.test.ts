@@ -1,11 +1,6 @@
 /**
- * Verifies the persisted story-flag store: reading, writing, migration default,
- * and that flags survive the persistent snapshot.
- *
- * Flags are engine-generic booleans an event runtime uses to gate one-time
- * events. Migration must materialize an empty flag set for older saves, the
- * accessors must read false for unset names, and set flags must appear in the
- * save-only snapshot so they persist across sessions.
+ * Verifies the persisted story-flag store: reading, writing, the migration
+ * default, and survival across the persistent snapshot.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,7 +63,6 @@ test("the persistent snapshot carries story flags", () => {
 
 test("selfSwitchFlag namespaces a switch by its map and entity id", () => {
 	expect(selfSwitchFlag("route-1", "npc-a", "A")).toBe("event:route-1:npc-a:A");
-	// The same short name on different entities/maps never collides.
 	expect(selfSwitchFlag("route-2", "npc-a", "A")).not.toBe(selfSwitchFlag("route-1", "npc-a", "A"));
 	expect(selfSwitchFlag("route-1", "npc-b", "A")).not.toBe(selfSwitchFlag("route-1", "npc-a", "A"));
 });

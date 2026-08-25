@@ -69,9 +69,8 @@ export async function importKey(raw: string): Promise<Result<CryptoKey, CryptoEr
 /**
  * Encrypts a string into a self-describing envelope.
  *
- * The IV is random per call, so sealing the same plaintext twice yields different
- * envelopes: sealed values are not comparable and not searchable. Anything that
- * must be looked up stays hashed with `sha256`.
+ * The IV is random per call, so sealing the same plaintext twice yields
+ * different envelopes; hash a value with `sha256` before storing it for lookup.
  *
  * @param key AES-GCM key from `importKey`.
  * @param plaintext Value to encrypt.
@@ -101,9 +100,8 @@ export async function seal(
 /**
  * Decrypts an envelope produced by `seal`.
  *
- * A wrong key and a tampered ciphertext both surface as the same
- * `DecryptionError` with the same message, so failures cannot be used to probe
- * which part of the value was altered.
+ * A wrong key and a tampered ciphertext raise the same `DecryptionError`,
+ * revealing only that decryption failed and nothing about which part changed.
  *
  * @param key AES-GCM key from `importKey`.
  * @param sealed Envelope shaped `v1.<iv>.<ciphertext>`.

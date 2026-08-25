@@ -1,21 +1,9 @@
 /**
- * Tests for the TCP monitor create/update/delete/check actions. `cloudflare:sockets`
- * is stubbed (its `connect()` never touches the network) so `checkTcpMonitor`'s on-demand
- * check can run outside the Workers runtime; the other three actions don't reach that code
- * path but still transitively import it, so the stub applies to the whole file.
- *
- * `cloudflare:workers` is replaced for the same reason and one more: the meter event an
- * on-demand check produces is handed to `waitUntil`, so the double collects that work
- * instead of dropping it and a test can await what the response deliberately doesn't. What
- * is pinned here is which requests are billable — a check that opened a connection is
- * exactly one `ping` event keyed on the history row it wrote, and every request that
- * returned without checking (rejected form, another team's monitor, an owner without an
- * active subscription) is none.
- *
- * The same module supplies an in-memory `PING_RESULTS` dataset, which pins the other half of
- * that: a check that ran writes exactly one Analytics Engine point with the same dimensions
- * the scheduled sweep writes, and a refused one writes none — so billed work and reported
- * work stay in step.
+ * Tests for the TCP monitor create/update/delete/check actions. `cloudflare:sockets` and
+ * `cloudflare:workers` are stubbed so `checkTcpMonitor`'s on-demand check runs outside the
+ * Workers runtime, with `waitUntil` work collected here so tests can await it. Billing and
+ * analytics assertions pin that a check that ran produces exactly one `ping` event and one
+ * `PING_RESULTS` point, and a refused request produces neither.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,20 +51,19 @@ vi.doMock("cloudflare:sockets", () => ({
 }));
 
 /**
- * Work the check action deferred past its response. Held rather than dropped so a test can
- * await the meter event the visitor is deliberately not made to wait for.
+ * Work the check action defers past its response, held here so a test can await the meter
+ * event that keeps running after the response is sent.
  */
 let deferred: Promise<unknown>[] = [];
 
 /**
  * The dataset `writePingResult` reports to — the only binding these paths touch. Module
- * scope because the actions capture `env` on import, so `beforeEach` empties it rather than
- * re-creating it. It enforces the platform's cardinality and size limits, so an over-budget
- * point fails here instead of being lost the way production loses it.
+ * scope holds it because the actions capture `env` on import; `beforeEach` empties it for
+ * each test, enforcing the platform's cardinality and size limits on write.
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-/** `waitUntil` collects deferred work so a test can await what the response doesn't. */
+/** `waitUntil` collects deferred work here so a test can await the event that continues after the response returns. */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
@@ -124,16 +111,9 @@ async function createLapsedSubscription(db: Database, ownerId: string) {
 }
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * `@pkg/validate`'s `validate()` flattens `FormData` into a plain object, which
+ * `remix/data-schema/form-data`'s `f.object()` rejects — a real bug that fails every
+ * call. This mock forwards the form container to the schema unflattened, exercising real branching.
  */
 let { checkTcpMonitor, createTcpMonitor, deleteTcpMonitor, updateTcpMonitor } =
 	await import("./tcp-monitors");
@@ -477,7 +457,6 @@ describe("checkTcpMonitor billing", () => {
 		);
 
 		expect(response.status).toBe(303);
-		// Refused before the connection was attempted, so there is no work to charge for.
 		expect(
 			await db.findMany(tcpMonitorResults, { where: { tcp_monitor_id: monitor.id } }),
 		).toHaveLength(0);
@@ -557,9 +536,9 @@ describe("checkTcpMonitor analytics", () => {
 		expect(point?.blobs).toEqual([monitor.id, "tcp", "up"]);
 		expect(point?.indexes).toEqual([team.id]);
 		/**
-		 * The connection's latency is measured, not stubbed, so only its shape is pinned. The
-		 * three that follow are fixed: one row means one check, and TCP has no notion of an
-		 * HTTP status to report or to expect.
+		 * The connection's latency is measured live, so only its shape is pinned here. The
+		 * three doubles that follow are fixed: one row means one check, and TCP's status
+		 * is simply up or down.
 		 */
 		let doubles = point?.doubles ?? [];
 		expect(doubles).toHaveLength(4);
@@ -582,7 +561,6 @@ describe("checkTcpMonitor analytics", () => {
 			{ monitor_id: monitor.id },
 		);
 
-		// No connection was attempted, so there is no result to report.
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 });

@@ -32,8 +32,7 @@ import { SentinelRow } from "./sentinel-row";
 /**
  * Default {@link ListBox.Props} selection cardinality, applied when
  * `multiple` is omitted, rendering every {@link ListBox.Item} as a native
- * `<input type="radio">` so only one option in the group can be selected at
- * a time.
+ * `<input type="radio">` limiting the group to one selected option.
  */
 const DEFAULT_MULTIPLE = false;
 
@@ -43,9 +42,8 @@ const DEFAULT_MULTIPLE = false;
 export namespace ListBox {
 	/**
 	 * Value {@link ListBox} stores in component context so every
-	 * {@link ListBox.Item} nested inside shares the same native grouping name
-	 * and selection cardinality without a consumer repeating them on each
-	 * option.
+	 * {@link ListBox.Item} nested inside shares the same grouping name and
+	 * selection cardinality without repeating them on each option.
 	 */
 	export interface Context {
 		/** Shared `name` every {@link ListBox.Item} reads unless it sets its own. */
@@ -63,10 +61,9 @@ export namespace ListBox {
 	 */
 	export interface Props extends TagProps<"div"> {
 		/**
-		 * Native grouping name shared by every {@link ListBox.Item} nested
-		 * inside, provided through component context. Defaults to the group's
-		 * own {@link Handle.id | stable instance id} when omitted, so options
-		 * always group correctly even when a consumer never sets a name.
+		 * Native grouping name shared by every {@link ListBox.Item} nested inside,
+		 * provided through component context. Defaults to the group's own
+		 * {@link Handle.id | stable instance id}, so options always group correctly.
 		 */
 		name?: string;
 		/**
@@ -122,14 +119,8 @@ export namespace ListBox {
 
 /**
  * Renders the group host: a `<div>` laying its {@link ListBox.Item} options
- * out as a scrollable column, capped at a fixed block size once the list
- * grows past a handful of rows. Every option nested inside reads its shared
- * native `name` and selection cardinality from component context, defaulting
- * to the group's own stable identifier and to single-selection so grouping
- * always works correctly even when a consumer never sets `name` or
- * `multiple` explicitly. The host's `role` defaults to `"radiogroup"` for
- * single selection or `"group"` once `multiple` renders checkboxes, unless a
- * consumer supplies its own.
+ * out as a scrollable column capped at a fixed block size, with `role`
+ * defaulting to `"radiogroup"` for single selection or `"group"` for `multiple`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link ListBox.Context}.
  * @returns The render function producing the group's markup.
@@ -174,19 +165,8 @@ export function ListBox(handle: Handle<ListBox.Props, ListBox.Context>) {
 
 /**
  * Renders a single option: a native `<label>` pairing a visually hidden
- * input — a radio or a checkbox, chosen by the nearest ancestor
- * {@link ListBox}'s `multiple` setting — with the option's visible content.
- * The hidden input carries every accessibility and form semantic natively —
- * focus, keyboard selection, native validation, form submission — while the
- * row reads the input's own `:checked` and `:focus` states through a
- * `:has()` selector to color its background, and the same states also
- * apply through `aria-selected` and `aria-disabled` so the row keeps
- * rendering correctly once a future enhancement drives selection through
- * those attributes instead of a native input.
- *
- * In dev mode, an option whose row carries no plain text and no
- * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
- * technology otherwise has no accessible name to announce for it.
+ * radio or checkbox input with the option's content. In dev mode, an
+ * option with no accessible name logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the option's markup.
@@ -265,10 +245,8 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 
 /**
  * Renders a decorative sentinel row: a `<div>` styled as a centered, muted
- * line of small text, sized to match {@link ListBox.Item}'s own vertical
- * rhythm. Carries no loading or fetching behavior of its own — it is styling
- * only, ready to hold whatever loading indicator or "load more" trigger a
- * paired enhancement supplies as `children`.
+ * line of small text sized to match {@link ListBox.Item}'s vertical rhythm,
+ * ready to hold a loading indicator or "load more" trigger as `children`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the sentinel row's markup.

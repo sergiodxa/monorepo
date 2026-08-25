@@ -1,5 +1,13 @@
 /* @jsxImportSource remix/ui */
 
+/**
+ * Converts a Markdoc render tree into Remix UI elements, mapping each tag
+ * name to its styled Remix output.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RemixNode } from "remix/ui";
 
 import { createElement, css } from "remix/ui";
@@ -40,9 +48,6 @@ function isTag(node: RenderableTreeNode): node is Tag {
 	return (node as { $$mdtype?: string }).$$mdtype === "Tag";
 }
 
-/**
- * Reads the runtime tag name from a Markdoc tag.
- */
 function getTagName(node: Tag): string {
 	return String((node as { name?: string }).name ?? "");
 }
@@ -61,9 +66,6 @@ function textAttribute(value: unknown, fallback: string): string {
 	return fallback;
 }
 
-/**
- * Returns a plain attributes object for one Markdoc tag.
- */
 function getTagAttributes(node: Tag): Record<string, unknown> {
 	return ((node as { attributes?: Record<string, unknown> }).attributes ?? {}) as Record<
 		string,
@@ -94,13 +96,14 @@ function getRemixProps(attrs: Record<string, unknown>): Record<string, unknown> 
 	return { ...rest, mix: nextMix };
 }
 
-/** Narrows Markdoc `css` attributes to Remix UI CSS objects. */
 function isCSSProps(value: unknown): value is CSSProps {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
  * Recursively renders Markdoc nodes into Remix components and primitives.
+ * Table elements render unstyled here so an ancestor component owns their
+ * sizing, scrolling, and borders instead of two conflicting layouts.
  *
  * @param node - Current render node to convert into Remix output
  * @param components - Optional custom tag renderers keyed by tag name
@@ -266,12 +269,6 @@ function renderChild(
 
 	if (tagName === "br") return <br />;
 
-	// `table`/`th`/`td` render bare here — the surrounding `Typeset` wrapper
-	// (see `@pkg/ui`) already sizes and colors them (width, overflow-driven
-	// scroll + edge fade for a table wider than its container, cell padding,
-	// borders, header weight), so styling them again here would only compete
-	// with it: two separate `overflow-x: auto` scroll containers nested
-	// inside each other, and two conflicting table widths.
 	if (tagName === "table") return <table>{children}</table>;
 
 	if (tagName === "thead")

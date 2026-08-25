@@ -27,9 +27,6 @@ describe("corner", () => {
 	});
 
 	test("the declaration lives inside the @supports block, never beside it", async () => {
-		// The whole point of the gate is that an unsupported browser sees no
-		// `corner-shape` at all; a declaration emitted at the top level of the
-		// rule would apply everywhere and defeat the progressive enhancement.
 		let css = await serialize(corner("squircle"));
 
 		expect(css.indexOf("@supports")).toBeLessThan(css.indexOf("corner-shape:"));

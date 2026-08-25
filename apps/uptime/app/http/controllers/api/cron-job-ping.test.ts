@@ -1,31 +1,7 @@
 /**
- * Tests `POST /api/v1/cron-jobs/:cronJobId/ping`, the ping endpoint for dead man's
- * switch monitoring. It requires an API key carrying `cron-jobs:ping`, so the first
- * group below covers who is let in: a missing, unparseable or expired key is 401, a key
- * without the scope is 403, and a key from another team pinging a monitor it does not
- * own is 404 rather than 403, so the endpoint cannot be used to learn which ids exist.
- *
- * Past that, the product rules: a healthy on-time ping, 404 for an unknown cron job id,
- * 409 for a disabled job, 429 for a ping within the per-monitor window, and 429 once a
- * caller has spent its own budget — two limits with two different purposes, so both are
- * exercised. The budget is also asserted to be spent *before* authentication, which is
- * the deliberate middleware order: a flood is refused without a database read for
- * whatever key it presented. The mail middleware is registered over a recording
- * transport, and no seeded alerts means `notifyCronJobResult` never dispatches one
- * anyway, so nothing leaves the process.
- *
- * Billing is covered alongside them, because which requests are billed is the whole
- * point of the distinction: an accepted ping is one event against the `ping` meter, keyed
- * on the `cron_job_pings` row it wrote, and every refusal — unauthenticated, unscoped,
- * unknown, disabled, too frequent, or over the caller's budget — performed no work and
- * must bill nothing.
- *
- * `cloudflare:workers` is mocked before the dynamic import of the controller because
- * the caller budget reads its backend off `env`. The `RATE_LIMITER` binding is an
- * in-memory limiter that really counts per key, so the budget is asserted by exhausting
- * it rather than by returning a canned refusal, and `PING_RESULTS` records the data
- * points it is handed. `waitUntil` collects the deferred ingestion instead of dropping
- * it, so a test can await what the response deliberately doesn't.
+ * Tests `POST /api/v1/cron-jobs/:cronJobId/ping`, the dead man's switch ping
+ * endpoint: authentication and scoping, the product rules for accepting or
+ * refusing a ping, and which of those requests get billed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,10 +32,9 @@ import routes from "~/routes/web";
 const CALLER_LIMIT = 60;
 
 /**
- * The `RATE_LIMITER` binding, counting per key against {@link CALLER_LIMIT} the way the
- * platform's does. The clock is frozen so the fixed window never rolls over mid-test: a
- * budget test spends sixty requests, and a rollover between two of them would hand the
- * caller a fresh allowance and turn the expected refusal into a pass.
+ * The `RATE_LIMITER` binding, counting per key against {@link CALLER_LIMIT}.
+ * The clock is frozen so the fixed window can't roll over mid-test and hand
+ * a caller spending its whole budget a fresh allowance mid-run.
  */
 let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 
@@ -67,11 +42,15 @@ let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 let pingResults = createAnalyticsEngine();
 
 /**
- * Work the handler deferred past the response. Held rather than dropped so a test can
- * await the ingestion the caller deliberately isn't made to wait for.
+ * Work the handler deferred past the response. Held rather than dropped so a
+ * test can await ingestion that completes after the response already went out.
  */
 let deferred: Promise<unknown>[] = [];
 
+/**
+ * Declared before the controller's dynamic import below: the caller budget
+ * reads its rate-limiter backend off `env`, so the mock must exist first.
+ */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ RATE_LIMITER: rateLimiter, PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
@@ -149,6 +128,11 @@ async function createCaller(db: Db, overrides: Record<string, unknown> = {}) {
 	return { team, monitor, key };
 }
 
+/**
+ * Routes the request through the full middleware stack, with mail sent over
+ * a recording transport, and drains deferred work before returning so a
+ * caller can await the ingestion the response itself doesn't wait for.
+ */
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
 		middleware: [asyncContext(), mail({ transport: new MemoryTransport(), from: MAIL_FROM })],
@@ -160,8 +144,6 @@ async function dispatch(db: Db, request: Request) {
 	container.singleton(PolarClient, () => polar);
 
 	let response = await container.scope(() => router.fetch(request));
-	// The platform settles deferred work after the response; this stands in for that, so
-	// asserting on the ingestion doesn't race it.
 	await Promise.all(deferred.splice(0));
 	return response;
 }
@@ -245,6 +227,11 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping authentication", () => {
 		expect(await recorded(db, monitor.id)).toEqual({ pings: 0, dataPoints: 0, events: 0 });
 	});
 
+	/**
+	 * A 403 would confirm the id names a real monitor, turning the endpoint
+	 * into a way to enumerate other teams' ids, so a valid key with the right
+	 * scope still gets 404 for a monitor it doesn't own.
+	 */
 	test("returns 404, not 403, for another team's monitor", async () => {
 		let { db } = createTestDatabase();
 		let { monitor } = await createCaller(db);
@@ -254,28 +241,26 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping authentication", () => {
 
 		let response = await dispatch(db, ping(monitor.id, { key }));
 
-		// 404 and not 403 on purpose: a 403 would confirm the id names a real monitor, which
-		// turns the endpoint into a way to enumerate other teams' ids. The key is valid and
-		// carries the scope, so the only thing separating these two answers is the choice.
 		expect(response.status).toBe(404);
 		expect(response.status).not.toBe(403);
 		expect(await recorded(db, monitor.id)).toEqual({ pings: 0, dataPoints: 0, events: 0 });
 	});
 
+	/**
+	 * The caller budget is spent before authentication runs: while budget
+	 * remains every attempt gets 401 from auth, and once it's gone the answer
+	 * flips to 429 without ever costing a key lookup.
+	 */
 	test("spends the caller budget before authenticating", async () => {
 		let { db } = createTestDatabase();
 		let { monitor } = await createCaller(db);
 		let address = "203.0.113.40";
 
-		// Unauthenticated throughout: while there is budget left the answer is 401, which is
-		// authentication having run.
 		for (let attempt = 0; attempt < CALLER_LIMIT; attempt++) {
 			let response = await dispatch(db, ping(monitor.id, { address }));
 			expect(response.status).toBe(401);
 		}
 
-		// Past the budget the answer changes to 429, so the limit was reached without the
-		// request ever costing a key lookup. Middleware order is what makes that true.
 		let refused = await dispatch(db, ping(monitor.id, { address }));
 		expect(refused.status).toBe(429);
 
@@ -336,14 +321,16 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		expect(pings).toHaveLength(0);
 	});
 
+	/**
+	 * Only the first ping succeeds; every refusal still spends caller budget,
+	 * since a refusal's cost is what this limit bounds. The final refusal's
+	 * own body shows the middleware refused it before the handler ran.
+	 */
 	test("refuses a caller that has spent its budget, and describes the policy", async () => {
 		let { db } = createTestDatabase();
 		let { monitor, key } = await createCaller(db);
 		let address = "203.0.113.10";
 
-		// Only the first ping is accepted — the rest are refused by the per-monitor
-		// rule — but every one of them spends caller budget, which is the point: the
-		// cost of a refusal is what this limit bounds.
 		for (let attempt = 0; attempt < CALLER_LIMIT; attempt++) {
 			let response = await dispatch(db, ping(monitor.id, { key, address }));
 			expect(response.status).toBe(attempt === 0 ? 201 : 429);
@@ -353,12 +340,15 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		expect(refused.status).toBe(429);
 		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
 
-		// The caller budget's own body rather than the per-monitor rule's, so this
-		// refusal came from the middleware and the handler never ran.
 		let body = (await refused.json()) as { error: string };
 		expect(body.error).toBe("too_many_requests");
 	});
 
+	/**
+	 * The same caller pinging a different monitor draws on its own bucket, so
+	 * a shared egress address can't let one noisy job starve every other job
+	 * behind it.
+	 */
 	test("keeps one monitor's exhausted budget off another's", async () => {
 		let { db } = createTestDatabase();
 		let { team, monitor: noisy, key } = await createCaller(db);
@@ -370,8 +360,6 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		}
 		expect((await dispatch(db, ping(noisy.id, { key, address }))).status).toBe(429);
 
-		// Same caller, different monitor: its own bucket, so a shared egress address
-		// cannot let one job starve every other job behind it.
 		let served = await dispatch(db, ping(quiet.id, { key, address }));
 		expect(served.status).toBe(201);
 	});
@@ -401,22 +389,28 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		]);
 	});
 
+	/**
+	 * A cron ping reports that the job ran elsewhere already, so it carries no
+	 * latency of its own.
+	 */
 	test("records an accepted ping as up, with no latency it never measured", async () => {
 		let { db } = createTestDatabase();
 		let { team, monitor, key } = await createCaller(db);
 
 		await dispatch(db, ping(monitor.id, { key, address: "203.0.113.31" }));
 
-		// A cron ping is a report, not a measurement: the job already ran, elsewhere.
 		expect(pingResults.dataPoints).toEqual([
 			{ blobs: [monitor.id, "cron", "up"], doubles: [0, 1, 0, 0], indexes: [team.id] },
 		]);
 	});
 
+	/**
+	 * An hour past the default five-minute grace period counts as late, but a
+	 * late ping is still a ping the team performed, so it still gets billed.
+	 */
 	test("records a ping that missed its deadline as degraded", async () => {
 		let { db } = createTestDatabase();
 		let { team, monitor, key } = await createCaller(db);
-		// Expected an hour ago, with a five-minute grace period: this one is late.
 		await CronJobMonitor.updateById(db, monitor.id, { next_expected_at: Date.now() - 3_600_000 });
 
 		await dispatch(db, ping(monitor.id, { key, address: "203.0.113.32" }));
@@ -424,7 +418,6 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		expect(pingResults.dataPoints).toEqual([
 			{ blobs: [monitor.id, "cron", "degraded"], doubles: [0, 1, 0, 0], indexes: [team.id] },
 		]);
-		// Late is still a ping the team performed, so it is still billed.
 		expect(ingestedEvents()).toHaveLength(1);
 	});
 
@@ -475,6 +468,10 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
+	/**
+	 * A refusal records nothing, so there is nothing to charge for — a job
+	 * retrying inside its own window must not spend allowance on the refusals.
+	 */
 	test("bills nothing for a ping inside the per-monitor window", async () => {
 		let { db } = createTestDatabase();
 		let { monitor, key } = await createCaller(db);
@@ -482,8 +479,6 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.35" }));
 
-		// Nothing was recorded, so there is nothing to charge for — a job retrying inside
-		// its minute must not spend allowance on the refusals.
 		expect(response.status).toBe(429);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
@@ -500,7 +495,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		ingestEventsSafeMock.mockClear();
 		pingResults.reset();
 
-		// Refused by the middleware, so the handler never ran at all.
+		/** The middleware refuses the request, so the handler never runs at all. */
 		let refused = await dispatch(db, ping(monitor.id, { key, address }));
 
 		expect(refused.status).toBe(429);
@@ -515,7 +510,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.37" }));
 
-		// A billing gap must not turn a caller's healthy job into a failed `curl`.
+		/** A billing gap must not turn a caller's healthy job into a failed `curl`. */
 		expect(response.status).toBe(201);
 		let pings = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
 		expect(pings).toHaveLength(1);

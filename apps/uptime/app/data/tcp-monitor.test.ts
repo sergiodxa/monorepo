@@ -42,12 +42,10 @@ describe("TcpMonitor.create", () => {
 		expect(monitor.host).toBe("db.example.com");
 		expect(monitor.port).toBe(5432);
 		/**
-		 * SQLite (and the production D1 adapter, identically) round-trips boolean
-		 * columns as 0/1, not real booleans — assert truthiness, not strict `true`.
+		 * SQLite (and the production D1 adapter, identically) round-trips boolean columns as
+		 * 0/1, so this asserts truthiness.
 		 */
 		expect(monitor.is_enabled).toBeTruthy();
-		// Due immediately, so the first check runs on the next tick rather than a whole
-		// interval later.
 		expect(monitor.next_due_at).not.toBeNull();
 		expect(monitor.next_due_at).toBeLessThanOrEqual(Date.now());
 	});
@@ -97,10 +95,9 @@ describe("TcpMonitor.listByTeam", () => {
 });
 
 /**
- * `claimDue` is a claim, not a query: it takes the monitors whose `next_due_at` has arrived
+ * `claimDue` both reads and writes: it takes the monitors whose `next_due_at` has arrived
  * and advances that column in the same call, so what matters is the state it leaves behind.
- * Every case below therefore calls it more than once, or inspects `next_due_at` afterwards,
- * rather than asserting on a single return value.
+ * Every case below calls it twice, or inspects `next_due_at` afterwards.
  */
 describe("TcpMonitor.claimDue", () => {
 	/** The `next_due_at` currently stored for a monitor, which is what a claim moves. */
@@ -129,11 +126,11 @@ describe("TcpMonitor.claimDue", () => {
 		expect(await TcpMonitor.claimDue(db, Date.now() + 24 * 60 * 60_000)).toEqual([]);
 	});
 
+	/** The two deliveries this cron really produces land in the same minute, ~7s apart. */
 	test("never claims the same monitor twice in the same minute", async () => {
 		let { db } = createTestDatabase();
 		await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput({ interval_seconds: 60 }));
 
-		// The two deliveries this cron really produces: same minute, ~7s apart.
 		let first = Date.now() + 1000;
 		expect(await TcpMonitor.claimDue(db, first)).toHaveLength(1);
 		expect(await TcpMonitor.claimDue(db, first + 7000)).toEqual([]);
@@ -151,11 +148,14 @@ describe("TcpMonitor.claimDue", () => {
 
 		await TcpMonitor.claimDue(db, anchor);
 
-		// An hourly monitor is claimed once an hour, however often the sweep runs.
 		expect(await TcpMonitor.claimDue(db, anchor + 30 * 60_000)).toEqual([]);
 		expect(await TcpMonitor.claimDue(db, anchor + 60 * 60_000)).toHaveLength(1);
 	});
 
+	/**
+	 * 7 minutes late on a 5-minute monitor: the next due time is the anchor plus two whole
+	 * intervals, so a sweep that fell behind resumes on the original grid.
+	 */
 	test("advances the due time by whole intervals from the previous one", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await TcpMonitor.create(
@@ -166,9 +166,6 @@ describe("TcpMonitor.claimDue", () => {
 		let anchor = Date.now();
 		await db.update(tcpMonitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
-		// 7 minutes late on a 5-minute monitor: two whole intervals have passed, so the next
-		// due time is the anchor plus two rather than the claim time plus one, and the
-		// intervals it slept through are not replayed.
 		await TcpMonitor.claimDue(db, anchor + 7 * 60_000);
 
 		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 10 * 60_000);
@@ -199,7 +196,6 @@ describe("TcpMonitor.updateById scheduling", () => {
 			crypto.randomUUID(),
 			tcpMonitorInput({ interval_seconds: 3600 }),
 		);
-		// Pushed an hour out by a claim, so a shorter interval must bring it back.
 		await db.update(
 			tcpMonitors,
 			monitor.id,
@@ -212,6 +208,10 @@ describe("TcpMonitor.updateById scheduling", () => {
 		expect(await TcpMonitor.claimDue(db, Date.now() + 1000)).toHaveLength(1);
 	});
 
+	/**
+	 * The web form resubmits the unchanged interval on every edit, so a rename and a
+	 * same-value interval both have to leave the cadence where it stands.
+	 */
 	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await TcpMonitor.create(
@@ -222,8 +222,6 @@ describe("TcpMonitor.updateById scheduling", () => {
 		let scheduled = Date.now() + 3_600_000;
 		await db.update(tcpMonitors, monitor.id, { next_due_at: scheduled }, { touch: false });
 
-		// The web form resubmits the unchanged interval on every edit, so neither a rename nor
-		// a same-value interval may restart the cadence.
 		let renamed = await TcpMonitor.updateById(db, monitor.id, {
 			name: "Renamed",
 			interval_seconds: 60,
@@ -323,8 +321,8 @@ describe("TcpMonitor.listResults", () => {
 		let monitor = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
 		let now = Date.now();
 		/**
-		 * Inserted directly (rather than via `recordCheckResult`) so `checked_at` can be
-		 * set to explicit, distinct timestamps instead of racing on `Date.now()`.
+		 * Inserted with explicit, distinct `checked_at` timestamps so the ordering assertion
+		 * is deterministic.
 		 */
 		await db.create(tcpMonitorResults, {
 			id: crypto.randomUUID(),

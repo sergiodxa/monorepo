@@ -1,8 +1,7 @@
 /**
  * Tests the `/api/v1/memberships` endpoint: lists the authenticated team's
  * memberships. Covers the happy path, that only the calling team's memberships come
- * back (never another team's), missing/invalid API keys, and a key lacking
- * `teams:read`.
+ * back, missing/invalid API keys, and a key lacking `teams:read`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

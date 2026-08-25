@@ -2,7 +2,7 @@
  * Tests the `/api/v1/maintenance/:maintenanceId` item endpoints: get/update/delete
  * and ending a window early. Covers happy paths, validation failures, missing/invalid
  * API keys, wrong-scope keys, and that a window belonging to another team always
- * 404s rather than leaking data or being mutated.
+ * 404s, leaving its data and state untouched.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +23,9 @@ import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` (imported by `./maintenance-window`) reads `env` from
- * `cloudflare:workers` at module load time, so it has to resolve under the test runner. These
- * endpoints touch no binding, and the empty strict env proves it: any read would throw by
- * the binding's name instead of quietly answering `undefined`.
+ * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
+ * must resolve under the test runner. An empty strict env proves these endpoints touch no
+ * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
@@ -251,9 +250,8 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 	});
 
 	/**
-	 * The pair moves as a unit: narrowing a window to a whole type must not leave the monitor
-	 * id it used to carry behind it, which would be a scope covering one monitor of a type
-	 * nobody asked for.
+	 * The pair moves as a unit: narrowing a window to a whole type clears the monitor id
+	 * it used to carry, keeping the scope at the whole type everyone asked for.
 	 */
 	test("clears the monitor id when only a monitorType is sent", async () => {
 		let { db } = createTestDatabase();

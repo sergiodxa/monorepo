@@ -1,22 +1,9 @@
 /**
- * Importer tool view — imports an EXISTING PNG and registers it as an atlas so the
- * game can blit tiles/sprites by region name. Built on the canonical tool-view
- * pattern: local state lives in setup-scope variables, the view re-renders through
- * `handle.update()` on any control change, and there are no framework hooks. A
- * file input decodes the chosen PNG via `createImageBitmap` to learn its
- * dimensions and paint a scaled preview onto a canvas bound with the `ref` mixin;
- * the same canvas overlays the current slicing (a tile grid or the manual region
- * rects) so the author sees exactly what will be written.
- *
- * Two slice modes drive the region map, both computed by the pure
- * `atlas-slicer` helpers (never in the DOM): a TILESET GRID mode (tile width/
- * height plus optional margin/spacing, with the fitting columns/rows derived from
- * the image size and names auto-generated as `tile.N` or `r{row}c{col}`), and a
- * SPRITE ATLAS mode where the author adds/removes/renames named regions by hand
- * (name + x/y/w/h, each drawn on the preview). An atlas id names both the written
- * `src/assets/<id>.png` and the manifest atlas; the Import button POSTs the PNG
- * bytes plus the region map to the importer export action, which writes the file
- * and registers the full atlas.
+ * Importer tool view. Decodes a chosen PNG, previews it with the current slice
+ * drawn over it, and posts the bytes plus the region map to the export action,
+ * which writes `src/assets/<id>.png` and registers the atlas so the game can blit
+ * by region name. Slicing comes from the pure `atlas-slicer` helpers, in either
+ * tileset-grid or hand-authored sprite-atlas mode.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,12 +19,9 @@ import type { Rect } from "~/presentation/render/atlas";
 type CssMixinStyles = Parameters<typeof css>[0];
 
 /**
- * The style-object shape the `css()` mixin accepts, used for shared base styles.
- *
- * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
- * carries that interface's `Symbol.iterator` member and reads as an iterable.
- * Dropping the symbol keys leaves the same plain property bag the base styles
- * actually are, so they can be spread into an override object.
+ * The style-object shape the `css()` mixin accepts, with the symbol keys it
+ * inherits from `CSSStyleDeclaration` dropped so base styles stay a plain
+ * property bag that spreads into an override object.
  */
 type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
@@ -71,7 +55,6 @@ function bytesToBase64(bytes: Uint8Array): string {
 	return btoa(binary);
 }
 
-/** Shared base style for the small control buttons. */
 const CONTROL_BUTTON: Styles = {
 	padding: "0.4rem 0.75rem",
 	fontFamily: "inherit",
@@ -92,16 +75,13 @@ const FIELD: Styles = {
 	borderRadius: "0.375rem",
 };
 
-/** Shared style for the small labels above each control group. */
 const LABEL = css({ display: "grid", gap: "0.25rem", fontSize: "0.8rem", color: "#9ca3af" });
 
 /** The indigo accent marking the active control/mode. */
 const ACCENT = "#6366f1";
 
-/** The idle border color shared by the small control buttons. */
 const IDLE_BORDER = "#3f3f46";
 
-/** Stroke color for the slice overlay drawn over the preview. */
 const OVERLAY_STROKE = "rgba(99, 102, 241, 0.9)";
 
 /** Fill tint for manual region rects so hand-placed regions read at a glance. */
@@ -115,30 +95,25 @@ const OVERLAY_FILL = "rgba(99, 102, 241, 0.15)";
  * @returns The render function for the importer tool.
  */
 export function ImporterTool(handle: Handle<Record<string, never>>) {
-	// The decoded image and its raw PNG bytes, or null before a file is chosen.
 	let bitmap: ImageBitmap | null = null;
 	let pngBytes: Uint8Array | null = null;
 	let imageWidth = 0;
 	let imageHeight = 0;
 	let fileName = "";
 
-	// The canvas the preview + overlay are painted onto, bound via `ref`.
 	let canvas: HTMLCanvasElement | null = null;
 
-	// Slice state.
 	let mode: SliceMode = "grid";
 	let atlasId = "";
 	let status = "";
 	let statusIsError = false;
 
-	// Grid-mode params.
 	let tileWidth = 16;
 	let tileHeight = 16;
 	let margin = 0;
 	let spacing = 0;
 	let naming: GridNaming = "index";
 
-	// Manual-mode region list plus the draft fields for the "add region" form.
 	let regions: NamedRegion[] = [];
 	let draftName = "";
 	let draftX = 0;
@@ -168,9 +143,9 @@ export function ImporterTool(handle: Handle<Record<string, never>>) {
 	}
 
 	/**
-	 * Paints the decoded image scaled to fit the preview, then overlays every rect
-	 * of the current slice. A no-op when no image is loaded or no 2D context is
-	 * available.
+	 * Paints the decoded image at an integer scale so pixel art stays crisp, then
+	 * overlays every rect of the current slice. The canvas bitmap matches the drawn
+	 * size, keeping the overlay math a single multiply.
 	 */
 	function renderPreview() {
 		if (canvas === null) return;
@@ -184,9 +159,6 @@ export function ImporterTool(handle: Handle<Record<string, never>>) {
 			return;
 		}
 
-		// Scale the longest side to PREVIEW_MAX with an integer-ish factor so pixel
-		// art stays crisp; the canvas bitmap matches the drawn size so overlay math
-		// is a single `scale` multiply.
 		let scale = Math.max(1, Math.floor(PREVIEW_MAX / Math.max(imageWidth, imageHeight)));
 		let drawWidth = imageWidth * scale;
 		let drawHeight = imageHeight * scale;
@@ -212,7 +184,10 @@ export function ImporterTool(handle: Handle<Record<string, never>>) {
 		}
 	}
 
-	/** Decodes the chosen PNG, adopts its dimensions, and previews it. */
+	/**
+	 * Decodes the chosen PNG, adopts its dimensions, and previews it. A blank atlas
+	 * id takes the file's base name, slugified.
+	 */
 	async function importFile(file: File) {
 		report("Decoding…", false);
 		try {
@@ -224,7 +199,6 @@ export function ImporterTool(handle: Handle<Record<string, never>>) {
 			imageWidth = decoded.width;
 			imageHeight = decoded.height;
 			fileName = file.name;
-			// Default a blank atlas id to the file's base name, slugified.
 			if (atlasId.trim().length === 0) {
 				atlasId = file.name
 					.replace(/\.[^.]+$/, "")

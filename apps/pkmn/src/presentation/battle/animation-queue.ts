@@ -1,12 +1,9 @@
 /**
  * A strictly-ordered queue of animation tasks for the battle scene.
  *
- * Engine battle events arrive in bursts (everything between two input requests);
- * the scene turns each into one or more tasks and drains them in order, so the
- * presentation is a fold over the ordered event stream rather than a diff of
- * before/after state. A task is any object with an `update(dt)` that returns true
- * when finished; the small factories here (wait, callback, run) cover the common
- * shapes so callers rarely define a task class.
+ * Battle events arrive in bursts between input requests; the scene turns
+ * each into tasks it drains in order, so presentation follows the event
+ * stream. Wait, callback, and run factories cover common task shapes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

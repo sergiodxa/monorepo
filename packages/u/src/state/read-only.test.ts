@@ -1,6 +1,4 @@
 /**
- * Unit tests for `read-only.ts`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

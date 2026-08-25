@@ -75,10 +75,9 @@ export namespace Slider {
 	export type Orientation = "horizontal" | "vertical";
 
 	/**
-	 * Value {@link Slider} stores in component context so every
+	 * Value {@link Slider} shares through component context so every nested
 	 * {@link Slider.Track}, {@link Slider.Thumb}, and {@link Slider.Output}
-	 * nested inside shares the same resolved range, value, orientation, and
-	 * thumb id without a consumer repeating them on each part.
+	 * reads the same resolved range, value, orientation, and thumb id.
 	 */
 	export interface Context {
 		/** Resolved lower bound of the range, shared with {@link Slider.Thumb}. */
@@ -119,13 +118,9 @@ export namespace Slider {
 	export interface TrackProps extends TagProps<"div"> {}
 
 	/**
-	 * Every native `<input>` attribute except `type` and `role`, which the
-	 * host fixes to `"range"` and the platform's own implicit `"slider"`
-	 * role respectively, plus the `mix` passthrough. Use `value`/`defaultValue`
-	 * for the thumb's position, `min`/`max`/`step` to override the range
-	 * inherited from the nearest ancestor {@link Slider}, `disabled` to
-	 * disable it, `name` for form submission, and
-	 * `aria-label`/`aria-labelledby` for its accessible name.
+	 * Every native `<input>` attribute except `type` and `role`, fixed to
+	 * `"range"` and the platform's implicit `"slider"` role. `min`/`max`/`step`
+	 * override the range inherited from the nearest ancestor {@link Slider}.
 	 */
 	export interface ThumbProps extends Omit<TagProps<"input">, "type" | "role"> {}
 
@@ -136,13 +131,9 @@ export namespace Slider {
 }
 
 /**
- * Renders the root host: a `<div>` stacking its children with a small gap,
- * growing to fill the inline axis by default or a fixed block axis when
- * `orientation` is `"vertical"`. Resolves the range, current value,
- * orientation, and a shared thumb id into component context, so every
- * {@link Slider.Track}, {@link Slider.Thumb}, and {@link Slider.Output}
- * nested inside — at any depth — reads the same numbers without a consumer
- * repeating them.
+ * Renders the root host: a `<div>` stacking its children, growing to fill
+ * the inline axis by default or a fixed block axis when vertical. Resolves
+ * the range, value, orientation, and thumb id into context for nested parts.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link Slider.Context}.
  * @returns The render function producing the root's markup.
@@ -192,15 +183,9 @@ export function Slider(handle: Handle<Slider.Props, Slider.Context>) {
 }
 
 /**
- * Renders the visual track: a `position: relative` `<div>` sized to the
- * nearest ancestor {@link Slider}'s orientation, drawing a full-length
- * background rail and a colored fill bar as its own `::before`/`::after`
- * pseudo-elements. The fill bar's length is computed from context's
- * resolved `min`/`max`/`value` at render time and carried on the
- * `--ui-slider-fill` custom property. Nest a single {@link Slider.Thumb}
- * inside — its native `<input type="range">` overlays this track's full box
- * so the platform's own drag, keyboard, and click-to-jump behavior works
- * across the whole visual length, not just over the thumb's own circle.
+ * Renders the visual track: a `position: relative` `<div>` that draws a rail
+ * and fill bar as pseudo-elements sized from context's resolved value, and
+ * overlays a nested {@link Slider.Thumb} so native drag spans its full length.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the track's markup.
@@ -271,23 +256,8 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 
 /**
  * Renders the interactive thumb: a native `<input type="range">` reset to
- * cover its enclosing {@link Slider.Track}'s entire box, so the platform's
- * own drag, arrow-key, and click-to-jump behavior spans the track's whole
- * visual length. Its own runnable track stays transparent — {@link
- * Slider.Track}'s rail and fill bar already draw the visible groove — and
- * only its circular thumb pseudo-element paints, sized and colored from
- * `--ui-*` custom properties so it reads consistently across engines. Pairs
- * `min`/`max`/`value` with the nearest ancestor {@link Slider} through
- * context by default, so a consumer only overrides them on the thumb itself
- * when a single instance needs its own range.
- *
- * Pressing scales the thumb up slightly, a focus-visible ring reads in the
- * primary color, and disabling it mutes the border and drops its shadow —
- * every one of those transitions collapses to an instant change under
- * reduced motion. In a `"vertical"` {@link Slider}, the control is rotated
- * with `writing-mode` so its value increases from the block-end edge toward
- * the block-start edge, matching a typical vertical fader's low-at-the-bottom
- * orientation.
+ * cover {@link Slider.Track}'s full box so native drag and keyboard control
+ * span its whole length, rotating with `writing-mode` when vertical.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the thumb's markup.
@@ -343,11 +313,9 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 };
 
 /**
- * Renders a live readout: a native `<output>` associated with the nearest
- * ancestor {@link Slider}'s thumb through `htmlFor` by default, so assistive
- * technology can tell which control this output reports on without the
- * consumer wiring the two ids together by hand. Carries no copy of its
- * own — pass the formatted value as `children`.
+ * Renders a live readout: a native `<output>` associated by default with
+ * the nearest ancestor {@link Slider}'s thumb via `htmlFor`, so assistive
+ * technology knows which control it reports on. Pass the value as `children`.
  *
  * @param handle Runtime handle carrying the host `<output>`'s props.
  * @returns The render function producing the readout's markup.

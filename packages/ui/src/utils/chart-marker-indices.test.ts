@@ -1,7 +1,7 @@
 /**
  * Unit tests for {@link "./chart-marker-indices"}: every assertion checks
- * known points, domains, and marker counts against known index results, with
- * no DOM and no rendering involved.
+ * known points, domains, and marker counts against known index results as
+ * plain function calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -20,10 +20,8 @@ import { text } from "@pkg/u/typography";
 export namespace Keyboard {
 	/**
 	 * Every native `<kbd>` attribute, unchanged, plus the `mix` passthrough.
-	 * A shortcut hint carries no color, variant, or size contract of its own
-	 * — it always renders as a small, muted, trailing-aligned annotation,
-	 * and its content is whatever `children` the consumer supplies (a single
-	 * key, a chorded sequence such as `"⌘K"`, or a platform-specific glyph).
+	 * Renders as a small, muted, trailing-aligned annotation whose content is
+	 * whatever `children` the consumer supplies — a key, a chord, a glyph.
 	 */
 	export interface Props extends TagProps<"kbd"> {}
 }
@@ -31,8 +29,7 @@ export namespace Keyboard {
 /**
  * Renders its children inside a `<kbd>` element styled as a small, muted
  * shortcut hint whose inline-start auto margin pushes it to the trailing
- * edge of whatever row it sits in — a menu item's command, a tooltip's
- * accelerator, a button's shortcut label.
+ * edge of whatever row it sits in — a menu item, a tooltip, a button.
  *
  * @param handle Runtime handle carrying the host `<kbd>`'s props.
  * @returns The render function producing the shortcut hint's markup.

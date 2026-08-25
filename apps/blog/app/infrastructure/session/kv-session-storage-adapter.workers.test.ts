@@ -1,12 +1,8 @@
 /**
  * Tests for the KV-backed session storage adapter: round-trip read/write of session data,
- * and that destroying a session removes its KV key and clears the cookie.
- *
- * These run inside workerd against the real `AUTH` KV namespace the app declares, so the
- * adapter is exercised against Cloudflare's own KV implementation rather than a stand-in.
- * The previous version of this file carried a forty-line fake whose `list()` returned
- * nothing and whose `put()` silently dropped every non-string value — the two places a fake
- * and the real thing were free to disagree.
+ * removal of the KV key and cookie on destroy, and writes landing under the configured
+ * prefix. They run inside workerd against the real `AUTH` KV namespace the app declares,
+ * so the adapter is exercised against Cloudflare's own KV implementation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,8 +35,6 @@ describe("KVSessionStorage", () => {
 
 		let cookie = await storage.save(session);
 		expect(typeof cookie).toBe("string");
-		// Counted through the binding's own listing rather than a fake's `size` getter. The
-		// old fake stubbed `list()` to an empty result, so this is coverage it could not have.
 		expect(await storedKeys("destroy:")).toHaveLength(1);
 
 		session.destroy();
@@ -63,7 +57,6 @@ describe("KVSessionStorage", () => {
 	});
 });
 
-/** The keys currently stored under `prefix`, straight from the KV binding. */
 async function storedKeys(prefix: string): Promise<string[]> {
 	let listed = await env.AUTH.list({ prefix });
 	return listed.keys.map((key) => key.name);

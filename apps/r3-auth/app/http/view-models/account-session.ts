@@ -10,7 +10,7 @@
 
 import type { SessionWithClient } from "~/app/data/session";
 
-/** How long a session may go untouched before the list marks it stale rather than active. */
+/** How long a session may go untouched before the list marks it stale. */
 const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Device classes the list distinguishes, each with its own translated label. */
@@ -27,13 +27,9 @@ export interface ParsedUserAgent {
 }
 
 /**
- * Reduces a user-agent header to browser, OS and device labels.
- *
- * Deliberately a token match rather than a parser: the values only ever help a person
- * recognize their own device in a list, so being approximate costs nothing while a
- * dependency that must keep up with every browser release would cost upkeep. A missing
- * or unrecognized header reads as `"Unknown"` instead of being hidden, because a
- * session the owner cannot identify is exactly the one they should consider revoking.
+ * Reduces a user-agent header to browser, OS and device labels using simple token
+ * matches, accurate enough for a person to recognize their own device in a list. An
+ * unrecognized header reads as `"Unknown"`, flagging the session as one worth revoking.
  */
 export function parseUserAgent(ua: string | null): ParsedUserAgent {
 	if (!ua) return { browser: "Unknown", os: "Unknown", deviceType: "unknown" };
@@ -92,8 +88,8 @@ export interface SessionRow {
 
 /**
  * Formats a date for a listing column: day, short month and year, in the request's
- * language, with no time — the list answers "which devices, roughly when", and a
- * timestamp to the second would only add noise.
+ * language. The list answers "which devices, roughly when", so second-level precision
+ * would only add noise.
  */
 function formatDate(epochMs: number, locale: string): string {
 	return new Intl.DateTimeFormat(locale, {
@@ -104,7 +100,8 @@ function formatDate(epochMs: number, locale: string): string {
 }
 
 /**
- * Maps a stored session onto its row.
+ * Maps a stored session onto its row. The session matching the current request's
+ * token stays marked active, since this very request just touched it.
  *
  * @param currentSessionId - The refresh token this request arrived with, so the row it
  *   names can be marked and confirmed differently from the rest.
@@ -128,7 +125,6 @@ export function toSessionRow(
 		lastAccessed: formatDate(session.updated_at, locale),
 		expires: formatDate(session.expires_at, locale),
 		isCurrent,
-		// The current session is never stale by definition: this very request touched it.
 		isStale: !isCurrent && Date.now() - session.updated_at > STALE_AFTER_MS,
 	};
 }

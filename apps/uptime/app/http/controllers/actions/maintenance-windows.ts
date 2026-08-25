@@ -28,12 +28,9 @@ import { parseMonitorScope } from "~/app/lib/monitor-scope";
 import routes from "~/routes/web";
 
 /**
- * Reads the submitted scope, or `null` when it is not one the team can be given.
- *
- * Both failures are the same answer on purpose: a value the encoding does not produce and
- * a monitor the team does not own are both "this form was not the one we rendered", and
- * neither should fall back to team-wide — silently widening a window would silence every
- * monitor the team has for the duration.
+ * Resolves the submitted scope only when it names a monitor the team actually owns;
+ * an unparseable value or a monitor outside the team both come back as `null` so the
+ * caller can ask for a fresh submission, keeping the window scoped to an owned monitor.
  */
 async function resolveSubmittedScope(
 	db: Database,

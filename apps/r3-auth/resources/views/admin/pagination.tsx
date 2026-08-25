@@ -24,8 +24,8 @@ namespace ListPagination {
 /**
  * Renders the page links, or nothing when there is only one page.
  *
- * Previous and next render as inert, non-navigating links at the ends of the range
- * rather than disappearing, so the control keeps its shape while paging.
+ * Previous and next render as inert, non-navigating links at the ends of the range,
+ * keeping the control's shape stable as the page count changes.
  */
 export default function ListPagination(handle: Handle<ListPagination.Props>) {
 	return () => {

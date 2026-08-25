@@ -1,10 +1,8 @@
 /**
- * Behavioural tests for the onboarding ID-token verification. Signs ID tokens with a test
- * ES256 key, publishes the matching JWKS through an injected fetch, and asserts that
- * verification accepts a well-formed token (returning its nonce) and rejects a wrong
- * issuer, wrong audience, expired/not-yet-valid token, a token signed by an unknown key,
- * and an unavailable or empty JWKS. This is the client-side check that replaced trusting a
- * base64-decoded ID-token payload.
+ * Behavioural tests for the onboarding ID-token verification: signs ID tokens with a
+ * test ES256 key, serves the matching JWKS via an injected fetch, and asserts accepted
+ * well-formed tokens (with nonce) plus rejected wrong issuer/audience, expired or
+ * not-yet-valid tokens, an unknown signing key, and an unavailable or empty JWKS.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -99,7 +97,6 @@ describe("verifyIdToken — accepts", () => {
 	});
 
 	test("returns nonce null when the token carries no nonce", async () => {
-		// Build a token without a nonce claim.
 		let now = Math.floor(Date.now() / 1000);
 		let token = new JWT({
 			iss: ISSUER,

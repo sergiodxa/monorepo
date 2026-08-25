@@ -13,12 +13,9 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 /**
- * Base class for every failure this package returns inside a `Result`.
- *
- * Use it as the error type in signatures, and read `name` as the failure kind and
- * `deliveryId` as the delivery it belongs to when writing a log line. The id is
- * `null` until the `webhook-id` header has been read, so an unauthenticated
- * request with no usable id still logs cleanly.
+ * Base class for every failure this package returns inside a `Result`. Read
+ * `name` as the failure kind and `deliveryId` as the delivery it belongs to;
+ * the id is `null` until authentication reads the `webhook-id` header.
  *
  * @example
  * if (isFailure(result)) logger.warn("webhook rejected", { kind: result.error.name, id: result.error.deliveryId });
@@ -35,11 +32,9 @@ export class WebhookError extends Error {
 }
 
 /**
- * No usable signing secret was configured, so nothing could be verified or signed.
- *
- * Returned for an absent, empty, or non-base64 secret. Verification fails closed
- * here rather than treating a missing secret as "nothing to check", and the
- * offending value never reaches the message.
+ * No usable signing secret was configured, so nothing could be verified or
+ * signed. Returned for an absent, empty, or non-base64 secret; verification
+ * fails closed, and the offending value never reaches the message.
  */
 export class InvalidSecretError extends WebhookError {
 	override name = "InvalidSecretError";
@@ -53,11 +48,9 @@ export class InvalidSecretError extends WebhookError {
 }
 
 /**
- * The delivery handed to `sign()` cannot be turned into a signable message.
- *
- * Covers an empty delivery id, a timestamp that is not whole seconds since the
- * epoch, and a payload with no JSON representation. These are caller mistakes
- * caught before a receiver would reject the delivery.
+ * The delivery handed to `sign()` cannot be turned into a signable message:
+ * an empty delivery id, a non-whole-second timestamp, or a payload with no
+ * JSON representation — caller mistakes caught before a receiver ever sees it.
  */
 export class InvalidDeliveryError extends WebhookError {
 	override name = "InvalidDeliveryError";
@@ -72,10 +65,8 @@ export class InvalidDeliveryError extends WebhookError {
 
 /**
  * The runtime refused to compute the HMAC, so no verdict could be reached.
- *
- * This is an infrastructure failure, not a rejected signature: it means nothing
- * about whether the delivery was authentic, so it must never be reported as an
- * authentication failure.
+ * This is an infrastructure failure that says nothing about the delivery's
+ * authenticity, so callers must never report it as an authentication failure.
  */
 export class SignatureComputationError extends WebhookError {
 	override name = "SignatureComputationError";
@@ -110,11 +101,9 @@ export class MissingHeaderError extends WebhookError {
 }
 
 /**
- * The `webhook-signature` header carried no signature this package can read.
- *
- * Returned when no space-separated value uses the `v1` scheme, or when every `v1`
- * value fails to decode. The header content is deliberately absent from the
- * message, since it is signature material.
+ * The `webhook-signature` header carried no signature this package can read:
+ * no value used the `v1` scheme, or every `v1` value failed to decode. The
+ * header content stays out of the message, since it is signature material.
  */
 export class MalformedSignatureError extends WebhookError {
 	override name = "MalformedSignatureError";
@@ -139,11 +128,9 @@ export class MalformedTimestampError extends WebhookError {
 }
 
 /**
- * The delivery timestamp sits outside the accepted tolerance, in either direction.
- *
- * A captured request replayed later lands here, and so does a sender whose clock
- * runs ahead. Both are rejected on the same rule, so tolerance is the only knob
- * that widens the replay window.
+ * The delivery timestamp sits outside the accepted tolerance, in either
+ * direction: a captured request replayed later lands here, and so does a
+ * sender whose clock runs ahead. Tolerance is the only knob that widens it.
  */
 export class StaleTimestampError extends WebhookError {
 	override name = "StaleTimestampError";
@@ -166,11 +153,9 @@ export class StaleTimestampError extends WebhookError {
 }
 
 /**
- * No presented signature matched any configured secret.
- *
- * This is the authentication failure: the body, the id, the timestamp, or the
- * secret differs from what the sender used. The message is identical for all of
- * those cases so failures cannot be used as an oracle.
+ * No presented signature matched any configured secret — the authentication
+ * failure. The body, id, timestamp, or secret differs from what the sender
+ * used, and the identical message keeps failures from acting as an oracle.
  */
 export class SignatureMismatchError extends WebhookError {
 	override name = "SignatureMismatchError";
@@ -195,11 +180,9 @@ export class DuplicateDeliveryError extends WebhookError {
 }
 
 /**
- * The replay store could not be read or written, so the delivery is rejected.
- *
- * Verification fails closed here on purpose: a delivery that cannot be recorded
- * cannot be de-duplicated, and accepting it would silently drop replay protection
- * for as long as the store is unavailable.
+ * The replay store could not be read or written, so the delivery is
+ * rejected: a delivery that cannot be recorded cannot be de-duplicated, and
+ * accepting it would drop replay protection for as long as the store is down.
  */
 export class ReplayStoreError extends WebhookError {
 	override name = "ReplayStoreError";
@@ -218,11 +201,9 @@ export class ReplayStoreError extends WebhookError {
 }
 
 /**
- * The request body could not be read as text, so there is nothing to verify.
- *
- * Almost always means the body was already consumed upstream: verification needs
- * the exact bytes received, and a stream can only be read once, so whoever reads
- * it first must verify.
+ * The request body could not be read as text, likely because it was already
+ * consumed upstream. Verification needs the exact bytes from a stream that
+ * can only be read once, so whoever reads it first must verify.
  */
 export class UnreadableBodyError extends WebhookError {
 	override name = "UnreadableBodyError";
@@ -237,10 +218,8 @@ export class UnreadableBodyError extends WebhookError {
 
 /**
  * The signature verified, but the body is not the shape the caller expected.
- *
- * Kept separate from every authentication failure: an unmodelled event type is
- * not an attack, so the verified `body` and `timestamp` travel on the error and
- * the caller decides whether to accept, store, or ignore the delivery.
+ * An unmodelled event type is still a genuine delivery, so the verified
+ * `body` and `timestamp` travel on the error to accept, store, or ignore.
  *
  * @example
  * if (result.error instanceof PayloadValidationError) return accepted(); // authentic, just unmodelled

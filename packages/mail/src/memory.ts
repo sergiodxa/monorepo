@@ -38,10 +38,9 @@ export interface RecordedDelivery {
 /**
  * Transport that keeps deliveries in memory for assertions.
  *
- * Recorded messages are the normalized ones a provider would have received, so
- * defaults, coerced address lists, and the derived plain-text part are all visible.
- * When a message came from an email object, `message.email` is that object, which
- * lets a test identify a send by type instead of by copy that changes.
+ * Recorded messages are the normalized ones a provider would have received; when a
+ * send came from an email object, `message.email` keeps it, so a test can match a
+ * send by type and stay valid through a copy change.
  *
  * @example
  * let transport = new MemoryTransport();

@@ -63,7 +63,8 @@ function readForm(formData: FormData): RoleInput {
 
 /**
  * Renders the role create/edit form document via the request's renderer, pre-checking
- * the role's permissions and disabling edits for built-in roles.
+ * the role's permissions and disabling edits for built-in roles. Narrows the integer
+ * `builtin` column to a boolean, since it otherwise renders as a truthy HTML attribute.
  * @param db - Database handle (used to load the CMS chrome).
  * @param role - The role being edited, or undefined when creating.
  * @param title - The page/heading title.
@@ -79,14 +80,6 @@ async function renderForm(
 	let ctx = getContext();
 	let { user, permissions, siteTitle } = await chrome(db);
 	let granted = new Set<Permission>(role?.permissions ?? []);
-	/*
-	 * Narrowed once, here, because `builtin` is a `c.integer()` column and so arrives as
-	 * the number `0` or `1`. Every use of it below is a place where that number behaves
-	 * differently from the boolean it stands for: an HTML boolean attribute is on
-	 * whenever it is merely present, so `readonly={0}` renders `readonly="0"` and locks
-	 * the very fields an editable role exists to edit; and `{0 && …}` renders a literal
-	 * "0" into the page rather than nothing.
-	 */
 	let isBuiltin = Boolean(role?.builtin);
 	return ctx.render(
 		<CmsLayout

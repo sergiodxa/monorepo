@@ -1,19 +1,12 @@
-import { unwrap } from "@pkg/result";
 /**
- * Verifies the battle mechanics test module for this game engine layer. This
- * module defines focused behavioral checks around deterministic combat-related
- * calculations so the surrounding battle domain can rely on stable, repeatable
- * outcomes during development.
- *
- * It also provides a compact fixture setup for exercising the exported
- * mechanics with representative in-memory data. By keeping these assertions in
- * a dedicated test module, the file documents the expected contract of the
- * mechanics helpers without coupling that contract to any particular content
- * set beyond what is minimally required for execution.
+ * Pins the deterministic mechanics: exact experience thresholds per growth rate,
+ * level resolution from stored experience, and size and size-class derivation,
+ * all against a compact in-memory fixture so the numbers stay repeatable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { unwrap } from "@pkg/result";
 import { expect, test } from "vitest";
 
 import type { NatureId } from "~/game/data/nature";

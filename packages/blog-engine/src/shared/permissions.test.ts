@@ -1,3 +1,10 @@
+/**
+ * Tests for the permission catalog: parsing a role's stored JSON into a set, and
+ * the hasAll/hasAny gates used to check it against required permissions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { hasAll, hasAny, parsePermissions, PERMISSION_KEYS } from "./permissions";

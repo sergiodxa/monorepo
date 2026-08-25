@@ -1,4 +1,3 @@
-import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Verifies the pure sprite-export payload shaping: a valid name derives the
  * `src/assets/<name>.png` write path, the manifest image id, and the served
@@ -9,6 +8,7 @@ import { isFailure, isSuccess } from "@pkg/result";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isFailure, isSuccess } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { validateWritePath } from "./path-safety";

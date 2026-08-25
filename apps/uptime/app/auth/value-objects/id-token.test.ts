@@ -27,7 +27,6 @@ async function publishedKeys(keyPair: Awaited<ReturnType<typeof generateSigningK
 	return await JWK.importLocal(JWK.toJSON([keyPair]));
 }
 
-/** Signs a raw payload into a JWT string using the given key pair. */
 async function signToken(
 	payload: Record<string, unknown>,
 	keyPair: Awaited<ReturnType<typeof generateSigningKey>>,

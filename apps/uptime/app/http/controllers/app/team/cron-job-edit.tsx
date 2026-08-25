@@ -1,18 +1,8 @@
 /**
- * Edit cron-job monitor page controller. Requires `requireUser` + `requireTeam`; 404s
- * when the monitor doesn't belong to the current team.
- *
- * The fields are framed as three bordered cards — what the job is, when it is
- * expected, and what happens when a run doesn't arrive — with the action row at the
- * foot of the last one, so the page reads as distinct settings groups rather than one
- * continuous column. All three cards still sit inside the same `<form>`, so the update
- * still posts every field in a single request. The delete form stays its own
- * `<form method="post">` with its own `_method=DELETE`, inside the confirmation dialog.
- *
- * The field markup is spelled out here rather than pulled from the shared create/edit
- * view, because that view renders the fields as one flat run and only this page splits
- * them across cards; inlining keeps the grouping at the call site instead of pushing a
- * layout concern into a view the create page also renders.
+ * Edit cron-job monitor page controller. Requires `requireUser` + `requireTeam`;
+ * 404s when the monitor doesn't belong to the current team. Fields are framed as
+ * three bordered cards inside one `<form>`; the delete form stays separate, inside
+ * the confirmation dialog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,7 +39,13 @@ const DELETE_DIALOG_ID = "delete-cron-job";
 /** Stable id linking the grace-period field's label to its number input. */
 const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
-/** GET /app/:team/cron-jobs/:monitorId/edit — a cron-job monitor's edit form. */
+/**
+ * GET /app/:team/cron-jobs/:monitorId/edit — a cron-job monitor's edit form.
+ *
+ * The timezone select also offers the monitor's own stored zone when it isn't
+ * among the runtime's known zones, keeping it `selected` so a save can't silently
+ * move the job to a different wall clock.
+ */
 export default createAction(routes.app.team.cronJobs.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -64,14 +60,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 		let t = ctx.i18next.getFixedT(null, "translation", "page.editCronJob");
 		let fields = ctx.i18next.getFixedT(null, "translation", "page.editCronJob.form.fields");
 
-		/*
-		 * The picker offers the zones this runtime knows plus the job's own stored value
-		 * when that isn't among them. Without the second half an unrecognised stored zone
-		 * would match no option, the browser would fall back to the first one, and saving
-		 * any unrelated field would quietly move the job to a different wall clock — the
-		 * failure a `<select>` makes silent. Shown but unsaveable is the right trade: the
-		 * validator rejects it with a message instead of overwriting it without one.
-		 */
 		let timezone = monitor.timezone ?? DEFAULT_TIMEZONE;
 		let hasUnknownTimezone = !isSupportedTimezone(timezone);
 
@@ -173,15 +161,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 												label={fields("timezone.label")}
 												description={fields("timezone.description")}
 											>
-												{/*
-												 * The saved zone is marked `selected` on its own `<option>`: `<select>` has no
-												 * `defaultValue` attribute, so spelling it on the host renders as inert markup
-												 * and leaves the first option showing, which a save would then write back over
-												 * the zone the job actually runs in.
-												 *
-												 * UTC leads the list on its own because the IANA enumeration does not contain
-												 * it; see `app/lib/timezones.ts` for why that exception exists.
-												 */}
 												<Select name="timezone" required>
 													{hasUnknownTimezone && (
 														<Select.Option value={timezone} selected>
@@ -216,7 +195,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* The two switches read as one group, so they sit on the tighter within-group rhythm. */}
 											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 												<Switch
 													name="alert_on_late"

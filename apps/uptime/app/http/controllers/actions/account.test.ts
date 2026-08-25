@@ -68,8 +68,8 @@ type LooseRouterMap = (target: unknown, handler: unknown) => void;
 
 /**
  * Posts a form body to one of the account-page actions through the real action, DB, and service
- * container. A field's value may be a list, since the email-preferences form posts one `emails`
- * value per switch left on and a browser sends those as repeated fields rather than as one.
+ * container. A field's value may be a list, since one switch left on posts one repeated `emails`
+ * field, serialized because Bun can't read an empty `URLSearchParams` stream.
  */
 async function postAccountAction(
 	action: RequestHandler,
@@ -79,7 +79,7 @@ async function postAccountAction(
 	body: Record<string, string | string[]>,
 	headers: Record<string, string> = {},
 	options: {
-		/** HTTP method, for the one action mapped to `DELETE` rather than `POST`. */
+		/** HTTP method; override for the action mapped to `DELETE`. */
 		method?: string;
 		session?: ReturnType<typeof createFakeSession>;
 	} = {},
@@ -100,10 +100,6 @@ async function postAccountAction(
 
 	let request = new Request(`https://uptime.test${route.href()}`, {
 		method: options.method ?? "POST",
-		// Serialized rather than handed over as `URLSearchParams`, because Bun's
-		// `URLSearchParams`-backed body stream cannot be read when it is empty — and a form
-		// whose every switch is off is exactly an empty body, which the form the actions here
-		// are reached from can genuinely post.
 		body: params.toString(),
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
@@ -319,6 +315,7 @@ describe("POST /actions/update-emails", () => {
 		expect(preferences?.unsubscribed_emails).toEqual(["teamWeeklyDigest"]);
 	});
 
+	/** An all-off submission is a valid preference; it redirects successfully. */
 	test("stores every optional email when the form posts none, since an unchecked switch posts nothing", async () => {
 		let { db } = createTestDatabase();
 		let viewer = createViewer();
@@ -331,7 +328,6 @@ describe("POST /actions/update-emails", () => {
 			{},
 		);
 
-		// Turning everything off is a legal choice, not a form that failed to validate.
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.home.href());
 
@@ -339,6 +335,7 @@ describe("POST /actions/update-emails", () => {
 		expect(preferences?.unsubscribed_emails).toEqual([...optionalEmails]);
 	});
 
+	/** Each save fully replaces the row's list, keeping exactly one row per subject. */
 	test("clears a stored refusal when the viewer turns an email back on", async () => {
 		let { db } = createTestDatabase();
 		let viewer = createViewer();
@@ -356,8 +353,6 @@ describe("POST /actions/update-emails", () => {
 			emails: [...optionalEmails],
 		});
 
-		// The whole list is replaced rather than added to, so the row is left refusing nothing
-		// and one row per subject is all there ever is.
 		let rows = await db.findMany(userPreferences, { where: { subject_id: viewer.id } });
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.unsubscribed_emails).toEqual([]);
@@ -495,10 +490,11 @@ describe("POST /actions/export-data", () => {
 });
 
 /**
- * The action queues and signs out. Everything about it that could be mistaken for a deletion is
- * asserted negatively: the team is still there when it returns.
+ * The action only queues the request and signs out; the daily sweep is what later
+ * deletes the account and its data.
  */
 describe("POST /actions/request-account-deletion", () => {
+	/** The queued record retains the only copy of the address once the session is gone. */
 	test("queues the request, destroys the session, and deletes nothing", async () => {
 		let { db } = createTestDatabase();
 		let viewer = createViewer();
@@ -521,12 +517,10 @@ describe("POST /actions/request-account-deletion", () => {
 
 		let queued = await AccountDeletion.findBySubjectId(db, viewer.id);
 		expect(queued).not.toBeNull();
-		// The address is captured here because nothing else in this app stores it.
 		expect(queued?.email).toBe(viewer.email);
 
 		expect(session.destroy).toHaveBeenCalledTimes(1);
 
-		// Nothing is gone yet — the daily sweep is what deletes.
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 		expect(await db.count(memberships, { where: { subject_id: viewer.id } })).toBe(1);
 	});

@@ -1,3 +1,10 @@
+/**
+ * Unit tests for the built-in `article` post type: the seeded field definitions
+ * and the metadata codec round-trip.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { createMetaCodec } from "../../posts/models/meta-codec";
@@ -11,7 +18,6 @@ describe("built-in article type", () => {
 	test("seeded fields match the ArticleMeta interface", () => {
 		let keys = ARTICLE_FIELDS.map((field) => field.key).sort();
 		expect(keys).toEqual(["content", "excerpt"]);
-		// content is required markdown; excerpt is optional textarea.
 		let content = ARTICLE_FIELDS.find((field) => field.key === "content");
 		let excerpt = ARTICLE_FIELDS.find((field) => field.key === "excerpt");
 		expect(content).toMatchObject({ kind: "markdown", required: true });

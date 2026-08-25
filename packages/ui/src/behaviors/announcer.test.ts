@@ -1,7 +1,6 @@
 /**
- * Unit tests for {@link Announcer}, constructed and driven directly with no
- * DOM and no rendering: every assertion reads queue state or observes
- * dispatched "change" events.
+ * Unit tests for {@link Announcer}, constructed and driven directly: every
+ * assertion reads queue state or observes dispatched "change" events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

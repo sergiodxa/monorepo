@@ -211,7 +211,6 @@ describe("Secret", () => {
 			let upgraded = await readStoredHash(client.id);
 			expect(upgraded?.startsWith(CURRENT_PREFIX)).toBe(true);
 
-			// The rewritten hash is the one the next request will be checked against.
 			expect(await Secret.verify(db, client.id, plainSecret)).toBe(true);
 			expect(await readStoredHash(client.id)).toBe(upgraded);
 		});

@@ -16,35 +16,27 @@ import { LikePost } from "~/app/repositories/posts/like";
 import routes from "~/routes/web";
 
 /**
- * Type contracts consumed by the feed UI layer.
- *
- * These shapes are intentionally presentation-oriented and decoupled from
- * repository record details.
+ * Type contracts consumed by the feed UI layer: presentation-oriented shapes
+ * that stand on their own once repository records are mapped.
  */
 export namespace FeedViewModel {
 	/**
-	 * Single feed timeline row ready to render without additional mapping.
-	 *
-	 * `href`, `label`, and `date` are preformatted so templates can stay mostly
-	 * declarative.
+	 * Single feed timeline row. `href`, `label`, and `date` arrive preformatted
+	 * so templates stay declarative.
 	 */
 	export interface ActivityItem {
-		/** URL opened when the feed item is clicked. */
 		href: string;
-		/** Human-readable sentence describing the activity. */
+		/** Full sentence describing the activity, written in first person. */
 		label: string;
-		/** Activity date string ready for UI display. */
 		date: string;
 		/** Whether the activity points to preview-only content. */
 		preview: boolean;
-		/** Emoji icon representing the activity type. */
+		/** Emoji icon standing in for the activity type. */
 		icon: string;
 		/**
 		 * Semantic tone the icon is tinted with, named in the design system's own
-		 * vocabulary (`"brand.emphasis"`, `"neutral"`, ...) rather than as a raw
-		 * CSS color. The view resolves it through the color utilities, so this
-		 * stays a presentation *choice* the view model owns while the actual
-		 * value stays the theme's to decide.
+		 * vocabulary (`"brand.emphasis"`, `"neutral"`, ...). The view resolves it
+		 * through the color utilities, so the theme owns the resulting color.
 		 */
 		iconTint: ColorValue;
 	}
@@ -55,7 +47,6 @@ export namespace FeedViewModel {
 	 * Items are already ordered by the repository and preserved as-is.
 	 */
 	export interface Page {
-		/** Ordered list of activity rows to render. */
 		activity: Array<ActivityItem>;
 	}
 }
@@ -68,10 +59,8 @@ export namespace FeedViewModel {
  */
 export class FeedViewModel {
 	/**
-	 * Builds the feed payload consumed by the feed page template.
-	 *
-	 * The mapper enforces URL requirements per kind and drops incomplete entries
-	 * (`slug`/`url` missing) to avoid rendering broken links.
+	 * Enforces the URL requirements of each kind: entries missing their `slug` or
+	 * `url` are dropped so every rendered row links somewhere valid.
 	 *
 	 * @param activity Feed items from the data layer.
 	 * @returns Render-safe feed payload with timeline metadata per activity kind.
@@ -135,10 +124,8 @@ export class FeedViewModel {
 	}
 
 	/**
-	 * Type guard used after mapping to remove invalid placeholder rows.
-	 *
-	 * `index` emits `null` when required routing data is missing; this method
-	 * narrows the array back to strictly renderable entries.
+	 * `index` emits `null` when required routing data is missing; this narrows
+	 * the mapped array back to strictly renderable entries.
 	 *
 	 * @param item Potential mapped activity row.
 	 * @returns `true` when the value is a renderable activity item.

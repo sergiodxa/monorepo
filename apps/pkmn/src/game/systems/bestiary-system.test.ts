@@ -1,10 +1,9 @@
 /**
  * Verifies the bestiary system's discovery and capture record rules in isolation from the engine.
  *
- * The tests confirm that marking a species seen appends without duplicating, that marking a species
- * caught records it in both the caught and seen collections (the caught-implies-seen invariant), and
- * that both operations are idempotent across repeated calls. They build a one-player world so the
- * assertions describe the system's rules directly.
+ * The tests confirm marking a species seen appends without duplicating, marking it caught records
+ * the species in both the caught and seen collections (the caught-implies-seen invariant), and
+ * both operations are idempotent across repeated calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

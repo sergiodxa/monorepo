@@ -1,9 +1,9 @@
 /**
  * The party screen: the player's creatures at a glance.
  *
- * Reads the party view from the engine and lists each creature with level and HP;
- * confirming one opens its summary, cancelling returns to the pause menu. It only
- * reads selectors, never mutating engine state.
+ * Reads the party view from the engine and lists each creature with level
+ * and HP; confirming one opens its summary, cancelling returns to the pause
+ * menu. Engine access stays read-only, expressed entirely through selectors.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,7 +20,6 @@ import { SummaryScene } from "./summary";
 
 /** Lists the party and opens a creature's summary. */
 export class PartyScene implements Scene {
-	/** The list widget for party members. */
 	private readonly list = new ListMenu(6);
 
 	enter(game: GameClient) {

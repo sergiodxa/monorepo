@@ -22,11 +22,9 @@ import SigningKey from "../../signing-keys/models/signing-key";
 import TenantMeta from "../models/tenant-meta";
 
 /**
- * Middleware that verifies the request has a valid access token
- * issued to a client with management API access.
- *
- * Internal requests (from the platform dashboard) use signed tokens
- * for secure authentication, verified using a shared secret.
+ * Middleware that verifies the request carries either a signed internal token
+ * from the control plane, or a Bearer access token whose subject or audience
+ * identifies a client with management API access.
  * @param internalSecret - HMAC secret shared with the control plane for internal tokens.
  * @returns A router middleware that authenticates management requests or returns `401`.
  */
@@ -35,8 +33,6 @@ export default (internalSecret: string) => {
 		let log = context.logger.middleware("management-auth");
 		let db = getServiceContainer().get(Database);
 
-		// Check for internal token (from platform dashboard)
-		// Uses HMAC-signed JWT for secure internal authentication
 		let internalToken = context.request.headers.get("x-internal-token");
 		if (internalToken) {
 			let isValid = await verifyInternalToken(internalToken, internalSecret);
@@ -46,10 +42,8 @@ export default (internalSecret: string) => {
 				return next();
 			}
 			log.info("Invalid internal token provided");
-			// Fall through to check for regular auth token
 		}
 
-		// Extract Bearer token from Authorization header
 		let authHeader = context.request.headers.get("authorization");
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
 			log.info("Missing or invalid Authorization header");
@@ -61,7 +55,6 @@ export default (internalSecret: string) => {
 
 		let token = authHeader.slice(7);
 
-		// Get issuer and signing keys
 		let issuer = await TenantMeta.getIssuer(db);
 		if (!issuer) {
 			log.error("Issuer not configured");
@@ -80,7 +73,6 @@ export default (internalSecret: string) => {
 			});
 		}
 
-		// Verify access token
 		let accessToken;
 		try {
 			accessToken = await AccessToken.verify(token, signingKeys, {
@@ -97,23 +89,16 @@ export default (internalSecret: string) => {
 			});
 		}
 
-		// Get the client ID from the token
-		// For client_credentials grant, the subject IS the client ID
-		// For authorization_code grant, we need to check the audience
 		let clientId = accessToken.subject;
 
-		// If the subject looks like a user ID (UUID), the audience is the client
-		// For M2M tokens, subject === client_id
 		let audience = accessToken.audience;
 		if (Array.isArray(audience)) {
-			// Find the client ID in the audience (not the issuer URL)
 			let foundClientId = audience.find((aud) => !aud.startsWith("https://"));
 			if (foundClientId) clientId = foundClientId;
 		} else if (typeof audience === "string" && !audience.startsWith("https://")) {
 			clientId = audience;
 		}
 
-		// Verify the client has management API access
 		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
@@ -131,7 +116,6 @@ export default (internalSecret: string) => {
 			});
 		}
 
-		// Store client info in context for use by handlers
 		context.managementClient = client;
 
 		log.info("Management API access granted", { clientId: client.id, clientName: client.name });

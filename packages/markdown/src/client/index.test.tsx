@@ -1,3 +1,11 @@
+/**
+ * Confirms `MarkdownView` renders a Markdoc AST into HTML through the
+ * Handle<Props> component model.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import Markdoc from "@markdoc/markdoc";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";

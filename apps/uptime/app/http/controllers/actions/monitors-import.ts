@@ -5,11 +5,9 @@
  * form uses, so an imported monitor is indistinguishable from a hand-made one and no second
  * creation path exists to drift from the first.
  *
- * A partial success is the expected outcome, not an error: somebody pasting thirty lines off a
- * spreadsheet will have a stray blank, a duplicate, and something that isn't a URL among them.
- * Refusing the whole submission over one bad line would make the feature useless precisely
- * when it is most needed, so the good lines are created and the bad ones are reported back
- * with their reasons.
+ * Pasting thirty lines off a spreadsheet routinely produces a stray blank, a duplicate, or
+ * something that isn't a URL, so the good lines are created immediately and the bad ones
+ * come back with their reasons — one bad line among many still leaves the batch usable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,25 +31,15 @@ import routes from "~/routes/web";
 /**
  * Session key the import page reads its one-time report from.
  *
- * The report travels in the session rather than in the query string because it holds the lines
- * somebody pasted, and a URL is the one place those should never end up: it is logged, shared
- * and bookmarked, and the report is for a single render.
+ * The session carries the report because it holds the lines somebody pasted, and a session
+ * read is private and single-use — matching a report that is meant for exactly one render.
  */
 export const MONITOR_IMPORT_REPORT = "monitorImport";
 
 /**
- * POST /actions/:team/import-monitors — creates a monitor for every valid, distinct URL in the
- * pasted list, then redirects.
- *
- * Where it redirects is part of the report: back to the paste box whenever anything was
- * rejected, so the lines to fix sit in front of the box they get re-pasted into, and on to the
- * monitor list when the whole list landed, since there is then nothing left to do here.
- *
- * No on-demand check is enqueued for the created monitors, unlike the single-monitor create.
- * `Monitor.create` stamps `next_due_at` at now, so the every-minute scheduler claims all of
- * them on its next tick; spending a subscription lookup and a queue message per line to save
- * at most that one minute would make this request's cost scale with the length of the list,
- * which is the one thing that makes this path different from creating one monitor.
+ * Created monitors rely on the every-minute scheduler for their first check: `Monitor.create`
+ * stamps `next_due_at` at now, so the scheduler claims all of them on its next tick, keeping
+ * this request's cost flat no matter how long the pasted list is.
  */
 export const importMonitors = createAction(routes.actions.monitor.http.import, async (ctx) => {
 	let session = ctx.get(Session);
@@ -100,9 +88,8 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 	session?.flash(MONITOR_IMPORT_REPORT, report);
 	session?.flash("toast", {
 		/**
-		 * A submission where nothing landed at all is the error; one where some of it did is
-		 * not, however many lines were rejected alongside — those monitors exist, and this
-		 * toast is where that gets said.
+		 * Any created monitor makes this a success, however many lines were rejected
+		 * alongside it — those monitors exist, and this toast is where that gets said.
 		 */
 		intent: report.created > 0 ? "success" : "error",
 		message:

@@ -2,9 +2,9 @@
  * The page a verification link lands on: a centered card carrying the outcome's heading
  * and sentence, and — when there is somewhere useful to go — one link.
  *
- * It is a standalone document rather than an account page because the reader arrives from
- * an inbox and may hold no session at all, so nothing here may assume a signed-in chrome
- * to sit inside.
+ * It renders as a standalone document: the reader arrives from an inbox and may be
+ * unauthenticated, so the markup here stands complete on its own, independent of any
+ * signed-in chrome.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

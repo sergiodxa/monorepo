@@ -1,10 +1,9 @@
 /**
  * Unit tests for `EnqueuePendingDomainsJob.perform`: verifies it batches one
- * `verifyDomainOwnership` queue message per unverified team domain and skips the queue
- * call entirely when there is nothing pending. The `QUEUE` binding is an in-memory queue
- * installed through `vi.doMock("cloudflare:workers", ...)`, since the job reaches for
- * `env.QUEUE.sendBatch` directly, so the messages asserted on are the ones that really
- * landed on it.
+ * `verifyDomainOwnership` message per unverified team domain and skips the
+ * queue call when nothing is pending. `QUEUE` is an in-memory queue mocked
+ * via `vi.doMock("cloudflare:workers", ...)` since the job calls
+ * `env.QUEUE.sendBatch` directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,12 +18,13 @@ import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
- * The queue the job enqueues through. It lives at module scope because the module under
- * test captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ * The queue the job enqueues through. It lives at module scope because the
+ * module under test captures `env` on import, so `beforeEach` resets this
+ * same instance.
  */
 let queue: QueueMock = createQueue({ name: "verify-domains" });
 
-/** Nothing pending means no call at all, which an empty `sent` cannot tell apart. */
+/** A spy on `sendBatch` distinguishes zero calls from a call sending nothing. */
 let sendBatch = vi.spyOn(queue, "sendBatch");
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));

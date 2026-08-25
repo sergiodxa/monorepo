@@ -22,10 +22,8 @@ import type { ToolArg, Value, ValueObject } from "../values";
 
 import { ToolError } from "../errors";
 
-/** The environment variable the plugin reads its connection string from. */
 const DATABASE_URL_VAR = "DATABASE_URL";
 
-/** Descriptors of every tool the `db` namespace exposes. */
 const DB_TOOLS: ToolDescriptor[] = [
 	{
 		name: "query",
@@ -44,18 +42,11 @@ const DB_TOOLS: ToolDescriptor[] = [
 ];
 
 /**
- * Create the built-in `db` plugin (namespace `"db"`): a single `db.query` tool
- * that runs a raw SQL string and returns `{ rows, affected_rows, count }`.
- *
- * `describe()` is static — it never opens a connection — so a suite that never
- * calls `db.*` needs no `DATABASE_URL` and pays nothing. The connection is
- * created on the first query from `DATABASE_URL`, reused for the rest of the
- * run (Bun's SQL client pools it), and closed once by the runner through
- * {@link Plugin.dispose} after the whole suite has run.
+ * Create the built-in `db` plugin (namespace `"db"`): a single `db.query`
+ * tool returning `{ rows, affected_rows, count }` from one pooled connection
+ * opened from `DATABASE_URL` and closed via {@link Plugin.dispose}.
  */
 export function createDbPlugin(): Plugin {
-	// The pooled connection, opened lazily and shared across every test in the
-	// run; null until the first successful open, and back to null after dispose.
 	let connection: SQL | null = null;
 	return {
 		namespace: "db",
@@ -68,10 +59,12 @@ export function createDbPlugin(): Plugin {
 			}
 			let text = readSql(args);
 			if (isFailure(text)) return text;
-			// The permission layer is two-staged: the runtime's central gate has
-			// already refused the call if the env family was denied outright; here
-			// the plugin refines that to the one variable it actually reads, so a
-			// caller who granted some other variable still gets the exact flag.
+			/**
+			 * The runtime's central gate has already refused the call if the env
+			 * family was denied outright; this refines that to the one variable
+			 * actually read, so granting some other variable still yields the
+			 * exact missing name.
+			 */
 			let allowed = context.permissions.checkEnv(DATABASE_URL_VAR);
 			if (isFailure(allowed)) return allowed;
 			let url = process.env[DATABASE_URL_VAR];
@@ -91,14 +84,16 @@ export function createDbPlugin(): Plugin {
 		},
 		async dispose() {
 			if (connection === null) return;
-			// Detach before awaiting so a slow or throwing close cannot leave a
-			// half-closed handle cached for a (nonexistent) later call.
+			/**
+			 * Detach before awaiting so a slow or throwing close cannot leave a
+			 * half-closed handle cached for a later call.
+			 */
 			let closing = connection;
 			connection = null;
 			try {
 				await closing.close();
 			} catch {
-				// Best-effort teardown: a failed close must never fail a run.
+				/** Best-effort teardown: a failed close must never fail a run. */
 			}
 		},
 	};
@@ -123,14 +118,9 @@ function readSql(args: ToolArg[]): Result<string, SpecError> {
 }
 
 /**
- * Open a pooled connection to `url`. The SQL client selects the driver from the
- * URL scheme (`sqlite://`, `postgres://`, …); a malformed URL, an unsupported
- * scheme, or a runtime that has no SQL client at all surfaces as a
- * {@link ToolError} rather than a throw.
- *
- * The client is imported here rather than at module scope so this module — and
- * therefore the tool descriptors and every argument check above — loads under
- * any runtime. Only actually connecting needs the Bun runtime.
+ * Open a pooled connection to `url`, translating a malformed URL,
+ * unsupported scheme, or missing SQL client into a {@link ToolError}. The
+ * client loads inside this call so the module works under any runtime.
  */
 async function openConnection(url: string): Promise<Result<SQL, SpecError>> {
 	try {
@@ -159,11 +149,9 @@ async function runQuery(connection: SQL, text: string): Promise<Result<Value, Sp
 }
 
 /**
- * Shape a driver result into the tool's value: `rows` are the returned records
- * (empty for DML), `affected_rows` is the driver's count — rows changed by DML
- * or rows returned by a SELECT — and `count` is `rows.length`, so a SELECT that
- * returns N rows reads `affected_rows == count == N` while an INSERT of one row
- * reads `affected_rows == 1` and `count == 0`.
+ * Shape a driver result into the tool's value: `rows` are the returned
+ * records (empty for DML), `affected_rows` is the driver's row count, and
+ * `count` is `rows.length`.
  */
 function shapeResult(result: unknown): ValueObject {
 	let rows: Value[] = [];
@@ -189,9 +177,8 @@ function affectedRows(result: unknown, fallback: number): number {
 
 /**
  * Coerce a driver-returned value into the JSON-shaped runtime {@link Value}
- * model: dates become ISO strings, binary becomes base64, out-of-range bigints
- * become strings (in range, numbers), and objects and arrays recurse — so every
- * row that reaches a `.spec` is a plain value the runtime can compare and print.
+ * model — dates to ISO strings, binary to base64, safe bigints to numbers
+ * and unsafe ones to strings — so every row is a plain, comparable value.
  */
 function toValue(value: unknown): Value {
 	if (value === null || value === undefined) return null;
@@ -212,7 +199,7 @@ function toValue(value: unknown): Value {
 	}
 	if (typeof value === "symbol" || typeof value === "function") return value.toString();
 
-	// Every `typeof` result is handled above, so nothing reaches here.
+	/** Every `typeof` result is handled above, so nothing reaches here. */
 	return null;
 }
 

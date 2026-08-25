@@ -159,9 +159,9 @@ describe("ariaChecked", () => {
 		});
 
 		/**
-		 * The opt-in half of the contract: the components render no
-		 * `aria-checked` of their own, so a control the mixin was not applied to
-		 * keeps announcing its state through the live control alone.
+		 * The opt-in half of the contract: `aria-checked` shows up only where
+		 * the mixin was applied, so an unmixed control keeps announcing its
+		 * state through the live control alone.
 		 */
 		test("leaves a control the mixin was not applied to carrying no aria-checked at all", async () => {
 			let html = await renderToString(
@@ -209,10 +209,9 @@ describe("ariaChecked", () => {
 		});
 
 		/**
-		 * The case a radio cannot do without: picking B unchecks A silently, with
-		 * no event of A's own, so a refresh limited to the control that fired
-		 * would leave A announcing itself as still checked — worse than the
-		 * attribute never being there.
+		 * Picking radio B unchecks sibling A silently, since only B fires a
+		 * change event, so refreshing every member of the group is what keeps
+		 * A's attribute accurate.
 		 */
 		test("flips a radio group's previously checked sibling to false", () => {
 			let scope = createScope();
@@ -282,9 +281,8 @@ describe("ariaChecked", () => {
 
 		/**
 		 * A disabled radio that started out checked still loses its checkedness
-		 * the moment somebody picks an enabled sibling, so it is refreshed along
-		 * with the rest of the group rather than skipped the way a mixin
-		 * synthesizing an interaction would skip it.
+		 * when an enabled sibling is picked, so the whole group is refreshed
+		 * together to keep it accurate.
 		 */
 		test("refreshes a disabled sibling along with the rest of the group", () => {
 			let scope = createScope();

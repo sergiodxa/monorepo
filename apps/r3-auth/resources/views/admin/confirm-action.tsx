@@ -63,7 +63,6 @@ export default function ConfirmAction(handle: Handle<ConfirmAction.Props>) {
 						<AlertDialog.Description id={descriptionId}>{description}</AlertDialog.Description>
 					</AlertDialog.Header>
 
-					{/* A real form: the dialog asks the question and the same markup answers it. */}
 					<form method="post">
 						{Object.entries(fields).map(([name, value]) => (
 							<input key={name} type="hidden" name={name} value={value} />

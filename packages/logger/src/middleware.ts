@@ -1,11 +1,11 @@
 /**
  * Request-logging middleware. Attaches a per-request {@link Logger} to the context as
  * `ctx.logger`, records the response on it, and flushes on both the success and the
- * error path, so handlers log through the request logger instead of the console.
+ * error path, giving handlers a request-scoped logger for their output.
  *
- * The module augmentation that types `ctx.logger` ships from this file rather than an
- * ambient `.d.ts`, because an ambient declaration is not pulled in transitively: a
- * consumer only gets the type by importing the middleware it comes with.
+ * The module augmentation that types `ctx.logger` lives in this file, so importing the
+ * middleware is what brings the type augmentation along, giving every consumer the type
+ * through that one import.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

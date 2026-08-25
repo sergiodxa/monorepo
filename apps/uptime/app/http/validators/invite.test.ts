@@ -2,11 +2,10 @@
  * Unit tests for the create/revoke invite form validators: the `email` format check
  * and the `revoke-invite` id schema.
  *
- * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
- * into a plain object before handing it to the schema, but these are `f.object(...)`
- * form-data schemas that only accept the raw `FormData`/`URLSearchParams` instance, so
- * every call through `validate()` fails before the field-level rules ever run.
+ * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` using real
+ * `FormData`, since these are `f.object(...)` form-data schemas that accept only a raw
+ * `FormData`/`URLSearchParams` instance — normalizing the data into a plain object first
+ * would leave every field-level rule failing before it ever runs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

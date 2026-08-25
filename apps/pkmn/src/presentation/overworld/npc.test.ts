@@ -35,9 +35,7 @@ test("npcAt returns null for a free tile", () => {
 });
 
 test("facingNpc finds the NPC one tile ahead in the facing direction", () => {
-	// Standing left of the healer (7,5) and facing right into it.
 	expect(facingNpc(npcs, { x: 6, y: 5, facing: "right" })?.id).toBe("healer");
-	// Standing above the trainer (5,3) and facing down into it.
 	expect(facingNpc(npcs, { x: 5, y: 2, facing: "down" })?.id).toBe("trainer");
 });
 
@@ -47,6 +45,5 @@ test("facingNpc returns null when adjacent but facing away", () => {
 });
 
 test("facingNpc returns null when facing an NPC but not adjacent", () => {
-	// Two tiles left of the healer: the tile ahead is empty, not the NPC.
 	expect(facingNpc(npcs, { x: 5, y: 5, facing: "right" })).toBeNull();
 });

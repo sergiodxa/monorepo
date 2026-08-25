@@ -1,25 +1,9 @@
 /**
- * Canvas-backed sprite pixel editor for the dev tools. A plain class (no framework
- * coupling) that owns ALL editor state: the pure {@link PixelGrid} model, the
- * current tool and color, the undo/redo history, the recent-color palette, and
- * the canvas handed to it by the view via {@link SpriteEditor.attach}. The view
- * constructs it once in component setup and wires pointer-free lifecycle through
- * the `ref` mixin; every user gesture flows through this class, which mutates the
- * grid and repaints.
- *
- * Rendering scales the small pixel grid up to fill the display canvas: a
- * checkerboard shows through transparent pixels, painted pixels are drawn on top,
- * and thin grid lines separate cells. The model itself stays canvas-free (see
- * {@link PixelGrid}) so it can be unit-tested without a DOM; this class is the
- * imperative shell around it. {@link SpriteEditor.toPng} rasterizes the grid at
- * native resolution (one canvas pixel per grid pixel, transparency preserved) to
- * an offscreen canvas and returns encoded PNG bytes for the export action.
- *
- * The higher-level affordances — pen/eraser plus a fill bucket and an eyedropper,
- * bounded undo/redo, a recent-color palette, and importing an existing PNG back
- * into the grid — are built on pure helpers ({@link GridHistory},
- * {@link pushRecentColor}, {@link imageDataToGrid}) that are exported alongside
- * the editor so they can be unit-tested without a canvas.
+ * Canvas-backed sprite pixel editor for the dev tools. It owns all editor state
+ * — the pure {@link PixelGrid} model, the tool and color, the undo/redo history,
+ * the recent-color palette — and is the imperative shell that mirrors the grid
+ * onto a display canvas. The pure helpers it builds on are exported alongside it
+ * so they stay unit-testable on their own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,8 +14,7 @@ import { type GridSnapshot, MAX_DIMENSION, PixelGrid, type Rgb } from "./pixel-g
 /**
  * The drawing tools. `pen` paints the current color, `eraser` clears to
  * transparent, `fill` flood-fills the contiguous same-color region under the
- * cursor, and `eyedropper` picks the color under the cursor into the current
- * color instead of drawing.
+ * cursor, and `eyedropper` adopts the color under the cursor as the pen color.
  */
 export type SpriteTool = "pen" | "eraser" | "fill" | "eyedropper";
 
@@ -60,22 +43,17 @@ export const SIZE_PRESETS: SizePreset[] = [
 	{ id: "64x64", label: "64×64", width: 64, height: 64 },
 ];
 
-/** Default sprite size when the editor is first constructed (a 16×16 tile). */
 const DEFAULT_WIDTH = 16;
 
-/** Default sprite height, paired with {@link DEFAULT_WIDTH}. */
 const DEFAULT_HEIGHT = 16;
 
-/** Default pen color (opaque black) before the user picks one. */
 const DEFAULT_COLOR: Rgb = { r: 0, g: 0, b: 0 };
 
-/** Side length in display pixels of one checkerboard square (in native pixels). */
+/** Side length in native canvas pixels of one checkerboard square. */
 const CHECKER_SIZE = 8;
 
-/** Fill for the light checkerboard squares seen through transparent pixels. */
 const CHECKER_LIGHT = "#3a3a3a";
 
-/** Fill for the dark checkerboard squares seen through transparent pixels. */
 const CHECKER_DARK = "#2a2a2a";
 
 /** Stroke color for the per-cell grid lines drawn over the scaled sprite. */
@@ -84,23 +62,16 @@ const GRID_LINE = "rgba(255, 255, 255, 0.08)";
 /** Target display size in CSS/canvas pixels the grid is scaled to fill. */
 const DISPLAY_SIZE = 512;
 
-/** Default depth of the undo/redo history (states, not ops). */
+/** Default depth of the undo/redo history, counted in whole grid states. */
 export const DEFAULT_HISTORY_LIMIT = 64;
 
 /** Default number of distinct recent colors the palette tracks. */
 export const DEFAULT_RECENT_LIMIT = 8;
 
 /**
- * A bounded undo/redo history of {@link GridSnapshot} states. Rather than replay
- * individual ops it stores full grid snapshots, so a step restores both the size
- * and the pixels regardless of intervening resizes. Pure and canvas-free: the
- * editor pushes a snapshot before each mutating gesture, and undo/redo hand the
- * neighbouring snapshot back for the editor to {@link PixelGrid.restore}.
- *
- * The history keeps a cursor into a single list. Pushing after an undo discards
- * the now-orphaned redo tail (the classic linear-history behaviour), and the
- * oldest states are dropped once the list exceeds the limit so memory stays
- * bounded on long editing sessions.
+ * A bounded undo/redo history of whole {@link GridSnapshot} states, so a step
+ * restores the size along with the pixels across intervening resizes. Pushing
+ * after an undo forks the timeline, and the oldest states drop past the limit.
  */
 export class GridHistory {
 	/** Snapshots in chronological order; index 0 is the oldest kept state. */
@@ -146,7 +117,6 @@ export class GridHistory {
 	 * @param snapshot The state to append and make current.
 	 */
 	push(snapshot: GridSnapshot): void {
-		// Drop the orphaned redo tail before appending the new present.
 		if (this.#cursor < this.#states.length - 1) {
 			this.#states = this.#states.slice(0, this.#cursor + 1);
 		}
@@ -181,10 +151,9 @@ export class GridHistory {
 }
 
 /**
- * Returns a new recent-color list with `color` promoted to the front, de-duped
- * (an identical RGB already present is moved to the front rather than added
- * again) and capped at `limit` entries by dropping the oldest. Pure: it never
- * mutates the input list, so the editor can hold the result as its new palette.
+ * Returns a fresh list with `color` at the front, de-duped by exact RGB and
+ * capped at `limit` by dropping the oldest. The input list is left as it was,
+ * so the caller adopts the returned list as its new palette.
  *
  * @param recent The current recent-color list, most-recent first.
  * @param color The color just used, to promote to the front.
@@ -227,12 +196,8 @@ export interface DecodedImage {
 
 /**
  * Loads a decoded image into a fresh {@link PixelGrid}, adopting its dimensions
- * and pixels. The pure half of PNG import: the caller (see
- * {@link SpriteEditor.importImage}) is responsible for turning a `File`/`Blob`
- * into a {@link DecodedImage} via a canvas, but the buffer→grid mapping — and its
- * validation — lives here so it can be unit-tested without a DOM. Dimensions
- * larger than {@link MAX_DIMENSION} or a mismatched buffer length are rejected by
- * {@link PixelGrid.loadPixels}.
+ * and pixels. The pure half of PNG import, so the buffer→grid mapping stays
+ * testable; {@link PixelGrid.loadPixels} enforces {@link MAX_DIMENSION} and length.
  *
  * @param image The decoded image to import.
  * @returns A new grid sized to and holding the image's pixels.
@@ -285,6 +250,9 @@ export class SpriteEditor {
 	#onPointerUp = () => this.#stopPainting();
 
 	/**
+	 * Seeds the history with the initial blank state so the first edit already
+	 * has a state to undo back to.
+	 *
 	 * @param width Initial sprite width in pixels.
 	 * @param height Initial sprite height in pixels.
 	 * @param historyLimit Depth of the undo/redo history.
@@ -299,8 +267,6 @@ export class SpriteEditor {
 		this.#grid = new PixelGrid(width, height);
 		this.#history = new GridHistory(historyLimit);
 		this.#recentLimit = recentLimit;
-		// Seed the history with the initial blank state so the first edit has a
-		// state to undo back to.
 		this.#history.push(this.#grid.snapshot());
 	}
 
@@ -377,8 +343,8 @@ export class SpriteEditor {
 	}
 
 	/**
-	 * Releases the canvas and removes every listener so a detached editor cannot
-	 * keep drawing or leak handlers. Called from the view when the canvas unmounts.
+	 * Releases the canvas and removes every listener, leaving the editor inert
+	 * until the next {@link attach}. Called when the canvas unmounts.
 	 */
 	detach(): void {
 		let canvas = this.#canvas;
@@ -392,8 +358,8 @@ export class SpriteEditor {
 	}
 
 	/**
-	 * Sets the active pen color. Does not repaint the grid — existing pixels keep
-	 * their colors; only future pen strokes use the new value.
+	 * Sets the active pen color. Painted pixels keep the colors they already
+	 * have; the new value applies from the next pen stroke on.
 	 *
 	 * @param color The RGB color future pen strokes paint.
 	 */
@@ -459,10 +425,9 @@ export class SpriteEditor {
 	}
 
 	/**
-	 * Decodes an image file/blob (typically a PNG) and loads its pixels into the
-	 * grid, resizing the grid to match so an existing sprite can be edited. Uses
-	 * `createImageBitmap` + a canvas to decode; the pure buffer→grid mapping is
-	 * {@link imageDataToGrid}. Records the imported state on the undo history.
+	 * Decodes an image file/blob and loads its pixels into the grid, resizing it
+	 * to match so an existing sprite can be edited. Decoding goes through
+	 * `createImageBitmap`; the imported state lands on the undo history.
 	 *
 	 * @param file The image file or blob to import.
 	 * @throws When the image cannot be decoded, a 2D context is unavailable, or
@@ -514,17 +479,14 @@ export class SpriteEditor {
 
 	/**
 	 * Rasterizes the grid at native resolution (one canvas pixel per grid pixel,
-	 * transparency preserved) and encodes it as PNG bytes. Uses `OffscreenCanvas`
-	 * when available (`convertToBlob`) and falls back to a detached `<canvas>`
-	 * (`toBlob`) otherwise, so it works in both worker-like and DOM contexts.
+	 * transparency preserved) and encodes PNG bytes, preferring `OffscreenCanvas`
+	 * so it works in worker-like contexts too.
 	 *
 	 * @returns The PNG-encoded sprite as bytes.
 	 */
 	async toPng(): Promise<Uint8Array> {
 		let width = this.#grid.width;
 		let height = this.#grid.height;
-		// Build the ImageData from a fresh array backed by a plain ArrayBuffer (the
-		// constructor rejects a SharedArrayBuffer-backed view), copying the grid in.
 		let pixels = new Uint8ClampedArray(width * height * 4);
 		pixels.set(this.#grid.serialize());
 		let image = new ImageData(pixels, width, height);
@@ -598,9 +560,9 @@ export class SpriteEditor {
 	}
 
 	/**
-	 * Applies the pen or eraser to the grid cell under a drag event and repaints,
-	 * WITHOUT recording history (a drag records a single state on release). A
-	 * no-op for non-drawing tools or when the event is off-grid.
+	 * Applies the pen or eraser to the grid cell under a drag event and repaints.
+	 * History is recorded once on release, so a whole drag undoes as one step. A
+	 * no-op for the fill and eyedropper tools or when the event is off-grid.
 	 *
 	 * @param event The pointer event whose position selects the target pixel.
 	 */
@@ -616,8 +578,8 @@ export class SpriteEditor {
 	}
 
 	/**
-	 * Starts a gesture. Pen/eraser begin a drag stroke; fill and eyedropper are
-	 * one-shot and apply immediately without drag tracking.
+	 * Starts a gesture. Pen and eraser begin a drag stroke; fill and eyedropper
+	 * apply once, immediately.
 	 *
 	 * @param event The pointer event that began the gesture.
 	 */
@@ -670,8 +632,7 @@ export class SpriteEditor {
 	/**
 	 * Picks the color under a pointer event into the current pen color and
 	 * notifies the color listener so the view's input can follow. Transparent
-	 * pixels are ignored (nothing to pick). Does not record history — picking a
-	 * color changes no pixels.
+	 * pixels are skipped, and the grid — with it the history — stays as it is.
 	 *
 	 * @param event The pointer event whose pixel color is picked.
 	 */

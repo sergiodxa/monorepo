@@ -12,13 +12,9 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-/**
- * Cache TTL for tenant meta values (1 minute in milliseconds).
- * Tenant metadata rarely changes, but we keep TTL short for safety.
- */
+/** Short despite tenant metadata rarely changing, to bound staleness after a write. */
 const TENANT_META_CACHE_TTL_MS = 60_000;
 
-/** Cache structure for tenant meta values. */
 interface MetaCache {
 	value: string | null;
 	expiresAt: number;

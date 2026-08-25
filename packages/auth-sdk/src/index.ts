@@ -85,6 +85,8 @@ export class AuthSDK extends APIClient {
 	/**
 	 * Exchanges the configured client credentials for an access token.
 	 *
+	 * Encodes the credentials as standard base64 per RFC 7617's Basic scheme.
+	 *
 	 * @param resources Resource indicators to scope the token to.
 	 * @returns The access token, or why the grant was refused.
 	 */
@@ -94,7 +96,6 @@ export class AuthSDK extends APIClient {
 		for (let resource of resources) body.append("resource", resource);
 
 		let headers = new Headers();
-		// RFC 7617 credentials are standard base64, not the URL-safe alphabet.
 		headers.set("Authorization", `Basic ${btoa(`${this.client.id}:${this.client.secret}`)}`);
 
 		let response = await this.post("/oauth/token", { headers, body });

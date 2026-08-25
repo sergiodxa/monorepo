@@ -18,24 +18,9 @@ import { block } from "@pkg/u/layout";
 import { mergeStyle } from "../utils/merge-style";
 
 /**
- * Stylesheet text {@link SharedElement} renders into a `<style>` element
- * alongside its host, rather than through a `css()` declaration on the host
- * itself. A `@view-transition` at-rule holds only descriptors (`navigation`,
- * `types`) and, unlike `@media`, can never wrap a per-instance selector —
- * `css()` would otherwise nest the host's generated class inside it, which
- * the at-rule's grammar doesn't accept and the browser would simply drop.
- * `::view-transition-group(*)` has the same constraint for a different
- * reason: it selects from the browser's own transition pseudo-element tree,
- * which isn't reachable through any selector rooted at this host's class.
- *
- * `navigation: auto` opts the whole document into cross-document view
- * transitions on same-origin navigation the moment a single instance
- * renders — the declaration is document-wide by nature, not scoped to one
- * element, so every instance repeating it is redundant but harmless. The
- * paired `prefers-reduced-motion` block collapses the morph between an
- * element's old and new position/size down to the plain cross-fade every
- * transitioning element still receives, rather than turning transitions off
- * outright.
+ * Written as plain CSS text inside a `<style>` element: `@view-transition`
+ * accepts only descriptors, and `::view-transition-group(*)` selects from
+ * the browser's own transition tree, both needing selectors written directly in CSS.
  */
 const CROSS_DOCUMENT_TRANSITION_STYLESHEET = `
 @view-transition {
@@ -55,29 +40,16 @@ const CROSS_DOCUMENT_TRANSITION_STYLESHEET = `
 export namespace SharedElement {
 	/**
 	 * Props accepted by {@link SharedElement}: every native `<div>` attribute
-	 * plus the `mix` passthrough. `id` doubles as the element's view
-	 * transition identity — render the same `id` on the corresponding element
-	 * in the document navigated to or from, and the browser morphs one into
-	 * the other instead of replacing it outright.
+	 * plus the `mix` passthrough. `id` doubles as the view transition identity,
+	 * matched against the same `id` in the document navigated to or from.
 	 */
 	export interface Props extends TagProps<"div"> {}
 }
 
 /**
- * Renders a plain `<div>` host whose `view-transition-name` comes straight
- * from its own `id`, so a same-origin, cross-document navigation recognizes
- * it as the same shared element on both sides and morphs it between its old
- * and new position, size, and appearance instead of popping between them.
- * Rendering even one instance also ships a `<style>` element declaring
- * `@view-transition { navigation: auto; }`, since that opt-in applies to the
- * whole document rather than to any single element. In dev mode, a host
- * rendered without an `id` logs a `console.warn`, since the browser then has
- * nothing to match it against on the other side of the navigation.
- *
- * Cross-document view transitions are a browser-level opt-in this component
- * only prepares the ground for. Pair it with the `viewTransition()` mixin
- * from the mixin layer to also wrap a same-document content swap — a Frame
- * reload — in a view transition of its own.
+ * Renders a plain `<div>` host whose `view-transition-name` comes from its
+ * own `id`, so a same-origin, cross-document navigation matching that `id`
+ * on the other side morphs the element instead of replacing it outright.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the host's markup.

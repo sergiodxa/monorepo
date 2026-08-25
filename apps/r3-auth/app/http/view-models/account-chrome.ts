@@ -32,11 +32,9 @@ export interface AccountChromeInput {
 export type AccountChrome = Omit<AccountLayout.Props, "children">;
 
 /**
- * Builds the account layout's props, translating the navigation and breadcrumb copy
- * through the request's own i18next instance.
- *
- * The trail carries the page's ancestors only, never the page itself: the heading right
- * beneath it already names the page, and repeating it there read as a stutter.
+ * Translates the navigation and breadcrumb copy through the request's own i18next
+ * instance. The trail carries only the page's ancestors — the heading beneath it
+ * already names the page, so repeating it there would stutter.
  */
 export function accountChrome(ctx: RequestContext, input: AccountChromeInput): AccountChrome {
 	return {

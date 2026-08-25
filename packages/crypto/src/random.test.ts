@@ -40,7 +40,6 @@ describe("randomToken", () => {
 	});
 
 	test("encodes 32 bytes of entropy by default", () => {
-		// 32 bytes is 43 unpadded base64url characters.
 		expect(randomToken()).toHaveLength(43);
 	});
 

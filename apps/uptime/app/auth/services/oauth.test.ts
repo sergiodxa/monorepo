@@ -1,9 +1,9 @@
 /**
- * Tests `createAuthProvider`: it builds an OIDC provider named "sergiodxa" (the
- * literal `remix/auth` routes callbacks by) regardless of the client credentials
- * and redirect URI passed in, and never throws while doing so — the provider's
- * internal runtime (token exchange, discovery) isn't part of its public shape, so
- * that's the only thing safe to assert on directly.
+ * Tests `createAuthProvider`: it builds an OIDC provider named "sergiodxa"
+ * (the literal name `remix/auth` routes callbacks by), keeping that name
+ * stable across any client credentials and redirect URI, and always
+ * returning a provider successfully. The provider's public shape is
+ * limited to that name — the only thing these tests assert on directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,25 +1,10 @@
 /**
- * Daily background job that counts yesterday's public-trial funnel, stores the count, and
- * mails it to whoever operates the deployment.
+ * Daily job that counts yesterday's public-trial funnel, stores the day's stats, and emails
+ * the summary to whoever operates the deployment.
  *
- * The question it exists to answer is the one none of the trial tables can: somebody used
- * the free form, gave us an address, received some number of emails, and some number of days
- * later became a paying customer. Each third of that sentence lives in a different place —
- * `leads` and `trial_watches` at the front, `trial_conversions` in the middle, Polar at the
- * end — and two of the three are deleted within a month, so the counting has to happen while
- * the rows are still there.
- *
- * **Two outputs, and only one of them is the email.** Every run writes a `trial_daily_stats`
- * row for the day it reported, whether or not anything is sent: that row is the only version
- * of the day that survives the thirty-day sweep and the retroactive deletion an unsubscribe
- * performs, so skipping it on a quiet day or on an unconfigured deployment would leave a hole
- * nothing can fill in later. The email is suppressed in two cases and the row is written in
- * both.
- *
- * **It is silent unless a deployment asks for it.** The recipient is the `FUNNEL_REPORT_TO`
- * worker variable and there is no fallback address, so local, preview and test runs count the
- * day, write it down, and send nothing.
- *
+ * Every run writes a `trial_daily_stats` row regardless of whether it sends, since two of the
+ * three source tables get swept within a month and that row is the only version of the day
+ * that survives. Sending itself is opt-in per deployment through `FUNNEL_REPORT_TO`.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -45,23 +30,15 @@ import { recordCost } from "~/app/services/cost";
 
 /**
  * How many days of context the report closes with, the reported day included.
- *
- * Thirty because that is how long a trial attempt stays claimable, so it is the shortest
- * window in which a lead from the start of it could still have converted at the end. It is
- * summed out of `trial_daily_stats` rather than re-queried, which is the entire reason that
- * table exists.
+ * Thirty is how long a trial attempt stays claimable, the shortest window in which a lead
+ * from the start could still convert by the end, so totals are summed out of `trial_daily_stats`.
  */
 const FUNNEL_TOTALS_DAYS = 30;
 
 /**
  * The internal address the report goes to, when the running deployment names one.
- *
- * Read structurally off `env` rather than through the generated `Cloudflare.Env`, which is
- * what makes an unset variable a supported state rather than a type error or a crash: the
- * variable is deployment configuration, and every environment that does not set it — local
- * dev, preview, the test suite — must run this job to completion and simply not send. An
- * empty string counts as absent, since that is what a variable declared and left blank looks
- * like.
+ * Read structurally off `env`, so an unset variable is simply a supported state;
+ * an empty string counts as absent too.
  *
  * @returns The recipient, or `null` when this deployment has none.
  */
@@ -75,6 +52,10 @@ export class SendFunnelReportJob extends Job {
 	/** The "Trial Funnel Report" cron monitor this job reports itself to when it completes. */
 	static override monitorId = "b6f2e0a4-9c31-4d58-a0e7-5f8c1b2d47a9";
 
+	/**
+	 * Records the send's cost before attempting delivery, since a rejected send is still
+	 * billed.
+	 */
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let mailer = getServiceContainer().get(Mailer);
@@ -82,9 +63,8 @@ export class SendFunnelReportJob extends Job {
 		let { start, end } = utcDayBounds(date);
 
 		/**
-		 * Deliberately no `apportionCost` call, for the same reason the digest job makes none: a
-		 * lead belongs to no team, so with no weights recorded the ledger attributes this run to
-		 * the platform, which is the truth.
+		 * A lead belongs to no team, so with no weights recorded for it, the ledger attributes
+		 * this run's cost to the platform, which is the accurate owner.
 		 */
 
 		let leads = await Lead.countFunnelActivity(db, start, end);
@@ -96,15 +76,9 @@ export class SendFunnelReportJob extends Job {
 			newLeads: leads.created,
 			urlsChecked: watches.created,
 			/**
-			 * The one counter with no column of its own, because nothing records a send as an
-			 * event: the per-lead total is a running one and it dies with the lead. It is derived
-			 * from the four stamps the four sends leave — one confirmation per watch created, one
-			 * digest per lead stamped, one change email and one wrap-up per watch stamped — which
-			 * is exact for three of them, since each of those is written at most once a day and
-			 * only after a transport accepted the message. The confirmation is the approximate
-			 * one: counted as a watch created, so a submission whose confirmation was rejected
-			 * still counts. Sharpening it means a row per send kept forever, to correct a number
-			 * that is read once a day.
+			 * Derived from the four stamps sends leave — confirmation, digest, change email,
+			 * wrap-up — since nothing else records a send count; the confirmation figure is
+			 * approximate because a rejected send still counts.
 			 */
 			emailsSent:
 				watches.created + watches.changeEmails + watches.summaryEmails + leads.digestsSent,
@@ -128,7 +102,6 @@ export class SendFunnelReportJob extends Job {
 
 		let totals = await TrialDailyStats.totalsBetween(db, startOfTotals(date), date);
 
-		// Counted before the send, because a rejected send is still a billed one.
 		recordCost("emailSent");
 		let sent = await mailer.send(
 			new FunnelReportEmail({
@@ -175,13 +148,8 @@ function toConversion(row: SelectTrialConversion): FunnelReportEmail.Conversion 
 
 /**
  * The three attribution columns as one line, or `null` when the row carries none.
- *
- * Composed here rather than in the email so the email prints a string it does not have to
- * decide the shape of, and so "unknown" stays the email's word for a missing value rather than
- * something this has to invent. A campaign is shown with its source when both are present,
- * since `outreach/agencies-august` is the identifier an operator actually recognises, and the
- * landing path is the fallback for a visit that arrived with no campaign at all — which still
- * says whether they came in through the agency page or the homepage.
+ * A campaign is shown with its source when both are present, since that pair is the
+ * identifier an operator recognises; the landing path stands in alone otherwise.
  */
 function describeAttribution(row: SelectTrialConversion): string | null {
 	let campaign = [row.campaign_source, row.campaign_name].filter(Boolean).join("/");

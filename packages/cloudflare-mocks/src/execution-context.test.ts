@@ -1,7 +1,7 @@
 /**
- * Tests for the execution context mock: deferred work is recorded rather than dropped,
- * `settled()` drains work registered while draining, and a rejected background promise
- * surfaces instead of vanishing.
+ * Tests for the execution context mock: work handed to `waitUntil` is recorded for
+ * later awaiting, `settled()` drains work registered while draining, and a rejected
+ * background promise surfaces through `settled()`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

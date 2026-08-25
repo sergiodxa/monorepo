@@ -1,8 +1,8 @@
 /**
  * Schema for the RP-initiated logout query string. Every parameter OpenID Connect
- * RP-Initiated Logout 1.0 defines is optional, so this shapes what arrives rather
- * than gating it: the decisions about which combinations are usable belong to the
- * controller and the engine, which can answer them with a redirect instead of an error.
+ * RP-Initiated Logout 1.0 defines is optional, so this schema only shapes what
+ * arrives; deciding which combinations are usable belongs to the controller and
+ * the engine, which can turn any of them into a redirect.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,10 +16,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 /**
  * A logout request as it arrives on the query string.
  *
- * `logout_hint` and `ui_locales` are accepted and carried no further: this server holds
- * one account per browser session, so there is nothing for a hint to disambiguate, and
- * it serves one language. Rejecting them would refuse requests the specification says
- * are valid.
+ * `logout_hint` and `ui_locales` are accepted so every request the specification allows
+ * stays valid, though this server serves one account and one language per session.
  */
 export const LogoutQuerySchema = s.object({
 	id_token_hint: s.optional(s.string()),

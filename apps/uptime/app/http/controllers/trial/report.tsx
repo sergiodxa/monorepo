@@ -1,40 +1,9 @@
 /**
- * `GET /try/report/:token` — the seven-day health report as a page.
+ * `GET /try/report/:token` — the seven-day health report as a durable page,
+ * addressed by the watch's own token since a trial has no account to guard it.
  *
- * The report already existed as an email. A page is what makes it an artifact: something a
- * reader can come back to, forward to a colleague or a client, and arrive at from the email
- * days later — and something a conversion call to action can live on once the trial is over
- * and the inbox has moved on.
- *
- * Addressed by the watch's own `report_token` and nothing else, because there is no account
- * behind a trial and the URL is therefore the only credential available. That token is
- * deliberately not the lead's unsubscribe token: this link is meant to be shared, and sharing
- * it must never hand somebody the power to delete the reader's address.
- *
- * ## Every figure is computed, and a figure with no data behind it is not printed
- *
- * The percentages and counts come from the watch's own totals through `watchStats`, and the
- * incidents from the stored results through `incidentsFrom` — the same functions the emails
- * use, so a reader holding both cannot be shown two versions of one week. Where there is
- * nothing to report the page says so rather than rounding to a flattering zero: a watch whose
- * checks have not started yet shows an em dash and a sentence explaining why, and it does not
- * claim "no incidents", because nobody has looked yet. A week that genuinely had no failure
- * does say so plainly, in one sentence, which is the whole of what the data supports.
- *
- * No incident duration is stated anywhere. Checks are an hour apart, so "down for three hours"
- * would be an assertion about fifty-nine unobserved minutes per check; the page names when a
- * failure was first seen and how many consecutive checks failed.
- *
- * There is no certificate section. The trial probes over HTTP and records a status, a response
- * time and an instant — no certificate is inspected and no expiry is stored anywhere a watch
- * can reach — so an expiry panel here could only be a guess, and the section is absent rather
- * than approximated.
- *
- * ## It is not indexable
- *
- * The page is about one reader's own site and is reachable only by an unguessable token, so it
- * emits `noindex, nofollow`. A crawler that somehow obtained a link must not put it in an
- * index where the token becomes searchable, and following the links out of it serves nobody.
+ * Every figure comes from `watchStats` and `incidentsFrom`, the same
+ * functions the emails use, so a reader holding both sees one consistent week.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,17 +44,15 @@ const ParamsSchema = s.object({ token: s.string() });
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * What a figure reads as when there is no data behind it. An em dash and never `0`: a zero is
- * a measurement, and printing one for a week nothing answered in would be the page's only lie.
+ * What a figure reads as when there is no data behind it: an em dash, since a
+ * zero would misstate a week nothing has answered in yet.
  */
 const NO_DATA = "—";
 
 /**
- * The zone every instant on the page is rendered in, named in the copy beside them.
- *
- * A trial reader is an email address and nothing else — no account, so no stored timezone and
- * no settings page to pick one in — which is the same reason the trial emails render in UTC.
- * Naming the zone is what keeps a timestamp honest for a reader who is four hours off it.
+ * The zone every instant on the page renders in: with no account behind a
+ * trial there is no stored timezone, so every timestamp renders in the same
+ * UTC the trial emails use.
  */
 const REPORT_ZONE = "UTC";
 
@@ -96,22 +63,17 @@ interface Figure {
 }
 
 /**
- * The window the report covers: the watch's whole seven days, or as much of them as has
- * actually happened when the reader arrives mid-trial.
- *
- * Clamped at `now` rather than always ending at `expires_at`, because a period ending in the
- * future would describe checks that have not run as though they had.
+ * The window the report covers: the watch's seven days, clamped at `now` so
+ * it stops at the checks that have actually run partway through a trial.
  */
 function reportPeriod(watch: SelectTrialWatch, now: number) {
 	return { from: watch.created_at, to: Math.min(now, watch.expires_at) };
 }
 
 /**
- * The response-time figures, or `null` when nothing ever answered.
- *
- * Derived from the checks that carry a timing and not from every check: a target that was
- * unreachable records no duration, and folding those in as zeros would report a site that was
- * down as instantaneous.
+ * The response-time figures, or `null` when nothing ever answered. Derived
+ * only from checks that carry a timing, since folding an unreachable target's
+ * missing duration in as zero would report a down site as instantaneous.
  */
 function timingSummary(results: SelectTrialWatchResult[]) {
 	let timings = results.flatMap((result) =>
@@ -131,12 +93,9 @@ function timingSummary(results: SelectTrialWatchResult[]) {
 }
 
 /**
- * The uptime ratio as the reader's own locale writes a percentage.
- *
- * The digits come from `watchStats`, so they are the same digits the emails print; only the
- * symbol and its placement are added here, and they are added by `Intl` rather than by a
- * locale key because where a percent sign goes is locale *data* and not copy somebody should
- * have to translate.
+ * The uptime ratio as the reader's own locale writes a percentage:
+ * `watchStats` supplies the digits, matching what the emails print, and
+ * `Intl` places the symbol since where it goes is locale data it already owns.
  *
  * @param uptime - A `watchStats` percentage, e.g. `"98.8"`.
  * @param locale - The request's language.
@@ -177,14 +136,17 @@ function segmentLabelKey(status: UptimeBar.Status) {
 }
 
 /**
- * One incident as a sentence: when the first failure was seen and how many consecutive checks
- * failed. No duration — see the module comment for why that number does not exist.
+ * One incident as a sentence: when the first failure was seen and how many
+ * consecutive checks failed, since checks land an hour apart and any duration
+ * would claim minutes nobody observed.
  */
 function incidentLine(incident: TrialIncident, locale: string, t: TFunction) {
 	return t("page.trial.report.incidents.entry", {
 		started: formatDateTime(new Date(incident.startedAt), { locale, timeZone: REPORT_ZONE }),
-		// `count`, so the sentence can decline "one check" against "four checks" in every
-		// language rather than in the one it was written in.
+		/**
+		 * `count`, so the sentence declines "one check" against "four checks" in
+		 * whichever language renders it.
+		 */
 		count: incident.checks,
 	});
 }
@@ -215,9 +177,9 @@ export default createAction(routes.trial.report, async (ctx) => {
 	let segments = segmentsOver(results, watch.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS);
 
 	/**
-	 * Whether anything has been measured at all. Every "nothing went wrong" statement on the
-	 * page is gated on this: with no completed check an empty incident list means nobody has
-	 * looked yet, not that the target stayed up.
+	 * Whether anything has been measured at all. Every "nothing went wrong"
+	 * statement on the page is gated on this: with no completed check, an empty
+	 * incident list simply means nobody has looked yet.
 	 */
 	let measured = stats.checks > 0;
 
@@ -411,7 +373,6 @@ export default createAction(routes.trial.report, async (ctx) => {
 											))}
 										</dl>
 										<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
-											{/* `count`, so the sentence declines "the one check" against "the 4 checks". */}
 											{t("page.trial.report.timing.basis", { count: timings.answered })}
 										</Text>
 									</Card.Content>

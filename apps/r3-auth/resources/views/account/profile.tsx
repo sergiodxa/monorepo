@@ -1,13 +1,9 @@
 /**
- * The read-only profile page: the subject's avatar and identity at the top of a card,
- * their display name, username and email address beneath it as a description list, and
- * a link to the form that changes them. The email address is shown but not editable —
- * it is the identifier every relying party keys on.
+ * The read-only profile page: avatar, identity, and account details, with a link
+ * to the edit form; the email stays fixed as the relying-party identifier.
  *
- * It is also where an unconfirmed address is surfaced: a badge beside the address so the
- * state is visible at a glance, and, while it is unconfirmed, a panel that says what that
- * costs and posts a request for a fresh verification message. Without both, "unverified"
- * would be a fact only relying parties can see.
+ * An unconfirmed address carries a badge and a resend panel, surfacing that
+ * verification state directly in the subject's own account.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,8 +29,8 @@ namespace ProfileView {
 		/**
 		 * A state badge rendered beside the value, when the value has one.
 		 *
-		 * `verified` picks the tone rather than the caller naming a colour, so "confirmed" is
-		 * never accidentally rendered in the tone that means the opposite.
+		 * `verified` maps directly to the badge's tone, so a confirmed label always
+		 * renders in the tone that means confirmed.
 		 */
 		badge?: { label: string; verified: boolean };
 	}
@@ -53,7 +49,10 @@ namespace ProfileView {
 		displayName: string;
 		/** The subject's handle, rendered with a leading `@`. */
 		username: string;
-		/** Absolute URL of the subject's avatar image. */
+		/**
+		 * Absolute URL of the subject's avatar image; the card shows their initials
+		 * whenever an image hosted elsewhere is unreachable.
+		 */
 		avatar: string;
 		/** The subject's role, shown as a badge so an admin can see they are one. */
 		role: string;
@@ -64,7 +63,12 @@ namespace ProfileView {
 	}
 }
 
-/** Renders the signed-in subject's profile as a card with a link to edit it. */
+/**
+ * Renders the signed-in subject's profile as a card with a link to edit it.
+ *
+ * The resend control submits a POST, so the verification email goes out only
+ * when the person explicitly submits the form.
+ */
 export default function ProfileView(handle: Handle<ProfileView.Props>) {
 	return () => {
 		let { title, displayName, username, avatar, role, details, editLabel, emailVerification } =
@@ -79,8 +83,6 @@ export default function ProfileView(handle: Handle<ProfileView.Props>) {
 				<Card.Content mix={[flex(), flexCol(), gap(6)]}>
 					<div mix={[flex(), items("center"), gap(4)]}>
 						<Avatar size="lg">
-							{/* The fallback is what shows while the image is unreachable, which is
-							common enough for an avatar hosted by whoever the person signed in with. */}
 							<Avatar.Image src={avatar} alt={displayName} />
 							<Avatar.Fallback>{displayName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
 						</Avatar>
@@ -127,8 +129,6 @@ export default function ProfileView(handle: Handle<ProfileView.Props>) {
 							</Alert.Content>
 
 							<Alert.Action>
-								{/* A form rather than a link: it sends mail, so it must not be reachable by
-								anything that follows a URL — a prefetch, a crawler or a history restore. */}
 								<Form method="post" action={emailVerification.actionHref}>
 									<Button type="submit" color="brand">
 										{emailVerification.action}

@@ -1,25 +1,12 @@
 /**
- * Bridges a message scroller's viewport to `ScrollFollowModel`: measures the
- * reader's live scroll position, the viewport's size, and which turns
- * intersect it, and reports all three into the model through its setter
- * methods, then fulfills every scroll intent the model records — jumping to
- * the live edge, the start of the conversation, or a specific turn — by
- * writing the viewport's scroll position directly. The model's own state
- * mirrors back onto the viewport as `data-autoscrolling`/`data-scrollable`
- * attributes and onto its jump-to-latest control's visibility and tab-order
- * reachability, so every visual part of the widget renders purely from state
- * the model owns.
- *
- * Why JS: detecting a reader scrolling away from the live edge — so
- * auto-follow disengages instead of fighting a deliberate scroll — anchoring
- * a newly arrived turn near the top of the viewport, and preserving the
- * reader's scroll position as older history prepends above it all require
- * reading live scroll position, viewport size, and turn geometry as they
- * change; no CSS selector expresses any of that.
- * No-JS baseline: every turn still renders in document order and the
- * viewport still scrolls natively by wheel, touch, trackpad, and keyboard;
- * only auto-follow, the prepend-preserving anchor, and the jump-to-latest
- * control are unavailable.
+ * Bridges a message scroller's viewport to `ScrollFollowModel`, reporting
+ * live scroll position, viewport size, and turn visibility into the model
+ * and fulfilling its scroll intents by writing scroll position directly, so
+ * every visible part of the widget renders purely from state the model owns.
+ * Why JS: tracking live scroll position, size, and turn geometry, and
+ * telling a deliberate scroll from an auto-follow correction, needs script;
+ * no CSS selector expresses that. No-JS baseline: turns still render in
+ * document order and the viewport still scrolls natively by wheel, touch, and keyboard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,12 +20,8 @@ import { prefersReducedMotion } from "../utils/prefers-reduced-motion";
 
 /**
  * Attribute every conversational turn exposes itself on, its value the
- * turn's stable id. `messageFollow()` reads every element carrying this
- * attribute beneath the viewport, in document order, both to measure which
- * turn sits nearest the start edge (fed into `ScrollFollowModel.setAnchorTurnId`)
- * and as the target list its lazily attached `IntersectionObserver` watches
- * (fed into `ScrollFollowModel.setMessageVisible`) — one attribute serving
- * both readings, since a turn is exactly the unit the model tracks for each.
+ * turn's stable id; `messageFollow()` reads it to find the anchor turn and
+ * to drive its lazily attached `IntersectionObserver`'s visibility tracking.
  */
 export const MESSAGE_SCROLLER_ANCHOR_ATTRIBUTE = "data-scroll-anchor";
 
@@ -57,36 +40,30 @@ export const MESSAGE_SCROLLER_JUMP_ATTRIBUTE = "data-scroll-jump";
 export const MESSAGE_SCROLLER_AUTOSCROLLING_ATTRIBUTE = "data-autoscrolling";
 
 /**
- * Attribute `messageFollow()` mirrors onto the viewport with a
- * space-separated token list of whichever edges still have more content
- * beyond them (`"start"`, `"end"`, or `"start end"`), readable with the `~=`
- * selector operator (`[data-scrollable~="end"]`), and removed entirely once
- * neither edge has anything left to reach.
+ * Attribute `messageFollow()` mirrors onto the viewport: a space-separated
+ * token list of edges still reachable (`"start"`, `"end"`, or `"start end"`),
+ * readable via `[data-scrollable~="end"]`; removed once neither edge is reachable.
  */
 export const MESSAGE_SCROLLER_SCROLLABLE_ATTRIBUTE = "data-scrollable";
 
 /**
  * How many pixels of rounding error the viewport's scroll position may still
- * sit at from a true edge and count as having reached it, so sub-pixel
- * layout rounding never leaves the model reporting an edge as reachable when
- * the viewport is visually already sitting at it.
+ * sit at from a true edge and count as reached, so sub-pixel layout rounding
+ * never leaves an edge visually reached but reported as still reachable.
  */
 const EDGE_TOLERANCE_PX = 1;
 
 /**
- * Keys whose native scrolling behavior on a focused viewport — or a focused
- * descendant inside it — advances or retreats the reader's position: the
- * keyboard half of detecting an intentional scroll away from the live edge,
- * alongside the wheel and touchmove listeners this mixin also attaches.
+ * Keys whose native scrolling on a focused viewport — or a focused
+ * descendant — advances or retreats the reader's position: the keyboard
+ * half of detecting an intentional scroll away from the live edge.
  */
 const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"]);
 
 /**
  * Resolves the behavior a scroll-fulfilling call should animate with,
  * collapsing to an instant jump under `prefers-reduced-motion: reduce` so a
- * long jump to the live edge, the start of the conversation, or a distant
- * turn never rides a motion effect the reader has asked the platform to
- * avoid.
+ * long jump never rides motion the reader has asked the platform to avoid.
  *
  * @returns `"instant"` when the reader prefers reduced motion, `"smooth"` otherwise.
  */
@@ -112,10 +89,8 @@ function readScrollEdges(host: HTMLElement): ScrollFollowModel.ReachableEdges {
 
 /**
  * Finds the turn nearest the viewport's start edge: the first element
- * carrying {@link MESSAGE_SCROLLER_ANCHOR_ATTRIBUTE}, in document order,
- * whose bottom edge hasn't yet scrolled past the viewport's own top edge.
- * `ScrollFollowModel` reads this turn's id back to hold the reader's
- * position while older history prepends above it.
+ * carrying {@link MESSAGE_SCROLLER_ANCHOR_ATTRIBUTE} whose bottom edge
+ * hasn't yet scrolled past the viewport's top edge, read back to hold position on prepend.
  *
  * @param host Viewport element to search beneath.
  * @returns The turn nearest the start edge, or `undefined` when the viewport holds none.
@@ -162,12 +137,9 @@ function precedes(node: Node, reference: Node): boolean {
 }
 
 /**
- * Jumps the viewport straight to its end edge when `model` is currently
- * pinned — the auto-follow behavior that keeps a reader who hasn't scrolled
- * away glued to the live edge as new turns arrive or the viewport itself
- * resizes. Always an instant jump, never a smooth scroll: animating every
- * incremental token of a streaming turn would read as constant motion
- * instead of a viewport that stays attached.
+ * Jumps the viewport straight to its end edge when `model` is pinned, the
+ * auto-follow behavior keeping a reader glued to the live edge as turns
+ * arrive; always instant, since animating every streamed token would read as constant motion.
  *
  * @param host Viewport element to scroll.
  * @param model Model whose pinned state gates the jump.
@@ -177,13 +149,9 @@ function stickToEndIfPinned(host: HTMLElement, model: ScrollFollowModel): void {
 }
 
 /**
- * Re-measures the viewport's reachable edges and anchor turn and reports
- * both into `model`. Also re-derives `model`'s pinned state: reaching the
- * end edge always re-engages auto-follow, and — only when `userInitiated`
- * marks the triggering scroll as the reader's own wheel, touch, or keyboard
- * gesture rather than one this mixin performed itself — scrolling away from
- * the end edge disengages it, so auto-follow never fights a deliberate
- * scroll.
+ * Re-measures the viewport's reachable edges and anchor turn into `model`,
+ * and re-derives its pinned state: reaching the end edge re-engages
+ * auto-follow, while a reader-initiated scroll away from it disengages it.
  *
  * @param host Viewport element to measure.
  * @param model Model to report the measurement into.
@@ -201,10 +169,9 @@ function resync(host: HTMLElement, model: ScrollFollowModel, userInitiated: bool
 }
 
 /**
- * Performs the actual scroll a pending {@link ScrollFollowModel.ScrollRequest}
- * describes: jumping or animating to the end or start edge, or to a specific
- * turn at its requested alignment, respecting `prefers-reduced-motion`
- * throughout.
+ * Performs the scroll a pending {@link ScrollFollowModel.ScrollRequest}
+ * describes: jumping or animating to the end, start, or a specific turn at
+ * its requested alignment, respecting `prefers-reduced-motion` throughout.
  *
  * @param host Viewport element to scroll.
  * @param request Scroll request consumed from the model.
@@ -243,15 +210,9 @@ function scrollableTokens(model: ScrollFollowModel): string | null {
 }
 
 /**
- * Mirrors `model`'s current state onto the viewport and its jump-to-latest
- * control: {@link MESSAGE_SCROLLER_AUTOSCROLLING_ATTRIBUTE} tracks `pinned`,
- * {@link MESSAGE_SCROLLER_SCROLLABLE_ATTRIBUTE} tracks the reachable edges,
- * and the control identified by {@link MESSAGE_SCROLLER_JUMP_ATTRIBUTE} is
- * shown and made reachable by keyboard and assistive technology only while
- * `pinned` is `false` — `inert` removes it from tab order and the
- * accessibility tree in the same step it's visually hidden, and
- * `data-visible` is left for its own styling to key an entrance/exit
- * transition off.
+ * Mirrors `model`'s state onto the viewport and its jump-to-latest control:
+ * autoscrolling and scrollable attributes track `pinned` and reachable
+ * edges, and `inert` hides the control from tab order in the same step as visibility.
  *
  * @param host Viewport element to mirror state onto.
  * @param model Model to read state from.
@@ -274,26 +235,9 @@ function syncAttributesFromModel(host: HTMLElement, model: ScrollFollowModel): v
 }
 
 /**
- * Adds live-scroll coordination to a message scroller's viewport. Wheel,
- * touch, keyboard, and native `scroll` events feed `model.setReachableEdges`,
- * `model.setPinned`, and `model.setAnchorTurnId`; a `MutationObserver`
- * compensates the reader's scroll position for turns prepended above the
- * current anchor and sticks the viewport to its end edge for turns appended
- * while `model.pinned` is `true`; and an `IntersectionObserver` — attached
- * lazily, the first time a turn exists beneath the viewport for it to report
- * on — feeds `model.setMessageVisible`.
- *
- * Every `model` `"change"` mirrors `pinned` onto the viewport as
- * {@link MESSAGE_SCROLLER_AUTOSCROLLING_ATTRIBUTE}, the reachable edges as
- * {@link MESSAGE_SCROLLER_SCROLLABLE_ATTRIBUTE}, and shows, hides, and
- * `inert`s the jump-to-latest control identified by
- * {@link MESSAGE_SCROLLER_JUMP_ATTRIBUTE} — and fulfills any scroll request
- * the change carries by scrolling to the live edge, the start of the
- * conversation, or a specific turn (identified by
- * {@link MESSAGE_SCROLLER_ANCHOR_ATTRIBUTE}) at its requested alignment.
- * Clicking the jump-to-latest control calls `model.scrollToEnd()` directly,
- * so wiring the control needs nothing beyond rendering it inside the
- * viewport.
+ * Adds live-scroll coordination to a message scroller's viewport: reports
+ * scroll position, size, and turn visibility into `model`, mirrors its
+ * pinned and reachable-edge state back onto the viewport, and fulfills its scroll requests.
  *
  * @param model Scroll-follow state shared with the rest of the widget.
  * @example
@@ -315,10 +259,9 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 	let observedItems = new Set<HTMLElement>();
 
 	/**
-	 * Lazily creates the visibility observer the first time there's a turn
-	 * beneath `host` to report on, and keeps it watching exactly the turns
-	 * currently rendered — unobserving, and reporting hidden, any turn that
-	 * has left the document since the last pass.
+	 * Lazily creates the visibility observer the first time a turn exists
+	 * beneath `host`, then keeps it watching exactly the turns currently
+	 * rendered, reporting hidden any turn that has left the document.
 	 */
 	function ensureItemsObserved(host: HTMLElement, model: ScrollFollowModel): void {
 		for (let item of observedItems) {
@@ -354,11 +297,9 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 	}
 
 	/**
-	 * Reacts to a batch of Content mutations: compensates the reader's
-	 * scroll position for every turn prepended above the current anchor,
-	 * sticks the viewport to its end edge when a turn was appended instead
-	 * while `model` is pinned, then re-syncs measurement and visibility
-	 * tracking against the settled layout.
+	 * Reacts to a batch of mutations: synchronously shifts scroll position for
+	 * turns prepended above the anchor, before the next paint, so the
+	 * reader's view stays visually still, then re-syncs after appended turns settle.
 	 */
 	function handleMutations(
 		host: HTMLElement,
@@ -380,9 +321,6 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 			}
 		}
 
-		// Shifting scrollTop here, synchronously within the mutation callback and
-		// before the next paint, is what keeps the reader's view visually still
-		// while older history grows the content above them.
 		if (prependHeight > 0) host.scrollTop += prependHeight;
 		if (appendedNew) stickToEndIfPinned(host, model);
 
@@ -393,9 +331,6 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
 
-		// `boundModel` is already set by this point: the mixin's runner (below)
-		// always executes once during render before "insert" fires for the same
-		// node, since insertion is a post-commit lifecycle step.
 		if (boundModel) {
 			stickToEndIfPinned(hostNode, boundModel);
 			ensureItemsObserved(hostNode, boundModel);

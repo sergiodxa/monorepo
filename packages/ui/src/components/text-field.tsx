@@ -72,21 +72,14 @@ export namespace TextField {
 		description?: RemixNode;
 		/**
 		 * Validation message rendered through {@link FieldError} beneath the
-		 * control — after the description, when both are present — and
-		 * referenced by the control's `aria-describedby`. Its presence alone
-		 * marks the control's `aria-invalid`, unless `aria-invalid` is set
-		 * explicitly.
-		 *
-		 * Optional inside a {@link Form} carrying `issues`: the field then
-		 * finds its own message by `name` through form context, and an
-		 * explicit value here still wins over whatever context holds.
+		 * control, marking `aria-invalid` unless set explicitly. Falls back to
+		 * a {@link Form}'s own `issues` message by `name`; an explicit value wins.
 		 */
 		errorMessage?: RemixNode;
 		/**
-		 * Native `autofocus`. Defaults to `true` for the first invalid field
-		 * of an enclosing {@link Form}'s `issues`, so a server round-trip
-		 * lands keyboard focus on the first problem with no client
-		 * JavaScript; pass it explicitly to decide for this field yourself.
+		 * Native `autofocus`. Defaults to `true` for the first invalid field of
+		 * an enclosing {@link Form}'s `issues`, landing keyboard focus on the
+		 * problem with no client JavaScript; pass explicitly to override.
 		 */
 		autoFocus?: boolean;
 		/** Native `<input>` `type`. Defaults to {@link DEFAULT_TYPE}. */
@@ -119,28 +112,9 @@ export namespace TextField {
 }
 
 /**
- * Renders a complete field in one call: a root element stacking
- * {@link Label}, an {@link Input} control, and, when supplied,
- * {@link Description} and {@link FieldError} in a single column with a small
- * gap between them. The label's `for`, the control's `id`, and the control's
- * `aria-describedby` are all computed from this instance's own stable
- * identifier, so the parts stay correctly associated with no id bookkeeping
- * left to the consumer.
- *
- * The control's keyboard focus ring reads `color` (defaulting to
- * `"neutral"`), and an invalid state — driven by `errorMessage`'s
- * presence, or an explicit `aria-invalid` override — recolors both the
- * border and ring to the semantic danger tone regardless of `color`; see
- * {@link Input} for the rest of the control's own styling contract.
- * Composing {@link Label}, {@link Input}, {@link Description}, and
- * {@link FieldError} directly instead remains available for a field whose
- * wiring or layout this wrapper doesn't cover.
- *
- * Inside a {@link Form} carrying `issues`, the field needs no `errorMessage`
- * of its own: it looks its message up by `name` through form context, and the
- * first invalid field of that render also picks up `autofocus`, so a parse
- * failure re-rendered from the server both shows every message and lands
- * keyboard focus on the first one. An explicit `errorMessage` still wins.
+ * Composes {@link Label}, {@link Input}, {@link Description}, and
+ * {@link FieldError} into one field, computing every id and
+ * `aria-describedby` link from this instance's own stable identifier.
  *
  * @param handle Runtime handle carrying the root element's props and this instance's stable identifier.
  * @returns The render function producing the field's markup.
@@ -204,11 +178,6 @@ export function TextField(handle: Handle<TextField.Props>) {
 				</Label>
 				<Input
 					id={handle.id}
-					// The platform's own `type`/`role` correlation only narrows
-					// correctly for a single literal `type` at the JSX call site;
-					// `resolvedType` spans several of this field's supported
-					// values, so the assignment below stays broader than that
-					// narrowed contract on purpose.
 					type={resolvedType as never}
 					name={name}
 					value={value}

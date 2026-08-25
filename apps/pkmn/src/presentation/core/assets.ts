@@ -1,26 +1,9 @@
 /**
  * The typed asset registry and eager loader for the presentation.
  *
- * A single manifest enumerates every image, audio clip, map, and sprite atlas the
- * game can use; the store loads them all at boot (the game is small enough for
- * eager loading) and hands out decoded handles by id. Missing files are tolerated
- * so the game still runs before real art and audio exist: image, audio, and atlas
- * getters return `null` for ids that failed or were never declared, and rendering
- * code falls back to procedural drawing. A manifest id that was declared but is
- * asked for the wrong kind throws, because that is a programming error, not
- * missing art.
- *
- * An atlas entry pairs an image URL with a named-region map (and optional animated
- * regions); once its image decodes the store assembles an `Atlas` and exposes it
- * by id, so renderers blit by region name without knowing whether the art came
- * from a file or was generated in code. Only original or openly-licensed art may
- * be declared — never the ripped commercial sheets that sit in `assets/`.
- *
- * A map entry is either a URL (fetched) or the map JSON inlined as an object;
- * either way the store validates it through the map loader before registering it,
- * so a malformed map is logged and skipped rather than crashing the renderer.
- * Inlining is the reliable form under the Bun HTML dev server (see the `maps`
- * field doc), which is why authored maps ship as imported JSON modules.
+ * A single manifest enumerates every image, audio clip, map, and atlas the
+ * game can use. The store loads them all at boot; missing files are
+ * tolerated so getters return null, but a wrong-kind lookup throws.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,7 +40,10 @@ export interface AtlasGridSlice {
 	start?: number;
 }
 
-/** One atlas declaration: an image URL sliced into named (and animated) regions. */
+/**
+ * One atlas declaration: an image URL sliced into named (and animated)
+ * regions, limited to original or openly-licensed art.
+ */
 export interface AtlasManifestEntry {
 	/** URL of the sheet image sliced into regions. */
 	image: string;
@@ -110,12 +96,9 @@ export interface AssetManifest {
 	/** Audio id to URL plus optional intro/loop points, in seconds. */
 	audio: Record<string, { url: string; loopStart?: number; loopEnd?: number }>;
 	/**
-	 * Map id to its tilemap source: either a URL string (fetched at boot) or the
-	 * map JSON inlined as an object. Inlining is the reliable path under the Bun
-	 * HTML dev server, whose SPA fallback returns the app shell for any unknown URL
-	 * rather than the file — so a runtime `fetch` of a content JSON path would get
-	 * HTML, not the map. Authored maps therefore ship as imported JSON modules
-	 * inlined here; the URL form is kept for a future real static file server.
+	 * Map id to its tilemap source: a URL string fetched at boot, or the map
+	 * JSON inlined as an object — the reliable path under the Bun HTML dev
+	 * server, whose SPA fallback serves the app shell for unknown URLs.
 	 */
 	maps: Record<string, string | object>;
 	/** Atlas id to its image URL and region map (optional; defaults to empty). */
@@ -252,9 +235,8 @@ export class AssetStore {
 	/**
 	 * Validates a map JSON value and registers it under an id.
 	 *
-	 * The value runs through {@link loadMap}, so a malformed map is logged and
-	 * skipped (its getter then returns null and the overworld falls back), never
-	 * registering a broken map that would crash the renderer.
+	 * The value runs through {@link loadMap}; a malformed map is logged and
+	 * skipped, keeping the renderer free of broken map data.
 	 */
 	private registerMap(id: string, value: unknown) {
 		let result = loadMap(value);

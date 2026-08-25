@@ -27,7 +27,10 @@ import {
 import { invalidCronMessage } from "~/app/lib/cron-text";
 import routes from "~/routes/web";
 
-/** POST /actions/:team/create-cron-job */
+/**
+ * POST /actions/:team/create-cron-job. Normalizes `cron_expression` before storing,
+ * so one schedule always has a single spelling in the database and logs.
+ */
 export const createCronJob = createAction(routes.actions.cronJob.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateCronJobSchema);
 	let session = ctx.get(Session);
@@ -58,7 +61,6 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 	let db = getServiceContainer().get(Database);
 	let monitor = await CronJobMonitor.create(db, ctx.team.id, {
 		...values,
-		// Stored normalized, so one schedule has one spelling in the database and in logs.
 		cron_expression: schedule.data.toString(),
 		description: description || null,
 		enabled_at: is_enabled ? Date.now() : null,
@@ -74,7 +76,10 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 	);
 });
 
-/** POST /actions/:team/update-cron-job */
+/**
+ * POST /actions/:team/update-cron-job. Compares the normalized cron expression so a
+ * re-saved schedule under a different spelling still registers as unchanged.
+ */
 export const updateCronJob = createAction(routes.actions.cronJob.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateCronJobSchema);
 	let session = ctx.get(Session);
@@ -109,8 +114,6 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 		);
 	}
 
-	// Compared normalized, so re-saving the same schedule spelled differently isn't
-	// treated as a reschedule.
 	let cronExpression = schedule.data.toString();
 	let wasEnabled = existing.enabled_at !== null;
 	let scheduleChanged =
