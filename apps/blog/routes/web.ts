@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, route } from "remix/routes";
+import { get, post, route } from "remix/routes";
 
 import auth from "~/routes/auth";
 import cms from "~/routes/cms";
@@ -28,6 +28,15 @@ export default route({
 	sitemap: get("/sitemap.xml"),
 
 	healthcheck: get("/healthcheck"),
+
+	/**
+	 * The Model Context Protocol endpoint, for agents rather than readers.
+	 *
+	 * `post()` because every MCP message is a `POST` to one path — the revision this server
+	 * speaks has no stream to open with a `GET` and no session to end with a `DELETE`, and
+	 * the package answers both with `405`.
+	 */
+	mcp: post("/mcp"),
 
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),

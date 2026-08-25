@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-08-25
+**Accepted** - 2026-08-25
 
 ## Background
 
@@ -58,13 +58,15 @@ Every tool declares `readOnlyHint: true`, so a client can run one without stoppi
 
 Each tool answers with the post's canonical URL alongside its slug. An agent that quotes a post should be able to link it, and building that URL from a slug is knowledge the agent should not have to hold.
 
-### 3. Search Is `LIKE`, Not FTS5
+### 3. Search Reads Per Type And Matches In Memory, Not FTS5
 
-`Post.search()` matches against the `title`, `excerpt` and `tags` rows in `post_meta`, joins back to `posts`, and applies the publish rule in TypeScript the way every other read path does.
+`PostSearch.query()` reads each content type through its own repository — `ArticlePost.findAll`, `TutorialPost.findAll`, `GlossaryPost.findAll` — and matches in memory, the way `Feed.listActivity` already composes the activity list.
 
-Because `post_meta` is a key/value table, this is one query — `key IN ('title', 'excerpt', 'tags') AND value LIKE ?` — rather than a column list that grows with the schema. It also means no index applies: a leading-wildcard `LIKE` scans the metadata rows for the keys it cares about. At this blog's size that is thousands of short rows per call, which is well inside what D1 answers quickly, and §6 keeps a public caller from making it hot.
+This is a change from the `LIKE` predicate this ADR originally specified, for two reasons. `post_meta` is a key/value table, so a `LIKE` search means a joined predicate over a metadata key set, and the repository's own comment notes that plain predicates are what the app's D1 adapter executes reliably; this app has no database test harness, so a new query shape could not be verified before shipping. Meanwhile the per-type reads are paths every page already exercises. The cost is transferring every published post's metadata per search instead of only the matches — a few hundred rows, the same order the feed page already pays.
 
-Body text is deliberately out of the match. Including `content` would multiply the scanned bytes by an order of magnitude for recall an agent rarely needs — it is searching for _which post_, and a post whose subject is not in its title, excerpt, or tags is mis-titled. FTS5 would fix both the recall and the scan, at the cost of a virtual table, triggers on every CMS write, and a backfill; that is a worthwhile trade once the search is used enough to know what it misses, and a poor one before.
+The signature is the part meant to last. Replacing the internals with an FTS5 index changes `search.ts` and nothing that calls it, and that becomes worth doing once there is evidence about what the current matching misses.
+
+Matching covers title, excerpt and tags, and results are ranked: a title hit sorts above a tag hit, which sorts above an excerpt hit, and ties break newest-first. Post bodies stay out of the match — including them multiplies the work for recall that mostly surfaces passing mentions, and a post whose subject appears in none of those three is mis-titled.
 
 ### 4. Preview Posts Are Invisible
 
@@ -96,7 +98,9 @@ The blog's global chain ends in things built for a person's page view. For `/mcp
 
 Introduce a path-prefix exemption in `bootstrap/app.tsx` and scope those middlewares to the HTML surface, so adding a second machine route later is one edit to a prefix list. This is the shape `apps/uptime` already uses for its own machine surfaces, arrived at for the same reasons.
 
-What the route keeps is everything a tool actually needs — notably the database — because `mcp.fetch(ctx)` receives the same `RequestContext` that chain wrote to. The exemption is about skipping wasted work, not about isolating the MCP surface from the app.
+What the route keeps is everything a tool actually needs, because `mcp.fetch(ctx)` receives the same `RequestContext` that chain wrote to. The exemption is about skipping wasted work, not about isolating the MCP surface from the app.
+
+The database arrives through a new `database()` middleware mapped onto this route alone, rather than through `@pkg/service-container` the way every HTTP controller here resolves it. An MCP handler is called with a context and nothing else — its signature belongs to the package — so what it needs has to be _in_ that context. Scoping the middleware to this one route leaves every other handler resolving services exactly as before.
 
 ### 7. A Budget And A Cache
 
@@ -125,8 +129,11 @@ No `.well-known` document and no `<link rel>` in the document head. Neither is a
 
 - A public endpoint that scans metadata per call is a new abuse surface, and the app gains its first rate-limiter binding to bound it.
 - `LIKE` search has no ranking. Results come back newest first, not best first, which for a query matching many posts is close to arbitrary.
-- Recall stops at titles, excerpts, and tags. A post about a topic it never names in those three is unfindable, and nothing surfaces that to the agent — it sees an empty result, not a limited index.
+- Recall stops at titles, excerpts and tags. A post about a topic it never names in those three is unfindable, and nothing surfaces that to the agent — it sees an empty result, not a limited index.
+- The handlers have no test coverage in this app, because they need a database and the blog has no harness for one. Only the wiring — which tools and resources are served — is asserted.
 - The tool descriptions become part of how well this works, and they are prose that has to be revised by watching agents use it, not verified by a test.
+- MCP handlers read the database from request context, which the app's own guidance forbids for HTML controllers. The reason differs — a package-owned signature rather than a preference — but a reader now finds two patterns in one app.
+- Every search reads all published metadata. That is fine at this size and is the first thing to re-measure if the endpoint gets busy.
 - The publish rule is now applied in three places: the HTML route, `get_post`, and every resource `read`. Each is a separate chance to forget it, and only the first is covered by the existing tests.
 
 ### Neutral
@@ -201,15 +208,16 @@ Offer a single `fetch_page` tool taking a path.
 
 ## Current Progress
 
-- [ ] Phase 1: Search
-- [ ] Phase 2: The Server
+- [x] Phase 1: Search
+- [x] Phase 2: The Server
 - [ ] Phase 3: Bounds And Discovery
 
 ## Notes
 
 - The publish rule has to be applied in the tool, not only in the repository listing helpers. `get_post` reaches a post by slug, and that is the path a draft would leak through.
-- `post_meta` is key/value, so a search across "several fields" is one predicate over a key set rather than several column comparisons. Adding a searchable field is an entry in that set, not a schema change.
-- A leading-wildcard `LIKE` cannot use an index. That is acceptable at this size and is the first thing to re-measure if the endpoint gets busy — the rate limit exists partly so that measurement stays possible.
+- `post_meta` is key/value, so nothing about search is a schema change: adding a searchable field means projecting one more value in `search.ts`.
+- The endpoint is live but unbounded. Phase 3 is the rate limit and the cache, and until it lands a public, unauthenticated endpoint reads all published metadata per call.
+- Search transfers every published post's metadata per query. Acceptable at this size, and the first thing to re-measure if the endpoint gets busy — the rate limit in Phase 3 exists partly so that measurement stays possible.
 - Tool descriptions are prompts. `search_posts` and `list_posts` overlap enough that a model will sometimes pick the wrong one; the fix is in the wording of both, and it is worth checking against a real agent rather than against a test.
 - The rate-limiter binding is new to this app. `namespace_id` is Worker-local and needs nothing provisioned, but `limit` and `period` live in `wrangler.jsonc` while the reasoning for the numbers belongs next to the route, the way `apps/uptime` keeps them.
 - Caching a tool result caches an answer about published content. A post published moments ago stays invisible for the TTL, which is fine here and would not be for a status tool on a different app.

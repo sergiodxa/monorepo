@@ -1,7 +1,7 @@
 /**
  * Assembles the blog HTTP application. Wires global middleware, maps public,
- * RSS, auth, and admin-guarded CMS routes onto the fetch router, and provides the
- * streaming HTML renderer and SSR frame resolver used by controllers.
+ * RSS, auth, admin-guarded CMS, and MCP routes onto the fetch router, and provides
+ * the streaming HTML renderer and SSR frame resolver used by controllers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,6 +47,7 @@ import tutorials from "~/app/http/controllers/tutorials";
 import wellKnown from "~/app/http/controllers/well-known";
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
 import createNoWWWMiddleware from "~/app/http/middleware/no-www";
@@ -55,6 +56,37 @@ import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
+
+import mcp from "./mcp";
+
+/**
+ * Paths served to machines rather than to readers.
+ *
+ * Exact paths rather than a prefix, so an unmatched path *beneath* one of these still gets
+ * the full chain and renders the normal 404 page. Taken from the route table so the two
+ * cannot drift apart.
+ */
+const MACHINE_PATHS = new Set<string>([routes.mcp.href()]);
+
+/**
+ * Scopes a middleware to the HTML surface.
+ *
+ * The session, the redirect lookup and the auth resolver all exist for a person's page
+ * view. An MCP request carries no cookie and follows no redirect, so for it each one is
+ * either wasted work or a KV read spent on nothing.
+ *
+ * The renderer deliberately stays outside this: it only builds a closure, and leaving it in
+ * place means anything that ever does render under a machine path still can.
+ *
+ * @param middleware Middleware that only applies to pages.
+ * @returns Middleware that passes machine requests straight through.
+ */
+function htmlOnly(middleware: Middleware<any>): Middleware<any> {
+	return (ctx, next) => {
+		if (MACHINE_PATHS.has(ctx.url.pathname)) return next();
+		return middleware(ctx, next);
+	};
+}
 
 /** Redirects anonymous CMS requests to login, preserving the request context typing. */
 let requireCMSAuth: Middleware = (_ctx, next) => {
@@ -76,11 +108,11 @@ export default function createApplication(env: App.Env) {
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),
 		asyncContext(),
-		session,
+		htmlOnly(session),
 		formData(),
 		methodOverride(),
-		redirects,
-		auth,
+		htmlOnly(redirects),
+		htmlOnly(auth),
 		renderWith(createHtmlRenderer),
 	];
 	let router = createRouter<AppContext>({
@@ -110,6 +142,17 @@ export default function createApplication(env: App.Env) {
 	router.map(routes.glossary, glossary);
 	router.map(routes.post, post);
 	router.map(routes.postRelated, postRelated);
+
+	// The MCP endpoint, outside every auth guard for the same reason the public pages are:
+	// its whole point is that somebody's agent can read this blog without an account.
+	//
+	// `database()` rather than the container: an MCP tool receives only a context, so what it
+	// needs has to be in that context, and scoping the middleware to this route leaves every
+	// other handler resolving services the way it already did.
+	router.map(routes.mcp, {
+		middleware: [database()],
+		handler: (ctx) => mcp.fetch(ctx),
+	});
 
 	router.map(routes.wellKnown, wellKnown);
 	router.map(routes.rss, {
