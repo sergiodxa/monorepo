@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, post, route } from "remix/routes";
+import { form, get, route } from "remix/routes";
 
 import auth from "~/routes/auth";
 import cms from "~/routes/cms";
@@ -30,13 +30,14 @@ export default route({
 	healthcheck: get("/healthcheck"),
 
 	/**
-	 * The Model Context Protocol endpoint, for agents rather than readers.
+	 * The Model Context Protocol endpoint, plus the page explaining it.
 	 *
-	 * `post()` because every MCP message is a `POST` to one path — the revision this server
-	 * speaks has no stream to open with a `GET` and no session to end with a `DELETE`, and
-	 * the package answers both with `405`.
+	 * `form()` rather than two routes: every MCP message is a `POST` to one path, and a
+	 * person who pastes that same URL into a browser arrives with a `GET`. Sharing the path
+	 * means the address somebody was given is the address that explains itself, rather than
+	 * a `404` for anyone who clicks instead of configuring.
 	 */
-	mcp: post("/mcp"),
+	mcp: form("/mcp"),
 
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),

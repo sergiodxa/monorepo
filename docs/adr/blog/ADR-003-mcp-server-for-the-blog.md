@@ -116,9 +116,15 @@ Two properties worth stating because breaking either is silent. Entries are **sh
 
 Caching pushed `waitUntil` into `App.Env`: the store defers its writes so a miss never waits on KV, which means the Worker's `ExecutionContext` has to reach it. `CACHE` is also typed as the platform `KVNamespace` rather than the app's `KVStore` contract, because its only consumer is the cache package, and that contract exists to keep repositories and services off the binding — a cache is neither.
 
-### 8. Discovery Is A Page, Not A Protocol
+### 8. Discovery Is A Page At The Same URL
 
-MCP has no discovery mechanism for an anonymous server — a person adds the URL to their client by hand. So the endpoint needs somewhere to be found: a short page on the blog giving the URL and a copyable client configuration, linked from the site's navigation.
+MCP has no discovery mechanism for an anonymous server — a person adds the URL to their client by hand. So the endpoint needs somewhere to be found, and the obvious place is the endpoint itself: `GET /mcp` renders a page explaining what the server offers and how to point a client at it, while `POST /mcp` speaks the protocol.
+
+One `form()` route rather than two paths, because the two audiences arrive at the same string. Somebody handed `https://sergiodxa.com/mcp` is as likely to paste it into a browser as into a config file, and a `404` for the first of those is a bad answer to a reasonable act.
+
+That makes the machine-path exemption method-aware: a `POST` here skips the session, the redirects and the auth resolver, and a `GET` keeps all three, because it is a page view like any other.
+
+The page's tool and resource lists are built from the server's own declarations rather than written as prose, so it cannot describe a tool that was renamed or a resource that was never mapped. The rate limit it quotes is the exported constant the middleware enforces, for the same reason — a documented limit that disagrees with the enforced one is worse than an undocumented one.
 
 No `.well-known` document and no `<link rel>` in the document head. Neither is a thing any client reads, and inventing one advertises a convention nothing follows.
 
@@ -132,6 +138,7 @@ No `.well-known` document and no `<link rel>` in the document head. Neither is a
 - The whole surface is read-only and public, so the worst outcome of a bug is content that was already public being served differently.
 - Resources cost almost nothing beyond enumeration, because the URLs they point at are ones the app already serves — and a client that fetches them directly never touches this endpoint.
 - The cache is verified against a real KV namespace in the Workers pool, so "it caches" is asserted rather than assumed.
+- The page cannot drift from the server: its lists come from the same declarations the handler is mapped against, and a test renders it and checks every served tool appears.
 
 ### Negative
 
@@ -172,7 +179,7 @@ Done when a real client — Claude Code with the URL added — lists the tools a
 
 1. Add the `MCP_RATE_LIMITER` binding and apply it to the route.
 2. Cache tool results through a `toolMiddleware`, and resource lists and reads explicitly.
-3. Add the page describing how to connect, and link it from the site navigation.
+3. Serve the page at `GET /mcp`, built from the server's own declarations.
 
 ## Alternatives Considered
 
@@ -218,7 +225,7 @@ Offer a single `fetch_page` tool taking a path.
 
 - [x] Phase 1: Search
 - [x] Phase 2: The Server
-- [x] Phase 3: Bounds (the discovery page is still outstanding)
+- [x] Phase 3: Bounds And Discovery
 
 ## Notes
 
@@ -227,6 +234,7 @@ Offer a single `fetch_page` tool taking a path.
 - `limit` and `period` are stated twice: on the binding in `wrangler.jsonc` and as constants in `app/mcp/rate-limit.ts`. The binding reports neither back, so they are kept in step by hand.
 - A post published or edited stays invisible for up to the cache TTL. That is the trade the TTL names, and it is the same staleness an RSS reader or a CDN already shows.
 - The cache is keyed without any notion of who asked. Adding a credential to this endpoint without adding it to the key would serve one caller's answers to another.
+- `/mcp` now has two audiences behind one path, so the middleware chain differs by method. A middleware added to the global chain without thinking about `htmlOnly` will run for agents too.
 - Search transfers every published post's metadata per query. The cache absorbs the repeats within a conversation, so what remains is one such read per five minutes per distinct query — and the rate limit bounds how many distinct queries a caller can produce.
 - Tool descriptions are prompts. `search_posts` and `list_posts` overlap enough that a model will sometimes pick the wrong one; the fix is in the wording of both, and it is worth checking against a real agent rather than against a test.
 - The rate-limiter binding is new to this app. `namespace_id` is Worker-local and needs nothing provisioned, but `limit` and `period` live in `wrangler.jsonc` while the reasoning for the numbers belongs next to the route, the way `apps/uptime` keeps them.

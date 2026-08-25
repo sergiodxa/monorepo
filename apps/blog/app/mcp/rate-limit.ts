@@ -16,12 +16,15 @@ import { rateLimit } from "@pkg/rate-limit/middleware";
 /**
  * Requests one caller may spend per {@link WINDOW}.
  *
+ * Exported because `/mcp`'s own page states it, and a documented limit that disagrees with
+ * the enforced one is worse than an undocumented one.
+ *
  * Mirrors the `simple.limit` on the `MCP_RATE_LIMITER` binding in `wrangler.jsonc`, kept in
  * step by hand because the binding reports neither value back. Sixty a minute is an abuse
  * bound rather than a product one: an agent answering a question makes a handful of calls
  * and then thinks, so this is far above any real use and hostile to a script.
  */
-const LIMIT = 60;
+export const MCP_RATE_LIMIT = 60;
 
 /** Length of the budget's window; matches the binding's `simple.period` of 60. */
 const WINDOW = "1 minute";
@@ -50,7 +53,7 @@ export default function mcpRateLimit(env: App.Env): Middleware {
 	if (!binding) return (_ctx, next) => next();
 
 	return rateLimit({
-		adapter: new CloudflareAdapter(binding, { limit: LIMIT, window: WINDOW }),
+		adapter: new CloudflareAdapter(binding, { limit: MCP_RATE_LIMIT, window: WINDOW }),
 		prefix: PREFIX,
 	});
 }

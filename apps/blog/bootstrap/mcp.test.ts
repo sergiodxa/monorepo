@@ -18,6 +18,7 @@ import { LATEST_PROTOCOL_VERSION, MetaKey } from "@pkg/mcp";
 import { describe, expect, test } from "vitest";
 
 import resourceset from "~/app/mcp/resources";
+import routes from "~/routes/web";
 
 import mcp from "./mcp";
 
@@ -145,5 +146,16 @@ describe("resource URIs", () => {
 		expect(resourceset.tutorial.href({ slug: "use-fetcher" })).toBe(
 			"https://sergiodxa.com/tutorials/use-fetcher.md",
 		);
+	});
+});
+
+describe("the route", () => {
+	test("answers both halves at one path", () => {
+		// A person given the endpoint URL pastes it into a browser as often as into a client,
+		// so the address that speaks the protocol is also the address that explains it.
+		expect(routes.mcp.index.href()).toBe("/mcp");
+		expect(routes.mcp.action.href()).toBe("/mcp");
+		expect(routes.mcp.index.method).toBe("GET");
+		expect(routes.mcp.action.method).toBe("POST");
 	});
 });

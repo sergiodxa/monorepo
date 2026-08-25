@@ -27,7 +27,7 @@ export type { CacheScope, HandlerOptions, McpHandler } from "./handler";
 export { ErrorCode } from "./jsonrpc";
 export { LATEST_PROTOCOL_VERSION, MetaKey, SUPPORTED_PROTOCOL_VERSIONS } from "./protocol";
 export type { ClientCapabilities, Implementation } from "./protocol";
-export { createResource, resource, resources } from "./resources";
+export { createResource, resource, resources, walkResources } from "./resources";
 export type {
 	ReadResult,
 	Resource,
@@ -48,7 +48,7 @@ export type {
 	PropertySchema,
 	StringSchema,
 } from "./schema";
-export { createTool, createToolController, tool, tools } from "./tools";
+export { createTool, createToolController, tool, tools, walk } from "./tools";
 export type {
 	Action,
 	ActionOrHandler,

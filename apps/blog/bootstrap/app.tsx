@@ -35,6 +35,7 @@ import colors from "~/app/http/controllers/colors";
 import feed from "~/app/http/controllers/feed";
 import glossary from "~/app/http/controllers/glossary";
 import healthcheck from "~/app/http/controllers/healthcheck";
+import mcpPage from "~/app/http/controllers/mcp";
 import post from "~/app/http/controllers/post";
 import postRelated from "~/app/http/controllers/post-related";
 import articlesRSS from "~/app/http/controllers/rss/articles";
@@ -61,13 +62,24 @@ import routes from "~/routes/web";
 import mcp from "./mcp";
 
 /**
- * Paths served to machines rather than to readers.
+ * Paths whose non-`GET` requests are served to machines rather than to readers.
  *
  * Exact paths rather than a prefix, so an unmatched path *beneath* one of these still gets
  * the full chain and renders the normal 404 page. Taken from the route table so the two
  * cannot drift apart.
  */
-const MACHINE_PATHS = new Set<string>([routes.mcp.href()]);
+const MACHINE_PATHS = new Set<string>([routes.mcp.index.href()]);
+
+/**
+ * Whether a request is the machine half of a machine path.
+ *
+ * Method-aware because `/mcp` answers both: a `POST` is an agent speaking the protocol, and
+ * a `GET` is a person who pasted the URL into a browser and needs the page — which means
+ * the session, the redirects and the auth resolver a reader's page view depends on.
+ */
+function isMachineRequest(ctx: RequestContext): boolean {
+	return ctx.method !== "GET" && MACHINE_PATHS.has(ctx.url.pathname);
+}
 
 /**
  * Scopes a middleware to the HTML surface.
@@ -84,7 +96,7 @@ const MACHINE_PATHS = new Set<string>([routes.mcp.href()]);
  */
 function htmlOnly(middleware: Middleware<any>): Middleware<any> {
 	return (ctx, next) => {
-		if (MACHINE_PATHS.has(ctx.url.pathname)) return next();
+		if (isMachineRequest(ctx)) return next();
 		return middleware(ctx, next);
 	};
 }
@@ -151,8 +163,13 @@ export default function createApplication(env: App.Env) {
 	// needs has to be in that context, and scoping the middleware to this route leaves every
 	// other handler resolving services the way it already did.
 	router.map(routes.mcp, {
-		middleware: [mcpRateLimit(env), database()],
-		handler: (ctx) => mcp.fetch(ctx),
+		actions: {
+			index: mcpPage,
+			action: {
+				middleware: [mcpRateLimit(env), database()],
+				handler: (ctx) => mcp.fetch(ctx),
+			},
+		},
 	});
 
 	router.map(routes.wellKnown, wellKnown);
