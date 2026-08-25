@@ -15,6 +15,7 @@ import { createResource, createToolController, ToolError } from "@pkg/mcp";
 import type { Post as PostTypes } from "~/app/repositories/post";
 
 import { getDatabase } from "~/app/http/middleware/database";
+import { cached } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
 import { Post } from "~/app/repositories/post";
@@ -106,38 +107,47 @@ export const postsController = createToolController(toolset.posts, {
 	},
 });
 
-/** Serves published articles as pickable resources. */
+/**
+ * Serves published articles as pickable resources.
+ *
+ * Both halves are cached explicitly, because resources have no middleware layer to do it
+ * for them: a picker calls `list` on every refresh, and it reads every published article.
+ */
 export const articleResource = createResource(resourceset.article, {
-	list: async (ctx) => {
-		let articles = await ArticlePost.listItems(getDatabase(ctx), { includePreview: false });
+	list: (ctx) =>
+		cached("resources/articles", null, async () => {
+			let articles = await ArticlePost.listItems(getDatabase(ctx), { includePreview: false });
 
-		return articles.map((article) => ({
-			uri: resourceset.article.href({ slug: article.slug }),
-			name: article.slug,
-			title: article.title,
-		}));
-	},
+			return articles.map((article) => ({
+				uri: resourceset.article.href({ slug: article.slug }),
+				name: article.slug,
+				title: article.title,
+			}));
+		}),
 
-	read: async (ctx) => {
-		let found = await findPublished(getDatabase(ctx), "articles", ctx.variables.slug);
-		return found?.post.meta.content ?? null;
-	},
+	read: (ctx) =>
+		cached("resources/article", ctx.variables, async () => {
+			let found = await findPublished(getDatabase(ctx), "articles", ctx.variables.slug);
+			return found?.post.meta.content ?? null;
+		}),
 });
 
-/** Serves published tutorials as pickable resources. */
+/** Serves published tutorials as pickable resources. Cached like the articles above. */
 export const tutorialResource = createResource(resourceset.tutorial, {
-	list: async (ctx) => {
-		let tutorials = await TutorialPost.listItems(getDatabase(ctx), { includePreview: false });
+	list: (ctx) =>
+		cached("resources/tutorials", null, async () => {
+			let tutorials = await TutorialPost.listItems(getDatabase(ctx), { includePreview: false });
 
-		return tutorials.map((tutorial) => ({
-			uri: resourceset.tutorial.href({ slug: tutorial.slug }),
-			name: tutorial.slug,
-			title: tutorial.title,
-		}));
-	},
+			return tutorials.map((tutorial) => ({
+				uri: resourceset.tutorial.href({ slug: tutorial.slug }),
+				name: tutorial.slug,
+				title: tutorial.title,
+			}));
+		}),
 
-	read: async (ctx) => {
-		let found = await findPublished(getDatabase(ctx), "tutorials", ctx.variables.slug);
-		return found?.post.meta.content ?? null;
-	},
+	read: (ctx) =>
+		cached("resources/tutorial", ctx.variables, async () => {
+			let found = await findPublished(getDatabase(ctx), "tutorials", ctx.variables.slug);
+			return found?.post.meta.content ?? null;
+		}),
 });

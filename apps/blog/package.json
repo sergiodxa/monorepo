@@ -13,13 +13,16 @@
 		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote"
 	},
 	"dependencies": {
+		"@pkg/crypto": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/jwt": "workspace:*",
+		"@pkg/kv-cache": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/markdown": "workspace:*",
 		"@pkg/mcp": "workspace:*",
+		"@pkg/rate-limit": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
 		"@pkg/service-container": "workspace:*",

@@ -52,6 +52,17 @@
 			"preview_id": "2bcc558cadce40dcb9c73f047c26be6c",
 		},
 	],
+	// Caller budget for the public, unauthenticated MCP endpoint (see
+	// `app/mcp/rate-limit.ts`). This binding rather than a KV counter because the endpoint
+	// bills nothing per call: a KV read plus write per counted request would cost several
+	// times the request being protected. `namespace_id` is a Worker-local identifier, not an
+	// account resource, so nothing has to be provisioned for it; `period` accepts only 10 or
+	// 60. `limit`/`period` are duplicated as constants in that module, which is where the
+	// reasoning for the numbers lives — the binding reports neither back.
+	"ratelimits": [
+		{ "name": "MCP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+	],
+
 	"d1_databases": [
 		{
 			"binding": "DB",

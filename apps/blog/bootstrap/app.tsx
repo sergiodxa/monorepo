@@ -54,6 +54,7 @@ import createNoWWWMiddleware from "~/app/http/middleware/no-www";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
+import mcpRateLimit from "~/app/mcp/rate-limit";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -150,7 +151,7 @@ export default function createApplication(env: App.Env) {
 	// needs has to be in that context, and scoping the middleware to this route leaves every
 	// other handler resolving services the way it already did.
 	router.map(routes.mcp, {
-		middleware: [database()],
+		middleware: [mcpRateLimit(env), database()],
 		handler: (ctx) => mcp.fetch(ctx),
 	});
 

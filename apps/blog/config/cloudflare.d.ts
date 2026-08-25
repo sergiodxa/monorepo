@@ -50,15 +50,23 @@ declare global {
 			DB: D1Database;
 			AUTH: KVNamespace;
 			REDIRECTS: KVNamespace;
+			CACHE: KVNamespace;
+			/** Optional: a deploy predating the `ratelimits` entry has no binding here. */
+			MCP_RATE_LIMITER?: RateLimit;
 			CLIENT_ID: SecretsStoreSecret;
 			CLIENT_SECRET: SecretsStoreSecret;
 			COOKIE_SESSION_SECRET: SecretsStoreSecret;
 		}
 	}
 
-	/** Minimal Worker handler shape used by the bootstrap export. */
+	/**
+	 * Minimal Worker handler shape used by the bootstrap export.
+	 *
+	 * The execution context is part of the signature so the bootstrap can hand `waitUntil`
+	 * to the cache, which defers its writes rather than making a miss wait on KV.
+	 */
 	interface ExportedHandler<Env = unknown> {
-		fetch(request: Request, env: Env): Response | Promise<Response>;
+		fetch(request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response>;
 	}
 }
 

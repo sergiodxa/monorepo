@@ -3,6 +3,9 @@
  * providers once, then per request opens a container scope, resolves secrets and
  * bindings from the environment, and forwards the request to the app router.
  *
+ * `waitUntil` is passed through as part of the environment so a deferred cache write
+ * outlives the response it was computed for.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -35,7 +38,7 @@ for (let provider of providers) provider.register(container);
  * environment-backed dependencies and forwarding the request to it.
  */
 export default {
-	async fetch(request: Request, env: Cloudflare.Env) {
+	async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext) {
 		return container.scope(async () => {
 			let IS_PROD = resolveIsProd(request);
 
@@ -52,6 +55,9 @@ export default {
 				COOKIE_SESSION_SECRET,
 				AUTH: env.AUTH,
 				REDIRECTS: env.REDIRECTS,
+				CACHE: env.CACHE,
+				MCP_RATE_LIMITER: env.MCP_RATE_LIMITER,
+				waitUntil: (promise) => ctx.waitUntil(promise),
 			});
 
 			return await router.fetch(request);

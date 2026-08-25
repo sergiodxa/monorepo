@@ -104,10 +104,17 @@ The database arrives through a new `database()` middleware mapped onto this rout
 
 ### 7. A Budget And A Cache
 
-The endpoint is public, unauthenticated, and does a table scan per search, so it needs both.
+The endpoint is public, unauthenticated, and every search reads the whole published corpus's metadata, so it needs both.
 
-- **Rate limit** per caller IP with `@pkg/rate-limit`, which means adding a `ratelimits` binding to `wrangler.jsonc` — the app has none today. A Cloudflare rate-limiter binding rather than KV counters, because a KV read plus write per request would cost more than the request being protected.
-- **Cache** tool results in the existing `CACHE` KV namespace, keyed by tool name and arguments. Published content changes when a post is written, so a short TTL is enough to make a repeated question free, and a stale answer for a few minutes is not a defect for content whose newest item is days old.
+**The budget** is a new `MCP_RATE_LIMITER` binding in `wrangler.jsonc` — sixty requests a minute per client address, spent by `@pkg/rate-limit` middleware on the route before the handler runs. A Cloudflare rate-limiter binding rather than a KV counter, because this endpoint bills nothing per call: a KV read plus write per counted request would cost several times the request being protected, so the protection would cost more than the abuse. `namespace_id` is Worker-local, so nothing has to be provisioned.
+
+Sixty a minute is an abuse bound, not a product one — an agent answering a question makes a handful of calls and then thinks. Callers behind one egress share a bucket, which is the cost of having no credential to key on and the reason the limit is set well above real use. A deployment without the binding gets a pass-through rather than a refusal, so a deploy predating it keeps serving.
+
+**The cache** is the existing `CACHE` KV namespace via `@pkg/kv-cache`, keyed by name and a hash of the arguments, with a five-minute TTL. Tool results go through a `toolMiddleware`, which is the one thing a request-level middleware cannot do — caching a result means seeing it. Resources cache explicitly in their `list` and `read`, since resources have no middleware layer.
+
+Two properties worth stating because breaking either is silent. Entries are **shared by every caller**, which is only correct because this surface is anonymous and no tool declares `available`; adding a credential means the caller's identity has to enter the key. And a **failed call is never cached**, because `isError` usually means a slug that does not exist yet, and storing that would keep answering "not found" for the whole TTL after the post appears.
+
+Caching pushed `waitUntil` into `App.Env`: the store defers its writes so a miss never waits on KV, which means the Worker's `ExecutionContext` has to reach it. `CACHE` is also typed as the platform `KVNamespace` rather than the app's `KVStore` contract, because its only consumer is the cache package, and that contract exists to keep repositories and services off the binding — a cache is neither.
 
 ### 8. Discovery Is A Page, Not A Protocol
 
@@ -124,6 +131,7 @@ No `.well-known` document and no `<link rel>` in the document head. Neither is a
 - The machine-path exemption gives the blog the boundary it lacks, so the next non-HTML route costs one line rather than a rethink.
 - The whole surface is read-only and public, so the worst outcome of a bug is content that was already public being served differently.
 - Resources cost almost nothing beyond enumeration, because the URLs they point at are ones the app already serves — and a client that fetches them directly never touches this endpoint.
+- The cache is verified against a real KV namespace in the Workers pool, so "it caches" is asserted rather than assumed.
 
 ### Negative
 
@@ -162,8 +170,8 @@ Done when a real client — Claude Code with the URL added — lists the tools a
 
 ### Phase 3: Bounds And Discovery
 
-1. Add the `ratelimits` binding and apply it to the route.
-2. Cache tool results in `CACHE`.
+1. Add the `MCP_RATE_LIMITER` binding and apply it to the route.
+2. Cache tool results through a `toolMiddleware`, and resource lists and reads explicitly.
 3. Add the page describing how to connect, and link it from the site navigation.
 
 ## Alternatives Considered
@@ -210,14 +218,16 @@ Offer a single `fetch_page` tool taking a path.
 
 - [x] Phase 1: Search
 - [x] Phase 2: The Server
-- [ ] Phase 3: Bounds And Discovery
+- [x] Phase 3: Bounds (the discovery page is still outstanding)
 
 ## Notes
 
 - The publish rule has to be applied in the tool, not only in the repository listing helpers. `get_post` reaches a post by slug, and that is the path a draft would leak through.
 - `post_meta` is key/value, so nothing about search is a schema change: adding a searchable field means projecting one more value in `search.ts`.
-- The endpoint is live but unbounded. Phase 3 is the rate limit and the cache, and until it lands a public, unauthenticated endpoint reads all published metadata per call.
-- Search transfers every published post's metadata per query. Acceptable at this size, and the first thing to re-measure if the endpoint gets busy — the rate limit in Phase 3 exists partly so that measurement stays possible.
+- `limit` and `period` are stated twice: on the binding in `wrangler.jsonc` and as constants in `app/mcp/rate-limit.ts`. The binding reports neither back, so they are kept in step by hand.
+- A post published or edited stays invisible for up to the cache TTL. That is the trade the TTL names, and it is the same staleness an RSS reader or a CDN already shows.
+- The cache is keyed without any notion of who asked. Adding a credential to this endpoint without adding it to the key would serve one caller's answers to another.
+- Search transfers every published post's metadata per query. The cache absorbs the repeats within a conversation, so what remains is one such read per five minutes per distinct query — and the rate limit bounds how many distinct queries a caller can produce.
 - Tool descriptions are prompts. `search_posts` and `list_posts` overlap enough that a model will sometimes pick the wrong one; the fix is in the wording of both, and it is worth checking against a real agent rather than against a test.
 - The rate-limiter binding is new to this app. `namespace_id` is Worker-local and needs nothing provisioned, but `limit` and `period` live in `wrangler.jsonc` while the reasoning for the numbers belongs next to the route, the way `apps/uptime` keeps them.
 - Caching a tool result caches an answer about published content. A post published moments ago stays invisible for the TTL, which is fine here and would not be for a status tool on a different app.

@@ -14,6 +14,7 @@
 
 import { createHandler } from "@pkg/mcp";
 
+import { cacheToolResults } from "~/app/mcp/cache";
 import bookmarks from "~/app/mcp/controllers/bookmarks";
 import glossary from "~/app/mcp/controllers/glossary";
 import { articleResource, postsController, tutorialResource } from "~/app/mcp/controllers/posts";
@@ -44,6 +45,9 @@ const mcp = createHandler({
 	instructions:
 		"Search and read the articles, tutorials, glossary entries and bookmarks published on sergiodxa.com. Start with search_posts to find writing on a topic, then get_post to read one in full. Posts are also available as resources, so a reader can attach one directly.",
 	listTtlMs: LIST_TTL_MS,
+	// Wraps every tool call, which is the one thing a request-level middleware cannot do:
+	// caching a result means seeing it.
+	toolMiddleware: [cacheToolResults()],
 });
 
 mcp.tools.map(toolset.searchPosts, searchPosts);
