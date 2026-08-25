@@ -115,6 +115,7 @@ Run from the repository root:
 | [lucide-remix](packages/lucide-remix)                   | Lucide icons for Remix UI                                     |
 | [mail](packages/mail)                                   | Transactional email with pluggable transports                 |
 | [markdown](packages/markdown)                           | Markdown parsing and Remix UI rendering                       |
+| [mcp](packages/mcp)                                     | MCP servers over stateless Streamable HTTP                    |
 | [oidc-client](packages/oidc-client)                     | OIDC client utilities                                         |
 | [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                                   |
 | [pagination](packages/pagination)                       | Offset and keyset pagination with Link headers                |
