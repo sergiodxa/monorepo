@@ -128,7 +128,9 @@ That makes the machine-path exemption method-aware: a `POST` here skips the sess
 
 Writing it as Markdown also means it can be served _as_ Markdown, at `/mcp.md` or through `Accept: text/markdown`, exactly as a post can. A page about serving agents is a poor place to make that an exception, and the fenced snippets are easier to copy from the source than from the syntax-highlighted page.
 
-**English and Argentine Spanish.** Language is chosen from `?lang=` first, then `Accept-Language`, matching exactly and then on the base tag, so `es`, `es-MX` and `es-419` all reach `es-AR`. There is one Spanish translation and there should be one: the regional tag says which Spanish it is written in, not which readers it is for. The explicit `?lang=` matters because it is the only way to link somebody to a translation. The chosen tag reaches `<html lang>`, which needed a `locale` prop on the blog layout.
+**English and Argentine Spanish.** Language is chosen from `?lang=` first, then `Accept-Language`, matching exactly and then on the base tag, so `es`, `es-MX` and `es-419` all reach `es-AR`. There is one Spanish translation and there should be one: the regional tag says which Spanish it is written in, not which readers it is for. The chosen tag reaches `<html lang>`, which needed a `locale` prop on the blog layout.
+
+The page shows no language chrome, neither a label naming the language nor a link to the other translation. Which one a reader gets is settled before the view runs, so either would be the only furniture on the page that exists to explain the page rather than the server. `?lang=` still resolves, so a translation can be reached and shared by hand, it is just not advertised.
 
 Storing the content as prose gives up the guarantee the generated version had, that the page cannot describe a tool the server does not serve. A test restores it: it renders both languages and asserts every mapped tool's name appears in each, and it interpolates the rate limit from the constant the middleware enforces rather than repeating the number.
 

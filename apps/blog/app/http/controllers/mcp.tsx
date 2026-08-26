@@ -16,14 +16,11 @@ import { accepts } from "@pkg/http/negotiate";
 import { isFailure } from "@pkg/result";
 import { createAction } from "remix/router";
 
-import type { McpPage, McpPageLocale } from "~/app/services/mcp-page";
+import type { McpPage } from "~/app/services/mcp-page";
 
 import { loadMcpPage, resolveMcpPageLocale } from "~/app/services/mcp-page";
 import { McpView } from "~/resources/views/mcp";
 import routes from "~/routes/web";
-
-/** What each language calls itself, for the eyebrow and the translation link. */
-const LANGUAGE_NAMES: Record<McpPageLocale, string> = { en: "English", "es-AR": "Español" };
 
 /** Builds a Markdown response, matching how the post route serves its own. */
 function markdown(status: number, body: string): Response {
@@ -42,12 +39,6 @@ async function pageFor(url: URL, request: Request): Promise<McpPage | null> {
 	let loaded = await loadMcpPage(locale);
 	if (isFailure(loaded)) return null;
 	return loaded.data;
-}
-
-/** Links to the page in the language this reader is not being served. */
-function alternateFor(locale: McpPageLocale): McpView.Alternate {
-	let other: McpPageLocale = locale === "en" ? "es-AR" : "en";
-	return { href: `${routes.mcp.index.href()}?lang=${other}`, label: LANGUAGE_NAMES[other] };
 }
 
 /**
@@ -72,9 +63,7 @@ export default createAction(routes.mcp.index, async (ctx) => {
 		activePath: routes.mcp.index.href(),
 		content: page.content,
 		markdownHref: routes.mcpMarkdown.href(),
-		eyebrow: LANGUAGE_NAMES[page.locale],
 		locale: page.locale,
-		alternate: alternateFor(page.locale),
 	};
 
 	return ctx.render(McpView, model);

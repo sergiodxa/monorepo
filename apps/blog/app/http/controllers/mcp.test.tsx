@@ -111,6 +111,19 @@ describe("GET /mcp", () => {
 		expect(article).not.toContain("```");
 	});
 
+	test("shows no language chrome", async () => {
+		// Which translation a reader gets is settled before the view runs, so a label naming it
+		// or a link offering the other one would be the only furniture on the page that
+		// explains the page rather than the server.
+		let html = await body(PAGE);
+		let header = html.slice(html.indexOf("<hgroup"), html.indexOf("</hgroup>"));
+
+		expect(header).not.toContain("English");
+		expect(header).not.toContain("Español");
+		expect(header).not.toContain("?lang=");
+		expect(header).toContain("View as Markdown");
+	});
+
 	test("is a full document titled for the browser tab", async () => {
 		let html = await body(PAGE);
 
@@ -149,16 +162,9 @@ describe("language", () => {
 		expect(html).toContain("This blog speaks the");
 	});
 
-	test("offers the other translation", async () => {
-		let english = await body(PAGE);
-		let spanish = await body(`${PAGE}?lang=es-AR`);
-
-		expect(english).toContain("?lang=es-AR");
-		expect(spanish).toContain("?lang=en");
-	});
-
 	test("accepts a bare language in ?lang, not just the exact tag", async () => {
-		// Somebody hand-editing the URL writes `es`, not `es-AR`.
+		// The page offers no link to its translation, so `?lang=` is how somebody reaches one by
+		// hand or shares it, and they will write `es` rather than `es-AR`.
 		let html = await body(`${PAGE}?lang=es`);
 
 		expect(html).toContain("Este blog habla el");
