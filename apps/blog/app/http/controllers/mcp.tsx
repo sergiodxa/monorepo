@@ -1,47 +1,95 @@
 /**
- * HTTP action for `GET /mcp`: the page explaining the MCP server that answers `POST` at
- * the same path.
+ * HTTP actions for the `/mcp` page: the HTML page at `GET /mcp` and its Markdown twin at
+ * `GET /mcp.md`, both explaining the MCP server that answers `POST /mcp`.
  *
- * The lists come from the server's own declarations rather than from prose here, so the
- * page cannot describe a tool that was renamed or a resource that was never mapped.
+ * The content is a Markdown file per language, so this controller picks a language,
+ * negotiates a format, and renders — the same three steps the post controller takes, for
+ * the same reason: an agent asking for Markdown should get Markdown, and a page about
+ * serving agents would be a poor place to make that an exception.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { walk, walkResources } from "@pkg/mcp";
+import * as ct from "@pkg/http/content-type";
+import { accepts } from "@pkg/http/negotiate";
+import { isFailure } from "@pkg/result";
 import { createAction } from "remix/router";
 
-import { MCP_RATE_LIMIT } from "~/app/mcp/rate-limit";
-import resourceset from "~/app/mcp/resources";
-import toolset from "~/app/mcp/tools";
+import type { McpPage, McpPageLocale } from "~/app/services/mcp-page";
+
+import { loadMcpPage, resolveMcpPageLocale } from "~/app/services/mcp-page";
 import { McpView } from "~/resources/views/mcp";
 import routes from "~/routes/web";
 
+/** What each language calls itself, for the eyebrow and the translation link. */
+const LANGUAGE_NAMES: Record<McpPageLocale, string> = { en: "English", "es-AR": "Español" };
+
+/** Builds a Markdown response, matching how the post route serves its own. */
+function markdown(status: number, body: string): Response {
+	return new Response(body, { status, headers: { "Content-Type": ct.Markdown } });
+}
+
 /**
- * Serves the MCP documentation page.
+ * Loads the page for a request's language.
  *
- * The endpoint is built from the request's own URL rather than hardcoded, so the address
- * the page tells a reader to paste is the one they are reading it at.
+ * @param url The request URL, read for a `?lang=` override.
+ * @param request The request, read for `Accept-Language`.
+ * @returns The parsed page, or `null` when its source could not be parsed.
+ */
+async function pageFor(url: URL, request: Request): Promise<McpPage | null> {
+	let locale = resolveMcpPageLocale(url, request.headers.get("Accept-Language"));
+	let loaded = await loadMcpPage(locale);
+	if (isFailure(loaded)) return null;
+	return loaded.data;
+}
+
+/** Links to the page in the language this reader is not being served. */
+function alternateFor(locale: McpPageLocale): McpView.Alternate {
+	let other: McpPageLocale = locale === "en" ? "es-AR" : "en";
+	return { href: `${routes.mcp.index.href()}?lang=${other}`, label: LANGUAGE_NAMES[other] };
+}
+
+/**
+ * Serves the MCP page, as HTML or as Markdown.
  *
- * @returns HTML response for `GET /mcp`.
+ * Markdown is negotiated the way a post negotiates it, so `Accept: text/markdown` reaches
+ * the same body `/mcp.md` serves.
+ *
+ * @returns The page response, or a `500` when its own source will not parse.
  */
 export default createAction(routes.mcp.index, async (ctx) => {
+	let page = await pageFor(ctx.url, ctx.request);
+	if (!page) return markdown(500, "# Error\n\nThis page's source could not be read.\n\n");
+
+	if (accepts(ctx.request).preferred(ct.HTML, ct.Markdown) === ct.Markdown) {
+		return markdown(200, page.body);
+	}
+
 	let model: McpView.Model = {
-		endpoint: new URL(routes.mcp.index.href(), ctx.url).toString(),
-		tools: [...walk(toolset)].map((tool) => ({
-			name: tool.descriptor.name,
-			title: tool.descriptor.title,
-			description: tool.descriptor.description,
-		})),
-		resources: [...walkResources(resourceset)].map((resource) => ({
-			name: resource.descriptor.name,
-			title: resource.descriptor.title,
-			description: resource.descriptor.description,
-			uriTemplate: resource.descriptor.uriTemplate,
-		})),
-		rateLimit: MCP_RATE_LIMIT,
+		title: page.frontmatter.title,
+		description: page.frontmatter.description,
+		activePath: routes.mcp.index.href(),
+		content: page.content,
+		markdownHref: routes.mcpMarkdown.href(),
+		eyebrow: LANGUAGE_NAMES[page.locale],
+		locale: page.locale,
+		alternate: alternateFor(page.locale),
 	};
 
 	return ctx.render(McpView, model);
+});
+
+/**
+ * Serves the MCP page as Markdown, whatever the request would otherwise accept.
+ *
+ * The extension is an explicit request, so it overrides negotiation rather than joining it.
+ *
+ * @returns The page's Markdown body.
+ */
+export const mcpMarkdownPage = createAction(routes.mcpMarkdown, async (ctx) => {
+	let page = await pageFor(ctx.url, ctx.request);
+	if (!page) return markdown(500, "# Error\n\nThis page's source could not be read.\n\n");
+
+	return markdown(200, page.body);
 });

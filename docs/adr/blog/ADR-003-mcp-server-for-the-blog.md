@@ -116,15 +116,21 @@ Two properties worth stating because breaking either is silent. Entries are **sh
 
 Caching pushed `waitUntil` into `App.Env`: the store defers its writes so a miss never waits on KV, which means the Worker's `ExecutionContext` has to reach it. `CACHE` is also typed as the platform `KVNamespace` rather than the app's `KVStore` contract, because its only consumer is the cache package, and that contract exists to keep repositories and services off the binding — a cache is neither.
 
-### 8. Discovery Is A Page At The Same URL
+### 8. Discovery Is A Page At The Same URL, Written As Markdown
 
-MCP has no discovery mechanism for an anonymous server — a person adds the URL to their client by hand. So the endpoint needs somewhere to be found, and the obvious place is the endpoint itself: `GET /mcp` renders a page explaining what the server offers and how to point a client at it, while `POST /mcp` speaks the protocol.
+MCP has no discovery mechanism for an anonymous server. A person adds the URL to their client by hand, so the endpoint needs somewhere to be found, and the obvious place is the endpoint itself: `GET /mcp` renders a page explaining what the server offers and how to point a client at it, while `POST /mcp` speaks the protocol.
 
-One `form()` route rather than two paths, because the two audiences arrive at the same string. Somebody handed `https://sergiodxa.com/mcp` is as likely to paste it into a browser as into a config file, and a `404` for the first of those is a bad answer to a reasonable act.
+One `form()` route rather than two paths, because both audiences arrive at the same string. Somebody handed `https://sergiodxa.com/mcp` is as likely to paste it into a browser as into a config file, and a 404 for the first of those is a bad answer to a reasonable act.
 
 That makes the machine-path exemption method-aware: a `POST` here skips the session, the redirects and the auth resolver, and a `GET` keeps all three, because it is a page view like any other.
 
-The page's tool and resource lists are built from the server's own declarations rather than written as prose, so it cannot describe a tool that was renamed or a resource that was never mapped. The rate limit it quotes is the exported constant the middleware enforces, for the same reason — a documented limit that disagrees with the enforced one is worse than an undocumented one.
+**The content is Markdown, one file per language.** The page is prose, so it is written the way a post is written and rendered the way a post is rendered, through the same `Typeset` reading rhythm and the same `MarkdownView`. It is not the post view itself, since that one builds its links from a post type and slug this page has neither of.
+
+Writing it as Markdown also means it can be served _as_ Markdown, at `/mcp.md` or through `Accept: text/markdown`, exactly as a post can. A page about serving agents is a poor place to make that an exception, and the fenced snippets are easier to copy from the source than from the syntax-highlighted page.
+
+**English and Argentine Spanish.** Language is chosen from `?lang=` first, then `Accept-Language`, matching exactly and then on the base tag, so `es`, `es-MX` and `es-419` all reach `es-AR`. There is one Spanish translation and there should be one: the regional tag says which Spanish it is written in, not which readers it is for. The explicit `?lang=` matters because it is the only way to link somebody to a translation. The chosen tag reaches `<html lang>`, which needed a `locale` prop on the blog layout.
+
+Storing the content as prose gives up the guarantee the generated version had, that the page cannot describe a tool the server does not serve. A test restores it: it renders both languages and asserts every mapped tool's name appears in each, and it interpolates the rate limit from the constant the middleware enforces rather than repeating the number.
 
 No `.well-known` document and no `<link rel>` in the document head. Neither is a thing any client reads, and inventing one advertises a convention nothing follows.
 
@@ -138,7 +144,7 @@ No `.well-known` document and no `<link rel>` in the document head. Neither is a
 - The whole surface is read-only and public, so the worst outcome of a bug is content that was already public being served differently.
 - Resources cost almost nothing beyond enumeration, because the URLs they point at are ones the app already serves — and a client that fetches them directly never touches this endpoint.
 - The cache is verified against a real KV namespace in the Workers pool, so "it caches" is asserted rather than assumed.
-- The page cannot drift from the server: its lists come from the same declarations the handler is mapped against, and a test renders it and checks every served tool appears.
+- The page reads like the rest of the blog, because it is written and rendered the same way, and it can be read as Markdown by the agents it describes.
 
 ### Negative
 
@@ -179,7 +185,7 @@ Done when a real client — Claude Code with the URL added — lists the tools a
 
 1. Add the `MCP_RATE_LIMITER` binding and apply it to the route.
 2. Cache tool results through a `toolMiddleware`, and resource lists and reads explicitly.
-3. Serve the page at `GET /mcp`, built from the server's own declarations.
+3. Serve the page at `GET /mcp`, from a Markdown file per language, with `/mcp.md` and `Accept: text/markdown` serving the source.
 
 ## Alternatives Considered
 
@@ -235,6 +241,8 @@ Offer a single `fetch_page` tool taking a path.
 - A post published or edited stays invisible for up to the cache TTL. That is the trade the TTL names, and it is the same staleness an RSS reader or a CDN already shows.
 - The cache is keyed without any notion of who asked. Adding a credential to this endpoint without adding it to the key would serve one caller's answers to another.
 - `/mcp` now has two audiences behind one path, so the middleware chain differs by method. A middleware added to the global chain without thinking about `htmlOnly` will run for agents too.
+- The page's prose is written twice, once per language, and nothing but a test keeps the two saying the same thing. Adding a third language means a third file to keep in step.
+- Tool names now live in prose as well as in the declarations. The test catches a rename, but only because it looks for every mapped tool's name in both files.
 - Search transfers every published post's metadata per query. The cache absorbs the repeats within a conversation, so what remains is one such read per five minutes per distinct query — and the rate limit bounds how many distinct queries a caller can produce.
 - Tool descriptions are prompts. `search_posts` and `list_posts` overlap enough that a model will sometimes pick the wrong one; the fix is in the wording of both, and it is worth checking against a real agent rather than against a test.
 - The rate-limiter binding is new to this app. `namespace_id` is Worker-local and needs nothing provisioned, but `limit` and `period` live in `wrangler.jsonc` while the reasoning for the numbers belongs next to the route, the way `apps/uptime` keeps them.

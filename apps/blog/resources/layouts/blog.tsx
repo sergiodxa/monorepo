@@ -40,6 +40,8 @@ export namespace BlogLayout {
 	export interface Props {
 		title: string;
 		description: string;
+		/** BCP 47 tag for the page's own language, defaulting to the site's English. */
+		locale?: string;
 		activePath?: string;
 		canonical?: string;
 		meta?: Array<MetaTag>;
@@ -73,10 +75,11 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
  */
 export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 	return () => {
-		let { activePath, canonical, children, description, meta = [], title } = handle.props;
+		let { activePath, canonical, children, description, locale, meta = [], title } = handle.props;
 
 		return (
 			<DocumentLayout
+				locale={locale}
 				title={title}
 				description={description}
 				canonical={canonical}

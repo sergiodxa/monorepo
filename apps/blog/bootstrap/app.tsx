@@ -35,7 +35,7 @@ import colors from "~/app/http/controllers/colors";
 import feed from "~/app/http/controllers/feed";
 import glossary from "~/app/http/controllers/glossary";
 import healthcheck from "~/app/http/controllers/healthcheck";
-import mcpPage from "~/app/http/controllers/mcp";
+import mcpPage, { mcpMarkdownPage } from "~/app/http/controllers/mcp";
 import post from "~/app/http/controllers/post";
 import postRelated from "~/app/http/controllers/post-related";
 import articlesRSS from "~/app/http/controllers/rss/articles";
@@ -162,6 +162,7 @@ export default function createApplication(env: App.Env) {
 	// `database()` rather than the container: an MCP tool receives only a context, so what it
 	// needs has to be in that context, and scoping the middleware to this route leaves every
 	// other handler resolving services the way it already did.
+	router.map(routes.mcpMarkdown, mcpMarkdownPage);
 	router.map(routes.mcp, {
 		actions: {
 			index: mcpPage,

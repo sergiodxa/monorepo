@@ -39,6 +39,14 @@ export default route({
 	 */
 	mcp: form("/mcp"),
 
+	/**
+	 * The same page as Markdown, for a reader who would rather read it the way the agents it
+	 * describes do. Its own route rather than an optional `(.:ext)` on {@link mcp}, so a
+	 * `POST` still matches only `/mcp` — the one path MCP clients speak to, and the one the
+	 * machine-surface middleware exemption is keyed on.
+	 */
+	mcpMarkdown: get("/mcp.md"),
+
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),
 	bookmarks: get("/bookmarks"),
