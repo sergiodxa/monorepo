@@ -1,20 +1,12 @@
 /**
  * Client island: a tri-state checkbox that ticks or clears every checkbox inside
- * the group element named by {@link CheckboxGroupSelectAllProps.groupId}, so a long
- * list of options can be taken or dropped in one gesture instead of one row at a
- * time. It owns no form field of its own — it only writes the `checked` property of
- * controls that already exist — so the submitted payload is exactly what it would
- * have been had every box been ticked by hand.
+ * the group element named by {@link CheckboxGroupSelectAllProps.groupId}, writing
+ * the `checked` property directly onto each existing control so the submitted
+ * payload comes out exactly as if every box had been ticked by hand.
  *
- * It stays hidden until its mixin has run, because the control is meaningless with
- * no script to drive it: a page served without JavaScript shows only the individual
- * checkboxes, all of which keep working on their own.
- *
- * The checked/indeterminate state is written straight onto the live control rather
- * than rendered from props: `indeterminate` has no HTML attribute at all (it is a
- * DOM-only property), and the boxes it summarizes can be toggled individually at
- * any time, so the DOM is the only honest source for what "all selected" currently
- * means.
+ * Present in the markup but `hidden` until its mixin has wired it up, so
+ * hydration always finds a matching element to adopt; each checkbox already
+ * handles its own toggling, keeping the page usable immediately on load.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,14 +24,14 @@ type CheckboxGroupSelectAllProps = {
 	groupId: string;
 };
 
-/** Ticks or clears every checkbox inside `groupId`, reporting "some selected" as indeterminate. */
+/**
+ * Ticks or clears every checkbox inside `groupId`, reporting "some selected" as
+ * indeterminate. Listens for `change` on the group element itself, since
+ * checkboxes are rendered by the page and their change events bubble up to it.
+ */
 export const CheckboxGroupSelectAll = clientEntry(
 	"/resources/components/checkbox-group-select-all.tsx#CheckboxGroupSelectAll",
 	function CheckboxGroupSelectAll(handle: Handle<CheckboxGroupSelectAllProps>) {
-		/*
-		 * Server-rendered as `false`, flipped by the mixin below: until a script has
-		 * wired the control up, showing it would offer an action that cannot happen.
-		 */
 		let ready = false;
 		/** Whether every driven checkbox is currently ticked, which flips the label to "clear". */
 		let allSelected = false;
@@ -71,15 +63,11 @@ export const CheckboxGroupSelectAll = clientEntry(
 		}
 
 		return () => (
-			// `hidden` rather than an unrendered branch, so the server and the first
-			// client render agree on the markup and hydration has something to adopt.
 			<div hidden={!ready}>
 				<Checkbox
 					mix={[
 						ref<HTMLInputElement>((node, signal) => {
 							control = node;
-							// Listening on the group, not each box: the boxes are rendered by the
-							// page rather than by this island, and change events bubble.
 							document
 								.getElementById(handle.props.groupId)
 								?.addEventListener("change", sync, { signal });

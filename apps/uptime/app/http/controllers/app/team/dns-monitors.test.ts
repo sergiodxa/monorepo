@@ -1,10 +1,9 @@
 /**
- * Tests for the DNS monitors list page controller. Unlike the HTTP monitor
- * controllers, `~/app/data/dns-monitor` doesn't import `cloudflare:workers`, so no
- * module mock is needed here. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
- * seeded directly by a fake middleware standing in for the real `auth`/`requireUser`/
- * `requireTeam` chain, matching the template in `app/http/controllers/actions/
- * monitors.test.ts`.
+ * Tests for the DNS monitors list page controller. `~/app/data/dns-monitor` imports
+ * only the database layer, so no module mock is needed here. `getViewer()`/`ctx.team`/
+ * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for
+ * the real `auth`/`requireUser`/`requireTeam` chain, matching the template in
+ * `app/http/controllers/actions/monitors.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -180,8 +179,6 @@ describe("dnsMonitors", () => {
 		let body = await (await send(db, team, membership)).text();
 
 		expect(body).toContain("2 of 3 watched");
-		// A monitor discovery has never run for reads as "none yet" rather than as a
-		// settled "0 of 0", which would claim we looked and found nothing.
 		expect(body).toContain("None yet");
 	});
 });

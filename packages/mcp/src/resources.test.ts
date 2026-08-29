@@ -244,9 +244,11 @@ describe("resources/read", () => {
 		expect(body.error?.message).toBe("Resource not found");
 	});
 
+	/**
+	 * A read has no isError channel — MCP gives resources only JSON-RPC errors — so the
+	 * error message reaching the client must never leak the real failure.
+	 */
 	test("hides an unexpected error and reports it to onError instead", async () => {
-		// A read has no isError channel — MCP gives resources only JSON-RPC errors — so there
-		// is nothing a resource can say to the model, and the message must not leak.
 		let onError = vi.fn();
 		let { body } = await call(
 			send("resources/read", { uri: "https://sergiodxa.com/articles/broken.md" }),

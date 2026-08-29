@@ -1,24 +1,10 @@
 /**
- * The cost ledger: one accumulator per unit of work that counts the platform operations
- * that unit caused, splits them across the teams that caused them, prices them against
- * the rate card, and writes the result to the `uptime_costs` Analytics Engine dataset
- * (ADR-007 §3–§6). It is the measurement half of per-customer cost; the daily reporting
- * job reads this dataset back and hands the figures to Polar.
- *
- * The accumulator is async-local, and it is the *same* one the D1 statement observer
- * already fed: a queue batch is one Worker invocation running up to ten jobs concurrently
- * under `waitUntil`, so a module-global counter would pool a whole batch into one number
- * and answer none of the questions worth asking, and a second parallel accumulator would
- * do the same additions twice on the hot path. `AsyncLocalStorage.run` nests strictly, so
- * concurrent jobs get one ledger each with no crosstalk. Everything recorded outside a
- * tracked unit of work — migrations, boot-time probes, tests — is simply not counted
- * rather than charged to whichever job happened to be running.
- *
- * Nothing on the hot path writes to D1. One data point per team per unit of work costs
- * 2.5e-5 cents, which is 0.7% of the HTTP check it measures; the four to six D1 rows a
- * cost row would have written are 17% of one. The ledger charges its own data point to
- * the team it describes, which is the only self-consistent choice — that write exists
- * because that team's work ran.
+ * The cost ledger: accumulates the platform operations one unit of work
+ * caused, splits them across the teams that caused them, prices them
+ * against the rate card, and writes the result to the `uptime_costs`
+ * Analytics Engine dataset (ADR-007 §3–§6), which the daily reporting job
+ * reads back for Polar. The accumulator is async-local, giving each job
+ * in a concurrently-run queue batch its own ledger with no crosstalk.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,17 +33,15 @@ const COSTS_DATASET = "uptime_costs";
 
 /**
  * Most data points one Analytics Engine `writeDataPoint` caller may emit per Worker
- * invocation. Only a sweep can approach it, since a sweep flushes one point per distinct
- * team; every other unit of work flushes one or two. Teams past the cap fold into a single
- * `overflow` point rather than being dropped, because a silent truncation here would read
- * as "that customer costs nothing".
+ * invocation. Only a sweep can approach it; teams past the cap fold into `overflow`, so
+ * every team still gets a counted, non-zero data point.
  */
 const MAX_DATA_POINTS = 250;
 
 /**
  * Stand-in team id for cost no team caused — a dead-letter record, a domain-verification
- * sweep with nothing pending. Written rather than discarded so the reporting job can
- * report how much spend went unattributed, which is a number worth watching.
+ * sweep with nothing pending. Recording it lets the reporting job show how much spend
+ * went unattributed, which is a number worth watching.
  */
 export const PLATFORM_TEAM_ID = "platform";
 
@@ -90,13 +74,9 @@ export interface CostLedgerOptions {
 }
 
 /**
- * What one unit of work cost, and who caused it.
- *
- * Quantities are recorded without a team and settled at flush time by
- * {@link CostLedger.apportion}. That is not a shortcut: in every unit of work this app has,
- * the per-team resources are proportional to the same weights the fixed ones are split by
- * — a sweep's per-monitor writes and its one claim both scale with monitors swept per team
- * — so a second, "direct" recording path would be a way of writing the same number twice.
+ * What one unit of work cost, and who caused it. Quantities are recorded
+ * without a team and settled at flush time by {@link CostLedger.apportion}:
+ * every resource scales with the same per-team weights, so one split serves both.
  */
 export class CostLedger {
 	/** D1 row counts for this unit of work, shared with its `job.completed` log line. */
@@ -132,12 +112,9 @@ export class CostLedger {
 	}
 
 	/**
-	 * Declares which teams caused this unit of work, and in what proportion.
-	 *
-	 * Weights **accumulate**, so a sweep can call this once per batch of claimed monitors
-	 * and a request's team guard can call it once, and both end up with the split they
-	 * meant. Their absolute size is irrelevant — only the ratios are used — so a monitor
-	 * count is as good a weight as a fraction.
+	 * Declares which teams caused this unit of work and in what proportion.
+	 * Weights **accumulate** across calls, so per-batch and single-call
+	 * callers both end up with the split they meant; only the ratios matter.
 	 *
 	 * @param weights - Team id to relative weight; entries with a non-positive weight are
 	 * ignored, since a zero-weight team caused none of the work.
@@ -152,12 +129,8 @@ export class CostLedger {
 	/**
 	 * Prices everything recorded and writes one Analytics Engine data point per team.
 	 *
-	 * Called exactly once, at the end of the unit of work, and never throws: it exists to
-	 * measure the work, and instrumentation that fails the work it measured would be worse
-	 * than no instrumentation. The modelled per-handler CPU, the Workers request share, the
-	 * D1 rows the statement observer accumulated, and the ledger's own data points are all
-	 * folded in here rather than at their call sites, because only here is the whole unit
-	 * of work known to be over.
+	 * Called exactly once, at the end of the unit of work. Catches and logs its
+	 * own errors, since instrumentation failing the work it measures would be worse than none.
 	 */
 	flush(): void {
 		try {
@@ -170,7 +143,11 @@ export class CostLedger {
 		}
 	}
 
-	/** {@link flush} without the guard: totals the quantities, splits them, and writes. */
+	/**
+	 * {@link flush} without the guard. CPU, request-share, and D1 quantities
+	 * fold in here because only here is the whole unit of work finally over;
+	 * each team's write counts itself as work that team caused.
+	 */
 	#write(): void {
 		this.record("workerRequest", this.#workerRequests);
 		this.record("workerCpuMs", MODELLED_CPU_MS[this.#handler]);
@@ -181,7 +158,6 @@ export class CostLedger {
 		let buckets = this.#split();
 
 		for (let [teamId, quantities] of buckets) {
-			// The point about to be written exists because this team's work ran.
 			quantities.aeDataPoint += 1;
 
 			env.COSTS.writeDataPoint({
@@ -203,15 +179,13 @@ export class CostLedger {
 	}
 
 	/**
-	 * Divides the recorded quantities across the apportionment weights, one bucket per
-	 * team. With no weights everything lands on {@link PLATFORM_TEAM_ID}; past
-	 * {@link MAX_DATA_POINTS} teams the smallest-weighted tail merges into
-	 * {@link OVERFLOW_TEAM_ID} and the truncation is logged.
+	 * Divides the recorded quantities across the apportionment weights, one
+	 * bucket per team. With no weights everything lands on {@link PLATFORM_TEAM_ID};
+	 * past {@link MAX_DATA_POINTS} teams the smallest-weighted tail merges into {@link OVERFLOW_TEAM_ID}.
 	 */
 	#split(): Map<string, CostQuantities> {
 		if (this.#weights.size === 0) return new Map([[PLATFORM_TEAM_ID, this.#quantities]]);
 
-		// Biggest first, so the cap costs the least-significant teams their own point.
 		let ranked = [...this.#weights].sort(([, left], [, right]) => right - left);
 		let total = ranked.reduce((sum, [, weight]) => sum + weight, 0);
 		let overflows = ranked.length > MAX_DATA_POINTS;
@@ -258,8 +232,7 @@ export function currentCostLedger(): CostLedger | null {
 
 /**
  * Counts `quantity` units of `resource` against the running unit of work, or does nothing
- * outside one. The recording call sites use this rather than reaching for the ledger, so
- * an uninstrumented path costs a no-op rather than a null check.
+ * outside one. Call sites use this directly, so an uninstrumented path costs a plain no-op.
  *
  * @param resource - What was consumed.
  * @param quantity - How much of it, defaulting to one operation.
@@ -281,10 +254,9 @@ export function apportionCost(weights: Iterable<readonly [string, number]>): voi
 }
 
 /**
- * Declares that the running unit of work was caused by these teams, one unit of weight per
- * id given — so a sweep hands over the team of every monitor it claimed and gets a split by
- * monitors swept per team, and a single-team job hands over one id and gets a direct
- * attribution. A no-op outside a tracked unit of work.
+ * Declares that the running unit of work was caused by these teams, one
+ * unit of weight per id given — a sweep hands over each claimed monitor's
+ * team and gets a split by count; a single-team job gets a direct attribution.
  *
  * @param teamIds - One entry per thing the unit of work did, repeats included.
  */
@@ -298,12 +270,9 @@ export function apportionCostByTeam(teamIds: Iterable<string>): void {
 }
 
 /**
- * Adds one D1 statement's cost to the running unit of work, or does nothing outside one.
- *
- * This is the database adapter's `onStatement` observer, so it runs once per statement on
- * the hot path: it allocates nothing, does no I/O, and cannot throw. Statements are
- * counted here and *priced* at flush time, which is why instrumenting cost added no
- * per-statement work to what ADR-019 already did.
+ * Adds one D1 statement's cost to the running unit of work, or does
+ * nothing outside one. The observer runs once per statement on the hot
+ * path, allocation-free; statements are counted here and priced later, at flush.
  *
  * @param observation - The row counts D1 reported for one statement.
  */
@@ -336,11 +305,8 @@ export async function trackCost<T>(ledger: CostLedger, body: () => Promise<T>): 
 
 /**
  * Share of one Workers request each job in the current queue batch owns.
- *
- * Module-level because a queue batch's size is a property of the invocation rather than of
- * any one job, and `Job.run` gives the usage tracker no way to be told about it. Safe
- * despite being mutable: `queue()` sets it before the synchronous loop that constructs
- * every job's ledger, and each ledger reads it once at construction.
+ * Module-level because batch size is a property of the invocation shared
+ * by every job in it; `queue()` sets it before constructing any ledger.
  */
 let queuedWorkerRequestShare = 1;
 
@@ -356,8 +322,9 @@ export function setQueueBatchSize(messages: number): void {
 }
 
 /**
- * The `Job.UsageTracker` this app registers: gives every job its own ledger, keyed to the
- * counters `Job.run` will log, and flushes it when the job's whole lifecycle is over.
+ * The `Job.UsageTracker` this app registers: gives every job its own ledger,
+ * keyed to the counters `Job.run` logs, flushed when the lifecycle ends. A
+ * delivered message costs one queue read and delete; each redelivery counts its own two.
  *
  * @param usage - Counters `Job.run` reports on `job.completed`.
  * @param body - The job lifecycle.
@@ -376,8 +343,6 @@ export function trackJobCost<T>(
 		usage,
 	});
 
-	// A delivered message is one queue read and one delete; a redelivery is another two,
-	// counted by the redelivered attempt's own ledger rather than guessed at from here.
 	ledger.record("queueOperation", 2);
 
 	return trackCost(ledger, body);
@@ -393,12 +358,9 @@ const KV_RESOURCES: Record<string, CostResource> = {
 };
 
 /**
- * Wraps a KV namespace so every operation through it is counted against the running unit
- * of work.
- *
- * A proxy rather than counting at the call sites, because the sessions this app stores in
- * KV are read and written inside `@pkg/session-storage-kv`, which has no business knowing
- * about cost — and one wrapper covers whatever else is handed the same binding later.
+ * Wraps a KV namespace so every operation through it is counted against
+ * the running unit of work, since the call sites that read and write KV
+ * sessions have no reason to know about cost.
  *
  * @param kv - The namespace binding to count.
  * @returns The same namespace, instrumented.
@@ -433,13 +395,8 @@ export interface DailyTeamCost {
 
 /**
  * SQL summing one UTC day of recorded cost per team, for the daily reporting job.
- *
- * Every sum is weighted by `_sample_interval`, without exception: Analytics Engine
- * statistically samples under load and an unweighted sum understates, which for a cost
- * figure means quietly under-reporting the expensive customers first.
- *
- * Built from the same {@link COST_RESOURCES} order the writer positions its `double`
- * fields by, so the two cannot drift.
+ * Every sum is weighted by `_sample_interval`, since Analytics Engine samples
+ * under load and an unweighted sum would quietly under-report the biggest spenders first.
  *
  * @param day - The UTC day to sum, `YYYY-MM-DD`.
  * @returns Query text for the Analytics Engine SQL API.
@@ -464,8 +421,8 @@ export function dailyCostQuery(day: string): string {
 
 /**
  * Reads a grouping column of a {@link dailyCostQuery} row as text. The SQL API types its
- * cells as unknown, so only a scalar becomes text; anything else reads as empty rather
- * than as a default stringification no team id or rate card could ever match.
+ * cells as unknown, so only a scalar becomes text — anything else reads as empty, since no
+ * team id or rate card could ever match some default stringification of it.
  */
 function toText(value: unknown): string {
 	return typeof value === "string" || typeof value === "number" ? String(value) : "";

@@ -1,14 +1,12 @@
 /**
  * Flow monitor detail page results fragment controller. GET
- * /app/:team/flows/:monitorId/cards/results — loads the monitor's recent runs once and renders
- * everything derived from them: the pass-rate, average-duration and total-runs cards, the flow's
- * own source with the line the last failure names marked, and the run table itself. No document
- * shell, so the detail page's results `Frame` can swap it in over its skeleton fallback.
+ * /app/:team/flows/:monitorId/cards/results — loads the monitor's recent runs once and
+ * renders the stat cards, marked source, and run table as a bare fragment the results
+ * `Frame` swaps in over its skeleton.
  *
- * The stat cards live here rather than on the page because every one of them is a reduction over
- * the same rows; leaving them behind would mean the page paying for the query it was structured to
- * avoid. The source listing lives here for the same reason in reverse: marking a line needs the
- * failing line number, which is a property of the last run and not of the monitor row.
+ * The stat cards and source marking live here because both reduce over the same run
+ * rows: computing them on the page would query the runs twice, and marking a line needs
+ * the last run's failing line number, a property the run's row alone carries.
  *
  * Requires `requireUser` + `requireTeam`.
  *
@@ -44,7 +42,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import routes from "~/routes/web";
 
-/** `error` is neutral, not `down`: it means this app could not find out (ADR-027 §8). */
+/** `error` is `neutral` because this app could not find out (ADR-027 §8). */
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	up: "up",
 	down: "down",
@@ -66,9 +64,9 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 
 		let totalRuns = results.length;
 		/**
-		 * `error` runs are excluded from both halves rather than counted as failures: a run that
-		 * could not happen is not evidence about the flow, and folding it in would move a
-		 * pass-rate somebody reads as "is my flow working" for a reason that is ours.
+		 * `error` runs stay outside both halves: they mark a run that failed to execute, and
+		 * folding them in would move a pass-rate meant to answer "is my flow working" for a
+		 * reason that is ours to own.
 		 */
 		let ran = results.filter((result) => result.status !== "error");
 		let passed = ran.filter((result) => result.status === "up").length;
@@ -211,34 +209,9 @@ namespace SourceListing {
 }
 
 /**
- * The flow's source, one row per line with its number in a gutter, and the failing line marked.
- *
- * This is the one thing a flow's detail page does that no other monitor type's needs: a flow's
- * failure is reported *by line*, and "expected 200, observed 500 on line 9" is only useful beside a
- * line 9 you can find.
- *
- * A two-column grid rather than a `<pre>` with the numbers baked into the text, because a number
- * that is part of the text gets selected and copied along with it — pasting a flow back into the
- * editor would carry a column of digits with it. The marked line is toned and also carries a `›` in
- * the gutter, since colour alone is not a signal everybody receives.
- *
- * The gutter column is content-sized and the code column takes the rest. `auto max-content` looked
- * right at a phone's width and wrong at a desktop's: an `auto` track absorbs the grid's free space,
- * so on a wide screen the *gutter* stretched and pushed the code halfway across the block. `1fr`
- * moves that free space to the code column, where growing is harmless — and its `auto` minimum is
- * the longest line, so the grid is still at least that wide and the container still scrolls.
- *
- * Long lines **scroll** rather than wrap. Wrapping was the first attempt and it was wrong for code:
- * a wrapped line reads as several lines with one number, so the gutter stops meaning anything at
- * exactly the moment it matters — when a failure names a line. The listing therefore sizes to its
- * longest line (`max-content`) inside a container that scrolls, which is also what keeps it from
- * widening the page: the overflow ends at the container instead of at the document.
- *
- * The gutter is `sticky` at the scrollport's inline start and carries the block's own background, so
- * the numbers stay put while the code slides under them. Both of its inline paddings are its own,
- * and the block has none — a sticky child sticks to the *padding* edge, so inline padding on the
- * scroll container leaves a strip the gutter cannot cover and the code slides visibly through it.
- * Same reason there is no column gap: a gap is another such strip.
+ * Renders `source` as a numbered-line grid with `failedAtLine` marked, so a run's failing
+ * line is easy to find. Numbers live in their own sticky gutter column, so copying a line
+ * copies only the code, and long lines scroll, keeping each gutter number aligned with its line.
  */
 function SourceListing(handle: Handle<SourceListing.Props>) {
 	return () => {

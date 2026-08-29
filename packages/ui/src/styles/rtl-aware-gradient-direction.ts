@@ -22,9 +22,8 @@ function stripLeadingDashes(propertyName: string): string {
 
 /**
  * Composes the custom property pairing a gradient direction's `"right"`
- * default with its `"left"` mirror under `&:dir(rtl)`, as its own `css()`
- * mixin ready to compose in a host's `mix` array alongside whatever `css()`
- * call carries that host's own remaining, genuinely local declarations.
+ * default with its `"left"` mirror under `&:dir(rtl)`, ready to compose
+ * alongside a host's own remaining, genuinely local declarations.
  *
  * @param propertyName The custom property the gradient direction reads from.
  * @returns A `css()` mixin ready for a host element's `mix` prop.

@@ -1,5 +1,5 @@
 /**
- * WebCrypto primitives with `Result`-based errors and no Node built-ins.
+ * WebCrypto primitives with `Result`-based errors, portable to any runtime.
  *
  * Encoding, digests, HMAC, random tokens, password hashing, TOTP, and authenticated
  * encryption live here once, so security-relevant details are decided in one place

@@ -2,14 +2,10 @@
  * Tests that adding `alerts.monitor_type` leaves every alert already in the table doing
  * exactly what it did before.
  *
- * Alerts are the rows an on-call rotation depends on, and both ways of getting the
- * backfill wrong are silent: widening a monitor-scoped alert starts sending it everything
- * the team monitors, and leaving it null beside a non-null id encodes a scope the
- * application cannot resolve. Neither would raise an error, so both are asserted against a
- * real database and a real seed rather than read off the SQL.
- *
- * Each test builds the schema as it stood immediately before this migration, seeds rows
- * against it, and then applies the one file.
+ * Both wrong backfills are silent: widening a monitor-scoped alert would send it every
+ * monitor the team owns, and a non-null monitor_id beside a null monitor_type encodes a
+ * scope no query can resolve. Each test builds the schema as it stood before this
+ * migration, seeds rows, and applies the one file.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +28,7 @@ beforeEach(() => {
 	applyMigrations(sqlite, MIGRATION);
 });
 
-/** One alert as the schema held it before this migration: no `monitor_type` column. */
+/** One alert as the schema held it before this migration, when `monitor_id` alone encoded scope. */
 function seedAlert(alert: { id: string; monitorId: string | null; name?: string }) {
 	sqlite.exec(
 		`INSERT INTO alerts (id, created_at, updated_at, team_id, monitor_id, config, name,

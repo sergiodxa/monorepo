@@ -4,8 +4,8 @@
  * It reads the smallest subset that covers a provider export and reports every other line
  * with its number and a reason, so an import can never quietly cover less than it claims.
  *
- * The pasted text is parsed and discarded: nothing here retains it, and callers persist the
- * records this returns rather than the file that produced them.
+ * The pasted text is parsed and discarded: nothing here retains it, and callers persist
+ * only the records this returns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,16 +20,16 @@ import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import { isDnsRecordType, normalizeDnsName, parseDnsRecordValue } from "~/app/lib/dns-record-value";
 
 /**
- * Largest paste that is parsed at all, in bytes — the same ceiling DNS providers put on a zone
- * file. Past it the text is refused whole rather than truncated: a half-read zone would produce
- * a review screen that looks complete and is not.
+ * Largest paste that is parsed at all, in bytes — the same ceiling DNS providers put on a
+ * zone file. Past it, the whole text is refused: a half-read zone would produce a review
+ * screen that looks complete while actually missing records.
  */
 export const MAX_ZONE_FILE_BYTES = 256 * 1024;
 
 /**
- * How much of a reported line is echoed back. A rejected line is shown so it can be recognised
- * in the file the user still has open, not re-read here, and a report that travels between a
- * request and a page has to stay small — it is a copy of somebody's zone either way.
+ * How much of a reported line is echoed back. A rejected line is shown so it can be
+ * recognised in the file the user still has open, and a report traveling between a
+ * request and a page stays small — it is a copy of somebody's zone either way.
  */
 const MAX_REPORTED_INPUT_LENGTH = 120;
 
@@ -37,9 +37,9 @@ const MAX_REPORTED_INPUT_LENGTH = 120;
 const RECORD_CLASSES = new Set(["IN", "CH", "HS", "CS"]);
 
 /**
- * Record types this parser recognises but does not track. They are told apart from a typo so a
- * `CAA` line can be reported as "a type we do not watch" rather than as an unreadable line —
- * different reasons lead a user to different fixes.
+ * Record types this parser recognises without tracking. Telling them apart from a typo
+ * gives a `CAA` line its own reported reason, since a real gap in coverage and a genuine
+ * typo call for different fixes from the user.
  */
 const KNOWN_UNTRACKED_TYPES = new Set([
 	"AFSDB",
@@ -103,7 +103,7 @@ export interface ZoneFileRecord {
 /** One line that did not become a record, and why. */
 export interface ZoneFileRejection {
 	line: number;
-	/** The line as pasted, trimmed and truncated. Shown, never stored. */
+	/** The line as pasted, trimmed and truncated, kept only for display in the response. */
 	input: string;
 	reason: ZoneFileRejectionReason;
 }
@@ -118,15 +118,14 @@ export interface ZoneFileDuplicate {
 	type: DnsRecordType;
 }
 
-/** What one pasted zone file amounts to: the records to review, and the lines that are not records. */
+/** What one pasted zone file amounts to: the records to review, and the lines it rejected. */
 export interface ZoneFileImport {
 	records: ZoneFileRecord[];
 	rejected: ZoneFileRejection[];
 	/**
-	 * Repeated declarations of a record already in {@link ZoneFileImport.records}, kept apart from
-	 * the rejections because nothing was lost: a real export does contain the same record twice
-	 * with different trailing comments, and DNS itself answers such an RRset once. Counting those
-	 * lines as "not imported" would report a complete import as a partial one.
+	 * Repeated declarations of a record already in {@link ZoneFileImport.records}. Kept apart
+	 * from the rejections since a repeat costs nothing: DNS answers such an RRset once, so an
+	 * export that lists a record twice still imports it completely.
 	 */
 	duplicates: ZoneFileDuplicate[];
 }
@@ -152,19 +151,16 @@ interface ZoneToken {
 /** A zone line split into fields, plus the structure that decides whether it can be read at all. */
 interface TokenizedLine {
 	tokens: ZoneToken[];
-	/** An unclosed `(` opens a multi-line record, which is reported rather than assembled. */
+	/** An unclosed `(` marks a multi-line record; each of its lines is reported individually. */
 	openParen: boolean;
 	closeParen: boolean;
 	unterminatedQuote: boolean;
 }
 
 /**
- * Splits one line into fields, dropping the `;` comment that ends it.
- *
- * Quoting is tracked rather than pattern-matched because a `;` inside a quoted string is data:
- * an SPF record reading `"v=spf1 a; mx; ~all"` would otherwise lose most of itself to a comment
- * that is not there. Whether a field was quoted is kept, since a TXT character-string is defined
- * by its quotes while a type or class name never carries any.
+ * Splits one line into fields, dropping the `;` comment that ends it. Quoting is tracked
+ * so a `;` inside a quoted string, like `"v=spf1 a; mx; ~all"`, is preserved as data.
+ * Each field remembers whether it was quoted, since only a TXT character-string is defined by its quotes.
  */
 function tokenize(line: string): TokenizedLine {
 	let tokens: ZoneToken[] = [];
@@ -245,18 +241,9 @@ function forReport(line: string): string {
 }
 
 /**
- * Resolves a name field to the absolute name it denotes, given the monitor's domain.
- *
- * The spellings a zone file uses all have to land on the same names the resolver will be asked
- * about, because the name is half of a record's identity: `@` is the apex, a field ending in a
- * dot is already absolute, and anything else is relative and is qualified with the domain —
- * which is exactly what `$ORIGIN` would change, and why `$ORIGIN` is refused instead of ignored.
- *
- * One deliberate departure from strict BIND: a dotless field that *already* spells out the zone
- * is taken as absolute rather than qualified into `example.com.example.com`. A real provider
- * export is internally inconsistent about this — it writes the apex without its trailing dot on
- * one line and with it on every other — and no zone in practice contains a name whose own labels
- * repeat the zone, so reading it literally would only ever manufacture a name nobody owns.
+ * Resolves a name field to the absolute name it denotes, given the monitor's domain. A
+ * dotless field that already spells out the zone is taken as absolute, since provider
+ * exports are inconsistent about the apex's trailing dot and no real zone owns a name that repeats itself this way.
  */
 function qualifyName(field: string, domain: string): string {
 	if (field === "@") return domain;
@@ -269,7 +256,7 @@ function qualifyName(field: string, domain: string): string {
 }
 
 /**
- * Resolves an owner, which — unlike a record's target — must belong to the monitor's zone.
+ * Resolves an owner, which must belong to the monitor's zone.
  *
  * @returns The absolute name, or `null` when it falls outside the monitor's domain.
  */
@@ -277,7 +264,7 @@ function resolveOwner(owner: string, domain: string): string | null {
 	let name = qualifyName(owner, domain);
 
 	if (name.length === 0) return null;
-	/** A zone file for one domain cannot enrol names in another: sweeping them is not this monitor's job. */
+	/** A zone file for one domain only enrols names inside that same domain. */
 	if (name !== domain && !name.endsWith(`.${domain}`)) return null;
 
 	return name;
@@ -305,7 +292,7 @@ function qualifyRecordData(
 
 	if (type === "TXT") return tokens.map((token) => token.value).join(" ");
 
-	/** Address types take exactly one literal; a second field means the line is not what it looks like. */
+	/** Address types take exactly one literal; a second field means the line is malformed. */
 	if (tokens.length !== 1) return null;
 	let literal = tokens[0];
 	if (!literal || literal.quoted) return null;
@@ -329,19 +316,9 @@ function directiveReason(directive: string): ZoneFileRejectionReason {
 }
 
 /**
- * Reads a pasted zone file into the records it declares and the lines it does not.
- *
- * The supported subset is one record per line, `<owner> [<ttl>] [<class>] <TYPE> <rdata>`, with
- * `;` comments outside quoted strings, blank lines, absolute and relative owners, `@` for the
- * apex, several TXT character-strings per line, and the six tracked types. Everything else —
- * `$` directives, parenthesised multi-line records, owner-inheriting continuation lines,
- * non-`IN` classes, untracked types, names outside the domain, and lines that are not records —
- * comes back in {@link ZoneFileImport.rejected} with its line number and a reason. Nothing is
- * dropped: an import that decides what gets monitored is the worst place for a silent omission.
- *
- * Records are returned in file order and de-duplicated on `(name, type, value)`, which is a
- * record's identity — a zone that writes one record twice still declares one record, and the
- * repeated line is listed in {@link ZoneFileImport.duplicates} rather than reported as skipped.
+ * Reads a pasted zone file into the records it declares and the lines it rejects. Every
+ * unsupported line comes back in {@link ZoneFileImport.rejected} with a reason, since an
+ * import that decides what gets monitored is the worst place for a silent omission.
  *
  * @param input - The raw contents of the paste box. It is read here and not retained.
  * @param domain - The monitor's domain, which relative owners and `@` resolve against.
@@ -363,7 +340,7 @@ export function parseZoneFile(
 	let seen = new Map<string, number>();
 
 	let lines = input.split(/\r?\n/);
-	/** Set by an unclosed `(`: the record's remaining lines are reported too, not read as records. */
+	/** Set by an unclosed `(`: the record's remaining lines are reported as unsupported too. */
 	let insideMultiLine = false;
 
 	for (let index = 0; index < lines.length; index++) {
@@ -381,7 +358,7 @@ export function parseZoneFile(
 			continue;
 		}
 
-		/** A blank or comment-only line is how a file breathes, not something to report. */
+		/** A blank or comment-only line is how a file breathes, and is skipped silently. */
 		if (tokens.length === 0 && !openParen && !closeParen) continue;
 
 		if (openParen) {
@@ -412,9 +389,9 @@ export function parseZoneFile(
 		}
 
 		/**
-		 * TTL and class are both optional and may be written in either order, so they are consumed
-		 * by what they look like rather than by position — the type is the first field that is
-		 * neither a duration nor a class name.
+		 * TTL and class are both optional and may be written in either order, so they are
+		 * consumed by what they look like: the type is the first field that is neither a
+		 * duration nor a class name.
 		 */
 		let cursor = 1;
 		let ttlSeen = false;
@@ -455,7 +432,7 @@ export function parseZoneFile(
 		let type = typeToken.value.toUpperCase();
 
 		if (!isDnsRecordType(type)) {
-			/** A type we know of but do not sweep reads differently to a line that is not a record. */
+			/** A known-but-untracked type is reported with its own reason, distinct from an unreadable line. */
 			let known = KNOWN_UNTRACKED_TYPES.has(type) || /^TYPE\d+$/.test(type);
 			reject(known ? "unsupportedType" : "malformed");
 			continue;
@@ -481,8 +458,8 @@ export function parseZoneFile(
 
 		/**
 		 * The strict reading: an import is the one channel with somewhere to put a refusal, so a
-		 * line whose RDATA is not valid for its type is reported with its number rather than
-		 * normalized as best it can be and monitored as a record the zone does not contain.
+		 * line whose RDATA fails its type's format is reported by line number and left out of
+		 * the records the zone ends up monitored for.
 		 */
 		let value = parseDnsRecordValue(type, qualified);
 		if (value === null) {
@@ -494,9 +471,8 @@ export function parseZoneFile(
 		let firstLine = seen.get(identity);
 
 		/**
-		 * A repeat is dropped rather than emitted: identity is `(name, type, value)`, the table
-		 * enforces it, and DNS answers such an RRset once — so a second row would be a constraint
-		 * violation standing in for a record that already exists.
+		 * A repeat is recorded as a duplicate: identity is `(name, type, value)`, and DNS answers
+		 * such an RRset once, so a second row would only restate a record that already exists.
 		 */
 		if (firstLine !== undefined) {
 			duplicates.push({ line, input: forReport(raw), firstLine, name, type });

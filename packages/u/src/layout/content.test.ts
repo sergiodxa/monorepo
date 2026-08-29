@@ -1,8 +1,4 @@
 /**
- * Unit tests for `content()`'s default value, plain keywords, and the
- * `between`/`around`/`evenly` aliasing to their `space-*` CSS keywords —
- * the same aliasing `u.justify()` applies.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

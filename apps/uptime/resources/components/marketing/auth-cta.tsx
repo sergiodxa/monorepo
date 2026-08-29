@@ -21,10 +21,9 @@ namespace AuthCta {
 	export interface Props {
 		isSignedIn: boolean;
 		/**
-		 * Label for the signed-out state's submit button. Required rather than
-		 * defaulted — an English fallback here would silently leak into every
-		 * non-English locale, so every call site must pass its own translated
-		 * copy (e.g. `ctx.i18next.t("landing.hero.cta.out")`).
+		 * Label for the signed-out state's submit button. Every call site
+		 * supplies its own translated copy — a default here would leak English
+		 * text into every non-English locale.
 		 */
 		startLabel: string;
 		/**
@@ -41,10 +40,9 @@ namespace AuthCta {
 		/** Optional trailing icon (e.g. an arrow), rendered after the label. */
 		icon?: RemixNode;
 		/**
-		 * Tone of the rendered button. Defaults to `"brand"`, which is right
-		 * everywhere the CTA sits on a page background. A CTA sitting *on* a
-		 * brand-colored band needs `"neutral"` instead — a brand button on a brand
-		 * fill is legible only by its border.
+		 * Tone of the rendered button. Defaults to `"brand"`, right for a CTA on a
+		 * page background. A CTA on a brand-colored band needs `"neutral"`,
+		 * since a brand-on-brand button is legible only by its border.
 		 */
 		color?: Button.Color;
 		/** Visual weight. Defaults to `"solid"`; pair `variant="solid"` with `color="neutral"` for the inverted treatment a brand band needs. */

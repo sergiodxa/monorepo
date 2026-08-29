@@ -16,11 +16,9 @@
 const PACKAGE_SRC_TEST = /^packages\/[^/]+\/src\//;
 
 /**
- * Apps that ship at least one test file but have no Vitest project rooted at them, so none
- * of their tests run.
- *
- * Both arguments are repo-relative directory paths (`apps/uptime`), and the result is
- * sorted so a failure message reads the same way twice.
+ * Apps that ship at least one test file but have no Vitest project rooted
+ * at them, so none of their tests run. Arguments are repo-relative
+ * directory paths (`apps/uptime`), returned sorted for a stable message.
  */
 export function findUnregisteredApps(appsWithTests: string[], projectRoots: string[]): string[] {
 	let roots = new Set(projectRoots);
@@ -28,11 +26,9 @@ export function findUnregisteredApps(appsWithTests: string[], projectRoots: stri
 }
 
 /**
- * Package test files the packages project cannot collect, because its glob is anchored at
- * `packages/*​/src/` and these sit outside it.
- *
- * Takes repo-relative file paths and returns them in the order given, which is the order
- * the caller enumerated the filesystem in.
+ * Package test files the packages project cannot collect, because its glob
+ * is anchored at `packages/*​/src/` and these sit outside it. Returned in
+ * the order given, matching how the caller enumerated the filesystem.
  */
 export function findUncollectablePackageTests(testFiles: string[]): string[] {
 	return testFiles.filter((file) => !PACKAGE_SRC_TEST.test(file));

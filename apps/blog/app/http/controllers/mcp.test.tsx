@@ -54,23 +54,25 @@ describe("GET /mcp", () => {
 		expect(html).toContain("sergiodxa.com/mcp");
 	});
 
+	/**
+	 * Checked against the Markdown — syntax highlighting splits a fenced command
+	 * into HTML spans, so only the Markdown twin is one copyable string — and
+	 * the bridge command reflects Claude Desktop's older protocol revision.
+	 */
 	test("gives a copyable configuration", async () => {
-		// Asserted against the Markdown rather than the HTML: a fenced block is syntax
-		// highlighted into spans, so the command is not one contiguous string on the page —
-		// which is exactly why the Markdown twin is the copyable one.
 		let source = await body("https://sergiodxa.com/mcp.md");
 
 		expect(source).toContain("claude mcp add --transport http sergiodxa");
 		expect(source).toContain('"mcpServers"');
-		// Claude Desktop does not speak this protocol revision yet, so the bridge is the only
-		// way in for it and has to be on the page.
 		expect(source).toContain("@abluva/mcp-remote@latest");
 		expect(source).toContain("2026-07-28");
 	});
 
+	/**
+	 * Checks both languages because a reader of either configures the same
+	 * server, so a tool rename has to land in both translations.
+	 */
 	test("names every tool the server actually serves", async () => {
-		// The content is prose now, so this is what stops it describing a tool that was
-		// renamed — in both languages, since a reader of either configures the same server.
 		let english = await body(PAGE);
 		let spanish = await body(`${PAGE}?lang=es-AR`);
 
@@ -88,19 +90,24 @@ describe("GET /mcp", () => {
 		}
 	});
 
+	/**
+	 * Interpolated from the constant the middleware enforces, so a change to
+	 * the binding surfaces here before it ever reaches a reader as stale prose.
+	 */
 	test("states the rate limit that is actually enforced", async () => {
 		let english = await body(PAGE);
 		let spanish = await body(`${PAGE}?lang=es-AR`);
 
-		// Interpolated from the constant the middleware enforces, so prose that drifts from
-		// the binding fails here rather than misleading a reader.
 		expect(english).toContain(`${MCP_RATE_LIMIT} requests a minute`);
 		expect(spanish).toContain(`${MCP_RATE_LIMIT} pedidos por minuto`);
 	});
 
+	/**
+	 * The whole point of storing the page as Markdown is that it gets parsed —
+	 * a regression in the parser or the view would surface as raw source on
+	 * the page itself.
+	 */
 	test("renders the Markdown as HTML, not as escaped source", async () => {
-		// The whole point of storing the page as Markdown is that it is parsed; a regression in
-		// the parser or the view would show as the source itself on the page.
 		let html = await body(PAGE);
 		let article = html.slice(html.indexOf("<article"), html.indexOf("</article>"));
 
@@ -111,10 +118,11 @@ describe("GET /mcp", () => {
 		expect(article).not.toContain("```");
 	});
 
+	/**
+	 * Language is settled before the view renders, so the page's content
+	 * stays focused on describing the MCP server itself.
+	 */
 	test("shows no language chrome", async () => {
-		// Which translation a reader gets is settled before the view runs, so a label naming it
-		// or a link offering the other one would be the only furniture on the page that
-		// explains the page rather than the server.
 		let html = await body(PAGE);
 		let header = html.slice(html.indexOf("<hgroup"), html.indexOf("</hgroup>"));
 
@@ -140,16 +148,18 @@ describe("language", () => {
 		expect(html).toContain("Este blog habla el");
 	});
 
+	/**
+	 * The page is written in Argentine Spanish; the tag identifies which
+	 * Spanish variant renders, so `es-419` and `es-MX` match it too.
+	 */
 	test("matches any Spanish against the one translation", async () => {
-		// The page is written in Argentine Spanish. The tag says which Spanish it is, not which
-		// readers it is for, so `es-419` and `es-MX` get it too.
 		for (let tag of ["es-419", "es-MX", "es"]) {
 			expect(await body(PAGE, { "Accept-Language": tag })).toContain("Servidor MCP");
 		}
 	});
 
+	/** The only way to link somebody to a translation, or to share one. */
 	test("lets an explicit choice override the browser", async () => {
-		// The only way to link somebody to a translation, or to share one.
 		let html = await body(`${PAGE}?lang=en`, { "Accept-Language": "es" });
 
 		expect(html).toContain("MCP server");
@@ -162,9 +172,11 @@ describe("language", () => {
 		expect(html).toContain("This blog speaks the");
 	});
 
+	/**
+	 * `?lang=` matches a bare code like `es` to its tagged translation, since
+	 * typing or sharing a link by hand tends to produce the bare form.
+	 */
 	test("accepts a bare language in ?lang, not just the exact tag", async () => {
-		// The page offers no link to its translation, so `?lang=` is how somebody reaches one by
-		// hand or shares it, and they will write `es` rather than `es-AR`.
 		let html = await body(`${PAGE}?lang=es`);
 
 		expect(html).toContain("Este blog habla el");

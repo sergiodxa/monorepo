@@ -1,5 +1,3 @@
-/* @jsxImportSource remix/ui */
-
 /**
  * Entry point for the Remix markdown client: renders a Markdoc AST into
  * Remix UI nodes and re-exports the fence and renderer helpers.
@@ -7,6 +5,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+/* @jsxImportSource remix/ui */
 
 import type { RemixNode, Handle } from "remix/ui";
 

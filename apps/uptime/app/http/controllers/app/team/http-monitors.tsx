@@ -1,21 +1,8 @@
 /**
- * HTTP monitors list controller. Lists the team's monitors, each row's badge and check
- * time coming from the columns the last check cached on the monitor row, so the page is
- * one indexed query. It used to run an uncached Analytics Engine "latest result" query per
- * monitor instead — an N+1 that grew with the team's monitor count. A monitor with no
- * cached status has never been checked and renders as `unknown`.
- * Requires `requireUser` + `requireTeam`.
- *
- * The table is `@pkg/ui`'s `Table` compound, and each row's delete confirmation is
- * `@pkg/ui`'s `AlertDialog` (composed directly rather than through the `Confirm`
- * convenience wrapper, since the confirming control here is a real `<form method="post">`
- * submit button rather than a `command="close"` action — the delete needs to actually
- * post to the delete action, not just dismiss the dialog). Each row's kebab-icon
- * actions menu is the shared `RowMenu`, which owns the trigger's hit area and the
- * WAI-ARIA menu keyboard pattern; this file supplies only the entries. It was once
- * inlined here on the grounds that this was its only use, which stopped being true
- * and left two triggers to keep in step — they had already drifted to different
- * sizes.
+ * HTTP monitors list controller. Each row's status and check time come from
+ * columns cached on the monitor row instead of a live query per monitor, so
+ * a monitor with no cached status has never been checked and renders as
+ * `unknown`. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,7 +46,11 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	down: "down",
 };
 
-/** GET /app/:team/http — the team's HTTP monitors list. */
+/**
+ * GET /app/:team/http — the team's HTTP monitors list. The import link sits
+ * beside "Create Monitor" since that is when someone with a list of URLs
+ * decides how to enter them.
+ */
 export default createAction(routes.app.team.monitors.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -87,12 +78,6 @@ export default createAction(routes.app.team.monitors.index, {
 					]}
 					actions={
 						<Fragment>
-							{/*
-							 * The bulk importer had a route, a page and six locales' worth of copy, and
-							 * nothing anywhere linked to it — reachable only by typing the URL. It
-							 * belongs beside "Create Monitor" because that is the moment somebody with
-							 * a list of URLs is deciding how to enter them.
-							 */}
 							<LinkButton
 								href={routes.app.team.monitorsImport.href({ team: ctx.team.slug })}
 								color="neutral"

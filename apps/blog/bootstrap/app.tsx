@@ -62,34 +62,25 @@ import routes from "~/routes/web";
 import mcp from "./mcp";
 
 /**
- * Paths whose non-`GET` requests are served to machines rather than to readers.
- *
- * Exact paths rather than a prefix, so an unmatched path *beneath* one of these still gets
- * the full chain and renders the normal 404 page. Taken from the route table so the two
- * cannot drift apart.
+ * Paths where a non-`GET` request signals a machine caller, since a reader's browser sends
+ * only `GET` here. Matched exactly against the route table, so a path *beneath* one of
+ * these still falls through to the full chain and the normal 404 page.
  */
 const MACHINE_PATHS = new Set<string>([routes.mcp.index.href()]);
 
 /**
- * Whether a request is the machine half of a machine path.
- *
- * Method-aware because `/mcp` answers both: a `POST` is an agent speaking the protocol, and
- * a `GET` is a person who pasted the URL into a browser and needs the page — which means
- * the session, the redirects and the auth resolver a reader's page view depends on.
+ * Whether a request is the machine half of a machine path. Method-aware because `/mcp`
+ * answers both: a `POST` is an agent speaking the protocol, while a `GET` is a person who
+ * pasted the URL into a browser and needs the full reader page.
  */
 function isMachineRequest(ctx: RequestContext): boolean {
 	return ctx.method !== "GET" && MACHINE_PATHS.has(ctx.url.pathname);
 }
 
 /**
- * Scopes a middleware to the HTML surface.
- *
- * The session, the redirect lookup and the auth resolver all exist for a person's page
- * view. An MCP request carries no cookie and follows no redirect, so for it each one is
- * either wasted work or a KV read spent on nothing.
- *
- * The renderer deliberately stays outside this: it only builds a closure, and leaving it in
- * place means anything that ever does render under a machine path still can.
+ * Scopes a middleware to the HTML surface. The session, redirect lookup and auth resolver
+ * exist for a person's page view and would spend a KV read against a cookieless MCP
+ * request; the renderer stays exempt, since a closure costs the same regardless.
  *
  * @param middleware Middleware that only applies to pages.
  * @returns Middleware that passes machine requests straight through.
@@ -156,12 +147,11 @@ export default function createApplication(env: App.Env) {
 	router.map(routes.post, post);
 	router.map(routes.postRelated, postRelated);
 
-	// The MCP endpoint, outside every auth guard for the same reason the public pages are:
-	// its whole point is that somebody's agent can read this blog without an account.
-	//
-	// `database()` rather than the container: an MCP tool receives only a context, so what it
-	// needs has to be in that context, and scoping the middleware to this route leaves every
-	// other handler resolving services the way it already did.
+	/**
+	 * The MCP endpoint sits outside every auth guard, keeping the blog freely readable by
+	 * any agent, and resolves its services via `database()` because an MCP tool's handler
+	 * receives only a context to work with.
+	 */
 	router.map(routes.mcpMarkdown, mcpMarkdownPage);
 	router.map(routes.mcp, {
 		actions: {

@@ -13,11 +13,9 @@
 export const JSONRPC_VERSION = "2.0";
 
 /**
- * The JSON-RPC error codes this server produces.
- *
- * The standard range is JSON-RPC's own. The `-32020` block is the sub-range MCP reserves
- * for protocol-defined errors; `-32000` to `-32019` is the legacy sub-range that new
- * implementations must not allocate from, which is why nothing here uses it.
+ * The JSON-RPC error codes this server produces. The `-32020` block is the sub-range MCP
+ * reserves for protocol-defined errors; `-32000` to `-32019` is the legacy sub-range new
+ * implementations must not allocate from.
  */
 export const ErrorCode = {
 	/** The body was not JSON. */

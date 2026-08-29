@@ -2,10 +2,9 @@
  * The tool declaration tree: the equivalent of a route table, where a tool's name is its
  * address and its input schema is the contract that types the handler.
  *
- * Declaration is separate from handling for the same reason `remix/routes` is separate
- * from `remix/router`. This file says what exists and what it takes; binding a handler
- * and its middleware happens at `map()`, which is where an application's own concerns
- * belong. Nothing here reads a request or runs anything.
+ * Declaration is separate from handling: this file says what exists and what it takes,
+ * while binding a handler and its middleware happens at `map()`, where an application's
+ * own concerns belong. Nothing here reads a request or runs anything.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,12 +14,9 @@ import type { AnyRequestContext, ToolContext } from "./context";
 import type { FromObjectSchema, ObjectSchema } from "./schema";
 
 /**
- * Behavioural hints a client shows a person before letting a tool run.
- *
- * They are hints, not enforcement: nothing here changes what a handler may do, and a
- * client may ignore them. Stating them is still worth it, because the approval prompt a
- * person sees is built from them — `readOnlyHint` in particular is what lets a client
- * run a tool without stopping to ask.
+ * Hints a client may weigh when shaping the approval prompt a person sees before a tool
+ * runs — `readOnlyHint` in particular is what lets a client run the tool without
+ * stopping to ask.
  */
 export interface ToolAnnotations {
 	/** Human-readable name, shown in place of the tool's identifier. */
@@ -42,8 +38,8 @@ export interface ToolDefinition<Schema extends ObjectSchema> {
 	/**
 	 * What the tool does and when to reach for it.
 	 *
-	 * This is the prompt. It is the only thing a model reads when deciding between this
-	 * tool and its neighbours, so it should say what the tool is for, not how it works.
+	 * This is the prompt — the only thing a model reads when choosing between this tool
+	 * and its neighbours, so it should focus on purpose and occasion for use.
 	 */
 	description: string;
 	/** The arguments, as JSON Schema. Also the source of the handler's argument type. */
@@ -51,8 +47,8 @@ export interface ToolDefinition<Schema extends ObjectSchema> {
 	/**
 	 * The shape of the structured result, when the tool returns one.
 	 *
-	 * Declaring it is what makes a result machine-readable rather than prose a model has
-	 * to re-parse, and MCP only permits `structuredContent` when it is declared.
+	 * Declaring it gives a model a result it can consume directly as data, and MCP only
+	 * permits `structuredContent` when it is declared.
 	 */
 	output?: ObjectSchema;
 	annotations?: ToolAnnotations;
@@ -83,11 +79,9 @@ export interface Tool<Schema extends ObjectSchema = ObjectSchema> {
 }
 
 /**
- * The characters MCP allows in a tool name.
- *
- * Enforced at declaration rather than left to convention, because a name outside this
- * set has to be Base64-encoded to survive the `Mcp-Name` header — so an unusual name
- * does not fail here, it fails later in a client, on one transport, as a header mismatch.
+ * The characters MCP allows in a tool name, checked at declaration. A name outside this
+ * set must be Base64-encoded to survive the `Mcp-Name` header, so catching it here
+ * avoids a header mismatch appearing later, one transport at a time.
  */
 const TOOL_NAME = /^[a-zA-Z0-9_.-]{1,128}$/;
 
@@ -138,11 +132,9 @@ export function isTool(value: Tool | ToolGroup): value is Tool<never> {
 }
 
 /**
- * Groups declared tools, checking that no name is used twice.
- *
- * Grouping is what lets one `map()` call cover several tools under a shared middleware
- * chain, the way a route group does. It carries no prefix and changes no name: a tool's
- * address is the name it was declared with, wherever it sits in the tree.
+ * Groups declared tools, checking that no name is used twice. Grouping is what lets one
+ * `map()` call cover several tools under a shared middleware chain — a tool's address
+ * stays the name it was declared with, wherever it sits in the tree.
  *
  * @param group Tools and nested groups.
  * @returns The same tree, typed so `map()` can require an action per tool.
@@ -180,8 +172,8 @@ export function* walk(group: ToolGroup): Generator<Tool> {
 /**
  * The argument type a tool's handler receives.
  *
- * Exported so a middleware bound to one tool can name that tool's input rather than
- * accepting the erased default.
+ * Exported so a middleware bound to one tool can name that tool's own input type
+ * directly.
  *
  * @example
  * function requireOwnMonitor(): ToolMiddleware<InputOf<typeof toolset.monitors.get>> {}
@@ -207,17 +199,9 @@ export interface CallToolResult {
 }
 
 /**
- * Middleware wrapping a tool call.
- *
- * Distinct from `remix/router`'s `Middleware`, which wraps the HTTP request and returns a
- * `Response`: a tool call is not a request and its answer is not a response, so a
- * middleware that meters or logs an outcome needs the result itself. Request-level
- * concerns — authentication, logging, providing a database — are remix middleware on the
- * route, not this.
- *
- * The default `Input` is erased, and because parameters are contravariant a middleware
- * written against it is assignable anywhere. Name a tool's input with {@link InputOf} only
- * when the middleware actually reads `ctx.input`.
+ * Middleware wrapping a tool call, given the call's own result directly so it can meter
+ * or log the outcome. The erased default `Input` keeps this assignable across every
+ * tool; name it with {@link InputOf} only when the middleware reads `ctx.input`.
  */
 export type ToolMiddleware<Input = Record<string, unknown>> = (
 	ctx: ToolContext<Input>,
@@ -237,12 +221,9 @@ export type ToolHandler<Input = Record<string, unknown>> = (
 /** One tool's handler, with the middleware and visibility that belong to it alone. */
 export interface Action<Schema extends ObjectSchema = ObjectSchema> {
 	/**
-	 * Whether this tool exists for this caller.
-	 *
-	 * A tool this returns `false` for is absent from `tools/list` and reported by
-	 * `tools/call` as an unknown tool, so a read-only credential never learns that a write
-	 * tool is there. It runs before any argument is read, which is why it takes the request
-	 * context rather than a tool context.
+	 * Whether this tool exists for this caller. A tool this returns `false` for is absent
+	 * from `tools/list` and reported by `tools/call` as unknown, so a read-only credential
+	 * never learns a write tool exists — checked before any argument is read.
 	 */
 	available?(ctx: AnyRequestContext): boolean;
 	middleware?: ToolMiddleware<FromObjectSchema<Schema>>[];
@@ -255,11 +236,9 @@ export type ActionOrHandler<Schema extends ObjectSchema = ObjectSchema> =
 	| ToolHandler<FromObjectSchema<Schema>>;
 
 /**
- * Handlers for every tool in one group, under a shared middleware chain.
- *
- * A nested group resolves to `never`, so it cannot be answered here and has to be mapped
- * by its own call — the same rule `remix/router` applies to nested route maps, so each
- * controller owns exactly one level.
+ * Handlers for every tool in one group, under a shared middleware chain. A nested group
+ * resolves to `never`, so it cannot be answered here — it needs its own call, keeping
+ * each controller responsible for exactly one level of the tree.
  */
 export interface Controller<Group extends ToolGroup> {
 	middleware?: ToolMiddleware[];
@@ -269,11 +248,9 @@ export interface Controller<Group extends ToolGroup> {
 }
 
 /**
- * Types one tool's implementation against its declaration, so it can live in its own file.
- *
- * Purely a type anchor at runtime — it returns what it was given. Its value is that a
- * handler written apart from the `map()` call still gets `ctx.input` typed from the
- * schema, which is what `createAction` does for a route in `remix/router`.
+ * Types one tool's implementation against its declaration, so it can live in its own
+ * file. Purely a type anchor at runtime — it returns what it was given, and lets a
+ * handler written apart from the `map()` call still get `ctx.input` typed from the schema.
  *
  * @param tool The declared tool this implements.
  * @param action The handler, or an action object with middleware and visibility.
@@ -289,11 +266,9 @@ export function createTool<Schema extends ObjectSchema>(
 }
 
 /**
- * Types a whole group's implementations against their declarations.
- *
- * The `createController` of this package: one file owns one group, and every tool in that
- * group must be answered, so a tool added to the declaration is a type error until it is
- * handled.
+ * Types a whole group's implementations against their declarations, requiring one
+ * action per tool the group declares. A tool added later is therefore a type error
+ * until this controller's `actions` answers for it.
  *
  * @param group The declared group this implements.
  * @param controller Shared middleware and one action per tool.

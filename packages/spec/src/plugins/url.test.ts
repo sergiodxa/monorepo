@@ -23,12 +23,10 @@ import { createUrlPlugin } from "./url";
 
 const PLUGIN = createUrlPlugin();
 
-/** Wrap a runtime value as a positional value argument. */
 function value(data: Value): ToolArg {
 	return { kind: "value", value: data };
 }
 
-/** Wrap a bare identifier as a word argument. */
 function word(name: string): ToolArg {
 	return { kind: "word", word: name };
 }

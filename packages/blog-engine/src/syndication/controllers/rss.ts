@@ -22,8 +22,8 @@ import { excerptFor } from "../../shared/components/post-render";
 import { renderNotFound } from "../../shared/not-found";
 
 /**
- * Builds RSS items for one post type's published posts (drafts and scheduled posts
- * are skipped), linking each to its absolute URL.
+ * Builds RSS items for one post type's published posts, linking each to its
+ * absolute URL.
  * @param db - Database handle.
  * @param origin - The request origin used to build absolute links.
  * @param type - The post type whose posts become feed items.

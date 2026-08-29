@@ -40,10 +40,9 @@ export function calculateSslStatus(
 }
 
 /**
- * Whether a status warrants an alert today. `expired` always does; `expiring` does on
- * every day within any of {@link WARNING_THRESHOLDS_DAYS} of expiry — deliberately not
- * edge-triggered, so a renewal reminder repeats daily until the cert is renewed.
- * Per-alert cooldown (`docs/alerts.md`) is what keeps this from spamming.
+ * Whether a status warrants an alert today. `expired` always does; `expiring`
+ * does every day within {@link WARNING_THRESHOLDS_DAYS} of expiry, repeating
+ * daily until renewal. Per-alert cooldown (`docs/alerts.md`) prevents spam.
  */
 export function shouldAlertOnSslStatus(status: SslStatus, daysUntilExpiry: number | null): boolean {
 	if (status === "expired") return true;

@@ -2,15 +2,9 @@
  * Cloudflare Worker entry point for the uptime app. Its `fetch` handler resolves
  * the session cookie secret, opens a service-container scope, builds the application
  * router, and forwards the request to it. Its `scheduled` handler dispatches cron
- * triggers, and its `queue` handler validates and runs the matching background job — for
- * the work queue and for the dead-letter queue both, since one handler serves every queue
- * the worker consumes. Re-exports the `GeoFetchDO` Durable Object class its binding needs.
- *
- * Each of the three handlers is also where a unit of work's cost ledger begins and ends
- * (ADR-007 §3): `fetch` and `scheduled` open one directly, while a queue batch's jobs get
- * one each from the usage tracker — a batch is a single invocation running up to ten jobs
- * concurrently, and one ledger between them would pool their cost into a number that
- * answers nothing.
+ * triggers, and its `queue` handler validates and runs the matching background job,
+ * for both the work queue and its dead-letter queue. Re-exports the `GeoFetchDO`
+ * Durable Object class its binding needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -95,9 +89,8 @@ const QueueMessageSchema = s.variant("type", {
 	sendTeamWeeklyDigests: s.object({ type: s.literal("sendTeamWeeklyDigests") }),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
-	 * so the notification never runs on the sweep's critical path. The statuses are
-	 * validated loosely here (the set of valid values differs per monitor type) and
-	 * strictly by `NotifyJob` itself.
+	 * so the notification never runs on the sweep's critical path. Validated loosely here,
+	 * since valid values differ per monitor type, and strictly by `NotifyJob` itself.
 	 */
 	notify: s.object({
 		type: s.literal("notify"),
@@ -109,10 +102,9 @@ const QueueMessageSchema = s.variant("type", {
 });
 
 /**
- * Name of the dead-letter queue, as declared in `wrangler.jsonc` (ADR-018). This worker
- * consumes two queues and the platform delivers both to the single `queue` handler below,
- * so the name has to exist in code as well as in config: `MessageBatch.queue` carries it,
- * and it is the only thing that says which queue a batch came from.
+ * Name of the dead-letter queue, as declared in `wrangler.jsonc` (ADR-018). Both
+ * queues this worker consumes deliver to the single `queue` handler below, so
+ * `MessageBatch.queue` is the only way to tell which queue a batch came from.
  */
 const DEAD_LETTER_QUEUE = "ping-dlq";
 
@@ -132,32 +124,24 @@ function isSecureHost(request: Request): boolean {
  * @param controller The trigger being dispatched.
  */
 async function dispatchCron(controller: ScheduledController): Promise<void> {
-	// Every minute: enqueue a `checkHttp` message for every monitor due for a check,
-	// plus a sweep of cron-job monitors for late/missed transitions and the TCP and DNS
-	// sweeps, which claim only the monitors their own `interval_seconds` has made due.
+	/**
+	 * Every minute: enqueue a `checkHttp` message for every due monitor, plus a sweep for
+	 * cron-job, TCP, and DNS monitors, each of which claims only what its own
+	 * `interval_seconds` has made due.
+	 */
 	if (controller.cron === "* * * * *") {
 		let db = getServiceContainer().get(Database);
 		/**
-		 * Claims the monitors that are due, advancing each one's next due time as it
-		 * does, so the later deliveries of this same minute's cron find nothing left to
-		 * enqueue.
-		 *
-		 * Nothing here asks about billing any more (ADR-005). Revoking a subscription
-		 * unschedules that owner's monitors the moment the webhook lands, so `next_due_at`
-		 * already carries the answer and a claimed monitor is by construction one that is
-		 * allowed to run. This used to ask Polar once per distinct owner per delivery —
-		 * 43,200 × K requests a month as one wide `Promise.all` burst — through a call that
-		 * returns `false` on any error, so a Polar outage silently stopped every customer's
-		 * monitoring.
+		 * Claims monitors due now, advancing each one's next due time so later deliveries
+		 * within the same minute enqueue nothing more. Billing is already decided by
+		 * `next_due_at` (ADR-005), replacing a per-owner Polar check that failed silently.
 		 */
 		let due = await Monitor.findDue(db, controller.scheduledTime);
 
 		/**
-		 * The claim, this invocation, and the four sweep messages below are all caused
-		 * collectively by whoever was due, so they are split by due monitors per team
-		 * (ADR-007 §5). Note what that means on a quiet platform: a customer with a single
-		 * 1-minute monitor absorbs nearly the whole scan. That is not an artifact — it is
-		 * the signal ADR-003 exists to remove.
+		 * The claim, this invocation, and the four sweep messages below are split by due
+		 * monitors per team (ADR-007 §5): a customer with one 1-minute monitor absorbing
+		 * nearly the whole scan is the signal ADR-003 exists to surface.
 		 */
 		apportionCostByTeam(due.map((monitor) => monitor.team_id));
 
@@ -167,9 +151,9 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 					due.map((monitor) => ({
 						type: "checkHttp",
 						/**
-						 * Deliberately one id per monitor per minute, not per delivery — see
-						 * `Monitor.scheduledJobId` for why this cron fires more than once a
-						 * minute and what collides when it does.
+						 * Keyed to the monitor and the minute, so every delivery within that minute
+						 * collides onto the same id — see `Monitor.scheduledJobId` for why this cron
+						 * can fire more than once a minute.
 						 */
 						id: Monitor.scheduledJobId(monitor.id, controller.scheduledTime),
 						monitorId: monitor.id,
@@ -180,83 +164,67 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 		}
 		waitUntil(sendQueueMessage({ type: "checkCronJobs" }));
 		/**
-		 * Every minute rather than the 5-minute and hourly triggers these used to have,
-		 * because a monitor's `interval_seconds` can be as fine as 60 and a coarser
-		 * delivery made the finer setting unreachable. Both jobs claim before they check,
-		 * so a delivery with nothing due costs one indexed range that matches no rows.
+		 * Fires every minute so a monitor's `interval_seconds`, as fine as 60, stays
+		 * reachable. Both jobs claim before they check, so a delivery with nothing due
+		 * costs only an indexed range that matches no rows.
 		 */
 		waitUntil(sendQueueMessage({ type: "checkTcp" }));
 		waitUntil(sendQueueMessage({ type: "checkDns" }));
 		/**
-		 * Flow monitors too, even though their finest interval is fifteen minutes (ADR-027 §7a).
-		 * Sharing this delivery rather than taking a trigger of its own for the same reason the
-		 * two above share it: the claim reads an indexed range that matches nothing in the
-		 * minutes when nothing is due, which is cheaper than a trigger per monitor type.
+		 * Flow monitors too, even though their finest interval is fifteen minutes
+		 * (ADR-027 §7a). They share this delivery for the same reason the two jobs above
+		 * do: the claim matches nothing when none is due, cheaper than a trigger per type.
 		 */
 		waitUntil(sendQueueMessage({ type: "checkFlows" }));
 	}
 
-	// Every 10 minutes: re-enqueue verification for every unverified team domain.
 	if (controller.cron === "*/10 * * * *") {
 		waitUntil(sendQueueMessage({ type: "enqueuePendingDomains" }));
 	}
 
 	/**
-	 * Hourly: re-check the URLs left on the public trial page. Its own trigger rather than a
-	 * share of the every-minute one, because an hour is the free watch's whole cadence and is
-	 * fixed by the product — the sweep claims before it checks, so a finer delivery would read
-	 * an indexed range that matches nothing in fifty-nine minutes out of sixty and pay for the
-	 * queue hop each time.
+	 * Runs on its own hourly trigger to re-check the URLs left on the public trial page,
+	 * since an hour is the free watch's whole cadence and is fixed by the product. The
+	 * sweep claims before it checks, so a finer delivery would match nothing most minutes.
 	 */
 	if (controller.cron === "0 * * * *") {
 		waitUntil(sendQueueMessage({ type: "checkTrialWatches" }));
 	}
 
-	// Daily at midnight: purge old `monitor_results` and `cron_job_pings` rows.
 	if (controller.cron === "0 0 * * *") {
 		waitUntil(sendQueueMessage({ type: "clean" }));
 		waitUntil(sendQueueMessage({ type: "cleanCronJobPings" }));
 	}
 
-	// Daily at 1 AM UTC: roll up yesterday's checks into `monitor_daily_stats`.
 	if (controller.cron === "0 1 * * *") {
 		waitUntil(sendQueueMessage({ type: "aggregateDailyStats" }));
 	}
 
-	// Daily at 2 AM UTC: repair the subscription projection against Polar, in case a
-	// webhook was missed. The one Polar query left on the billing path.
+	/**
+	 * Daily at 2 AM UTC: repair the subscription projection against Polar, in case a
+	 * webhook was missed. The one Polar query left on the billing path.
+	 */
 	if (controller.cron === "0 2 * * *") {
 		waitUntil(sendQueueMessage({ type: "reconcileSubscriptions" }));
 	}
 
-	// Daily at 3 AM UTC: price yesterday's recorded cost per team and report it to Polar.
 	if (controller.cron === "0 3 * * *") {
 		waitUntil(sendQueueMessage({ type: "reportCosts" }));
 	}
 
 	/**
-	 * Daily at 4 AM UTC: erase the accounts queued for deletion.
-	 *
-	 * After 02:00, so the subscription reconciliation has already finished and cannot re-write a
-	 * projection row for an account being deleted, and on its own hour rather than sharing 03:00
-	 * so a failure in the cost report neither delays nor is delayed by somebody's erasure. Once
-	 * a day is what makes the delay a grace period rather than a limitation: the request is
-	 * cancellable for as long as it sits in the queue.
+	 * Daily at 4 AM UTC: erases the accounts queued for deletion. Runs after 02:00, once
+	 * reconciliation has finished and cannot re-write a row being deleted, and on its own
+	 * hour so a cost-report failure and an account erasure never delay each other.
 	 */
 	if (controller.cron === "0 4 * * *") {
 		waitUntil(sendQueueMessage({ type: "deleteAccounts" }));
 	}
 
 	/**
-	 * Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor, and send
-	 * the free trial's daily digests.
-	 *
-	 * The digest rides the last of the daily triggers on purpose. It has to run after midnight
-	 * UTC, since the once-a-day bound it enforces is counted against that boundary, and it has
-	 * to stay clear of the midnight cleanup, which is what deletes expired watches and orphaned
-	 * leads — six hours is more than that sweep can take, so a digest is never assembled from
-	 * rows being deleted underneath it. 06:00 UTC is also the most humane of the five for an
-	 * email a person actually reads.
+	 * Daily at 6 AM UTC: re-evaluates SSL certificate status for every HTTP monitor and
+	 * sends the free trial's daily digests. Running six hours after the midnight cleanup
+	 * that deletes expired watches and leads keeps every digest built from settled rows.
 	 */
 	if (controller.cron === "0 6 * * *") {
 		waitUntil(sendQueueMessage({ type: "checkSsl" }));
@@ -264,36 +232,27 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 	}
 
 	/**
-	 * Daily at 7 AM UTC: count yesterday's trial funnel, store the day, and mail the report.
-	 *
-	 * Last of the daily triggers, and on its own hour rather than sharing 06:00, so a failure in
-	 * the SSL sweep or the digests neither delays nor is delayed by a report about them. It
-	 * reads only the previous UTC day, so the midnight cleanup finished seven hours before it
-	 * starts and cannot be deleting rows it is counting.
+	 * Daily at 7 AM UTC: counts yesterday's trial funnel, stores the day, and mails the
+	 * report, on its own hour so an SSL-sweep or digest failure and this report stay
+	 * independent. Reading only the previous UTC day keeps it clear of the midnight cleanup.
 	 */
 	if (controller.cron === "0 7 * * *") {
 		waitUntil(sendQueueMessage({ type: "sendFunnelReport" }));
 	}
 
 	/**
-	 * Daily at 8 AM UTC: mail every team's members yesterday's monitor digest.
-	 *
-	 * After the 01:00 roll-up, because that is what writes the day this reports, and on its own
-	 * hour rather than sharing 06:00 or 07:00 so a failure in the SSL sweep, the trial digests or
-	 * the funnel report neither delays nor is delayed by mail going to paying customers. It is
-	 * also the last of the daily triggers, which makes it the most humane hour of the five for
-	 * something a person reads.
+	 * Daily at 8 AM UTC: mails every team's members yesterday's monitor digest. Runs after
+	 * the 01:00 roll-up that writes the day it reports, on its own hour so failures in the
+	 * SSL sweep, trial digests, or funnel report stay independent of mail reaching customers.
 	 */
 	if (controller.cron === "0 8 * * *") {
 		waitUntil(sendQueueMessage({ type: "sendTeamDailyDigests" }));
 	}
 
 	/**
-	 * Mondays at 9 AM UTC: the same digest over the last seven days.
-	 *
-	 * Monday because the week it reports is the one that just ended, and an hour after the daily
-	 * one because on this day a member gets both — the two are separate switches and a reader who
-	 * turned one off still gets the other, so neither may depend on the other having run.
+	 * Mondays at 9 AM UTC: the same digest over the last seven days. Monday because the
+	 * week it reports just ended, and an hour after the daily one because a member can get
+	 * both from independent switches, so neither may depend on the other having run.
 	 */
 	if (controller.cron === "0 9 * * 1") {
 		waitUntil(sendQueueMessage({ type: "sendTeamWeeklyDigests" }));
@@ -314,9 +273,8 @@ export default {
 			});
 			/**
 			 * Which team a request is for is settled downstream — `requireTeam` for the app,
-			 * the status-page controller for a public one — so the ledger opens unattributed
-			 * and is told once the request has resolved whose it is. One that never does (a
-			 * marketing page, a 404) is platform cost, which is the truth.
+			 * the status-page controller for a public one — so the ledger opens unattributed and
+			 * is told once resolved. One that never resolves (a marketing page, a 404) is platform cost.
 			 */
 			return await trackCost(new CostLedger({ handler: "fetch" }), () => app.fetch(request));
 		});
@@ -366,12 +324,9 @@ export default {
 					logger.error("queue.invalid_message", { body: message.body });
 
 					/**
-					 * Sent to the dead-letter queue explicitly rather than by `message.retry()`:
-					 * a body that matched no schema won't match one on the fourth delivery
-					 * either, so retrying would spend three redeliveries to arrive at the same
-					 * queue. Acking on its own is what used to happen here, and it discarded the
-					 * payload. The `invalid` wrapper is what tells `DeadLetterJob` this body
-					 * failed validation rather than exhausted its retries.
+					 * Sent explicitly to the dead-letter queue, since a body matching no schema
+					 * stays invalid across redeliveries. The `invalid` wrapper tells `DeadLetterJob`
+					 * this failed validation, distinct from a message that exhausted its retries.
 					 */
 					await env.DLQ.send({ invalid: message.body }, { contentType: "json" });
 
@@ -441,7 +396,10 @@ export default {
 						waitUntil(NotifyJob.run({ message, uptime }));
 						break;
 					default:
-						// Valid message, but this phase doesn't implement its job yet.
+						/**
+						 * Acknowledges the message immediately, so a valid type without a matching
+						 * case is never retried.
+						 */
 						message.ack();
 				}
 			}

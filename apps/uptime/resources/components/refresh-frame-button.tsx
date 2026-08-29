@@ -1,18 +1,14 @@
 /**
- * Client island: a link that reloads the `Frame` it is rendered inside, spinning
- * its icon for as long as the reload is in flight.
+ * Client island: a link that reloads the `Frame` it is rendered inside,
+ * spinning its icon while the reload is in flight.
  *
- * It renders as a real anchor carrying the `link` mixin's `rmx-target`/`rmx-src`
- * attributes, so before this module hydrates — and with no JS at all — a click
- * still refreshes: the runtime's own navigation listener re-navigates the named
- * frame, or, failing that, the browser follows {@link RefreshFrameButtonProps.href}
- * as an ordinary page load. Once hydrated, `on("click")` takes over instead and
- * reloads the enclosing frame directly, which is what lets it hold a pending
- * state across the request and rotate the icon while it waits.
+ * It renders as a real anchor with the `link` mixin's `rmx-target`/`rmx-src`
+ * attributes, so a pre-hydration click still refreshes via the runtime's nav
+ * listener, or falls back to {@link RefreshFrameButtonProps.href} as a page
+ * load. Once hydrated, `on("click")` takes over, reloading the frame directly
+ * and holding a pending state to spin the icon while it waits.
  *
- * Its label comes in as a prop rather than through `@pkg/i18n/ui`'s
- * `intl(handle)`, since the fragments this renders inside wire up no
- * `IntlProvider` of their own for the server-rendered pass.
+ * Its label arrives as a prop, since these fragments render without an `IntlProvider` to source it from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,7 +33,11 @@ type RefreshFrameButtonProps = {
 	label: string;
 };
 
-/** Reloads the enclosing frame from {@link RefreshFrameButtonProps.src}, spinning its icon until the reload settles. */
+/**
+ * Reloads the enclosing frame from {@link RefreshFrameButtonProps.src},
+ * spinning its icon until the reload settles. Modified and non-primary clicks
+ * pass through to the browser so the fallback page can still open in a new tab.
+ */
 export const RefreshFrameButton = clientEntry(
 	"/resources/components/refresh-frame-button.tsx#RefreshFrameButton",
 	function RefreshFrameButton(handle: Handle<RefreshFrameButtonProps>) {
@@ -56,8 +56,6 @@ export const RefreshFrameButton = clientEntry(
 					mix={[
 						link(href, { target, src, resetScroll: false }),
 						on("click", async (event) => {
-							// Modified and non-primary clicks stay the browser's to handle, so
-							// opening the fallback page in a new tab keeps working.
 							if (event.button !== 0) return;
 							if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 

@@ -1,29 +1,9 @@
 /**
- * Tests the DNS monitor detail page's three `Frame`s end to end, through the app's real
- * renderer: the document request dispatches each frame's `src` back through the same
- * router, so every fragment controller runs for real — middleware chain, current schema,
- * migrated tables — and their HTML has to land inside the document.
- *
- * The page's own tests stub `resolveFrame` to an empty string, which makes every frame
- * look like it resolved to nothing and lets a page whose frames never arrive ship
- * unnoticed. This file imports `~/app/http/render` instead of restating it, so the code
- * under test is the code that runs in production.
- *
- * A frame's content reaches the client as a `<template>` streamed after the document, and
- * that template is the only thing that ends the skeleton — so every case here asserts it
- * arrived, closed, under the id the document's own placeholder carries. Asserting on the
- * fragment's markup alone does not: a fragment can render perfectly and still never be
- * emitted, which is precisely how a page with permanent skeletons passed its tests.
- *
- * The last two cases are the failure mode itself, once for each side of it. A fragment
- * response's headers exist before its HTML does, so a fragment can fail either before the
- * response — a handler that threw — or after it, while its body renders. Both used to end
- * the same way: no template, no error, a skeleton the visitor keeps forever.
- *
- * The record list is seeded rather than left empty, so the table the page renders inline
- * between the frames is actually emitted and can be checked for the markup a browser would
- * foster-parent out of it — which would relocate everything after it, the check-history
- * placeholder that sits directly below it included.
+ * Tests the DNS monitor detail page's three `Frame`s end to end through the app's real
+ * renderer, so every fragment controller runs under production's middleware chain and its
+ * markup has to actually reach the client for a case to pass. Each case asserts a frame's
+ * `<template>` streamed and closed under its placeholder's id, since a fragment can render
+ * valid markup and still never be sent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,9 +57,8 @@ const BASE_URL = "https://uptime.test";
 
 /**
  * The CSS declarations a rendered element's classes resolve to, read out of the `<style>`
- * tags the renderer emits alongside the markup. `css()` mixins turn into generated class
- * names, so a layout assertion has to go through them rather than matching a class name
- * that changes whenever the rule does.
+ * tags the renderer emits — `css()` mixins turn into generated class names, so a layout
+ * assertion has to compare declarations, since the class name itself changes with the rule.
  */
 function declarationsFor(html: string, classAttribute: string): string {
 	let rules = new Map<string, string>();
@@ -94,13 +73,9 @@ function declarationsFor(html: string, classAttribute: string): string {
 }
 
 /**
- * Every frame placeholder in the document that no template ever answered — which is the
- * page's permanent-skeleton list, since the placeholder is a region the client keeps
- * showing its fallback in until a closed `<template>` of the same id arrives.
- *
- * Only closed templates count. A template whose fragment died halfway through its body is
- * never terminated, the browser cannot use it, and matching on the opening tag alone would
- * report it as present.
+ * Every frame placeholder in the document that no template ever answered — the client keeps
+ * showing its fallback until a closed `<template>` of the same id arrives, so only a closed
+ * tag counts: a fragment that died mid-body leaves its template unterminated.
  */
 function unresolvedFrameIds(html: string): string[] {
 	let streamed = new Set(
@@ -115,10 +90,9 @@ function unresolvedFrameIds(html: string): string[] {
 }
 
 /**
- * Where each frame placeholder sits in the document, in document order — which is the only
- * handle a test has on *which* frame is which, since the id in the placeholder is generated
- * rather than the name the page declared. Document order is also what the client honours:
- * a frame fills the region it was declared in, so position is the page's layout contract.
+ * Where each frame placeholder sits in the document, in document order — the only handle a
+ * test has on *which* frame is which, since the placeholder's id is generated and carries no
+ * relation to the name the page declared. Document order is also the client's layout contract.
  */
 function frameOffsets(html: string): number[] {
 	return [...html.matchAll(/<!-- rmx:f:\S+ -->/g)].map((match) => match.index);
@@ -135,12 +109,8 @@ const ALLOWED_TABLE_CHILDREN: Record<string, readonly string[]> = {
 
 /**
  * Everything the browser's parser would foster-parent out of a table: an element, or text,
- * sitting directly inside `<table>`/`<tbody>`/`<tr>` rather than inside a cell.
- *
- * Worth checking rather than trusting, because the server's output can be a perfectly
- * balanced string and still parse into a different tree than it reads as. Hoisted content
- * is moved to just before the table, taking whatever follows it out of position — which on
- * this page would mean the frame placeholders themselves.
+ * that lands as a direct child of `<table>`/`<tbody>`/`<tr>`, outside any cell. Hoisted
+ * content moves to just before the table, carrying whatever follows it along.
  */
 function fosterParentedContent(html: string): string[] {
 	let offenders: string[] = [];
@@ -167,8 +137,6 @@ function fosterParentedContent(html: string): string[] {
 		}
 
 		if (allowed && !allowed.includes(name)) offenders.push(`<${name}> in <${parent}>`);
-		// Only table structure needs tracking: anything nested inside a cell is the cell's
-		// business, and a `<td>` on the stack is what makes its own children legal.
 		if (selfClosing !== "/" && name in ALLOWED_TABLE_CHILDREN) stack.push(name);
 		if (name === "td" || name === "th") stack.push(name);
 	}
@@ -201,7 +169,11 @@ namespace createHarness {
 	}
 }
 
-/** One team, one DNS monitor, and the page plus every fragment route on a single router. */
+/**
+ * One team, one DNS monitor, and the page plus every fragment route on a single router,
+ * seeded with one record per state a row can be drawn in so the inline table between the
+ * frames renders every branch its cells have, including the watch toggle's own form.
+ */
 async function createHarness(options: createHarness.Options = {}) {
 	let { db } = createTestDatabase();
 
@@ -221,8 +193,6 @@ async function createHarness(options: createHarness.Options = {}) {
 		{ touch: true, returnRow: true },
 	);
 
-	// One record per state the row can be drawn in, so the inline table between the frames is
-	// rendered with every branch its cells have — including the watch toggle's own form.
 	for (let record of [
 		{ record_type: "A", value: "1.2.3.4", status: "ok", is_enabled: true },
 		{ record_type: "MX", value: "10 mx.example.com", status: "new", is_enabled: false },
@@ -249,8 +219,6 @@ async function createHarness(options: createHarness.Options = {}) {
 		);
 	}
 
-	// Mirrors production: the renderer and the language resolver are global middleware, so
-	// a frame sub-request is rendered by the same request-scoped renderer the document is.
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
@@ -289,6 +257,11 @@ async function createHarness(options: createHarness.Options = {}) {
 }
 
 describe("the DNS monitor detail page's frames, resolved server-side", () => {
+	/**
+	 * Per-check latency stays on the row it belongs to, so a headline card's numbers describe
+	 * only the resolver's own speed, and a sweep that lost queries reports exactly how many
+	 * went unanswered.
+	 */
 	test("resolves the summary and check-history fragments instead of leaving their skeletons", async () => {
 		let harness = await createHarness();
 
@@ -313,20 +286,12 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let body = await (await harness.visit()).text();
 
 		expect(body).not.toContain("Frame error:");
-		// The template is what ends the skeleton, so it is what gets asserted: a fragment can
-		// render its whole tree and still never be streamed, and then this page looks exactly
-		// as broken as one whose fragment never ran.
 		expect(unresolvedFrameIds(body)).toEqual([]);
-		// Markup only the fragment route renders: with frame resolution stubbed out, every
-		// assertion below would be run against an empty string.
 		expect(body).toContain(en.page.dnsMonitorDetail.stats.successRate.label);
 		expect(body).toContain(en.page.dnsMonitorDetail.stats.totalChecks.label);
 		expect(body).toContain(en.page.dnsMonitorDetail.results.title);
 		expect(body).toContain("42ms");
-		// Per-check latency stays on the row it belongs to; averaging it into a headline card
-		// would report our resolver's speed as a fact about the visitor's DNS.
 		expect(body).not.toContain("Avg. Response Time");
-		// A sweep that lost queries knows less than a whole one did, and says so.
 		expect(body).toContain("2 queries did not answer");
 	});
 
@@ -371,18 +336,15 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * The page reads from claim to evidence, and the raw check log is the least-scanned
-	 * thing on it, so it goes last — under a record table that on a real zone runs to dozens
-	 * of rows. Order is a property of where the placeholders sit in the document, which is
-	 * the only thing the client can honour: a frame fills the region it was declared in.
+	 * The check log is the least-scanned thing on the page, so it goes last — under a record
+	 * table that on a real zone runs to dozens of rows. Order here is a property of placeholder
+	 * position in the document, the only layout contract the client honours.
 	 */
 	test("puts the check history last, below the record table", async () => {
 		let harness = await createHarness();
 
 		let body = await (await harness.visit()).text();
 
-		// A placeholder's id is generated, so the frames are told apart by where they sit —
-		// which is the same thing the assertion is about.
 		let [summary, uptimeHistory, checkHistory] = frameOffsets(body);
 		let records = body.indexOf(en.page.dnsMonitorDetail.records.title);
 
@@ -393,10 +355,9 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * The record table is rendered inline, between the frames, and a browser hoists content
-	 * it finds directly inside a table out of it — carrying everything that follows along.
-	 * The check-history placeholder sits directly below it, so a stray element in a row
-	 * would move the very region the client is waiting to fill.
+	 * The record table renders inline, between the frames, and a browser hoists content found
+	 * directly inside a table out of it, carrying everything after it along — the check-history
+	 * placeholder sitting just below included.
 	 */
 	test("emits the record table with nothing a browser would hoist out of it", async () => {
 		let harness = await createHarness();
@@ -408,10 +369,9 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * `StatCardSkeleton` renders bare cards deliberately, so several frames can share one
-	 * row a caller lays out. This page's frames each stand alone, so each has to open its
-	 * fallback with a row of its own — without one the placeholder cards stack flush, which
-	 * is not the shape any fragment resolves to.
+	 * `StatCardSkeleton` renders bare cards so several frames can share one row a caller lays
+	 * out. This page's frames stand alone, so each fallback opens its own row — the shape every
+	 * fragment here actually resolves to once it streams in.
 	 */
 	test("opens each frame's fallback with a row, so the placeholder cards are not flush", async () => {
 		let harness = await createHarness();
@@ -429,10 +389,9 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * A fallback of the wrong height moves the page when the frame swaps out, so the number
-	 * of placeholder cards has to be the number the fragment resolves to. The summary is two
-	 * cards — success rate and total checks — since the average-response-time card was
-	 * dropped, and a stale three-card fallback would leave a card-wide hole behind.
+	 * A fallback of the wrong height moves the page when the frame swaps out, so the number of
+	 * placeholder cards has to equal the fragment's own: two, since the summary now totals
+	 * success rate and total checks, each drawn as `Card`'s tinted `<section>`.
 	 */
 	test("holds exactly as many placeholder cards as the summary resolves to", async () => {
 		let harness = await createHarness();
@@ -442,15 +401,13 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let [summary, uptimeHistory] = frameOffsets(body);
 		let fallback = body.slice(summary, uptimeHistory);
 
-		// `Card` renders as a tinted `<section>`, so one match is one placeholder card.
 		expect([...fallback.matchAll(/<section data-color=/g)]).toHaveLength(2);
 	});
 
 	/**
-	 * A fragment that throws before it has a response at all. Frame resolution rejects, and a
-	 * rejection streams no `<template>` — so the client's frame never resolves and the
-	 * skeleton is what the visitor keeps. A failure has to become content, and the surviving
-	 * frame has to arrive regardless.
+	 * A fragment that throws before it produces a response: frame resolution rejects, and a
+	 * rejection streams no `<template>`, so a failure has to surface as visible content — an
+	 * error message — while the surviving frame still arrives.
 	 */
 	test("renders a fragment that throws as an error rather than an unresolvable skeleton", async () => {
 		let harness = await createHarness({
@@ -465,17 +422,13 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 
 		expect(body).toContain("Frame error: fragment blew up");
 		expect(unresolvedFrameIds(body)).toEqual([]);
-		// The failure is contained: the other frame still resolves.
 		expect(body).toContain(en.page.dnsMonitorDetail.uptimeHistory);
 	});
 
 	/**
-	 * The half the first fix missed, and the one every real fragment failure takes. A
-	 * fragment's response exists before its HTML does — `ctx.render` returns the moment its
-	 * stream is created — so a component that throws, or a query that rejects part-way
-	 * through the tree, fails *after* the response has been handed back. Left as a stream,
-	 * that failure lands inside the renderer, which drops the template and says nothing; the
-	 * page then looks precisely like one whose fragment was never requested.
+	 * A fragment's response exists before its HTML does — `ctx.render` returns the moment its
+	 * stream is created — so a component that throws mid-tree fails after the response already
+	 * shipped, and the renderer has to turn that stream failure into a visible error template.
 	 */
 	test("renders a fragment that fails while its body streams, not a silent skeleton", async () => {
 		let harness = await createHarness({

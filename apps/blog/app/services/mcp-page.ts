@@ -1,11 +1,10 @@
 /**
  * Loads the `/mcp` page's content from the bundled Markdown files, one per language.
  *
- * The page is prose rather than data, so it lives as Markdown the way a post does — which
- * also means it can be served *as* Markdown to the agents the page is about. The files are
- * bundled through `import.meta.glob`, so no request reads a filesystem, and parsing happens
- * per request rather than at module scope, where a parse failure would take the whole
- * Worker down at deploy time instead of failing one route.
+ * The page is prose content, so it lives as Markdown the way a post does — which also means
+ * it can be served *as* Markdown to the agents the page is about. The files are bundled
+ * through `import.meta.glob`, so each request reads an in-memory string, and parsing per
+ * request keeps a bad file's failure scoped to the one route that needed it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +39,8 @@ const markdown = new Markdown({ frontmatter: frontmatterSchema });
 /**
  * The bundled sources, keyed by path.
  *
- * Loaders rather than eager imports so the Markdown is a string the bundler resolves, not
- * work done when the module is first evaluated.
+ * Each entry is a loader, so the Markdown stays a string the bundler resolves and parsing
+ * runs only when a request asks for it, past the module's own evaluation.
  */
 const sources = import.meta.glob<string>("../../resources/content/mcp/*.md", {
 	query: "?raw",
@@ -64,11 +63,9 @@ export function isMcpPageLocale(value: string): value is McpPageLocale {
 }
 
 /**
- * Finds the language a request tag should be served in.
- *
- * An exact match wins, then a match on the base tag, so `es`, `es-MX` and `es-419` all reach
- * the Argentine Spanish page. There is one Spanish translation and there should be one: the
- * regional tag says which Spanish it is written in, not which readers it is for.
+ * Finds the language a request tag should be served in. An exact match wins, then a match
+ * on the base tag, so `es`, `es-MX` and `es-419` all reach the Argentine Spanish page — the
+ * regional tag identifies the written dialect, independent of the intended reader.
  *
  * @param tag A language tag, from a header or a query parameter.
  * @returns The language to serve, or `undefined` when the page is in none like it.
@@ -85,15 +82,9 @@ function matchLocale(tag: string): McpPageLocale | undefined {
 }
 
 /**
- * Picks the language to serve.
- *
- * An explicit `?lang=` wins, because a reader who asked for a language by hand has said
- * something their browser's settings cannot override — and because it is the only way to
- * link somebody to a translation, or to share one.
- *
- * Otherwise the first `Accept-Language` entry that matches, exactly or on its base tag, so
- * `es`, `es-MX` and `es-419` all reach the Argentine Spanish page. Quality values are
- * honoured only by order, which is what browsers send anyway.
+ * Picks the language to serve. An explicit `?lang=` wins first, since it is the only way to
+ * share a link to one translation regardless of browser settings; otherwise the first
+ * matching `Accept-Language` entry wins, honouring quality only by request order.
  *
  * @param url The request URL, read for `?lang=`.
  * @param acceptLanguage The request's `Accept-Language` header, when it sent one.
@@ -117,6 +108,9 @@ export function resolveMcpPageLocale(url: URL, acceptLanguage: string | null): M
 /**
  * Loads and parses the page in one language.
  *
+ * A locale missing its source file surfaces as a 500 error naming the locale, keeping a
+ * mismatch between the locale list and the bundled files diagnosable.
+ *
  * @param locale The language to load.
  * @returns The parsed page, or the parse error when the file's frontmatter is wrong.
  * @example
@@ -124,9 +118,6 @@ export function resolveMcpPageLocale(url: URL, acceptLanguage: string | null): M
  */
 export async function loadMcpPage(locale: McpPageLocale): Promise<Result<McpPage, Error>> {
 	let load = sources[`../../resources/content/mcp/${locale}.md`];
-	// Unreachable while the glob and the locale list agree; a guard rather than a `!` so
-	// adding a locale to the list without adding its file fails as a 500 with a message
-	// naming the missing file, not as `undefined is not a function`.
 	if (!load) return failure(new Error(`No MCP page source for locale "${locale}"`));
 
 	let raw = await load();

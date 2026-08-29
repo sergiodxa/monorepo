@@ -1,16 +1,13 @@
 /**
- * Discovery and checking for a domain monitor: it turns a domain — plus the names a pasted
- * zone file declares — into the records the monitor watches, and runs the sweep-and-diff one
- * check performs. It sits between the resolver, the zone-file parser and the record table so
- * every entry point that discovers (the API, the create form, a re-import) and every one that
- * checks discovers and checks identically.
+ * Discovery and checking for a domain monitor: turns a domain and any zone-file names into
+ * the records it watches, and runs the sweep-and-diff every check performs. Sits between
+ * the resolver, the zone-file parser and the record table so every entry point that
+ * discovers or checks does so identically.
  *
- * Nothing here retains the pasted text: callers hand it the parsed records, and what is
- * persisted is those records and the fact that an import happened.
- *
- * The limits every DNS surface quotes live here too, derived from the platform's subrequest
- * ceiling rather than repeated per caller, so a screen that refuses a zone and a job that
- * sweeps one can never be governed by two different numbers.
+ * What survives an import is the parsed records themselves and the fact that an import
+ * happened. The DNS limits every surface quotes live here too, derived from the platform's
+ * subrequest ceiling, so a screen that refuses a zone and a job that sweeps one share one
+ * number.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,75 +31,53 @@ import { normalizeDnsName } from "~/app/lib/dns-record-value";
 import { QUERIES_PER_NAME, sweepDnsName } from "~/app/services/dns-check";
 
 /**
- * Outbound subrequests one Worker invocation may make on the paid plan. Quoted here because
- * every other limit below is derived from it, and because the failure it guards against is a
- * hard one: the 1,001st subrequest throws, mid-sweep, for a domain whose records are almost
- * all fine.
+ * Outbound subrequests one Worker invocation may make on the paid plan. Every limit below is
+ * derived from this one, because the failure it guards against is unforgiving: the 1,001st
+ * subrequest throws mid-sweep, on a domain whose records are almost all fine.
  */
 const SUBREQUEST_LIMIT = 1_000;
 
 /**
- * How many of {@link SUBREQUEST_LIMIT} one invocation may spend on DNS queries.
- *
- * The remaining 400 are not slack: the monitor claim, the owner lookup, the queue batch, the
- * ping ingestion and — the part that scales — the several D1 statements each monitor's diff
- * reads and writes all leave through the same counter. Sizing the query budget at the full
- * ceiling would mean a sweep failing on its own bookkeeping rather than on its queries.
+ * How many of {@link SUBREQUEST_LIMIT} one invocation may spend on DNS queries; the
+ * remaining budget covers the monitor claim, owner lookup, queue batch, ping ingestion and
+ * each monitor's own D1 statements — sized so a sweep's failures trace to its queries.
  */
 export const INVOCATION_QUERY_BUDGET = Math.floor(SUBREQUEST_LIMIT * 0.6);
 
 /**
- * The most names one check of one monitor may sweep: the invocation's whole query budget,
- * expressed in the unit a customer's zone is measured in. 100 names is 600 queries.
- *
- * READ THIS BEFORE MERGING IT WITH {@link MAX_TRACKED_NAMES_PER_MONITOR}. The two are
- * different quantities that are deliberately equal, not one constant written twice:
- *
- * - this one is what a single invocation can *afford* — it comes from the platform's
- *   subrequest ceiling and would change if that ceiling, the reserve, or the number of record
- *   types swept per name changed;
- * - the other is what a monitor may *hold* — it comes from the product's promise that a zone
- *   we accept at import is a zone we can sweep whole on every check.
- *
- * Keeping the second derived from the first is what makes that promise true: an import cap
- * above this would accept zones that are truncated on every single check forever, and one
- * below it would refuse zones we can in fact sweep. If they ever need to diverge, the sweep
- * cap is the ceiling and the import cap must stay under it.
+ * The most names one check of one monitor may sweep, from the invocation's whole query
+ * budget. Equal to {@link MAX_TRACKED_NAMES_PER_MONITOR} on purpose — this is what an
+ * invocation can afford, and if the two ever diverge, this value is the ceiling.
  */
 export const MAX_NAMES_PER_CHECK = Math.floor(INVOCATION_QUERY_BUDGET / QUERIES_PER_NAME);
 
 /**
- * Most names one monitor may track, and therefore the most a single import may add.
+ * Most names one monitor may track, and therefore the most a single import may add. Enforced
+ * at import, while the user is still at the paste box, so a zone too large to sweep is
+ * refused before it is ever stored.
  *
- * Enforced at import rather than at check time on purpose: a zone that cannot be swept must
- * be refused while the user is still looking at the paste box, not silently truncated months
- * later in a background job. See {@link MAX_NAMES_PER_CHECK} for why it is derived from the
- * sweep cap rather than chosen.
+ * @see MAX_NAMES_PER_CHECK for why this value is derived from the sweep cap.
  */
 export const MAX_TRACKED_NAMES_PER_MONITOR = MAX_NAMES_PER_CHECK;
 
 /**
- * Names swept at once inside one check. Each one is already {@link QUERIES_PER_NAME} parallel
- * queries, so this sits below the flat sweeps' shared concurrency: the number that matters to
- * a resolver is queries in flight, not names, and a caller may run several checks at once —
- * the product of the two is what has to stay bounded.
- *
- * Workers holds at most six simultaneous outbound connections, so a number above six is
- * pipeline depth rather than parallelism: the excess queues instead of failing, which is what
- * makes overshooting cheap and undershooting expensive.
+ * Names swept at once inside one check. Each name is already {@link QUERIES_PER_NAME}
+ * parallel queries, and several checks may run at once, so this stays under the six
+ * simultaneous outbound connections Workers grants — a higher value only adds queuing depth.
  */
 const NAME_CONCURRENCY = 4;
 
 /** What a sweep of several names amounts to, in the shape the diff and the result row want. */
 export interface DnsSweep {
-	/** Only the queries that answered. A failed one is absent, never an empty answer. */
+	/**
+	 * Only the queries that answered — an empty answer means no records of that type; a
+	 * failed query is simply absent from the list.
+	 */
 	answers: DnsQueryAnswer[];
 	queriesFailed: number;
 	/**
-	 * The slowest single query, not the sum: this feeds a latency chart, not a cost one.
-	 *
-	 * `null` when not one name was reached at all, because the column is nullable for exactly
-	 * that and a zero there would read as an instant answer rather than as no answer.
+	 * The slowest single query, for a latency chart. `null` marks a sweep that reached no
+	 * name at all, keeping a genuine zero-latency answer distinguishable as its own value.
 	 */
 	responseTimeMs: number | null;
 	/** The first failure's reason, for the result row's `error_message`. */
@@ -113,18 +88,15 @@ export interface DnsSweep {
 export interface DnsDiscovery {
 	/** Names swept, which is the set every later check will query. */
 	names: string[];
-	/** Records that were not already tracked. A re-import mostly adds nothing, and says so. */
+	/** Records new to the monitor; a re-import usually contributes zero, and the count says so. */
 	imported: number;
 	queriesFailed: number;
 }
 
 /**
- * The names one check of one monitor sweeps, and what had to be left out to get there.
- *
- * Planning is separate from running because a caller with a query budget of its own — the
- * scheduled sweep, which spends one invocation's allowance across every monitor it claimed —
- * has to know the size of the work before it commits to it, and has to be able to sweep only
- * part of it. Everything else runs the whole plan.
+ * The names one check of one monitor sweeps, and what had to be left out to get there. Kept
+ * separate from running so a budget-constrained caller — the scheduled sweep, spending one
+ * invocation's allowance across every monitor it claimed — can size the work before committing.
  */
 export interface DnsCheckPlan {
 	/** What to sweep, already capped at {@link MAX_NAMES_PER_CHECK}. */
@@ -145,9 +117,9 @@ export interface DnsCheckRun {
 	counts: DnsRecordCounts;
 	queriesFailed: number;
 	/**
-	 * What the check classified, which is what an alert quotes. It travels with the run
-	 * because only this invocation holds it: the diff is computed here and never persisted,
-	 * so anything reconstructed later reports what is outstanding rather than what changed.
+	 * What the check classified, which is what an alert quotes. Computed fresh inside this
+	 * invocation and handed back with the run, since reading the records back later shows
+	 * only today's outstanding state.
 	 */
 	diff: DnsRecordDiff;
 }
@@ -166,12 +138,9 @@ export function discoveryNames(
 }
 
 /**
- * Sweeps every supported record type at each name, bounded so one call stays inside a single
- * invocation's subrequest budget.
- *
- * A name whose sweep threw counts its whole set of queries as failed rather than as answered
- * with nothing: the two mean opposite things, and reporting the second would tell a customer
- * every record at that name had vanished because we could not reach a resolver.
+ * Sweeps every supported record type at each name, bounded to stay inside one invocation's
+ * subrequest budget. A name whose sweep throws counts its full set of queries as failed, so
+ * a resolver outage reads as an unanswered sweep, distinct from vanished records.
  */
 export async function sweepNames(names: readonly string[]): Promise<DnsSweep> {
 	let answers: DnsQueryAnswer[] = [];
@@ -194,11 +163,8 @@ export async function sweepNames(names: readonly string[]): Promise<DnsSweep> {
 
 		for (let query of outcome.value.outcomes) {
 			/**
-			 * A failed query is OMITTED from what the diff sees, never handed over with an empty
-			 * `values`. The two mean opposite things: empty is "there is nothing of this type
-			 * here", a failure is "we did not find out", and diffing the second would tell a
-			 * customer every record at that name vanished because a resolver had a bad minute.
-			 * The diff leaves a `(name, type)` it was given no answer for exactly as it found it.
+			 * Skipped so the diff can tell a resolver hiccup apart from vanished records — a
+			 * `(name, type)` with no answer is left exactly as it was found.
 			 */
 			if (query.errorMessage !== null) {
 				errorMessage ??= query.errorMessage;
@@ -217,20 +183,12 @@ export async function sweepNames(names: readonly string[]): Promise<DnsSweep> {
 }
 
 /**
- * Discovers a monitor's records: sweeps `names`, stores everything that resolved as watched,
- * and stores everything the zone file declared but the resolver did not answer as a finding
- * that is *not* watched.
+ * Discovers a monitor's records: what `names` resolves to is stored watched, and what the
+ * zone file declared without a matching answer is stored as an unwatched finding —
+ * high-signal once at import (ADR-026 §8), ordinary on a proxied zone forever after.
  *
- * That second half is ADR-026 §8. A declared record that does not resolve is high-signal at
- * import — a stale delegation, a change that never published, a typo between the console and
- * the file — and worthless as a standing alert, because the file is pasted once and every
- * legitimate change after it widens a divergence nobody wants emailed about. It is also the
- * common case rather than the exceptional one on a proxied zone, where the customer's records
- * genuinely are not in public DNS.
- *
- * Importing never overwrites `is_enabled` on a record already tracked (see
- * `DnsMonitorRecord.importMany`), so a re-import cannot silently re-enable something the user
- * declined.
+ * @see DnsMonitorRecord.importMany for why a record the user already declined stays declined
+ * on a re-import.
  */
 export async function importDiscovery(
 	db: Database,
@@ -282,11 +240,9 @@ export async function importDiscovery(
 }
 
 /**
- * Works out what one check of a monitor would sweep, without sweeping anything.
- *
- * The apex is always included, even when no record of it is stored: it is the one name we
- * know without being told, and a monitor whose records were all declined must still be able
- * to discover something appearing there.
+ * Works out what one check of a monitor would sweep, purely as a plan. The apex is always
+ * included, even with no record of it stored yet: it is the one name a monitor knows without
+ * being told, so a domain whose records were all declined can still surface something new.
  */
 export async function planDnsCheck(
 	db: Database,
@@ -304,23 +260,12 @@ export async function planDnsCheck(
 }
 
 /**
- * Runs one check over exactly the names it is handed: sweeps them, classifies the answers
- * against the stored baseline, writes the record-level effects and the history row.
+ * Runs one check over exactly the names it is handed, writing both the record effects and
+ * the history row. The single place a check runs, so the scheduled sweep and "Check now"
+ * always agree, with `error` outranking `changed` since an incomplete diff reads as incomplete.
  *
- * The single place a check is performed. Every entry point — the scheduled sweep, "Check
- * now", anything later — goes through here, so a monitor cannot behave one way on the hour
- * and another way when a customer presses the button. A caller that could not afford the
- * whole plan reports the shortfall as `unsweptNames` rather than shortening the plan
- * silently: names nobody looked at are queries that did not answer, like any other, and that
- * is what keeps a budget cut-off reading as a partial check instead of as missing records.
- *
- * The monitor's status is `error` when any query failed, `changed` when any watched record is
- * missing or edited or any record is new, and `ok` otherwise — the same three words every
- * other DNS surface already reads, so nothing downstream has to learn a new one. `error`
- * outranks `changed` because an unanswered query means the diff is incomplete, and reporting
- * "everything is fine except these three findings" from a partial answer is the one thing a
- * sweep must never do.
- *
+ * @param unsweptNames Names the caller's budget left uncovered; counted as failed queries so
+ * a budget cut-off stays legible as a partial check.
  * @returns The history row's id and what the check counted, which is everything a caller
  * needs to meter, report and alert on it.
  */
@@ -334,10 +279,9 @@ export async function recordDnsCheck(
 	let queriesFailed = sweep.queriesFailed + unsweptNames * QUERIES_PER_NAME;
 
 	/**
-	 * The diff is applied before the caller hears anything back, and that order is
-	 * load-bearing: an alert carries ids and statuses only, and its consumer reads the
-	 * findings back off these rows. A message enqueued ahead of the write could be delivered
-	 * against a baseline that has not moved yet.
+	 * Applied before the caller hears anything back: an alert carries only ids and statuses,
+	 * and its consumer reads the findings back off these rows, so the write must land before
+	 * any message referencing it is enqueued.
 	 */
 	let diff = await DnsMonitorRecord.diff(db, monitorId, sweep.answers);
 	await DnsMonitorRecord.applyDiff(db, monitorId, diff);
@@ -353,10 +297,9 @@ export async function recordDnsCheck(
 		status,
 		responseTimeMs: sweep.responseTimeMs,
 		/**
-		 * Only a resolver's own words, never ours: a check cut short by a caller's query
-		 * budget has `queries_failed` to say so, and inventing a sentence for it here would
-		 * put untranslated English on a customer's screen from a job that has no request, no
-		 * locale and no way to get one.
+		 * A resolver's own words only: `queries_failed` already reports when a caller's budget
+		 * cut a check short, and this job has no request, no locale, and no way to translate a
+		 * sentence of its own.
 		 */
 		errorMessage: status === "error" ? sweep.errorMessage : null,
 		queriesFailed,

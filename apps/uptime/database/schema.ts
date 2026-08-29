@@ -2,10 +2,10 @@
  * Database schema for the uptime app defined with remix/data-table. Declares every
  * table backing the uptime monitoring product — teams/access, HTTP/DNS/TCP/SSL/cron-job
  * monitoring, alerts, maintenance windows, status pages, API keys, and daily stats
- * aggregation. This reuses the frozen production D1 database (see `database/migrations/`,
- * copied unchanged from the prior app), so column names and nullability mirror that
- * physical schema exactly. Audit timestamps are declared as `c.integer()` (milliseconds
- * since epoch), not text, because the existing rows already store epoch-ms integers.
+ * aggregation. This reuses a frozen production D1 database (see `database/migrations/`),
+ * so column names and nullability mirror that physical schema exactly. Audit timestamps
+ * are declared as `c.integer()` (milliseconds since epoch), not text, because the
+ * existing rows already store epoch-ms integers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,8 +17,6 @@ import { column as c, table } from "remix/data-table";
 
 /** Payload shape accepted when creating or updating a row, DB defaults included. */
 type InsertRow<sourceTable extends AnyTable> = Partial<TableRow<sourceTable>>;
-
-// Teams & access
 
 export const teams = table({
 	name: "teams",
@@ -49,12 +47,8 @@ export const memberships = table({
 		role: c.enum(["member", "admin"]).default("member"),
 		/**
 		 * When this membership was last sent the daily and the weekly team digest, or `null`
-		 * for one that never has been. The pair is the unit both stamps are on: one person in
-		 * three teams receives three digests, so a stamp on the subject would suppress two of
-		 * them and a stamp on the team would suppress every member but the first.
-		 *
-		 * Each is written only after a send the transport accepted, which is what makes a
-		 * re-delivered trigger a no-op and a failed send a retry.
+		 * for one that never has been. Stamped per membership so one person in three teams
+		 * gets three digests; written only after an accepted send, so retries are safe.
 		 */
 		last_daily_digest_at: c.integer().nullable(),
 		last_weekly_digest_at: c.integer().nullable(),
@@ -110,9 +104,11 @@ export const apiKeyScopes = [
 	"maintenance:write",
 	"dns-monitors:read",
 	"dns-monitors:write",
-	// Every API v1 TCP-monitor endpoint checks for these two scope strings, so they
-	// must be real, grantable scopes — without them no API key could ever carry
-	// TCP-monitor access and those endpoints would be permanently unreachable.
+	/**
+	 * Real, grantable scopes: every API v1 TCP-monitor endpoint checks for these two
+	 * strings, so their absence would make TCP-monitor access ungrantable and those
+	 * endpoints permanently unreachable.
+	 */
 	"tcp-monitors:read",
 	"tcp-monitors:write",
 	"alerts:read",
@@ -124,11 +120,11 @@ export const apiKeyScopes = [
 	"cron-jobs:ping",
 	"api-keys:read",
 	"api-keys:write",
-	// Named for what the holder does rather than for what the server writes: a key with
-	// this scope triggers one-shot checks through `POST /api/v1/ping`, and there is no
-	// stored ping resource for a `:read`/`:write` pair to describe. Appended rather than
-	// inserted in place — the column stores the strings, so position means nothing, but
-	// the checkbox list on the API-key form is rendered in this order.
+	/**
+	 * Named for what the holder does, not for a resource — there is no stored ping
+	 * resource for a `:read`/`:write` pair to describe. Appended last because the
+	 * checkbox list on the API-key form renders scopes in this order.
+	 */
 	"ping:trigger",
 ] as const;
 
@@ -159,17 +155,9 @@ export const supportedLanguages = ["en", "es", "de", "ja", "fr", "it"] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 
 /**
- * Every email a member can turn off, and the value set of
- * `user_preferences.unsubscribed_emails`. Declared here, next to the column, so adding a
- * third digest is one edit rather than one per repeated union — the same reason
- * {@link apiKeyScopes} and {@link monitorStatuses} live beside theirs.
- *
- * It holds the *optional* mail only. An invite, an alert and a password-style transactional
- * message are each the answer to something somebody did, so none of them belongs in a list
- * whose whole purpose is to be switched off; a digest nobody asked for by name does.
- *
- * The settings page renders one switch per entry in this order, and each key names its own
- * copy under `page.account.emails.list.*` in the locale files.
+ * Every email a member can turn off — the value set of `unsubscribed_emails`. Holds only
+ * the *optional* mail: an invite, alert, or transactional message already answers something
+ * the member did, so none of those belong in a list meant to be switched off.
  */
 export const optionalEmails = ["teamDailyDigest", "teamWeeklyDigest"] as const;
 
@@ -186,13 +174,8 @@ export const userPreferences = table({
 		preferred_language: c.enum(supportedLanguages).nullable(),
 		/**
 		 * The {@link optionalEmails} this subject has turned off, or `null` for one who has
-		 * turned nothing off — so the default is subscribed and a member who never opened the
-		 * settings page needs no row here at all.
-		 *
-		 * Stored as the refusals rather than as the acceptances because that is what makes the
-		 * default hold without a backfill: a new digest is opt-out for everybody the moment it
-		 * ships, with no row rewritten and no column added. An unknown string is ignored on
-		 * read (see `UserPreferences.wants`), which is what makes retiring an email safe.
+		 * turned nothing off. Stored as refusals, so a new digest is opt-out for everyone
+		 * with no backfill, and an unknown string is ignored on read.
 		 */
 		unsubscribed_emails: (c.json() as ColumnBuilder<Array<OptionalEmail>>).nullable(),
 	},
@@ -203,24 +186,8 @@ export type InsertUserPreferences = InsertRow<typeof userPreferences>;
 
 /**
  * The queue of accounts asked to be deleted, one row per person waiting for the daily sweep.
- *
- * The row *is* the queue and the retry policy both: the sweep deletes it only after the whole
- * erasure succeeded and the confirmation mail was accepted, so a run that failed halfway
- * leaves it in place and tomorrow's run picks it up again. Nothing here records an attempt or
- * a backoff, because "it failed" and "it will be retried tomorrow" are the same statement.
- *
- * It is also the grace period. Deletion takes effect up to a day after it is asked for, which
- * is not a limitation of running the sweep daily — it is the window in which somebody who
- * clicked by mistake can sign back in and cancel, and the queue makes it free to offer.
- *
- * **Why `email` is stored here, on the one table whose purpose is erasure.** This app holds no
- * account-holder address anywhere else: an account is an OIDC subject, `invites.email` is an
- * invitee's address and `leads.email` a trial visitor's, and the account holder's own address
- * exists only in the ID token on the request that carries it. So the confirmation mail that
- * says "your account has been deleted" has no address to go to unless the request that asked
- * for the deletion captures one. The irony is deliberate and bounded: an erasure request is
- * the one place that must store an address in order to be fulfilled, and this row — the only
- * copy of it — is deleted at the very end of the erasure, after the mail has gone out.
+ * The row is the retry state too: it is removed only once the whole erasure succeeds and the
+ * confirmation mail is accepted, so a run that fails halfway is retried untouched tomorrow.
  */
 export const accountDeletions = table({
 	name: "account_deletions",
@@ -230,7 +197,11 @@ export const accountDeletions = table({
 		created_at: c.integer(),
 		/** The OIDC subject to erase. Unique: asking twice is one request, not two. */
 		subject_id: c.text().unique(),
-		/** Address the confirmation mail goes to; see this table's docblock for why it is here. */
+		/**
+		 * Address the confirmation mail goes to — the one account-holder address stored
+		 * anywhere in this app. Captured here because deletion erases the OIDC subject and
+		 * every other trace, so this request is the only chance to have one to mail.
+		 */
 		email: c.text(),
 		/** When the person asked, which is what the queued-state copy tells them back. */
 		requested_at: c.integer(),
@@ -240,12 +211,10 @@ export const accountDeletions = table({
 export type SelectAccountDeletion = TableRow<typeof accountDeletions>;
 export type InsertAccountDeletion = InsertRow<typeof accountDeletions>;
 
-// HTTP monitors
-
 /**
  * What a completed HTTP check classifies a monitor as — the value set of
  * `monitors.last_status`, and what the check pipeline passes around. Declared here, next
- * to the column, so adding a status is one edit rather than one per repeated union.
+ * to the column, so adding a status stays a single edit that every derived union picks up.
  */
 export const monitorStatuses = ["up", "down", "degraded"] as const;
 
@@ -261,9 +230,8 @@ export const monitors = table({
 		enabled_at: c.integer().nullable(),
 		/**
 		 * When this monitor's next check is due, or `null` when it isn't scheduled at all
-		 * (disabled, or never enabled). The scheduler claims monitors by advancing this
-		 * from its own previous value by whole intervals, which is what keeps the cadence
-		 * anchored to the schedule rather than to each check's completion time.
+		 * (disabled, or never enabled). The scheduler advances this from its own previous
+		 * value by whole intervals, keeping the cadence anchored to the schedule.
 		 */
 		next_due_at: c.integer().nullable(),
 		team_id: c.text(),
@@ -288,14 +256,9 @@ export const monitors = table({
 			.nullable()
 			.default("unknown"),
 		/**
-		 * What the last completed check classified this monitor as, when it completed, and
-		 * how long it took. A **cache**, written by the consumer after the result is
-		 * committed: the Analytics Engine result stream stays authoritative for history and
-		 * aggregation, and these exist only so transition detection and the list row cost no
-		 * query. When the two disagree, believe the stream — the same relationship
-		 * `dns_monitors.last_status` has with `dns_monitor_results`, and the same trio
-		 * `tcp_monitors` already carries. `NULL` means "never checked", which recovery
-		 * detection reads as not-a-recovery, so no backfill is needed.
+		 * What the last completed check classified this monitor as, when, and how long it
+		 * took. Cached only so transition detection and the list row cost no query; on
+		 * disagreement, the Analytics Engine result stream is what to believe.
 		 */
 		last_status: c.enum(monitorStatuses).nullable(),
 		last_checked_at: c.integer().nullable(),
@@ -341,8 +304,6 @@ export const monitorContentChecks = table({
 export type SelectMonitorContentCheck = TableRow<typeof monitorContentChecks>;
 export type InsertMonitorContentCheck = InsertRow<typeof monitorContentChecks>;
 
-// DNS monitors
-
 export const dnsMonitors = table({
 	name: "dns_monitors",
 	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
@@ -355,23 +316,20 @@ export const dnsMonitors = table({
 		/** The zone apex this monitor covers, absolute, lowercased, no trailing dot. */
 		domain: c.text(),
 		/**
-		 * When a zone file was last pasted and parsed. The pasted text itself is deliberately
-		 * never stored — a customer's complete zone is a map of their infrastructure, and a
-		 * re-paste serves every feature a stored copy would. `null` means every tracked name
-		 * was discovered by resolution, so the monitor covers the apex and nothing else.
+		 * When a zone file was last pasted and parsed; only the timestamp persists, since a
+		 * re-paste covers every use a stored copy of a customer's infrastructure map would.
+		 * `null` means every tracked name came from resolution, covering just the apex.
 		 */
 		zone_file_imported_at: c.integer().nullable(),
 		/**
 		 * Daily by default: DNS changes are human-caused and human-paced, and a record's TTL
-		 * puts a floor under detection latency that a faster interval cannot get below.
+		 * already sets the floor under detection latency no matter the interval chosen.
 		 */
 		interval_seconds: c.integer().default(86_400),
 		/**
 		 * When this monitor's next check is due, or `null` when it isn't scheduled at all.
-		 * The sweep claims monitors by advancing this from its own previous value by whole
-		 * intervals, which is what makes `interval_seconds` authoritative instead of the
-		 * sweep's own cadence (ADR-006). Same column, same meaning, on all three monitor
-		 * tables.
+		 * The sweep advances this from its own previous value by whole intervals, so
+		 * `interval_seconds` alone sets the cadence (ADR-006), same as on every monitor table.
 		 */
 		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
@@ -384,24 +342,18 @@ export type SelectDnsMonitor = TableRow<typeof dnsMonitors>;
 export type InsertDnsMonitor = InsertRow<typeof dnsMonitors>;
 
 /**
- * What the last check found for one tracked record. `new` and `missing` are states of a
- * record, not of a check: a record stays `new` until the user enables or deletes it, and
- * `changed` is reserved for the one case a diff can attribute without guessing — a
- * name+type holding exactly one stored and one resolved record that differ.
+ * What the last check found for one tracked record. `new` and `missing` are properties of
+ * the record itself: it stays `new` until the user enables or deletes it, and `changed`
+ * marks the one case a diff can attribute without guessing.
  */
 export const dnsRecordStates = ["ok", "changed", "missing", "new", "error"] as const;
 
 export type DnsRecordState = (typeof dnsRecordStates)[number];
 
 /**
- * One tracked DNS record, identified by `(name, record_type, value)` rather than by RRset.
- * A DNS record has no identity of its own — an RRset is a set of RDATA — so making the
- * normalized value part of the key is what lets a sixth MX appearing beside five existing
- * ones read as one addition instead of as "the MX records changed".
- *
- * The table is the complete set of everything ever seen for the domain, including records
- * the user declined to watch: `is_enabled` says only whether a deviation alerts. Without
- * that invariant a declined record would be rediscovered as `new` on every check.
+ * One tracked DNS record, identified by `(name, record_type, value)`. Making the normalized
+ * value part of the key is what lets a sixth MX beside five existing ones read as one
+ * addition, since an RRset itself is just a set of RDATA with no identity of its own.
  */
 export const dnsMonitorRecords = table({
 	name: "dns_monitor_records",
@@ -438,12 +390,9 @@ export const dnsMonitorResults = table({
 		dns_monitor_id: c.text(),
 		status: c.enum(["ok", "changed", "error"]),
 		/**
-		 * Counters, not values: one row per check of the monitor rather than per query, so
-		 * retention volume does not multiply by the number of names swept. The per-record
-		 * detail lives in `dns_monitor_records`, which is configuration and is not swept.
-		 *
-		 * Each defaults to `0` rather than being required, so a caller that has nothing to
-		 * report writes a truthful zero instead of being unable to insert at all.
+		 * Counters: one row per check of the monitor, so retention volume holds steady
+		 * regardless of how many names get swept. Each defaults to `0`, so a caller with
+		 * nothing to report can still insert a truthful zero.
 		 */
 		records_checked: c.integer().default(0),
 		records_changed: c.integer().default(0),
@@ -455,9 +404,9 @@ export const dnsMonitorResults = table({
 		 */
 		queries_failed: c.integer().default(0),
 		/**
-		 * The slowest single query in the sweep, not the sum. The column means "how long did
-		 * DNS take to answer" and feeds a latency chart; summing would quietly turn that chart
-		 * into a cost chart.
+		 * The slowest single query in the sweep. The column means "how long did DNS take
+		 * to answer" and feeds a latency chart; summing would quietly turn that chart into
+		 * a cost chart.
 		 */
 		response_time_ms: c.integer().nullable(),
 		error_message: c.text().nullable(),
@@ -467,8 +416,6 @@ export const dnsMonitorResults = table({
 
 export type SelectDnsMonitorResult = TableRow<typeof dnsMonitorResults>;
 export type InsertDnsMonitorResult = InsertRow<typeof dnsMonitorResults>;
-
-// TCP monitors
 
 export const tcpMonitors = table({
 	name: "tcp_monitors",
@@ -510,8 +457,6 @@ export const tcpMonitorResults = table({
 export type SelectTcpMonitorResult = TableRow<typeof tcpMonitorResults>;
 export type InsertTcpMonitorResult = InsertRow<typeof tcpMonitorResults>;
 
-// SSL monitors (standalone, separate from HTTP monitors)
-
 export const sslMonitors = table({
 	name: "ssl_monitors",
 	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
@@ -519,7 +464,7 @@ export const sslMonitors = table({
 		id: c.text().primaryKey(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
-		enabled_at: c.integer().nullable(), // null = disabled
+		enabled_at: c.integer().nullable(),
 		team_id: c.text(),
 		http_monitor_id: c.text().nullable(),
 		name: c.text(),
@@ -538,8 +483,6 @@ export const sslMonitors = table({
 
 export type SelectSslMonitor = TableRow<typeof sslMonitors>;
 export type InsertSslMonitor = InsertRow<typeof sslMonitors>;
-
-// Cron job monitors
 
 export const cronJobStatuses = ["healthy", "late", "missed", "new"] as const;
 
@@ -585,8 +528,6 @@ export const cronJobPings = table({
 export type SelectCronJobPing = TableRow<typeof cronJobPings>;
 export type InsertCronJobPing = InsertRow<typeof cronJobPings>;
 
-// Alerts
-
 export type AlertConfig =
 	| { strategy: "webhook"; config: { url: string; secret: string } }
 	| { strategy: "email"; config: { to: string; subjectPrefix: string } }
@@ -602,29 +543,21 @@ export const alerts = table({
 		updated_at: c.integer(),
 		team_id: c.text(),
 		/**
-		 * Which monitor table {@link alerts.monitor_id} points into, and — on its own — the
-		 * whole of a type-wide scope. `null` in both columns is team-wide: every monitor of
-		 * every type, which is what every alert created before this column was.
-		 *
-		 * `"ssl"` is deliberately not a value here even though `alert_events.monitor_type`
-		 * has one: a certificate event is dispatched against the HTTP monitor's own row, so
-		 * it is matched by whatever watches that monitor. See `~/app/lib/monitor-scope`.
+		 * Which monitor table {@link alerts.monitor_id} points into; `null` in both columns
+		 * means every monitor of every type. Cast because a nullable enum column infers as
+		 * `string | null`, which would otherwise leak into every scope comparison.
 		 */
-		// Cast because a nullable enum column infers as `string | null`, which would leak an
-		// unchecked string into every scope comparison; the values are the ones listed here.
 		monitor_type: c.enum(["http", "dns", "tcp", "cron"]).nullable() as ColumnBuilder<
 			"http" | "dns" | "tcp" | "cron" | null
 		>,
 		monitor_id: c.text().nullable(),
 		name: c.text(),
 		notify_on_recovery: c.boolean().default(true),
-		// How long an ongoing outage stays quiet between notifications. An hour by
-		// default, so a monitor that is still down alerts again once an hour for as long
-		// as it lasts, and an hourly monitor always alerts. Rows created before this
-		// default keep whatever they stored — including `0`, which is still legal here
-		// and is floored at dispatch time rather than rewritten (see
-		// `app/services/alerts.ts`), because an unthrottled alert on a 1-minute monitor
-		// would otherwise be one email per minute for the whole outage.
+		/**
+		 * How long an outage stays quiet between notifications — without a floor, a
+		 * 1-minute monitor would alert once a minute for the whole outage. Legacy `0`
+		 * values stay legal and are floored at dispatch time (`app/services/alerts.ts`).
+		 */
 		cooldown_minutes: c.integer().default(60),
 		config: c.json() as ColumnBuilder<AlertConfig>,
 	},
@@ -634,17 +567,9 @@ export type SelectAlert = TableRow<typeof alerts>;
 export type InsertAlert = InsertRow<typeof alerts>;
 
 /**
- * One record-level observation a domain sweep made, as the alert reports it.
- *
- * `kind` is the diff's own vocabulary rather than a summary of it, because the three
- * outcomes want different reactions: a watched record that stopped resolving is a
- * failure, a newly seen one is waiting to be accepted or fixed, and a `changed` one is
- * the single edit DNS lets us attribute to a record. The three fields after it are the
- * record's whole identity, which is what makes a finding quotable back to the zone.
- *
- * `recordType` is a plain string, like every `status` in this union: a snapshot is
- * stored JSON that outlives the code that wrote it, and a stored row must stay readable
- * after the supported type set grows.
+ * One record-level observation a domain sweep made, as the alert reports it. `kind` is the
+ * diff's own vocabulary, since each outcome wants a different reaction, and every string
+ * field, like `recordType`, keeps stored JSON snapshots readable as the type set grows.
  */
 export interface DnsFinding {
 	kind: "missing" | "new" | "changed";
@@ -664,14 +589,9 @@ export type AlertEventSnapshot =
 			url: string;
 	  }
 	/**
-	 * A DNS monitor watches a domain rather than one record type, so the counters and the
-	 * findings describe a sweep of every tracked record instead of one resolved value.
-	 *
-	 * The counters are the totals; `findings` is a capped sample of the very same three
-	 * buckets, so `recordsMissing + recordsChanged + recordsNew` is always the number of
-	 * findings there were before the cap, and the difference is what a reader is not being
-	 * shown. Both are needed: a bounded snapshot cannot hold a large zone's every finding,
-	 * and a body that only quoted five of them would understate the event.
+	 * A DNS monitor watches a whole domain, so the counters are totals across every
+	 * tracked record and `findings` is a capped sample of the same three buckets —
+	 * `recordsMissing + recordsChanged + recordsNew` is the count before the cap.
 	 */
 	| {
 			type: "dns";
@@ -701,15 +621,9 @@ export type AlertEventSnapshot =
 	  };
 
 /**
- * What became of one alert delivery attempt. Declared here, next to the column, so the
- * value set is a real union rather than `string` — the alert pipeline and the history view
- * both branch on it. Every reason an alert was recorded without being delivered is named
- * `skipped_*`, which is what lets both of them treat suppressions as a group.
- *
- * `skipped_cap` is no longer produced — the per-incident send ceiling it recorded is gone,
- * see `app/services/alerts.ts` — but it stays in the union because rows written while the
- * ceiling existed still carry it, and dropping the value would make that history unreadable
- * by everything that branches on this column.
+ * What became of one alert delivery attempt. Every reason an alert was recorded without
+ * being delivered is named `skipped_*`, so the pipeline and history view treat suppressions
+ * as a group; `skipped_cap` stays for rows written while that ceiling still existed.
  */
 export const alertEventStatuses = ["sent", "skipped_cooldown", "skipped_cap", "failed"] as const;
 
@@ -736,8 +650,6 @@ export const alertEvents = table({
 export type SelectAlertEvent = TableRow<typeof alertEvents>;
 export type InsertAlertEvent = InsertRow<typeof alertEvents>;
 
-// Maintenance windows
-
 export const maintenanceWindows = table({
 	name: "maintenance_windows",
 	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
@@ -747,35 +659,30 @@ export const maintenanceWindows = table({
 		updated_at: c.integer(),
 		team_id: c.text(),
 		/**
-		 * Which monitor table {@link maintenanceWindows.monitor_id} points into, and — on its
-		 * own — the whole of a type-wide window. `null` in both columns is team-wide: every
-		 * monitor of every type, which is what every window created before this column was.
-		 *
-		 * `"ssl"` is deliberately not a value here, as in {@link alerts}: a certificate check
-		 * runs against the HTTP monitor's own row, so it is covered by whatever covers that
-		 * monitor. See `~/app/lib/monitor-scope`.
+		 * Which monitor table {@link maintenanceWindows.monitor_id} points into; `null` in
+		 * both columns means every monitor of every type. Cast because the nullable enum
+		 * infers as `string | null`, which would otherwise leak into scope comparisons.
 		 */
-		// Cast because a nullable enum column infers as `string | null`, which would leak an
-		// unchecked string into every scope comparison; the values are the ones listed here.
 		monitor_type: c.enum(["http", "dns", "tcp", "cron"]).nullable() as ColumnBuilder<
 			"http" | "dns" | "tcp" | "cron" | null
 		>,
-		monitor_id: c.text().nullable(), // null (with a null type) means all monitors
+		monitor_id: c.text().nullable(),
 		name: c.text(),
 		starts_at: c.integer(),
 		ends_at: c.integer(),
-		ended_early_at: c.integer().nullable(), // manual early termination
+		ended_early_at: c.integer().nullable(),
 		suppress_alerts: c.boolean().default(true),
 		show_on_status_page: c.boolean().default(true),
 		is_recurring: c.boolean().default(false),
-		recurring_pattern: c.text().nullable(), // e.g. "weekly:monday:02:00-04:00"
+		/**
+		 * @example "weekly:monday:02:00-04:00"
+		 */
+		recurring_pattern: c.text().nullable(),
 	},
 });
 
 export type SelectMaintenanceWindow = TableRow<typeof maintenanceWindows>;
 export type InsertMaintenanceWindow = InsertRow<typeof maintenanceWindows>;
-
-// Status pages
 
 export const statusPages = table({
 	name: "status_pages",
@@ -799,8 +706,10 @@ export const statusPages = table({
 export type SelectStatusPage = TableRow<typeof statusPages>;
 export type InsertStatusPage = InsertRow<typeof statusPages>;
 
-// Physical table has no `id`/timestamp columns or an enforced unique constraint, but
-// the framework requires at least one primary-key column — the pair is the natural key.
+/**
+ * Physical table has no `id`/timestamp columns or an enforced unique constraint, but the
+ * framework requires at least one primary-key column — the pair is the natural key.
+ */
 export const statusPageMonitors = table({
 	name: "status_page_monitors",
 	primaryKey: ["status_page_id", "monitor_id"],
@@ -815,8 +724,10 @@ export const statusPageMonitors = table({
 export type SelectStatusPageMonitor = TableRow<typeof statusPageMonitors>;
 export type InsertStatusPageMonitor = InsertRow<typeof statusPageMonitors>;
 
-// Physical table has no `id`/timestamp columns or an enforced unique constraint, but
-// the framework requires at least one primary-key column — the pair is the natural key.
+/**
+ * Physical table has no `id`/timestamp columns or an enforced unique constraint, but the
+ * framework requires at least one primary-key column — the pair is the natural key.
+ */
 export const statusPageCronJobs = table({
 	name: "status_page_cron_jobs",
 	primaryKey: ["status_page_id", "cron_job_monitor_id"],
@@ -879,8 +790,6 @@ export const statusPageSslMonitors = table({
 export type SelectStatusPageSslMonitor = TableRow<typeof statusPageSslMonitors>;
 export type InsertStatusPageSslMonitor = InsertRow<typeof statusPageSslMonitors>;
 
-// Analytics
-
 export const monitorDailyStats = table({
 	name: "monitor_daily_stats",
 	timestamps: { createdAt: "created_at" },
@@ -889,7 +798,10 @@ export const monitorDailyStats = table({
 		created_at: c.integer(),
 		monitor_id: c.text(),
 		monitor_type: c.enum(["http", "dns", "tcp", "cron"]),
-		date: c.text(), // "2026-02-14" format
+		/**
+		 * @example "2026-02-14"
+		 */
+		date: c.text(),
 		total_checks: c.integer(),
 		successful_checks: c.integer(),
 		failed_checks: c.integer(),
@@ -903,19 +815,10 @@ export const monitorDailyStats = table({
 export type SelectMonitorDailyStats = TableRow<typeof monitorDailyStats>;
 export type InsertMonitorDailyStats = InsertRow<typeof monitorDailyStats>;
 
-// Billing
-
 /**
- * A **projection** of Polar's subscription state, written only by the Polar webhook and
- * the daily reconciliation sweep (ADR-005). Polar stays authoritative for money; these
- * rows exist so authorisation costs one indexed read instead of one API call, which is
- * what lets the every-minute scheduler ask nothing at all.
- *
- * Nothing else may write here, and a drift between this table and Polar is never fixed by
- * editing a row: reconciliation reads Polar and repairs the projection in the one
- * direction that keeps the two convergent. Rows are kept after a subscription ends —
- * `status` records how it ended, and the absence of any row for a customer is what
- * "we have never learned anything about them" means (see `Subscription.stateFor`).
+ * A **projection** of Polar's subscription state (ADR-005): Polar stays authoritative, and
+ * only the webhook and the daily reconciliation sweep write here, keeping authorisation to
+ * one indexed read per request. Rows persist after a subscription ends; `status` says how.
  */
 export const subscriptions = table({
 	name: "subscriptions",
@@ -937,11 +840,9 @@ export const subscriptions = table({
 		current_period_end: c.integer().nullable(),
 		revoked_at: c.integer().nullable(),
 		/**
-		 * When Polar last modified the subscription, from the payload itself. This is the
-		 * version stamp the upsert orders events by: Polar retries deliveries and events can
-		 * arrive out of order, and `updated_at` above is when *this app* wrote the row, which
-		 * is always later than the payload and so can't order two payloads against each
-		 * other.
+		 * When Polar last modified the subscription, taken from the payload itself — the
+		 * version stamp the upsert orders events by, since Polar can retry and redeliver
+		 * out of order. `updated_at` only records when this app wrote the row.
 		 */
 		polar_modified_at: c.integer(),
 	},
@@ -950,34 +851,10 @@ export const subscriptions = table({
 export type SelectSubscription = TableRow<typeof subscriptions>;
 export type InsertSubscription = InsertRow<typeof subscriptions>;
 
-// Trial watches
-
 /**
- * Someone who probed a target on the public trial page and left an email so the result
- * could be followed up on. Not a user and not a Polar customer: nothing here is billed and
- * no customer is provisioned, because a lead only becomes one by actually signing up.
- *
- * Identity, consent, and one schedule. Everything tied to a *particular attempt* — how long
- * that target is checked for, how long a sign-up can still claim it, whether it was claimed
- * — belongs on {@link trialWatches}, because one person can try three URLs on three
- * different days and each attempt runs its own clocks.
- *
- * The one schedule that is per person is the daily digest, and `last_digest_at` is here for
- * that reason: someone watching three URLs gets one email a day covering all three, not
- * three emails. The full split, which is the thing a future reader will assume is an
- * accident:
- *
- * | Schedule            | Lives on        | Why                                          |
- * | ------------------- | --------------- | -------------------------------------------- |
- * | hourly check        | `trial_watches` | one target is checked, not one person        |
- * | on-change email     | `trial_watches` | it is about one target going down            |
- * | **daily digest**    | **`leads`**     | one reader, one inbox, one email a day       |
- * | weekly wrap-up      | `trial_watches` | it ends *that* watch's seven days            |
- *
- * Two different deletions reach this row and they must not be confused. `Lead.deleteOrphaned`
- * is the scheduled sweep and is conditional — it only removes a lead once no watch is left
- * to protect. `Lead.forget` is the unsubscribe cascade and is unconditional: it takes the
- * lead, its watches and their results, open conversion windows included.
+ * Someone who probed a target on the public trial page and left an email to be followed up
+ * on, staying anonymous and unbilled until they actually sign up. Everything tied to one
+ * attempt lives on {@link trialWatches}; `last_digest_at` here is the one schedule per person.
  */
 export const leads = table({
 	name: "leads",
@@ -987,71 +864,41 @@ export const leads = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		/**
-		 * The address as it was last typed, and the one every email is actually delivered to.
-		 *
-		 * Not unique, and not the identity of the row — {@link leads.normalized_email} is. The
-		 * two are different things: `hello+news@x.com` is a legitimate way to write an address
-		 * that must keep receiving mail exactly as spelled, while the person behind it is the
-		 * same person as `hello@x.com` and must not get a second free week by tagging. A repeat
-		 * submission overwrites this with whatever was typed that time, the way `locale` does,
-		 * because the newest spelling is the one they are watching an inbox for.
+		 * The address as it was last typed, the one every email is delivered to.
+		 * {@link leads.normalized_email} is the row's real identity, so a `+tag` variant keeps
+		 * receiving mail as spelled; a repeat submission overwrites this with the newest spelling.
 		 */
 		email: c.text(),
 		/**
-		 * The address reduced to the person behind it — lowercased, `+tag` removed, dots kept —
-		 * and the row's real identity. See `normalizeLeadEmail` in `~/app/lib/trial-identity`
-		 * for why each of those three is the way it is.
-		 *
-		 * Unique, and the conflict target of the create-or-update the trial form runs, for the
-		 * reason the raw address used to carry it: a second row for one person would split
-		 * their watches across two leads, send them two digests a day, and hand each of their
-		 * tagged spellings its own free week on the same URL. It is also what the sign-in path
-		 * matches a subject's address against, so somebody who tried with `hello+test@` and
-		 * signed up as `hello@` still has their targets converted.
+		 * The address reduced to the person behind it — lowercased, `+tag` removed, dots
+		 * kept (see `normalizeLeadEmail`) — and the row's unique, real identity: one person
+		 * can't split into two leads or two free weeks by tagging, and sign-in matches on it.
 		 */
 		normalized_email: c.text().unique(),
 		/**
-		 * The random, unguessable token every trial email's unsubscribe link carries.
-		 *
-		 * This is the only credential a lead will ever hold — they never made an account, so
-		 * there is nothing to sign in with and nothing else to prove the request is theirs.
-		 * Random and never derived from the address for exactly that reason: anything
-		 * computable from a known email would let a stranger unsubscribe anyone whose address
-		 * they can guess. Unique and indexed because it is looked up on its own.
+		 * The random, unguessable token every trial email's unsubscribe link carries — the
+		 * only credential a lead ever holds, since they never made an account. Generated
+		 * purely at random, so no one could unsubscribe another address just by guessing it.
 		 */
 		unsubscribe_token: c.text().unique(),
-		/** Optional because the form asks for a first name and does not require one. */
 		/** Which language every follow-up email goes out in, taken from the page they used. */
 		locale: c.enum(supportedLanguages),
 		/**
-		 * When they ticked the marketing opt-in, or `null` when they never did.
-		 *
-		 * `null` is load-bearing and is not the same as "no lead": handing over an email to be
-		 * told about *this target* is not consent to be emailed about anything else. The
-		 * digest and wrap-up emails are the service they asked for and go out either way;
-		 * every other send must read this column first, and a null here forbids it.
-		 *
-		 * It does not extend the row's life. Every email this feature sends is driven by a
-		 * watch, so once a lead's last watch is gone there is nothing for the consent to
-		 * authorise and `Lead.deleteOrphaned` takes the row regardless of this column — see
-		 * that method for when adding a standing mailing list would change the answer.
+		 * When they ticked the marketing opt-in, or `null` when they never did. This gates
+		 * every send beyond the digest and wrap-up, which go out regardless as the service
+		 * asked for. `Lead.deleteOrphaned` still takes the row once the last watch is gone.
 		 */
 		consented_at: c.integer().nullable(),
 		/**
-		 * When the last daily digest went out — the one schedule that belongs to the person
-		 * rather than to a target. See `shouldSendDigest` for the once-per-day bound this
-		 * enforces and `Lead.listDueForDigest` for the query it drives.
+		 * When the last daily digest went out — the one schedule keyed to the person's
+		 * single inbox. See `shouldSendDigest` for the once-per-day bound this enforces
+		 * and `Lead.listDueForDigest` for the query it drives.
 		 */
 		last_digest_at: c.integer().nullable(),
 		/**
-		 * How many trial emails this address has actually been sent, counted one at a time by
-		 * `Lead.recordEmailSent` and only after a transport accepted the message.
-		 *
-		 * A lifetime total and not a per-day one: the question it answers is "how many emails
-		 * had they received by the time they signed up", which is one number taken once, at
-		 * conversion, and copied onto {@link trialConversions} so it survives this row. Counting
-		 * attempts instead of accepted sends would make it a measure of what was intended rather
-		 * than of what landed, which is the opposite of what a funnel wants.
+		 * How many trial emails this address has actually been sent, counted one at a time
+		 * by `Lead.recordEmailSent` after a transport accepts each message — a lifetime
+		 * total, copied onto {@link trialConversions} once, at conversion.
 		 */
 		emails_sent: c.integer().default(0),
 	},
@@ -1061,25 +908,9 @@ export type SelectLead = TableRow<typeof leads>;
 export type InsertLead = InsertRow<typeof leads>;
 
 /**
- * One URL from the public trial page, re-checked hourly for seven days.
- *
- * HTTP only, which is why there is no type column: the public page probes a URL and nothing
- * else. The authenticated ping API still offers HTTP, DNS and TCP; adding one of those to
- * the free page would be a migration then rather than an unused column now.
- *
- * Two independent deadlines sit on this row and neither implies the other:
- *
- * - `expires_at` (`created_at` + 7 days) ends the **checking**. The hourly checks stop, the
- *   weekly wrap-up goes out, `next_due_at` goes null.
- * - `converts_until` (`created_at` + 30 days) ends the **offer**. Until then, signing up
- *   turns this target into a real monitor.
- *
- * They are per watch and not per lead because each attempt is its own offer: someone who
- * tries URL A on day 0 and URL B on day 3 and signs up on day 32 gets a monitor for B and
- * not for A. A lead-level window could not express that.
- *
- * Nothing may delete this row while `converts_until` is in the future — the URL on it is the
- * only record of what a conversion should create.
+ * One URL from the public trial page, re-checked hourly for seven days. `expires_at` ends
+ * checking at day 7; `converts_until` ends the sign-up offer at day 30 — independent per
+ * watch, since each attempt is its own offer, and the row survives until that offer expires.
  */
 export const trialWatches = table({
 	name: "trial_watches",
@@ -1095,79 +926,47 @@ export const trialWatches = table({
 		 */
 		url: c.text(),
 		/**
-		 * The same URL reduced to the endpoint behind it, used for one thing only: deciding
-		 * whether this lead already has a free week running on this target. See
-		 * `normalizeTrialUrl` in `~/app/lib/trial-identity` for the four reductions it makes and
-		 * the one it deliberately does not — `http://` and `https://` stay two different
-		 * endpoints and each gets its own week.
-		 *
-		 * Stored rather than derived at read time so the cap's lookup is an indexed equality on
-		 * `(lead_id, normalized_url)` rather than a scan over every URL that lead ever tried,
-		 * and so `url` can stay verbatim for probing and display without the two ever
-		 * disagreeing about which one is which.
-		 *
-		 * It carries no unique constraint. Nothing needs it to: a watch is deleted thirty days
-		 * after it is created, so "a row exists for this pair" already *is* the thirty-day
-		 * window, and the request that finds one answers with a report email rather than an
-		 * error.
+		 * The same URL reduced to the endpoint behind it (see `normalizeTrialUrl`), used to
+		 * decide whether this lead already has a free week running on this target. Stored so
+		 * the cap's lookup is an indexed equality, leaving `url` free to stay verbatim.
 		 */
 		normalized_url: c.text(),
 		/**
 		 * The random, unguessable token the seven-day report page is addressed by, generated
-		 * when the watch is created and never rotated.
-		 *
-		 * Per watch and not per lead, and deliberately not the lead's `unsubscribe_token`. A
-		 * report is meant to be reopened, forwarded to a colleague or handed to a client, and
-		 * the unsubscribe token *acts*: it deletes an address and everything attached to it.
-		 * Sharing a page must never hand over that power, and one token doing both jobs is the
-		 * only way it could. Two tokens also keep the blast radius of a leaked link to the one
-		 * URL the report is about rather than to every URL that reader ever tried.
-		 *
-		 * Never rotated for the reason `leads.unsubscribe_token` is never rotated: the link is
-		 * already sitting in an inbox, and a new token would silently turn it into a 404.
-		 *
-		 * Unique and indexed because it is looked up on its own, with no lead in hand — the URL
-		 * is the whole of the request, since nobody behind a trial has an account to prove
-		 * anything with.
+		 * once and kept for good, since the link already sits in an inbox. Kept separate
+		 * from `leads.unsubscribe_token`, so sharing this page only ever grants a read.
 		 */
 		report_token: c.text().unique(),
 		/**
-		 * Fixed at one hour by the product and not editable anywhere, but stored rather than
-		 * hard-coded in the sweep because it is what makes this table claimable by the same
-		 * `claimDue` statement the three monitor tables use — that statement advances
-		 * `next_due_at` in terms of this column. A cadence the schema states is also one a
-		 * migration can change without touching code.
+		 * Fixed at one hour by the product, but stored as a column so this table is claimable
+		 * by the same `claimDue` statement the three monitor tables use, which advances
+		 * `next_due_at` in terms of this column — a cadence a migration could change.
 		 */
 		interval_seconds: c.integer().default(3600),
 		/**
-		 * When the next hourly check is owed, or `null` when the watch is finished.
-		 *
-		 * Same column, same meaning, same claim as `monitors.next_due_at`: `null` is "not
-		 * scheduled", so nulling it at expiry is exactly how a finished watch leaves the
-		 * sweep's claim, and one index on this column serves the whole predicate. It is also
-		 * what "currently active" means to the daily digest.
+		 * When the next hourly check is owed, or `null` when the watch is finished. Same
+		 * column, same meaning, same claim as `monitors.next_due_at`: nulling it at expiry
+		 * is how a finished watch leaves the sweep, and it is what "active" means to the digest.
 		 */
 		next_due_at: c.integer().nullable(),
 		/** `created_at` + 7 days: when checking stops and the weekly wrap-up goes out. */
 		expires_at: c.integer(),
 		/**
 		 * `created_at` + 30 days: when the offer to turn this target into a real monitor on
-		 * sign-up runs out. Stored rather than derived so the deadline this attempt was
-		 * actually given survives a change to the policy constant, and so the cleanup sweep is
-		 * an indexed range over one column rather than arithmetic in a `WHERE` clause.
+		 * sign-up runs out. Stored so the deadline an attempt was actually given survives a
+		 * change to the policy constant, and the cleanup sweep is an indexed range on one column.
 		 */
 		converts_until: c.integer(),
 		/**
-		 * The previous check's status, which is the entire basis for detecting a change — the
-		 * history table below is what a digest renders, but a sweep must not have to read it
-		 * to answer "is this different from last hour?".
+		 * The previous check's status, the entire basis for detecting a change: a sweep
+		 * answers "is this different from last hour?" straight from this column, while the
+		 * history table below is what a digest renders.
 		 */
 		last_status: c.enum(monitorStatuses).nullable(),
 		/**
-		 * Running totals a digest reads directly. Redundant with `trial_watch_results`, and
-		 * worth it: the totals are wanted for every target on every digest while the history
-		 * is only wanted for the bar, and keeping them here means the common read is the row
-		 * the query already returned rather than an aggregate over 168 rows per target.
+		 * Running totals a digest reads directly, redundant with `trial_watch_results` on
+		 * purpose: every digest wants totals for every target, so the common read stays the
+		 * one row already returned, cheap regardless of how many checks the watch has run.
 		 */
 		checks_run: c.integer().default(0),
 		checks_ok: c.integer().default(0),
@@ -1179,20 +978,15 @@ export const trialWatches = table({
 		 */
 		change_notified_at: c.integer().nullable(),
 		/**
-		 * When this watch's seven-day wrap-up went out; set once, at the same time checking
-		 * stops. Per watch and not per lead on purpose: watches started on different days end
-		 * on different days, so a lead who tried URLs on days 0, 3 and 6 is wrapped up on days
-		 * 7, 10 and 13, each email about the target whose week just ended.
+		 * When this watch's seven-day wrap-up went out, set once. Kept per watch since
+		 * watches started on different days end on different days — a lead who tried URLs
+		 * on days 0, 3 and 6 is wrapped up on days 7, 10 and 13, one email per target.
 		 */
 		summary_sent_at: c.integer().nullable(),
 		/**
-		 * The real monitor this target became and when, or `null` while it is still only a
-		 * trial.
-		 *
-		 * Per watch rather than per lead because that is the only shape that can represent a
-		 * partial conversion — two targets claimed, a third already past its own
-		 * `converts_until` — and because it is the exact idempotency guard: signing in a
-		 * second time finds nothing unconverted and creates nothing.
+		 * The real monitor this target became and when, or `null` while still only a trial.
+		 * Kept per watch, since that is the only shape that can represent a partial
+		 * conversion, and it is the idempotency guard: a second sign-in creates nothing new.
 		 */
 		converted_monitor_id: c.text().nullable(),
 		converted_at: c.integer().nullable(),
@@ -1203,20 +997,9 @@ export type SelectTrialWatch = TableRow<typeof trialWatches>;
 export type InsertTrialWatch = InsertRow<typeof trialWatches>;
 
 /**
- * One trial check, shaped like `dns_monitor_results` and `tcp_monitor_results` so it reads
- * the same way. A digest draws an uptime bar over these rows, which totals on the watch
- * cannot produce.
- *
- * This is the disposable one of the three trial tables. Rows are bounded by construction —
- * 168 per watch, and then the watch stops writing — but bounded is not self-deleting.
- *
- * They live exactly as long as the watch they belong to, and the sweep deletes them by
- * following {@link trialWatchResults.trial_watch_id} to a watch past its `converts_until`
- * rather than by an age of their own. An age would be wrong now that a repeat submission is
- * answered with a report drawn from these rows: a cutoff shorter than the watch's own life
- * would leave a live watch with nothing to report, and one as long as it would delete the
- * results *after* the watch, orphaning them. Following the watch is the only shape with
- * neither failure.
+ * One trial check, shaped like `dns_monitor_results` and `tcp_monitor_results` so a digest
+ * can draw an uptime bar over these rows. The sweep deletes them by following the watch
+ * past its `converts_until`, since deleting by an age of their own could outlive or orphan it.
  */
 export const trialWatchResults = table({
 	name: "trial_watch_results",
@@ -1232,30 +1015,10 @@ export const trialWatchResults = table({
 export type SelectTrialWatchResult = TableRow<typeof trialWatchResults>;
 export type InsertTrialWatchResult = InsertRow<typeof trialWatchResults>;
 
-// Trial funnel
-
 /**
- * One account that came through the public trial: what it cost to get them there, when
- * they signed up, and when — if ever — they started paying.
- *
- * **The one trial table nothing sweeps.** The other three are deleted on a thirty-day clock
- * and an unsubscribe deletes a lead's entire history the moment it is clicked, so a row
- * here is written by copying the facts out rather than by pointing at them: `lead_created_at`,
- * `emails_sent`, `watch_count` and `urls` are snapshots taken at sign-up of rows that will
- * not exist in a month. Joining back to a lead would produce a table that answers questions
- * for thirty days and then silently stops.
- *
- * **Keyed on the subject, not on the address.** Three reasons, and they agree. Unsubscribing
- * must delete every trace of a lead, and an address kept here would be a trace. Somebody who
- * signed up is a customer rather than a lead, so the address they typed into a public form is
- * no longer the identity that matters. And the subject is `teams.owner_id`, which is
- * {@link subscriptions}' `external_customer_id` — so this table reaches billing without a hop
- * through anything that expires.
- *
- * Both dates are written once. `signed_up_at` is set by the first sign-in that converts and
- * never moved, because conversion runs on every sign-in and the interesting instant is the
- * first one; `paid_at` is set by the first entitlement that lands and never moved, because a
- * renewal is not a conversion.
+ * One account that came through the public trial, keyed on the OIDC subject — the identity
+ * that survives an unsubscribe — so this table stays untouched when a lead is erased. Every
+ * fact here is a snapshot copied at sign-up, since the source rows are gone within a month.
  */
 export const trialConversions = table({
 	name: "trial_conversions",
@@ -1277,32 +1040,24 @@ export const trialConversions = table({
 		watch_count: c.integer().default(0),
 		/**
 		 * The URLs themselves, as a JSON array of strings. Denormalized deliberately: the
-		 * watches are gone in a month, the list is only ever read back whole to be printed in a
-		 * report, and a child table would need its own sweep exemption to survive as long as
-		 * this row does.
+		 * watches are gone in a month, and a child table would need its own sweep exemption
+		 * to survive as long as this row does.
 		 */
 		urls: c.text(),
 		/**
-		 * Where they first arrived, copied off the session's first-touch record: the landing
-		 * path, and the campaign the link carried when it carried one.
-		 *
-		 * Nullable and expected to be null for plenty of rows. Attribution lives in a session
-		 * cookie, so anyone who blocks it, arrives in a fresh session, or signed up before this
-		 * existed has none — and a missing attribution has to read as "unknown" rather than as
-		 * "direct", which is a different and much more flattering claim.
-		 *
-		 * Three short slugs and a path, never a query string, a referrer, or anything the person
-		 * typed. This row outlives an unsubscribe by design, so nothing personal may reach it.
+		 * Where they first arrived — three short slugs and a path, copied off the session's
+		 * first-touch record. This row outlives an unsubscribe, so nothing personal belongs
+		 * here; a missing value, common when attribution never ran, reads as unknown.
 		 */
 		landing_path: c.text().nullable(),
 		campaign_source: c.text().nullable(),
 		campaign_name: c.text().nullable(),
-		/** The first sign-in that claimed a trial target; never moved by a later one. */
+		/** Set by the first sign-in that claims a trial target, and fixed from then on. */
 		signed_up_at: c.integer(),
 		/**
-		 * When they first became entitled to a paid subscription, or `null` while they are on
-		 * the free tier. First payment wins — a renewal, a plan change or a repaired webhook
-		 * must not move it, or "days from lead to paid" would drift upward forever.
+		 * When they first became entitled to a paid subscription, or `null` while still on
+		 * the free tier. First payment wins and is the column's only write, keeping "days
+		 * from lead to paid" accurate against renewals, plan changes and repaired webhooks.
 		 */
 		paid_at: c.integer().nullable(),
 	},
@@ -1312,17 +1067,9 @@ export type SelectTrialConversion = TableRow<typeof trialConversions>;
 export type InsertTrialConversion = InsertRow<typeof trialConversions>;
 
 /**
- * One reported day of the trial funnel, written by the report job and never recomputed.
- *
- * It exists because the tables these counters are drawn from do not keep their own past.
- * Leads and watches are swept at thirty days and an unsubscribe removes a lead's history
- * retroactively, so counting August in September returns a smaller number than counting
- * August in August. A stored row is the only version of the day that stays true, and it is
- * what the report's thirty-day context sums over.
- *
- * Written on every run, including a run that sends no email, so a quiet day is a row of
- * zeroes rather than a hole. `date` is unique, which is what makes a re-run overwrite the
- * day it recomputed instead of double-counting it.
+ * One reported day of the trial funnel, written by the report job and never recomputed —
+ * the only version of the day that stays true, since leads and watches are swept within
+ * thirty days. Written as a row of zeroes on a quiet run; `date` is unique, so a re-run overwrites it.
  */
 export const trialDailyStats = table({
 	name: "trial_daily_stats",
@@ -1349,14 +1096,10 @@ export const trialDailyStats = table({
 export type SelectTrialDailyStats = TableRow<typeof trialDailyStats>;
 export type InsertTrialDailyStats = InsertRow<typeof trialDailyStats>;
 
-// Flow monitors
-
 /**
  * What a flow check concluded. `down` is a failed assertion — the flow is broken. `error`
- * is this app failing to find out: a spec that will not parse, a host the monitor is not
- * allowed to reach, a run that could not start. The distinction is the same one the HTTP
- * check draws between a bad response and a probe that never happened, and it is what keeps
- * a mistyped spec from paging somebody about their own site.
+ * is this app failing to find out, from a spec that won't parse to a host outside its
+ * allowed reach — the same split the HTTP check draws, keeping a mistyped spec from paging anyone.
  */
 export const flowStatuses = ["up", "down", "error"] as const;
 
@@ -1364,14 +1107,8 @@ export type FlowStatus = (typeof flowStatuses)[number];
 
 /**
  * A flow monitor: several requests and the assertions that make them a flow, written as an
- * executable spec (ADR-027). Where an HTTP monitor asks "did this endpoint answer", a flow
- * asks "does this sequence still work" — sign in, read the token back, call the endpoint it
- * authorises — which is a question no single request can be asked.
- *
- * The configuration is the spec text. That is deliberate and it is the whole design: the
- * spec language cannot compute, branch or loop, so a customer's monitor is a list of
- * permission-gated tool calls rather than code, and running it needs no sandbox beyond the
- * grants derived here.
+ * executable spec (ADR-027) — a sequence question no single HTTP check can ask. Limited to
+ * permission-gated tool calls, running one needs no sandbox beyond the grants derived here.
  */
 export const flowMonitors = table({
 	name: "flow_monitors",
@@ -1383,21 +1120,15 @@ export const flowMonitors = table({
 		team_id: c.text(),
 		name: c.text(),
 		/**
-		 * The spec source, verbatim as written.
-		 *
-		 * Which hosts it may reach is deliberately **not** stored beside it. The `net` grant a
-		 * run gets is computed from the team's verified domains every time, so a monitor can
-		 * only ever drive a domain the team has proved it owns — and un-verifying or removing a
-		 * domain stops its flows at the next check rather than whenever somebody remembers to
-		 * re-save them. A stored allowance would be a copy of team state that goes stale in
-		 * exactly the direction that matters.
+		 * The spec source, verbatim as written. The `net` grant a run gets is computed from
+		 * the team's verified domains every time, so a monitor only ever drives a domain the
+		 * team has proved it owns, and un-verifying one stops its flows at the very next check.
 		 */
 		source: c.text(),
 		/**
-		 * One of `FLOW_INTERVALS_SECONDS`, defaulting to an hour (ADR-027 §7a). Unlike the
-		 * other monitor types this is a fixed list rather than any integer: a flow run costs
-		 * orders of magnitude more than a single ping, so the interval is a commercial term
-		 * before it is a cadence and every selectable value has a price printed beside it.
+		 * One of `FLOW_INTERVALS_SECONDS`, defaulting to an hour (ADR-027 §7a) — a fixed
+		 * list, since a flow run costs orders of magnitude more than a single ping, making
+		 * the interval a commercial term with a price printed beside every selectable value.
 		 */
 		interval_seconds: c.integer().default(3_600),
 		/** Same column, same meaning, as on every other monitor table (ADR-006). */
@@ -1412,10 +1143,9 @@ export type SelectFlowMonitor = TableRow<typeof flowMonitors>;
 export type InsertFlowMonitor = InsertRow<typeof flowMonitors>;
 
 /**
- * One flow check's outcome. Counters plus the first failure, not a transcript: what makes
- * this readable during an incident is the assertion that broke and where it is written, and
- * a per-step log would multiply retention volume by the step count to add detail nobody
- * reads twice.
+ * One flow check's outcome: counters plus the first failure. What makes this readable
+ * during an incident is the assertion that broke and where, and a per-step log would
+ * multiply retention volume by the step count to add detail nobody reads twice.
  */
 export const flowMonitorResults = table({
 	name: "flow_monitor_results",

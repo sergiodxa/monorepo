@@ -1,24 +1,13 @@
 /**
- * Client island: a real `<form>` posting to the "run monitor" action, so it
- * works with no JS at all (a plain navigating submit, same as before this
- * component existed) — `on("submit")` only runs once hydrated, where it
- * intercepts the submit to `fetch()` the same action instead, so clicking
- * doesn't navigate away, and hands its pending state to `@pkg/ui`'s
- * `Button` (`isPending`), which swaps its content for a spinner while the
- * request is in flight. `Monitor.ping` only enqueues the check — the
- * check itself finishes asynchronously — so the hydrated path keeps the
- * button pending and polls the run-status route until the queued check
- * commits a result (or the wait times out), then reloads the detail page's
- * stat-card and uptime-history frames in place and, when the check moved the
- * monitor to a different status, queues a toast about it.
+ * Client island: a real `<form>` posting to the "run monitor" action works with
+ * no JS; once hydrated, `on("submit")` intercepts it to `fetch()` the same action
+ * instead, showing a spinner via `Button`'s `isPending` while it's in flight.
+ * `Monitor.ping` only enqueues the check, so the button polls the run-status
+ * route until it commits a result (or times out), reloads the affected frames,
+ * and toasts any status change.
  *
- * Its label reads through `@pkg/i18n/ui`'s `intl(handle)` rather than
- * `ctx.i18next.t`, since this component runs both server-side (the no-JS
- * baseline markup) and client-side (after hydration) and has no access to the
- * request-scoped `ctx.i18next` instance itself — `intl(handle)` resolves the
- * nearest ancestor `IntlProvider` (wired up by this component's caller,
- * `monitor-show.tsx`, for the server-rendered pass) or, client-side, the
- * module-scoped default `bootstrap/browser.ts` registers via `setIntl()`.
+ * Its label reads through `intl(handle)` rather than `ctx.i18next.t`, since it
+ * also renders server-side with no request-scoped `ctx.i18next` to read from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -98,10 +87,9 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 /**
- * Polls `statusUrl` until the monitor's last-checked instant moves past `since`, which is
- * what tells the queued check apart from the result that was already there. Returns the
- * new status, or `undefined` when the wait ran out or anything about the response was
- * unusable — both mean "say nothing", never "assume it stayed the same".
+ * Polls `statusUrl` until the monitor's last-checked instant moves past `since`,
+ * distinguishing the queued check's own result from one already there. Returns
+ * `undefined` on timeout or an unusable response — both read as "say nothing."
  */
 async function waitForCheck(
 	statusUrl: string,
@@ -133,8 +121,8 @@ async function waitForCheck(
 }
 
 /**
- * The toast a status change deserves, or `undefined` when the check left the monitor where
- * it was — an unchanged run is not news, and must stay silent.
+ * The toast a status change deserves, or `undefined` when the check left the
+ * monitor where it was — only a change is worth announcing.
  */
 export function transitionToast(
 	t: TFunction,
@@ -151,7 +139,11 @@ export function transitionToast(
 	};
 }
 
-/** Posts {@link RunMonitorButtonProps.action} with the monitor's id, spinning the icon until the request settles. */
+/**
+ * Posts {@link RunMonitorButtonProps.action} with the monitor's id, spinning
+ * the icon until the request settles, then reloads the affected frames before
+ * toasting so the toast lands over numbers that already reflect the result.
+ */
 export const RunMonitorButton = clientEntry(
 	"/resources/components/run-monitor-button.tsx#RunMonitorButton",
 	function RunMonitorButton(handle: Handle<RunMonitorButtonProps>) {
@@ -202,9 +194,7 @@ export const RunMonitorButton = clientEntry(
 								let status = await waitForCheck(handle.props.statusUrl, run.checkedAt, signal);
 								if (status === undefined) return;
 
-								// Reloaded before the toast so the numbers behind it are already the new ones.
-								// A frame the page did not render has nothing to wait on, so it is dropped
-								// rather than contributing an `undefined` to the batch.
+								/** Only frames the page actually rendered have anything to reload, so a missing lookup is filtered out. */
 								let frames = MONITOR_FRAMES.map((name) => handle.frames.get(name)).filter(
 									(frame) => frame !== undefined,
 								);
@@ -213,7 +203,7 @@ export const RunMonitorButton = clientEntry(
 								let toast = transitionToast(t, handle.props.name, run.status, status);
 								if (toast) showToast(toast);
 							} catch {
-								// A failed run is already visible in the page; a broken toast helps nobody.
+								/** A failed run already shows in the page, so this stays silent rather than risking a wrong toast. */
 							} finally {
 								pending = false;
 								void handle.update();

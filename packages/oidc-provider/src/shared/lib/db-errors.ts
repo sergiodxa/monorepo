@@ -1,9 +1,9 @@
 /**
  * Typed error classes for common database constraint failures.
  *
- * Models throw these instead of raw driver errors so controllers can map a
- * missing/duplicate/foreign-key violation to the right HTTP status without
- * inspecting vendor-specific messages.
+ * Controllers inspect the error type to map a missing/duplicate/foreign-key
+ * violation to the right HTTP status, independent of the underlying driver's
+ * error messages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

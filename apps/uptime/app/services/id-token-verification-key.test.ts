@@ -1,6 +1,3 @@
-import { JWK, JWT } from "@pkg/jwt";
-import { HttpResponse, http } from "msw";
-import { setupServer } from "msw/node";
 /**
  * Unit tests for the ID-token verification key service. The JWKS endpoint is served
  * by a mock server, so the tests cover what the service is actually responsible for:
@@ -10,11 +7,14 @@ import { setupServer } from "msw/node";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { JWK, JWT } from "@pkg/jwt";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
-/** The endpoint the service is pointed at. */
 const JWKS_URL = "https://auth.sergiodxa.com/.well-known/jwks.json";
 
 let server = setupServer();
@@ -23,7 +23,6 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** Generates a key pair and serves its public half as the auth server's key set. */
 async function publish(): Promise<JWK.KeyPair> {
 	let keyPair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 	server.use(http.get(JWKS_URL, () => HttpResponse.json(JWK.toJSON([keyPair]))));
@@ -58,8 +57,6 @@ describe("IdTokenVerificationKeyService", () => {
 		let service = new IdTokenVerificationKeyService();
 		let keys = await service.value;
 
-		// Nothing has been fetched yet: the resolver goes to the network when a token
-		// first needs a key, which is what keeps construction free of I/O.
 		expect(requests).toBe(0);
 
 		await JWT.verify(token, keys, { algorithms: [JWK.Algorithm.ES256] });

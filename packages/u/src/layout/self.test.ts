@@ -1,6 +1,4 @@
 /**
- * Unit tests for `self()`'s default and explicit `align-self` values.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -20,10 +20,7 @@ import {
 	validateScheme,
 } from "../../shared/lib/uri-validation";
 
-/**
- * Model for OAuth 2.0 clients.
- * Manages client registration, configuration, and lifecycle.
- */
+/** OAuth 2.0 client model backed by the `clients` table. */
 export default class Client {
 	/** Error thrown when a logo URL is invalid or uses an unsafe scheme. */
 	static InvalidLogoUrlError = class extends InvalidUriError {
@@ -57,7 +54,6 @@ export default class Client {
 		return url;
 	}
 
-	/** Database table schema for clients. */
 	static table = table({
 		name: "clients",
 		primaryKey: ["id"],

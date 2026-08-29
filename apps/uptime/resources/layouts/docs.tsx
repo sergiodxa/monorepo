@@ -1,17 +1,9 @@
 /**
- * Shared chrome for the `/docs` site: a searchable sidebar grouping every doc by
- * section, a topbar with a breadcrumb trail and a dashboard call to action, and the
- * article content column. Every doc page composes its content into this layout.
- *
- * Mirrors `resources/layouts/app-shell.tsx`'s own migration: the mobile drawer's
- * popover-attributed `<aside>` and its hamburger toggle stay a custom composition
- * (like `app-shell.tsx`'s `<nav popover>`, `@pkg/ui`'s own `Sidebar` assumes a
- * persistent `<aside>` beside an `Inset` plus a separate `Dialog`-based
- * `MobileNav` tree for narrow viewports, which doesn't fit this single-drawer
- * layout) — but the pieces `@pkg/ui` does have real, Provider-free components
- * for are swapped in: `Sidebar.Header`/`Sidebar.Content` for the drawer's own
- * structure, `Breadcrumbs` for the trail, and `Typeset` for the article's
- * typography.
+ * Shared chrome for the `/docs` site: a searchable sidebar grouping every
+ * doc by section, a topbar with a breadcrumb trail and a dashboard CTA,
+ * and the article content column that every doc page composes into. The
+ * sidebar stays a custom `<aside popover>` since `@pkg/ui`'s own `Sidebar`
+ * assumes a persistent `<aside>`, not a single slide-in drawer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,8 +70,11 @@ const sidebarTitleCss = [weight(600), fontSize("lg"), m(0), fg("neutral.emphasis
 /** The sidebar's subtitle, e.g. "Guides and reference". */
 const sidebarDescriptionCss = [
 	fontSize("0.8125rem"),
-	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
-	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.
+	/**
+	 * Physical 3-value margin shorthand (top / left+right / bottom) —
+	 * `@pkg/u`'s `m()` only covers the 1/2/4-value logical form, not a
+	 * 3-value one.
+	 */
 	raw({ margin: "4px 0 0" }),
 	fg("neutral.muted"),
 ];
@@ -144,16 +139,15 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 		return (
 			<div mix={[flex(), flexCol(), height("100dvh"), raw({ overflow: "hidden" })]}>
 				<div mix={[flex(), grow(), shrink(), basis("0%"), minBs(0), width("100%")]}>
-					{/*
-					 * Fully hidden below 768px and replaced by a slide-in native
-					 * popover drawer triggered by the topbar's hamburger. At ≥768px
-					 * this resets to a normal static column (`!important` beats
-					 * the UA `[popover]:not(:popover-open) { display: none }`).
-					 */}
 					<aside
 						id="docs-sidebar"
 						popover="auto"
 						mix={[
+							/**
+							 * Below 768px the sidebar hides behind a slide-in native popover
+							 * drawer opened by the topbar's hamburger; at ≥768px the
+							 * `!important`s below reset it to a normal static column.
+							 */
 							fixed(),
 							insTop(0),
 							insLeft(0),
@@ -180,12 +174,9 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								insBottom("auto"),
 								width("256px"),
 								/**
-								 * The native Popover API's UA stylesheet sets `height:
-								 * fit-content` on every `[popover]` element regardless of open
-								 * state (only `display` is gated behind `:popover-open`) — an
-								 * explicit, author-stylesheet `height` is required to beat it,
-								 * since stretch alignment from the flex row above only takes
-								 * over once `height` itself resolves to `auto`.
+								 * The UA stylesheet sets `height: fit-content` on every
+								 * `[popover]`, so an explicit `height` is required to beat it
+								 * once the flex row's stretch alignment resolves it to `auto`.
 								 */
 								height("auto"),
 								maxHeight("none"),
@@ -256,8 +247,11 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								minIs(0),
 								minBs(0),
 								overflowY("auto"),
-								// Physical 3-value padding shorthand (top / left+right / bottom) —
-								// `@pkg/u`'s `p()` only covers the 1/2/4-value logical form.
+								/**
+								 * Physical 3-value padding shorthand (top / left+right /
+								 * bottom) — `@pkg/u`'s `p()` only covers the 1/2/4-value
+								 * logical form.
+								 */
 								raw({ padding: "32px 24px 80px" }),
 							]}
 						>

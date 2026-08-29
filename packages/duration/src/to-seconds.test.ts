@@ -1,7 +1,7 @@
 /**
  * Tests for the whole-seconds conversion used by HTTP headers and platform TTLs,
- * covering the documented rounding direction, the sub-second floor, and the
- * millisecond input that must not be mistaken for seconds.
+ * covering the documented rounding direction, the sub-second floor, and the bare
+ * number input read as milliseconds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

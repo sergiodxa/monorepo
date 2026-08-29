@@ -5,7 +5,7 @@
  * the same string literals and the same type checks across every call site. `JWT`
  * gives each kind of token a class instead: the registered claims arrive as getters,
  * an application adds its own on top through `this.parser`, and signing, verifying,
- * and decoding all produce that class rather than a plain object.
+ * and decoding all produce an instance of that class.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,9 +28,8 @@ const RELATIVE_CLAIMS = ["exp", "iat", "nbf"] as const;
 
 /**
  * Resolves any claim written as a length of time into the instant it names.
- * A duration is measured from now, so `exp: "1h"` is an hour from now; a
- * number is already seconds since the epoch. The claim set is copied only
- * when something needs resolving.
+ * A duration is measured from now, so `exp: "1h"` is an hour from now, and a
+ * number stays seconds since the epoch; the claim set copies only when needed.
  *
  * @param payload - The claims as written.
  * @returns The claims with every time claim as seconds since the epoch.
@@ -291,9 +290,8 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Signs a token with the first key matching the algorithm.
 	 *
-	 * The keys arrive newest first, so the newest key for that algorithm signs
-	 * while older ones stay published to verify what they already signed. The
-	 * chosen key's `kid` goes into the header, letting `verify` pick it out.
+	 * The keys arrive newest first, so the newest signs while older ones stay
+	 * published to verify what they already signed, keyed by the `kid` header.
 	 *
 	 * @param jwt - The token to sign.
 	 * @param algorithm - Algorithm to sign with; also selects the key.
@@ -314,8 +312,7 @@ export class JWT implements jose.JWTPayload {
 	 * Verifies a token and returns it as an instance of the class this was called on.
 	 *
 	 * The key is picked by the token's `kid`, letting a retired key keep verifying
-	 * what it already signed through a rotation; `algorithms` pins which ones this
-	 * caller accepts.
+	 * what it already signed through a rotation; `algorithms` pins accepted ones.
 	 *
 	 * @param token - The compact-serialized token.
 	 * @param jwks - The keys themselves, or a resolver from `JWK.importLocal` /

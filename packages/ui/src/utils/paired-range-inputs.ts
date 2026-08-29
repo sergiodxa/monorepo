@@ -1,10 +1,9 @@
 /**
  * Shared query for a pair of `<input type="range">` elements living under a
  * host element, told apart by a single `data-*` attribute carrying a
- * different value on each half of the pair — a horizontal- and
- * vertical-axis input, a lower- and upper-bound thumb, or any other paired
- * arrangement a mixin coordinates through the same attribute-and-value
- * convention.
+ * different value on each half — a horizontal/vertical axis pair, a
+ * lower/upper-bound thumb, or any other paired arrangement a mixin
+ * coordinates through the same attribute-and-value convention.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

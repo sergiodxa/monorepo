@@ -16,13 +16,8 @@ import { rateLimit } from "@pkg/rate-limit/middleware";
 /**
  * Requests one caller may spend per {@link WINDOW}.
  *
- * Exported because `/mcp`'s own page states it, and a documented limit that disagrees with
- * the enforced one is worse than an undocumented one.
- *
- * Mirrors the `simple.limit` on the `MCP_RATE_LIMITER` binding in `wrangler.jsonc`, kept in
- * step by hand because the binding reports neither value back. Sixty a minute is an abuse
- * bound rather than a product one: an agent answering a question makes a handful of calls
- * and then thinks, so this is far above any real use and hostile to a script.
+ * Kept equal by hand to the `MCP_RATE_LIMITER` binding's `simple.limit` in `wrangler.jsonc`,
+ * unreadable back from the binding; set high as an abuse bound, not a usage cap.
  */
 export const MCP_RATE_LIMIT = 60;
 
@@ -35,18 +30,12 @@ const PREFIX = "mcp";
 /**
  * Creates middleware spending one caller's budget before the MCP handler runs.
  *
- * Keyed on the client address, which is all an anonymous endpoint has to go on. Callers
- * behind one egress share a bucket; that is the cost of having no credential to key on, and
- * the limit is set high enough that it is not a problem in practice.
- *
- * A Cloudflare rate-limiter binding rather than a KV counter, because this endpoint bills
- * nothing per call: a KV read plus write per counted request would cost several times the
- * request being protected, so the protection would cost more than the abuse.
+ * Keyed on the client address, all an anonymous endpoint has; shared egress means shared
+ * buckets. A Cloudflare rate-limiter binding holds the count at no storage cost per call.
  *
  * @param env Environment bindings, read for the rate limiter.
- * @returns Middleware that limits the request, or a pass-through when the deployment
- * declares no limiter — a deploy predating the binding, or a local run without it, keeps
- * serving rather than refusing everything.
+ * @returns Middleware that limits the request, or a pass-through that keeps serving when the
+ * deployment declares no limiter — a deploy predating the binding, or a local run without it.
  */
 export default function mcpRateLimit(env: App.Env): Middleware {
 	let binding = env.MCP_RATE_LIMITER;

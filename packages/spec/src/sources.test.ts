@@ -1,7 +1,7 @@
 /**
- * Tests for loading a suite from in-memory sources: the registration pass the
- * on-disk loader delegates to, exercised without touching a filesystem — which
- * is the whole reason it is a separate entry point.
+ * Tests for loading a suite from in-memory sources: the registration pass
+ * the on-disk loader delegates to, exercised purely in memory — which is
+ * the whole reason it is a separate entry point.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

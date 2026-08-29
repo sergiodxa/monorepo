@@ -1,9 +1,10 @@
 /**
- * Tests for the monitor run-status probe controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load. The route exists so a hydrated
- * page can tell a freshly committed check apart from the one that was already there, so
- * what is pinned here is that both the status and the instant come back verbatim —
- * including the never-checked case, where both are `null` and must not be coerced.
+ * Tests for the monitor run-status probe controller. `cloudflare:workers` is
+ * mocked because `~/app/data/monitor` reads `env` at module load. The route
+ * lets a hydrated page tell a freshly committed check apart from the one that
+ * was already there, so what's pinned here is that both the status and the
+ * instant come back verbatim, including for a monitor that has never been
+ * checked, where both come back `null`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -124,9 +125,9 @@ describe("monitor-run-status", () => {
 	});
 
 	/**
-	 * A monitor that has never completed a check is the baseline a first run is compared
-	 * against, so both fields have to stay `null` rather than becoming `0`/`"unknown"` —
-	 * the poller treats "the instant moved" as the signal that a check landed.
+	 * A monitor that has never completed a check is the baseline a first run is
+	 * compared against, so both fields stay `null`: the poller treats the instant
+	 * changing as the signal that a check landed.
 	 */
 	test("reports nulls for a monitor that has never been checked", async () => {
 		let { db, team, membership, monitor } = await createFixture();

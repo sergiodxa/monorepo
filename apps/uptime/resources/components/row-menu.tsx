@@ -1,16 +1,13 @@
 /**
- * A per-row kebab-icon actions menu, generic over its items — built on
- * `@pkg/ui`'s `Menu`/`Popover` compound, anchored to its own kebab trigger
- * through the Popover API's implicit-anchor behavior (the `commandfor`
- * invoker relationship doubles as the CSS anchor, so N independently
- * positioned triggers — one per table row — each get a correctly placed
- * panel with no manual anchor-name wiring), plus the `menuKeys()` mixin for
- * the WAI-ARIA menu keyboard pattern (roving tabindex, arrow-key/Home/End
- * navigation, typeahead) over whatever `[role^="menuitem"]` descendants a
- * caller's own children happen to carry. It takes arbitrary `children` because
- * no two callers want the same action set: the team settings page alone needs
- * three (member rows, pending-invite rows, domain rows), and the monitor tables
- * want view/edit/delete, all from a single row-menu shell.
+ * A per-row kebab-icon actions menu, generic over its items, built on
+ * `@pkg/ui`'s `Menu`/`Popover` compound. Anchoring reuses the Popover API's
+ * implicit-anchor behavior — the `commandfor` invoker relationship doubles as
+ * the CSS anchor — so each row's independently positioned trigger gets a
+ * correctly placed panel with no manual anchor-name wiring.
+ *
+ * The `menuKeys()` mixin adds the WAI-ARIA menu keyboard pattern over the
+ * caller's own `[role^="menuitem"]` children, since each caller needs a
+ * different action set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,18 +38,9 @@ namespace RowMenu {
 }
 
 /**
- * Square, icon-only trigger.
- *
- * 40px with a 20px glyph, widening to 44px wherever the pointer is coarse: a finger
- * cannot aim at the 32px box a mouse manages fine, and 44px is the smallest target
- * WCAG 2.5.5 accepts. The media query keys on pointer type rather than viewport width
- * because it is the input device, not the screen size, that decides how big the target
- * has to be — a touch laptop needs the larger box at desktop widths.
- *
- * The glyph is three small dots, so it reads far lighter than its nominal size and
- * needs a full-weight stroke and the emphasis foreground to stay visible. Inheriting
- * the cell's color left it at the muted body tone, which all but disappeared against a
- * dark background.
+ * Square, icon-only trigger; widens to the WCAG 2.5.5 minimum of 44px under
+ * a coarse pointer, since a touch laptop needs the larger target even at
+ * desktop widths. A full-weight stroke and the emphasis foreground keep the three-dot glyph visible against a dark background.
  */
 const trigger = [
 	inlineFlex(),
@@ -77,7 +65,11 @@ const panel = [
 	media("(prefers-color-scheme: dark)", bg("neutral.bg-tint")),
 ];
 
-/** Shared row styling for a menu entry; call sites compose their own `<button>`/`<a>` with it. */
+/**
+ * Shared row styling for a menu entry; call sites compose their own
+ * `<button>`/`<a>` with it. Text stays physically left-aligned to match this
+ * row's fixed layout regardless of text direction.
+ */
 export const menuItem = [
 	flex(),
 	items("center"),
@@ -90,7 +82,6 @@ export const menuItem = [
 	fg("neutral.emphasis"),
 	font("inherit"),
 	fontSize("sm"),
-	// Deliberately physical `"left"`, not the logical start/end, per this row's layout.
 	textAlign("left"),
 	textDecoration("none"),
 	cursor("pointer"),

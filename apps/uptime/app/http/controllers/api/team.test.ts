@@ -1,8 +1,7 @@
 /**
  * Tests the authenticated team's own profile endpoints: `GET /api/v1/team` reads it
  * (`teams:read`) and `PUT /api/v1/team` updates its name and/or logo (`teams:write`).
- * There's no id param and thus no cross-team-ownership case — the team is always
- * whichever one the bearer key resolves to via `requireApiKey`.
+ * The team is always whichever one the bearer key resolves to via `requireApiKey`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

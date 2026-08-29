@@ -159,6 +159,10 @@ describe("monitorsImport", () => {
 		expect(body).not.toContain('id="import-report"');
 	});
 
+	/**
+	 * Reason copy is i18next-translated; the assertion checks that each rejected
+	 * line renders its own reason cell, independent of the exact translated wording.
+	 */
 	test("shows every rejected line with its reason so it can be fixed and re-pasted", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -175,8 +179,6 @@ describe("monitorsImport", () => {
 		expect(body).toContain('id="import-report"');
 		expect(body).toContain("<code>https://example.com/</code>");
 		expect(body).toContain("<code>not a url</code>");
-		// Reason copy is i18n, so the assertion is on the reasons being distinguished at all:
-		// two rejected lines, each with its own line number and its own reason cell.
 		let cells = body.match(/<code>/g);
 		expect(cells).toHaveLength(2);
 	});

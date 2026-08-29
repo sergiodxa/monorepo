@@ -1,7 +1,7 @@
 /**
  * Covers the `Cache-Tag` serializer: that it keeps the caller's order, collapses
- * repeats, refuses an empty list rather than emitting a header that purges
- * nothing, and refuses a value that would exceed the header size limit.
+ * repeats, refuses an empty list since an empty header would purge nothing, and
+ * refuses a value that would exceed the header size limit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

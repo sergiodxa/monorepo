@@ -68,7 +68,6 @@ export const CopyButton = clientEntry(
 				{copied
 					? intl(handle).t("components.copyButton.copied")
 					: (handle.props.label ?? intl(handle).t("components.copyButton.label"))}
-				{/* Keeps `value`'s text readable to the clipboard mixin while rendering no visible pixels. */}
 				<span id={valueId} mix={[visuallyHidden()]}>
 					{handle.props.value}
 				</span>

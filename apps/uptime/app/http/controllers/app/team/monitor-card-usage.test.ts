@@ -1,14 +1,11 @@
 /**
  * Tests for the monitor detail page "Monthly Pings Usage" stat-card fragment
- * controller. `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env`
- * at module load. Both figures the card shows are counted from the local check history,
- * so the fixture seeds `monitor_results` rows rather than any billing state, and no
- * billing client takes part. `ctx.team`/`ctx.membership`/auth/i18next state is seeded
- * directly, standing in for the real `requireUser`/`requireTeam`/i18n middleware chain.
- *
- * The three figures the card can produce are all pinned here, because two of them look
- * alike on screen and mean opposite things: a monitor that ran nothing is `0`, a failed
- * count is a dash plus a log line, and the two must never be confused.
+ * controller. `cloudflare:workers` is mocked because `~/app/data/monitor` reads
+ * `env` at module load, and both figures come from local check history rather
+ * than billing state. `ctx.team`/`ctx.membership`/auth/i18next are seeded
+ * directly, standing in for the real middleware chain. The three figures the
+ * card can produce are pinned here since two look alike but mean opposite
+ * things and must never be confused.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -139,10 +136,9 @@ async function recordChecks(db: Database, monitor: SelectMonitor, count: number)
 }
 
 /**
- * A second handle over the fixture's storage whose raw statements fail, or answer with
- * `rows`, while every structural query still works. The consumed count is the only raw
- * statement the controller issues, so this is what isolates its failure from the
- * estimate and the monitor lookup that both have to keep working.
+ * A second handle over the fixture's storage whose raw statements fail, or answer
+ * with `rows`, while structural queries keep working — isolating the failure to
+ * the consumed count, the controller's only raw statement, from the estimate and lookup.
  */
 function createRawFailingDatabase(
 	sqliteDb: SqliteDatabase,
@@ -224,10 +220,9 @@ describe("monitor-card-usage", () => {
 	});
 
 	/**
-	 * The distinction the card exists to keep: a monitor that ran nothing this month is a
-	 * real answer and reads as `0`, while an unavailable count reads as a dash. Asserting
-	 * the dash's absence is what makes this test fail if `0` is ever flattened into
-	 * "unknown".
+	 * A monitor that ran nothing this month is a real answer and reads as `0` — the
+	 * distinction this card exists to keep from an unavailable count's dash. Asserting
+	 * the dash's absence catches `0` ever being flattened into "unknown".
 	 */
 	test("renders a genuine zero as 0, not as unavailable", async () => {
 		let { db, team, membership, monitor } = await createFixture();
@@ -243,10 +238,9 @@ describe("monitor-card-usage", () => {
 	});
 
 	/**
-	 * A failing count has to stay a dash — showing the customer "0 used" for usage nobody
-	 * could read is worse than showing nothing — but it must not stay silent, so the log
-	 * line is asserted alongside the rendering. The estimate is unaffected and still
-	 * renders, which is the whole reason the two are settled independently.
+	 * A failing count renders as a dash, distinct at a glance from a real `0`; the
+	 * asserted log line is what keeps that failure visible. The assertion pins only
+	 * the fields the card owns, since the driver wraps the thrown error.
 	 */
 	test("renders unavailable and reports the failure when the count query fails", async () => {
 		let { sqliteDb, team, membership, monitor } = await createFixture();
@@ -262,7 +256,6 @@ describe("monitor-card-usage", () => {
 			expect(body).toContain("—");
 			expect(body).toContain("Out of");
 
-			// The driver wraps the thrown error, so only the fields the card owns are pinned.
 			expect(errors).toHaveBeenCalledWith(
 				"monitor_usage_card.consumed_unavailable",
 				expect.objectContaining({ monitorId: monitor.id, teamId: team.id }),
@@ -272,7 +265,7 @@ describe("monitor-card-usage", () => {
 		}
 	});
 
-	/** A count that isn't a finite number is unknown, not a value to print as-is. */
+	/** A non-finite count is treated as unknown, so it renders as unavailable like any other failed count. */
 	test("renders unavailable and reports a non-finite count", async () => {
 		let { sqliteDb, team, membership, monitor } = await createFixture();
 		let db = createRawFailingDatabase(sqliteDb, [{ consumed: Number.NaN }]);

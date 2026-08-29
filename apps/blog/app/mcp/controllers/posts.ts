@@ -28,9 +28,8 @@ const COLLECTION_PATHS = { articles: "/articles", tutorials: "/tutorials" } as c
 /**
  * Reads one published post, or reports it as absent.
  *
- * The publish rule is applied here rather than trusted from the repository, because
- * `findByTypeAndSlug` returns preview posts too — the HTML route refuses those with a `403`
- * and nothing below that route does. A slug learned from elsewhere must not reach a draft.
+ * The publish rule is enforced here because `findByTypeAndSlug` returns preview posts too;
+ * only the HTML route otherwise guards against a slug learned elsewhere reaching a draft.
  *
  * @param db Database connection used for the lookup.
  * @param postType Which collection to look in.

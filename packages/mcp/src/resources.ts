@@ -2,15 +2,13 @@
  * Resource declaration and handling.
  *
  * A resource is addressed by URI, and a URI is a URL, so the pattern is a
- * `remix/route-pattern` — the same syntax the apps declare routes with, and the same
- * machinery for matching one and for building one from its variables. The RFC 6570
- * template MCP puts on the wire is derived from that pattern rather than written a second
- * time, which is the same trade as deriving a tool's argument type from its JSON Schema.
+ * `remix/route-pattern` — the same syntax routes declare, matched and built with the
+ * same machinery. The RFC 6570 template MCP puts on the wire derives from that pattern,
+ * keeping the two in lockstep with the tool's argument type derived from its JSON Schema.
  *
- * Resources differ from tools in who reaches for them: a tool is chosen by the model,
- * while a resource is picked by the person or attached by their client. That is why the
- * blog's posts belong here as well as behind a search tool — a reader who wants to hand
- * one to their agent has no slug to give a tool.
+ * A tool is chosen by the model; a resource is picked by the person or attached by their
+ * client — which is why the blog's posts live here too, for a reader who wants to hand
+ * one to their agent with no slug to give a tool.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,8 +57,8 @@ export interface Resource<Pattern extends string = string> {
 	/**
 	 * Builds this resource's URI from its variables.
 	 *
-	 * The typed `createHref` for the declared pattern, so a listing never concatenates a
-	 * URI by hand and cannot drift from the template it was declared with.
+	 * The typed `createHref` for the declared pattern, so every URI a listing builds comes
+	 * straight from the template it was declared with.
 	 */
 	href(...args: CreateHrefArgs<Pattern>): string;
 }
@@ -84,13 +82,9 @@ export interface ResourceContents {
 }
 
 /**
- * What a read handler may answer with.
- *
- * A string is text in the declared media type; a byte array is Base64-encoded as a blob;
- * an array is passed through for a read that returns several contents. `null` means the
- * resource does not exist, which MCP reports as `-32602` — and it has to be `null` rather
- * than an empty array, because the specification forbids an empty `contents` for a
- * resource that is not there: it cannot be told apart from one that is simply empty.
+ * What a read handler may answer with: text, a Base64-encoded byte blob, or several
+ * contents at once. `null` reports the resource as missing (`-32602`); an empty
+ * `contents` array is reserved for one that exists with nothing to show.
  */
 export type ReadResult = string | Uint8Array | ResourceContents[] | null | undefined;
 
@@ -103,11 +97,9 @@ export interface ResourceAction<Pattern extends string = string> {
 	 */
 	available?(ctx: AnyRequestContext): boolean;
 	/**
-	 * Enumerates concrete instances for `resources/list`.
-	 *
-	 * Omit it and a resource with variables appears only in `resources/templates/list` —
-	 * which is the right shape for a corpus too large to enumerate. A resource with no
-	 * variables needs no enumerator: it is already one concrete URI.
+	 * Enumerates concrete instances for `resources/list`. Omitting it keeps a resource with
+	 * variables in `resources/templates/list` only, the right shape for a corpus too large
+	 * to enumerate; a resource with no variables needs none, already being one concrete URI.
 	 */
 	list?(ctx: AnyRequestContext): Awaitable<ResourceListing[]>;
 	/** Reads one instance. Return `null` when it does not exist. */
@@ -119,7 +111,7 @@ export interface ResourceGroup {
 	readonly [key: string]: Resource | ResourceGroup;
 }
 
-/** Reports whether a node of a declaration tree is a resource rather than a nested group. */
+/** Reports whether a node of a declaration tree is a resource. */
 export function isResource(value: Resource | ResourceGroup): value is Resource {
 	return RESOURCE in value;
 }
@@ -197,11 +189,8 @@ export function* walkResources(group: ResourceGroup): Generator<Resource> {
 
 /**
  * Types one resource's implementation against its declaration, so it can live in its own
- * file.
- *
- * Purely a type anchor at runtime — it returns what it was given. Its value is that a read
- * handler written apart from the `map()` call still gets `ctx.variables` typed from the
- * pattern, the way `createAction` types `ctx.params` for a route.
+ * file. Purely a type anchor at runtime, returning what it was given: a read handler
+ * declared apart from `map()` still gets `ctx.variables` typed from the pattern.
  *
  * @param resource The declared resource this implements.
  * @param action How to list and read it.
@@ -223,14 +212,9 @@ interface Converted {
 }
 
 /**
- * Derives the RFC 6570 template MCP publishes from a `route-pattern` source.
- *
- * `:name` becomes `{name}` and `*name` becomes `{+name}`, whose reserved expansion is what
- * allows the `/` a wildcard can match. Everything else in the pattern language has no RFC
- * 6570 equivalent — optionals, protocol alternation, search constraints, unnamed
- * wildcards, repeated capture names — and is refused here rather than silently published
- * as a template a client would expand into a URI this server never matches. A pattern that
- * needs an optional segment is two resources.
+ * Derives the RFC 6570 template MCP publishes from a `route-pattern` source. `*name`
+ * becomes `{+name}` — reserved expansion, so the capture can span a `/` — and `:name`
+ * becomes `{name}`; a bare `:` with no name after it, as in `://`, stays literal text.
  */
 function toUriTemplate(pattern: string): Converted {
 	let template = "";
@@ -241,8 +225,6 @@ function toUriTemplate(pattern: string): Converted {
 		let char = pattern[index];
 
 		if (char === "\\") {
-			// An escaped delimiter is literal text in the pattern, and literal text in the
-			// template — but `{` and `}` are the template's own syntax and have to stay out.
 			let escaped = pattern[index + 1] ?? "";
 			if (escaped === "{" || escaped === "}") {
 				throw new Error(`Resource pattern ${JSON.stringify(pattern)} cannot contain braces`);
@@ -271,7 +253,6 @@ function toUriTemplate(pattern: string): Converted {
 		if (char === ":" || char === "*") {
 			let name = readName(pattern, index + 1);
 			if (name === "") {
-				// `://` is the protocol delimiter, not a capture, so a bare colon there is text.
 				if (char === ":") {
 					template += char;
 					continue;
@@ -331,7 +312,7 @@ export function toContents(
 	return output.map((each) => ({ uri, ...(mimeType === undefined ? {} : { mimeType }), ...each }));
 }
 
-/** Base64-encodes bytes without assuming a Node or browser-only helper. */
+/** Base64-encodes bytes using only `btoa`, so it runs the same in every runtime. */
 function toBase64(bytes: Uint8Array): string {
 	let binary = "";
 	for (let byte of bytes) binary += String.fromCodePoint(byte);

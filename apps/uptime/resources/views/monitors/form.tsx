@@ -1,34 +1,9 @@
 /**
- * Shared HTTP monitor form fields, used by both the new-monitor and edit-monitor
- * views. Renders name/URL/check-interval/expected-status/region inputs — split
- * across two `group`s so a page can card them as "what is being watched" and "how
- * it is checked" while still posting them as one form — pre-filled
- * from `handle.props.monitor` when editing, and from `handle.props.defaultUrl` when
- * a caller creating a monitor already knows the URL. Method, timeout and degraded-threshold
- * aren't collected here — they keep their table default on create (HEAD / 10s /
- * 5000ms) and stay untouched on update, the same way the region select has no
- * pre-selected value on create but keeps the monitor's existing one on edit. SSL
- * settings are a separate form/action. It exists so the two pages don't duplicate
- * the field markup.
- *
- * Name/URL render through `@pkg/ui`'s `TextField` convenience wrapper directly
- * (its own composed label/description covers them, so the local `Field` wrapper
- * isn't needed for either); status/region render through `@pkg/ui`'s `Select`
- * still wrapped in `Field`, since `Select` has no composed label/description part
- * of its own the way `TextField` does. `i18next.getFixedT(...)` — a valid,
- * already-working i18n approach — is unchanged; only the underlying markup moved
- * to `@pkg/ui`.
- *
- * The `EXPECTED_STATUS_CODES` option labels ("200 OK", "201 Created", …) stay
- * hardcoded English on purpose: an HTTP status code and its standard reason
- * phrase is a fixed, protocol-defined pairing — closer to a technical, enum-like
- * label than to translatable prose — so it's left untranslated the same way a
- * unit symbol or a country code would be. The region hints, by contrast, ARE
- * ordinary prose describing a place, and this app's own locale files already
- * carry the matching `page.<page>.form.fields.region.options.*` keys (with a
- * `{{emoji}}` placeholder) — previously unused here — so `LOCATION_HINTS` now
- * renders through those keys instead of the hardcoded English labels it had
- * before.
+ * Shared HTTP monitor form fields for the new-monitor and edit-monitor views,
+ * split into a `"basics"` group (name, URL) and a `"checks"` group (interval,
+ * expected status, region) that post to one `<form>`. Method, timeout, and
+ * the degraded threshold keep their table defaults; SSL settings live in a
+ * separate form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,7 +39,11 @@ const LOCATION_HINT_EMOJI: Record<(typeof LOCATION_HINTS)[number], string> = {
 	me: "🐫",
 };
 
-/** Common HTTP status codes a healthy endpoint might return. Left untranslated — see this module's own doc comment for why. */
+/**
+ * Common HTTP status codes a healthy endpoint might return, with their status
+ * text left untranslated: a code and its standard reason phrase form a fixed,
+ * protocol-defined pairing, closer to an enum label than translatable prose.
+ */
 const EXPECTED_STATUS_CODES = [
 	{ value: 200, label: "200 OK" },
 	{ value: 201, label: "201 Created" },
@@ -98,8 +77,7 @@ namespace MonitorFormFields {
 		/**
 		 * Which half of the fields to render: `"basics"` is what gets watched (name,
 		 * URL), `"checks"` is how it gets watched (interval, expected status, region).
-		 * Both belong to the same `<form>`; the split only lets a caller frame them as
-		 * two groups.
+		 * Both groups post to the same `<form>`.
 		 */
 		group: "basics" | "checks";
 		/**
@@ -111,7 +89,11 @@ namespace MonitorFormFields {
 	}
 }
 
-/** Renders the name/URL/check-interval/expected-status/region fields, pre-filled from `monitor` when editing and defaulted to a 10-minute interval expecting status 200 when creating. */
+/**
+ * Renders the name/URL/check-interval/expected-status/region fields, defaulting
+ * to a 10-minute interval and status 200 on create. The region `<select>` marks
+ * its saved option `selected` directly since a host `defaultValue` is inert here.
+ */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
 		let { monitor, i18next, page, group, defaultUrl } = handle.props;
@@ -175,17 +157,6 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 				</Field>
 
 				<Field label={t("region.label")} description={t("region.description")}>
-					{/*
-					 * The saved region is marked `selected` on its own `<option>`: `<select>` has
-					 * no `defaultValue` attribute, so spelling it on the host renders as inert
-					 * markup and the browser just keeps the first option — which on the edit page
-					 * would move a monitor to another region on the next save.
-					 *
-					 * Exactly one option may claim `selected` — which of two claimants a browser
-					 * honours is not something the markup decides — so the placeholder ties its
-					 * own claim to the same "nothing saved yet" condition that renders it at all,
-					 * rather than asserting it unconditionally and racing the saved region.
-					 */}
 					<Select name="location_hint" required>
 						{!locationHint && (
 							<Select.Option value="" disabled selected={!locationHint}>

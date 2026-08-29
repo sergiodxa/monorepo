@@ -41,10 +41,8 @@ const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
 /**
  * GET /app/:team/cron-jobs/:monitorId/edit — a cron-job monitor's edit form.
- *
  * The timezone select also offers the monitor's own stored zone when it isn't
- * among the runtime's known zones, keeping it `selected` so a save can't silently
- * move the job to a different wall clock.
+ * among the runtime's known zones, keeping the save from switching zones.
  */
 export default createAction(routes.app.team.cronJobs.edit, {
 	middleware: [requireUser, requireTeam],

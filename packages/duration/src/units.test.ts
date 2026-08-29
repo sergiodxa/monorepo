@@ -1,7 +1,7 @@
 /**
- * Tests for the unit tables: that every long spelling and short alias covers the
- * same fixed span, that the spans are the expected millisecond counts, and that
- * unknown or calendar-based units are not in the tables.
+ * Tests for the unit tables: every long spelling and short alias covers the
+ * same fixed span, the spans match their millisecond counts, and unknown or
+ * calendar-based units resolve to undefined.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

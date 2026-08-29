@@ -24,41 +24,28 @@ export default route({
 	statusPage: get("/status/:slug"),
 
 	/**
-	 * The public try-it surface. Unauthenticated by design — the whole point is that a
-	 * visitor with no account can probe one URL and see what monitoring would tell them.
-	 * Every leaf here is reachable by anyone, so each one carries its own protection
-	 * rather than inheriting an auth chain: `trial.check.action` goes through
-	 * `trial-guard.ts` (target blocklist, Turnstile, per-IP limit, daily budget) and
-	 * `trial.unsubscribe` proves itself with the unguessable token in its own URL.
+	 * The public try-it surface, reachable with no account. Every leaf carries its own
+	 * protection: `trial.check.action` goes through `trial-guard.ts`, and
+	 * `trial.unsubscribe` proves itself with its own URL token.
 	 */
 	trial: {
 		/**
-		 * `form()` rather than a page and a separate action at their own URLs: the `GET` is
-		 * an empty box and the `POST` runs the check and renders the answer in its own
-		 * response. Collapsing the two is what lets the page hold no state between requests
-		 * — a reload of the `GET` cannot show somebody else's stale result, and every link
-		 * back here lands on a fresh form.
-		 *
-		 * Running a probe is always the `POST`, so a link preview or a crawler following
-		 * `/try` cannot spend one; arriving with `?url=` only pre-fills the field.
+		 * `form()` combines the empty `GET` box and the check-running `POST` into one
+		 * route, so the page holds no state between requests. Running a probe is always
+		 * the `POST`, keeping a preview or crawler following `/try` from spending one.
 		 */
 		check: form("/try"),
 		lead: post("/try/lead"),
 		/**
-		 * The seven-day health report as a page, addressed by the watch's own unguessable
-		 * `report_token` — the same way `unsubscribe` proves itself, and for the same reason:
-		 * there is no account behind a trial, so the URL is the only credential available.
-		 *
-		 * A separate token from the lead's unsubscribe one on purpose. That token *acts* (it
-		 * deletes an address), and a report is something a reader may forward to a colleague or a
-		 * client; sharing a link must never hand over the power to unsubscribe somebody.
+		 * Addressed by the watch's own unguessable `report_token`, the only credential a
+		 * trial has since there's no account behind it. A separate token from the lead's
+		 * unsubscribe one keeps a forwarded report from ever unsubscribing someone.
 		 */
 		report: get("/try/report/:token"),
 		/**
-		 * `form()` rather than `post()`: the GET renders a confirmation page and only the
-		 * POST deletes. A mail scanner that follows every link in an email — Outlook Safe
-		 * Links, Gmail's fetcher — must not be able to unsubscribe somebody who never
-		 * clicked, which is exactly what a GET that deletes would allow.
+		 * `form()` pairs a confirmation-page `GET` with the deleting `POST`, so a mail
+		 * scanner following every link in an email lands safely on the confirmation
+		 * page, and only a real click reaches the delete.
 		 */
 		unsubscribe: form("/unsubscribe/:token"),
 	},
@@ -83,10 +70,9 @@ export default route({
 	},
 
 	/**
-	 * How the monitoring works and who runs it. Its own top-level leaf rather than a
-	 * `marketing.*` slug, because it is not a page that sells: it is the one a prospective
-	 * customer reads to decide whether to believe the rest of the site, and it is linked from
-	 * the footer next to the legal pages for that reason.
+	 * Its own top-level leaf: this is what a prospective customer reads to decide
+	 * whether to trust the rest of the site, so it sits in the footer next to the
+	 * legal pages, apart from the `marketing.*` pages that sell.
 	 */
 	trust: get("/trust"),
 
@@ -123,11 +109,9 @@ export default route({
 				 */
 				panel: get("/app/:team/dashboard/panel/:type"),
 				/**
-				 * Fragment routes: each renders exactly one dashboard stat card, loaded into
-				 * its own named `Frame` with a skeleton `fallback` so no card ever blocks
-				 * another (notably usage, the slowest fetch, a Polar API call). `count` is
-				 * parameterized by `:resource` rather than one route per monitor type since
-				 * all five counts share the same shape (a total plus a status breakdown).
+				 * Each stat card loads into its own named `Frame` with a skeleton `fallback`, so
+				 * usage — the slowest fetch, a Polar API call — never blocks another. `count` is
+				 * parameterized by `:resource` since all five counts share the same shape.
 				 */
 				cards: {
 					usage: get("/app/:team/dashboard/cards/usage"),
@@ -142,11 +126,9 @@ export default route({
 					only: ["index", "new", "show", "edit"],
 				}),
 				/**
-				 * Fragment routes: each renders exactly one monitor-detail-page stat card (or
-				 * the uptime history bar), loaded into its own named `Frame` with a skeleton
-				 * `fallback` so none of them block the page shell or each other — notably the
-				 * usage card's Polar API call, the slowest of the bunch. Same rationale as
-				 * `dashboard.cards` above, scoped down to one monitor via `:monitorId`.
+				 * Each stat card (or the uptime history bar) loads into its own named `Frame`
+				 * with a skeleton `fallback`, so the usage card's Polar API call — the slowest
+				 * of the bunch — never blocks the page shell or the cards beside it.
 				 */
 				cards: {
 					usage: get("/app/:team/monitors/:monitorId/cards/usage"),
@@ -156,20 +138,16 @@ export default route({
 					uptimeHistory: get("/app/:team/monitors/:monitorId/cards/uptime-history"),
 				},
 				/**
-				 * JSON probe reporting the monitor's cached last status and last-checked
-				 * instant. An on-demand run only *enqueues* a check, so the request that
-				 * starts it cannot report the outcome; this is what a hydrated page polls
-				 * afterwards to notice the result landing, and it stays a page-area route
-				 * (session-authenticated) rather than an API one so no key is involved.
+				 * Reports the monitor's cached last status and last-checked instant. An
+				 * on-demand run only enqueues a check, so a hydrated page polls this route
+				 * afterward to notice the result landing; it stays session-authenticated.
 				 */
 				runStatus: get("/app/:team/monitors/:monitorId/run-status"),
 			},
 			/**
-			 * Paste-a-list bulk creation. `/app/:team/import-monitors` rather than a leaf under the
-			 * monitors base path, because `monitors.show` is `/app/:team/monitors/:monitorId` —
-			 * anything at `/app/:team/monitors/import` is also a valid `show` with the id
-			 * `"import"`, and which of the two wins would be a property of match ordering rather
-			 * than of this table.
+			 * Paste-a-list bulk creation, at `/app/:team/import-monitors`. Since `monitors.show`
+			 * is `/app/:team/monitors/:monitorId`, a path under the monitors base would also
+			 * match `show` with the id `"import"`, leaving the winner to match ordering.
 			 */
 			monitorsImport: get("/app/:team/import-monitors"),
 			dnsMonitors: {
@@ -178,29 +156,15 @@ export default route({
 					only: ["index", "new", "show", "edit"],
 				}),
 				/**
-				 * The step between creating a domain monitor and monitoring anything with it:
-				 * discovery has run, and this lists what it found — grouped by name, then by
-				 * type — for the visitor to accept or decline before any of it becomes an
-				 * expectation. Its own page rather than a section of `show`, because a monitor
-				 * with unreviewed records is a distinct state and a reload must land back on
-				 * the decision rather than on a detail page that implies it was made.
-				 *
-				 * `/review` under `:monitorId` rather than a query flag: the monitor already
-				 * exists by the time it renders (discovery wrote its records), so the URL is
-				 * shareable, re-openable, and cannot be reached for a monitor that is not there.
+				 * Its own page: an unreviewed monitor is a distinct state, and a reload must
+				 * land back on the decision. The monitor already exists by the time this
+				 * renders, so `/review` under `:monitorId` stays a shareable, re-openable URL.
 				 */
 				review: get("/app/:team/dns/:monitorId/review"),
 				/**
-				 * Fragment routes for the detail page's data fetches, same rationale as
-				 * `monitors.cards` above: the shell renders from the monitor row alone, while the
-				 * uptime history bar, the result-derived stat cards and the check history each
-				 * load into their own `Frame` rather than the page awaiting all three before its
-				 * first byte.
-				 *
-				 * `results` and `checkHistory` are two routes over the same result rows because
-				 * the page puts them in different places — the summary above the record table, the
-				 * raw log below it — and a `Frame` fills the region it was declared in, so content
-				 * that has to appear in two places cannot come from one fragment.
+				 * The shell renders from the monitor row alone, while the uptime history bar,
+				 * the stat cards, and the check history each load into their own `Frame`.
+				 * `results` and `checkHistory` split the same rows since each `Frame` fills only its own region.
 				 */
 				cards: {
 					uptimeHistory: get("/app/:team/dns/:monitorId/cards/uptime-history"),
@@ -260,14 +224,9 @@ export default route({
 	},
 
 	/**
-	 * None of these leaves carry an id in the URL (only `:team`) — the record being
-	 * acted on comes from a form-body field instead (e.g. a hidden `monitor_id` input),
-	 * so `resources()`'s `:param`-in-URL shape doesn't fit here. Grouped by resource
-	 * instead, with every path string unchanged from the old flat map. `monitor.http`
-	 * also carries the SSL-settings and content-check actions since both are
-	 * sub-resources of an HTTP monitor, even though they're implemented in their own
-	 * controller files (`ssl.ts`, `content-checks.ts`). `setDashboardTab` doesn't belong
-	 * to any resource, so it stays a standalone leaf.
+	 * None of these leaves carry an id in the URL (only `:team`) — the record acted on
+	 * comes from a form-body field instead. Grouped by resource; `setDashboardTab`
+	 * belongs to no resource, so it stands alone.
 	 */
 	actions: {
 		monitor: {
@@ -300,10 +259,9 @@ export default route({
 				 */
 				toggleRecord: post("/actions/:team/toggle-dns-monitor-record"),
 				/**
-				 * Re-parses a freshly pasted zone file for an existing monitor. Its own action
-				 * rather than a field on the edit form, because the pasted text is never stored:
-				 * names can only be re-discovered by asking for the file again, which is a
-				 * deliberate, occasional act rather than part of renaming a monitor.
+				 * Re-parses a freshly pasted zone file for an existing monitor, as its own
+				 * action: the pasted text is never stored, so names can only be rediscovered
+				 * by pasting the file again — a deliberate, occasional act of its own.
 				 */
 				importZoneFile: post("/actions/:team/import-dns-monitor-zone-file"),
 			},
@@ -352,12 +310,9 @@ export default route({
 	},
 
 	/**
-	 * A separate route-map group (not a URL prefix — the paths are still
-	 * `/actions/:team/...`) purely so `bootstrap/app.tsx` can lay `requireRole("admin")`
-	 * over this whole group without also restricting the member-level `actions` above.
-	 * `router.map()` requires one middleware chain per call and every leaf of a group
-	 * in the same call, so these can't just be extra keys on `actions`. Grouped by
-	 * sub-resource, same rationale (and same no-id-in-URL shape) as `actions` above.
+	 * A separate route-map group, not a URL prefix (paths stay `/actions/:team/...`),
+	 * so `bootstrap/app.tsx` can lay `requireRole("admin")` over exactly this group: a
+	 * `router.map()` call takes one middleware chain over every leaf within it.
 	 */
 	teamAdminActions: {
 		team: {
@@ -398,10 +353,9 @@ export default route({
 		 */
 		updateEmails: post("/actions/update-emails"),
 		/**
-		 * The viewer's own data as a JSON download. A `POST` rather than a `GET`, even though it
-		 * mutates nothing: a `GET` that returns somebody's whole account is a URL another site
-		 * can point an image or an iframe at, and cross-origin protection only applies to the
-		 * unsafe methods. The form is a button, so nothing is lost by it.
+		 * Exports the viewer's own data as a JSON download, mutating nothing. A `POST`
+		 * keeps it behind cross-origin protection, which guards only the unsafe methods —
+		 * a `GET` returning someone's whole account is a URL another site could point an image at.
 		 */
 		exportData: post("/actions/export-data"),
 		/**
@@ -415,11 +369,9 @@ export default route({
 	},
 
 	/**
-	 * Inbound webhooks from third parties. Grouped under one path prefix because that
-	 * prefix is what exempts them from cross-origin protection and language resolution in
-	 * `bootstrap/app.tsx` — a sender proves itself with a signature over the request body,
-	 * so neither an `Origin` header nor a session applies. Every leaf here is
-	 * unauthenticated by the auth chain's standards and must verify its own signature.
+	 * Inbound webhooks from third parties, grouped under one path prefix so
+	 * `bootstrap/app.tsx` exempts it from cross-origin protection and language
+	 * resolution; each leaf verifies its own signature over the request body.
 	 */
 	webhooks: {
 		polar: post("/webhooks/polar"),
@@ -433,24 +385,18 @@ export default route({
 		cronJobPing: post("/api/v1/cron-jobs/:cronJobId/ping"),
 
 		/**
-		 * Bearer-API-key-gated public REST API. Each resource below groups its
-		 * conventional CRUD leaves via `resources()` (collection `index`/`create` plus
-		 * item `show`/`update`/`destroy`, relative to the resource's base path and
-		 * `:idParam`), with any non-standard action (e.g. `alerts.events`,
-		 * `monitors.contentChecks`) added as an extra key alongside the spread. Every
-		 * leaf is still mapped in `bootstrap/app.tsx` with its own `requireApiKey(scope)`
-		 * middleware, since read/write methods on the same resource need different
-		 * scopes — grouping here is only about the route table, not shared middleware.
+		 * Bearer-API-key-gated public REST API. Each resource groups its CRUD leaves via
+		 * `resources()`, plus any non-standard action as an extra key. `bootstrap/app.tsx`
+		 * maps each leaf with its own `requireApiKey(scope)` since read/write scopes differ.
 		 */
 		v1: {
 			status: get("/api/v1/status"),
 			backfillDailyStats: post("/api/v1/backfill-daily-stats"),
 
 			/**
-			 * One-shot check against a target the caller describes in the request body, with
-			 * no monitor behind it. Not a `resources()` leaf and not nested under a monitor
-			 * type, because it creates nothing and belongs to none of them: the body's `type`
-			 * discriminator picks which kind of check to run.
+			 * Runs a one-shot check against a target described in the request body, with no
+			 * monitor behind it — its own top-level leaf, since the body's `type`
+			 * discriminator alone picks which kind of check to run.
 			 */
 			ping: post("/api/v1/ping"),
 
@@ -474,14 +420,9 @@ export default route({
 				}),
 				results: get("/api/v1/dns-monitors/:dnsMonitorId/results"),
 				/**
-				 * The monitor's tracked records, and the toggle deciding which of them alert.
-				 * Deliberately on the existing `dns-monitors:read`/`:write` scopes rather than a
-				 * pair of its own: a key that may reconfigure a domain monitor may decide which of
-				 * its records are watched, because the two are the same authority.
-				 *
-				 * `PATCH` rather than `PUT`: the only mutable field is `isEnabled`, and a caller
-				 * must never be able to rewrite a record's identity — the normalized value is the
-				 * key the diff runs on, so editing it would silently retarget the expectation.
+				 * The monitor's tracked records and the toggle deciding which of them alert, kept
+				 * on the existing `dns-monitors:read`/`:write` scopes, since reconfiguring a
+				 * monitor and picking its watched records share the same authority. `PATCH` touches only `isEnabled`.
 				 */
 				records: {
 					index: get("/api/v1/dns-monitors/:dnsMonitorId/records"),
@@ -530,9 +471,10 @@ export default route({
 			teamShow: get("/api/v1/team"),
 			teamUpdate: put("/api/v1/team"),
 
-			// `destroy` takes the id in the JSON body rather than the URL (`DELETE
-			// /api/v1/team-domains` with no id segment), so it can't come from
-			// `resources()`'s `:id`-param shape and is added by hand instead.
+			/**
+			 * `destroy` reads the id from the JSON body, since `DELETE /api/v1/team-domains`
+			 * carries no id segment for `resources()` to bind as a `:id` param — added by hand.
+			 */
 			teamDomains: {
 				...resources("/api/v1/team-domains", { only: ["index", "create"] }),
 				destroy: del("/api/v1/team-domains"),

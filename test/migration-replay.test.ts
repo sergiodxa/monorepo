@@ -1,18 +1,12 @@
 /**
- * Repo-wide guard that a migration chain applies cleanly to an empty database, and that no
- * copy step reads a column its source table does not have.
+ * Repo-wide guard that every migration chain applies cleanly to an empty database, and that
+ * no copy step reads a column its source table lacks.
  *
- * Two real bugs motivated this. `@pkg/oidc-provider`'s chain aborted outright on a fresh
- * database — `0001` created a column and `0003` added it again — which meant a newly
- * provisioned tenant Durable Object could not boot. And four Drizzle-generated table rebuilds
- * copy a renamed column by its *new* name out of the old table; with SQLite's double-quoted
- * string literals enabled, as the adapters run, those reads silently yield the column's own
- * name as text instead of failing.
- *
- * Replaying with DQS off is what makes the second class visible. The scanner is exercised
- * against fixtures before it is trusted against the repo, since a chain with no new
- * violations cannot otherwise prove it would catch one.
- *
+ * Two real bugs motivated this: a chain that re-added an existing column aborted
+ * outright on a fresh database, and several Drizzle table rebuilds copy a renamed
+ * column by its new name — with SQLite's double-quoted strings enabled, that
+ * silently returns the column's own name as text. Replaying with DQS off makes
+ * the second failure mode visible.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -26,25 +20,13 @@ import type { MigrationFile } from "./migration-replay";
 
 import { replayMigrations } from "./migration-replay";
 
-/** Repo root, resolved from this file so the scan does not depend on the working directory. */
+/** Repo root, resolved from this file so file globs stay anchored to the repo no matter where the process runs. */
 const ROOT = join(import.meta.dirname, "..");
 
 /**
- * Copy steps that read a renamed column by its new name, left as they were applied.
- *
- * These are historical: every one has already run against production, and the file is the
- * record of what ran. Rewriting them would make the record a fiction while changing nothing
- * observable — the only replays that happen are against empty databases, where the copy moves
- * no rows either way.
- *
- * Two of them have no mechanical correction at all, which is the other reason they stay:
- * `chief_miss_america` turns one `subject_id` into both `team_id` and `author_id`, and
- * `plain_toro` adds four NOT NULL columns to a table that has none of them. Deriving those
- * values is a product decision, not a transcription.
- *
- * The risk they carry is a replay against a database that already has rows, which nothing in
- * this repo does. An entry here is a statement about reality, not a permanent carve-out: the
- * test below fails if one stops failing, so it is removed by whatever change fixes it.
+ * Copy steps that read a renamed column by its new name, left as they ran against
+ * production; two have no mechanical correction, since deriving their values is a
+ * product decision, and the test below fails once an entry stops failing.
  */
 const KNOWN: { file: string; column: string }[] = [
 	{ file: "20250520185608_gigantic_wendell_rand.sql", column: "subject_id" },
@@ -105,6 +87,10 @@ describe("migration chains apply to an empty database", () => {
 			expect(failures[0]?.message).toContain("duplicate column name");
 		});
 
+		/**
+		 * The rename copy at 0002 succeeds silently; only the deliberate error at 0003 is
+		 * reported, proving the replay continues past a single failure.
+		 */
 		test("accepts a correct rename copy, and keeps replaying past a failure", () => {
 			let failures = replayMigrations([
 				{ name: "0001.sql", sql: "CREATE TABLE t (id TEXT, user_id TEXT);" },
@@ -115,16 +101,17 @@ describe("migration chains apply to an empty database", () => {
 				{ name: "0003.sql", sql: "SELECT nope FROM t;" },
 			]);
 
-			// The good copy passes; the deliberate error after it is still reported, which is
-			// what proves one failure does not end the replay.
 			expect(failures.map((failure) => failure.file)).toEqual(["0003.sql"]);
 		});
 	});
 
+	/**
+	 * Confirms the scan found real migrations, so a clean result below reflects genuine
+	 * coverage.
+	 */
 	test("no migration chain has an unaccepted failure", () => {
 		let dirs = migrationDirectories();
 
-		// A scan that silently found no migrations would pass this test forever.
 		expect(dirs.length).toBeGreaterThan(4);
 
 		let unexpected: string[] = [];

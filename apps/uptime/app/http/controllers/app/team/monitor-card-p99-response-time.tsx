@@ -5,9 +5,8 @@
  * document shell, so the monitor page's p99 `Frame` can swap it in over its skeleton
  * fallback. Requires `requireUser` + `requireTeam`.
  *
- * Calls `getHttpP99ResponseTime` directly rather than `Monitor.getStatsById` so the card
- * pays for one Analytics Engine query and none of the D1 aggregate that method also runs
- * for figures this card doesn't render.
+ * Calls `getHttpP99ResponseTime` directly, so the card pays for exactly one Analytics
+ * Engine query, separate from `Monitor.getStatsById`'s combined D1 aggregate query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,8 +40,8 @@ export default createAction(routes.app.team.monitors.cards.p99ResponseTime, {
 
 		/**
 		 * An em dash covers both "no HTTP checks in the last 24 hours" (`null`) and "the
-		 * Analytics Engine query failed" — the p99 is the only figure on this card, so a
-		 * missing number degrades to a placeholder rather than taking the fragment down.
+		 * Analytics Engine query failed" — the p99 is this card's only figure, so a
+		 * missing number renders as a placeholder, keeping the fragment's response intact.
 		 */
 		let result = await getHttpP99ResponseTime({ monitorId: monitor.id });
 		let p99ResponseTimeMs = isFailure(result) ? null : result.data;

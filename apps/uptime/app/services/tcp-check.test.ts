@@ -18,7 +18,6 @@ interface FakeSocket {
 let nextSocket: FakeSocket;
 let closeCalls: FakeSocket[] = [];
 
-/** Builds a fake socket that records whether it was closed. */
 function fakeSocket(opened: Promise<void>): FakeSocket {
 	let socket: FakeSocket = {
 		opened,

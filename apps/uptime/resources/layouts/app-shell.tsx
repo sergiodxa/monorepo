@@ -1,52 +1,9 @@
 /**
- * Signed-in app shell layout: a full-height sidebar (team switcher, icon nav links,
- * admin-only group, user menu) on the left, and a header (breadcrumb + page-specific
- * quick actions) above the page's main content on the right. Every `/app/:team/*`
- * page composes its content into this shell. It exists as the shared frame every
- * team-area page renders inside.
- *
- * At ≥768px this is a CSS grid with a named-area layout:
- *
- * ```
- * | team picker | header  |
- * | nav list    | content |
- * | user menu   | content |
- * ```
- *
- * — a grid rather than nested flex rows/columns because the team-picker cell and the
- * header cell need to share exactly one row's height (so the divider below the team
- * picker lines up with the divider below the header): the grid's default
- * `align-items: stretch` gives every cell in a row the row's full height for free,
- * with no hardcoded pixel height to keep in sync between two unrelated elements.
- * This exact three-row/two-column grid-area layout, and the single-DOM-tree
- * `display: contents` off-canvas trick below, has no equivalent in `@pkg/ui`'s own
- * `Sidebar` (which assumes a persistent `<aside>` beside an `Inset`, plus a *separate*
- * `Dialog`-based `MobileNav` tree for narrow viewports) — so this file keeps that
- * outer composition as its own layout and only swaps in the pieces `@pkg/ui` does
- * have a real component for: `Menu` (the team/user dropdowns), `Breadcrumbs` (the
- * trail), and `Sidebar.Item` (the nav rows themselves). The bottom notification is
- * `FlashToast`, which is `@pkg/ui`'s `Toast` in the region and the self-fading treatment
- * this app renders one in.
- *
- * The sidebar's three sections (team picker / nav list / user menu) are DOM children
- * of one `<nav popover>` element (so the mobile off-canvas drawer can show/hide them
- * as a single unit), but at ≥768px that `<nav>` switches to `display: contents` —
- * generating no box of its own — so its three children become direct items of the
- * outer grid instead of one flex column inside a "sidebar" grid cell. Below 768px,
- * `grid-area` on those children is simply inert (their containing block isn't a grid
- * there), and the `<nav>` lays them out as an ordinary flex column, exactly like the
- * mobile drawer always has.
- *
- * Page-specific copy (`heading`, `breadcrumbs`) arrives already translated from the
- * controller, but the chrome's own copy — nav labels, the user menu, and the landmark
- * names a screen reader announces — belongs to this file, so it takes the request's
- * `i18next` and resolves those from `app.layout.*` itself. The prop is required: a shell
- * that quietly falls back to English when a page forgets to pass it is a bug that
- * renders perfectly and is only ever noticed by the readers it fails.
- *
- * There is no separate top-level header spanning the sidebar's width — the team
- * switcher already names the team once, in the sidebar, so a page never repeats it a
- * second time as a header title or a third time as its own `<h1>`.
+ * Signed-in app shell: a sidebar (team switcher, nav, admin group, user
+ * menu) and a header sit around the content every `/app/:team/*` page
+ * composes here. Below 768px the sidebar is a `<nav popover>` off-canvas
+ * drawer; at ≥768px that same `<nav>` switches to `display: contents` and
+ * its three sections become direct items of a two-column, three-row grid.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -109,13 +66,9 @@ import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
 
 /**
- * The page shell. Below 768px, a plain flex column — the sidebar `<nav>` is either
- * closed (`display: none`, no box) or an off-canvas overlay (top-layer, outside
- * normal flow either way), so header+main are simply the only flex children that
- * matter. At ≥768px it becomes the two-column, three-row grid described above.
- * `height`/`width` stay physical (not `bs()`/`is()`) here since this IS the
- * viewport-sized outer frame — `grid-template-*` has no `@pkg/u` equivalent and
- * stays a bespoke `raw()` declaration.
+ * The page shell: a plain flex column below 768px, where the sidebar
+ * `<nav>` is either closed or an off-canvas overlay; at ≥768px it becomes
+ * the two-column, three-row grid described in the file docblock.
  */
 const page = combine([
 	flex(),
@@ -176,13 +129,9 @@ const header = combine([
 ]);
 
 /**
- * The breadcrumb trail above the heading.
- *
- * Truncates on one line, like the heading below it does. Without this the trail wrapped: the
- * heading column is `min-inline-size: 0` so it can shrink, but a wrapping trail grows *taller*
- * instead of narrower, and at a phone's width "Dashboard › Flow Monitors" became two lines above
- * a third — three lines of text inside a header fixed at 64px. One line that ends in an ellipsis
- * is the same compromise the heading already makes.
+ * The breadcrumb trail above the heading, truncated to one line like the
+ * heading below it. Without truncation, a wrapping trail grows taller
+ * instead of narrower, pushing three lines into a header fixed at 64px.
  */
 const breadcrumbTrail = combine([truncate(), minIs(0)]);
 
@@ -202,16 +151,9 @@ const breadcrumbText = combine([
 const headingColumn = combine([flex(), flexCol(), justify("center"), gap("2px"), minIs(0)]);
 
 /**
- * The sidebar's popover drawer. Below 768px this is a native popover — hidden until
- * opened by the header's hamburger button — rendered as a fixed, full-height overlay
- * sheet with its own backdrop: a flex column of its three sections, with the middle
- * one (`navCell`, below) independently scrollable so the team picker and user menu
- * stay pinned. At ≥768px it becomes `display: contents` (see the file docblock) —
- * the `!important`s throughout are required to beat the UA stylesheet's
- * `[popover]:not(:popover-open) { display: none }`, which otherwise wins on
- * specificity. `top`/`left`/`bottom` stay the physical `insTop()`/`insLeft()`/
- * `insBottom()` exceptions since this drawer is pinned to the physical viewport
- * edge it slides in from, not a logical writing-direction edge.
+ * The sidebar's popover drawer: a native, full-height overlay below 768px
+ * that becomes `display: contents` at ≥768px (see the file docblock); the
+ * `!important`s beat the UA stylesheet's default `display: none`.
  */
 const sidebarNav = combine([
 	fixed(),
@@ -242,10 +184,9 @@ const sidebarNav = combine([
 ]);
 
 /**
- * Top sidebar cell: the team picker. Shares row 1 with `header` at ≥768px — the
- * grid's default `align-items: stretch` gives both the same height, so their
- * `borderBottom`s land at the same y — with a matching `borderRight` to continue the
- * vertical divider between the sidebar and the content column.
+ * Top sidebar cell: the team picker, sharing row 1 with `header` at ≥768px
+ * so the grid's `align-items: stretch` gives both the same height, with a
+ * right border continuing the divider below it.
  */
 const teamPickerCell = combine([
 	flex(),
@@ -295,24 +236,16 @@ const userMenuCell = combine([
 ]);
 
 /**
- * Plain (non-interactive) row used for the team picker when the viewer has one team.
- * `minWidth: 0` is required for `truncatedLabel`'s ellipsis to actually kick in —
- * without it, this row (and the sidebar itself) would rather grow past its intended
- * width than truncate the team name.
+ * Plain (non-interactive) row for the team picker when the viewer has
+ * one team. `minWidth: 0` lets {@link truncatedLabel}'s ellipsis kick in
+ * instead of the row growing past its intended width.
  */
 const teamPickerRow = combine([flex(), items("center"), gap(2), minIs(0), is("full")]);
 
 /**
- * Interactive team/user-menu trigger button, styled to look like the plain row
- * above and opened via the same `commandfor`/`command="toggle-popover"` Invoker
- * Commands relationship a `Menu` documents — that same invoker relationship is also
- * what gives the `Menu` its implicit CSS anchor, with no extra wiring on this button.
- * `width: 100%` alone (no negative-margin "bleed" trick) keeps its left/right edges
- * flush with its parent cell's own padding on both sides equally — the cell's
- * padding IS the button's margin from the sidebar's edge. `font` stays
- * `raw()` — the CSS `font` shorthand has no `@pkg/u` equivalent — while the
- * physical (non-logical) text alignment uses `textAlign()`'s raw-string
- * escape.
+ * Interactive team/user-menu trigger, opened via the `commandfor`/
+ * `command="toggle-popover"` relationship that also gives `Menu` its
+ * implicit CSS anchor; `width: 100%` keeps it flush with the cell's padding.
  */
 const menuTriggerButton = combine([
 	flex(),
@@ -344,10 +277,9 @@ const truncatedLabel = combine([
 ]);
 
 /**
- * The "switch" affordance icon at the end of the team-picker/user-menu triggers.
- * Explicitly colored to match `truncatedLabel` — `currentColor` alone isn't reliable
- * here, since the icon and the label are siblings rather than parent/child, so they
- * don't necessarily inherit the same computed color.
+ * The "switch" affordance icon at the end of the team-picker/user-menu
+ * triggers, explicitly colored to match {@link truncatedLabel} since
+ * `currentColor` won't inherit between sibling elements.
  */
 const menuChevronIcon = combine([shrink(), fg("neutral.emphasis")]);
 
@@ -369,27 +301,23 @@ namespace AppShell {
 		viewer: { name: string; email: string; avatar: string };
 		isAdmin: boolean;
 		/**
-		 * The request's i18next instance, used to read every string the shell owns
-		 * (nav labels, menu items, and the landmark labels under `app.layout.*`).
-		 * Required rather than optional: a layout that falls back to English when a
-		 * caller forgets is a bug that renders fine and so never gets reported, while
-		 * a missing required prop is a type error the compiler reports at once.
+		 * The request's i18next instance, used to read every string the shell
+		 * owns under `app.layout.*`. Required, so a missing instance is caught
+		 * at compile time and every render uses the caller's real translations.
 		 */
 		i18next: ReturnType<typeof getContext>["i18next"];
 		/** Bold page title, shown in the header in place of a per-page `<h1>`. */
 		heading: string;
 		/**
-		 * Small trail of parent pages shown above {@link AppShell.Props.heading}. Omit
-		 * (or pass an empty array) to render no trail at all, e.g. on the dashboard.
-		 * Segments with no `href` (typically only the last, current-page segment)
-		 * render as plain text instead of a link.
+		 * Small trail of parent pages shown above {@link AppShell.Props.heading}.
+		 * Omit it (or pass an empty array) to render no trail, e.g. on the
+		 * dashboard. A segment with no `href` renders as plain text.
 		 */
 		breadcrumbs?: Array<{ label: string; href?: string }>;
 		/**
-		 * The current request's URL path (e.g. `ctx.url.pathname`), compared against
-		 * each nav item's `href` to mark the matching link as the active one. Optional
-		 * since not every caller passes it yet; nav links simply render with no active
-		 * state until a given page's controller starts passing it.
+		 * The current request's URL path (e.g. `ctx.url.pathname`), compared
+		 * against each nav item's `href` to mark the active link. Optional: nav
+		 * links render with no active state until a page's controller passes it.
 		 */
 		currentPath?: string;
 		/** Page-specific quick actions (e.g. "Create monitor"), shown at the end of the header. */
@@ -399,7 +327,11 @@ namespace AppShell {
 	}
 }
 
-/** Renders the sidebar (team picker, primary nav, admin-only nav, user menu) plus header and main content area around `children`. */
+/**
+ * Renders the sidebar (team picker, primary nav, admin-only nav, user
+ * menu) plus header and main content area around `children`, and mounts
+ * `AppToaster` so any island can call `showToast()` without its own region.
+ */
 export default function AppShell(handle: Handle<AppShell.Props>) {
 	return () => {
 		let {
@@ -420,11 +352,9 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 		let dashboardHref = routes.app.team.dashboard.index.href({ team: team.slug });
 
 		/**
-		 * A nav item is active on an exact match, or (for every item except the
-		 * dashboard) when `currentPath` is nested under it, e.g. so "HTTP Monitors"
-		 * stays highlighted on a specific monitor's own detail/edit page. The
-		 * dashboard link is excluded from the prefix check since it's never a parent
-		 * of another route the way the other nav items are.
+		 * A nav item is active on an exact match, or (except the dashboard) when
+		 * `currentPath` is nested under it, so "HTTP Monitors" stays highlighted
+		 * on a monitor's own detail page; the dashboard link is never a parent.
 		 */
 		function isNavItemActive(href: string): boolean {
 			if (currentPath === undefined) return false;
@@ -648,12 +578,6 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 					/>
 				)}
 
-				{/*
-				 * Mounted on every signed-in page, not just the ones that toast today, so any
-				 * island can call `showToast()` without first arranging for a region of its
-				 * own. It renders no markup until something is queued, so the cost of having
-				 * it here is one hydration marker.
-				 */}
 				<AppToaster />
 			</div>
 		);

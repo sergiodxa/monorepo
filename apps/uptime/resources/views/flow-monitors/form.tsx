@@ -1,16 +1,9 @@
 /**
- * Shared flow monitor form fields, used by both the new-monitor and edit-monitor views. The
- * enabled toggle only renders when editing — a new monitor has no toggle and is always created
- * enabled (see `CreateFlowMonitorSchema`'s `is_enabled` default).
- *
- * The interval is a select and not a stepper, unlike every other monitor type's: a flow may run
- * on one of seven values from 15 minutes to a day (ADR-027 §7a), and each option carries what
- * it costs, so the control has to enumerate rather than count.
- *
- * The verified domains a team holds are rendered beside the source, because they are the answer
- * to the question the editor raises — which URLs may I write here. A team with none is told so
- * before it writes a spec that cannot run, since the same rule the sweep applies is applied to
- * this form on submit.
+ * Shared flow monitor form fields, used by the new-monitor and edit-monitor views. A new
+ * monitor is always created enabled, so the toggle only renders when editing. The interval
+ * control lists a flow's seven fixed cadences explicitly (ADR-027 §7a), since each carries
+ * its own cost. Verified domains render beside the source since they answer what a spec
+ * written here may reach.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

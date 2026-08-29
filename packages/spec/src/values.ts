@@ -1,7 +1,7 @@
 /**
  * The runtime value model: what `.spec` expressions evaluate to and what
- * tools receive and return. Values are deliberately JSON-shaped so they can
- * cross the plugin protocol boundary without a serialization layer.
+ * tools receive and return. Values are deliberately JSON-shaped so they
+ * cross the plugin protocol boundary already serialized.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,15 +13,16 @@ export interface ValueObject {
 }
 
 /**
- * Everything a `.spec` expression can evaluate to. Duration literals evaluate
- * to their number of milliseconds; there is no separate duration value.
+ * Everything a `.spec` expression can evaluate to. Duration literals
+ * evaluate to their number of milliseconds, represented by the plain
+ * `number` case above.
  */
 export type Value = string | number | boolean | null | Value[] | ValueObject;
 
 /**
  * One argument to a tool call. A `word` is a bare identifier in argument
  * position (`exists`, `textbox`, `with`) — a symbol the tool's descriptor
- * interprets, distinct from the string of the same spelling.
+ * interprets, carrying its own tag apart from a same-spelled string value.
  */
 export type ToolArg = { kind: "value"; value: Value } | { kind: "word"; word: string };
 

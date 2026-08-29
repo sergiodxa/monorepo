@@ -1,10 +1,9 @@
 /**
  * Tests for the KV-backed cache, run inside workerd against a real KV namespace.
  *
- * They pin down how a TTL written as a number or as a duration string reaches KV, so the two
- * forms can never drift apart and a numeric call site can never silently change its expiry.
- * Expiry is read back from the namespace's own listing rather than from a recorded options
- * object, so what is asserted is the expiry KV actually stored.
+ * They pin down how a TTL written as a number or as a duration string reaches
+ * KV, so the two forms can never drift apart. Expiry is read back from the
+ * namespace's own listing, so assertions check the expiry KV actually stored.
  *
  * That distinction found a real limit: KV rejects an `expirationTtl` below 60 with a 400, and
  * the fake this replaced accepted any value, so the suite used to assert that a 30-second TTL
@@ -143,10 +142,9 @@ describe("Cache.KVStore", () => {
 	});
 
 	/**
-	 * The limit the previous fake hid. KV's floor is 60 seconds, and the store passes a TTL
-	 * through unchanged, so a shorter one reaches the binding and is refused. Nothing in this
-	 * repo writes a sub-minute TTL; this test is what makes the constraint visible if someone
-	 * tries, rather than letting a green suite promise it works.
+	 * KV enforces a 60 second floor on `expirationTtl`; the store passes a TTL
+	 * through unchanged, so anything shorter is rejected by the binding. This
+	 * test keeps that limit visible for a future sub-minute TTL.
 	 */
 	test("a ttl below KV's 60 second floor is rejected by the binding", async () => {
 		await store.write("tooShort", "value", { ttl: "30 seconds" });

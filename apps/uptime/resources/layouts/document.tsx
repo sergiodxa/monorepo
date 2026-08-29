@@ -22,12 +22,9 @@ import { SEO } from "~/app/lib/seo";
 import colorStyles from "~/resources/css/colors.css?url";
 
 /**
- * Raw `@font-face` rule for Mona Sans, the display font `--ui-font-sans` (see
- * `resources/css/colors.css`) points the marketing chrome at. Declared here, once,
- * so every page's `<head>` gets it regardless of which layout it renders through.
- * Emitted as a plain `<style>` tag rather than through the `css()` mixin because
- * that mixin scopes every rule to a generated element class name, which can't
- * express a top-level, unscoped at-rule like this.
+ * Raw `@font-face` rule for Mona Sans, declared once so every page's `<head>`
+ * gets it. Uses a plain `<style>` tag: the `css()` mixin scopes rules to a
+ * generated class name, which can't express an unscoped `@font-face`.
  */
 const fontFaceCss = `
 	@font-face {
@@ -43,11 +40,9 @@ const fontFaceCss = `
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
 /**
- * The Cloudflare Web Analytics site token. Public by construction — the beacon reads it
- * out of the rendered attribute, so it ships to every browser that loads a page — which
- * is why it is a constant here rather than a binding. Kept verbatim: it is what
- * identifies this property in the Cloudflare dashboard, so a changed token silently
- * starts a fresh, empty analytics history instead of failing.
+ * The Cloudflare Web Analytics site token — public by construction, since
+ * browsers read it straight off the rendered attribute. Change it and
+ * Cloudflare treats it as a new property, losing the analytics history.
  */
 const CF_BEACON_TOKEN = "2e915da0d572432eb502c32794ac1da6";
 
@@ -72,28 +67,24 @@ namespace DocumentLayout {
 		locale?: string;
 		/**
 		 * Page-specific assets to preload, emitted before the stylesheets so the
-		 * browser starts fetching them as early as possible. Only for assets that
-		 * render above the fold (the homepage's hero screenshot) — everything else
-		 * should just load normally.
+		 * browser fetches them as early as possible. Reserve this for assets that
+		 * render above the fold, such as a hero screenshot; leave everything else off.
 		 */
 		preload?: Preload[];
 		/**
 		 * Description, canonical URL, Open Graph facts, and structured data for an
-		 * indexable page. Build the canonical with `SEO.canonical()` and the schema
-		 * with `SEO.schema.*` rather than by hand, so a page never advertises a URL
-		 * the rest of the site disagrees with — and only describe what the page
-		 * actually renders (an `FAQPage` node for questions a visitor can't find on
-		 * the page breaks Google's structured-data policy). Omit inside the app
-		 * shell: the signed-in screens have nothing to say to a crawler.
-		 *
-		 * The page's `title` and the site identity are supplied by the layout, so a
-		 * caller passes neither.
+		 * indexable page. Build it with `SEO.canonical()` and `SEO.schema.*` so URLs
+		 * stay consistent site-wide. Omit it in the app shell — nothing there talks to a crawler.
 		 */
 		seo?: Omit<Seo.Props, "title" | "site">;
 	}
 }
 
-/** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`, with an optional `<title>` and the client entry script. */
+/**
+ * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. The
+ * client entry script loads `async`, so a non-blocking Frame's `<template>`
+ * is picked up the moment that chunk of the streamed response arrives.
+ */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { title, locale = "en", preload = [], seo, children } = handle.props;
@@ -103,9 +94,6 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				<head>
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					{/* An indexable page emits its whole head contribution — title, description,
-					canonical, Open Graph, Twitter, and structured data — through one input;
-					a page with nothing to tell a crawler still gets its `<title>`. */}
 					{seo ? <Seo title={title} site={SEO.site} {...seo} /> : title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
 					{preload.map((asset) => (
@@ -117,11 +105,6 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 							media={asset.media}
 						/>
 					))}
-					{/* Order matters: reset first, then semantic theme tokens, then this
-					app's own --color-* scales those tokens read through `var()` — CSS
-					custom properties resolve at used-value time, so declaration order
-					between these three doesn't actually affect which value wins, but
-					reading them least-specific-to-most mirrors the token layering. */}
 					<link rel="stylesheet" href={resetStyles} />
 					<link rel="stylesheet" href={colorStyles} />
 					<link rel="stylesheet" href={themeStyles} />
@@ -129,16 +112,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				</head>
 				<body mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), font("mono")]}>
 					{children}
-					{/* `async`, not the implicit defer of a plain module script — a deferred
-					script waits for this whole streamed response to finish parsing, so a
-					non-blocking Frame's later-arriving <template> would never get picked up
-					until the slowest Frame on the page had already resolved. */}
 					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
-					{/* Cloudflare's own analytics beacon — no cookies, and nothing added to the
-					first-party bundle. Last thing in the body, where Cloudflare's snippet goes, so
-					it never competes with the page's own content for the connection. The
-					`data-cf-beacon` name and its JSON shape are the beacon's, read verbatim off
-					this attribute, so neither is ours to tidy up. */}
 					<script
 						type="module"
 						src="https://static.cloudflareinsights.com/beacon.min.js"

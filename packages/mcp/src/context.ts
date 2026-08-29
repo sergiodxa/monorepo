@@ -2,10 +2,10 @@
  * The contexts a tool or resource handler receives, and the keys the dispatcher
  * publishes them through.
  *
- * Neither context is a new object. Each is the request's own `RequestContext` — the one
- * the surrounding remix middleware wrote to — with a couple of properties installed on it,
- * so `ctx.get(Database)` inside a tool reads exactly what the app's database middleware
- * provided and no second context system exists.
+ * Both contexts are the request's own `RequestContext` — the one the surrounding
+ * remix middleware wrote to — with a couple of properties installed on it, so
+ * `ctx.get(Database)` inside a tool reads exactly what the app's database middleware
+ * provided, all through that one shared context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,14 +21,8 @@ import type { ToolDescriptor } from "./tools";
 /**
  * A request context whatever its params and middleware entries.
  *
- * `RequestContext` is generic over both, and a context that has been through middleware is
- * a different type from a bare one. This package is mounted by applications whose chains it
- * cannot know, so it accepts any of them rather than naming one.
- *
- * `ContextEntries` rather than `any` for the entries: `any` matches both arms of the
- * conditional that resolves `ctx.get()`, which collapses every lookup to `{}`. The broad
- * list falls back to the key's own value type, so `ctx.get(Database)` still reads as
- * `Database | undefined`.
+ * Mounted by applications whose middleware chains it cannot know, so it stays generic over both;
+ * typing the entries as `ContextEntries` keeps `ctx.get()` resolving to each key's real value type.
  */
 // oxlint-disable-next-line typescript/no-explicit-any -- params are never read here
 export type AnyRequestContext = RequestContext<any, ContextEntries>;
@@ -49,11 +43,9 @@ export type ResourceContext<Variables = ResourceVariableValues> = AnyRequestCont
 	/** The URI as the client asked for it. */
 	readonly uri: string;
 	/**
-	 * What the URI pattern captured.
-	 *
-	 * Named for RFC 6570's term rather than "params", because `RequestContext.params`
-	 * already holds the *route's* params — installing these there would shadow them, which
-	 * is silent today only because the MCP route happens to have none.
+	 * What the URI pattern captured, named for RFC 6570's term to keep
+	 * `RequestContext.params` reserved for the route's own params; installing captures
+	 * there would shadow them, safe for now only because the MCP route's own param set stays empty.
 	 */
 	readonly variables: Variables;
 	/** The resource being read. */
@@ -75,7 +67,7 @@ export const ResourceVariables = createContextKey<ResourceVariableValues>();
 /** Context key holding the resource being read, exposed as `ctx.resource`. */
 export const CurrentResource = createContextKey<ResourceDescriptor>();
 
-/** Reports whether a value is a request context rather than a bare request. */
+/** True when the value is already a request context; false for a bare request. */
 export function isRequestContext(value: Request | AnyRequestContext): value is AnyRequestContext {
 	return value instanceof RequestContext;
 }

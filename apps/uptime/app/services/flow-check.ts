@@ -1,25 +1,9 @@
 /**
- * The flow check: run a customer's executable spec and report what it concluded (ADR-027).
+ * Runs a customer's executable spec and reports what it concluded (ADR-027).
  *
- * Nothing here writes to a database, meters anything, or knows what a monitor is — a caller
- * that wants those does them itself, the same division `http-check.ts`, `dns-check.ts` and
- * `tcp-check.ts` already keep.
- *
- * Three things bound a run, and all three are decided here rather than by the spec:
- *
- * - **Which capabilities exist.** `http`, `url` and `jwt`, and nothing else. This is not a
- *   permission decision, it is registration: a spec calling `fs.write` or `cli.run` fails
- *   with an unknown name, because there is no grant that could ever lift it. There is no
- *   filesystem, no process, and no environment to read.
- * - **What the network grant covers.** Only hosts under a domain the team has **verified**,
- *   and only the ones this spec names. That is what stops the feature being a way to automate
- *   somebody else's site: a flow drives a sequence — signing in, carrying a token, calling the
- *   endpoint it authorises — so unlike an HTTP monitor, which sends one request a stranger
- *   could send anyway, it may only ever be pointed at a domain the team has proved it owns.
- *   Resolved on every run from team state, never stored, so un-verifying a domain stops its
- *   flows at the next check.
- * - **How much a run may do.** A request ceiling and a wall-clock deadline, both enforced by
- *   the wrapper around the `http` plugin, so what a run costs is bounded before it starts.
+ * Decides three things itself: which capabilities exist (`http`, `url`, `jwt` only), which
+ * hosts a verified domain covers, and how many requests and how much time a run gets before
+ * it is cut off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,9 +70,9 @@ export interface FlowCheckInput {
 	/** The spec source, as the customer wrote it. */
 	source: string;
 	/**
-	 * The team's **verified** domains. The only thing that decides what this run may reach, and
-	 * passed rather than resolved because it is team state, not monitor state — a domain
-	 * un-verified this morning has to stop this afternoon's check.
+	 * The team's **verified** domains — the only thing that decides what this run may reach.
+	 * Passed in fresh from team state on every call, so a domain un-verified this morning
+	 * already stops this afternoon's check.
 	 */
 	verifiedDomains: readonly string[];
 	/** Overrides the {@link FLOW_RUN_TIMEOUT_MS} deadline. For tests. */
@@ -100,10 +84,8 @@ export interface FlowCheckInput {
 /**
  * Runs a flow's spec and reports what it concluded.
  *
- * Never throws: a spec that will not parse, a monitor with no hosts to reach, or a run that
- * could not start is an `error` result carrying the reason. That status exists to keep this
- * app's own failures out of the customer's outage history — only `down` means their flow is
- * broken.
+ * A spec that will not parse, names no reachable host, or cannot start returns an `error`
+ * result carrying the reason, so only `down` ever lands in the customer's outage history.
  */
 export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResult> {
 	let inspection = inspectFlowSource(input.source, input.verifiedDomains);
@@ -151,42 +133,32 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 }
 
 /**
- * Failure codes that mean the **monitor** is wrong rather than the flow it watches.
- *
- * A spec that reaches a host it was not allowed, or calls a namespace this run does not
- * register, describes a check that could never have succeeded — so it is an `error`, and it
- * stays out of the customer's outage history. An assertion that did not hold, a request that
- * failed, a flow that ran out of time: those are the flow being broken, which is `down`.
+ * Failure codes for a check that could never have succeeded — a host the run had no grant
+ * for, or a namespace it does not register. These mean the monitor is misconfigured, so the
+ * run reports `error` and stays out of the customer's outage history.
  */
 const MISCONFIGURED = new Set(["permission-denied", "unknown-name", "ambiguous-name"]);
 
 /**
  * Which status a completed run reports.
  *
+ * Checked ahead of the failing test's own error code, so a run cut off for making too many
+ * requests is treated as a monitor problem to fix.
+ *
  * @param failed - The first failing test, or `undefined` when every test passed.
  * @param overspent - Whether the run was cut off for making too many requests.
  */
 function statusOf(failed: TestResult | undefined, overspent: boolean): FlowStatus {
 	if (failed === undefined) return "up";
-	// Checked before the code, because the refusal surfaces as an ordinary tool error and a
-	// spec too big to run is a monitor to fix, not an outage to page somebody about.
 	if (overspent) return "error";
 	let code = failed.error?.code;
 	return code !== undefined && MISCONFIGURED.has(code) ? "error" : "down";
 }
 
 /**
- * Every host a spec's own text names.
- *
- * Collected from **every string literal in the file** that parses as an absolute HTTP URL,
- * rather than from the arguments of `http.*` calls specifically. That is deliberate: a URL can
- * reach a request through a fixture's returned object or a `let`-bound field, so following
- * only direct arguments would miss hosts a run genuinely uses. Reading every literal can only
- * be too generous about what a spec *wants*, never too strict — and wanting a host grants
- * nothing on its own, since {@link resolveAllowedHosts} still has to find it under a verified
- * domain.
- *
- * Comments are not literals, so a URL mentioned in a comment names nothing.
+ * Every host a spec's text names, collected from every string literal that parses as an
+ * absolute HTTP URL — including one reached through a fixture or a `let`-bound field —
+ * since {@link resolveAllowedHosts} checks each one against a verified domain.
  *
  * @param source - The spec text.
  * @returns The hosts, sorted; empty when the spec names none or will not parse.
@@ -226,11 +198,8 @@ export type FlowSourceInspection =
 /**
  * Can this source be run by this team, and what would it reach?
  *
- * The one place the three rules about a source live — it has to parse, it has to name at
- * least one host, and every host it names has to be covered by a verified domain — so the
- * form that refuses a bad monitor at save time and the sweep that refuses one at check time
- * cannot disagree about what "bad" means. A monitor the form accepted and the sweep then
- * rejected every hour would be the worst version of this feature.
+ * The one place the three rules about a source live, so the form that accepts a monitor and
+ * the sweep that runs it always agree on what counts as valid.
  *
  * @param source - The spec text.
  * @param verifiedDomains - The team's verified hostnames.
@@ -245,10 +214,8 @@ export function inspectFlowSource(
 	let resolved = resolveAllowedHosts(specHosts(source), verifiedDomains);
 
 	/**
-	 * Refused up front rather than left to the grant to deny mid-run, so the reason names the
-	 * host and the domain policy instead of a `--allow-net` flag no customer can pass. A spec
-	 * that reaches somewhere the team has not verified is a monitor to fix, and nothing about it
-	 * should be attempted first.
+	 * Refused up front, naming the host and the domain policy in the customer's own terms: a
+	 * spec reaching somewhere the team has not verified is a monitor for them to fix.
 	 */
 	if (resolved.refused.length > 0) {
 		return {
@@ -259,10 +226,9 @@ export function inspectFlowSource(
 	}
 
 	/**
-	 * No hosts at all: either the spec makes no requests, or every URL it uses is computed at
-	 * run time and therefore unverifiable. Both are configuration errors reported once rather
-	 * than runs that fail every request. `parseGrants` would read `--allow-net=` as a malformed
-	 * scope list, which is a true but unhelpful way to say the same thing.
+	 * No hosts at all means the spec makes no requests, or every URL it uses is computed at run
+	 * time and unverifiable. Reporting it once here, as a configuration error, gives the
+	 * customer one clear message to act on.
 	 */
 	if (resolved.allowed === "") {
 		return {
@@ -285,22 +251,9 @@ export interface ResolvedHosts {
 }
 
 /**
- * Resolves a spec's hosts against a team's **verified** domains.
- *
- * This is the whole authorization story for a flow monitor, and it is why a flow monitor is
- * gated harder than an HTTP monitor: an HTTP monitor sends one request a stranger could send
- * anyway, while a flow drives a sequence — signing in, carrying a token, calling the endpoint
- * it authorises. So a flow may only ever be pointed at a domain the team has proved it owns,
- * which means this tool cannot be turned into a way to automate somebody else's site.
- *
- * Ownership of a domain covers its subdomains: a team that has verified `example.com` controls
- * the zone, so `app.example.com` and `api.example.com` are theirs too. Nothing wider than
- * that — `notexample.com` and `example.com.evil.test` both fail the label boundary.
- *
- * The result is an **exact** host list rather than a wildcard, because `--allow-net` scopes
- * match a host exactly. That is the stricter reading and the right one: the grant ends up
- * naming only the hosts this spec actually asks for, so a flow authorised for `app.example.com`
- * cannot reach `internal.example.com` even though the team owns both.
+ * Resolves a spec's hosts against a team's **verified** domains: ownership of a domain
+ * covers its subdomains, so `example.com` covers `app.example.com` but not
+ * `notexample.com`, and the result names only the exact hosts the spec asked for.
  *
  * @param hosts - What the spec names, from {@link specHosts}.
  * @param verifiedDomains - The team's verified hostnames.
@@ -314,7 +267,6 @@ export function resolveAllowedHosts(
 	let refused: string[] = [];
 
 	for (let host of hosts) {
-		// A scope may carry a port; ownership is a property of the name, so compare without it.
 		let name = host.toLowerCase().split(":")[0] ?? "";
 		if (domains.some((domain) => name === domain || name.endsWith(`.${domain}`))) {
 			allowed.push(host);
@@ -326,7 +278,12 @@ export function resolveAllowedHosts(
 	return { allowed: allowed.join(","), refused };
 }
 
-/** The `host` or `host:port` of an absolute HTTP URL, or `null` for anything else. */
+/**
+ * The `host` or `host:port` of an absolute HTTP URL, or `null` for anything else.
+ *
+ * `URL.host` carries the port only when it is non-default, which is exactly the shape
+ * `--allow-net` wants: a scope with no port matches any port on that host.
+ */
 function hostOf(text: string): string | null {
 	let url: URL;
 	try {
@@ -335,8 +292,6 @@ function hostOf(text: string): string | null {
 		return null;
 	}
 	if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-	// `URL.host` carries the port only when it is non-default, which is exactly the shape
-	// `--allow-net` wants: a scope with no port matches any port on that host.
 	return url.host === "" ? null : url.host;
 }
 
@@ -428,13 +383,8 @@ function* fromExpression(expression: ExpressionNode): Generator<string> {
 
 /**
  * Wraps the `http` plugin so a run's cost is bounded before it starts: it may make at most
- * `maxRequests` calls, and none at all past `deadline`.
- *
- * Enforced here rather than by racing the whole run against a timer, because a race cannot
- * stop what it abandoned — the run would keep making requests nobody is waiting for. A
- * refusal at the plugin boundary instead fails the statement that asked, which fails the
- * test, which is reported with the reason. Both refusals are `ToolError`s and not permission
- * denials: neither is something a grant could allow.
+ * `maxRequests` calls, and none at all past `deadline`, each refusal failing the statement
+ * that asked so the test reports it as an ordinary `ToolError`.
  */
 function createRequestBudget(limits: { maxRequests: number; timeoutMs: number }): {
 	wrap(plugin: Plugin): Plugin;
@@ -501,7 +451,7 @@ function errorResult(message: string): FlowCheckResult {
  * The 1-based line a failure happened on, from the span the error carries.
  *
  * `positionAt` is pure and takes the source text, which this app already holds on the
- * monitor row — no file is opened, which is what makes this work with no filesystem.
+ * monitor row, so the line resolves entirely from data already in memory.
  */
 function lineOf(source: string, result: TestResult): number | null {
 	let span = result.error?.span;
@@ -512,9 +462,6 @@ function lineOf(source: string, result: TestResult): number | null {
 /**
  * The failure, formatted for a human reading an incident: the message, and the expected and
  * observed values when the failure was an assertion.
- *
- * Assembled here rather than through the package's reporter, which renders for a terminal
- * (colour, indentation, a suite summary) and reads the source off a disk to do it.
  */
 function detailOf(result: TestResult): string | null {
 	let error = result.error;

@@ -1,29 +1,14 @@
 /**
- * Static content for the public marketing site: the 12 `/features/:slug`, 6
- * `/for/:slug`, 7 `/use-cases/:slug`, and 10 `/vs/:slug` pages. Each record supplies
- * the copy a shared page template (`resources/views/marketing/*`) renders, so the 35
- * near-identical marketing routes are data plus one template per page family instead
- * of 35 bespoke view files. Each page's meta title/description is its canonical
- * marketing copy; supporting copy (feature bullets, steps, FAQs, comparison rows) is
- * written fresh to a consistent structure per page family.
+ * Static content for the site's `/features`, `/for`, `/use-cases`, and `/vs`
+ * pages, each family rendered by one shared template instead of bespoke views.
  *
- * Two kinds of value here are load-bearing and must not be invented. Trust-indicator
- * figures are claims about our own product, so they track what Uptime actually does
- * today (9 regions, 1-60m intervals, 365-day retention with the last 90 days charted,
- * $5/mo + $1 per 10k pings). Retention and charted history are two different claims and
- * must not be collapsed into one: results are kept for a year, but the app plots the
- * trailing 90 days, so copy promising a browsable "full year" would be selling something
- * the product does not do. The
- * `theirCost` figures in `pricingScenarios` are claims about a named competitor's
- * public pricing — hedged with `~` where the plan mapping is approximate, and left
- * out entirely rather than guessed. `honestTake` exists for the same reason: a
- * comparison page that only lists our wins reads as marketing.
+ * Trust-indicator and competitor figures track Uptime's actual behavior and a
+ * competitor's actual published pricing, hedged or omitted where the real
+ * number isn't known.
  *
- * Alert-delivery times are deliberately absent from every figure here. The last hop of a
- * notification belongs to an inbox, a webhook endpoint or a chat provider we don't run, so
- * any number stated for it is a promise about somebody else's infrastructure. Where a page
- * wants a figure about how fast a failure is caught, it states the check-interval floor,
- * which is ours and is enforced.
+ * Pages state the check-interval floor for how fast a failure is caught, since
+ * that figure is Uptime's own and enforced — the final delivery hop belongs to
+ * an inbox, webhook, or chat provider outside this app.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,9 +36,8 @@ export namespace MarketingContent {
 		description: string;
 		/**
 		 * Lucide icon name (kebab-case, e.g. `"globe"`), rendered through
-		 * `@pkg/lucide-remix`'s `<Icon name>`. A name rather than a component so
-		 * this file stays plain data with no JSX. Optional: a grid whose bullets
-		 * have no icons renders without the tiles.
+		 * `@pkg/lucide-remix`'s `<Icon name>` — a name keeps this file plain data
+		 * with no JSX. A grid whose bullets have no icons renders without the tiles.
 		 */
 		icon?: IconName;
 	}
@@ -83,14 +67,9 @@ export namespace MarketingContent {
 	}
 
 	/**
-	 * One cost scenario on a `/vs/:slug` page: the same monitoring setup priced
-	 * against both products.
-	 *
-	 * Our own side is never written down here. `usage` states the setup and the view
-	 * prices it through `app/lib/pricing.ts`, so a price change can't leave a stale
-	 * figure in a comparison table — the failure mode this shape exists to prevent.
-	 * The competitor's side stays copy: it's a claim about their published pricing,
-	 * quoted as they state it, hedges and all.
+	 * One cost scenario on a `/vs/:slug` page. `usage` prices our side through
+	 * `app/lib/pricing.ts` so a price change can't leave a stale comparison
+	 * figure; the competitor's side stays quoted copy, hedges and all.
 	 */
 	export interface PricingScenario {
 		/** Row label, e.g. `"10 monitors at 30-min intervals"`. */
@@ -106,11 +85,9 @@ export namespace MarketingContent {
 		/** The competitor's price, quoted as their own pricing page reads. */
 		theirCost: string;
 		/**
-		 * The competitor's monthly price in USD, when {@link PricingScenario.theirCost}
-		 * quotes one unambiguous figure. Present means the view states the yearly
-		 * difference; absent means it falls back to
-		 * {@link PricingScenario.savingsNote}, since a range or a bundled quote can't
-		 * be subtracted honestly.
+		 * The competitor's monthly price in USD when {@link PricingScenario.theirCost}
+		 * quotes one unambiguous figure; a range or bundled quote can't be subtracted
+		 * honestly, so it falls back to {@link PricingScenario.savingsNote} instead.
 		 */
 		theirCostUsd?: number;
 		/** What the row wins on when that isn't a smaller number. */
@@ -150,10 +127,9 @@ export namespace MarketingContent {
 		steps: Step[];
 		faqs: Faq[];
 		/**
-		 * The four figures in this page's trust-indicator strip. Page-specific by
-		 * design — a feature page's stats are about that feature (`9` regions,
-		 * `1-60m` intervals), not the product at large. Optional: the strip is
-		 * skipped entirely for a page that has nothing to put in it.
+		 * The four figures in this page's trust-indicator strip, page-specific by
+		 * design — a feature page's stats describe that feature, not the product at
+		 * large. The strip is skipped entirely for a page with nothing to put in it.
 		 */
 		trustIndicators?: [TrustIndicator, TrustIndicator, TrustIndicator, TrustIndicator];
 	}
@@ -845,9 +821,11 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Track SSL certificate expiry and get alerts before they expire, with daily checks and a configurable warning threshold.",
 		highlights: ["Daily checks", "Configurable warning window", "Per-monitor thresholds"],
-		// Deliberately says nothing about chain validation or mixed-content scanning:
-		// SSL monitoring compares a manually-entered expiry date against today, so
-		// anything implying we inspect the certificate itself would be a false claim.
+		/**
+		 * These figures describe expiry-date tracking only. SSL monitoring compares
+		 * a manually-entered expiry date against today's date, so the copy stays
+		 * scoped to what the check actually verifies.
+		 */
 		trustIndicators: [
 			{ icon: "calendar-clock", value: "Daily", label: "Expiry Checks" },
 			{ icon: "bell-ring", value: "Custom", label: "Warning Days" },
@@ -1153,9 +1131,11 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			"A status page per client",
 			`Free for ${FREE_TRIAL_DAYS} days, no card`,
 		],
-		// Product facts only, and none of them a claim about how reliable we are. "Multi-site"
-		// rather than "multi-team": client sites live side by side in one team, so a multi-team
-		// figure would misdescribe the workflow an agency actually uses.
+		/**
+		 * These figures name product facts, not a reliability claim. "Multi-site" fits
+		 * how client sites live side by side in one team, naming the workflow an
+		 * agency actually runs.
+		 */
 		trustIndicators: [
 			{ icon: "monitor", value: "∞", valueLabel: "Unlimited", label: "Monitors & Members" },
 			{ icon: "layers", value: "5", label: "Monitor Types" },
@@ -1255,8 +1235,10 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"Domain verification, auto-provisioning, and role-based access, with a 99.9% uptime target for the monitoring platform itself.",
 		highlights: ["Domain auto-provisioning", "Role-based access", "99.9% uptime target"],
-		// "Uptime Target", not the old page's "SLA Guarantee": 99.9% is a goal we hold
-		// ourselves to, and we don't offer a financial-remedy SLA (see the FAQ below).
+		/**
+		 * "Uptime Target" names the 99.9% figure as a goal held for the platform
+		 * itself, matching the "Do you offer an SLA?" answer in the FAQ below.
+		 */
 		trustIndicators: [
 			{ icon: "shield", value: "99.9%", label: "Uptime Target" },
 			{ icon: "users", value: "Auto", label: "Provisioning" },
@@ -1312,8 +1294,10 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"API-first design and webhook integrations mean Uptime fits into your deploy pipeline instead of asking you to change it.",
 		highlights: ["Full REST API", "Signed webhooks", "Cron & TCP monitoring"],
-		// The old page claimed "CLI Friendly"; there is no CLI, so this leads with the
-		// signed-webhook contract instead — the thing a DevOps reader can actually verify.
+		/**
+		 * "Signed Webhooks" leads this strip because the HMAC contract is a concrete
+		 * claim a DevOps reader can verify directly.
+		 */
 		trustIndicators: [
 			{ icon: "code", value: "REST", label: "API First" },
 			{ icon: "webhook", value: "HMAC", label: "Signed Webhooks" },
@@ -1598,9 +1582,10 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Automated health checks for your services. Monitor endpoints, databases, and internal services with customizable intervals.",
 		highlights: ["1-60 min intervals", "Custom headers", "Any expected status"],
-		// The old page advertised Kubernetes/Docker "integration"; there is none — we
-		// call a health endpoint over HTTP like any other monitor, so these figures
-		// describe the check itself rather than an orchestrator hook.
+		/**
+		 * These figures describe the check itself: a health endpoint reached over
+		 * HTTP like any other monitor, not a Kubernetes or Docker orchestrator hook.
+		 */
 		trustIndicators: [
 			{ icon: "heart-pulse", value: "/healthz", label: "Endpoints" },
 			{ icon: "timer", value: "1-60m", label: "Intervals" },
@@ -2620,8 +2605,10 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 				icon: "webhook",
 			},
 		],
-		// The old page also conceded cron-job monitoring to Oh Dear; that concession is
-		// now stale, since cron-job monitoring is a first-class Uptime feature.
+		/**
+		 * Cron-job monitoring is a first-class Uptime feature, so it's absent from
+		 * this list of where Oh Dear genuinely wins.
+		 */
 		honestTake: [
 			{
 				title: "They crawl your whole site for broken links",

@@ -32,10 +32,9 @@ export async function checkTcpConnection(
 	let startedAt = performance.now();
 	let socket = connect({ hostname: host, port });
 	/**
-	 * Kept so the losing side of the race below can be cancelled. An uncleared timer
-	 * keeps the invocation alive for the whole `timeoutMs` even when the socket opened
-	 * in milliseconds, which is what made a sequential sweep cost `N × timeoutMs`
-	 * instead of `N × actual latency` (ADR-008).
+	 * Kept so the losing side of the race can be cancelled. Left running, the
+	 * timer holds the invocation open for the full `timeoutMs` even after a
+	 * fast connect, inflating a sequential sweep's cost (ADR-008).
 	 */
 	let timeout: ReturnType<typeof setTimeout> | undefined;
 

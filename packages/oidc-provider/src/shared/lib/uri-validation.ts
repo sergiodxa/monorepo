@@ -15,7 +15,7 @@ export const LOCALHOST_SCHEMES = ["http", "https"];
 /** Hostnames considered as localhost for development purposes. */
 export const LOCALHOST_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
 
-/** Dangerous schemes that should never be allowed to prevent XSS attacks. */
+/** Schemes rejected to prevent XSS attacks. */
 export const FORBIDDEN_SCHEMES = ["javascript", "data", "vbscript", "file"];
 
 /** Error thrown when a URI is malformed. */
@@ -48,7 +48,6 @@ interface ValidateSchemeOptions {
 }
 
 /**
- * Validates that a URI has a safe scheme.
  * HTTPS is required for production; HTTP is allowed for localhost.
  * Dangerous schemes (javascript:, data:, vbscript:, file:) are rejected to prevent XSS.
  * @param uri - URI to validate

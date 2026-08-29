@@ -1,8 +1,8 @@
 /**
- * Key-value store contract this package's session storage depends on. It declares
- * the minimal get/put/delete/list surface a KV-like binding must expose. It exists
- * so the session storage adapter depends on an abstraction instead of any concrete
- * KV implementation (Cloudflare Workers KV, an in-memory fake for tests, etc.).
+ * Key-value store contract this package's session storage depends on. Declares
+ * the minimal get/put/delete/list surface a KV-like binding must expose, so the
+ * session storage adapter can run against Cloudflare Workers KV, an in-memory
+ * fake for tests, or any other backend that implements it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +13,6 @@
  */
 export interface KVStore {
 	/**
-	 * Reads a value by key.
 	 * @returns Stored value or `null` when the key does not exist.
 	 */
 	get(key: string): Promise<string | null>;
@@ -34,7 +33,6 @@ export interface KVStore {
 	delete(key: string): Promise<void>;
 
 	/**
-	 * Lists stored keys.
 	 * @returns Object containing key names available in the store.
 	 */
 	list(): Promise<{ keys: Array<{ name: string }> }>;

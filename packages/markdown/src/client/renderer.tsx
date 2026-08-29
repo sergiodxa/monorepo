@@ -1,5 +1,3 @@
-/* @jsxImportSource remix/ui */
-
 /**
  * Converts a Markdoc render tree into Remix UI elements, mapping each tag
  * name to its styled Remix output.
@@ -7,6 +5,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+/* @jsxImportSource remix/ui */
 
 import type { RemixNode } from "remix/ui";
 
@@ -102,8 +102,8 @@ function isCSSProps(value: unknown): value is CSSProps {
 
 /**
  * Recursively renders Markdoc nodes into Remix components and primitives.
- * Table elements render unstyled here so an ancestor component owns their
- * sizing, scrolling, and borders instead of two conflicting layouts.
+ * Table elements render unstyled here so a single ancestor component owns
+ * their sizing, scrolling, and borders.
  *
  * @param node - Current render node to convert into Remix output
  * @param components - Optional custom tag renderers keyed by tag name

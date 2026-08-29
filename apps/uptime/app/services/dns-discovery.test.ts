@@ -1,17 +1,11 @@
 /**
- * Tests the shared DNS discovery and check pipeline directly: the names a check plans, the
- * accounting a sweep does for queries that failed or were never made, the import that turns a
- * pasted zone into records, and the check that diffs, applies and records one result row.
+ * Tests the DNS discovery and check pipeline directly: planning a sweep, accounting for failed
+ * or unattempted queries, importing a pasted zone, and recording one check's result.
  *
- * The property this file exists for is the last suite: a monitor swept by the scheduled job
- * and the same monitor swept by an on-demand check must produce the same result row and leave
- * the record table in the same state, because both run this module. The two used to be two
- * implementations of one thing, and the way that goes wrong is silent — a customer pressing
- * "Check now" is told something the hourly run never says.
- *
- * `sweepDnsName` is mocked, since DNS resolution has tests of its own, and the bindings the
- * job reaches for are in-memory ones installed through `cloudflare:workers`, so it can be run
- * in-process alongside the direct calls.
+ * A scheduled sweep and an on-demand check share this module and must produce the same result
+ * row and leave the same records behind, which the last suite in this file asserts directly.
+ * `sweepDnsName` is mocked since DNS resolution is tested elsewhere, and the bindings the job
+ * reads are in-memory ones installed through `cloudflare:workers`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -137,10 +131,9 @@ beforeEach(() => {
 });
 
 /**
- * The caps every DNS surface quotes. They are asserted against each other rather than against
- * their literal values because the numbers are allowed to move — what is not allowed is for
- * the import cap to drift above what one check can afford, which would accept zones that are
- * truncated on every check forever.
+ * The caps every DNS surface quotes are asserted relative to each other, since the numbers
+ * themselves may move. What must hold is that the import cap stays at or below what one
+ * check can afford, so a zone is fully swept on every check.
  */
 describe("dns limits", () => {
 	test("a monitor filled to the import cap is sweepable whole in one invocation", () => {
@@ -153,6 +146,10 @@ describe("dns limits", () => {
 });
 
 describe("planDnsCheck", () => {
+	/**
+	 * The apex is the one name known without being told, so a record appearing there is
+	 * discoverable even when nothing at that name has ever been imported.
+	 */
 	test("always plans the apex, even for a monitor whose tracked names are all elsewhere", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "example.com");
@@ -160,8 +157,6 @@ describe("planDnsCheck", () => {
 
 		let plan = await planDnsCheck(db, monitor.id, monitor.domain);
 
-		// The apex is the one name we know without being told, so a record appearing there is
-		// discoverable even when nothing at it has ever been imported.
 		expect(plan.names).toContain("example.com");
 		expect(plan.names).toHaveLength(3);
 		expect(plan.tracked).toBe(2);
@@ -178,6 +173,7 @@ describe("planDnsCheck", () => {
 		expect(plan.tracked).toBe(0);
 	});
 
+	/** Six over: the five past the cap plus the apex the cap pushed out. */
 	test("caps the plan and reports the remainder rather than sweeping past the budget", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "big.example.com");
@@ -190,12 +186,15 @@ describe("planDnsCheck", () => {
 		let plan = await planDnsCheck(db, monitor.id, monitor.domain);
 
 		expect(plan.names).toHaveLength(MAX_NAMES_PER_CHECK);
-		// Six over: the five past the cap plus the apex the cap pushed out.
 		expect(plan.overflow).toBe(6);
 	});
 });
 
 describe("sweepNames", () => {
+	/**
+	 * A thrown sweep counts as failed queries because its outcome is unknown, distinct from a
+	 * query that resolved and simply found nothing.
+	 */
 	test("counts a name whose sweep threw as its whole set of failed queries", async () => {
 		sweepDnsNameMock.mockImplementation(async (name: string) => {
 			if (name === "broken.example.com") throw new Error("fetch failed");
@@ -204,13 +203,15 @@ describe("sweepNames", () => {
 
 		let sweep = await sweepNames(["ok.example.com", "broken.example.com"]);
 
-		// Not "answered with nothing": the two mean opposite things, and reporting the second
-		// would say every record at that name had vanished.
 		expect(sweep.queriesFailed).toBe(QUERIES_PER_NAME);
 		expect(sweep.answers.map((answer) => answer.name)).toEqual(["ok.example.com"]);
 		expect(sweep.errorMessage).toBe("fetch failed");
 	});
 
+	/**
+	 * The column stays nullable so an unreached name reports as no measurement, distinguishable
+	 * from a genuine zero-millisecond answer.
+	 */
 	test("reports no latency at all when not one name was reached", async () => {
 		sweepDnsNameMock.mockImplementation(async () => {
 			throw new Error("fetch failed");
@@ -218,12 +219,16 @@ describe("sweepNames", () => {
 
 		let sweep = await sweepNames(["a.example.com"]);
 
-		// The column is nullable for exactly this: a zero would read as an instant answer.
 		expect(sweep.responseTimeMs).toBeNull();
 	});
 });
 
 describe("importDiscovery", () => {
+	/**
+	 * A record that resolved is enabled immediately, since the user is on the review screen
+	 * deciding in the moment. A declared record nothing answers for is stored as a finding:
+	 * high-signal at import, worthless as a standing alert.
+	 */
 	test("watches what resolved and stores what the zone only declared unwatched", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "example.com");
@@ -245,16 +250,16 @@ describe("importDiscovery", () => {
 		let resolved = records.find((record) => record.record_type === "A");
 		let declared = records.find((record) => record.record_type === "TXT");
 
-		// An import-time discovery enables everything it resolved: the user is present, looking
-		// at the review screen, and about to decide.
 		expect(resolved?.is_enabled).toBeTruthy();
 		expect(resolved?.status).toBe("ok");
-		// A declared record nothing answers for is high-signal at import and worthless as a
-		// standing alert, so it is stored as a finding rather than as an expectation.
 		expect(declared?.is_enabled).toBeFalsy();
 		expect(declared?.status).toBe("missing");
 	});
 
+	/**
+	 * A re-import reports nothing as news when nothing changed, and the user's decision to
+	 * leave a record unwatched persists across unrelated imports.
+	 */
 	test("never re-enables a record the user declined", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "example.com");
@@ -269,8 +274,6 @@ describe("importDiscovery", () => {
 
 		let discovery = await importDiscovery(db, monitor.id, ["example.com"]);
 
-		// Nothing is news on a re-import, and "I chose not to watch this" is not a setting that
-		// expires because an unrelated import ran.
 		expect(discovery.imported).toBe(0);
 		let [after] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
 		expect(after?.is_enabled).toBeFalsy();
@@ -278,6 +281,11 @@ describe("importDiscovery", () => {
 });
 
 describe("recordDnsCheck", () => {
+	/**
+	 * A name nobody reached is reported as partial, keeping it distinct from a record confirmed
+	 * gone. A scheduled sweep runs outside any request or locale context, so `queries_failed`
+	 * alone signals a cut-short run.
+	 */
 	test("counts names the caller could not afford as queries that did not answer", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "example.com");
@@ -286,18 +294,18 @@ describe("recordDnsCheck", () => {
 		let run = await recordDnsCheck(db, monitor.id, ["example.com"], 3);
 
 		expect(run.queriesFailed).toBe(3 * QUERIES_PER_NAME);
-		// Partial, and reported as partial: a name nobody looked at must never read as a
-		// record that is gone.
 		expect(run.status).toBe("error");
 		expect(run.counts.recordsMissing).toBe(0);
 
 		let [result] = await DnsMonitor.listResults(db, monitor.id);
 		expect(result?.queries_failed).toBe(3 * QUERIES_PER_NAME);
-		// No sentence of ours: this job has no request, no locale and no way to get one, so
-		// `queries_failed` is what says the sweep was cut short.
 		expect(result?.error_message).toBeNull();
 	});
 
+	/**
+	 * A record that appears unannounced becomes active only through an explicit user action
+	 * on the review screen.
+	 */
 	test("imports a record discovered by a later check disabled", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "example.com");
@@ -310,8 +318,6 @@ describe("recordDnsCheck", () => {
 
 		expect(run.status).toBe("changed");
 		expect(run.counts.recordsNew).toBe(1);
-		// Accepting a record that appeared unannounced must be something the user did, not
-		// something that happened by their not reading the email.
 		let [stored] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
 		expect(stored?.is_enabled).toBeFalsy();
 		expect(stored?.status).toBe("new");
@@ -372,12 +378,14 @@ describe("scheduled and on-demand checks", () => {
 	}
 
 	/**
-	 * Checks one monitor through the job and an identical one through the on-demand path, then
-	 * compares everything either of them wrote.
+	 * Checks one monitor through the job and an identical one on-demand, then compares everything
+	 * either wrote. The on-demand monitor sits outside its interval so the job's claim reaches
+	 * only the scheduled monitor, and its returned run mirrors the stored status.
 	 *
-	 * The two monitors are seeded identically and share a domain, so the mocked resolver
-	 * answers both the same way; the on-demand one is parked outside its interval so the job's
-	 * claim cannot pick it up as well.
+	 * @param expected Asserted directly against the returned run, not only cross-checked
+	 * against the scheduled monitor, so a scenario where neither path did anything cannot pass
+	 * for one where both did the same thing.
+	 * @param seed Seeds both monitors identically so the mocked resolver answers them alike.
 	 */
 	async function expectSameOutcome(
 		expected: DnsCheckStatus,
@@ -414,11 +422,7 @@ describe("scheduled and on-demand checks", () => {
 		let checked = await DnsMonitor.findByIdForTeam(db, "team-2", onDemand.id);
 		let swept = await DnsMonitor.findByIdForTeam(db, "team-1", scheduled.id);
 		expect(checked?.last_status).toBe(swept?.last_status ?? null);
-		// The run the caller gets back describes the row it wrote, so a meter event and an
-		// alert built from it say the same thing the scheduled sweep's would.
 		expect(String(run.status)).toBe(String(swept?.last_status));
-		// Named per scenario so an equivalence that holds because neither path did anything
-		// cannot pass for one that holds because both did the same thing.
 		expect(run.status).toBe(expected);
 	}
 

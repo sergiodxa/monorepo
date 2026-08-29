@@ -1,8 +1,8 @@
 /**
  * Unit tests for {@link "./create-seo"}: the configured origin is what every URL the
  * instance returns is built from, the site identity it exposes is exactly what the head
- * components need, and the schema builders it hands back are bound to the same
- * configuration rather than to whichever host served the request.
+ * components need, and the schema builders it hands back stay bound to that same
+ * configuration for every request they serve.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

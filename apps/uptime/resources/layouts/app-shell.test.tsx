@@ -1,9 +1,9 @@
 /**
- * Tests that the signed-in shell reads every string it owns from the request's own
- * i18next instance rather than baking English into the markup. A missing or misspelled
- * key renders as the key itself and fails neither typecheck nor any other test, so these
- * assert on the rendered output, and assert it twice — once per locale — so a hardcoded
- * literal that happens to match the English copy still fails.
+ * Tests that the signed-in shell sources every string it owns from the request's
+ * own i18next instance. A missing or misspelled key renders as the key itself and
+ * fails neither typecheck nor any other test, so these assert on the rendered
+ * output, and assert it twice — once per locale — so a hardcoded literal that
+ * happens to match the English copy still fails.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +24,7 @@ let { i18n } = await createTranslator({
 	fallbackLanguage: "en",
 })();
 
-/** Renders the shell in `locale`, always with a toast queued so the flash region is in the markup. */
+/** Queues a toast so the flash region appears in the markup when rendering the shell in `locale`. */
 function render(locale: "en" | "de") {
 	return renderToString(
 		<AppShell

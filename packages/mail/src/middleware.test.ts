@@ -1,8 +1,8 @@
 /**
  * Tests the middleware contract: a mailer on the context configured with the app's
  * sender identity, a transport resolved per request when a factory is given, and a
- * deferred queue that flushes only after the handler returned, logging failures
- * instead of throwing them at a request whose response is already decided.
+ * deferred queue that flushes only after the handler returned, logging failures to
+ * leave a request's already-decided response intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +18,6 @@ import mail from "./middleware";
 
 import { Mailer } from "./index";
 
-/** Sender identity the middleware is registered with. */
 const SENDER = { email: "no-reply@example.com", name: "Example" };
 
 /** Reply-to identity used to check that registration reaches every message. */

@@ -4,9 +4,8 @@
  *
  * The same split as `bootstrap/app.tsx` — `app/mcp/tools.ts` and `app/mcp/resources.ts`
  * declare what exists, `app/mcp/controllers/**` implements it, and the wiring lives here.
- * Nothing is authenticated: every post this server can reach is already served as HTML to
- * anyone who asks, so a credential would protect nothing while stopping the thing the
- * server exists for.
+ * Every post this server can reach is already public as HTML, so any client can read it
+ * directly here too — the openness this server exists to provide.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,12 +22,9 @@ import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
 
 /**
- * How long a client may cache the tool, resource and template lists.
- *
- * Ten minutes: the lists change when a post is published, which happens on the order of
- * days, and a client that re-lists on every turn spends context re-reading a set that has
- * not moved. Nothing here declares `available`, so every caller sees the same lists and the
- * package advertises them as publicly cacheable.
+ * How long a client may cache the tool, resource and template lists. Ten minutes matches
+ * how often they actually change — a post publishing — so re-listing every turn would waste
+ * context on an unchanged set; every caller sees identical lists, cacheable publicly.
  */
 const LIST_TTL_MS = 600_000;
 
@@ -45,8 +41,7 @@ const mcp = createHandler({
 	instructions:
 		"Search and read the articles, tutorials, glossary entries and bookmarks published on sergiodxa.com. Start with search_posts to find writing on a topic, then get_post to read one in full. Posts are also available as resources, so a reader can attach one directly.",
 	listTtlMs: LIST_TTL_MS,
-	// Wraps every tool call, which is the one thing a request-level middleware cannot do:
-	// caching a result means seeing it.
+	/** Wraps every tool call directly, the one place its result is visible to cache. */
 	toolMiddleware: [cacheToolResults()],
 });
 

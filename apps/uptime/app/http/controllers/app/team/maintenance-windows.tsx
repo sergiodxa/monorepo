@@ -38,9 +38,9 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 
 		let windows = await MaintenanceWindow.listByTeam(db, ctx.team.id);
 		/**
-		 * Names for the monitor-scoped rows, keyed across every type: a scope's id is unique
-		 * on its own, so one map answers every row without a per-type lookup that would only
-		 * restate what {@link storedMonitorScope} already resolved.
+		 * A scope's monitor id is unique across every type, so one map keyed by id
+		 * resolves every row's name, matching what {@link storedMonitorScope}
+		 * already determined for that row.
 		 */
 		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 		let monitorNamesById = new Map(

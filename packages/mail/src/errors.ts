@@ -9,8 +9,7 @@
 
 /**
  * Error carried by a failed send. The original provider or render error is kept
- * as `cause` so a log line can report the root problem without the mailer having
- * to flatten it into the message.
+ * as `cause`, so a log line can report the root problem directly from it.
  */
 export class MailError extends Error {
 	override name = "MailError";

@@ -1,13 +1,10 @@
 /**
  * Tests for the monitor detail page "P99 Response Time" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
- * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
- * in-memory implementations, so the cache the card must not consult is a store that
- * would really have answered. `queryAnalytics`'s Analytics Engine SQL API call is
- * intercepted by MSW, so it never hits the network.
- * `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly, standing in for
- * the real `requireUser`/`requireTeam`/i18n middleware chain, following the template
- * in `monitor-card-slowest-result.test.ts`.
+ * `~/app/services/analytics` read `env` at module load; the bindings behind it are
+ * in-memory implementations, and the Analytics Engine SQL API call is intercepted by
+ * MSW so it never hits the network. `ctx.team`/`ctx.membership`/auth/i18next state is
+ * seeded directly, standing in for the real middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,9 +41,8 @@ import routes from "~/routes/web";
 
 /**
  * The bindings the import chain captures on load, so they live at module scope. The KV
- * namespace really stores, which is what makes "this card never consults the team cache"
- * an assertion about a store that would have answered rather than about a stub that
- * could only ever return `null`.
+ * namespace stores real values, so asserting the card never reads it verifies a cache
+ * that could have answered but wasn't asked.
  */
 let kv = createKVNamespace();
 let queue = createQueue();
@@ -197,10 +193,13 @@ describe("monitor-card-p99-response-time", () => {
 		expect(body).toContain("p99, last 24h");
 	});
 
+	/**
+	 * The Analytics Engine SQL API names the monitor-id filter `blob1` and the team-id
+	 * filter `index1`, so asserting on `blob1` (and the KV spy) confirms this query is
+	 * both monitor-scoped and uncached.
+	 */
 	test("scopes the query to this monitor and does not read the team cache", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		// The SQL the card actually sent, read off the intercepted request body; it stays
-		// empty if the card never queries, which the assertions below would then catch.
 		let sql = "";
 
 		server.use(
@@ -213,7 +212,6 @@ describe("monitor-card-p99-response-time", () => {
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
 
-		// The monitor-scoped query filters `blob1`, never `index1`, and is uncached.
 		expect(sql).toContain(`blob1 = '${monitor.id}'`);
 		expect(sql).not.toContain(`index1 = '${team.id}'`);
 		expect(kvGet).not.toHaveBeenCalled();
@@ -247,10 +245,13 @@ describe("monitor-card-p99-response-time", () => {
 		expect(body).toContain("—");
 	});
 
+	/**
+	 * A monitor outside the team is rejected before any Analytics Engine query runs;
+	 * the `onUnhandledRequest: "error"` guard turns an unexpected query into a failing
+	 * request, holding the card to that guarantee.
+	 */
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		// A monitor the team doesn't own is rejected before any query is billed, which this
-		// handler and the `onUnhandledRequest: "error"` guard together hold the card to.
 		server.use(
 			http.post(SQL_URL, () => {
 				throw new Error("the p99 card must not query for a monitor outside the team");

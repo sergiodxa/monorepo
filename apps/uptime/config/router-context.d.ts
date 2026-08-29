@@ -1,19 +1,19 @@
+/**
+ * Augments `remix/router`'s `RequestContext` with the values installed by this
+ * app's globally-applied middleware.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Renderer } from "remix/middleware/render";
 import type {} from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 /**
- * Router context values installed by globally-applied middleware.
- *
- * `bootstrap/app.tsx` installs `renderWith(createHtmlRenderer)` in its global
- * middleware chain (cast `as Middleware`, matching the rest of that chain), which
- * populates the context through a `property: "render"` transform. Because route
- * handlers are typed against the router's plain default context, this augmentation
- * surfaces that value the same way `logger`/`team`/`membership`/`language` augment
- * `RequestContext` from their own middleware modules.
- *
- * @author [Sergio Xalambrí](https://sergiodxa.com)
- * @copyright Sergio Xalambrí 2026
+ * `bootstrap/app.tsx` installs `renderWith(createHtmlRenderer)` in its global middleware
+ * chain, populating this context the same way `logger`/`team`/`membership`/`language` do
+ * from their own modules — route handlers are typed against the router's plain context.
  */
 declare module "remix/router" {
 	interface RequestContext {

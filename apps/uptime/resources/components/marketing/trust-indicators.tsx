@@ -1,14 +1,12 @@
 /**
  * The four-up band of headline figures below a marketing hero: one brand-tinted icon,
  * mono figure, and label per column, inside a bordered tinted strip. Every marketing
- * page carries its own page-specific set of figures ("9 / Global Regions", "1-60m /
- * Check Intervals"), so the band itself is centralized here instead of being composed
- * by hand once per page family.
+ * page carries its own page-specific set of figures, so the band is centralized here
+ * for every page family to reuse.
  *
- * Icons arrive as already-rendered nodes rather than Lucide names: a caller reading
- * its figures out of content data resolves them through `<Icon name>`, while one
- * importing a specific `<XyzIcon>` passes that straight through, and this component
- * doesn't have to know which.
+ * Icons arrive as already-rendered nodes: a caller reading its figures out of content
+ * data resolves them through `<Icon name>`, while one importing a specific `<XyzIcon>`
+ * passes that straight through, and this component renders either one the same way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,12 +28,9 @@ namespace MarketingTrustIndicators {
 		/** The figure, rendered in the mono face so digits align across columns (`"9"`, `"1-60m"`, `"365d"`). */
 		value: string;
 		/**
-		 * What {@link Indicator.value} says out loud, for a figure that is a symbol rather than
-		 * something readable — `"∞"` is announced as "infinity", or at low symbol verbosity as
-		 * nothing at all, which would leave the column as a label with no figure under it.
-		 *
-		 * Supplying it swaps the glyph for this text entirely rather than adding to it, so the
-		 * figure is heard once and as a word.
+		 * What {@link Indicator.value} is announced as when the figure is a symbol —
+		 * `"∞"` would otherwise go unannounced or get spelled out. Rendered via
+		 * `role="img"` on the value span, so only this text reaches a screen reader.
 		 */
 		valueLabel?: string;
 		label: string;
@@ -46,14 +41,14 @@ namespace MarketingTrustIndicators {
 	}
 }
 
-/** Renders the trust-indicator strip: two columns of figures below 768px, four at or above it. */
+/**
+ * Renders the trust-indicator strip: two columns of figures below 768px, four
+ * at or above it, painted one palette step off the page's own body color in
+ * each scheme so it reads as a distinct band framed by the hero and content.
+ */
 export default function MarketingTrustIndicators(handle: Handle<MarketingTrustIndicators.Props>) {
 	return () => (
 		<section
-			// A distinctly tinted band between the hero and the first content section:
-			// one palette step off the page's own body color in each scheme, rather than
-			// the semantic `bg("neutral.tint")` — that resolves to the *same* token the
-			// body already paints, so the strip would read as unseparated from the hero.
 			mix={[
 				pb(8),
 				bg("color.neutral.100"),
@@ -62,10 +57,6 @@ export default function MarketingTrustIndicators(handle: Handle<MarketingTrustIn
 				borderEdge("bottom", { color: "neutral", width: 1 }),
 			]}
 		>
-			{/* Same centered wrapper every marketing section uses: capped at 1152px with
-			16/24/32px side padding by breakpoint, so the figures line up with the hero
-			text above them. Inlined rather than shared, since this component ships its
-			own `<section>` and has exactly one wrapper to style. */}
 			<div
 				mix={[
 					maxIs("1152px"),
@@ -98,11 +89,6 @@ export default function MarketingTrustIndicators(handle: Handle<MarketingTrustIn
 								]}
 							>
 								<span mix={[fg("brand")]}>{indicator.icon}</span>
-								{/*
-								 * `role="img"` with the name on it, rather than the glyph plus visually
-								 * hidden text: it makes the span an opaque labelled node, so the symbol
-								 * inside is never announced alongside the word or spelled out.
-								 */}
 								{indicator.valueLabel ? (
 									<span mix={[font("mono")]} role="img" aria-label={indicator.valueLabel}>
 										{indicator.value}

@@ -1,15 +1,11 @@
 /**
- * Client island: the docs sidebar's search box and navigation list. Typing into the
- * search field filters every doc by title (case-insensitive substring match) into a
- * flat result list, each row labeled with its source section so docs that share a
- * title across sections stay distinguishable; clearing it restores the sections
- * grouped by `frontmatter.section.title`. The link matching `activePath` renders
- * with a solid active background so visitors can tell which page they're on.
+ * Client island: the docs sidebar's search box and navigation list. Typing
+ * filters every doc by title into a flat, section-labeled list; clearing it
+ * restores the sections grouped by `frontmatter.section.title`.
  *
- * Composes `@pkg/ui`'s `SearchField`/`SearchField.Input` for the search box, and
- * `NavLink` (styled with the same `--ui-neutral-bg-tint-hover`/`--ui-radius-lg`
- * tokens `Sidebar.Item` uses for its own rows) for the nav-list links, instead of
- * hand-rolled equivalents of both.
+ * Composes `@pkg/ui`'s `SearchField`/`SearchField.Input` and `NavLink`, styled
+ * with the same tokens `Sidebar.Item` uses for its own rows, so the search box
+ * and nav rows stay visually consistent with the rest of the sidebar.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,24 +38,24 @@ type DocsNavProps = {
 
 const navList = [listStyle(), m(0), p(0)];
 
+/**
+ * `tracking("wide")` (0.025em) reads identically to the literal 0.03em this
+ * heading used, so the value promotes to the named scale step. The margin uses
+ * `raw()`'s physical 3-value shorthand, since `m()` only covers 1/2/4-value form.
+ */
 const sectionTitle = [
 	fontSize("xs"),
 	weight(700),
 	textTransform("uppercase"),
-	// 0.03em sits 0.005em (~0.08px at this font size) off the named `wide` step
-	// (0.025em) — close enough to be imperceptible, so this promotes to the
-	// scale instead of staying a one-off literal.
 	tracking("wide"),
 	fg("neutral.muted"),
-	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
-	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.
 	raw({ margin: "20px 20px 8px" }),
 ];
 
 /**
  * A doc nav row: `NavLink` styled with the same tokens `Sidebar.Item` uses for
- * its own rows (row padding, radius, hover/current tint) instead of an inline
- * text link's underline treatment — `hasBackground` drops that underline.
+ * its own rows (row padding, radius, hover/current tint), with `hasBackground`
+ * so the row renders as a solid tinted block.
  */
 const navLink = [
 	block(),
@@ -76,7 +72,11 @@ const navLink = [
 	]),
 ];
 
-/** Renders {@link DocsNavProps.sections} grouped by section, or a flat filtered list once the visitor types a search query. */
+/**
+ * Renders {@link DocsNavProps.sections} grouped by section, or a flat filtered
+ * list once the visitor types a search query. The search field's margin uses
+ * `raw()`'s physical 3-value shorthand, since `m()` only covers 1/2/4-value form.
+ */
 export const DocsNav = clientEntry(
 	"/resources/components/docs-nav.tsx#DocsNav",
 	function DocsNav(handle: Handle<DocsNavProps>) {
@@ -94,12 +94,7 @@ export const DocsNav = clientEntry(
 
 			return (
 				<div>
-					<SearchField
-						aria-label={searchPlaceholder}
-						// Physical 3-value margin shorthand (top / left+right / bottom) —
-						// `@pkg/u`'s `m()` only covers the 1/2/4-value logical form.
-						mix={[raw({ margin: "0 20px 8px" })]}
-					>
+					<SearchField aria-label={searchPlaceholder} mix={[raw({ margin: "0 20px 8px" })]}>
 						<SearchField.Input
 							value={search}
 							placeholder={searchPlaceholder}

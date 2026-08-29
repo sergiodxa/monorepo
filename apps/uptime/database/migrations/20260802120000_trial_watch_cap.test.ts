@@ -1,17 +1,9 @@
 /**
- * Tests the one migration in this app that has to convert data rather than only add to the
- * schema.
- *
- * `leads.email` used to carry the unique index. Moving it to `normalized_email` means two
- * rows that exist happily today — `hello@x.com` and `hello+news@x.com` — become one key, so
- * the index cannot simply be created: the rows have to be merged first, and merging has to
- * decide what happens to the watches, the counters, the consent and the token each of them
- * carried. Everything asserted here is a decision that would be silent and unrecoverable if
- * it were made wrong, which is why it is tested against a real database and a real seed
- * rather than read off the SQL.
- *
- * Each test builds the schema as it stood immediately before this migration, seeds rows
- * against it, and then applies the one file.
+ * Tests the one migration in this app that converts existing data: `leads.email`'s unique
+ * index moves to `normalized_email`, so rows that collide under the new key — like
+ * `hello@x.com` and `hello+news@x.com` — must be merged first, deciding what happens to
+ * each one's watches, counters, consent, and token. Getting a merge decision wrong would be
+ * silent and unrecoverable, so every case here runs against a real database and seed data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -207,7 +199,7 @@ describe("trial watch cap migration: collision merge", () => {
 		expect(readLeads()[0]?.emails_sent).toBe(7);
 	});
 
-	/** Consent given once is not withdrawn by a later row that never ticked the box. */
+	/** Consent given once survives every later row, even one that never ticked the box. */
 	test("keeps the earliest consent and never loses one to a null", () => {
 		seedLead({
 			id: "older",
@@ -227,7 +219,7 @@ describe("trial watch cap migration: collision merge", () => {
 		expect(readLeads()[0]?.consented_at).toBe(7_777);
 	});
 
-	/** Merging must not hand the merged person a second digest on a day one of them had one. */
+	/** Merging keeps the later of the two digest stamps, capping the merged person at one digest per day. */
 	test("keeps the latest digest stamp", () => {
 		seedLead({
 			id: "older",

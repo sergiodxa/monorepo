@@ -6,10 +6,9 @@
  * a turn repeats that three times. Caching by tool and arguments turns a repeated question
  * into one KV read.
  *
- * Every entry is shared by every caller. That is only correct because this surface is
- * anonymous and identical for everybody — no tool declares `available`, so no answer
- * depends on who asked. Introducing a credential here means the caller's identity has to
- * become part of the key, or one visitor's answer will be served to another.
+ * Every entry is shared by every caller because this surface is anonymous and identical for
+ * everybody — no tool declares `available`. A credential introduced later must become part
+ * of the key, or one visitor's answer would be served to another.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,13 +23,9 @@ import { isFailure } from "@pkg/result";
 import { getEnv } from "~/app/http/middleware/env";
 
 /**
- * How long an entry may be served.
- *
- * Five minutes: the corpus changes when something is published or edited, which happens on
- * the order of days, so this is short enough that a correction is never stale for long and
- * long enough that a conversation's repeated questions are free. The cost of being wrong is
- * a reader seeing a five-minute-old version of a post, which is what an RSS reader or a CDN
- * would show them anyway.
+ * How long an entry may be served. Short enough that a correction is never stale for long
+ * once the corpus changes, long enough that a conversation's repeated questions are free.
+ * Being wrong for that long costs no more than an RSS reader or a CDN already would.
  */
 const TTL = "5 minutes";
 
@@ -45,10 +40,8 @@ function store(): Cache.KVStore {
 /**
  * Builds a cache key from a name and the value that distinguishes one call from another.
  *
- * The distinguishing value is hashed rather than spelled out, because a tool's arguments
- * can carry a 200-character query and a KV key cannot: hashing bounds the key regardless of
- * what a caller sends. Argument order is stable because the validator emits properties in
- * the schema's declaration order, so the same call always produces the same key.
+ * Hashing the value keeps the key bounded no matter what a caller sends, and argument order
+ * stays stable because the validator always emits properties in the schema's declaration order.
  *
  * @param name What is being cached, such as a tool or resource name.
  * @param value The arguments or variables the entry is specific to.
@@ -63,9 +56,8 @@ async function keyFor(name: string, value: unknown): Promise<string | null> {
 /**
  * Caches a computed value under a key, as JSON.
  *
- * Used by the resource handlers, which have no middleware layer of their own. A `null`
- * result is cached like any other: for a read it means the resource does not exist, and
- * repeating that lookup costs the same as any other miss.
+ * A `null` result is cached like any other, since a missing resource is a stable answer.
+ * Caching here is only an optimization: a call still returns a fresh value when no key exists.
  *
  * @param name What is being cached.
  * @param value The variables the entry is specific to.
@@ -78,8 +70,6 @@ export async function cached<T>(
 	produce: () => Promise<T>,
 ): Promise<T> {
 	let key = await keyFor(name, value);
-	// Without a key there is nothing to look under, so the call proceeds uncached rather
-	// than failing: a cache is an optimization and must not be able to break a read.
 	if (key === null) return produce();
 
 	let text = await store().fetch(key, async () => JSON.stringify(await produce()), { ttl: TTL });
@@ -89,9 +79,8 @@ export async function cached<T>(
 /**
  * Middleware caching every tool result by tool name and arguments.
  *
- * A failed call is never cached. `isError` means the tool ran and could not do what was
- * asked — often because the caller passed a slug that does not exist — and storing that
- * would keep answering "not found" for five minutes after the post appears.
+ * Only a successful call is cached: `isError` often means a slug that does not exist yet,
+ * and storing that would keep answering "not found" for the whole TTL after the post appears.
  *
  * @returns Tool middleware that serves a stored result when one is current.
  */

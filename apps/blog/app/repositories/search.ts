@@ -2,14 +2,13 @@
  * Cross-type search over the published corpus.
  *
  * Reads each content type through its own repository and matches in memory, the way
- * `Feed` composes the activity list, rather than issuing a `LIKE` of its own. The corpus
- * is a few hundred posts and every read here is a path the site already exercises on every
- * page, so this trades a little transfer for reusing queries that are known to work
- * against the app's D1 adapter. The signature is the part meant to last: replacing the
- * internals with an FTS5 index later changes this file and nothing that calls it.
+ * `Feed` composes the activity list. The corpus is only a few hundred posts and every
+ * read here already runs on every page, so this reuses queries proven to work against
+ * the app's D1 adapter. The signature is what's meant to last: swapping the internals for
+ * an FTS5 index later touches only this file.
  *
- * Only published posts are ever returned. Preview posts are filtered by the per-type
- * repositories, and the glossary is filtered here since its reader does not.
+ * Only published posts are returned: previews are filtered per-type, glossary filtered
+ * here since `GlossaryPost.findAll` returns every row regardless of publish state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,7 +41,7 @@ export namespace PostSearch {
 		limit?: number;
 	}
 
-	/** One hit, projected for a machine reader rather than for a page. */
+	/** One hit, shaped for a machine reader. */
 	export interface Result {
 		kind: Kind;
 		title: string;
@@ -85,10 +84,8 @@ export class PostSearch {
 	/**
 	 * Finds published posts matching `query`.
 	 *
-	 * Matching is a case-insensitive substring over title, excerpt and tags — not over post
-	 * bodies. A caller is looking for *which* post, and including bodies multiplies the work
-	 * for recall that mostly surfaces passing mentions; a post whose subject appears in none
-	 * of those three is mis-titled.
+	 * Matching is a case-insensitive substring over title, excerpt and tags — the fields that
+	 * name which post a caller means, far cheaper than scanning full bodies.
 	 *
 	 * @param db Database connection used to read each content type.
 	 * @param options The query, and any narrowing by kind, tag or count.
@@ -182,8 +179,8 @@ export class PostSearch {
 	/**
 	 * Published glossary entries, projected.
 	 *
-	 * Filtered here rather than by the repository: `GlossaryPost.findAll` returns every row,
-	 * so without this a scheduled entry would be searchable.
+	 * Filtered here because `GlossaryPost.findAll` returns every row regardless of publish
+	 * state; this method keeps only the published ones searchable.
 	 */
 	private static async glossary(db: Database): Promise<Array<Candidate>> {
 		let entries = await GlossaryPost.findAll(db);
@@ -200,7 +197,12 @@ export class PostSearch {
 			);
 	}
 
-	/** Builds one candidate, resolving its URL and its sort timestamp. */
+	/**
+	 * Builds one candidate, resolving its URL and its sort timestamp.
+	 *
+	 * A timestamp that fails to parse sorts as oldest, keeping the post present in results
+	 * with its ordering pushed to the end.
+	 */
 	private static candidate(
 		kind: PostSearch.Kind,
 		post: { published_at: string | null; created_at: string },
@@ -210,8 +212,6 @@ export class PostSearch {
 
 		return {
 			relevance: Relevance.Body,
-			// A row whose dates cannot be parsed sorts last rather than being dropped, so a
-			// malformed date hides a post from the ordering and not from the results.
 			timestamp: Number.isNaN(timestamp) ? 0 : timestamp,
 			result: {
 				kind,

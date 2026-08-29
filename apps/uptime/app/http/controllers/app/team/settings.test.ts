@@ -1,10 +1,9 @@
 /**
  * Tests for the team settings page controller. No `cloudflare:workers` mock is
- * needed — this controller only touches `~/app/data/invite`, `~/app/data/team`,
- * `~/app/data/team-domain`, and `~/app/services/subjects`, none of which depend on a
- * queue binding. A fake `AuthSDK` stands in for the real one so
- * `resolveSubjects()` doesn't attempt a real client-credentials call — it's made to
- * fail so the page falls back to rendering members by raw `subject_id`.
+ * needed since this controller only touches `~/app/data/invite`, `~/app/data/team`,
+ * `~/app/data/team-domain`, and `~/app/services/subjects`, none of which depend on
+ * a queue binding. A fake `AuthSDK` is made to fail so `resolveSubjects()` falls
+ * back to rendering members by raw `subject_id`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,7 +51,6 @@ let { i18n: i18nextInstance } = await createTranslator({
 	fallbackLanguage: "en",
 })();
 
-/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.i18next + Auth. */
 function seedTeam(
 	team: SelectTeam,
 	membership: SelectMembership,

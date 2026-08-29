@@ -1,9 +1,8 @@
 /**
- * Tests for the new-HTTP-monitor form page controller. Doesn't import `~/app/data/
- * monitor`, so no `cloudflare:workers` mock is needed (unlike `http-monitors.test.ts`).
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching
- * the template in `app/http/controllers/actions/monitors.test.ts`.
+ * Tests for the new-HTTP-monitor form page controller. `getViewer()`/
+ * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
+ * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
+ * matching the template in `app/http/controllers/actions/monitors.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

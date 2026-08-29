@@ -1,3 +1,10 @@
+/**
+ * Tests hasAny, hasMany, isEmpty, first, last, unique, toArray, and skip
+ * across empty, single, and multi-element arrays.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "vitest";
 
 import { first, hasAny, hasMany, isEmpty, last, skip, toArray, unique } from "./index";

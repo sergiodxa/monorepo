@@ -60,10 +60,9 @@ export function createDbPlugin(): Plugin {
 			let text = readSql(args);
 			if (isFailure(text)) return text;
 			/**
-			 * The runtime's central gate has already refused the call if the env
-			 * family was denied outright; this refines that to the one variable
-			 * actually read, so granting some other variable still yields the
-			 * exact missing name.
+			 * The runtime's central gate already refuses the call if the whole `env`
+			 * family was denied; this refines that to the one variable actually read,
+			 * so granting some other variable still yields the exact missing name.
 			 */
 			let allowed = context.permissions.checkEnv(DATABASE_URL_VAR);
 			if (isFailure(allowed)) return allowed;

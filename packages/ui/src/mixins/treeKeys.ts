@@ -18,8 +18,7 @@ import { isPrintableKey, labelFor, setRovingTabindex } from "../utils/keyboard-n
 /**
  * Attribute every Tree row exposes itself on; its value doubles as the
  * `SelectionModel.Key` {@link treeKeys} toggles, ranges over, and mirrors
- * `aria-selected` onto, while `aria-level`/`aria-expanded` derive each row's
- * place in the tree.
+ * `aria-selected` onto, while `aria-level`/`aria-expanded` derive each row's place.
  */
 export const TREE_ITEM_ATTRIBUTE = "data-tree-item";
 
@@ -40,9 +39,8 @@ declare global {
 
 /**
  * Dispatched on a Tree's row list by {@link treeKeys} whenever the bound
- * `SelectionModel`'s selection changes or the roving cursor moves rows, so a
- * consumer can react — a live-region announcement, syncing a hidden field —
- * without reading the model or DOM focus directly.
+ * `SelectionModel`'s selection changes or the roving cursor moves rows, so
+ * a consumer can react without reading the model or DOM focus directly.
  */
 export class TreeChangeEvent extends Event {
 	/** Keys the bound model currently reports as selected. */

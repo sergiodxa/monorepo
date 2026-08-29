@@ -49,10 +49,9 @@ const SECOND_MS = 1000;
 const TTL_TOLERANCE_FACTOR = 2;
 
 /**
- * A timestamp header must be a second count written canonically: digits only, no
- * sign, no padding, and short enough to be a time. Requiring the canonical form is
- * what lets the header be read as a number and put back into the signed content
- * unchanged, so the message verified here is the message the sender signed.
+ * A timestamp header must be a second count written canonically: digits only,
+ * no sign, no padding, and short enough to be a time, so it round-trips into
+ * the signed content unchanged, matching what the sender signed.
  */
 const TIMESTAMP_PATTERN = /^(?:0|[1-9]\d{0,14})$/;
 
@@ -74,8 +73,8 @@ export interface VerifyOptions extends SecretOptions {
 
 	/**
 	 * Schema the verified body is parsed with. Any Standard Schema works, so a
-	 * sender-provided schema needs no adapter. A body that fails it is a parsing
-	 * failure, never an authentication failure.
+	 * sender-provided schema needs no adapter. A body that fails it surfaces as
+	 * a parsing failure after authentication has already succeeded.
 	 */
 	schema?: StandardSchemaV1;
 
@@ -129,8 +128,8 @@ export type VerifiedPayload<Options> = Options extends {
 /**
  * Attaches the delivery id to a failure so a log line can name the delivery.
  *
- * The id is the only request-derived value put on an error: the signature and the
- * secret must never appear in one.
+ * The id is the only request-derived value ever put on an error, keeping the
+ * signature and the secret confined to where they were received.
  */
 function fail<E extends WebhookError>(error: E, id: string | null): Failure<E> {
 	error.deliveryId = id;
@@ -138,11 +137,9 @@ function fail<E extends WebhookError>(error: E, id: string | null): Failure<E> {
 }
 
 /**
- * Reads the body once, as text.
- *
- * A consumed body cannot be verified at all, since the signature covers the exact
- * bytes and a stream is readable only once, so that is a failure rather than an
- * empty body.
+ * A consumed body cannot be verified at all, since the signature covers the
+ * exact bytes and a stream is readable only once, so reading an already-used
+ * body surfaces as an `UnreadableBodyError`.
  */
 async function readBody(request: Request): Promise<Result<string, UnreadableBodyError>> {
 	if (request.bodyUsed) return failure(new UnreadableBodyError());
@@ -155,11 +152,9 @@ async function readBody(request: Request): Promise<Result<string, UnreadableBody
 }
 
 /**
- * Parses the verified body, through the schema when one was given.
- *
- * The body is JSON decoded even without a schema, so a caller always receives a
- * payload; either failure keeps the verified text on the error, because an
- * authentic delivery this endpoint cannot model is the caller's decision to make.
+ * The body is JSON decoded even without a schema, so a caller always
+ * receives a payload, and either failure keeps the verified text on the
+ * error, since an authentic but unmodeled delivery is the caller's decision.
  */
 async function parsePayload(
 	body: string,
@@ -178,9 +173,6 @@ async function parsePayload(
 
 	if (schema === undefined) return success(value);
 
-	// `validate()` only treats `Request`, `FormData`, and `URLSearchParams` inputs
-	// specially and hands everything else straight to the schema, so the assertion
-	// only widens the decoded value into its input union.
 	let parsed = await validate(value as Record<string, unknown>, schema);
 	if (isFailure(parsed)) {
 		return failure(new PayloadValidationError(body, timestamp, parsed.error.issues));
@@ -192,8 +184,8 @@ async function parsePayload(
 /**
  * Whether any presented MAC matches any configured secret.
  *
- * Every comparison is constant time; the loop stops at the first match, which
- * only reveals which secret of a rotation matched, not anything about the bytes.
+ * Every comparison is constant time, so stopping at the first match reveals
+ * only which secret of a rotation matched.
  */
 async function matchesAnySecret(
 	secrets: readonly Bytes[],
@@ -215,11 +207,8 @@ async function matchesAnySecret(
 /**
  * Verifies a Standard Webhooks request and returns the delivery it carried.
  *
- * The body is read once as text and verified as received, never re-serialized.
- * Failures are distinct values: `MissingHeaderError`, `MalformedSignatureError`,
- * `MalformedTimestampError`, `StaleTimestampError`, and `SignatureMismatchError`
- * mean the request is not authentic, while `PayloadValidationError` means it is
- * authentic but not the expected shape.
+ * A tolerance that resolves to an unusable number collapses to zero, keeping
+ * a bypassed type's acceptance window at its narrowest.
  *
  * @param request Inbound request, with its body still unread.
  * @param options Secret or secrets, plus tolerance, schema, and replay store.
@@ -253,8 +242,6 @@ export async function verify<Options extends VerifyOptions>(
 	if (!TIMESTAMP_PATTERN.test(timestampHeader)) return fail(new MalformedTimestampError(), id);
 	let timestamp = new Date(Number(timestampHeader) * SECOND_MS);
 
-	// A tolerance that is not a usable number can only come from a bypassed type, so
-	// it collapses to zero rather than widening the window it exists to bound.
 	let configured = toMs(options.tolerance ?? DEFAULT_TOLERANCE);
 	let toleranceMs = Number.isFinite(configured) && configured > 0 ? configured : 0;
 
@@ -273,8 +260,6 @@ export async function verify<Options extends VerifyOptions>(
 	if (isFailure(matched)) return fail(matched.error, id);
 	if (!matched.data) return fail(new SignatureMismatchError(), id);
 
-	// Only an authenticated delivery reaches the store, so an unsigned request can
-	// neither read nor write it.
 	let store = options.store;
 	if (store !== undefined) {
 		try {
@@ -287,8 +272,6 @@ export async function verify<Options extends VerifyOptions>(
 	let payload = await parsePayload(body.data, timestamp, options.schema);
 	if (isFailure(payload)) return fail(payload.error, id);
 
-	// Remembered only once the delivery is fully accepted, so a sender retrying a
-	// body this endpoint rejected is not answered with a duplicate-id failure.
 	if (store !== undefined) {
 		try {
 			await store.remember(id, options.ttl ?? toleranceMs * TTL_TOLERANCE_FACTOR);
@@ -301,8 +284,6 @@ export async function verify<Options extends VerifyOptions>(
 		id,
 		timestamp,
 		body: body.data,
-		// The payload is parsed through the caller's schema when there is one, which
-		// is exactly what `VerifiedPayload` reports; the parse itself is untyped.
 		payload: payload.data as VerifiedPayload<Options>,
 	});
 }

@@ -1,7 +1,7 @@
 /**
- * Unit tests for the rules every uptime report shares: that folding statuses together keeps
- * the worst of them, that an unobserved period loses to any measurement rather than winning
- * as the least known state, and that uptime is printed to one decimal without a sign.
+ * Unit tests for the rules every uptime report shares: folding statuses together
+ * keeps the worst of them, any measurement outranks an unobserved period, and
+ * uptime prints as a plain one-decimal magnitude.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

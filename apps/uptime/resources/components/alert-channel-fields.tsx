@@ -1,25 +1,9 @@
 /**
- * The "Notification channel" card's contents: the channel `<select>` and the four
- * per-channel settings fieldsets it chooses between. Both the create and the edit alert
- * pages render exactly this block — the only thing that differs between them is whether
- * the fields start empty or prefilled — so it lives here instead of being spelled out
- * twice.
- *
- * Only the selected channel's fieldset is shown, and the switching is done in CSS alone:
- * a `<select>`'s currently selected `<option>` matches `:checked` and keeps matching as
- * the user changes the selection, so `:has()` can read the choice from an ancestor and
- * hide the fieldsets that don't belong to it. That keeps the page working with
- * JavaScript disabled, which a client island would not. The rules are written as "hide
- * this channel when something *else* is selected" rather than "hide everything, then
- * show one", so no two rules ever compete over the same fieldset — and so a browser
- * without `:has()` simply falls back to showing all four, which is still a complete,
- * submittable form rather than an empty card.
- *
- * Hiding is `display: none`, so every channel's inputs stay in the DOM and still post
- * their (empty, for the channels nobody filled in) values. That is what the server
- * expects: the create/update schemas mark all of them optional and only require the
- * selected `strategy`'s fields, and the action builds the stored config from that
- * strategy alone, ignoring the rest.
+ * The channel `<select>` and its four per-channel fieldsets, shared by the
+ * create and edit alert pages. `:has()` on the checked option shows only
+ * the chosen fieldset in CSS alone, so the form works without JavaScript,
+ * and hidden fieldsets still post their (empty) values for schemas that
+ * only require the chosen strategy.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,16 +54,25 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 	return () => {
 		let { config, i18next } = handle.props;
 
-		// The create and edit pages label these fields identically, so both read the same
-		// shared namespace rather than a per-page one.
+		/**
+		 * Reads the shared `page.alerts.form.fields` namespace so the create
+		 * and edit pages label these fields identically.
+		 */
 		let t = i18next.getFixedT(null, "translation", "page.alerts.form.fields");
 
+		/**
+		 * The saved channel's own `<option>` is marked `selected`, which is
+		 * what determines a `<select>`'s initial choice and keeps that
+		 * channel's fieldset the one revealed.
+		 */
 		return (
 			<div
 				mix={[
-					// A hidden flex item produces no gap, so the four fieldsets stacking on the
-					// same rhythm as the picker above them costs nothing when three of them are
-					// display:none — which is the usual case, since only one channel shows.
+					/**
+					 * A hidden flex item produces no gap, so the four fieldsets stacking on
+					 * the same rhythm as the picker above them cost nothing while three
+					 * stay `display: none` — the usual case, since only one channel shows.
+					 */
 					vstack({ gap: SETTINGS_FIELD_GAP }),
 					...CHANNELS.map((channel) =>
 						has(
@@ -90,13 +83,6 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 				]}
 			>
 				<Field label={t("channel.label")}>
-					{/*
-					 * The saved channel is marked `selected` on its own `<option>` rather than
-					 * through a `defaultValue` on the host: `<select>` has no such attribute, so
-					 * that spelling reaches the browser as inert markup and leaves the first
-					 * option selected — which here would also mean the wrong settings block being
-					 * the one revealed.
-					 */}
 					<Select name="strategy">
 						{CHANNELS.map((channel) => (
 							<Select.Option

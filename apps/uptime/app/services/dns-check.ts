@@ -77,7 +77,11 @@ export interface DnsQueryOutcome {
 	 * read as "every record at this name vanished".
 	 */
 	errorMessage: string | null;
-	/** Whether address answers were dropped because a CNAME owns the name — see below. */
+	/**
+	 * Whether A/AAAA answers were dropped because the same response carried a CNAME. The
+	 * answer itself is the trigger, so a CDN-proxied name — CNAME in the zone, plain A records
+	 * at the edge — keeps its edge addresses, since its answers carry no CNAME.
+	 */
 	suppressedByCname: boolean;
 }
 
@@ -96,13 +100,8 @@ export interface DnsNameSweep {
 
 /**
  * Resolves `domain`'s `recordType` records via Cloudflare's DoH JSON API, throwing on any
- * answer that is not a clean `NOERROR`.
- *
- * Deliberately unlike {@link queryDnsRecords}: this is the resolve-and-verify step of the
- * public probe's SSRF and DNS-rebinding defence, where a name that does not resolve and a
- * resolver that could not be reached must both refuse the probe, and where the address
- * reached by following a CNAME is exactly the address that must be inspected. Answers are
- * returned as the resolver wrote them, unnormalized, for the same reason.
+ * answer that is not a clean `NOERROR`. Backs the SSRF and DNS-rebinding defence, where an
+ * unresolved name and an unreachable resolver must both refuse the probe.
  */
 export async function resolveDns(
 	domain: string,
@@ -117,10 +116,9 @@ export async function resolveDns(
 		.map((record) => {
 			let data = record.data;
 			/**
-			 * The outermost quote pair only. Correct normalization lives in
-			 * `normalizeDnsRecordValue` and is not applied here on purpose — this function
-			 * answers to the probe fence, which inspects addresses and must see the resolver's
-			 * own bytes.
+			 * The outermost quote pair only. This function passes the resolver's own
+			 * bytes to the probe fence unnormalized, on purpose: the fence must
+			 * inspect addresses exactly as returned; normalization lives in `normalizeDnsRecordValue`.
 			 */
 			if (recordType === "TXT" && data.startsWith('"') && data.endsWith('"')) {
 				return data.slice(1, -1);
@@ -132,30 +130,9 @@ export async function resolveDns(
 }
 
 /**
- * Resolves one `(name, type)` for the sweep, distinguishing "no records of this type here"
- * from "we did not find out". It never throws: a failure is a value the caller diffs around.
- *
- * Three rules a sweep needs that a single-record check does not:
- *
- * 1. `NXDOMAIN` and `NOERROR` with no answers both mean *none*. A zone-file name that has
- *    been retired, or a name with addresses but no mail, hits one of them on every check, so
- *    treating either as an error would park every domain monitor in `error` forever. Only
- *    `SERVFAIL` and the other response codes, a transport failure, or a non-2xx response are
- *    errors.
- * 2. A CNAME **in the answer** suppresses A/AAAA tracking at that name.
- *    `?name=www.github.com&type=A` answers with the CNAME *and* `github.com`'s address, and
- *    filtering by type keeps the latter — an address that exists in nobody's zone as
- *    `www.github.com`. Storing it would alert the customer every time an unrelated third
- *    party rotated an address. The CNAME itself is tracked; where it points is the target's
- *    business.
- *
- *    The trigger is the CNAME answer, not the shape of the customer's zone, and the two
- *    come apart: a name a CDN proxies is a CNAME in the zone file and plain A records at
- *    the edge in DNS, with no CNAME in the answer at all. Nothing is suppressed there and
- *    nothing should be — the edge addresses are the authoritative answer, and the fact that
- *    they do not match the zone file is a true observation this reports rather than hides.
- * 3. Answers are filtered to the queried type code, which matters precisely because a CNAME
- *    answer rides along in an address query.
+ * Resolves one `(name, type)` for the sweep, returning any failure as a value the caller
+ * diffs around. `NXDOMAIN` and empty `NOERROR` both mean "no records of this type here" —
+ * treating either as an error would park a retired or mail-less domain in `error` forever.
  */
 export async function queryDnsRecords(
 	name: string,
@@ -219,13 +196,9 @@ export async function queryDnsRecords(
 }
 
 /**
- * Sweeps every supported record type at one name, which is what makes a name's coverage
- * complete: a DNS answer carries the full RRset, so an addition inside a tracked name shows
- * up beside the records already stored.
- *
- * The types run together — {@link QUERIES_PER_NAME} subrequests, a fixed and small number.
- * Fanning out across *names* is the caller's job, because the per-invocation subrequest
- * budget is spent in names and only the caller knows how many it has left.
+ * Sweeps every supported record type at one name — {@link QUERIES_PER_NAME} subrequests,
+ * a fixed, small number — so a DNS answer's full RRset gives complete coverage. Fanning
+ * out across names is the caller's job, since it owns the per-invocation subrequest budget.
  */
 export async function sweepDnsName(name: string): Promise<DnsNameSweep> {
 	let owner = normalizeDnsName(name);
@@ -274,9 +247,8 @@ function joinValues(values: string[]): string | null {
 
 /**
  * Comparison key for the ad-hoc probe's expected-value matching. Values reaching it are
- * already normalized, so the only folding left is the MX `hostOnly` affordance: an expected
- * token without a space is a mail host the caller does not want pinned to a preference,
- * while a token with one is read as `preference host` and pins it.
+ * already normalized, so the only folding left is the MX `hostOnly` affordance: a
+ * spaceless token is a bare mail host; one with a space pins it as `preference host`.
  */
 function comparisonKey(value: string, recordType: DnsRecordType, hostOnly: boolean): string {
 	if (recordType !== "MX" || !hostOnly) return value;
@@ -285,18 +257,9 @@ function comparisonKey(value: string, recordType: DnsRecordType, hostOnly: boole
 }
 
 /**
- * Tests whether every configured token is PRESENT among the resolved records — containment,
- * not set equality. Tokens are matched element-wise against whole records so that a token
- * never satisfies itself against a longer record it merely appears inside: `aspmx.l.google.com`
- * must not be considered found because `alt1.aspmx.l.google.com.` was resolved.
- *
- * SECURITY TRADEOFF, deliberate: because extra resolved records are tolerated, an attacker
- * who ADDS a hostile record while leaving the configured ones in place is not flagged. This
- * survives only for the stateless ad-hoc probe, which has one record type and one expected
- * value and no history to diff against. A domain monitor closes that hole by construction —
- * an added record is not stored, so the sweep reports it as new.
- *
- * An empty token list requires nothing and therefore always matches.
+ * Tests whether every configured token is present among the resolved records, matched
+ * whole-record so a token can't be satisfied by a longer record it merely appears inside.
+ * SECURITY: only the stateless ad-hoc probe uses this — a hostile record added here passes unnoticed.
  */
 function containsExpected(
 	values: string[],
@@ -316,13 +279,9 @@ function containsExpected(
 }
 
 /**
- * Resolves and classifies one single-record probe: `changed` when a configured expected value
- * is not contained in the resolved records, or — with no expected value — when the resolved
- * set differs from the previously resolved one. The first check has no previous value, so it
- * classifies as `ok` and becomes the baseline once the caller persists it.
- *
- * This is the shape the ad-hoc ping endpoint asks for. A stored domain monitor does not use
- * it: its expectation is a table of records, not a transcribed string.
+ * Resolves and classifies one single-record probe: `changed` when a configured expected
+ * value is missing from the resolved records, or, with no expected value, when the
+ * resolved set differs from the previous one; a first check has no previous value and becomes the baseline.
  */
 export async function checkDns(
 	domain: string,
@@ -332,9 +291,9 @@ export async function checkDns(
 ): Promise<DnsCheckResult> {
 	try {
 		/**
-		 * Deliberately not routed through `resolveDns`: that function's legacy outermost-quote
-		 * strip runs before normalization can see the value, which turns a chunked TXT record
-		 * into a different string than either channel would produce for it.
+		 * Normalizes each answer directly through `normalizeDnsRecordValue`, matching what the
+		 * stored channel produces for a chunked TXT record — `resolveDns`'s quote strip runs
+		 * before normalization can see the value and would otherwise yield a different string.
 		 */
 		let answer = await queryDoh(domain, recordType);
 		if (answer.status !== 0) {

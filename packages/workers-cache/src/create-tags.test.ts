@@ -1,8 +1,8 @@
 /**
  * Covers the tag vocabulary builder: that builders keep their names and
  * arguments, that every produced tag is validated against the platform's
- * character set and length rules, and that a violation throws where the tag was
- * built instead of reaching a header the platform would drop.
+ * character set and length rules, and that a violation throws at the point the
+ * tag was built, ahead of a header the platform would silently drop.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

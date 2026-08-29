@@ -1,8 +1,8 @@
 /**
- * In-memory transport that records every delivery instead of sending it. It is a
- * real fake rather than a module mock, so tests assert on the message a caller
- * actually produced — including the email object it came from, and the assembled
- * MIME when it is asked for one — without touching a provider SDK.
+ * In-memory transport that captures every delivery for assertions. As a full
+ * implementation of the transport contract, it lets tests assert on the message
+ * a caller actually produced — including the email object it came from, and
+ * the assembled MIME when it is asked for one — using state held in memory.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,9 +38,8 @@ export interface RecordedDelivery {
 /**
  * Transport that keeps deliveries in memory for assertions.
  *
- * Recorded messages are the normalized ones a provider would have received; when a
- * send came from an email object, `message.email` keeps it, so a test can match a
- * send by type and stay valid through a copy change.
+ * Recorded messages are the normalized ones a provider receives; `message.email`
+ * keeps the original when a send came from one, so matching by type survives a copy.
  *
  * @example
  * let transport = new MemoryTransport();

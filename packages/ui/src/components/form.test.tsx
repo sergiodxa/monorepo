@@ -1,10 +1,9 @@
 /**
  * Tests for the path {@link Form}'s `issues` takes to reach a field: the
- * documented parse-then-re-render pattern passes `issues` and nothing else,
- * so a field has to find its own message through form context or the user is
- * shown no error at all. Covers the lookup by `name`, an explicit
- * `errorMessage` still winning, the aria wiring the found message drives, and
- * the `autofocus` that lands on the first invalid field.
+ * parse-then-re-render pattern passes `issues` alone, so a field must find
+ * its own message through form context or show no error. Covers lookup by
+ * `name`, an explicit `errorMessage` override, the aria wiring, and the
+ * `autofocus` on the first invalid field.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

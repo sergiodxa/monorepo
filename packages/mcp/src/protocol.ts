@@ -14,12 +14,9 @@
  */
 
 /**
- * The protocol revisions this server implements, newest first.
- *
- * A request naming anything else is refused with `UnsupportedProtocolVersion`, which
- * carries this list so the client can retry with something both sides know. Only modern
- * revisions belong here: the handshake-based ones are a different era, not a lower
- * version, and answering them would mean implementing `initialize` and sessions.
+ * The protocol revisions this server implements, newest first. A request naming anything
+ * else is refused with `UnsupportedProtocolVersion`, which carries this list so the
+ * client can retry with a revision both sides know.
  */
 export const SUPPORTED_PROTOCOL_VERSIONS = ["2026-07-28"] as const;
 
@@ -36,11 +33,8 @@ export const METHOD_HEADER = "Mcp-Method";
 export const NAME_HEADER = "Mcp-Name";
 
 /**
- * The `_meta` keys this revision reserves.
- *
- * Spelled out as constants rather than inline strings because they are long, easy to
- * mistype, and a typo in one produces a request that looks valid and is missing a
- * required field.
+ * The `_meta` keys this revision reserves, kept as constants because a typo here would
+ * silently produce a request that looks valid but is missing a required field.
  */
 export const MetaKey = {
 	/** The revision the request is written against. Required. */
@@ -131,15 +125,13 @@ export function isMetadataProblem(
 const BASE64_SENTINEL = /^=\?base64\?(.*)\?=$/;
 
 /**
- * Decodes a header value that may use the Base64 sentinel form.
- *
- * Clients encode any value that is not plain printable ASCII — a tool name with an
- * accent, a resource URI with a space — as `=?base64?…?=`, and must encode a literal
- * value that happens to look like the sentinel too. Comparing without decoding would
- * reject exactly those requests.
+ * Decodes a header value that may use the Base64 sentinel form clients use for any value
+ * that is not plain printable ASCII. An undecodable value is returned as written, so the
+ * caller's comparison fails and the request is refused as a header mismatch.
  *
  * @param value The raw header value.
- * @returns The decoded value, or the input unchanged when it carries no sentinel.
+ * @returns The decoded value, or the input unchanged when it carries no sentinel or fails
+ * to decode.
  */
 export function decodeHeaderValue(value: string): string {
 	let match = BASE64_SENTINEL.exec(value);
@@ -148,8 +140,6 @@ export function decodeHeaderValue(value: string): string {
 	try {
 		return new TextDecoder().decode(Uint8Array.from(atob(match[1]), (c) => c.codePointAt(0) ?? 0));
 	} catch {
-		// An undecodable sentinel is left as written, so the caller's comparison fails and
-		// the request is refused as a header mismatch rather than as a server fault.
 		return value;
 	}
 }

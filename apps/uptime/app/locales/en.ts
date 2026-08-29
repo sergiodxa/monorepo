@@ -79,10 +79,9 @@ export default {
 		},
 
 		/**
-		 * The three things that stay true however much somebody ends up monitoring. The price
-		 * and the allowance are interpolated from `~/app/lib/pricing.ts` rather than written
-		 * here — a literal would go stale the day pricing moves, and `app/lib/public-claims.ts`
-		 * fails the build on one.
+		 * The three things that stay true no matter how much someone ends up monitoring.
+		 * Price and allowance are interpolated from `~/app/lib/pricing.ts`, so a stale
+		 * literal here would fail the `app/lib/public-claims.ts` build check.
 		 */
 		benefits: {
 			badge: "Why Uptime",
@@ -1380,7 +1379,7 @@ export default {
 				dnsMoreFindings: "…and {{count}} more",
 			},
 
-			/** Said only where it applies: what a DNS diff means, not what it found. */
+			/** Explains what a DNS diff means, shown only where that meaning is needed. */
 			dns: {
 				recordSetEditNote:
 					"A record set holding several values has no per-record identity in DNS, so a value edited inside one is reported as one record no longer resolving plus one new record.",
@@ -1701,9 +1700,9 @@ export default {
 		},
 
 		/**
-		 * A bulk import reports two numbers, and `partial` is the one that matters: a submission
-		 * where some lines landed is a success with a to-do list, not a failure, so it says how
-		 * many monitors exist before it says how many lines need fixing.
+		 * A bulk import reports two numbers, and `partial` is the one that matters: a
+		 * submission where some lines landed counts as a success with a to-do list, so
+		 * it names how many monitors exist before it names what needs fixing.
 		 */
 		importMonitors: {
 			errors: {
@@ -2763,8 +2762,11 @@ export default {
 						description: "A name to identify the alert.",
 					},
 
-					// The picker's own copy is shared with the maintenance-window form; only this
-					// sentence, which is about alerts, stays here. See `components.monitorScope`.
+					/**
+					 * Shared with the maintenance-window scope picker; this description covers
+					 * just the alerts-specific sentence. See `components.monitorScope` for the
+					 * rest of the picker's copy.
+					 */
 					scope: {
 						description:
 							"What this alert watches. Leave it team-wide, narrow it to one kind of monitor, or point it at a single one.",
@@ -2902,7 +2904,10 @@ export default {
 				},
 
 				cooldown: {
-					// Not "None": a repeat is spaced by a floor even when the team configured 0.
+					/**
+					 * A team can configure a cooldown of zero, but repeats are still spaced
+					 * apart by a floor interval — this label names that guaranteed minimum.
+					 */
 					none: "Fastest allowed",
 					minutes: "{{count}} min",
 					hours: "{{count}} hr",
@@ -3114,8 +3119,8 @@ export default {
 			},
 
 			/**
-			 * The rejected lines, shown above the box they get re-pasted into. It leads with what
-			 * *was* created, so a partial import does not read as a failed one.
+			 * The rejected lines, shown above the box they get re-pasted into. Leading
+			 * with what was created keeps a partial import reading as a success.
 			 */
 			report: {
 				section: { title: "Last import" },
@@ -3291,7 +3296,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				/** ADR-026 §14 requires this notice on the setup screen as well as in the docs. */
 				apexOnlyNotice:
 					"DNS does not let anyone list a zone's records. Without a zone file we can only watch your domain's apex — never a subdomain.",
 
@@ -3424,7 +3429,7 @@ export default {
 
 				findings: "{{changed}} changed · {{missing}} missing · {{new}} new",
 				noFindings: "No changes",
-				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				/** Only successfully answered queries enter the diff, so a partial sweep reads as partial. */
 				queriesFailed_one: "{{count}} query did not answer",
 				queriesFailed_other: "{{count}} queries did not answer",
 			},
@@ -3467,9 +3472,8 @@ export default {
 		},
 
 		/**
-		 * The review step between creating a domain monitor and monitoring anything with it.
-		 * Its own page, so a reload lands back on the decision rather than on a detail page
-		 * that implies it was already made.
+		 * The review step between creating a domain monitor and monitoring anything
+		 * with it. Its own page keeps a reload landing back on this decision point.
 		 */
 		dnsMonitorReview: {
 			header: {
@@ -3478,7 +3482,7 @@ export default {
 					"Every record we found is watched by default. Uncheck anything you do not want to be alerted about — it is kept either way, so nothing you decline comes back as a new record later.",
 			},
 
-			/** A line the parser could not use is reported, never silently dropped. */
+			/** Every line the parser could not use is still surfaced to the user. */
 			unparsed: {
 				title_one: "{{count}} line was not imported",
 				title_other: "{{count}} lines were not imported",
@@ -3523,9 +3527,9 @@ export default {
 			},
 
 			/**
-			 * A line repeating a record an earlier line declared. Reported apart from the
-			 * rejections: nothing was lost, so calling it "not imported" would describe a
-			 * complete import as a partial one.
+			 * A line repeating a record an earlier line already declared. Kept apart
+			 * from the rejections, since nothing was lost — the record was imported
+			 * from whichever line named it first.
 			 */
 			duplicates: {
 				title_one: "{{count}} line declared a record another line already declared",
@@ -3535,7 +3539,7 @@ export default {
 				line: "Line {{line}}: {{name}} {{type}} was already declared on line {{firstLine}}.",
 			},
 
-			/** Said at review, where the cap is enforced, rather than at check time. */
+			/** The cap is enforced at review time, so this notice appears there too. */
 			namesCap: {
 				title: "More names than one monitor can watch",
 				description:
@@ -3551,7 +3555,7 @@ export default {
 					value: "Value",
 				},
 
-				/** Each box names the record it decides, since the column heading is not read per row. */
+				/** Each box names the record it decides, so a row makes sense read on its own. */
 				watchRecord: "Watch {{name}} {{type}}",
 			},
 
@@ -3838,7 +3842,10 @@ export default {
 					sent: "Sent",
 					skipped_cooldown: "Skipped (Cooldown)",
 					skipped_cap: "Skipped (Repeat Limit)",
-					// Fallback label for a suppression reason with no label of its own yet.
+					/**
+					 * Generic label covering any suppression reason before it gets a
+					 * specific translation of its own.
+					 */
 					skipped: "Skipped",
 					failed: "Failed",
 				},
@@ -4023,10 +4030,9 @@ export default {
 
 		trial: {
 			/**
-			 * The report as its own page, reachable by the watch's token. Every figure is computed
-			 * from stored checks, so each one has a "nothing to report yet" wording beside it: a
-			 * watch with no completed check shows an em dash and says why, and never claims "no
-			 * incidents", because nobody has looked yet.
+			 * The report as its own page, reachable by the watch's token. Every figure is
+			 * computed from stored checks, so a watch with no completed check shows an em
+			 * dash next to a "nothing to report yet" explanation, since nothing has run.
 			 */
 			report: {
 				meta: {
@@ -4157,10 +4163,9 @@ export default {
 				submit: "Start the free {{days}}-day report",
 
 				/**
-				 * What a visitor is agreeing to, stated next to the field rather than after it. Each
-				 * line is something the system actually does — the address is the one we probed and
-				 * not one they can retype, the cadence and the length are the watch's own, and the
-				 * three emails named are the three that exist.
+				 * What a visitor is agreeing to, placed beside the field. Each line states a
+				 * guarantee the system already keeps — the probed address, the watch's own
+				 * cadence and length, and the three emails that exist.
 				 */
 				expectations: {
 					target: "We keep checking {{url}} — the exact address we just checked, and nothing else.",

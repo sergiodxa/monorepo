@@ -1,9 +1,9 @@
 /**
- * Centered eyebrow badge + heading + lead paragraph at the top of a marketing page
- * section. Every marketing page/section repeats this same three-part shape, so it's
- * centralized here instead of composing it by hand at each call site. Its heading
- * renders through `@pkg/ui`'s `Heading` (fixed at `level={2}` — every marketing
- * page nests its sections below its own `<h1>` hero) instead of a bare `<h2>`.
+ * Centered eyebrow badge + heading + lead paragraph at the top of a
+ * marketing page section. Every marketing page/section repeats this same
+ * three-part shape, centralized here for reuse. Its heading renders through
+ * `@pkg/ui`'s `Heading`, fixed at `level={2}` since every marketing page
+ * nests its sections below its own `<h1>` hero.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,15 +27,15 @@ namespace SectionHeader {
 	}
 }
 
-/** Renders an optional {@link SectionHeader.Props.badge}, an `<h2>` title (through `Heading`), and an optional lead paragraph. */
+/**
+ * Renders an optional {@link SectionHeader.Props.badge}, an `<h2>` title
+ * (through `Heading`), and an optional lead paragraph. The title's size is
+ * set directly here, overriding `Heading`'s own fixed size for this section.
+ */
 export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 	return () => (
-		<div
-			// Centered wrapper capping the badge/heading/lead paragraph at 640px wide.
-			mix={[textAlign("center"), m(0, "auto", 10, "auto"), maxWidth("640px")]}
-		>
+		<div mix={[textAlign("center"), m(0, "auto", 10, "auto"), maxWidth("640px")]}>
 			{handle.props.badge && (
-				// Small pill badge above hero/section headings: a brand-tinted outline chip.
 				<span
 					mix={[
 						inlineFlex(),
@@ -55,9 +55,6 @@ export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 			)}
 			<Heading
 				level={2}
-				// The section's own heading size: bold, 30px by default and 36px at ≥640px,
-				// with tight `-0.025em` tracking throughout — layered on top of `Heading`'s
-				// own fixed emphasis size, which this section wants larger.
 				mix={[
 					text("3xl"),
 					tracking("tight"),
@@ -68,8 +65,6 @@ export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 				{handle.props.title}
 			</Heading>
 			{handle.props.description && (
-				// Hero/section supporting paragraph: 18px, muted color, `1.625` line-height,
-				// capped at 576px wide.
 				<p
 					mix={[
 						fontSize("lg"),

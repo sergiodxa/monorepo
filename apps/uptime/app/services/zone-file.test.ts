@@ -1,8 +1,7 @@
 /**
  * Tests for the pasted zone-file parser, driven by two fixtures: a genuine provider export,
  * which is what a real paste looks like, and a hand-built file whose tail carries one line for
- * every construct the parser refuses, so each refusal is asserted to come back reported rather
- * than dropped.
+ * every construct the parser refuses, so each refusal is asserted against the reason it reports.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,14 +30,14 @@ const RECONSTRUCTED_FIXTURE = readFileSync(
 	"utf8",
 );
 
-/** Parses text against `sergiodxa.com`, failing the test rather than the type when the cap trips. */
+/** Parses text against `sergiodxa.com`, asserting success so a tripped cap fails the test itself. */
 function parse(input: string, domain = DOMAIN): ZoneFileImport {
 	let result = parseZoneFile(input, domain);
 	expect(isSuccess(result)).toBe(true);
 	return unwrap(result);
 }
 
-/** The reason reported for the line containing `needle`, or `undefined` when it was not reported. */
+/** The reason reported for the line containing `needle`, or `undefined` when none matched. */
 function reasonForLineContaining(
 	imported: ZoneFileImport,
 	needle: string,
@@ -52,7 +51,7 @@ describe("parseZoneFile", () => {
 
 		test("reads every tracked record and reports the rest", () => {
 			expect(imported.records.length).toBeGreaterThan(0);
-			/** The header's `;;` lines are comments, not lines somebody needs told about. */
+			/** The header's `;;` lines are comments, invisible to whoever reviews the import. */
 			expect(imported.rejected.some((rejection) => rejection.input.startsWith(";;"))).toBe(false);
 		});
 

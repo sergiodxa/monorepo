@@ -1,13 +1,9 @@
 /**
- * The two ways this app puts work on its queue: one message, or a batch of them split into
- * requests the queue accepts. Every producer goes through here rather than reaching for the
- * binding, because a queue write is billed and therefore has to be counted, and one place
- * that knows "a send is one queue operation" beats fifteen that each have to remember.
- *
- * Bodies are typed `unknown` on purpose. The message contract is the `variant` schema the
- * worker's `queue` handler validates against — a producer that spells a message wrong is
- * caught there, on the consumer side where every delivery passes through it, and a type here
- * would only be a second copy of that contract to keep in sync.
+ * Every producer's sends pass through here, where a queue write is billed and
+ * one place counts every send. Bodies stay typed `unknown` because the
+ * worker's `queue` handler validates the message schema on the consumer side,
+ * where every delivery already passes through it — a type here would just be a
+ * second contract to keep in sync.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,8 +29,8 @@ export async function sendQueueMessage(body: unknown): Promise<void> {
 }
 
 /**
- * Enqueues many messages, in as many requests as {@link QUEUE_BATCH_LIMIT} needs. Sending
- * nothing is a no-op, so callers don't have to guard an empty result.
+ * Enqueues many messages, in as many requests as {@link QUEUE_BATCH_LIMIT} needs.
+ * Sending nothing is a no-op — an empty list passes through safely.
  *
  * @param bodies - One message body per message, matching the worker's message schema.
  */

@@ -111,8 +111,7 @@ export namespace CodeBlock {
  * A fenced block of code, highlighted, inside a single-cell table.
  *
  * The table keeps the block's background solid in Outlook, which paints a `<pre>`
- * background only as wide as its text. Long lines wrap because an inbox offers no
- * horizontal scrollbar to reach them.
+ * no wider than its text, so long lines wrap since an inbox offers no scrollbar.
  *
  * @example <CodeBlock language="bash" code="bun run deploy" />
  */

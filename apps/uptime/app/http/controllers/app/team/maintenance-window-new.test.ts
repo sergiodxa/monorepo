@@ -1,14 +1,9 @@
 /**
  * Tests for the new maintenance window page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` (used here to populate the monitor-scope dropdown)
- * reads `env` at module load — following the exact pattern established in
- * `app/http/controllers/actions/monitors.test.ts`. It renders an empty form, so this
- * only checks the 200 response and that every field the create action reads is still
- * present after the fields were regrouped into cards.
- * `getViewer()`/`ctx.team`/`ctx.membership`/
- * `ctx.teams` are seeded directly by a fake middleware standing in for the real
- * `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/app/team/http-monitors.test.ts`.
+ * because `~/app/data/monitor` reads `env` at module load; the empty-form render is
+ * checked only for a 200 and that every create-action field survived being regrouped
+ * into cards. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded by a
+ * fake middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -113,6 +108,7 @@ async function send(
 }
 
 describe("maintenanceWindowNew", () => {
+	/** The default lives on the selected `<option>`, the only place a `<select>` exposes it. */
 	test("renders the empty schedule-maintenance form", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -127,7 +123,6 @@ describe("maintenanceWindowNew", () => {
 		expect(body).toContain('name="ends_at"');
 		expect(body).toContain('name="suppress_alerts"');
 		expect(body).toContain('name="is_recurring"');
-		// `<select>` has no `defaultValue` attribute, so the default is marked on its option.
 		expect(body).toContain('value="" selected');
 		expect(body).not.toContain("defaultvalue");
 		expect(body).toContain(

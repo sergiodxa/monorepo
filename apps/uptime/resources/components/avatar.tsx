@@ -1,19 +1,11 @@
 /**
- * Client island: a circular user avatar. Renders `src` if given, falling back to
- * the name's initials (first letter of up to two words) when there's no image or
- * the image fails to load at runtime (a real `error` listener via the `on` mixin,
- * not a raw `onerror` HTML string — that's not a typed `<img>` prop here). Per the
- * approved-islands list.
+ * Client island per the approved-islands list: a circular user avatar,
+ * composing `@pkg/ui`'s compound `Avatar` for its fallback/image layering.
  *
- * Composes `@pkg/ui`'s compound `Avatar` internally: `Avatar.Fallback` renders
- * first (so it paints underneath), and `Avatar.Image` renders on top of it when
- * `src` is given, hiding itself on the same `error` listener the original markup
- * used to reveal the fallback beneath. `@pkg/ui`'s own `size` prop is a
- * `"sm"/"md"/"lg"` variant rather than this component's arbitrary pixel `size`,
- * so the host's dimensions and the fallback's inherited font size are overridden
- * directly through `mix` instead, keeping this component's numeric `size` API
- * exact for every value callers already pass (24, 40, 48, …), not just the three
- * built-in buckets.
+ * `@pkg/ui`'s own `size` prop only accepts `"sm"/"md"/"lg"` variants, so
+ * host dimensions and the fallback's font size are set directly through
+ * `mix`, keeping this component's numeric `size` exact for any pixel value
+ * callers pass (24, 40, 48, …).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,10 +18,9 @@ import { fontSize } from "@pkg/u/typography";
 import { Avatar as UIAvatar } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
-/** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
+/** Props are declared as a `type` alias to satisfy `SerializableProps`. */
 type AvatarProps = { src: string | null; name: string; size?: number };
 
-/** First letter of up to the first two words of `name`, uppercased. */
 function getInitials(name: string): string {
 	let words = name.split(" ").filter(Boolean);
 	if (words.length === 0) return "?";

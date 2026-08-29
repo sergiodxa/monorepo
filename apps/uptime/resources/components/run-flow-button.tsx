@@ -1,22 +1,13 @@
 /**
- * Client island: a real `<form>` posting to the "check flow monitor" action, so it works with no
- * JS at all (a plain navigating submit) — `on("submit")` only runs once hydrated, where it
- * intercepts the submit to `fetch()` the same action instead, keeps the button pending, and
- * reports the outcome as a toast.
+ * Client island: a real `<form>` posts to the run action so it works with no
+ * JS; once hydrated, `on("submit")` intercepts it to `fetch()` the same action
+ * instead, keeping the button pending — a flow run can take most of thirty
+ * seconds, long enough that a bare navigation would read as a hung page.
  *
- * Unlike the HTTP monitors' run button, there is nothing to poll. A flow runs **inline**, so the
- * request that starts it is the request that answers with the result — which is also why the
- * hydrated path matters more here than there: a flow may take most of thirty seconds (the run's
- * own ceiling), and holding a navigation open for that long would read as a hung page. The button
- * spins, then the toast says what happened.
- *
- * The toast carries the failing test and its line rather than only a colour, because that is the
- * one thing a flow knows that no other monitor type does — "the sign-in form authenticates failed
- * on line 9" is the whole reason somebody pressed the button.
- *
- * Its label reads through `@pkg/i18n/ui`'s `intl(handle)` rather than `ctx.i18next.t`, since this
- * component runs both server-side (the no-JS baseline markup) and client-side (after hydration)
- * and has no access to the request-scoped `ctx.i18next` instance.
+ * The toast names the failing test and line, the one signal a flow run has
+ * that no other monitor type does. Its label reads through `intl(handle)`
+ * rather than `ctx.i18next.t`, since it also renders server-side with no
+ * request-scoped `ctx.i18next` to read from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,12 +28,9 @@ import type { AppToast } from "~/resources/components/app-toaster";
 import { showToast } from "~/resources/components/app-toaster";
 
 /**
- * The action's JSON answer.
- *
- * One flat shape rather than a union of "refused" and "ran", because a `null` status already says
- * which: a run that never happened has no status to report, only a `reason`. The alternative is a
- * discriminant this schema library does not narrow on, and a shape that needs a type assertion to
- * read is worse than one extra nullable field.
+ * The action's JSON answer: one flat shape rather than a union of "refused"
+ * and "ran", since a `null` status already tells the two apart — the
+ * alternative needs a discriminant this schema library doesn't narrow on.
  */
 const RunResponseSchema = s.object({
 	/** What the run concluded, or `null` when it never ran. */
@@ -70,12 +58,9 @@ type RunFlowButtonProps = {
 };
 
 /**
- * The toast a finished run deserves.
- *
- * Three outcomes, three colours, and the middle one is the reason this is a function rather than a
- * ternary: `error` is not an outage — the flow could not be run at all — so it is a warning about
- * the monitor rather than a failure of the thing it watches, and its detail is the only place that
- * says which.
+ * The toast a finished run deserves: three outcomes, three colours. `error`
+ * warns about the monitor's own ability to run, distinct from an outage of
+ * the thing it watches, and its `detail` names the reason why.
  */
 export function runToast(t: TFunction, name: string, run: RunResponse): AppToast {
 	if (run.status === null) {
@@ -152,7 +137,7 @@ export const RunFlowButton = clientEntry(
 								let run = s.parse(RunResponseSchema, await response.json());
 								showToast(runToast(t, handle.props.name, run));
 							} catch {
-								// A failed request says nothing rather than something wrong.
+								/** A failed request has no outcome to report, so this stays silent rather than risking a wrong toast. */
 							} finally {
 								pending = false;
 								void handle.update();

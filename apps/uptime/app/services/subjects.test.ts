@@ -1,8 +1,3 @@
-import type { AuthSDK, Subject } from "@pkg/auth-sdk";
-import type { Result } from "@pkg/result";
-
-import { AuthenticationError, SubjectNotFoundError } from "@pkg/auth-sdk";
-import { failure, success } from "@pkg/result";
 /**
  * Unit tests for `resolveSubjects`, the best-effort batch profile lookup used by
  * the team settings member list and the account page's team list. A fake
@@ -13,11 +8,15 @@ import { failure, success } from "@pkg/result";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { AuthSDK, Subject } from "@pkg/auth-sdk";
+import type { Result } from "@pkg/result";
+
+import { AuthenticationError, SubjectNotFoundError } from "@pkg/auth-sdk";
+import { failure, success } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { resolveSubjects } from "~/app/services/subjects";
 
-/** Builds a minimal `Subject` fixture with the given id. */
 function subject(id: string): Subject {
 	return {
 		id,
@@ -31,7 +30,6 @@ function subject(id: string): Subject {
 	};
 }
 
-/** Builds a fake `AuthSDK` from an `authenticate` outcome and a per-id lookup map. */
 function fakeSdk(
 	authenticateResult: Awaited<ReturnType<AuthSDK["authenticate"]>>,
 	subjectsById: Map<string, Awaited<ReturnType<AuthSDK["fetchSubjectById"]>>>,

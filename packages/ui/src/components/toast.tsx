@@ -44,8 +44,8 @@ import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
 /**
  * `role` applied to {@link Toast} through {@link attrs} unless a consumer
- * supplies its own, announcing the panel as a status update rather than an
- * interrupting alert.
+ * supplies its own, announcing the panel as a status update that assistive
+ * technology reads after finishing whatever it is currently reading.
  */
 const DEFAULT_ROLE = "status";
 
@@ -57,15 +57,15 @@ const DEFAULT_COLOR: Toast.Color = "neutral";
 
 /**
  * Default {@link Toast.Props.live}, announcing a toast's content politely so
- * a run of toasts never talks over each other or interrupts whatever
- * assistive technology is currently reading.
+ * each toast waits its turn behind whatever assistive technology is
+ * currently reading.
  */
 const DEFAULT_LIVE: Toast.Live = "polite";
 
 /**
  * `aria-atomic="true"` applied through {@link attrs} unless a consumer
- * overrides it, so assistive technology re-reads the whole toast on update
- * instead of only the part that changed.
+ * overrides it, so assistive technology re-reads the whole toast whenever
+ * any part of it updates.
  */
 const DEFAULT_ARIA_ATOMIC = "true";
 
@@ -78,8 +78,8 @@ const DEFAULT_GRAPHIC_ARIA_HIDDEN = "true";
 
 /**
  * `type="button"` default applied to {@link Toast.Action} and
- * {@link Toast.Cancel} since most toast actions run a script-driven command
- * rather than submit a form; either control accepts `type="submit"` instead.
+ * {@link Toast.Cancel}, matching the script-driven command most toast
+ * actions run; pass `type="submit"` for a form control.
  */
 const DEFAULT_BUTTON_TYPE: NonNullable<Toast.ActionProps["type"]> = "button";
 
@@ -108,8 +108,8 @@ export namespace Toast {
 
 	/**
 	 * `aria-live` politeness applied to the host element. `"off"` omits the
-	 * `aria-live` attribute entirely rather than writing the literal value
-	 * `"off"`, leaving the element's implicit live-region behavior in place.
+	 * `aria-live` attribute entirely, leaving the element's implicit
+	 * live-region behavior in place.
 	 */
 	export type Live = "polite" | "assertive" | "off";
 
@@ -218,9 +218,8 @@ export namespace Toast {
 
 /**
  * Renders a single toast panel, tinted, bordered, and shadowed by
- * {@link Toast.Props.color}, with `role` defaulting to `"status"` and
- * `aria-atomic` to `true` (both overridable); compose a `mix`-driven
- * `enterExit()` since the panel holds still on its own.
+ * {@link Toast.Props.color}, with `role` and `aria-atomic` defaulted
+ * (overridable); pair a `mix`-driven `enterExit()`, since it holds still.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the toast's markup.
@@ -368,8 +367,8 @@ Toast.Icon = function ToastIcon(handle: Handle<Toast.IconProps>) {
 
 /**
  * Renders {@link Toast.LoaderProps.children} as the toast's loading graphic,
- * laid out identically to {@link Toast.Icon} so swapping between them causes
- * no layout shift; pair a `spin()` `mix` factory for its rotating loop.
+ * laid out identically to {@link Toast.Icon} so swapping between them keeps
+ * the layout stable; pair a `spin()` `mix` factory for its rotating loop.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the loading graphic's markup.
@@ -464,9 +463,8 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
 
 /**
  * Renders {@link Toast.ActionProps.children} as the toast's primary trailing
- * control, colored from the current text color. `type` defaults to `"button"`
- * and precedes the consumer's attributes so a `command`/`commandfor` pair
- * still runs; pass `type="submit"` for a real form.
+ * control; `type` defaults to `"button"`, ordered before the consumer's
+ * attributes so `command`/`commandfor` still run; use `type="submit"` for a form.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the action control's markup.
@@ -511,10 +509,9 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 };
 
 /**
- * Renders {@link Toast.CancelProps.children} as the toast's secondary
- * trailing control, tinted neutral regardless of `color` so it reads as
- * lower-emphasis next to {@link Toast.Action}; `type` defaults to
- * `"button"`, written before the consumer's attributes so `command`/`commandfor` still run.
+ * Renders {@link Toast.CancelProps.children} as a neutral-tinted, secondary
+ * trailing control; `type` defaults to `"button"`, ordered before the
+ * consumer's attributes so `command`/`commandfor` still run.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the cancel control's markup.
@@ -559,9 +556,8 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 
 /**
  * Renders a dismiss control for the ancestor {@link Toast}: an icon-only
- * `<button>` pinned to the panel's block-start/inline-end corner, removed by
- * a consumer's mixin or the platform's Command Invoker API via
- * `commandfor`/`command`; `type="button"` precedes those attributes so the pairing still runs.
+ * `<button>` removable via a consumer's mixin or the `commandfor`/`command`
+ * pair; `type="button"` precedes those attributes so the pairing still runs.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the dismiss control's markup.
@@ -602,10 +598,9 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 };
 
 /**
- * Renders the fixed viewport that stacks every currently queued
- * {@link Toast} in a gapped column pinned to one corner via
- * {@link Toast.RegionProps.placement}; `pointer-events` stays `none` on the
- * region so content behind an empty stretch stays clickable, restored per toast.
+ * Renders the fixed viewport stacking every queued {@link Toast} at a corner
+ * via {@link Toast.RegionProps.placement}; `pointer-events` stays `none` so
+ * clicks pass through to content behind, restored per toast.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the viewport's markup.

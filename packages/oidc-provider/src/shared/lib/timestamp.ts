@@ -10,7 +10,6 @@
  */
 
 /**
- * Converts a timestamp value to an ISO string.
  * Handles both integer timestamps (from older records) and ISO strings (from newer records).
  *
  * @param value - A timestamp as either a Unix timestamp (number) or ISO string
@@ -27,7 +26,6 @@ export function toIsoString(value: string | number): string {
 }
 
 /**
- * Converts an optional timestamp value to an ISO string or null.
  * Handles both integer timestamps (from older records) and ISO strings (from newer records).
  *
  * @param value - A timestamp as either a Unix timestamp (number), ISO string, or null/undefined

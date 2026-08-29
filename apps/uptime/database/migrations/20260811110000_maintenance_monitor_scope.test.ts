@@ -2,14 +2,10 @@
  * Tests that adding `maintenance_windows.monitor_type` leaves every window already in the
  * table covering exactly what it covered before.
  *
- * Both ways of getting the backfill wrong are silent: widening a monitor-scoped window
- * starts silencing every monitor the team owns for its duration, and leaving it null beside
- * a non-null id encodes a scope the application cannot resolve. Neither would raise an
- * error, so both are asserted against a real database and a real seed rather than read off
- * the SQL.
- *
- * Each test builds the schema as it stood immediately before this migration, seeds rows
- * against it, and then applies the one file.
+ * Both wrong backfills are silent: widening a monitor-scoped window would silence every
+ * monitor the team owns for its duration, and a non-null monitor_id beside a null
+ * monitor_type encodes a scope no query can resolve. Each test builds the schema as it
+ * stood before this migration, seeds rows, and applies the one file.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +28,7 @@ beforeEach(() => {
 	applyMigrations(sqlite, MIGRATION);
 });
 
-/** One window as the schema held it before this migration: no `monitor_type` column. */
+/** One window as the schema held it before this migration, when `monitor_id` alone encoded scope. */
 function seedWindow(window: { id: string; monitorId: string | null; name?: string }) {
 	sqlite.exec(
 		`INSERT INTO maintenance_windows (id, created_at, updated_at, team_id, monitor_id, name,

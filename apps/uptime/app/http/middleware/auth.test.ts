@@ -1,10 +1,9 @@
 /**
- * Integration tests for the auth middleware's session-identity helpers
- * (`getViewer`, `isAuthenticated`, `login`, `logout`, `getIdToken`, `setIdToken`).
- * They run the real `remix/middleware/session` + `auth()` chain — seeding the
- * session via `login()` from a preceding test-only middleware — so the session
- * auth scheme's `read`/`verify`/`invalidate` hooks execute for real instead of
- * being stubbed out.
+ * Integration tests for the auth middleware's session-identity helpers. They
+ * exercise the real `remix/middleware/session` + `auth()` chain, seeding the
+ * session via `login()` in a preceding test-only middleware, so the auth
+ * scheme's `read`/`verify`/`invalidate` hooks run against real session
+ * storage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,13 +1,8 @@
 /**
- * Team settings page controller. Requires `requireUser` + `requireTeam` +
- * `requireRole("admin")` — only admins and the owner may view or manage settings.
- *
- * Renders the page as card-boxed sections (General, Members, Domains, Billing, Danger
- * Zone); every destructive action is gated behind an `AlertDialog` confirmation. Billing
- * and Danger Zone are owner-only — an admin who isn't the owner never sees them. The
- * danger-zone delete button relies on the native `pattern="DELETE"` constraint to stay
- * disabled-in-effect until the confirmation input matches exactly. The Pending Invitations
- * and Verified Domains cards each swap their table for an `Empty` state when empty.
+ * Team settings page controller, gated behind `requireUser`, `requireTeam`, and
+ * `requireRole("admin")`. Billing and Danger Zone stay owner-only, and the
+ * danger-zone delete button relies on the native `pattern="DELETE"` constraint
+ * to stay disabled-in-effect until the confirmation input matches exactly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -76,10 +71,8 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** How many days a pending invite stays acceptable before it's shown as expired. */
 const INVITE_EXPIRATION_DAYS = 7;
 
-/** The moment a pending invite stops being acceptable, `INVITE_EXPIRATION_DAYS` after it was created. */
 function getInviteExpirationDate(createdAt: number): Date {
 	let expiresAt = new Date(createdAt);
 	expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRATION_DAYS);
@@ -160,10 +153,8 @@ function textInput() {
 /**
  * GET /app/:team/settings — team settings: general, members, domains, billing, danger zone.
  *
- * The transfer-ownership menu item stays disabled until a transfer action exists.
- *
- * Field's own trailing margin spaces the danger-zone confirmation input from the footer
- * below, keeping this card's footer rhythm consistent with the rest of the page.
+ * The transfer-ownership menu item stays disabled until a transfer action exists. Field's
+ * own trailing margin spaces the danger-zone confirmation input from the footer below.
  */
 export default createAction(routes.app.team.settings, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],

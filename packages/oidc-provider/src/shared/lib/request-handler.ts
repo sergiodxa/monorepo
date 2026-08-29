@@ -1,8 +1,8 @@
 /**
  * Identity helper for contextually typing plain router request handlers.
  *
- * Used by simple endpoints (e.g. the 404 fallback) that define a handler inline
- * and want the router's `RequestHandler` shape without an explicit annotation.
+ * Simple endpoints (e.g. the 404 fallback) call this on an inline handler to
+ * get the router's `RequestHandler` shape inferred automatically.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -79,10 +79,9 @@ export default {
 		},
 
 		/**
-		 * The three things that stay true however much somebody ends up monitoring. The price
-		 * and the allowance are interpolated from `~/app/lib/pricing.ts` rather than written
-		 * here — a literal would go stale the day pricing moves, and `app/lib/public-claims.ts`
-		 * fails the build on one.
+		 * The three things that stay true however much somebody ends up monitoring. Price
+		 * and allowance values are interpolated from `~/app/lib/pricing.ts`, so they move
+		 * automatically with pricing; `app/lib/public-claims.ts` enforces that at build time.
 		 */
 		benefits: {
 			badge: "Uptime を選ぶ理由",
@@ -551,8 +550,8 @@ export default {
 			},
 
 			/**
-			 * Code-available, not open source: the repository carries its own license with
-			 * conditions, so the claim is only that a reader can check the code.
+			 * Code-available under its own license terms: the repository is visible, so
+			 * the claim is only that a reader can check the code.
 			 */
 			source: {
 				title: "コードを読めます",
@@ -1621,9 +1620,9 @@ export default {
 		},
 
 		/**
-		 * A bulk import reports two numbers, and `partial` is the one that matters: a submission
-		 * where some lines landed is a success with a to-do list, not a failure, so it says how
-		 * many monitors exist before it says how many lines need fixing.
+		 * A bulk import reports two numbers, and `partial` is the one that matters: a
+		 * submission where some lines landed is a success with a to-do list, so it says
+		 * how many monitors exist before it says how many lines need fixing.
 		 */
 		importMonitors: {
 			errors: {
@@ -2670,8 +2669,10 @@ export default {
 						description: "アラートを識別するための名前。",
 					},
 
-					// The picker's own copy is shared with the maintenance-window form; only this
-					// sentence, which is about alerts, stays here. See `components.monitorScope`.
+					/**
+					 * The picker's own copy is shared with the maintenance-window form; only this
+					 * sentence, which is about alerts, stays here. See `components.monitorScope`.
+					 */
 					scope: {
 						description:
 							"このアラートが監視する対象です。チーム全体のままにするか、モニターの種類で絞り込むか、特定の 1 つだけを指定できます。",
@@ -3020,8 +3021,9 @@ export default {
 			},
 
 			/**
-			 * The rejected lines, shown above the box they get re-pasted into. It leads with what
-			 * *was* created, so a partial import does not read as a failed one.
+			 * The rejected lines, shown above the box they get re-pasted into. It leads
+			 * with what *was* created, so a partial import reads as progress with a
+			 * to-do list.
 			 */
 			report: {
 				section: { title: "前回のインポート" },
@@ -3194,7 +3196,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				/** ADR-026 §14: said on the setup screen as well as in the docs. */
 				apexOnlyNotice:
 					"DNSでは、ゾーン内のレコードを一覧表示することは誰にもできません。ゾーンファイルがない場合、監視できるのはドメインのApexのみで、サブドメインは監視できません。",
 
@@ -3328,7 +3330,7 @@ export default {
 
 				findings: "{{changed}}件変更 · {{missing}}件消失 · {{new}}件新規",
 				noFindings: "変更なし",
-				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				/** A failed query stays out of the diff, so a partial sweep reads as partial. */
 				queriesFailed_one: "{{count}}件のクエリが応答しませんでした",
 				queriesFailed_other: "{{count}}件のクエリが応答しませんでした",
 			},
@@ -3371,9 +3373,8 @@ export default {
 		},
 
 		/**
-		 * The review step between creating a domain monitor and monitoring anything with it.
-		 * Its own page, so a reload lands back on the decision rather than on a detail page
-		 * that implies it was already made.
+		 * The review step between creating a domain monitor and monitoring anything with
+		 * it, kept as its own page so a reload lands back on the same pending decision.
 		 */
 		dnsMonitorReview: {
 			header: {
@@ -3382,7 +3383,7 @@ export default {
 					"見つかったレコードは既定ですべて監視します。通知が不要なものはチェックを外してください。いずれの場合もレコードは保持されるため、除外したものが後から新規レコードとして現れることはありません。",
 			},
 
-			/** A line the parser could not use is reported, never silently dropped. */
+			/** Every line the parser rejects surfaces here, each with its own reason. */
 			unparsed: {
 				title_one: "{{count}}行はインポートされませんでした",
 				title_other: "{{count}}行はインポートされませんでした",
@@ -3428,8 +3429,8 @@ export default {
 
 			/**
 			 * A line repeating a record an earlier line declared. Reported apart from the
-			 * rejections: nothing was lost, so calling it "not imported" would describe a
-			 * complete import as a partial one.
+			 * rejections, since nothing was lost — the record is already tracked from the
+			 * first line that declared it.
 			 */
 			duplicates: {
 				title_one: "{{count}}行は、別の行がすでに宣言しているレコードを宣言していました",
@@ -3439,7 +3440,7 @@ export default {
 				line: "{{line}}行目：{{name}} {{type}} は{{firstLine}}行目ですでに宣言されています。",
 			},
 
-			/** Said at review, where the cap is enforced, rather than at check time. */
+			/** Said at review, the point where the cap is enforced. */
 			namesCap: {
 				title: "1 つのモニターで監視できる名前の数を超えています",
 				description:
@@ -3455,7 +3456,7 @@ export default {
 					value: "値",
 				},
 
-				/** Each box names the record it decides, since the column heading is not read per row. */
+				/** Each box names the record it decides, since the heading appears once, above the whole list. */
 				watchRecord: "{{name}} の {{type}} レコードを監視します",
 			},
 
@@ -3928,10 +3929,9 @@ export default {
 
 		trial: {
 			/**
-			 * The report as its own page, reachable by the watch's token. Every figure is computed
-			 * from stored checks, so each one has a "nothing to report yet" wording beside it: a
-			 * watch with no completed check shows an em dash and says why, and never claims "no
-			 * incidents", because nobody has looked yet.
+			 * The report as its own page, reachable by the watch's token. Every figure is
+			 * computed from stored checks, so a watch with no completed check shows an em
+			 * dash and wording admitting nothing has been observed yet.
 			 */
 			report: {
 				meta: {
@@ -4062,10 +4062,9 @@ export default {
 				submit: "無料の {{days}} 日間レポートを開始する",
 
 				/**
-				 * What a visitor is agreeing to, stated next to the field rather than after it. Each
-				 * line is something the system actually does — the address is the one we probed and
-				 * not one they can retype, the cadence and the length are the watch's own, and the
-				 * three emails named are the three that exist.
+				 * What a visitor is agreeing to, placed beside the field so it reads before
+				 * submission. Each line matches what the system actually does: the probed
+				 * address, the watch's own cadence and length, and the three emails that exist.
 				 */
 				expectations: {
 					target:

@@ -1,33 +1,7 @@
 /**
- * Placeholder shown as a dashboard `Frame`'s `fallback` while its real content streams
- * in — one or more `Card`s, each filled with pulsing `Skeleton` bars standing in for
- * the card that will replace it. Renders bare cards with no wrapping row of its own, so
- * multiple `Frame`s (each with their own `count`) can share one flex row provided by
- * the caller and combine into a single visual row of cards.
- *
- * It mirrors `StatCard`'s own structure: one `Card.Header` child for the label and one
- * for the value, with its subtitle nested inside exactly as `StatCard` nests `Subtitle`
- * inside `value`, so the header contributes the same single gap either way — a fallback
- * that is the wrong height moves the page when it swaps out. Each bar sits inside one
- * line box of the type step it stands in for rather than carrying its own height, which
- * is what keeps the two in step; see {@link SkeletonLine}.
- *
- * The subtitle is one row per line it stands in for, since a card whose
- * subtitle is a stack of lines is that many line boxes taller and a one-line fallback
- * would jump by the difference. The 0.25rem column gap does double duty here: it is the
- * `Subtitle`'s own top margin under the value, and — because every line of a stacked
- * subtitle carries that same margin — the space between the lines too, so `n` rows and
- * `n` gaps come to the same sum either way.
- *
- * A card whose breakdown is a row of badges stands in for it with a pill of a badge's own
- * height rather than a line of text: a `Badge` is an `xs` line box plus its `0.5` block
- * padding and its two borders, which is shorter than the `sm` line a subtitle draws, and
- * these four cards each swap in on their own — a fallback off by those few pixels shifts
- * the row three more times.
- *
- * `@pkg/ui`'s `Skeleton` carries no animation of its own — the `pulse()` mixin
- * from `@pkg/ui/animations` supplies the breathing loop, matching the original
- * hand-rolled `@keyframes` shimmer.
+ * Placeholder shown as a dashboard `Frame`'s `fallback` while its real
+ * content streams in, matching `StatCard`'s own header structure and height
+ * so the page holds still when the real card swaps in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,23 +25,18 @@ namespace SkeletonLine {
 		/** The bar's thickness, centered inside the line box. */
 		thickness: string;
 		/**
-		 * Where the real line's line height comes from, since only some of them take the
-		 * type scale's own pairing: `"scale"` for a line drawn with `u.text()`, `"none"`
-		 * for one whose leading is collapsed to the font size (`Card.Title`, `Label`), and
-		 * `"inherit"` for one that sets a font size and nothing else (`Card.Description`),
-		 * leaving the document's own line height to set the box. Defaults to `"scale"`.
+		 * Which line-height the real line follows: `"scale"` for text set with
+		 * `u.text()`, `"none"` for a collapsed leading like `Card.Title`/`Label`, and
+		 * `"inherit"` for a bare font-size line like `Card.Description`. Defaults to `"scale"`.
 		 */
 		leading?: "scale" | "none" | "inherit";
 	}
 }
 
 /**
- * One pulsing bar occupying exactly one line box of {@link SkeletonLine.Props.size}
- * text: `bs("1lh")` resolves against the `line-height` this row resolves for itself,
- * so a row is as tall as the line it replaces no matter how thick its bar is, and
- * stays that way if the type scale is retuned. A browser without `lh` support drops
- * the declaration and falls back to the bar's own height, which is merely the
- * slightly-too-short placeholder this replaced.
+ * One pulsing bar sized to exactly one line box of {@link SkeletonLine.Props.size}
+ * text: `bs("1lh")` resolves against that size's own line height, so the row
+ * tracks the type scale even if it is retuned later.
  */
 function SkeletonLine(handle: Handle<SkeletonLine.Props>) {
 	return () => {
@@ -94,22 +63,24 @@ namespace StatCardSkeleton {
 		/** How many placeholder cards to render. Defaults to 1. */
 		count?: number;
 		/**
-		 * How many subtitle lines the card reserves under its value. Defaults to 1, the
-		 * shape of every stat card whose subtitle is a single caption; a caller whose real
-		 * card reserves more lines passes the same number the card does, so the two stay
-		 * the same height and the row does not move when the frame swaps in.
+		 * How many subtitle lines the card reserves under its value, matching the real
+		 * card's own line count so the two stay the same height when the frame swaps
+		 * in. Defaults to 1, the shape of a single-caption subtitle.
 		 */
 		subtitleLines?: number;
 		/**
-		 * Draws the row under the value as a badge-height pill instead of a line of text,
-		 * for a card whose breakdown is a row of badges. Takes the place of
-		 * {@link StatCardSkeleton.Props.subtitleLines} rather than adding to it.
+		 * Draws the row under the value as a single badge-height pill, replacing the
+		 * {@link StatCardSkeleton.Props.subtitleLines} lines for a card whose
+		 * breakdown is a row of badges.
 		 */
 		badges?: boolean;
 	}
 }
 
-/** Renders {@link StatCardSkeleton.Props.count} bare placeholder cards. */
+/**
+ * Renders {@link StatCardSkeleton.Props.count} bare cards for the caller to
+ * arrange in its own shared row.
+ */
 export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>) {
 	return () => {
 		let count = handle.props.count ?? 1;
@@ -122,11 +93,6 @@ export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>)
 					<Card key={index} mix={[grow(1), shrink(1), basis("160px")]}>
 						<Card.Header>
 							<SkeletonLine size="sm" width="60%" thickness="0.75rem" />
-							{/**
-							 * The value and its subtitle in one header child, matching how `StatCard`
-							 * renders both inside a single `value` node. The 0.25rem column gap stands
-							 * in for `Subtitle`'s own top margin.
-							 */}
 							<div mix={[flex(), flexCol(), gap("0.25rem")]}>
 								<SkeletonLine size="2xl" width="45%" thickness="1.75rem" />
 								{badges ? (

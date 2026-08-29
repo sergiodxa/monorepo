@@ -1,8 +1,8 @@
 /**
  * The error raised when a tag, or a list of them, cannot be turned into a header
- * value. It is thrown rather than returned as a failure because an unusable tag
- * is a mistake in the code that declared it, not a runtime condition a caller
- * can recover from, and the platform would drop it silently instead.
+ * value. Throwing it at the point the tag is built surfaces a mistake in the
+ * calling code immediately, ahead of the platform's own handling, which drops
+ * an unusable tag silently.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

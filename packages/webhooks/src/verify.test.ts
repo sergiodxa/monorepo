@@ -51,7 +51,7 @@ const SECRET = "c2VjcmV0LXVzZWQtYnktdGhlLXNlbmRlcg";
 /** A second secret, standing in for the one a rotation is moving away from. */
 const PREVIOUS_SECRET = "cHJldmlvdXMtc2VjcmV0LXRoYXQtcm90YXRlZA";
 
-/** Endpoint the test requests are addressed to; nothing reads it. */
+/** Endpoint the test requests are addressed to, present only to satisfy `Request`'s constructor. */
 const ENDPOINT = "https://example.com/webhooks/inbound";
 
 /** Tolerance wide enough to accept the vector's 2021 timestamp. */
@@ -65,7 +65,6 @@ let deliveries = 0;
 
 /** In-memory `ReplayStore`, recording what was asked of it. */
 class MemoryReplayStore implements ReplayStore {
-	/** Remembered ids mapped to the TTL they were remembered with. */
 	remembered = new Map<string, DurationInput>();
 
 	/** Ids `seen()` was called with, in order. */

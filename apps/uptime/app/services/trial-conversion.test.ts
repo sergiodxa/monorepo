@@ -1,17 +1,8 @@
 /**
  * Tests `convertTrialWatches`, the sign-in-time claim that turns trial targets into real
- * monitors.
- *
- * The centrepiece is the worked example the rule exists for: one person, three attempts made
- * on days 0, 3 and 6, converted against two different sign-in dates. Signing in on day 30
- * claims all three and on day 32 claims two, which is the only pair of assertions that can
- * distinguish a per-attempt window from a per-lead one — a per-lead rule keyed on the first
- * or last attempt gives three-and-three or three-and-none.
- *
- * The rest is the safety net. Conversion sits on the one path a user cannot route around, so
- * what is pinned here is that it creates nothing twice, that a failure anywhere in it is
- * swallowed rather than raised, and that a failure on one target still leaves the others
- * claimed.
+ * monitors. The centerpiece is the worked example the window rule exists for: attempts on
+ * days 0, 3 and 6, claimed in full on day 30 but only two of three by day 32 — the one pair
+ * of outcomes that distinguishes a per-attempt window from a per-lead one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,11 +68,8 @@ async function attempt(leadId: string, url: string, daysAgo: number) {
 
 /**
  * The worked example: attempts on URLs A, B and C made on days 0, 3 and 6, seeded as they
- * would look to someone signing in on `signInDay`.
- *
- * An hour is shaved off the elapsed time so that "day 30" lands unambiguously inside the
- * first attempt's thirty-day window instead of exactly on its edge, where `converts_until`
- * is exclusive and the answer would be about the boundary rather than about the rule.
+ * would look to someone signing in on `signInDay`. An hour is shaved off the elapsed time so
+ * "day 30" lands inside the first attempt's window rather than exactly on its exclusive edge.
  */
 async function threeAttempts(leadId: string, signInDay: number) {
 	let first = signInDay - 1 / 24;
@@ -153,10 +141,9 @@ describe("the conversion window, per attempt", () => {
 });
 
 /**
- * A lead is the person, not the string they typed, and sign-in has to find them by the same
- * rule. Matching the stored address exactly used to fail for exactly the people careful
- * enough to tag: they tried as `hello+test@`, signed up as `hello@`, and their targets
- * lapsed unclaimed with nothing able to say why.
+ * A lead is the person, not the string they typed, and sign-in must find them by the same
+ * rule: matching the stored address exactly used to fail for exactly the people careful enough
+ * to tag, who signed up as `hello@` but tried as `hello+test@`.
  */
 describe("matching a subject to a lead", () => {
 	async function convertAs(email: string) {
@@ -181,7 +168,7 @@ describe("matching a subject to a lead", () => {
 		expect((await created()).map((monitor) => monitor.url)).toEqual(["https://cased.example"]);
 	});
 
-	/** The reduction not made: a dotted local part is somebody else, and gets nothing. */
+	/** A dotted local part names a different address, so it gets nothing. */
 	test("does not hand one person's targets to a dotted variant of their address", async () => {
 		let lead = await createLead("hello@gmail.com");
 		await attempt(lead.id, "https://dotted.example", 1);
@@ -194,9 +181,8 @@ describe("matching a subject to a lead", () => {
 
 /**
  * The evidence a trial produced is the reason somebody subscribes, so the moment they pay is
- * the worst possible moment to lose it. What is pinned here is that the week of checks arrives
- * on the monitor as daily history and as a current status, and — separately — that failing to
- * carry it never costs anyone the conversion itself.
+ * the worst possible moment to lose it. The week of checks arrives on the monitor as daily
+ * history and a current status, and the conversion itself still succeeds when carrying it fails.
  */
 describe("the history a claimed target arrives with", () => {
 	/**
@@ -235,6 +221,10 @@ describe("the history a claimed target arrives with", () => {
 		});
 	}
 
+	/**
+	 * Seven days of hourly checks span eight calendar days unless they start exactly at midnight,
+	 * so the count check is bounded rather than exact — what matters is that every day is present.
+	 */
 	test("carries a week of hourly checks as one daily row per day", async () => {
 		let lead = await createLead();
 		let watchId = await attempt(lead.id, "https://example.com", 1);
@@ -245,9 +235,6 @@ describe("the history a claimed target arrives with", () => {
 		let [monitor] = await created();
 		let rows = await history(monitor?.id ?? "");
 
-		// Seven days of hourly checks span eight calendar days unless they happen to start at
-		// midnight, so the count is bounded rather than fixed — what matters is that every day
-		// is present and none is empty.
 		expect(rows.length).toBeGreaterThanOrEqual(7);
 		expect(rows.every((row) => row.total_checks > 0)).toBe(true);
 		expect(rows.reduce((sum, row) => sum + row.total_checks, 0)).toBe(7 * 24);
@@ -298,7 +285,8 @@ describe("the history a claimed target arrives with", () => {
 
 	/**
 	 * The carry is a nicety on the one path a user cannot route around. A monitor with no
-	 * history is a monitor; a sign-in that threw would cost somebody their account.
+	 * history is a monitor; a sign-in that threw would cost somebody their account. The claim
+	 * itself must still be spent, or the next sign-in mints a second monitor.
 	 */
 	test("still converts the target when carrying its history fails", async () => {
 		let lead = await createLead();
@@ -316,7 +304,6 @@ describe("the history a claimed target arrives with", () => {
 		let [monitor] = await created();
 		expect(monitor?.url).toBe("https://example.com");
 
-		// And the claim is still spent, so the next sign-in does not make a second monitor.
 		let watch = await TrialWatch.findById(db, watchId);
 		expect(watch?.converted_monitor_id).toBe(monitor?.id ?? null);
 	});

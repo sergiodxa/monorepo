@@ -1,16 +1,9 @@
 /**
  * HTTP monitor detail page controller. Shows the monitor's usage/performance stat
- * cards, SSL status, and a 90-day uptime bar from `monitor_daily_stats`, plus run/edit
- * actions. Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't
- * belong to the current team. The usage/slowest-result/uptime stat cards and the
- * uptime history all load via named `Frame`s pointed at their own fragment routes
- * (`monitor-card-usage.tsx`, `-slowest-result.tsx`, `-uptime.tsx`,
- * `-uptime-history.tsx`), so this controller no longer blocks on any of it (notably
- * Polar's API, the slowest of those fetches) before it can render the page shell.
- *
- * The certificate's last-checked instant reads as a distance from now, with the
- * absolute timestamp on `title`, matching how every other monitor detail page words
- * a "when did this last happen" reading.
+ * cards, SSL status, and a 90-day uptime bar, plus run/edit actions; 404s when the
+ * monitor doesn't belong to the current team. The stat cards and uptime history render
+ * via named `Frame`s pointed at their own fragment routes, so the page shell paints
+ * independent of Polar's API and the other fragment fetches.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +51,11 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** GET /app/:team/monitors/:monitorId — a monitor's detail page. */
+/**
+ * GET /app/:team/monitors/:monitorId — a monitor's detail page. `RunMonitorButton`
+ * is a `clientEntry` island rendered server-side too, so its `IntlProvider` wrapper
+ * supplies the request-scoped `intl` its client-only module default lacks during SSR.
+ */
 export default createAction(routes.app.team.monitors.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -92,16 +89,6 @@ export default createAction(routes.app.team.monitors.show, {
 					]}
 					actions={
 						<Fragment>
-							{/*
-							 * RunMonitorButton is a `clientEntry` island: its render function runs
-							 * both server-side (for the no-JS baseline markup) and client-side
-							 * (after hydration). Client-side, `intl(handle)` falls back to the
-							 * module-scoped default `bootstrap/browser.ts` registers via `setIntl()` —
-							 * but that default is never set server-side (it's guarded browser-only,
-							 * since a module-scoped instance would leak across concurrent requests in
-							 * a Workers isolate), so the SSR pass needs this request-scoped
-							 * `IntlProvider` ancestor for `intl(handle)` to resolve at all.
-							 */}
 							<IntlProvider i18n={ctx.i18next}>
 								<RunMonitorButton
 									action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}

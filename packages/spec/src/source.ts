@@ -27,7 +27,6 @@ export interface Span {
 export interface SourceFile {
 	/** Path as handed to the loader; relative paths stay relative. */
 	path: string;
-	/** The complete text of the file. */
 	text: string;
 }
 

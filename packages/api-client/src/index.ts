@@ -2,8 +2,7 @@
  * Base class for clients of a remote HTTP API.
  *
  * One origin, path-relative verb methods, and a single place to attach what every call
- * needs, so a client of some service is a subclass with methods rather than a module of
- * functions that each rebuild a URL.
+ * needs, so a client of some service is a subclass with its own methods.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,14 +1,14 @@
 /**
  * Tests the MCP server's wiring: which tools and resources it actually serves.
  *
- * Every case here goes through a real request but touches no database, because the paths
- * that describe the server — `server/discover`, `tools/list`, `resources/templates/list` —
- * never read one. That is also what makes them worth asserting: mapping is what registers a
- * tool, so a tool declared in `app/mcp/tools.ts` and never mapped in `bootstrap/mcp.ts`
- * disappears silently, and the expected lists below are the only thing that notices.
+ * Every case here goes through a real request, and the paths that describe the server —
+ * `server/discover`, `tools/list`, `resources/templates/list` — answer straight from
+ * registration data. That is also what makes them worth asserting: mapping is what
+ * registers a tool, and the expected lists below are what would catch a declared tool
+ * missing from `bootstrap/mcp.ts`.
  *
- * The handlers themselves need a database this app has no test harness for, so their
- * behaviour is covered by `@pkg/mcp`'s own tests plus the repositories they call.
+ * The handlers themselves reach a database this app covers at the repository layer, so
+ * their behaviour is asserted there and by `@pkg/mcp`'s own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -92,8 +92,10 @@ describe("tools/list", () => {
 	});
 
 	test("marks every tool read-only and closed-world", async () => {
-		// No tool writes and none reaches past this database, so a client may run any of them
-		// without stopping to ask a person.
+		/**
+		 * Every tool only reads, and only from this database, so a client can run any of
+		 * them on its own.
+		 */
 		let body = await call("tools/list");
 
 		for (let each of body.result?.tools ?? []) {
@@ -138,8 +140,10 @@ describe("resources/templates/list", () => {
 
 describe("resource URIs", () => {
 	test("build the blog's own Markdown URLs", async () => {
-		// The URI has to be a URL the blog actually serves, since a client may fetch it
-		// directly instead of calling resources/read.
+		/**
+		 * The URI has to be a URL the blog actually serves, since a client may fetch it
+		 * directly as well as through `resources/read`.
+		 */
 		expect(resourceset.article.href({ slug: "remix-v3" })).toBe(
 			"https://sergiodxa.com/articles/remix-v3.md",
 		);
@@ -151,8 +155,10 @@ describe("resource URIs", () => {
 
 describe("the route", () => {
 	test("answers both halves at one path", () => {
-		// A person given the endpoint URL pastes it into a browser as often as into a client,
-		// so the address that speaks the protocol is also the address that explains it.
+		/**
+		 * A person given the endpoint URL pastes it into a browser as often as into a
+		 * client, so the address that speaks the protocol also explains it.
+		 */
 		expect(routes.mcp.index.href()).toBe("/mcp");
 		expect(routes.mcp.action.href()).toBe("/mcp");
 		expect(routes.mcp.index.method).toBe("GET");

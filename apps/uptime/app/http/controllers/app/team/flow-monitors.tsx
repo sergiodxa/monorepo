@@ -49,7 +49,10 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	error: "neutral",
 };
 
-/** GET /app/:team/flows — the team's flow monitors list. */
+/**
+ * GET /app/:team/flows — the team's flow monitors list. The header action's
+ * label stays on one line since a button breaking mid-phrase reads as broken.
+ */
 export default createAction(routes.app.team.flowMonitors.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -77,7 +80,6 @@ export default createAction(routes.app.team.flowMonitors.index, {
 						},
 					]}
 					actions={
-						/* One short label, held on one line: a button that breaks mid-phrase reads as broken. */
 						<div mix={[flex(), items("center"), nowrap()]}>
 							<LinkButton href={newHref}>
 								<PlusIcon size={16} strokeWidth={1.5} />

@@ -1,11 +1,9 @@
 /**
- * Public surface of `@pkg/spec`: the executable specification runtime. The
- * primary consumer is the `spec` CLI; the exports exist so programmatic
- * embedders (test harnesses, tooling) can load and run suites directly.
- *
- * This entry point assumes a Bun or Node process — it reaches the filesystem and
- * spawns processes. A runtime without those imports `@pkg/spec/workers`, which
- * exports the same language core with a smaller capability set.
+ * Public surface of `@pkg/spec`, the executable specification runtime
+ * consumed by the `spec` CLI and available to programmatic embedders. This
+ * entry point assumes a Bun or Node process because it reaches the
+ * filesystem and spawns processes; a runtime without those imports
+ * `@pkg/spec/workers` for the same language core with a smaller capability set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,15 +1,13 @@
 /**
- * New HTTP monitor form page controller. Posts to the `create-monitor` action.
- * Requires `requireUser` + `requireTeam`.
+ * New HTTP monitor form page controller. Posts to the `create-monitor` action;
+ * requires `requireUser` + `requireTeam`.
  *
- * The fields are grouped into two bordered cards — what gets watched, and how it
- * gets checked — inside a single `<form>`, so the page reads as distinct settings
- * groups while still submitting as one request. The submit control sits at the foot
- * of the last card rather than loose under the fields.
+ * Fields are grouped into two bordered cards — what gets watched, how it gets
+ * checked — inside one `<form>`, with the submit control at the last card's foot.
  *
- * Accepts a `?url=` pre-fill, so anywhere in the app that already knows which URL a viewer
- * wants watched can hand them this form with it filled in. It only seeds the field: the
- * monitor is still created by the `POST`, so a link, a crawler or a reload creates nothing.
+ * A `?url=` pre-fill lets the rest of the app hand this form a URL to watch
+ * already filled in; it only seeds the field, since the monitor is still
+ * created by the `POST`, so a link, a crawler, or a reload creates nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,9 +30,9 @@ import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
 
 /**
- * Longest pre-fill accepted from `?url=`. The value is only ever echoed into an input and
- * JSX escapes it, so this is not an injection guard — it is a cap on how much of somebody
- * else's query string this page will render for them.
+ * Longest pre-fill accepted from `?url=`. JSX already escapes the echoed
+ * value; this only limits how much of somebody else's query string the page
+ * renders back to them.
  */
 const MAX_PREFILL_LENGTH = 2048;
 

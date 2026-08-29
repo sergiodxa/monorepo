@@ -19,7 +19,7 @@ interface CmsNavItem {
 	permission?: Permission;
 }
 
-/** Props for the CMS chrome layout. */
+/** Props for {@link CmsLayout}; `permissions` decides which nav items render. */
 export interface CmsLayoutProps {
 	title: string;
 	siteTitle: string;

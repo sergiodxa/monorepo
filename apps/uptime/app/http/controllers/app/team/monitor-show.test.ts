@@ -1,13 +1,8 @@
 /**
  * Tests for the HTTP monitor detail page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load, following the exact pattern
- * established in `app/http/controllers/actions/monitors.test.ts`. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the same
- * template's `seedTeam` helper. The page itself no longer queries Polar/Analytics
- * Engine/`monitor_daily_stats` directly — it only renders `<Frame>` placeholders
- * pointed at the monitor-card-* fragment routes, so `resolveFrame` is a no-op here,
- * same as `dashboard.test.ts`.
+ * because `~/app/data/monitor` reads `env` at module load, and `ctx.team`/
+ * `ctx.membership`/`ctx.teams`/auth state are seeded by a fake middleware standing in
+ * for `requireUser`/`requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

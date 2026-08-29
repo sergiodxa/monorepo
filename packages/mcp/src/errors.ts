@@ -13,13 +13,9 @@
  */
 
 /**
- * A tool ran and could not complete — the post does not exist, the target refused the
- * connection, the caller asked for a page past the end.
- *
- * Its message reaches the model verbatim, so write it as guidance rather than as a log
- * line: state what was wrong and, where there is one, what would work. Every other
- * exception is reported to the model as a generic failure, since an unexpected error's
- * message is written for an operator and can carry detail the caller must not read.
+ * A tool ran and could not complete — the post does not exist, the connection was
+ * refused, the caller asked for a page past the end. Its message reaches the model
+ * verbatim, so it must read as actionable guidance: what went wrong, and what would work.
  */
 export class ToolError extends Error {
 	override readonly name = "ToolError";
@@ -28,10 +24,8 @@ export class ToolError extends Error {
 /**
  * A tool call is not permitted for this caller, reported as a protocol error.
  *
- * Reaching it means a call got past the `available` predicate that should already have
- * hidden the tool, so it is the backstop for a client working from a stale tool list
- * rather than the normal way a permission is enforced. Refusing the *request* — no
- * credential at all — is the surrounding remix middleware's job, not a tool's.
+ * Reaching it means a call got past the `available` predicate meant to hide the tool — a backstop for a
+ * stale client list, since remix middleware already blocks a credential-less request earlier in the chain.
  */
 export class ForbiddenError extends Error {
 	override readonly name = "ForbiddenError";
@@ -40,9 +34,8 @@ export class ForbiddenError extends Error {
 /**
  * Arguments did not satisfy a tool's declared schema.
  *
- * Mapped to JSON-RPC `-32602` and never surfaced as a tool result: a call whose
- * arguments do not typecheck never reached the handler, so there is no outcome to
- * report.
+ * Reported to the client as JSON-RPC error `-32602`, raised before the handler runs; each
+ * instance carries exactly the constraint failures that stopped the call before the handler could run.
  */
 export class InvalidArgumentsError extends Error {
 	override readonly name = "InvalidArgumentsError";

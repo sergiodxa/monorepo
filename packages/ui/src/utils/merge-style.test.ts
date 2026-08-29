@@ -1,7 +1,7 @@
 /**
  * Unit tests for the `style` prop merge in {@link "./merge-style"}: every
  * assertion feeds one of the two prop forms plus a declaration record and
- * checks the merged result, with no DOM and no rendering involved.
+ * checks the merged result through direct calls to the function.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

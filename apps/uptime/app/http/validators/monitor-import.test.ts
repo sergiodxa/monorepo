@@ -1,8 +1,8 @@
 /**
  * Tests for the bulk monitor import parser and its form schema. Exercises the line rules on
  * their own — trimming, blank lines, bare hosts, duplicates, invalid lines, and the
- * per-submission cap — since they are the whole feature and none of them needs a request, a
- * team, or a database to be wrong.
+ * per-submission cap — since they are the whole feature and can be exercised with plain
+ * strings alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,7 +1,7 @@
 /**
  * Unit tests for the standalone HTTP cookies. `safeReturnTo` is pure decision
- * logic over a string, tested directly with no router/database involved; the
- * `returnTo`/`language`/`dashboardTab` cookies are smoke-tested for a
+ * logic over a string, tested directly by calling it with plain arguments;
+ * the `returnTo`/`language`/`dashboardTab` cookies are smoke-tested for a
  * serialize/parse round trip through `remix/cookie`'s real (unsigned) codec.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

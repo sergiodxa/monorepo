@@ -2,9 +2,9 @@
  * The signature scheme itself: the exact string a delivery signs, the MAC over
  * it, the header value that carries the MAC, and the reverse parse.
  *
- * Signing and verifying share every one of these steps, so they live here rather
- * than being written twice — a difference of one separator between the two sides
- * is an authentication bypass or a permanent rejection.
+ * Signing and verifying share every one of these steps through one shared
+ * implementation; a difference of one separator between the two sides is an
+ * authentication bypass or a permanent rejection.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,10 +30,8 @@ const VALUE_SEPARATOR = /\s+/;
 
 /**
  * Builds the exact message a signature covers: id, timestamp, and raw body,
- * joined with dots.
- *
- * The body must be the text as received or as it will be sent, never a
- * re-serialized object: two JSON encodings of the same value sign differently.
+ * joined with dots; the body must be the exact text sent, since two JSON
+ * encodings of the same value sign differently.
  *
  * @param id Delivery id from the `webhook-id` header.
  * @param timestamp Send time in whole seconds since the epoch.
@@ -77,10 +75,8 @@ export function formatSignature(mac: BinaryLike): string {
 /**
  * Parses a `webhook-signature` header into the MACs worth comparing against.
  *
- * Values using another scheme, such as the asymmetric `v1a`, and values that do
- * not decode are skipped rather than failing the header, so one unreadable
- * signature cannot invalidate a good one sent alongside it. A header with no
- * readable `v1` value left is malformed.
+ * Reading each space-separated value independently keeps a good `v1` MAC
+ * usable even when a sibling value uses another scheme or is unreadable.
  *
  * @param header Raw header value, one or more space-separated signatures.
  * @returns Candidate MACs in the order presented, or `MalformedSignatureError` when none is readable.

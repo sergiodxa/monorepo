@@ -1,7 +1,7 @@
 /**
  * Unit tests for the paired range-input lookup in
  * {@link "./paired-range-inputs"}: every assertion drives a minimal object
- * standing in for an `HTMLElement`, with no DOM and no rendering involved.
+ * standing in for an `HTMLElement`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

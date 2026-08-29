@@ -1,19 +1,9 @@
 /**
- * Unit tests for the alert-dispatch pipeline: maintenance-window suppression,
- * candidate resolution (monitor-specific + team-wide for HTTP/SSL, team-wide-only for
- * everything else), the repeat policy (immediate first alert, cooldown-spaced repeats for
- * as long as the outage lasts, always-delivered recovery) and the suppression
- * totals a recovery message reports, delivery success/failure recording, the
- * per-strategy delivery mechanics (email/webhook/Slack/Discord, including the webhook
- * HMAC signature), the recovery/notify-on-recovery branching in every `notify*`
- * helper, and the cron-job `alert_on_late` opt-in that suppresses a `late` notification
- * without suppressing the transition. `Alert` and `AlertEvent` are mocked because their `config`/`snapshot`
- * columns are untyped JSON text columns this test harness's SQLite adapter can't bind
- * object values into — mocking isolates the orchestration logic in `alerts.ts` (this
- * file's subject) from that unrelated data-layer gap. `MaintenanceWindow` has no JSON
- * columns, so suppression is exercised against the real in-memory database. The three
- * webhook endpoints are intercepted with MSW, so what a channel is asserted to have sent is
- * the request that actually went out.
+ * Unit tests for the alert-dispatch pipeline: maintenance suppression, candidate
+ * resolution, the repeat policy, recovery suppression totals, delivery outcome
+ * recording, and per-strategy delivery (email/webhook/Slack/Discord). `Alert` and
+ * `AlertEvent` are mocked because this harness's SQLite adapter can't bind their JSON
+ * `config`/`snapshot` columns; webhook endpoints are intercepted with MSW.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,10 +38,9 @@ let countSentSinceRecoveryMock = vi.fn(async (..._args: unknown[]) => 0);
 let summarizeIncidentMock = vi.fn(async (..._args: unknown[]) => ({ sent: 0, suppressed: 0 }));
 
 /**
- * The real classes, imported before the `vi.doMock` calls below so this file still holds a
- * handle on the implementations it is replacing. A mock registered with `vi.doMock` only
- * reaches imports that run after it, which is why the subject and everything it pulls the two
- * data classes in through are imported dynamically further down rather than statically here.
+ * The real classes, imported before the `vi.doMock` calls below so this file keeps a handle
+ * on the implementations being replaced. A mock registered with `vi.doMock` only reaches
+ * imports that run after it, so the subject module is imported dynamically further down.
  */
 let realAlertModule = await import("~/app/data/alert");
 let realAlertEventModule = await import("~/app/data/alert-event");
@@ -67,12 +56,9 @@ let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceReco
 );
 
 /**
- * The fakes subclass the real classes rather than object-spreading them, so every static this
- * file does not fake is still the real one: object spread silently drops class statics, since
- * they are non-enumerable, which is what once made the overridden methods look like the only
- * ones that existed. Only `listForMonitor` on `Alert`, and
- * `record`/`isInCooldown`/`countSentSinceRecovery`/`summarizeIncident` on `AlertEvent`, are
- * actually replaced.
+ * The fakes subclass the real classes rather than object-spreading them, so every static
+ * this file doesn't fake stays equal to the real class's own — object spread silently
+ * drops class statics, since they are non-enumerable.
  */
 class FakeAlert extends realAlertModule.default {
 	static override listForMonitor = listForMonitorMock;
@@ -143,13 +129,10 @@ function failingTransport(message: string): Transport {
 	};
 }
 
-/** The endpoint the `webhook` strategy's fixtures POST to. */
 const WEBHOOK_URL = "https://hooks.example.com/uptime";
 
-/** The endpoint the `slack` strategy's fixtures POST to. */
 const SLACK_URL = "https://hooks.slack.example/abc";
 
-/** The endpoint the `discord` strategy's fixtures POST to. */
 const DISCORD_URL = "https://discord.example/webhooks/abc";
 
 /** One webhook delivery as it went on the wire. */
@@ -198,7 +181,6 @@ function onlyDelivery(): Delivery {
 	return delivery;
 }
 
-/** A minimal HTTP snapshot fixture. */
 let httpSnapshot: AlertEventSnapshot = {
 	type: "http",
 	responseStatus: 500,
@@ -603,16 +585,9 @@ describe("dispatchAlerts — cooldown", () => {
 });
 
 /**
- * The alert repeat policy, one test per requirement: alert immediately when a monitor is
- * detected down, stay quiet while it is still down until the cooldown has passed and then
- * alert again for as long as the outage lasts, and always alert once on recovery.
- *
- * These run the real `isInCooldown`/`countSentSinceRecovery` against a seeded in-memory
- * database — the whole point is the interaction between the two, so mocked answers would
- * assert the mocks. `record` stays mocked because `dispatchAlerts` always records a snapshot
- * and this harness's SQLite adapter can't bind an object into a JSON column, so history is
- * seeded by writing rows (with a null snapshot) instead. Every instant is a fixed offset from
- * one captured `now`, so nothing here waits on the clock.
+ * The alert repeat policy: alert immediately when a monitor goes down, stay quiet during
+ * the cooldown, and always alert on recovery. These tests run the real `isInCooldown` and
+ * `countSentSinceRecovery` against a seeded database, since mocking both would only assert the mocks.
  */
 describe("dispatchAlerts — repeat policy", () => {
 	/** Points the two history reads at their real implementations for this test. */
@@ -672,13 +647,15 @@ describe("dispatchAlerts — repeat policy", () => {
 		return { delivered: transport.messages.length, status: call.status };
 	}
 
+	/**
+	 * Seeds a previous outage this alert already reported and saw recover, minutes ago — the
+	 * hour-long cooldown must not hold back the news that it is down again.
+	 */
 	test("alerts immediately the first time a monitor is detected down", async () => {
 		let { db } = createTestDatabase();
 		useRealHistoryReads();
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-first", cooldown_minutes: 60 });
-		// A previous outage this alert already reported and saw recover, minutes ago: an
-		// hour-long cooldown must not hold back the news that it is down *again*.
 		await seedSent(db, alert.id, "down", now - 10 * 60_000);
 		await seedSent(db, alert.id, "up", now - 9 * 60_000);
 
@@ -702,13 +679,15 @@ describe("dispatchAlerts — repeat policy", () => {
 		expect(await dispatchOne(after, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
 
+	/**
+	 * Seeds twelve hourly down notifications culminating a minute before recovery, so the
+	 * recovery alert must fire however long the outage already ran.
+	 */
 	test("alerts on recovery however long the outage lasted, with no ceiling to stop it", async () => {
 		let { db } = createTestDatabase();
 		useRealHistoryReads();
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-recovers", cooldown_minutes: 60 });
-		// Twelve hours of hourly notifications — more than the per-incident ceiling this
-		// policy replaced ever allowed — and the twelfth was a minute ago.
 		for (let hour = 12; hour >= 1; hour--) {
 			await seedSent(db, alert.id, "down", now - hour * 60 * 60_000);
 		}
@@ -721,8 +700,10 @@ describe("dispatchAlerts — repeat policy", () => {
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-zero", cooldown_minutes: 0 });
 
-		// The previous check, one minute ago: without the floor this is one email per check
-		// for the whole outage, which is what the removed ceiling used to prevent.
+		/**
+		 * A stored `cooldown_minutes: 0` is clamped to the minimum spacing between repeats,
+		 * so a check one minute after the previous down alert still falls inside that floor.
+		 */
 		let perCheck = createTestDatabase().db;
 		useRealHistoryReads();
 		await seedSent(perCheck, alert.id, "down", now - 60_000);
@@ -731,8 +712,10 @@ describe("dispatchAlerts — repeat policy", () => {
 			status: "skipped_cooldown",
 		});
 
-		// The floor is a floor, not the default: a row asking for the fastest cadence gets
-		// the fastest allowed one rather than being quietly moved to an hour.
+		/**
+		 * The floor sets the fastest cadence a zero-cooldown alert can repeat at; a check
+		 * past that floor is delivered on the next dispatch.
+		 */
 		let afterFloor = createTestDatabase().db;
 		await seedSent(afterFloor, alert.id, "down", now - 6 * 60_000);
 		expect(await dispatchOne(afterFloor, alert, "down")).toEqual({ delivered: 1, status: "sent" });
@@ -774,10 +757,8 @@ describe("dispatchAlerts — repeat policy", () => {
 describe("dispatchAlerts — recovery reports what was suppressed", () => {
 	/**
 	 * Asserted on the webhook channel, which puts the pipeline's own `text` on the wire
-	 * verbatim. The email channel renders the same totals through a locale key instead, so
-	 * asserting there would be asserting the translation rather than the sentence this
-	 * pipeline writes — and the sentence is what changed: nothing is held back by a
-	 * per-incident limit any more, only by the alert's cooldown.
+	 * verbatim; the email channel renders the same totals through a locale key, so
+	 * asserting there would check the translation instead of the sentence this pipeline writes.
 	 */
 	test("adds the incident's sent and suppressed totals to the recovery message", async () => {
 		let { db } = createTestDatabase();
@@ -997,9 +978,8 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 
 /**
  * The plain-text body every non-email channel puts on the wire, asserted on the Slack
- * strategy because it sends that text verbatim. A DNS snapshot is the one whose body has
- * to explain itself: the counters, the findings behind them, and the two sentences that
- * keep a truthful report from reading as a bug.
+ * strategy because it sends that text verbatim. A DNS snapshot's body explains itself
+ * with counters, findings, and the sentences that keep a true report from reading as a bug.
  */
 describe("dispatchAlerts — the DNS body", () => {
 	async function slackText(snapshot: AlertEventSnapshot): Promise<string> {
@@ -1075,7 +1055,7 @@ describe("dispatchAlerts — the DNS body", () => {
 		expect(text).not.toContain("Newly seen records are not being watched yet");
 	});
 
-	/** The counters are the totals, so the difference is what the body is not listing. */
+	/** The counters report the true totals, so any gap above the listed findings is what the summary line accounts for. */
 	test("says how many findings it is not showing", async () => {
 		let text = await slackText(
 			makeDnsSnapshot({
@@ -1666,10 +1646,9 @@ describe("dnsAlertResultFromRecords", () => {
 	});
 
 	/**
-	 * A newly discovered record is stored disabled by construction, so `is_enabled` cannot
-	 * be the test for whether it is news — it is precisely the thing waiting to be accepted
-	 * or fixed. A record the user declined and that later stops resolving is not news at
-	 * all: that is what declining it meant.
+	 * A newly discovered record is stored disabled by construction, so `is_enabled` alone
+	 * can't distinguish "awaiting review" from "declined" — both are disabled, and only
+	 * `status` tells a new record apart from one missing because it was declined.
 	 */
 	test("keeps a disabled new record and drops a disabled missing one", () => {
 		let result = dnsAlertResultFromRecords("changed", [
@@ -2019,7 +1998,6 @@ describe("shouldNotifyDnsResult", () => {
 });
 
 describe("shouldNotifyCronJobResult", () => {
-	/** A monitor that opted into late warnings. */
 	let alerting = { alert_on_late: true };
 	/** The schema default: late warnings declined. */
 	let silent = { alert_on_late: false };
@@ -2046,10 +2024,12 @@ describe("shouldNotifyCronJobResult", () => {
 		expect(shouldNotifyCronJobResult(null, "healthy", silent)).toBe(false);
 	});
 
+	/**
+	 * A monitor flapping healthy -> late -> healthy every minute, with late warnings
+	 * declined, once delivered a recovery notice for every flap with no down notice
+	 * behind any of them.
+	 */
 	test("stays silent recovering from a late the monitor was never notified about", () => {
-		// Production sent several "recovered" an hour with no "down" anywhere among them:
-		// an every-minute monitor flaps healthy -> late -> healthy, and with the warning
-		// declined only the recovery half was ever delivered.
 		expect(shouldNotifyCronJobResult("late", "healthy", silent)).toBe(false);
 	});
 

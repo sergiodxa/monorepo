@@ -1,13 +1,11 @@
 /**
  * Tests for the HTTP monitor edit page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load; the env carries no bindings
- * and is strict, so this page reaching for one would fail by name here. This
- * controller is a pure GET render with a 404 guard; it doesn't re-render the form with
- * validation errors inline (that only happens in the separate `update-monitor` action,
- * already covered by `app/http/controllers/actions/monitors.test.ts`), so there's no
- * inline-error case to cover here. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams`
+ * because `~/app/data/monitor` reads `env` at module load, and the mock's strict,
+ * bindingless env matches what a page doing only a GET render and 404 guard needs.
+ * Validation-error rendering belongs to the separate `update-monitor` action and is
+ * covered by its own suite. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams`
  * are seeded directly by a fake middleware standing in for the real `auth`/
- * `requireUser`/`requireTeam` chain, matching the same template's `seedTeam` helper.
+ * `requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -136,6 +134,11 @@ describe("monitorEdit", () => {
 		expect(body).toContain("Save Changes");
 	});
 
+	/**
+	 * Anchored to the input's own tag, since the bare `checked` word also appears
+	 * in the components' CSS selectors. Guards against SQLite's stored 1/0 leaking as
+	 * a present HTML attribute, which would tick the switch and flip the saved decision.
+	 */
 	test("reflects the stored SSL monitoring decision in the checkbox", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -163,19 +166,10 @@ describe("monitorEdit", () => {
 			return await response.text();
 		}
 
-		// Anchored to the attribute inside this input's own tag, never to the bare word
-		// `checked`: that word also shows up in the components' `input:checked` CSS
-		// selectors, so a substring check would pass no matter what the input renders.
 		let CHECKED_ATTRIBUTE = /<input[^>]*name="ssl_monitoring_enabled"[^>]*\schecked/;
 
-		// Control case: proves the regex can actually see a present `checked` attribute,
-		// so the negative assertion below is failing for the right reason.
 		expect(await renderWithSsl(true)).toMatch(CHECKED_ATTRIBUTE);
 
-		// SQLite stores booleans as 1/0. If a stored `false` came back as `0`,
-		// `defaultChecked={0}` would still emit the attribute, and an HTML boolean
-		// attribute is ON whenever it is merely present — so the switch would render
-		// ticked and re-saving would silently flip the user's stored decision.
 		expect(await renderWithSsl(false)).not.toMatch(CHECKED_ATTRIBUTE);
 	});
 

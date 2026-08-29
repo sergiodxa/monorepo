@@ -155,7 +155,6 @@ describe("flowMonitors", () => {
 		await seedMonitor(db, team.id, { name: "Misconfigured", last_status: "error" });
 
 		let body = await (await send(db, team, membership)).text();
-		// The distinction the status column exists to draw: our failure, not the customer's.
 		expect(body).toContain("Cannot run");
 		expect(body).not.toContain("Failing");
 	});

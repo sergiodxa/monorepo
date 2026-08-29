@@ -1,28 +1,9 @@
 /**
- * Repo-wide guard against handing a boolean to an ARIA attribute whose value is a
- * token: `aria-hidden`, `aria-invalid`, `aria-busy`, `aria-pressed`, `aria-checked`
- * and the rest of the set listed in the scanner this reuses.
- *
- * The rule is written out in full in the "ARIA values are tokens, never flags"
- * section of `packages/ui/AGENTS.md`. The short version: these attributes take
- * text, the renderer writes a `true` prop the way HTML wants a boolean attribute
- * written — as the bare name — so `aria-hidden={true}` reaches the document as
- * `aria-hidden=""`, which is none of the tokens ARIA defines and resolves to the
- * attribute's default. A `false` is dropped from the markup entirely. Nothing
- * throws, nothing looks wrong on screen, and the element announces the opposite of
- * what was meant.
- *
- * This file exists because the component library was never where most of the
- * mistake lived. Apps write JSX too, and they were carrying more of it than the
- * library was — 42 sites in one app alone, every one of them a decorative icon
- * that screen readers were being asked to read out. A guard that only covered the
- * library would have gone on passing while that stayed true.
- *
- * The scanner lives beside this file in `aria-tokens.ts` and is exercised against
- * fixtures here before it is trusted against the repo — a codebase with zero current
- * violations cannot otherwise prove the scanner would catch one. `packages/ui`
- * imports the same scanner for a package-scoped run of its own, so the rule has one
- * definition and two scopes.
+ * Repo-wide guard against handing a boolean to a token-valued ARIA attribute
+ * (`aria-hidden`, `aria-invalid`, `aria-busy`, `aria-pressed`, `aria-checked`,
+ * and more). A `true` renders as the bare attribute name, which resolves to
+ * the default value, and `false` is dropped from the markup entirely, so the
+ * element quietly announces the opposite of what was meant.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,23 +17,16 @@ import { describe, expect, test } from "vitest";
 
 import { findAriaViolations } from "./aria-tokens";
 
-/** Repo root, resolved from this file so the scan does not depend on the working directory. */
+/** Repo root, resolved from this file so the scan behaves the same regardless of the working directory. */
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Where the scan looks. Everything first-party, and nothing generated or vendored. */
+/** First-party directories walked by the scan below. */
 const SCANNED = ["apps", "packages"];
 
 /**
- * Paths carrying known, deliberately unfixed occurrences.
- *
- * Empty, and the scan below is genuinely repo-wide because of it. The one entry this
- * ever held was `packages/ui`, the previous generation of the component library,
- * exempted because its violations were real defects in code that no consumer reached
- * any more. The package is gone, so that debt is settled rather than deferred.
- *
- * An entry here is a debt with an end date, not a permanent carve-out, and the test
- * below is what stops it outliving its reason: the exemption fails once the package is
- * clean or gone, so it is removed by the same change that removes the need for it.
+ * Paths carrying known, deliberately unfixed occurrences. Empty by design: an
+ * entry here is a debt with an end date — the test below fails once its target
+ * is clean or gone, so fixing or deleting it removes the exemption too.
  */
 const EXEMPT: string[] = [];
 
@@ -131,6 +105,11 @@ describe("ARIA token attributes, repo-wide", () => {
 		});
 	});
 
+	/**
+	 * The 500-file floor catches a scanner that silently matches nothing. The
+	 * 60s budget covers reading every first-party file from disk with room to
+	 * spare, so a failure stays a meaningful signal of a real violation.
+	 */
 	test("no first-party module hands a boolean to a token-valued ARIA attribute", () => {
 		let violations: string[] = [];
 		let scanned = 0;
@@ -149,20 +128,14 @@ describe("ARIA token attributes, repo-wide", () => {
 			}
 		}
 
-		// A scan that silently matched nothing would pass this test forever.
 		expect(scanned).toBeGreaterThan(500);
 		expect(violations).toEqual([]);
-		// This walks every first-party `.ts`/`.tsx` in the repo and reads each one, so it
-		// is bound by disk rather than by the assertions. On CI that has come in just over
-		// the 5s default and failed the run on timing alone; the budget is generous
-		// because the number worth failing on is a violation, never a slow disk.
 	}, 60_000);
 
 	/**
-	 * The exemption has to stay a statement about reality. Whether the exempted path
-	 * gets fixed or deleted, this fails and says which — an exemption nobody needs any
-	 * more is one that will quietly swallow the next regression in whatever moves into
-	 * that path later.
+	 * Keeps the exemption a statement about reality: it fails once the exempted
+	 * path is fixed or deleted, catching the point where an unnecessary entry
+	 * would otherwise swallow the next regression in whatever moves in later.
 	 */
 	test("every exemption still has something to exempt", () => {
 		for (let exempt of EXEMPT) {

@@ -3,9 +3,8 @@
  * last-known status and how much of its domain it watches, or an empty state when there
  * are none yet. Requires `requireUser` + `requireTeam`.
  *
- * A monitor is a domain rather than a record type, so the column that once named the one
- * record type it covered is now the count of records it tracks and how many of those are
- * watched — the only number on this page that says how much work a row stands for.
+ * A monitor's records column reports how many of its domain's records it watches — the
+ * only number on this page that says how much work a row stands for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,10 +47,8 @@ interface RecordCounts {
 /**
  * Counts every listed monitor's records in one statement, keyed by monitor.
  *
- * One grouped read rather than a count per row: this page draws a whole team's monitors,
- * and a per-monitor count would put a round trip behind each of them for a number that is
- * a single `GROUP BY` away. The `IN` list is bounded by the per-team monitor cap, so it
- * never needs chunking against the bound-parameter limit.
+ * A single `GROUP BY` counts every monitor's records in one round trip; the `IN`
+ * list stays within the per-team cap, keeping the query under the bound-parameter limit.
  *
  * @returns Counts for the monitors that have records. A monitor with none is absent, and
  * the caller reads that as the zero it is.
@@ -81,7 +78,12 @@ async function countRecords(
 	);
 }
 
-/** GET /app/:team/dns — the team's DNS monitors list. */
+/**
+ * GET /app/:team/dns — the team's DNS monitors list.
+ *
+ * A monitor with no records shows "None yet": discovery might still be pending, and a
+ * settled "0 of 0" would misreport it as already checked and empty.
+ */
 export default createAction(routes.app.team.dnsMonitors.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -183,11 +185,6 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 													<Table.Cell>
 														<code>{monitor.domain}</code>
 													</Table.Cell>
-													{/*
-													 * A monitor with no records yet is not a monitor with nothing to
-													 * watch: discovery may simply not have run. "None yet" says that,
-													 * where a bare "0 of 0" would read as a settled answer.
-													 */}
 													<Table.Cell>
 														{count === undefined
 															? ctx.i18next.t("page.dnsMonitors.table.noRecords")

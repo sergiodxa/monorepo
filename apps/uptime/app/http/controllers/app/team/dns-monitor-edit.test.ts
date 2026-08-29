@@ -1,9 +1,8 @@
 /**
- * Tests for the DNS monitor edit page controller. `~/app/data/dns-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. This controller is a
- * pure GET render with a 404 guard; it doesn't re-render the form with validation
- * errors inline (that only happens in the separate `update-dns-monitor` action), so
- * there's no inline-error case to cover here. `getViewer()`/`ctx.team`/`ctx.membership`/
+ * Tests for the DNS monitor edit page controller. `~/app/data/dns-monitor` imports
+ * only portable runtime APIs, so this suite loads it directly. The controller renders
+ * a pure GET page behind a 404 guard; inline validation-error rendering belongs to the
+ * `update-dns-monitor` action's own tests. `getViewer()`/`ctx.team`/`ctx.membership`/
  * `ctx.teams` are seeded directly by a fake middleware standing in for the real
  * `auth`/`requireUser`/`requireTeam` chain, matching the template in
  * `app/http/controllers/actions/monitors.test.ts`.
@@ -131,8 +130,9 @@ describe("dnsMonitorEdit", () => {
 	});
 
 	/**
-	 * The pasted zone is never stored, so the box is always empty and re-importing is its
-	 * own submission rather than a field that rides along with a rename.
+	 * The pasted zone lives only in the request that imports it, so the box starts
+	 * empty on every visit, and the import stands as its own submission apart from
+	 * a rename.
 	 */
 	test("offers a zone-file re-import as its own form, with nothing pre-filled", async () => {
 		let { db, team, membership } = await createFixture();

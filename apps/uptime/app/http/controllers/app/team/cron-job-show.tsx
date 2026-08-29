@@ -53,10 +53,8 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 
 /**
  * GET /app/:team/cron-jobs/:monitorId — a cron-job monitor's detail page.
- * The ping snippets sit inside an `IntlProvider` so `CopyButton`'s
- * `clientEntry` island can resolve `intl(handle)` during server rendering.
- * The uptime history bar scrolls in its own box, since 90 bars need more
- * width than a phone screen offers.
+ * Ping snippets sit inside an `IntlProvider` so `CopyButton`'s island resolves
+ * `intl(handle)` server-side; the uptime bar scrolls since 90 bars exceed phone width.
  */
 export default createAction(routes.app.team.cronJobs.show, {
 	middleware: [requireUser, requireTeam],

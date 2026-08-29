@@ -1,9 +1,9 @@
 /**
  * Base class for clients of a remote HTTP API.
  *
- * Subclasses get path-relative requests against a fixed origin and one place to attach
- * whatever every call needs — credentials, tracing, a retry decision — instead of each
- * method rebuilding a URL and re-adding the same headers.
+ * Subclasses get path-relative requests against a fixed origin and one shared place —
+ * the `before` and `after` hooks — to attach whatever every call needs: credentials,
+ * tracing, a retry decision.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,8 +39,8 @@ export class APIClient {
 	/**
 	 * Adjusts a request before it is sent.
 	 *
-	 * The extension point for anything every call needs, so a subclass sets it once here
-	 * rather than in each method. Returns the request unchanged by default.
+	 * The extension point for anything every call needs, so a subclass can set it once
+	 * here for every request. Returns the request unchanged by default.
 	 *
 	 * @param request Request about to be sent.
 	 * @returns The request to send.

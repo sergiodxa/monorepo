@@ -1,16 +1,13 @@
 /**
  * Client island: a `NumberField` whose decrement/increment buttons actually
- * step the value. `stepUp()`/`stepDown()` are script-only methods, so the
- * buttons declare their step as a custom Invoker Command targeting the input
- * and `@pkg/ui/mixins`' `stepper()` — applied to the group — turns those
- * commands into real steps plus press-and-hold repeat. That mixin only runs
- * once hydrated, which is why this is a `clientEntry` rather than a plain
- * server component: rendered as one, the same markup comes out inert.
+ * step the value, since `stepUp()`/`stepDown()` are script-only. The buttons
+ * declare their step as an Invoker Command targeting the input, and
+ * `@pkg/ui/mixins`' `stepper()` turns those into real steps once hydrated,
+ * which is why this ships as a `clientEntry`.
  *
  * No-JS baseline: the field is a native `<input type="number">` carrying the
- * same `name`, `min`, `max` and `defaultValue` either way, so typed entry,
- * `ArrowUp`/`ArrowDown` stepping and the submitted form body are identical
- * with scripting off. Only the two buttons go quiet.
+ * same `name`, `min`, `max` and `defaultValue` either way, so typed entry and
+ * the submitted form body stay identical with scripting off; only the buttons go quiet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,7 +23,7 @@ import {
 } from "@pkg/ui/mixins";
 import { clientEntry } from "remix/ui";
 
-/** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
+/** Declared as a `type` alias so it satisfies `SerializableProps`. */
 type StepperFieldProps = {
 	/** Id given to the input, linking it to its `Label` and to both buttons' `commandfor`. */
 	id: string;

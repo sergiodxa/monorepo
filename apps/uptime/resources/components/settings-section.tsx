@@ -1,22 +1,13 @@
 /**
- * The section-heading-plus-bordered-card composition every settings-style page in
- * this app is built from: a titled (optionally described) `<section>` holding one
- * or more cards, each card a rounded, bordered box split into an optional header,
- * a field region, and a footer action row. It exists so a page made of several
- * independently-submittable groups reads as distinct settings groups instead of
- * one undifferentiated column of inputs, without every such page re-deriving the
- * same geometry inline.
+ * The section-heading-plus-bordered-card composition every settings-style page
+ * is built from: a titled section holding cards, each a rounded, bordered box
+ * split into an optional header, a field region, and a footer action row, so a
+ * page of independent groups reads as distinct settings rather than one column.
  *
- * The field region owns the vertical rhythm between its children, as a `gap`. It used
- * to be the other way round — every field ended in its own trailing margin and the body
- * left its block-end padding off to compensate — which is a contract no markup can
- * enforce, and it broke silently each time a control that ends in no margin was dropped
- * into a card. Nothing placed in a body should carry a trailing margin.
- *
- * `tone` is repeated on the card and its header/footer rather than inferred from
- * the section, because the border color has to be set on each element that draws
- * a border and there is no ambient channel to carry it: a destructive group needs
- * its divider lines in the danger color too, not only its outer frame.
+ * The field region owns the vertical rhythm between its children as a `gap`,
+ * since a trailing margin per field is a contract no markup can enforce. `tone`
+ * repeats on the card and its header/footer because the border color must be
+ * set on each element that draws one — there's no ambient channel to carry it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,25 +24,16 @@ import { m, mi, p } from "@pkg/u/size";
 import { fontSize, weight } from "@pkg/u/typography";
 
 /**
- * Viewport from which a card is allowed to bleed past the column it sits in.
- *
- * The app shell pads its content area by 20px below this width and 48px from it up, so a
- * card reaching a further 6 spacing units out each side only has room above the threshold —
- * below it the card would overflow the viewport and the page would scroll sideways.
+ * Viewport from which a card may bleed past its column. Below this width the
+ * app shell's content padding is only 20px, too narrow for a 6-unit bleed;
+ * above it, the padding widens to 48px, which has room.
  */
 const CARD_BLEED_FROM = "(min-width: 768px)";
 
 /**
- * Vertical rhythm between two consecutive fields inside a card body.
- *
- * It is applied once, as a `gap` on the body itself, so a field never has to carry it:
- * a control that ends in no trailing margin (or one whose `mix` reaches its inner input
- * instead of its wrapper, as a switch's does) is spaced correctly by construction rather
- * than by every call site remembering to add a margin the markup can't enforce.
- *
- * Exported so the few places that stack fields in their own container — a fieldset
- * grouping one channel's inputs, say — space them on the same rhythm instead of
- * re-picking a number.
+ * Vertical rhythm between two consecutive fields inside a card body, applied
+ * once as the body's own `gap`, so individual fields carry no trailing margin
+ * of their own — a contract markup can't enforce. Exported for reuse elsewhere.
  */
 export const SETTINGS_FIELD_GAP = "28px";
 
@@ -159,15 +141,9 @@ SettingsSection.Header = function SettingsCardHeader(handle: Handle<SettingsSect
 };
 
 /**
- * A card's field region: evenly padded, and stacking whatever it is given on the
- * {@link SETTINGS_FIELD_GAP} rhythm.
- *
- * The rhythm lives here rather than on the fields because a trailing margin per field
- * is a contract the markup cannot enforce — a control that ends in no margin, or one
- * that forwards its `mix` to an inner input rather than to its own wrapper, breaks the
- * spacing silently and only at that one call site. A `gap` spaces whatever it is handed,
- * so nothing has to be remembered. Its corollary: a child must NOT carry a trailing
- * margin of its own, or that field alone sits on a doubled gap.
+ * A card's field region: evenly padded, and spacing whatever it holds on the
+ * {@link SETTINGS_FIELD_GAP} rhythm, applied once as the body's own `gap`
+ * rather than as a trailing margin every field would otherwise need to carry.
  */
 SettingsSection.Body = function SettingsCardBody(handle: Handle<SettingsSection.BodyProps>) {
 	return () => <div mix={[p(6), vstack({ gap: SETTINGS_FIELD_GAP })]}>{handle.props.children}</div>;

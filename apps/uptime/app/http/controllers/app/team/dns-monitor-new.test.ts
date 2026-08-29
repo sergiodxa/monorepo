@@ -1,6 +1,6 @@
 /**
- * Tests for the new-DNS-monitor form page controller. `~/app/data/dns-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
+ * Tests for the new-DNS-monitor form page controller. `~/app/data/dns-monitor` imports
+ * only portable runtime APIs, so this suite loads it directly. `getViewer()`/
  * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
  * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the
  * template in `app/http/controllers/actions/monitors.test.ts`.
@@ -100,6 +100,7 @@ async function send(
 }
 
 describe("dnsMonitorNew", () => {
+	/** The default lives on the selected `<option>`, the only place a `<select>` exposes it. */
 	test("renders the empty new-DNS-monitor form", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -110,22 +111,28 @@ describe("dnsMonitorNew", () => {
 		expect(body).toContain("Create DNS Monitor");
 		expect(body).toContain('name="domain"');
 		expect(body).toContain("Domain");
-		// `<select>` has no `defaultValue` attribute, so the default is marked on its option.
 		expect(body).toContain('value="86400" selected');
 		expect(body).not.toContain("defaultvalue");
 	});
 
+	/**
+	 * A sweep queries every type at every name, so a record's own TTL already floors
+	 * detection latency past the point a faster cadence would help.
+	 */
 	test("offers no cadence below the domain-sweep floor", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await send(db, team, membership)).text();
 
-		// A sweep is a query per type per name, and a record's own TTL floors detection
-		// latency anyway, so the 5-minute option the other monitor types offer is absent.
 		expect(body).not.toContain('value="300"');
 		expect(body).toContain('value="900"');
 	});
 
+	/**
+	 * The apex-only limit appears on this screen, where the visitor decides whether
+	 * to paste, closing the gap between what "domain monitoring" sounds like and
+	 * what it is.
+	 */
 	test("takes a zone file, and says what it cannot see without one", async () => {
 		let { db, team, membership } = await createFixture();
 
@@ -133,34 +140,35 @@ describe("dnsMonitorNew", () => {
 
 		expect(body).toContain('name="zone_file"');
 		expect(body).toContain("<textarea");
-		// The apex-only limit belongs on the screen where the visitor decides whether to
-		// paste, not only in the docs: it is the gap between what "domain monitoring"
-		// sounds like and what it is.
 		expect(body).toContain('id="dns-apex-only-notice"');
 		expect(body).toContain("we can only watch your domain's apex");
 	});
 
+	/**
+	 * Asserted by its id: the copy interpolating the two numbers is a pending locale
+	 * key, and the screen's contract holds however it states them, independent of
+	 * the wording.
+	 */
 	test("states both bounds a paste is refused against", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await send(db, team, membership)).text();
 
-		// Asserted by its id: the copy interpolating the two numbers is a pending locale
-		// key, and the screen's contract is that it states them, not how it words them.
 		expect(body).toContain('id="dns-zone-file-limits"');
 	});
 
+	/**
+	 * The card owns its field rhythm outright: the single `gap: 28px` rule between
+	 * fields, and the padding around them now that the last field sits flush with
+	 * the edge — both measurements come from the card alone.
+	 */
 	test("spaces the card's fields from the card alone, never twice", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await send(db, team, membership)).text();
 
-		// The card body states the field rhythm once, as a gap, in a single rule.
 		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
-		// And nothing inside restates it as its own trailing margin, which would
-		// leave that one field sitting on a doubled gap.
 		expect(body).not.toContain("margin-block-end: 28px");
-		// The body pads all four edges now that the last field ends flush with it.
 		expect(body).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
 	});
 });

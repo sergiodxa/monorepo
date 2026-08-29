@@ -1,7 +1,6 @@
 /**
  * Unit tests for the color math in {@link "./color-math"}: every assertion
- * checks known inputs against known outputs, with no DOM and no rendering
- * involved.
+ * compares known inputs against known outputs as plain value checks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

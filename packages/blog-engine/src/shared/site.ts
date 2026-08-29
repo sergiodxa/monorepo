@@ -24,8 +24,7 @@ export interface SiteChrome {
 }
 
 /**
- * Loads the shared public-site chrome (title, theme, nav) for one request, resolving
- * settings and visible post types in parallel.
+ * Loads the shared public-site chrome (title, theme, nav) for one request.
  * @param db - Database handle.
  * @returns The site chrome to spread into the public {@link Layout}.
  */

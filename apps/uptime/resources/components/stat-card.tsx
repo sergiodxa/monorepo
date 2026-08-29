@@ -1,14 +1,7 @@
 /**
- * A single labeled figure inside a dashboard/detail-page stat row. `value` accepts
- * any node (not just text) since some stat cards render badges instead of a plain
- * number, e.g. the dashboard's SSL certificate counts.
- *
- * Composed from `@pkg/ui`'s `Card` (the bordered, shadowed panel and its
- * `Card.Header` slot, which already stacks children in a column with a small gap —
- * exactly the "muted label, then big value" layout this card needs) plus `Text` for
- * both lines, muted-copy defaults for the label and an overridden size/weight/color
- * for the value. `@pkg/ui` has no dedicated stat-card component, so this is a
- * composition rather than a single import.
+ * A single labeled figure inside a dashboard/detail-page stat row. `value`
+ * accepts any node — plain text, a badge, or another status element — for
+ * cards such as the dashboard's SSL certificate counts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,12 +35,9 @@ namespace StatCard {
 }
 
 /**
- * Renders a dashboard stat card with a muted label and a large value.
- *
- * A card with a {@link StatCard.Props.create} link shares its label's line with it,
- * rather than having it laid over the corner: the label is the one line short enough to
- * give up the room, and a figure or a status breakdown running under an absolutely
- * positioned icon is exactly the collision this avoids having to tune per card.
+ * Renders a dashboard stat card with a muted label and a large value. A
+ * {@link StatCard.Props.create} link shares the label's line, the one line
+ * with room to spare, keeping the icon clear of a value that runs the card's full width.
  */
 export default function StatCard(handle: Handle<StatCard.Props>) {
 	return () => {

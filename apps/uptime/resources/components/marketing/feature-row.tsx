@@ -1,9 +1,8 @@
 /**
- * A compact feature entry: a small tinted icon tile beside a title and one line of
- * supporting copy. Sits next to `MarketingCard` rather than inside it as a variant —
- * this one lays its icon *beside* the text instead of above it, and drops the card's
- * larger title size, so a long list of secondary capabilities reads as a dense
- * checklist rather than a grid of equally-weighted cards.
+ * A compact feature entry: a small tinted icon tile beside a title and one
+ * line of supporting copy. Kept separate from `MarketingCard` for its own
+ * icon-beside-text layout and compact title size, suited to a long list of
+ * secondary capabilities reading as a dense checklist.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,24 +22,26 @@ namespace MarketingFeatureRow {
 	export interface Props {
 		title: string;
 		description: string;
-		/** Icon rendered in a brand-tinted 40px tile at the row's inline-start edge. */
+		/**
+		 * Icon rendered in a brand-tinted 40px tile at the row's inline-start edge,
+		 * sized so a wrapping title can't squeeze the glyph. Colored one step past
+		 * `brand.tint`, the card's own background, so the tile stays visible.
+		 */
 		icon: RemixNode;
 	}
 }
 
-/** Renders one icon + title + description row inside a features grid. */
+/**
+ * Icon + title + description row; padding sits directly on `Card`,
+ * unpadded by default, alongside `Card.Title`/`Card.Description`. The
+ * heading uses `level={3}`, nested below the page's `<h1>` and section's `<h2>`.
+ */
 export default function MarketingFeatureRow(handle: Handle<MarketingFeatureRow.Props>) {
 	return () => {
 		let { title, description, icon } = handle.props;
 
-		// `Card` carries no padding of its own — that lives on `Card.Header`, which
-		// this row's icon-beside-text layout doesn't use — so it's set here.
 		return (
 			<Card mix={[flex(), items("start"), gap(4), p(5)]}>
-				{/* The icon's own tile: a 40px brand-tinted rounded square that never
-				shrinks, so a wrapping title can't squeeze the glyph. One palette step
-				past `brand.tint` in each scheme — that token is the card's own
-				background here, so the tile would be invisible. */}
 				<span
 					aria-hidden="true"
 					mix={[
@@ -59,8 +60,6 @@ export default function MarketingFeatureRow(handle: Handle<MarketingFeatureRow.P
 					{icon}
 				</span>
 				<div>
-					{/* `level={3}`: nested below the page's own `<h1>` hero and this
-					section's `<h2>` heading. */}
 					<HeadingScope level={3}>
 						<Card.Title mix={[fontSize("base")]}>{title}</Card.Title>
 					</HeadingScope>

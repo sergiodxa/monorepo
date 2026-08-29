@@ -1,9 +1,9 @@
 /**
- * Covers the request-less translator factory: fallback defaults, resolution of a
- * language the caller does not ship, the reported locale being the one copy was
- * produced in, per-language instance caching (including the unsupported language
- * sharing the fallback's instance), cache ownership per translator, and the
- * i18next options a caller passes through.
+ * Covers the request-less translator factory: fallback defaults, resolving a
+ * language absent from the caller's resources, the reported locale matching
+ * where copy was produced, per-language instance caching (the unsupported
+ * language sharing the fallback's instance), cache ownership per translator,
+ * and pass-through of the caller's i18next options.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,10 +20,8 @@ const RESOURCES = {
 	fr: { translation: { hello: "Bonjour" } },
 };
 
-/** The languages {@link RESOURCES} ships, as a translator is configured with them. */
 const SUPPORTED_LANGUAGES = ["en", "es", "fr"];
 
-/** Builds a translator over {@link RESOURCES}, optionally with extra i18next options. */
 function makeTranslator(i18next?: { interpolation: { escapeValue: boolean } }) {
 	return createTranslator({
 		resources: RESOURCES,

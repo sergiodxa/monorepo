@@ -1,16 +1,11 @@
 /**
- * Analytics Engine service for ping results. Writes ping data points to the
- * `PING_RESULTS` binding and reads them back through Cloudflare's Analytics Engine SQL
- * HTTP API (the binding itself only supports writes), with a KV-cached variant so the
- * dashboard doesn't re-query on every load. Every query is a single-table SELECT with
- * GROUP BY/ORDER BY/LIMIT only — Analytics Engine's SQL API does not support joins or
- * subqueries, so a monitor's current status is derived from its 24h success ratio
- * (100% = up, 0% = down, otherwise degraded) rather than a joined "latest row" lookup.
- * See `docs/adr/uptime/ADR-001-analytics-engine-migration.md` for the dataset schema.
- *
- * Everything here is an aggregate over a window. A monitor's *single most recent* result
- * deliberately isn't: that lives on the `monitors` row (`last_status`/`last_checked_at`),
- * since both readers already hold the row and asking here cost an uncached round trip.
+ * Analytics Engine service for ping results — writes data points to
+ * `PING_RESULTS` and reads them back through the Analytics Engine SQL HTTP
+ * API, with a KV-cached variant so the dashboard doesn't re-query on every
+ * load. The SQL API supports no joins or subqueries, so a monitor's status
+ * derives from its 24h success ratio (100% up, 0% down, otherwise
+ * degraded). See `docs/adr/uptime/ADR-001-analytics-engine-migration.md`
+ * for the schema.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,9 +18,7 @@ import { env } from "cloudflare:workers";
 
 import { recordCost } from "~/app/services/cost";
 
-/** Minimum KV cache TTL, in seconds. */
 const MIN_CACHE_TTL_SECONDS = 60;
-/** Maximum KV cache TTL, in seconds. */
 const MAX_CACHE_TTL_SECONDS = 600;
 
 /**
@@ -35,12 +28,9 @@ const MAX_CACHE_TTL_SECONDS = 600;
 export type PingType = "http" | "dns" | "tcp" | "cron" | "adhoc" | "flow";
 
 /**
- * A ping's outcome, matching the `blob3` dimension in the Analytics Engine dataset.
- *
- * The union spans every monitor type's own status vocabulary rather than flattening them
- * onto HTTP's — a DNS check answers `ok`/`changed`/`error`, and remapping that onto
- * up/degraded/down would record a fact nothing observed. Nothing reads `blob3` without
- * first filtering `blob2` to one type, so the vocabularies never have to agree.
+ * A ping's outcome, matching the `blob3` dimension in the Analytics Engine
+ * dataset. Spans each monitor type's own vocabulary (DNS answers
+ * `ok`/`changed`/`error`) since callers always filter `blob2` to one type first.
  */
 export type PingStatus = "up" | "down" | "degraded" | "timeout" | "ok" | "changed" | "error";
 
@@ -63,17 +53,9 @@ export interface SparklinePoint {
 }
 
 /**
- * Runs a raw SQL query against the Analytics Engine HTTP API.
- *
- * Wrapped in a try/catch: this call can throw (network hiccup, DNS blip, an
- * unexpectedly non-JSON body) rather than merely returning a non-ok response, and
- * every caller here composes several of these behind a `Promise.all` — one
- * transient failure must degrade to `failure(...)` for that one query, not crash
- * the whole page with an uncaught exception.
- *
- * Counted as one billable Analytics Engine query whether it answers or fails, which is
- * what makes the monitors list's query-per-monitor visible in the cost figures rather than
- * only in the code.
+ * Runs a raw SQL query against the Analytics Engine HTTP API. Wrapped in a
+ * try/catch so a thrown network/DNS/parse error degrades to `failure(...)`
+ * instead of crashing callers that compose several via `Promise.all`.
  * @param sql SQL query text (the account's Analytics Engine SQL dialect).
  */
 export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
@@ -107,9 +89,8 @@ export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>
 
 /**
  * {@link queryAnalytics}, cached in KV under `cacheKey` for `ttlSeconds`.
- *
- * The KV operations are counted here rather than through `countedKv`, because this reads
- * the binding directly instead of the instrumented one the router is handed.
+ * Reads `env.KV` directly, so the `recordCost` calls here track those KV
+ * operations themselves.
  */
 export async function queryAnalyticsCached<T>(
 	cacheKey: string,
@@ -139,17 +120,9 @@ export function getCacheTtl(minIntervalSeconds: number): number {
 }
 
 /**
- * Writes one ping result as an Analytics Engine data point, counted against the check
- * that produced it.
- *
- * Every ping type lands in this one dataset, told apart by `blob2` — the dimension was
- * always there, but only HTTP ever filled it, which is why DNS and TCP results were
- * invisible here until they started calling this too.
- *
- * `responseStatus`/`expectedStatus` are HTTP's alone and default to 0 for the types that
- * have no such notion. A zero already means "unknown" for HTTP itself (an unreachable
- * target has no status), so the two read the same way and no query has to special-case a
- * missing double.
+ * Writes one ping result as an Analytics Engine data point, counted against
+ * the check that produced it. `responseStatus`/`expectedStatus` default to
+ * 0 — HTTP's own "unknown" value — for ping types with no such notion.
  */
 export function writePingResult(params: {
 	monitorId: string;
@@ -181,18 +154,17 @@ function deriveHealth(
 }
 
 /**
- * Summarizes every HTTP monitor's last 24 hours for a team in one query: total checks
- * plus a per-status breakdown, from which a health badge and an uptime percentage
- * (up + degraded, since both mean the endpoint was reachable and correct) are derived.
- * Cached in KV.
+ * Summarizes every HTTP monitor's last 24 hours for a team in one query:
+ * total checks plus a per-status breakdown, from which a health badge and
+ * an uptime percentage (up + degraded, both reachable) are derived. Cached in KV.
  */
 export async function getTeamHttpSummaries(
 	teamId: string,
 ): Promise<Result<HttpMonitorSummary[], Error>> {
 	/**
-	 * Analytics Engine's SQL API rejects `COUNT(*)` ("COUNT() function must have 0
-	 * arguments"), so totals are summed from `double2` (always 1 per row, see
-	 * writePingResult) instead — matching how the same dataset is queried elsewhere.
+	 * Analytics Engine's SQL API rejects `COUNT(*)` ("COUNT() function must
+	 * have 0 arguments"), so totals are summed from `double2`, which is
+	 * always 1 per row (see writePingResult).
 	 */
 	let sql = `
 		SELECT
@@ -228,7 +200,10 @@ export async function getTeamHttpSummaries(
 	);
 }
 
-/** One monitor's slowest response time over the last 24 hours, in milliseconds, or `null` when it has no checks in range. */
+/**
+ * One monitor's slowest response time over the last 24 hours, in
+ * milliseconds, or `null` when it has no checks in range.
+ */
 export async function getSlowestResultForMonitor(
 	teamId: string,
 	monitorId: string,
@@ -257,22 +232,9 @@ interface HttpP99Row {
 }
 
 /**
- * The 99th-percentile response time over the last 24 hours, in milliseconds, for a whole
- * team or for one monitor — `null` when the scope has no HTTP checks in range.
- *
- * `quantileExactWeighted(q)(column, weight)` is the spelling this account's SQL dialect
- * documents; `quantileWeighted` exists only as a legacy `quantileWeighted(q, column,
- * weight)` form, so the curried spelling is the safe one. `_sample_interval` is the
- * weight for the same reason {@link getHttpDailyAggregate} uses it: Analytics Engine
- * statistically samples at scale, so an unweighted quantile skews toward whichever rows
- * survived sampling.
- *
- * The weighted check total comes back in the same query so "no checks at all" can be
- * told apart from a real quantile — with nothing in range the aggregate still returns one
- * row, and a `0` there means "empty", not "instant".
- *
- * The team-scoped query is cached in KV alongside the other dashboard queries; the
- * single-monitor one isn't, matching {@link getSlowestResultForMonitor}.
+ * The 99th-percentile response time over 24 hours, in ms, for a team or one
+ * monitor — `null` when the scope has no HTTP checks in range. Weighted by
+ * `_sample_interval` via the curried `quantileExactWeighted(q)(column, weight)` form; the flat form is legacy-only.
  */
 export async function getHttpP99ResponseTime(
 	scope: HttpP99Scope,
@@ -289,11 +251,9 @@ export async function getHttpP99ResponseTime(
 	`;
 
 	/**
-	 * Wrapped in a try/catch on top of the one inside {@link queryAnalytics}: the cached
-	 * path reads KV before it ever reaches that guard, and a KV read can throw. This is
-	 * the only figure on a stats card whose other numbers come from D1, so anything that
-	 * goes wrong on the way to Analytics Engine has to degrade to one missing number
-	 * rather than take the whole card down.
+	 * Wrapped in a second try/catch: the cached path reads KV before ever
+	 * reaching {@link queryAnalytics}'s own guard, and a KV read can throw. A
+	 * failure here degrades to one missing number, keeping the rest of the card intact.
 	 */
 	let result: Result<HttpP99Row[], Error>;
 	try {
@@ -364,11 +324,9 @@ function downsampleSparklinePoints(
 }
 
 /**
- * Every HTTP monitor's recent latency sparkline for a team in one query — unlike
- * {@link getMonitorSparkline}, which queries a single monitor, this fetches the team's
- * last `limit` HTTP results across every monitor, groups them by monitor in memory, and
- * downsamples each group to a chart-friendly point count. Avoids an N+1 query per
- * monitor on the dashboard table. Cached in KV.
+ * Every HTTP monitor's recent latency sparkline for a team in one query,
+ * avoiding an N+1 per monitor: groups the team's last `limit` HTTP results
+ * by monitor in memory and downsamples each group. Cached in KV.
  */
 export async function getTeamHttpSparklines(
 	teamId: string,
@@ -419,10 +377,9 @@ export interface HttpDailyAggregate {
 }
 
 /**
- * Every HTTP monitor's totals for one UTC calendar day, across every team — the source
- * `AggregateDailyStatsJob` rolls into `monitor_daily_stats`. `_sample_interval` weights
- * each row by how many real events it represents, since Analytics Engine statistically
- * samples at scale; a plain `COUNT(*)` would undercount under sampling.
+ * Every HTTP monitor's totals for one UTC calendar day, across every team —
+ * the source `AggregateDailyStatsJob` rolls into `monitor_daily_stats`.
+ * `_sample_interval` weights each row since Analytics Engine samples statistically; a plain `COUNT(*)` would undercount.
  */
 export async function getHttpDailyAggregate(
 	date: string,

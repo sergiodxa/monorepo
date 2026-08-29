@@ -1,9 +1,9 @@
 /**
- * Tests the account export as a document: what a person's own export contains, and — the half
- * that matters — what it must never contain. Every exclusion is asserted against the serialized
- * JSON rather than against the object graph, because the file is what leaves the building: a
- * secret reachable through a getter, a spread that pulled in one column too many, or a nested
- * row nobody meant to include all show up as a substring of the text and in nothing else.
+ * Tests the account export as a document: what a person's own export contains, and — the
+ * half that matters — what it excludes. Every exclusion is asserted against the serialized
+ * JSON, since that string is what leaves the building: a secret reachable through a getter,
+ * a spread that pulled in one column too many, or a nested row nobody meant to include all
+ * surface as a substring there.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -103,7 +103,6 @@ async function addDnsMonitor(db: Database, teamId: string, name = "example.com")
 	);
 }
 
-/** Adds one tracked record to a DNS monitor. */
 async function addDnsRecord(
 	db: Database,
 	monitorId: string,
@@ -198,8 +197,10 @@ describe("buildAccountExport", () => {
 		expect(joinedMembership?.isOwner).toBe(false);
 		expect(joinedMembership?.role).toBe("member");
 
-		// Configuration is exported for teams the viewer owns and for no others: a team they
-		// merely joined is somebody else's setup.
+		/**
+		 * Configuration is exported only for teams the viewer owns; a team they merely
+		 * joined is somebody else's setup.
+		 */
 		expect(document.ownedTeams).toHaveLength(1);
 		expect(document.ownedTeams[0]?.name).toBe("Owned");
 		expect(document.ownedTeams[0]?.httpMonitors).toHaveLength(1);
@@ -366,12 +367,12 @@ describe("buildAccountExport", () => {
 		};
 
 		expect(exported.records).toHaveLength(2);
-		// Ordered by name, so two exports of an unchanged monitor are the same file.
+		/** Ordered by name, so two exports of an unchanged monitor are the same file. */
 		expect(exported.records.map((record) => record.name)).toEqual([
 			"example.com",
 			"mail.example.com",
 		]);
-		// The join column is the monitor this array already sits under, as with content checks.
+		/** The join column is the monitor this array already sits under, as with content checks. */
 		expect(exported.records[0]?.dns_monitor_id).toBeUndefined();
 		expect(JSON.stringify(document)).toContain("203.0.113.5");
 		expect(document.ownedTeams[0]?.dnsRecordsTruncated).toBe(false);
@@ -383,8 +384,10 @@ describe("buildAccountExport", () => {
 		await addMember(db, team.id, SUBJECT.id);
 		let monitor = await addDnsMonitor(db, team.id);
 
-		// One row past the cap: the smallest input that proves the cap is a cap and that the
-		// overshoot the reader uses to detect it never reaches the file.
+		/**
+		 * One row past the cap: the smallest input that shows the cap holds, since the
+		 * overshoot row stays out of the file the assertions below check.
+		 */
 		for (let index = 0; index <= MAX_EXPORTED_DNS_RECORDS_PER_TEAM; index++) {
 			await addDnsRecord(db, monitor.id, {
 				name: `host-${index.toString().padStart(5, "0")}.example.com`,

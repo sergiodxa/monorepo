@@ -18,17 +18,8 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 
 /**
  * Resolves every listed subject id to its auth-server profile, best-effort.
- *
- * One request per distinct subject, in bounded-concurrency batches (ADR-008): a page asks about
- * the handful of members in one team, but the digest job asks about every member of every team
- * in one invocation, and an unbounded fan-out of that set would sit well past the Workers
- * simultaneous-subrequest ceiling. Ids are de-duplicated first, since the same person is a
- * member of as many teams as they joined.
- *
- * Best-effort in two places on purpose. A failed client-credentials exchange returns an empty
- * map rather than throwing, and one subject the auth server cannot resolve is absent from the
- * map rather than failing the batch — every caller has to decide what a missing profile means
- * for the one row, or the one email, it belongs to.
+ * Runs in bounded-concurrency batches to stay under the Workers subrequest
+ * ceiling (ADR-008); an unresolved id is simply absent from the result.
  *
  * @param sdk - Auth SDK to resolve through.
  * @param subjectIds - Subjects to look up, duplicates allowed.

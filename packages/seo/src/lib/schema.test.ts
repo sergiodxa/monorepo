@@ -1,8 +1,8 @@
 /**
  * Unit tests for the builders in {@link "./schema"}: every node declares the one
  * schema.org context and its own `@type`, nested nodes carry theirs, page URLs come out
- * canonical while asset URLs come out absolute, and optional properties are absent
- * rather than present-and-empty.
+ * canonical, asset URLs come out absolute, and optional properties appear only when the
+ * caller supplies them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +14,6 @@ import { createSchemaBuilders } from "./schema";
 
 const BASE_URL = "https://example.com";
 
-/** The builder set under test, bound to a fictional site. */
 function builders() {
 	return createSchemaBuilders({
 		baseUrl: BASE_URL,

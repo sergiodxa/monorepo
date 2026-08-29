@@ -1,7 +1,7 @@
 /**
  * Unit tests for {@link "./robots"}: each boolean pair maps to the directive spelling a
  * crawler expects, and the default is the fully permissive value a page without the tag
- * already has, so adding the tag never changes how an indexable page is treated.
+ * already has, so an indexable page keeps the same treatment once the tag is added.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

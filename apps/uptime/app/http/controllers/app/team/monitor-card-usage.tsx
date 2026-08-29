@@ -25,17 +25,9 @@ import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /**
- * Reduces one settled figure to the number the card can render, or to `null` for
- * "unavailable" — reporting under `event` every reason it had to give up.
- *
- * The reporting is the point. A monitor that genuinely ran nothing is a fulfilled `0` and
- * renders as `0`; only a failure produces `null`, and `null` renders as a dash. Flattening
- * a rejection without recording it leaves a broken query with no trace anywhere but that
- * dash, on a page nobody watches, which is how the previous version of this card stayed
- * silently broken in production.
- *
- * A fulfilled but non-finite figure is treated the same way: "NaN" reads as a real value
- * to whoever sees it, and "unknown" is the honest answer.
+ * Reduces one settled figure to a renderable number, or logs under `event` and
+ * returns `null` for "unavailable". A fulfilled `0` still renders as `0`, while a
+ * rejection or a non-finite value is always logged before it renders as a dash.
  */
 function reportable(
 	result: PromiseSettledResult<number>,
@@ -57,18 +49,12 @@ function reportable(
 }
 
 /**
- * Counts the pings this monitor has consumed so far this month and, independently,
- * projects the consumption its current interval implies — both from the local check
- * history, in parallel via `Promise.allSettled` so a failure in either one still lets
- * the other render. Each resolves to `null` when its own query failed, since "usage
- * unavailable" must never be shown to the user as "0 used"; a monitor that genuinely
- * ran nothing is a `0` and shows as `0`.
+ * Counts consumed pings and projects the interval's implied consumption in
+ * parallel via `Promise.allSettled` so either failing still lets the other
+ * render; both read from local check history, independent of billing state.
  *
- * Both figures come from this app's own data, so the card is readable regardless of the
- * team's billing state and no subscription check gates it. The consumed figure is
- * therefore what was recorded here rather than what was billed, and it undercounts a
- * month where an aggregation run was lost — see
- * {@link Monitor.countConsumedPingsByMonitor}.
+ * @see {@link Monitor.countConsumedPingsByMonitor} for why the consumed figure
+ * can undercount when an aggregation run is lost.
  */
 async function getMonitorPingUsage(
 	db: Database,

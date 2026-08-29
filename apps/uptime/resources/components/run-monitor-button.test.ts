@@ -68,7 +68,7 @@ describe("transitionToast", () => {
 		expect(transitionToast(i18n.t, "Homepage", "degraded", "degraded")).toBeUndefined();
 	});
 
-	/** An unreadable outcome is not a transition — there is nothing truthful to announce. */
+	/** A status that couldn't be read has nothing true to report, so it stays silent. */
 	test("says nothing when the new status is unknown", () => {
 		expect(transitionToast(i18n.t, "Homepage", "up", null)).toBeUndefined();
 	});

@@ -203,11 +203,9 @@ describe("cronJobEdit", () => {
 		}
 
 		/**
-		 * Matching happens within the switch's own tag, since the bare word
-		 * `checked` also appears in the component's `~ input:checked` CSS. `checked`
-		 * is an HTML boolean attribute: its mere presence — even as `checked="0"`
-		 * for a `false` that came back from SQLite as the integer 0 — renders the
-		 * switch ON, and re-saving would flip the stored decision.
+		 * Scoped to the switch's own tag since the bare word `checked` also shows
+		 * up in the component's `~ input:checked` CSS. `checked` is an HTML
+		 * boolean attribute: even `checked="0"` from a false SQLite value renders it on.
 		 */
 		let checkedInput = /<input[^>]*\bname="alert_on_late"[^>]*\schecked/;
 

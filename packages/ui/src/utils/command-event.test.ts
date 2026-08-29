@@ -1,7 +1,6 @@
 /**
  * Unit tests for the command-event cast in {@link "./command-event"}: every
- * assertion checks the narrowed value against a plain `Event` stand-in, with
- * no DOM and no rendering involved.
+ * assertion checks the narrowed value against a plain `Event` stand-in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

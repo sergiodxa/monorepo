@@ -1,12 +1,13 @@
 /**
  * Tests DNS resolution for domain monitors. The DoH endpoint is stubbed with MSW and
- * answers with payloads copied from real queries, because the four behaviours pinned here —
+ * answers with payloads copied from real queries, since the four behaviours pinned here —
  * `NXDOMAIN` is not an error, a CNAME poisons an address sweep, a long TXT arrives in
- * chunks, and both input channels must fold to one string — are all properties of what
- * Cloudflare actually returns rather than of what the code expects it to.
+ * chunks, and both input channels fold to one string — are all properties confirmed by
+ * what Cloudflare actually returns.
  *
- * `resolveDns` is tested for the throw-on-anything-but-clean-NOERROR contract the public
- * probe's SSRF fence depends on, separately from the sweep's never-throw one.
+ * `resolveDns` is tested against the throw-on-anything-but-clean-NOERROR contract the
+ * public probe's SSRF fence depends on, kept separate from the sweep's own
+ * value-returning contract.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

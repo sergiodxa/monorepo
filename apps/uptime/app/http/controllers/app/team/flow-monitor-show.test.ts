@@ -1,9 +1,9 @@
 /**
- * Tests for the flow monitor detail page shell. `~/app/data/flow-monitor` doesn't import
- * `cloudflare:workers`, so no module mock is needed here. `getViewer()`/`ctx.team`/
- * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for the real
- * `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/actions/monitors.test.ts`.
+ * Tests for the flow monitor detail page shell. `~/app/data/flow-monitor` runs unmocked
+ * here, since it needs nothing from `cloudflare:workers` that a test would have to stand
+ * in for. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a
+ * fake middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
+ * matching the template in `app/http/controllers/actions/monitors.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,9 +68,9 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 }
 
 /**
- * Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s renderer. Frame
- * resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op — the
- * results fragment this page frames has its own test.
+ * Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s renderer.
+ * `resolveFrame` is a no-op stand-in here, since frame resolution has its own test for the
+ * results fragment this page frames.
  */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {

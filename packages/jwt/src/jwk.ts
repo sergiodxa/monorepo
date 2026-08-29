@@ -30,10 +30,8 @@ const SCAN_PAGE_SIZE = 100;
 
 /**
  * The public parameters a JWKS entry carries, one key type at a time.
- *
- * Each entry is rebuilt only from the fields listed here, which keeps private
- * components — `d`, and an RSA key's `p`, `q`, `dp`, `dq`, `qi` — out of a
- * published key set; `toJSON` throws for any key type missing from this map.
+ * Rebuilding an entry only from the fields listed here keeps private components
+ * — `d`, and an RSA key's `p`, `q`, `dp`, `dq`, `qi` — out of a published set.
  */
 const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undefined> = {
 	EC: ({ crv, x, y }) => ({ crv, x, y }),
@@ -100,8 +98,8 @@ export namespace JWK {
 	/**
 	 * The half of a key pair `JWT.sign` needs.
 	 *
-	 * A structural subset of `KeyPair`, so a full pair is accepted wherever this is,
-	 * and a caller holding only a private key does not have to fabricate the rest.
+	 * A structural subset of `KeyPair`, so a full pair is accepted wherever this is
+	 * expected, and a caller holding only a private key already has enough to sign.
 	 */
 	export interface SigningKey {
 		/** Identifier written into the token header as `kid`. */
@@ -139,8 +137,8 @@ export namespace JWK {
 	/**
 	 * Generates a new key pair in serialized form.
 	 *
-	 * Generated extractable so the pair can be written to storage; a key held
-	 * only within one isolate would sign tokens no other isolate could verify.
+	 * Generated extractable, so the pair survives being written to storage and
+	 * every isolate can import it to verify tokens any other isolate signed.
 	 *
 	 * @param alg - Algorithm to generate for.
 	 * @returns The pair as PEM strings, ready to store.
@@ -163,9 +161,8 @@ export namespace JWK {
 	/**
 	 * Imports a stored key pair back into usable `CryptoKey` objects.
 	 *
-	 * The public half is imported extractable, ready to be re-exported as a JWK,
-	 * while the private half imports non-extractable since it never needs to
-	 * leave the runtime again.
+	 * The public half imports extractable, ready to re-export as a JWK; the
+	 * private half imports non-extractable, keeping it confined to the runtime.
 	 *
 	 * @param value - A pair previously produced by `generateKeyPair`.
 	 * @returns The pair with both halves imported and the public JWK attached.
@@ -194,9 +191,8 @@ export namespace JWK {
 	/**
 	 * Loads the signing keys out of storage, generating one on first use.
 	 *
-	 * Every stored key comes back newest first, the order `JWT.sign` picks by and
-	 * `toJSON` publishes in; finding none usable mints an ES256 key and re-reads
-	 * storage, so every isolate ends up with the identical result.
+	 * Every stored key comes back newest first; finding none usable mints an ES256
+	 * key and re-reads storage, so every isolate converges on the same result.
 	 *
 	 * @param storage - Where key files live.
 	 * @returns The usable key pairs, newest first.
@@ -258,8 +254,7 @@ export namespace JWK {
 	 * Renders key pairs as the JSON a `/.well-known/jwks.json` endpoint serves.
 	 *
 	 * Each entry keeps only the public parameters its key type publishes here,
-	 * plus `kid` and `alg`; an unrecognized key type raises an error, keeping
-	 * unvetted private material out of the published set.
+	 * plus `kid` and `alg`, keeping unvetted private material out of the set.
 	 *
 	 * @param keys - The key pairs to publish.
 	 * @returns The JWKS document.
@@ -283,7 +278,7 @@ export namespace JWK {
 	 * Walks every stored key under a prefix, page by page.
 	 *
 	 * Every page's entries are yielded, including the first, so the earliest key
-	 * file is never dropped, and any returned cursor is followed to the next page.
+	 * file stays included, and any returned cursor is followed to the next page.
 	 *
 	 * @param storage - Where key files live.
 	 * @param prefix - Key prefix to walk.
@@ -300,8 +295,6 @@ export namespace JWK {
 	}
 
 	/**
-	 * Writes a serialized key pair into storage as a JSON file.
-	 *
 	 * @param storage - Where key files live.
 	 * @param prefix - Key prefix to write under.
 	 * @param serialized - The pair to store.

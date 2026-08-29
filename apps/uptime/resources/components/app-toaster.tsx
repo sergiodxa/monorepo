@@ -1,15 +1,13 @@
 /**
- * App-wide client toast stack: a `clientEntry` island holding one headless `Toaster`
- * queue and rendering it into a `Toast.Region`. Any other island anywhere on the page
- * queues a toast with {@link showToast}, which travels as a DOM event on `document`
- * rather than through `remix/ui` context — each island hydrates its own runtime tree, so
- * there is no shared ancestor between a button in the page header and this region.
+ * App-wide client toast stack: a `clientEntry` island holding one headless
+ * `Toaster` queue, rendered into a `Toast.Region`. Other islands queue a toast
+ * via {@link showToast}, which dispatches a `document` DOM event so any island
+ * can reach this region, since each island hydrates its own runtime tree with
+ * no shared ancestor between them.
  *
- * It renders nothing at all while the queue is empty, which is always the case
- * server-side: a toast here is by definition something that happened after hydration, and
- * keeping the empty case out of the markup is also what lets the region's labels come
- * from `intl(handle)` (resolved from the module-scoped default the browser bootstrap
- * registers, which exists only in the browser) without an `IntlProvider` ancestor.
+ * Rendering nothing while the queue is empty (always true server-side) is
+ * also what lets region labels resolve from the module-scoped `intl(handle)`
+ * default without an `IntlProvider` ancestor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +38,8 @@ export interface AppToast {
 
 /**
  * Queues a toast on the page's {@link AppToaster}. A no-op outside the browser and
- * whenever no `AppToaster` is mounted, so a caller never has to guard either case —
- * a toast is a progressive enhancement, not something to fail a flow over.
+ * whenever no `AppToaster` is mounted, so a caller can call it unconditionally: a
+ * toast is a progressive enhancement a flow completes successfully without.
  *
  * @param toast The already-translated toast to show.
  * @example
@@ -59,8 +57,8 @@ export const AppToaster = clientEntry(
 		let toaster = new Toaster<AppToast>();
 
 		/**
-		 * `queueTask` never runs in the server renderer, which is what keeps every
-		 * `document`/timer touch below out of the SSR pass without an environment check.
+		 * `queueTask` never runs in the server renderer, so every `document`/timer
+		 * touch below can assume it always runs in the browser.
 		 */
 		handle.queueTask(() => {
 			toaster.addEventListener("change", () => handle.update(), { signal: handle.signal });
@@ -74,7 +72,7 @@ export const AppToaster = clientEntry(
 				{ signal: handle.signal },
 			);
 
-			// Timers outlive the island otherwise, and each one would fire into a dead tree.
+			/** Timers outlive the island otherwise, and each one would fire into a dead tree. */
 			handle.signal.addEventListener("abort", () => toaster.dispose());
 		});
 

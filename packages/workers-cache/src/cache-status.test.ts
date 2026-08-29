@@ -1,7 +1,7 @@
 /**
  * Covers the cache status reader: the header values that map onto each status,
  * the case and whitespace tolerance, and that an absent or unrecognized value
- * reads as unknown instead of being reported as a miss.
+ * reads as unknown, a status distinct from a miss.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,6 @@ import { describe, expect, test } from "vitest";
 import { cacheStatus } from "./cache-status";
 import { CACHE_STATUS_HEADER } from "./platform";
 
-/** Builds a response carrying the given platform cache status header value. */
 function respond(status?: string): Response {
 	return new Response("ok", {
 		headers: status === undefined ? {} : { [CACHE_STATUS_HEADER]: status },

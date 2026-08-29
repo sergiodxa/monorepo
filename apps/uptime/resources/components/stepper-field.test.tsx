@@ -48,9 +48,9 @@ async function hydrationData(html: string) {
 
 describe("StepperField", () => {
 	/**
-	 * The whole point of the component: a plain server component renders the same
-	 * markup and never hydrates, so the marker and its entry are what prove the
-	 * buttons get a runtime at all.
+	 * The whole point of the component: the rendered markup looks the same
+	 * whether the buttons hydrate or not, so the marker and its client entry
+	 * are what prove they got a runtime.
 	 */
 	test("renders as a client entry the browser bootstrap can load", async () => {
 		let html = await render();
@@ -66,8 +66,8 @@ describe("StepperField", () => {
 
 	/**
 	 * `bootstrap/browser.ts` resolves a client entry by globbing `../resources/**`
-	 * and keying on the module URL's pathname, so a URL naming a file that isn't
-	 * there throws at hydration time instead of failing any type check.
+	 * and keying on the module URL's pathname, a plain string whose mismatch
+	 * only ever surfaces as a hydration-time throw — the failure this test catches.
 	 */
 	test("names a module the browser bootstrap's resources glob actually covers", async () => {
 		let { h } = await hydrationData(await render());
@@ -108,7 +108,7 @@ describe("StepperField", () => {
 		expect(html).toContain('id="tcp-monitor-port"');
 	});
 
-	/** Both buttons carry a glyph and no text, so the accessible name can only come from the label prop. */
+	/** Both buttons carry only a glyph, so the accessible name can only come from the label prop. */
 	test("names both buttons for assistive technology", async () => {
 		let html = await render();
 

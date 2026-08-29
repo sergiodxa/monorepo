@@ -97,15 +97,14 @@ describe("RangeSlider", () => {
 
 	/**
 	 * The fill bar's length rides a custom property the track computes from the
-	 * value it renders with — 600 seconds is 15.25% of the way from 60 to 3600 —
-	 * so a re-render with a new value is what moves the fill, and the property
-	 * carrying the rendered value is what proves the two are linked at all.
+	 * value it renders with — 600 of 60–3600 is 15.25% — so the property is
+	 * what links a re-render's new value to the bar's width.
 	 */
 	test("sizes the track's fill bar from the value it renders with", async () => {
 		expect(await render()).toContain("--ui-slider-fill: 15.25%");
 	});
 
-	/** The readout reports the scaled, unit-suffixed value rather than the raw seconds the form posts. */
+	/** The readout reports the value scaled and unit-suffixed for display; the form still submits it in raw seconds. */
 	test("reports the value in the unit the label promises", async () => {
 		let html = await render();
 

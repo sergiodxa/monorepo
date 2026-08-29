@@ -1,8 +1,8 @@
 /**
  * Tests for the inflection rules, covering the regular English suffixes, the
  * default irregulars and uncountables, the identifier casings used to derive
- * job names, and the guarantee that a custom inflector never leaks its
- * vocabulary into the shared one.
+ * job names, and the guarantee that a custom inflector's vocabulary stays
+ * scoped to that inflector alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

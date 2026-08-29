@@ -193,10 +193,13 @@ describe("monitor-card-slowest-result", () => {
 		expect(body).toContain("N/A");
 	});
 
+	/**
+	 * A monitor outside the team is rejected before any Analytics Engine query runs;
+	 * the `onUnhandledRequest: "error"` guard turns an unexpected query into a failing
+	 * request, holding the card to that guarantee.
+	 */
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		// A monitor the team doesn't own is rejected before any query is billed, which this
-		// handler and the `onUnhandledRequest: "error"` guard together hold the card to.
 		server.use(
 			http.post(SQL_URL, () => {
 				throw new Error("the slowest-result card must not query for a monitor outside the team");

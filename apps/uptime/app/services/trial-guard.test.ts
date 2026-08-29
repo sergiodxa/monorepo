@@ -1,33 +1,9 @@
 /**
- * Tests the fence in front of the public trial probe. Three things are worth pinning here
- * and the rest follows from them.
- *
- * The first is the blocklist, exercised range by range rather than by sampling, because
- * every entry in it is a separate decision and a missing one is invisible until it is
- * exploited. That includes the spellings that only exist to get past a check like this:
- * the legacy IPv4 forms `URL` silently normalizes, the IPv6 prefixes that carry an IPv4
- * inside them, and the fully qualified `localhost.` that matches no suffix rule until its
- * root label is stripped.
- *
- * The second is that the challenge fails closed in every direction, an absent secret
- * included. An unconfigured deployment refuses rather than passing, and it says so in the
- * log, because the alternative — a quietly unchallenged prober — looks identical to a
- * protected one from outside until the bill arrives.
- *
- * The third is that the refusals stay apart. A test asserting only `isFailure` would pass
- * while the page told a visitor their site was down because we had run out of budget, or
- * told somebody who had not ticked the box to reload the page.
- *
- * The fourth is what a billed probe does and does not skip: the three free-tier controls
- * go, and the two that keep this Worker from being an attack proxy stay. Both halves are
- * asserted, because the failure modes are a spent budget nobody owed and an open prober.
- *
- * The Cloudflare bindings are an in-memory KV namespace and a really-counting rate limiter,
- * installed through `vi.doMock("cloudflare:workers", ...)`, so the day's counter is read
- * back from storage and a refused caller is one that spent its allowance. Both outbound
- * calls — DNS-over-HTTPS and Turnstile's siteverify — are intercepted with MSW, one handler
- * each, so a test can fail one without touching the other and the calls a probe did *not*
- * make are counted off the requests that really left.
+ * Tests the fence in front of the public trial probe: the blocklist (exercised range by
+ * range, including the address spellings that exist only to evade a check like this), a
+ * challenge that fails closed even with no secret configured, and refusal reasons kept
+ * distinguishable so a test can tell a budget refusal from a missing checkbox. Both outbound
+ * calls are intercepted with MSW so a probe's skipped calls are as visible as the ones it made.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,9 +37,9 @@ let kvPut = vi.spyOn(kv, "put");
 let limiter: RateLimitMock = createRateLimit({ limit: TRIAL_PROBE_LIMIT, period: 60 });
 
 /**
- * Turnstile's two keys. They are variables behind accessors rather than plain bindings
- * because the service reads them off `env` at call time, and the tests move each one between
- * configured, empty and absent — which is what makes an unconfigured deployment testable.
+ * Turnstile's two keys sit behind accessors, since the service reads them off `env` at call
+ * time: the tests move each one between configured, empty and absent, which is what makes an
+ * unconfigured deployment testable.
  */
 let turnstileSecretKey: string | undefined = "turnstile-secret";
 let turnstileSiteKey: string | undefined = "turnstile-site";
@@ -113,8 +89,8 @@ let verifications: Verification[] = [];
 
 /**
  * Both outbound endpoints, answering out of {@link dnsRecords}/{@link dnsFailures} and the
- * Turnstile switches so a test steers them by setting state rather than by re-registering a
- * handler. Registered as defaults, so `resetHandlers` puts them back between tests.
+ * Turnstile switches, so a test steers them just by setting that state. Registered as
+ * defaults, so `resetHandlers` puts them back between tests.
  */
 let server = setupServer(
 	http.get(DOH_URL, ({ request }) => {
@@ -159,9 +135,12 @@ function submission(
 	};
 }
 
+/**
+ * The namespace and the limiter outlive the test that used them, so every test clears
+ * yesterday's counter and any spent allowance first. `logger.error` is silenced here too,
+ * since the unconfigured-secret case logs by design and a test below asserts on that call.
+ */
 beforeEach(async () => {
-	// The namespace and the limiter outlive the test that used them, so yesterday's counter
-	// and a spent allowance are cleared rather than re-created.
 	let { keys } = await kv.list();
 	for (let key of keys) await kv.delete(key.name);
 	kvGet.mockClear();
@@ -181,8 +160,6 @@ beforeEach(async () => {
 	dnsQueries = [];
 	verifications = [];
 
-	// Silenced rather than left to print: the unconfigured-secret case logs on every request
-	// by design, and one of the tests below asserts on exactly that call.
 	vi.spyOn(logger, "error").mockImplementation(() => {});
 });
 
@@ -485,13 +462,13 @@ describe("guardTrialProbe", () => {
 		expect(result.error.reason).toBe("failed-challenge");
 	});
 
+	/** The token is never sent for verification, so nothing is spent asking. */
 	test("tells an unfinished form apart from a rejected token, and asks nobody about it", async () => {
 		let result = await guardTrialProbe(submission("example.com", { token: null }));
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("challenge-incomplete");
-		// The token is never sent for verification, so nothing is spent asking.
 		expect(verifications).toEqual([]);
 	});
 
@@ -522,8 +499,8 @@ describe("guardTrialProbe", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		/**
-		 * `unavailable` and not `failed-challenge`: the visitor completed everything asked of
-		 * them, and this deployment is the thing that is wrong.
+		 * The reason is `unavailable`: the visitor completed everything asked of them, so the
+		 * deployment is what's broken here.
 		 */
 		expect(result.error.reason).toBe("unavailable");
 		expect(result.error.detail).toBe("turnstile-unconfigured");
@@ -561,17 +538,18 @@ describe("guardTrialProbe", () => {
 		await guardTrialProbe(submission("example.com"));
 
 		/**
-		 * The binding counts one request per call and its ceiling is three per minute, so a
+		 * The binding counts one request per call, with a ceiling of three per minute, so a
 		 * second call here would silently cut a visitor's allowance from three probes to one.
-		 * Cheap to assert, and the failure it catches looks like the feature being broken
-		 * rather than like a limit being wrong.
+		 * Cheap to assert, and a failure here reads as the feature breaking outright.
 		 */
 		expect(limiter.count("trial-probe:203.0.113.9")).toBe(1);
 	});
 
+	/**
+	 * The caller's whole minute is spent before it submits, so the refusal comes from the
+	 * binding's own counter reaching its ceiling.
+	 */
 	test("refuses an address that is over its budget, before anything is spent on it", async () => {
-		// The caller's whole minute spent before it submits, so the refusal comes from the
-		// binding's own counter reaching its ceiling rather than from a canned answer.
 		for (let spent = 0; spent < TRIAL_PROBE_LIMIT; spent++) {
 			await limiter.limit({ key: "trial-probe:203.0.113.9" });
 		}
@@ -591,7 +569,7 @@ describe("guardTrialProbe", () => {
 		await guardTrialProbe(submission("example.com"));
 
 		expect(await kv.get(budgetKey)).toBe("1");
-		// Two days, which the stored counter cannot report back on its own.
+		/** Two days, which the stored counter cannot report back on its own. */
 		expect(kvPut).toHaveBeenCalledWith(budgetKey, "1", { expirationTtl: 172_800 });
 	});
 
@@ -616,7 +594,7 @@ describe("guardTrialProbe", () => {
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("budget-exhausted");
 		expect(result.error.detail).toBe("daily-cap");
-		// Untouched: a probe that was refused must not spend anything on top of a spent day.
+		/** The day's counter stays exactly as spent, since a refused probe adds nothing to it. */
 		expect(await kv.get(budgetKey)).toBe(String(TRIAL_DAILY_BUDGET));
 	});
 
@@ -659,7 +637,7 @@ describe("guardTrialProbe", () => {
 
 		expect(isFailure(result)).toBe(false);
 		if (isFailure(result)) return;
-		// Nothing to report: a billed probe takes nothing out of the day's allowance.
+		/** A billed probe takes nothing out of the day's allowance, so there is nothing to report. */
 		expect(result.data.budgetRemaining).toBeNull();
 		expect(limiter.count("trial-probe:203.0.113.9")).toBe(0);
 		expect(kvGet).not.toHaveBeenCalled();

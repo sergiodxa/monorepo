@@ -1,7 +1,7 @@
 /**
  * Covers {@link interactiveTransition} as pure `css()` output: the exact
  * transition-property list, and its duration/easing sourced from the
- * animation layer's shared tokens rather than a restated literal.
+ * animation layer's shared tokens.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

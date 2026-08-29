@@ -5,8 +5,7 @@
  * The blog resolves services through `@pkg/service-container`, which suits a handler whose
  * signature the app controls. A handler behind a route-agnostic boundary — an MCP tool, for
  * instance — receives only a context, so for those the database has to be *in* that
- * context. This middleware is what puts it there, scoped to the routes that need it rather
- * than added globally.
+ * context. This middleware puts it there, scoped to just the routes that need it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,9 +33,8 @@ export default function database(): Middleware {
 /**
  * Reads the database out of request context.
  *
- * Throws rather than returning `undefined`, because a handler reaching for a database the
- * route never provided is a wiring mistake and not a runtime condition worth handling at
- * every call site. The message names the fix.
+ * A missing database signals a wiring mistake fixed once at the route, so
+ * this throws with a message naming the fix.
  *
  * @param ctx The request context, whatever middleware it has been through.
  * @returns The request-scoped database.

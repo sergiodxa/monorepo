@@ -28,11 +28,9 @@ export namespace Cache {
 	 */
 	interface StoreWriteOptions {
 		/**
-		 * How long the entry may be served before it expires. A bare number is
-		 * whole seconds — the unit this option has always used and the unit KV's
-		 * `expirationTtl` counts — so numeric call sites keep their exact expiry,
-		 * while a duration string states its own unit. `3600` and `"1 hour"` are
-		 * therefore equivalent. Omitted means the entry never expires.
+		 * A bare number is whole seconds — the unit KV's `expirationTtl`
+		 * counts, so numeric call sites keep their exact expiry — while a
+		 * duration string states its own unit. Omitted means no expiration.
 		 */
 		ttl?: DurationInput;
 	}
@@ -174,12 +172,9 @@ export namespace Cache {
 }
 
 /**
- * Normalizes a TTL option to the whole seconds KV's `expirationTtl` counts.
- *
- * A bare number is already seconds and passes through untouched, so existing
- * numeric call sites keep their exact expiry; a duration string is converted,
- * which makes `3600` and `"1 hour"` produce the same expiry. `undefined` stays
- * `undefined` so KV stores the entry without expiration.
+ * A bare number passes through unchanged so existing numeric call sites keep
+ * their exact expiry; a duration string converts so `3600` and `"1 hour"`
+ * produce the same result. `undefined` stays `undefined`.
  */
 function toExpirationTtl(ttl: DurationInput | undefined): number | undefined {
 	if (ttl === undefined) return undefined;

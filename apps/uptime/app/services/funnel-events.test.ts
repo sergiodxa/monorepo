@@ -2,14 +2,12 @@
  * Tests the funnel-event service: the names and properties each event emits, and the two
  * guarantees the callers depend on.
  *
- * The first is privacy, and it is the suite that matters most. Every one of these events is
- * emitted from a path that has a URL, an address or a webhook secret in scope, so the rule is
- * pinned twice over: once as "no typed property carries one", and once as "a value that looks
- * like one is redacted even if a property is added carelessly later".
+ * The first is privacy: every event is emitted from a path that may hold a URL, an address
+ * or a webhook secret, so the rule is pinned twice — no typed property carries one, and a
+ * value that looks like one is redacted even if a property is added carelessly later.
  *
- * The second is that emitting cannot fail a request. A sink that throws, and no sink at all,
- * both have to leave the caller running — instrumentation is never a reason somebody's form
- * submission returns a 500.
+ * The second is that the caller keeps running whether the sink throws or there is no sink
+ * at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -211,10 +209,9 @@ describe("event names", () => {
 
 describe("no personal data", () => {
 	/**
-	 * The rule, pinned as one table rather than one test each: an event may never carry a full
-	 * URL, an address, a token, a query string, a response body, or free text. Each of these is
-	 * fed in through a property whose type says `string`, which is exactly the mistake a future
-	 * change could make, and every one of them has to come back out redacted.
+	 * The rule, pinned once as a table: an event may never carry a full URL, an address, a
+	 * token, a query string, a response body, or free text, fed in through a plain `string`
+	 * property the way a careless future change would.
 	 */
 	let unsafe: Array<[string, string]> = [
 		["an email address", "reader@example.com"],
@@ -264,8 +261,7 @@ describe("no personal data", () => {
 
 		/**
 		 * Every event, each fed the worst value its string properties will accept, so the check
-		 * is over the whole taxonomy at once rather than over the handful of events that happen
-		 * to be interesting. Nothing that comes out may look like personal data.
+		 * covers the whole taxonomy at once. Nothing that comes out may look like personal data.
 		 */
 		let poison = "reader@example.com?token=abc https://example.com/x";
 
@@ -343,9 +339,9 @@ describe("no personal data", () => {
 		expect(recorded).toHaveLength(10);
 
 		/**
-		 * Asserted as "nothing that reaches a log looks like personal data" rather than as
-		 * "everything was redacted", because the enum values these events legitimately carry —
-		 * `up`, `http`, `daily` — are strings too and must survive.
+		 * Asserted as "nothing that reaches a log looks like personal data," since the enum
+		 * values these events legitimately carry — `up`, `http`, `daily` — are strings too and
+		 * must survive.
 		 */
 		for (let entry of recorded) {
 			for (let value of Object.values(entry.payload)) {

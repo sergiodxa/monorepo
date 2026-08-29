@@ -1,17 +1,13 @@
 /**
  * The posts this blog offers as resources, declared as URL patterns.
  *
- * Resources exist alongside the tools because they answer a different question. A tool is
- * chosen by the model, which is why `get_post` needs a slug it had to find first; a
- * resource is picked by the *person*, from a list their client shows them. Somebody who
- * wants to hand one post to their agent has no slug to type and, without this, nothing to
- * browse.
+ * Resources sit beside the tools because they're picked differently: a tool is what the
+ * model chooses once it already has a slug, while a resource is what a person browses from
+ * a list in their client before any slug exists.
  *
- * The URIs are this blog's own `.md` URLs. `app/http/controllers/post.tsx` already
- * negotiates Markdown from both the extension and `Accept: text/markdown`, so a client may
- * fetch a post itself and never call this server — which is exactly when MCP says to use
- * the `https://` scheme. The extension rather than the header, because it holds for every
- * client regardless of what it sends.
+ * The URIs reuse this blog's own `.md` URLs, already served as Markdown by
+ * `app/http/controllers/post.tsx` — the `https://` scheme MCP calls for when a client
+ * fetches a post directly. The extension holds regardless of what the client sends.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,9 +18,8 @@ import { resource, resources } from "@pkg/mcp";
 /**
  * Origin the resource URIs are built against.
  *
- * Fixed rather than read from the request: a resource URI is an identity a client may
- * store, hand to another tool, or open in a browser, so it must not change depending on
- * which hostname a particular request arrived on.
+ * Fixed, since a resource URI is an identity a client may store or hand to another tool,
+ * so it must stay the same regardless of which hostname a request arrives on.
  */
 const ORIGIN = "https://sergiodxa.com";
 

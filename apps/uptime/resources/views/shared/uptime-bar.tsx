@@ -1,26 +1,11 @@
 /**
- * Compact uptime bar: a single row of thin vertical bars covering the last
- * {@link UPTIME_WINDOW_DAYS} days (today inclusive), one bar per day, colored by that
- * day's `monitor_daily_stats.status`. A range/uptime caption sits above the row and a
- * status-color legend below it. Days with no data (not yet reached, or the monitor
- * didn't exist yet) render as empty bars, and the bars stretch to fill the full row
- * width (no per-bar max width), so the row never trails off into empty space
- * regardless of how many days actually have data.
- *
- * Shared because the public status page and every signed-in monitor detail page want
- * the same summary of the same table, and a second copy would be a second thing to keep
- * in step. Bar/legend colors read the shared `--ui-success/warning/danger/
- * neutral-*` design tokens instead of ad-hoc `oklch(...)` literals, so they follow the
- * app's light/dark theming automatically.
- *
- * The component holds no copy of its own: every caption and legend label arrives
- * pre-translated through {@link UptimeBar.Props.labels} and
- * {@link UptimeBar.Props.formatUptime}, built once per request by the caller from
- * `ctx.i18next.t("statusPage.uptimeBar.*")` so one card's worth of translation work is
- * shared across every bar on a page.
- *
- * At the 2px floor each bar carries, a full 90-day row needs ~358px; a caller whose
- * column can be narrower than that on a phone should give it a scroll box of its own.
+ * Compact uptime bar: a row of thin bars covering the last
+ * {@link UPTIME_WINDOW_DAYS} days, one per day, colored by that day's
+ * `monitor_daily_stats.status`, with a range/uptime caption above and a
+ * status legend below. Shared by the public status page and the monitor
+ * detail page so both stay in step off one table. Captions and legend
+ * labels arrive pre-translated through {@link UptimeBar.Props.labels} and
+ * {@link UptimeBar.Props.formatUptime}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,11 +37,9 @@ function buildLastNDays(): string[] {
 }
 
 /**
- * Aggregate uptime across `days` as a formatted percentage value (no unit or
- * copy attached — pass it through {@link UptimeBar.Props.formatUptime} for the
- * translated caption), or `null` when there's no data at all. Only sums entries whose
- * `date` falls in `dates`, so a caller that hands over a wider window still gets a
- * percentage matching the bars actually rendered.
+ * Aggregate uptime across `days` as a formatted percentage string (no unit or
+ * copy attached; pass it through {@link UptimeBar.Props.formatUptime}), or
+ * `null` when there's no data — filtered by `dates` so a wider `days` window still matches the rendered bars.
  */
 function calculateUptimePercentage(
 	days: SelectMonitorDailyStats[],
@@ -97,7 +80,11 @@ namespace UptimeBar {
 	}
 }
 
-/** Renders the last-90-days bar row for `days`, with a range/uptime caption above it and a status-color legend below it. */
+/**
+ * Renders the last-{@link UPTIME_WINDOW_DAYS}-days bar row for `days`, with a
+ * range/uptime caption above it and a status-color legend below it. At the 2px
+ * floor each bar carries, the row needs ~358px; give it a scroll box on narrower columns.
+ */
 export default function UptimeBar(handle: Handle<UptimeBar.Props>) {
 	return () => {
 		let { labels, formatUptime } = handle.props;

@@ -1,23 +1,12 @@
 /**
- * Label + control (+ optional helper text) wrapper for a single form field, matching
- * the app's `<label><span>Label</span><input/></label>` convention plus a muted
- * description line below. Exists so every form's field markup shares one composition
- * of the label/span/helper-text wrapper instead of repeating it per input across
- * every `form.tsx`.
+ * Shares one label/control/helper-text composition across every form so it isn't
+ * repeated per input in each `form.tsx`. Wraps `children` directly rather than
+ * pairing through `for`/`id`, since `children` can be a `<select>`, `<textarea>`,
+ * or a custom slider that only a native `<label>` nesting handles — `@pkg/ui`'s
+ * `TextField` bundles its own `<input>` and doesn't fit here.
  *
- * Composes `@pkg/ui`'s `Label` and `Description` for the caption and helper
- * text, and its shared `fieldStackLayout()` style helper for both levels of
- * vertical stacking this wrapper needs: the label text above its control inside
- * `Label` itself, and the whole field (label, control, description) stacked
- * above the next one. `@pkg/ui`'s own `TextField` bundles its own `<input>`
- * and doesn't fit here, since this wrapper's `children` can be a `<select>`, a
- * `<textarea>`, or a custom slider — anything a native `<label>` can wrap by
- * nesting rather than by `for`/`id`, which is why `Label` wraps `children`
- * directly instead of pairing with it through an `id`.
- *
- * It deliberately ends in no trailing margin: the distance to the next field is the
- * containing card body's `gap`, so this wrapper stays correct wherever it is placed
- * and a container never has to know which of its children brought their own spacing.
+ * Ends with no trailing margin: spacing to the next field comes from the
+ * containing card body's `gap`, so this wrapper stays correct wherever it's placed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

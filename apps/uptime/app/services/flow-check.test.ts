@@ -72,8 +72,6 @@ describe("runFlowCheck", () => {
 	test("the second step failing is down, and says which assertion and which line", async () => {
 		server.use(
 			http.post(`${ORIGIN}/login`, () => HttpResponse.json({ token: "t0ken" }, { status: 201 })),
-			// The endpoint the token authorises has stopped honouring it — exactly the failure a
-			// single-request monitor on either URL would report as healthy.
 			http.get(`${ORIGIN}/me`, () => new HttpResponse(null, { status: 500 })),
 		);
 
@@ -82,7 +80,6 @@ describe("runFlowCheck", () => {
 		expect(result.status).toBe("down");
 		expect(result.testsFailed).toBe(1);
 		expect(result.failedTest).toBe("a member can sign in and read their profile");
-		// `expect profile.status 200` is the ninth line of the source above.
 		expect(result.failedAtLine).toBe(9);
 		expect(result.failureDetail).toContain("200");
 		expect(result.failureDetail).toContain("500");
@@ -100,10 +97,6 @@ describe("runFlowCheck", () => {
 			verifiedDomains: [DOMAIN],
 		});
 
-		// No MSW handler is registered for that host and `onUnhandledRequest: "error"` would fail
-		// the test if anything were sent, so this also proves the refusal happens before the
-		// request rather than after it. This is the property that stops the feature being a way
-		// to automate a domain the team does not own.
 		expect(result.status).toBe("error");
 		expect(result.requestsMade).toBe(0);
 		expect(result.errorMessage).toContain("victim.invalid.test");
@@ -126,8 +119,6 @@ describe("runFlowCheck", () => {
 			verifiedDomains: [DOMAIN],
 		});
 
-		// Not "run the parts we can": a flow is a sequence, so a partially authorised one is a
-		// monitor to fix rather than a check to attempt.
 		expect(result.status).toBe("error");
 		expect(result.requestsMade).toBe(0);
 	});
@@ -220,8 +211,6 @@ describe("runFlowCheck", () => {
 		});
 
 		expect(result.status).toBe("down");
-		// The first request was allowed and the second was refused once the deadline had
-		// passed, which is what bounds the run without abandoning work still in flight.
 		expect(result.requestsMade).toBe(1);
 		expect(result.failureDetail).toContain("ran out of time");
 	});
@@ -365,8 +354,6 @@ describe("resolveAllowedHosts", () => {
 	});
 
 	test("the allowance is the hosts the spec asks for, not the whole domain", () => {
-		// A wildcard is not expressible as a grant scope, and it should not be: a flow authorised
-		// for `app.` must not also reach `internal.` just because the team owns the zone.
 		expect(resolveAllowedHosts(["app.example.test"], ["example.test"]).allowed).toBe(
 			"app.example.test",
 		);

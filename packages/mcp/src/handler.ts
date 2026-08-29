@@ -1,12 +1,12 @@
 /**
  * The Streamable HTTP transport and method dispatch: one request in, one response out,
- * with no session, no handshake, and nothing carried between calls.
+ * complete and self-contained.
  *
- * Revision `2026-07-28` made MCP stateless, which is what lets this be an ordinary remix
- * action rather than a connection-holding process. `fetch` accepts a `RequestContext`, so
- * an application's existing middleware — session, logger, database, authentication — is the
- * middleware for its MCP surface too, and a handler reads what that middleware set with the
- * same `ctx.get()` every other handler in the app uses.
+ * Revision `2026-07-28` made MCP stateless, which lets this run as an ordinary remix action
+ * that returns after every request. `fetch` accepts a `RequestContext`, so an application's
+ * existing middleware — session, logger, database, authentication — is the middleware for
+ * its MCP surface too, and a handler reads what that middleware set with the same
+ * `ctx.get()` every other handler in the app uses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,8 +70,8 @@ const DEFAULT_LIST_TTL_MS = 60_000;
 /**
  * Which body field each method's `Mcp-Name` header mirrors.
  *
- * A method absent from here carries no `Mcp-Name`, so nothing is required and nothing is
- * compared. Adding `prompts/get` later is one entry.
+ * A method absent from here skips the `Mcp-Name` check entirely. Adding `prompts/get`
+ * later is one entry.
  */
 const NAME_SOURCE: Record<string, "name" | "uri"> = {
 	"tools/call": "name",
@@ -84,56 +84,50 @@ export interface HandlerOptions {
 	name: string;
 	/** Human-readable name for a client that renders one. */
 	title?: string;
-	/** The server's own version, not the protocol's. */
+	/** This server's own version, independent of the protocol version it negotiates. */
 	version: string;
 	/**
 	 * How to use this server as a whole, delivered with `server/discover`.
 	 *
-	 * A client may put it in the model's system prompt, so it is the place for what no single
-	 * tool or resource description can say.
+	 * A client may put it in the model's system prompt: the place for guidance spanning the
+	 * whole server, beyond what one tool or resource description covers.
 	 */
 	instructions?: string;
 	/**
 	 * Middleware wrapping every tool call, before any group or action middleware.
 	 *
-	 * For request-level concerns use `remix/router` middleware on the route instead; this
-	 * slot exists for what has to see a tool's result, such as metering.
+	 * This slot exists for what has to see a tool's result, such as metering; request-level
+	 * concerns belong on the route's own `remix/router` middleware.
 	 */
 	toolMiddleware?: ToolMiddleware[];
 	/**
 	 * How long a client may cache a list result, in milliseconds.
 	 *
-	 * Required on the wire by this revision. It is a freshness hint that lets a client stop
-	 * re-listing every turn, so it trades how quickly a change is noticed against how much
-	 * of each conversation is spent re-reading a list.
+	 * Required on the wire by this revision, trading how quickly a client notices a change
+	 * against how much of each turn goes to re-listing.
 	 */
 	listTtlMs?: number;
 	/**
 	 * Whether a shared cache may store list results.
 	 *
-	 * Defaults to `"private"` as soon as any tool or resource declares `available`, because
-	 * such a list varies by credential and a shared intermediary holding one caller's copy
-	 * would serve it to another. Only a list identical for every caller may be `"public"`.
+	 * Defaults to `"private"` once any tool or resource declares `available`, since such a
+	 * list varies by credential; only a list identical for every caller may be `"public"`.
 	 */
 	cacheScope?: CacheScope;
 	/**
 	 * Origins allowed to call this endpoint, checked when a request carries `Origin`.
 	 *
-	 * Omitted means any origin, which is right for a public endpoint on the internet and
-	 * wrong for one bound to localhost, where the check is what stops a web page from
-	 * reaching a local server through DNS rebinding.
+	 * Omitted means any origin, right for a public endpoint but wrong for one bound to
+	 * localhost, where the check is what stops a web page from reaching it via DNS rebinding.
 	 */
 	allowedOrigins?: readonly string[] | ((origin: string) => boolean);
 	/**
-	 * Reports an exception a handler did not expect, which the caller is told nothing about.
-	 *
-	 * Without it the only trace of an internal failure is a generic sentence, so a handler
-	 * with nothing wired here fails silently from an operator's side.
+	 * Reports an exception a handler did not expect, so an operator can see it even though
+	 * the caller receives only a generic failure sentence.
 	 */
 	onError?(error: unknown, info: { method: string; tool?: string; uri?: string }): void;
 }
 
-/** A tool, its handler, and every middleware that wraps it. */
 interface ToolRegistration {
 	tool: Tool;
 	available: ((ctx: AnyRequestContext) => boolean) | undefined;
@@ -141,7 +135,6 @@ interface ToolRegistration {
 	handler: ToolHandler;
 }
 
-/** A resource and how it is listed and read. */
 interface ResourceRegistration {
 	resource: Resource;
 	action: ResourceAction;
@@ -153,8 +146,8 @@ export interface McpHandler {
 		/**
 		 * Binds a handler to one tool, or a controller to a group of them.
 		 *
-		 * Mapping is what registers a tool: one declared and never mapped does not exist,
-		 * exactly as an unmapped route is not served.
+		 * Mapping is what registers a tool: only a mapped tool exists, the same way only a
+		 * mapped route is served.
 		 *
 		 * @throws Error When a tool is mapped twice, or a nested group appears as an action.
 		 */
@@ -165,6 +158,9 @@ export interface McpHandler {
 		/**
 		 * Binds list and read handlers to one resource.
 		 *
+		 * Every pattern joins one matcher, so a URI matching more than one resource resolves
+		 * to the most specific match.
+		 *
 		 * @throws Error When a resource is mapped twice.
 		 */
 		map<Pattern extends string>(resource: Resource<Pattern>, action: ResourceAction<Pattern>): void;
@@ -173,14 +169,16 @@ export interface McpHandler {
 	 * Answers one MCP request.
 	 *
 	 * Pass the `RequestContext` when there is one, so handlers read what the surrounding
-	 * middleware provided; pass a `Request` and one is built, which is the shape a bare
-	 * Worker export needs.
+	 * middleware provided; pass a bare `Request` and one is built for a plain Worker export.
 	 */
 	fetch(input: Request | AnyRequestContext): Promise<Response>;
 }
 
 /**
  * Builds the MCP handler for one application.
+ *
+ * Tools and resources register into a `Map`, so every list stays in insertion order and
+ * deterministic for whatever cache a client keeps of it.
  *
  * @param options The server's identity, and how its results may be cached.
  * @returns A handler to map tools and resources onto, and to answer requests with.
@@ -189,8 +187,6 @@ export interface McpHandler {
  * router.map(routes.mcp, (ctx) => mcp.fetch(ctx));
  */
 export function createHandler(options: HandlerOptions): McpHandler {
-	// Insertion-ordered, which is what makes every list deterministic across requests — a
-	// client caches these, and a set that reorders itself defeats the cache.
 	let tools = new Map<string, ToolRegistration>();
 	let resources = new Map<string, ResourceRegistration>();
 	let matcher = createMultiMatcher<ResourceRegistration>();
@@ -249,8 +245,6 @@ export function createHandler(options: HandlerOptions): McpHandler {
 
 				let registration: ResourceRegistration = { resource, action };
 				resources.set(resource.pattern, registration);
-				// One matcher over every pattern, so an ambiguous URI resolves by specificity
-				// rather than by which resource happened to be mapped first.
 				matcher.add(resource.pattern, registration);
 			},
 		},
@@ -269,7 +263,12 @@ interface Registry {
 	conditional: boolean;
 }
 
-/** Runs one request end to end, from method check to serialized response. */
+/**
+ * Runs one request end to end, from method check to serialized response.
+ *
+ * An unknown method answers with 404, so a client can tell a modern server that merely
+ * lacks that method from a legacy server that lacks this endpoint entirely.
+ */
 async function answer(
 	ctx: AnyRequestContext,
 	options: HandlerOptions,
@@ -277,8 +276,6 @@ async function answer(
 ): Promise<Response> {
 	let request = ctx.request;
 
-	// GET and DELETE were the session-era stream and teardown; this revision has neither, and
-	// the spec names 405 as the answer an older client should get for them.
 	if (request.method !== "POST") {
 		return new Response(null, { status: 405, headers: { Allow: "POST" } });
 	}
@@ -297,9 +294,6 @@ async function answer(
 		return json(replyError(null, ErrorCode.ParseError, "Request body was not valid JSON"), 400);
 	}
 
-	// Batching was removed in this revision, and under the previous one it only ever saved
-	// round trips — which a stateless server does not need enough to justify the ambiguity of
-	// a batch that half-fails.
 	if (Array.isArray(body)) {
 		return json(
 			replyError(null, ErrorCode.InvalidRequest, "Batched requests are not supported"),
@@ -311,9 +305,6 @@ async function answer(
 		return json(replyError(null, ErrorCode.InvalidRequest, "Not a JSON-RPC 2.0 message"), 400);
 	}
 
-	// A notification expects no answer. This revision defines no client-to-server notification
-	// over HTTP, so anything arriving here is acknowledged and dropped rather than validated —
-	// its header requirements are deliberately unspecified.
 	if (!isRequest(body)) return new Response(null, { status: 202 });
 
 	let id: RequestId = body.id;
@@ -326,9 +317,6 @@ async function answer(
 		return json(replyError(id, ErrorCode.InvalidParams, metadata.reason), 400);
 	}
 
-	// The header and the body both state the version, and a gateway may route on the header
-	// while this code executes the body. Making them agree is what stops those two from being
-	// different requests.
 	if (request.headers.get(PROTOCOL_VERSION_HEADER) !== metadata.protocolVersion) {
 		return json(
 			replyError(
@@ -402,8 +390,6 @@ async function answer(
 			let entries: ResourceListing[] = [];
 			for (let entry of registry.resources.values()) {
 				if (!(entry.action.available?.(ctx) ?? true)) continue;
-				// A resource with variables and no enumerator is a template only; one without
-				// variables is already a single concrete URI and needs no enumerator at all.
 				if (entry.action.list) entries.push(...(await entry.action.list(ctx)));
 				else if (!entry.resource.hasVariables) {
 					entries.push({ uri: entry.resource.href(), ...entry.resource.descriptor });
@@ -438,14 +424,17 @@ async function answer(
 		}
 
 		default: {
-			// 404 rather than a 200 carrying the error: this revision uses the status to tell a
-			// modern server that lacks a method from a legacy server that lacks the endpoint.
 			return json(replyError(id, ErrorCode.MethodNotFound, `Unknown method: ${body.method}`), 404);
 		}
 	}
 }
 
-/** Validates and runs one tool call, mapping each failure to where MCP reports it. */
+/**
+ * Validates and runs one tool call, mapping each failure to where MCP reports it.
+ *
+ * An unavailable tool is reported as unknown, so the refusal carries no more than what
+ * `tools/list` already told the caller.
+ */
 async function callTool(
 	ctx: AnyRequestContext,
 	options: HandlerOptions,
@@ -460,8 +449,6 @@ async function callTool(
 	}
 
 	let entry = registry.tools.get(name);
-	// A tool this caller may not use is reported as absent rather than as forbidden, so the
-	// refusal says exactly as much as `tools/list` already did and no more.
 	if (!entry || !(entry.available?.(ctx) ?? true)) {
 		return json(replyError(id, ErrorCode.InvalidParams, `Unknown tool: ${name}`), 200);
 	}
@@ -476,8 +463,6 @@ async function callTool(
 		);
 	}
 
-	// Installed on the request's own context, not on a wrapper: `headers` and `router` are
-	// getters over private fields, so anything reading them through a derived object throws.
 	ctx.set(ToolInput, checked.data, { property: "input" });
 	ctx.set(CurrentTool, entry.tool.descriptor, { property: "tool" });
 
@@ -498,9 +483,6 @@ async function callTool(
 		}
 
 		options.onError?.(error, { method: "tools/call", tool: name });
-		// The model is told the call failed and nothing more: an unexpected error's message was
-		// written for an operator. `ToolError` is how a handler says something the model should
-		// read, and it is handled inside the chain before ever reaching here.
 		return json(
 			reply(id, {
 				resultType: "complete",
@@ -513,7 +495,12 @@ async function callTool(
 	}
 }
 
-/** Runs the middleware chain, then the handler, and shapes what it returned. */
+/**
+ * Runs the middleware chain, then the handler, and shapes what it returned.
+ *
+ * Only a `ToolError`'s message reaches the model; any other thrown error is treated as an
+ * operator-facing detail and rethrown for the caller to turn into a generic failure.
+ */
 function runChain(
 	ctx: ToolContext,
 	chain: readonly ToolMiddleware[],
@@ -522,8 +509,6 @@ function runChain(
 	let entered = -1;
 
 	async function step(index: number): Promise<CallToolResult> {
-		// A middleware that calls `next()` twice would run the rest of the chain, and the
-		// handler, a second time — which for a tool that writes is a duplicated write.
 		if (index <= entered) throw new Error("next() was called more than once");
 		entered = index;
 
@@ -534,9 +519,6 @@ function runChain(
 			let output = await entry.handler(ctx);
 			return toResult(output, entry.tool.descriptor.outputSchema !== undefined);
 		} catch (error) {
-			// Only a `ToolError`'s message is written for the model. Anything else came from code
-			// that did not expect to fail, and its message is an operator's detail — a query
-			// fragment, an upstream URL — that the caller must not read.
 			if (error instanceof ToolError) {
 				return { content: [{ type: "text", text: error.message }], isError: true };
 			}
@@ -550,9 +532,8 @@ function runChain(
 /**
  * Shapes a tool handler's return value into a result.
  *
- * A string is the answer as written. Anything else is serialized, and additionally attached
- * as `structuredContent` when the tool declared an output schema — the text block stays
- * either way, since a client that reads only content blocks is conformant.
+ * The text block always carries the full answer; a schema-declaring tool additionally gets
+ * it attached as `structuredContent`, so a client reading only content blocks stays conformant.
  */
 function toResult(output: unknown, hasOutputSchema: boolean): CallToolResult {
 	if (typeof output === "string") return { content: [{ type: "text", text: output }] };
@@ -563,7 +544,12 @@ function toResult(output: unknown, hasOutputSchema: boolean): CallToolResult {
 	return result;
 }
 
-/** Matches a URI to a mapped resource and reads it. */
+/**
+ * Matches a URI to a mapped resource and reads it.
+ *
+ * A failure here always becomes a JSON-RPC error, since MCP gives a resource read only
+ * that channel to report one.
+ */
 async function readResource(
 	ctx: AnyRequestContext,
 	options: HandlerOptions,
@@ -579,8 +565,6 @@ async function readResource(
 	}
 
 	let match = matchUri(registry, uri);
-	// Not found and hidden are the same answer, for the same reason a hidden tool reports as
-	// unknown: the refusal says exactly as much as the list already did.
 	if (!match || !(match.data.action.available?.(ctx) ?? true)) {
 		return json(replyError(id, ErrorCode.InvalidParams, "Resource not found", { uri }), 200);
 	}
@@ -596,8 +580,6 @@ async function readResource(
 		output = await action.read(ctx as ResourceContext);
 	} catch (error) {
 		options.onError?.(error, { method: "resources/read", uri });
-		// A resource read has no `isError` channel — MCP gives it only JSON-RPC errors — so
-		// there is nothing a resource can say to the model, and every failure is a protocol one.
 		return json(replyError(id, ErrorCode.InternalError, "Failed to read the resource"), 200);
 	}
 
@@ -609,7 +591,12 @@ async function readResource(
 	return json(reply(id, { resultType: "complete", contents, ...listing, _meta: meta }), 200);
 }
 
-/** The most specific mapped resource matching a URI, with its captured variables. */
+/**
+ * The most specific mapped resource matching a URI, with its captured variables.
+ *
+ * Returns `null` for a URI the matcher cannot parse, exactly as it would for one that
+ * matches no registered resource.
+ */
 function matchUri(
 	registry: Registry,
 	uri: string,
@@ -618,7 +605,6 @@ function matchUri(
 	try {
 		match = registry.matcher.match(uri);
 	} catch {
-		// A URI the matcher cannot parse is simply not one of ours.
 		return null;
 	}
 	if (!match) return null;
@@ -684,10 +670,10 @@ function json(body: JsonRpcResponse, status: number): Response {
 }
 
 /**
- * Writes a transport-level failure, which is not a JSON-RPC message.
+ * Writes a transport-level failure as a bare `{ error }` object.
  *
  * These happen before a message exists — a wrong method, an unreadable content type, a
- * refused origin — so there is no id to answer and no envelope to put an error in.
+ * refused origin — so the status code alone carries the failure.
  */
 function httpError(status: number, message: string): Response {
 	return new Response(JSON.stringify({ error: message }), {

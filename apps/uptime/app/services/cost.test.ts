@@ -1,17 +1,9 @@
 /**
- * Unit tests for the cost ledger (ADR-007 §3–§6). Four groups of properties:
- *
- * - **Accumulation** (inherited from ADR-019's D1 accumulator, which this module absorbed):
- *   statements land on the unit of work that issued them, concurrent units don't pool their
- *   totals, and a statement issued outside any tracked unit is dropped rather than charged
- *   to whoever happens to be running.
- * - **Attribution**: what apportionment does to the quantities, what "no team" records as,
- *   and that the per-invocation data-point cap folds rather than truncates.
- * - **Self-accounting**: the ledger's own Analytics Engine write, the modelled CPU, and the
- *   Workers request share are in what it reports, because an instrument that doesn't
- *   account for itself makes every total wrong by the cost of measuring it.
- * - **Round trip**: the query built for the reporting job reads back the same `double`
- *   positions the writer wrote, which is the one thing no runtime check would catch.
+ * Unit tests for the cost ledger (ADR-007 §3–§6): a unit of work's D1 statements
+ * accumulate independently of concurrent units; apportioned quantities split by
+ * team weight; the ledger's own write, modelled CPU, and request share land in
+ * what it reports; and the reporting query reads back the same `double`
+ * positions the writer wrote.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -104,13 +96,15 @@ async function flushing(
 }
 
 describe("recordD1Statement", () => {
+	/**
+	 * Awaits between the two statements because a job's own statements are spread
+	 * across awaits, so the accumulator has to survive a microtask boundary.
+	 */
 	test("accumulates statements, rows, and duration into the active unit of work", async () => {
 		let usage = createD1Usage();
 
 		await trackCost(new CostLedger({ handler: "queue", usage }), async () => {
 			recordD1Statement(observation({ rowsRead: 20_000 }));
-			// Awaited in between: the accumulator has to survive a microtask boundary,
-			// since a job's statements are spread across awaits.
 			await Promise.resolve();
 			recordD1Statement(observation({ kind: "insert", rowsRead: 0, rowsWritten: 10 }));
 		});
@@ -143,7 +137,6 @@ describe("recordD1Statement", () => {
 			}),
 		]);
 
-		// Pooling these would report 502 rows read twice and answer nothing.
 		expect(first.rowsRead).toBe(2);
 		expect(second.rowsRead).toBe(500);
 	});
@@ -155,8 +148,6 @@ describe("recordD1Statement", () => {
 			recordD1Statement(observation({ kind: "insert", rowsRead: 0, rowsWritten: 10 }));
 		});
 
-		// The observer touches only the usage counters; the ledger reads them at flush. That
-		// is what keeps instrumenting cost free of extra per-statement work.
 		expect(quantity(point!, "d1RowRead")).toBe(20_180);
 		expect(quantity(point!, "d1RowWritten")).toBe(10);
 	});
@@ -174,7 +165,6 @@ describe("trackCost", () => {
 			}),
 		).rejects.toBe(boom);
 
-		// A unit of work that threw still consumed everything it consumed.
 		expect(costs.dataPoints).toHaveLength(1);
 	});
 
@@ -201,7 +191,6 @@ describe("CostLedger attribution", () => {
 
 	test("splits shared quantities in proportion to the weights", async () => {
 		let written = await flushing(async () => {
-			// A sweep that took three of one team's monitors and one of another's.
 			apportionCostByTeam(["team-1", "team-1", "team-1", "team-2"]);
 			recordCost("queueOperation", 8);
 		});
@@ -235,17 +224,23 @@ describe("CostLedger attribution", () => {
 		expect(written.map((point) => point.indexes?.[0])).toEqual(["team-1"]);
 	});
 
+	/**
+	 * Covers a dead-letter record or a sweep that found nothing pending: a
+	 * reporting job earns its keep by saying how much spend landed on nobody.
+	 */
 	test("records unattributed work as platform cost rather than dropping it", async () => {
 		let [point] = await flushing(async () => recordCost("queueOperation", 2), {
 			handler: "scheduled",
 		});
 
-		// A dead-letter record or a sweep with nothing pending. Written, because a reporting
-		// job that can say how much spend landed on nobody is the point of writing it.
 		expect(point?.indexes).toEqual([PLATFORM_TEAM_ID]);
 		expect(point?.blobs?.[1]).toBe("platform");
 	});
 
+	/**
+	 * The first 249 teams keep their own point; the tail merges into one
+	 * overflow point, keeping every team's cost visible in what the flush reports.
+	 */
 	test("folds teams past the data-point cap into one overflow point", async () => {
 		let teamIds = Array.from({ length: 300 }, (_unused, index) => `team-${index}`);
 		let written = await flushing(async () => {
@@ -253,8 +248,6 @@ describe("CostLedger attribution", () => {
 			recordCost("d1RowWritten", 300);
 		});
 
-		// 249 teams keep their own point and the tail merges, rather than the write silently
-		// failing — which would read as "those customers cost nothing".
 		expect(written).toHaveLength(250);
 		let overflow = written.find((point) => point.indexes?.[0] === OVERFLOW_TEAM_ID);
 		expect(quantity(overflow!, "d1RowWritten")).toBeCloseTo(51, 6);
@@ -280,7 +273,6 @@ describe("CostLedger self-accounting", () => {
 			workerRequests: 0.2,
 		});
 
-		// One invocation runs a whole batch, so a job owns a fraction of the request.
 		expect(quantity(point!, "workerRequest")).toBeCloseTo(0.2, 9);
 		expect(quantity(point!, "workerCpuMs")).toBe(MODELLED_CPU_MS.queue);
 	});
@@ -303,14 +295,10 @@ describe("CostLedger self-accounting", () => {
 			COST_RESOURCES.map((resource) => [resource, quantity(point!, resource)]),
 		);
 		expect(total(point!)).toBeCloseTo(priceCostQuantities(quantities as never), 12);
-		// Email dominates anything else a single unit of work can do.
 		expect(total(point!)).toBeGreaterThan(RATES.emailSent);
 	});
 
 	test("never lets a failed write fail the work it was measuring", async () => {
-		// The binding rejecting the point is the failure mode: instrumentation that takes
-		// down the request it was measuring is worse than no instrumentation. One write is
-		// all a single-team flush makes, so the binding is itself again afterwards.
 		vi.spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
 
 		await expect(
@@ -325,10 +313,12 @@ describe("CostLedger self-accounting", () => {
 });
 
 describe("countedKv", () => {
+	/**
+	 * Wraps a namespace backed by real storage, so the assertions confirm behavior
+	 * by reading the value back. Checking the `name` property confirms a
+	 * non-method property also passes through the proxy untouched.
+	 */
 	test("counts reads and mutations without changing what the namespace does", async () => {
-		// A namespace that really stores, so "without changing what it does" is read back
-		// from it rather than from a record of the calls. The extra property is there
-		// because a non-method one has to pass through the proxy untouched as well.
 		let kv = Object.assign(createKVNamespace(), { name: "session-store" });
 		await kv.put("a", "value");
 
@@ -354,10 +344,6 @@ describe("dailyCostQuery", () => {
 			recordCost("doDurationMs", 250);
 		});
 
-		// The query aliases `doubleN` to the resource the writer put at position N, so a
-		// reordered rate card would show up as one resource's total appearing under another
-		// resource's name. Rebuild a response row from the written point and check the
-		// reader's mapping agrees.
 		let sql = dailyCostQuery("2026-07-30");
 		let aliases = [...sql.matchAll(/double(\d+)\) AS (\w+)/g)].map(([, index, alias]) => ({
 			index: Number(index),
@@ -373,12 +359,14 @@ describe("dailyCostQuery", () => {
 		expect(aliases.map((entry) => entry.alias)).toEqual([...COST_RESOURCES, "reportedCents"]);
 	});
 
+	/**
+	 * Analytics Engine samples under load, so weighting each sum by the sample
+	 * interval keeps a cost figure representative of the expensive customers.
+	 */
 	test("weights every sum by the sample interval", () => {
 		let sql = dailyCostQuery("2026-07-30");
 		let sums = sql.match(/SUM\(/g) ?? [];
 
-		// Analytics Engine samples under load, and an unweighted sum understates — which for
-		// a cost figure means under-reporting the expensive customers first.
 		expect(sql.match(/SUM\(_sample_interval \*/g)).toHaveLength(sums.length);
 	});
 

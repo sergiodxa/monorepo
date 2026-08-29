@@ -16,11 +16,9 @@ import type { MonitorStatus } from "~/database/schema";
 const EVENT_PREFIX = "funnel";
 
 /**
- * Longest string value an event property may carry.
- *
- * Sized for the values that are legitimate here — a hostname, a UUID, a strategy name — and
- * well under anything that could be a token, a JWT or a response fragment. A value over the
- * bound is redacted rather than truncated, because a truncated secret is still a secret.
+ * Sized for legitimate values here — a hostname, a UUID, a strategy name — comfortably
+ * under anything that could be a token or JWT; an oversized value is redacted, since a
+ * truncated secret is still a secret.
  */
 const MAX_STRING_LENGTH = 100;
 
@@ -31,7 +29,7 @@ const MAX_STRING_LENGTH = 100;
  */
 const UNSAFE_STRING = /[@\s?#]|:\/\//;
 
-/** What a redacted value reads as, so a leak shows up as a hole rather than as silence. */
+/** What a redacted value reads as, so a leak shows up as a visible hole in the log. */
 const REDACTED = "[redacted]";
 
 /** Every funnel event this app emits, as the suffix after `funnel.`. */
@@ -48,13 +46,9 @@ export type FunnelEventName =
 	| "alert_configured";
 
 /**
- * The one method this module needs from a logger, so a fetch handler can pass its
- * `RequestLogger`, a job its batched one, and a service the immediate singleton, without any
- * of them being converted to the others.
- *
- * Accepting `undefined` is deliberate rather than lax: a surface with no logger installed
- * must still be able to call these, since an event that cannot be recorded is a missing line
- * in a report and never a failed request.
+ * The one method this module needs from a logger, so any caller can pass whatever logger
+ * it already holds, `undefined` included: an unrecorded event costs only a missing report
+ * line, while the caller's own request completes regardless.
  */
 export interface FunnelEventSink {
 	info(event: string, payload?: Record<string, unknown>): void;
@@ -66,7 +60,7 @@ export interface FunnelAttribution {
 	source: string | null;
 	/** Campaign name, e.g. `agencies-august`; `null` when the visit carried none. */
 	campaign: string | null;
-	/** Path of the first page the visitor landed on. Never a query string. */
+	/** Path of the first page the visitor landed on, as just the pathname. */
 	landingPath: string | null;
 }
 
@@ -75,9 +69,8 @@ export type FunnelMonitorType = "http" | "dns" | "tcp" | "cron";
 
 /**
  * What {@link attributionProperties} accepts: the first-touch record as the session carries
- * it, or the same three fields as they were copied onto a stored conversion. The two differ
- * only in whether a landing path can be absent, so widening that one field is what lets both
- * callers pass the record they happen to hold instead of rebuilding it.
+ * it, or the same three fields copied onto a stored conversion, differing only in whether a
+ * landing path can be absent — so both callers pass the record they already hold.
  */
 export type FunnelAttributionInput = Pick<TrialAttribution, "source" | "campaign"> & {
 	landingPath: string | null;
@@ -85,8 +78,8 @@ export type FunnelAttributionInput = Pick<TrialAttribution, "source" | "campaign
 
 /**
  * The campaign fields off a first-touch record, with every one nulled when there is no
- * record at all — so an event's shape does not change with whether attribution was captured,
- * and a query can group by `source` without a missing-key case.
+ * record at all — so an event's shape stays the same whether attribution was captured, and
+ * a query can group by `source` without a missing-key case.
  *
  * @param attribution - The first-touch record, when the caller has one.
  */
@@ -99,11 +92,8 @@ export function attributionProperties(attribution?: FunnelAttributionInput): Fun
 }
 
 /**
- * The host behind a URL, which is the most an event may say about somebody's target.
- *
- * A hostname is what makes an event readable — "the check that failed was against a `.local`
- * address" is worth knowing — while the path and query are the parts that carry identifiers,
- * tokens and, on a status endpoint, the customer's own naming.
+ * The host behind a URL, which is the most an event may say about somebody's target: the
+ * path and query are what carry identifiers, tokens, and a customer's own naming.
  *
  * @param url - A URL string, already resolved by whatever validated it.
  * @returns The hostname, or `null` when the string will not parse as a URL.
@@ -118,13 +108,9 @@ export function hostnameOf(url: string): string | null {
 }
 
 /**
- * Replaces every value that could carry personal data with {@link REDACTED}, and drops
- * `undefined` so an absent property is absent rather than a `null` that means "we looked".
- *
- * This is a backstop and not the rule — the property interfaces are what keep addresses and
- * URLs out — but it is the part that still holds when somebody adds a field in a hurry.
- * Numbers and booleans pass through untouched: neither can be an address, and both are what
- * the counts in these events are made of.
+ * Replaces every value that could carry personal data with {@link REDACTED}, dropping
+ * `undefined` so an absent property stays absent. A backstop behind the property
+ * interfaces, for a `string` field added in a hurry; numbers and booleans pass through.
  */
 function scrub(properties: Record<string, unknown>): Record<string, unknown> {
 	let safe: Record<string, unknown> = {};
@@ -147,10 +133,7 @@ function scrub(properties: Record<string, unknown>): Record<string, unknown> {
  * Emits one event, and swallows anything that goes wrong doing so.
  *
  * Every caller here sits on a path a person is waiting on — a form submission, a sign-in, an
- * email send — so the guarantee this module makes is that measuring a step can never be the
- * reason the step failed. The same swallow-and-carry-on discipline the trial conversion
- * service applies to its own writes, one level stricter: there is not even a failure to log,
- * because the thing that failed was the logging.
+ * email send — so measuring a step always leaves that step to succeed or fail on its own.
  */
 function emit(
 	sink: FunnelEventSink | undefined,
@@ -159,25 +142,23 @@ function emit(
 ): void {
 	try {
 		sink?.info(`${EVENT_PREFIX}.${event}`, scrub(properties));
-	} catch {
-		// Nothing to report the failed report to, and nothing worth failing a request over.
-	}
+	} catch {}
 }
 
 /** A visitor asked the public page to check a target. */
 export interface UrlCheckStartedProperties {
-	/** The target's host. Never the full URL. */
+	/** The target's host, e.g. `example.com`. */
 	hostname: string | null;
 	/** Path the check was asked for from, which is the only page that offers one. */
 	sourcePage: string;
-	/** Whether a signed-in viewer asked, who is shown no email capture and so cannot convert. */
+	/** Whether the viewer asking was already signed in, and so already has an account. */
 	signedIn: boolean;
 }
 
 /**
  * The top of the funnel: a check was requested. Paired with
- * {@link trackUrlCheckCompleted}, so a probe that never answered is visible as the gap
- * between the two counts rather than as nothing at all.
+ * {@link trackUrlCheckCompleted}, so a probe that never answered shows up as the gap
+ * between the two counts.
  */
 export function trackUrlCheckStarted(
 	sink: FunnelEventSink | undefined,
@@ -221,14 +202,14 @@ export interface TrialMonitorStartedProperties {
 	monitorType: FunnelMonitorType;
 	/** Whether the probe they had just watched run succeeded. */
 	immediateCheckSucceeded: boolean;
-	/** Whether they ticked the optional marketing opt-in, which is not required to be here. */
+	/** Whether they ticked the optional marketing opt-in. */
 	consented: boolean;
 }
 
 /**
  * The funnel's first commitment: an address was handed over and a week of free checks
- * started. The event fires only for a watch that was actually created — a submission capped
- * by the one-week-per-URL rule started nothing and is not one of these.
+ * started. The event fires only for a watch that was actually created, since a submission
+ * capped by the one-week-per-URL rule starts no watch at all.
  */
 export function trackTrialMonitorStarted(
 	sink: FunnelEventSink | undefined,
@@ -273,10 +254,9 @@ export interface FirstTrialAlertSentProperties {
 }
 
 /**
- * The trial's moment of proof, and the strongest single predictor in this funnel: a lead who
- * has been told their site went down has seen the product do the one thing it is for.
- * Emitted only for the first such email per watch, since the second one is a flapping target
- * rather than a new step.
+ * The trial's moment of proof, and the strongest single predictor in this funnel: a lead
+ * has seen the product do the one thing it is for. Emitted only for the first such email
+ * per watch — a later one marks a target that is simply flapping.
  */
 export function trackFirstTrialAlertSent(
 	sink: FunnelEventSink | undefined,
@@ -297,9 +277,9 @@ export interface TrialProgressEmailSentProperties {
 }
 
 /**
- * Continued engagement, per send rather than per lead: the number of these somebody received
- * before they signed up is the one measure of how much of the trial they actually saw, and
- * it cannot be recovered afterwards because the lead row is deleted within thirty days.
+ * Continued engagement, counted per send: the number somebody received before they signed
+ * up is the one measure of how much of the trial they actually saw, worth capturing here
+ * since the lead row itself is deleted within thirty days.
  */
 export function trackTrialProgressEmailSent(
 	sink: FunnelEventSink | undefined,
@@ -365,10 +345,9 @@ export interface SecondMonitorCreatedProperties {
 }
 
 /**
- * Activation, and the reason it is the second monitor and not the first: the first can be the
- * one the sign-up flow converted for them or the one they made to see whether the product
- * works, while the second is somebody who decided to keep using it. Nothing else in this
- * funnel distinguishes a curious visitor from a user.
+ * Activation: the first monitor can be the one sign-up converted for them, or one made
+ * just to see whether the product works, while the second is somebody who decided to keep
+ * using it — the one signal in this funnel that tells a curious visitor from a user.
  */
 export function trackSecondMonitorCreated(
 	sink: FunnelEventSink | undefined,
@@ -382,18 +361,18 @@ export interface AlertConfiguredProperties {
 	teamId: string;
 	/** The alert row, as its opaque id. */
 	alertId: string;
-	/** Where the notification goes. Never the destination itself. */
+	/** The name of the channel a notification goes through — the address itself is redacted. */
 	strategy: string;
-	/** Whether it is scoped to one monitor rather than to every monitor on the team. */
+	/** Whether it is scoped to one monitor, or applies to every monitor on the team. */
 	monitorScoped: boolean;
 	/** The team's alert count immediately after this one, so the first is `1`. */
 	alertCount: number;
 }
 
 /**
- * The other half of activation: a team that has told us where to reach them is a team that
- * expects to be reached. The strategy name is recorded and its configuration never is —
- * every strategy's config is a destination, and three of the four are a secret URL.
+ * The other half of activation: a team that has told us where to reach them expects to be
+ * reached. Only the strategy name is recorded, since every strategy's configuration is a
+ * destination and three of the four are a secret URL.
  */
 export function trackAlertConfigured(
 	sink: FunnelEventSink | undefined,

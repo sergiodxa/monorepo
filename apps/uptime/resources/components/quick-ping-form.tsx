@@ -1,33 +1,13 @@
 /**
- * Client island: the quick-check form that lives in the dashboard's header, where the
- * "create monitor" button used to be. A real `<form>` posting to the run-ping action, so
- * it works with no JavaScript at all — a plain navigating submit that lands back on the
- * dashboard with the answer. Once hydrated, `on("submit")` intercepts instead and
- * `fetch()`es the same action, then reloads the enclosing `Frame` so only this bar
- * re-renders: running a check must not cost the dashboard its stat cards, its tab table,
- * and every fetch behind them.
+ * Client island: the dashboard header's quick-check form, a real `<form>`
+ * posting to the run-ping action so it works as a plain navigating submit.
+ * Once hydrated, `on("submit")` intercepts it instead, `fetch()`es the same
+ * action, then reloads the enclosing `Frame` so only this bar re-renders.
  *
- * What a check came back as is not drawn here at all — it is a toast the fragment renders
- * beside this form, which is what a 64px header row has room for. That also means this
- * island holds no state about the last check beyond the URL still sitting in the field.
- *
- * The form element is its own `[popover]`, and that is what makes one form serve both
- * layouts. At ≥768px a `display: flex !important` rule beats the UA's
- * `[popover]:not(:popover-open) { display: none }` and the bar simply sits in the header
- * as a row. Below that there is no room for a URL field next to the page title, so the
- * bar stays a popover: the fragment's icon button opens it as a sheet under the header,
- * a column with room for the caption explaining what a check does. Two renderings of the
- * same form would have been two frames reading one session, and only whichever ran first
- * would have found the result in it.
- *
- * The `<label>` wraps the `<input>` rather than pointing at it by `id`: that is what the
- * control's accessible name rests on, and it survives whichever way the caption is
- * styled. Only the caption's `<span>` is clipped, never the label itself — clipping the
- * label would take the field down with it.
- *
- * Its labels come in as props rather than through `@pkg/i18n/ui`'s `intl(handle)`,
- * since the fragment this renders inside wires up no `IntlProvider` of its own for the
- * server-rendered pass.
+ * The form is its own `[popover]`, letting one form serve both layouts —
+ * a `display: flex !important` header row at ≥768px, a sheet below — since
+ * two forms would race to write the same session. Labels arrive as props,
+ * translated by the caller ahead of this fragment's server-rendered pass.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,9 +57,14 @@ type QuickPingFormProps = {
 	src: string;
 	/** Kept after a check so the field still names the target the toast is about. */
 	url?: string;
+	/** Wraps the input to give it an accessible name that holds regardless of how the caption is styled. */
 	label: string;
 	placeholder: string;
-	/** What a check does and does not do; drawn in the popover, read out in both layouts. */
+	/**
+	 * Caption explaining what a check does; shown as a visible line in the
+	 * popover, and kept for assistive tech via `visuallyHidden` where the
+	 * header row has no room to show it.
+	 */
 	description: string;
 	submit: string;
 };
@@ -101,10 +86,9 @@ export const QuickPingForm = clientEntry(
 					action={action}
 					mix={[
 						/**
-						 * The narrow-viewport sheet: a panel pinned under the header's own 64px
-						 * row, inset from both edges, laid out as a column. Every declaration
-						 * here is undone by the `raw()` block in the media query below, where
-						 * this becomes an ordinary row in the header's flex line.
+						 * The narrow-viewport sheet: pinned under the header's 64px row as a
+						 * column. The media query below undoes every declaration here via its
+						 * own `raw()` block, turning this into an ordinary flex row at ≥768px.
 						 */
 						fixed(),
 						insBs("64px"),
@@ -148,10 +132,9 @@ export const QuickPingForm = clientEntry(
 							void handle.update();
 							try {
 								/**
-								 * `manual` so the browser doesn't spend a request rendering the
-								 * dashboard the action redirects to — that redirect exists for the
-								 * no-JavaScript path. The response's `Set-Cookie` still lands, which
-								 * is what carries the flashed result into the reload below.
+								 * `manual` captures the redirect response itself, so its `Set-Cookie`
+								 * lands immediately — the redirect exists only for the no-JavaScript
+								 * submit path.
 								 */
 								await fetch(action, {
 									method: "POST",
@@ -167,12 +150,6 @@ export const QuickPingForm = clientEntry(
 						}),
 					]}
 				>
-					{/**
-					 * The one place a visitor is told a check saves nothing and sends no alerts.
-					 * The sheet has a line to draw it on; the header row does not, so there it is
-					 * clipped rather than dropped — the field points `aria-describedby` at it
-					 * either way.
-					 */}
 					<p
 						id={HELP_ID}
 						mix={[

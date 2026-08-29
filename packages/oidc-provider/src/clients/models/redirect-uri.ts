@@ -20,15 +20,11 @@ import {
 	validateScheme,
 } from "../../shared/lib/uri-validation";
 
-/**
- * Model for client redirect URIs.
- * Manages OAuth 2.0 redirect URIs for authorization code flows.
- */
+/** Client redirect URI model backed by the `client_redirect_uris` table. */
 export default class RedirectUri {
 	/** Error thrown when a redirect URI is malformed. */
 	static InvalidRedirectUriError = class extends InvalidUriError {
 		override name = "InvalidRedirectUriError";
-		/** Builds the error with a fixed "Invalid redirect URI" message. */
 		constructor() {
 			super("Invalid redirect URI");
 		}
@@ -43,7 +39,6 @@ export default class RedirectUri {
 		}
 	};
 
-	/** Database table schema for redirect URIs. */
 	static table = table({
 		name: "client_redirect_uris",
 		primaryKey: ["id"],

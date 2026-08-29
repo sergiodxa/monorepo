@@ -156,7 +156,6 @@ describe("httpMonitors", () => {
 		let body = await response.text();
 		expect(body).toContain("Homepage");
 		expect(body).toContain("https://example.com");
-		// A monitor with no cached status has never been checked.
 		expect(body).toContain("Unknown");
 		expect(body).toContain("Never");
 	});

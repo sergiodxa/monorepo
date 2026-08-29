@@ -29,12 +29,14 @@ describe("DocumentLayout", () => {
 		expect(html).toContain('src="https://static.cloudflareinsights.com/beacon.min.js"');
 	});
 
+	/**
+	 * The renderer escapes the quotes inside the attribute value; the browser
+	 * unescapes them before the beacon ever reads it, so the JSON it parses is
+	 * `{"token": "2e915da0d572432eb502c32794ac1da6"}`.
+	 */
 	test("hands the beacon the site token in the shape it parses", async () => {
 		let html = await renderDocument();
 
-		// The renderer escapes the quotes inside the attribute value; the browser unescapes
-		// them before the beacon ever reads it, so the JSON it parses is
-		// `{"token": "2e915da0d572432eb502c32794ac1da6"}`.
 		expect(html).toContain(
 			'data-cf-beacon="{&quot;token&quot;: &quot;2e915da0d572432eb502c32794ac1da6&quot;}"',
 		);

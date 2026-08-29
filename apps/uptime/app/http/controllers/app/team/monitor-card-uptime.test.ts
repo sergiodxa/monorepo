@@ -2,8 +2,7 @@
  * Tests for the monitor detail page "Uptime percentage" stat-card fragment
  * controller. `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env`
  * at module load. `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly,
- * standing in for the real `requireUser`/`requireTeam`/i18n middleware chain,
- * following the template in `dashboard-card-uptime.test.ts`.
+ * standing in for the real `requireUser`/`requireTeam`/i18n middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

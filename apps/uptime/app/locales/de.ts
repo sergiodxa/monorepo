@@ -4172,10 +4172,9 @@ export default {
 				submit: "Kostenlosen Bericht über {{days}} Tage starten",
 
 				/**
-				 * Worauf sich ein Besucher einlässt, neben dem Feld statt darunter genannt. Jede
-				 * Zeile ist etwas, das das System tatsächlich tut — die Adresse ist die, die wir
-				 * geprüft haben, und keine, die neu eingetippt werden kann, Takt und Dauer sind die
-				 * der Beobachtung selbst, und die drei genannten E-Mails sind die drei, die es gibt.
+				 * Jede Zeile hier ist etwas, das das System tatsächlich ausführt: die geprüfte
+				 * Adresse bleibt bestehen, Takt und Dauer entsprechen der Beobachtung, und die
+				 * genannten E-Mails sind vollständig aufgeführt.
 				 */
 				expectations: {
 					target:

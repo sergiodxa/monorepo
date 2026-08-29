@@ -54,8 +54,7 @@ export interface HSLColor {
 /**
  * A color's hue, saturation, and value (brightness) — the space behind a
  * two-dimensional saturation/value picking surface, where every reachable
- * color maps directly onto a square: saturation runs along one axis, value
- * along the other.
+ * color maps directly onto a point on that square.
  */
 export interface HSVColor {
 	/** Hue, in degrees around the color wheel, `0`–`360`. */
@@ -87,12 +86,12 @@ export function clampChannel(value: number, min = 0, max = 255): number {
 	return Math.min(max, Math.max(min, value));
 }
 
-/** Normalizes `hue` into the `[0, 360)` range a color wheel wraps around, folding a negative or over-large input back into range instead of clamping it. */
+/** Normalizes `hue` into the `[0, 360)` range a color wheel wraps around, folding a negative or over-large input back into range. */
 function normalizeHue(hue: number): number {
 	return ((hue % FULL_TURN_DEGREES) + FULL_TURN_DEGREES) % FULL_TURN_DEGREES;
 }
 
-/** Normalizes `angle` (radians) into the `[0, 2π)` range {@link angleFromCenter} produces, folding a negative or over-large input back into range instead of clamping it. */
+/** Normalizes `angle` (radians) into the `[0, 2π)` range {@link angleFromCenter} produces, folding a negative or over-large input back into range. */
 function normalizeAngle(angle: number): number {
 	return ((angle % FULL_TURN_RADIANS) + FULL_TURN_RADIANS) % FULL_TURN_RADIANS;
 }
@@ -277,7 +276,7 @@ function parseRgbChannelToken(token: string): number | null {
 	return Number.isFinite(value) ? value : null;
 }
 
-/** Parses an alpha token — a plain `0`–`1` number or a percentage — to its numeric value; a missing token (no fourth component given) resolves to fully opaque (`1`) rather than failing the parse. */
+/** Parses an alpha token — a plain `0`–`1` number or a percentage — to its numeric value; a missing token (no fourth component given) resolves to fully opaque (`1`). */
 function parseAlphaToken(token: string | undefined): number | null {
 	if (token === undefined) return 1;
 

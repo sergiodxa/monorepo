@@ -1,7 +1,7 @@
 /**
  * Tests for `parseDate`: that readable input becomes a `Date` and unreadable input
- * becomes a named failure, never an `Invalid Date` that would spread `NaN` through
- * every later calculation.
+ * becomes a named failure, so every downstream calculation works from a genuinely
+ * valid instant.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

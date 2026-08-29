@@ -1,23 +1,14 @@
 /**
- * New DNS monitor form page controller. Posts to the `create-dns-monitor` action.
- * Requires `requireUser` + `requireTeam`.
+ * New DNS monitor form page controller. Posts to the `create-dns-monitor` action
+ * behind `requireUser` + `requireTeam`.
  *
- * A monitor here is a domain, not a record type: the three things it asks for are the
- * domain, an optional pasted zone file, and how often every name found gets resolved.
- * They are grouped into three bordered cards inside a single `<form>`, so the page reads
- * as distinct settings groups while still submitting as one request. The submit control
- * sits at the foot of the last card rather than loose under the fields.
+ * A pasted zone is the only channel through which a domain's other names reach
+ * this monitor; apex-only coverage is the default until one arrives. That limit
+ * is stated on this screen, where the visitor decides whether to paste — closing
+ * the gap between what "domain monitoring" sounds like and what it is.
  *
- * The zone-file box is not a convenience. DNS refuses to enumerate a zone from outside it,
- * so a paste is the only channel through which the *names* in a zone can reach us, and
- * without one this monitor covers the apex and nothing else. That is said on this screen
- * rather than only in the docs, because it is the difference between what "domain
- * monitoring" sounds like and what it is, and this is the screen where the visitor decides.
- *
- * The field markup is spelled out here instead of coming from the shared DNS field
- * component, because carding the form means rendering the fields across three boxes, and
- * that component emits them as one fragment with no way to ask for a subset. The edit page
- * still renders it unchanged.
+ * Fields are spelled out directly here since carding the form spans three boxes,
+ * while the shared DNS field component emits them as a single one-card fragment.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,13 +32,9 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
- * How often every tracked name is resolved, in seconds, paired with the locale key naming
- * each span.
- *
- * The list floors at 900 rather than at the 300 the other monitor types offer: a domain
- * monitor sweeps every supported type at every known name, so a faster cadence buys
- * detection latency the records' own TTLs put a floor under anyway, and it is not a bound a
- * form should put one click away.
+ * How often every tracked name is resolved, in seconds, paired with the locale
+ * key naming each span. A domain sweep already queries every type at every name,
+ * so the 900s floor rests on each record's own TTL bounding detection latency.
  */
 const INTERVAL_OPTIONS = [
 	{ value: 900, key: "15m" },
@@ -64,10 +51,14 @@ const INTERVAL_OPTIONS = [
  */
 const DEFAULT_INTERVAL_SECONDS = 86_400;
 
-/** The paste ceiling as the screen states it, so the copy and the parser cannot disagree. */
+/** The paste ceiling as the screen states it, keeping the copy and the parser in agreement. */
 const MAX_ZONE_FILE_LABEL = `${MAX_ZONE_FILE_BYTES / 1024} KiB`;
 
-/** GET /app/:team/dns/new — the new DNS monitor form. */
+/**
+ * GET /app/:team/dns/new — the new DNS monitor form. The apex-only limit reads as
+ * a polite status update, since it holds before the visitor does anything, and an
+ * alert on load would cast a standing property of DNS as an error.
+ */
 export default createAction(routes.app.team.dnsMonitors.new, {
 	middleware: [requireUser, requireTeam],
 	handler: () => {
@@ -138,8 +129,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 								<SettingsSection.Card>
 									<SettingsSection.Body>
 										<Field label={t("zoneFile.label")} description={t("zoneFile.description")}>
-											{/* Spellcheck off: every line is a hostname or an RDATA literal, and a
-											    red squiggle under all of them makes a correct paste look wrong. */}
 											<TextArea
 												name="zone_file"
 												rows={10}
@@ -148,9 +137,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 											/>
 										</Field>
 
-										{/* The two bounds a paste is refused against, stated where the pasting
-										    happens: the size the text is read up to, and the number of names one
-										    monitor can sweep in a single pass. */}
 										<Description id="dns-zone-file-limits">
 											{t("zoneFile.limits", {
 												size: MAX_ZONE_FILE_LABEL,
@@ -158,13 +144,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 											})}
 										</Description>
 
-										{/*
-										 * Announced politely rather than as an alert: it is a standing property of
-										 * DNS, true of this form before the visitor has done anything wrong, and
-										 * interrupting a screen reader with it on load would frame a limit as an
-										 * error. It is on the screen at all because the gap between "domain
-										 * monitoring" and "the apex only" is decided here, not in the docs.
-										 */}
 										<Alert id="dns-apex-only-notice" color="neutral" live="off">
 											<Alert.Content>
 												<Alert.Description>
@@ -186,7 +165,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 								<SettingsSection.Card>
 									<SettingsSection.Body>
 										<Field label={t("interval.label")} description={t("interval.description")}>
-											{/* Both sides are numbers here, so the match never leans on string coercion. */}
 											<Select name="interval_seconds">
 												{INTERVAL_OPTIONS.map((option) => (
 													<Select.Option

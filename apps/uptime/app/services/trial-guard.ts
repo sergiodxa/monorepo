@@ -1,37 +1,11 @@
 /**
- * The fence in front of the public "try it" probe: the checks that must all pass before an
- * anonymous visitor gets to make this Worker fetch a URL they chose.
+ * The fence in front of the public "try it" probe: the checks that must all pass before
+ * an anonymous visitor gets to make this Worker fetch a URL they chose.
  *
- * Everything here exists because that probe is an outbound request made on a stranger's
- * behalf, from our egress and under our domain. Three distinct things can go wrong with
- * that and each has its own control: the target can be somewhere a stranger has no
- * business reaching through us ({@link checkTarget}), the caller can be a script rather
- * than a person ({@link verifyChallenge}), and the volume can be whatever a bored person
- * with a loop decides ({@link consumeCallerBudget} per address, {@link spendDailyBudget}
- * across the whole site).
- *
- * One entry point, {@link guardTrialProbe}, runs all three and answers with a single
- * `Result` so the page's action branches once. The refusal reasons stay distinguishable on
- * purpose: "we stopped for the day" and "your site is unreachable" are different sentences
- * to show a visitor, and collapsing them would make the page lie.
- *
- * Ordering is by cost, cheapest first, so the expensive checks are only reached by
- * requests that survived the free ones: the caller budget is a binding call that bills
- * nothing, the target rules are pure string work, the challenge is one round trip, DNS is
- * one or two more, and the daily budget is the only step that spends KV.
- *
- * ## Billed probes
- *
- * A caller that is charging the probe to an account passes `billed` and skips the three
- * controls that exist purely because an anonymous probe is free — the per-address budget,
- * the challenge, and the daily budget. None of them are protecting anything for a request
- * that pays its own way, and the daily cost fence in particular must not be spent by
- * traffic that is not costing us anything. The target rules and the resolve-and-verify
- * step are *not* skipped: those are about this Worker not being used as an attack proxy,
- * which is as true of a signed-in caller as of a stranger.
- *
- * What this deliberately does not do: perform the probe, decide what to tell the visitor,
- * or record anything to Analytics Engine. A caller granted a probe does those itself.
+ * Three things can go wrong with that outbound request: the target can be private
+ * ({@link checkTarget}), the caller can be a script ({@link verifyChallenge}), and the
+ * volume can be unbounded ({@link consumeCallerBudget}, {@link spendDailyBudget}).
+ * {@link guardTrialProbe} runs all three, cheapest first, and returns one `Result`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,10 +29,8 @@ const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverif
 /**
  * Free probes the whole site performs in one UTC day, across every visitor.
  *
- * A cost fence, not a marketing quota. Each probe runs through a Durable Object, so the
- * bill for the trial page scales with however many requests reach it, and without a
- * ceiling one afternoon of somebody's script is an unbounded invoice. The number is set
- * where a normal day of curious visitors never notices it and a bad day costs cents.
+ * A cost fence, not a marketing quota: sized so a normal day is unaffected and a bad
+ * day of scripted traffic costs only cents in Durable Object billing.
  */
 export const TRIAL_DAILY_BUDGET = 500;
 
@@ -66,29 +38,16 @@ export const TRIAL_DAILY_BUDGET = 500;
 const BUDGET_PREFIX = "trial:budget";
 
 /**
- * How long a day's counter outlives its day. Two days rather than one so a request served
- * either side of the UTC boundary always finds its own day's key, and so the keys expire
- * themselves instead of needing a sweep.
+ * How long a day's counter outlives its day: two days, so a request served either side of
+ * the UTC boundary always finds its own day's key, and the keys expire themselves
+ * automatically.
  */
 const BUDGET_TTL_SECONDS = 172_800;
 
 /**
  * Probes one address may spend per {@link CALLER_WINDOW}, mirroring the `simple.limit`
- * declared for the `TRIAL_RATE_LIMITER` binding in `wrangler.jsonc` (the binding reports
- * neither number back, so the two are kept in step by hand and drift shows up only in what
- * a caller is told about its own budget).
- *
- * Three, against the sixty the authenticated endpoints get, because the surface is
- * different: a caller running a billed API hard is a caller paying for it, while this
- * probes on behalf of a stranger for free. Somebody trying the tool runs a check, reads the
- * result and thinks about it, so one probe a minute would cover the happy path — but this
- * budget is spent before {@link verifyChallenge} runs, so a submission the challenge
- * refuses, which is what an impatient visitor submitting ahead of the widget gets, spends
- * an allowance with no check behind it. Three is room for those retries, and still nothing
- * a script can work with.
- *
- * It is still only a shaping limit. Addresses are free, so the honest cost fence is
- * {@link TRIAL_DAILY_BUDGET}, which this cannot substitute for.
+ * on the `TRIAL_RATE_LIMITER` binding (kept in step by hand; it reports neither number
+ * back). A shaping limit — {@link TRIAL_DAILY_BUDGET} is the real cost fence.
  */
 const CALLER_LIMIT = 3;
 
@@ -99,23 +58,15 @@ const CALLER_WINDOW = "1 minute";
 const CALLER_PREFIX = "trial-probe";
 
 /**
- * Stand-in for a caller whose address the platform did not report, so those requests share
- * one bucket rather than escaping the limit by being unidentifiable.
+ * Stand-in for a caller whose address the platform did not report, so every such request
+ * counts against one shared bucket, keeping an unidentifiable caller inside the limit.
  */
 const UNKNOWN_ADDRESS = "unknown";
 
 /**
  * Address ranges that are not on the public internet, as `[network, prefix length]`.
- *
- * Every entry is a range a probe reaching it would mean this Worker was used to touch
- * something a stranger cannot touch themselves, or a range no answer can come back from.
- * `169.254.0.0/16` is the one worth naming: it holds `169.254.169.254`, the cloud instance
- * metadata address, which is the single most valuable target an open prober has.
- *
- * The rest, in order: `0.0.0.0/8` this-network, `10/8`, `172.16/12` and `192.168/16`
- * RFC1918, `100.64/10` carrier-grade NAT, `127/8` loopback, `192.0.0/24` IETF protocol
- * assignments, `198.18/15` benchmarking, the three documentation ranges, `224/4` multicast
- * and `240/4` reserved (which is where the `255.255.255.255` broadcast address lives).
+ * `169.254.0.0/16` matters most: it holds the cloud metadata address
+ * `169.254.169.254`, the highest-value target an open prober could reach.
  */
 const BLOCKED_IPV4: readonly (readonly [string, number])[] = [
 	["0.0.0.0", 8],
@@ -135,19 +86,9 @@ const BLOCKED_IPV4: readonly (readonly [string, number])[] = [
 ];
 
 /**
- * IPv6 ranges that are not on the public internet, as `[network, prefix length]`.
- *
- * `::/96` covers both the unspecified address and the deprecated IPv4-compatible form, and
- * it is what blocks `::1`. Then `100::/64` discard-only, `2001::/32` Teredo, `2001:db8::/32`
- * documentation, `fc00::/7` unique-local, `fe80::/10` link-local and `ff00::/8` multicast.
- *
- * Teredo is refused wholesale rather than unpacked. It hides a client IPv4 in the last two
- * groups XORed with `ffff`, so reading it back is possible, but a Teredo target is not
- * something a real monitored site is reachable at, and refusing the whole prefix cannot be
- * gotten wrong the way an unpacking can.
- *
- * The prefixes that *are* unpacked instead of listed here are the ones that carry a real,
- * routable IPv4 inside them — see {@link embeddedIpv4}.
+ * IPv6 ranges that are not on the public internet, as `[network, prefix length]`. Teredo
+ * (`2001::/32`) is blocked as a whole prefix, since no genuine monitored site sits behind
+ * it; the prefixes carrying a routable IPv4 are unpacked and checked — see {@link embeddedIpv4}.
  */
 const BLOCKED_IPV6: readonly (readonly [string, number])[] = [
 	["::", 96],
@@ -160,11 +101,9 @@ const BLOCKED_IPV6: readonly (readonly [string, number])[] = [
 ];
 
 /**
- * Name suffixes that never denote a host on the public internet: the special-use names a
- * resolver answers locally, the private-network conventions, and RFC 2606's reserved TLDs.
- *
- * Matched against the last labels of the name, so `example.com` is unaffected by `example`
- * being listed — the rule is "ends in `.example`", not "contains it".
+ * Name suffixes that never denote a public host: resolver-local names, private-network
+ * conventions, and RFC 2606 reserved TLDs. Matched against the name's last labels, so
+ * listing `example` blocks suffixes like `foo.example` while leaving `example.com` alone.
  */
 const BLOCKED_SUFFIXES: readonly string[] = [
 	"localhost",
@@ -188,9 +127,8 @@ export type TrialRefusalReason =
 	/** The URL points somewhere an anonymous visitor may not send us. */
 	| "blocked-target"
 	/**
-	 * The form arrived with no Turnstile token, which is what an unticked widget looks
-	 * like. Not a failure — an unfinished form, and the only reason here the visitor can
-	 * clear by doing one more thing on the page they are already looking at.
+	 * The form arrived with no Turnstile token — what an unticked widget looks like. An
+	 * unfinished form the visitor clears by finishing the widget already on the page.
 	 */
 	| "challenge-incomplete"
 	/** A Turnstile token was supplied and Cloudflare did not accept it. */
@@ -200,32 +138,29 @@ export type TrialRefusalReason =
 	/** The site has performed all the free probes it will perform today. */
 	| "budget-exhausted"
 	/**
-	 * Something on our side stopped the check before it could run, so nothing at all was
-	 * learned about the target. A statement about this deployment rather than about the
-	 * visitor's URL, and the only reason here they cannot act on — see {@link TrialRefusal}
-	 * on `detail`, which is where the specific fault is named for whoever reads the logs.
+	 * Something on this deployment stopped the check before it could run, so nothing was
+	 * learned about the target — a fault attributable to the deployment itself. See
+	 * {@link TrialRefusal} on `detail` for the specific cause, meant for the logs.
 	 */
 	| "unavailable";
 
 /**
  * A refused trial probe.
  *
- * `reason` is what the page branches on and shows a visitor; `detail` names the specific
- * rule that fired and is for logs — it distinguishes an unroutable literal from an
- * unresolvable name from a scheme we do not speak, none of which the visitor needs spelled
- * out but all of which someone reading production logs does.
+ * `reason` drives what the page shows a visitor; `detail` names the specific rule that
+ * fired, meant for an operator reading production logs.
  */
 export class TrialRefusal extends Error {
 	/** Which control refused, and therefore what the page should say. */
 	readonly reason: TrialRefusalReason;
 
-	/** The specific rule that fired, for logs rather than for display. */
+	/** The specific rule that fired, meant for an operator reading logs. */
 	readonly detail: string;
 
 	/**
-	 * Seconds until the caller could succeed, when that is knowable — a rate limit's
-	 * window. `null` for refusals with no useful wait, including the daily budget: the
-	 * next UTC midnight is derivable by the caller and is not a "retry after".
+	 * Seconds until the caller could succeed, when that is knowable from a rate limit's
+	 * window. `null` for the daily budget too: its reset is UTC midnight, which the caller
+	 * can derive on its own.
 	 */
 	readonly retryAfterSeconds: number | null;
 
@@ -250,15 +185,14 @@ export interface TrialProbeRequest {
 	/** The token Turnstile's widget produced, or `null` when the form sent none. */
 	token: string | null;
 	/**
-	 * The request being served. Read only for `CF-Connecting-IP` — the caller passes the
-	 * request rather than an address so that the "never trust `X-Forwarded-For`" rule is
-	 * enforced in one place instead of at every call site.
+	 * The request being served, read only for `CF-Connecting-IP`. Passing the request keeps
+	 * the "never trust `X-Forwarded-For`" rule enforced in this one place.
 	 */
 	request: Request;
 	/**
-	 * Whether the caller is charging this probe to an account, which turns off the three
-	 * free-tier controls — see this module's own doc comment. Stated rather than optional
-	 * so that every call site has to have an opinion about who is paying.
+	 * Whether the caller is charging this probe to an account, which turns off the
+	 * free-tier controls: the per-address budget, the challenge, and the daily budget.
+	 * Required, so every call site commits to an answer about who is paying.
 	 */
 	billed: boolean;
 }
@@ -268,9 +202,9 @@ export interface TrialProbeGrant {
 	/** The normalized absolute URL to probe. */
 	url: URL;
 	/**
-	 * The addresses the hostname resolved to when it was checked, all of them public. A
-	 * record of what was verified, not an instruction — see {@link guardTrialProbe} on why
-	 * the probe cannot be pinned to them.
+	 * The addresses the hostname resolved to when it was checked, all of them public — a
+	 * record of what was verified. {@link guardTrialProbe} explains why the probe itself
+	 * cannot be pinned to them.
 	 */
 	addresses: string[];
 	/**
@@ -283,9 +217,8 @@ export interface TrialProbeGrant {
 /**
  * The Turnstile secret, when the running deployment has one.
  *
- * Read structurally rather than off the generated `Cloudflare.Env` so that an absent
- * secret is a state this module can *describe* rather than a crash. It is not a state it
- * tolerates: {@link verifyChallenge} refuses every probe without one.
+ * Read structurally off `env` so an absent secret is a describable state: {@link
+ * verifyChallenge} turns it into a refusal for every probe, keeping the app running.
  *
  * @returns The secret, or `undefined` when this deployment has none.
  */
@@ -296,14 +229,9 @@ function turnstileSecret(): string | undefined {
 }
 
 /**
- * The Turnstile site key, for the page to render the widget with.
- *
- * Not a secret — it ships to the browser — but read the same structural way, so the page
- * renders without the key rather than failing. A page given `null` renders no widget at
- * all, and a deployment in that state is broken rather than merely unconfigured: with no
- * widget the form sends no token, and {@link verifyChallenge} refuses a probe with no
- * token. That is the intended shape of the failure — an unprotected prober is the one
- * outcome worse than a page that cannot run a check.
+ * The Turnstile site key the page renders its widget with, read the same structural way
+ * as the secret. A deployment with none renders no widget, so the form sends no token and
+ * {@link verifyChallenge} refuses every probe — the safe failure mode for an open prober.
  *
  * @returns The site key, or `null` when this deployment has none.
  */
@@ -316,9 +244,8 @@ export function trialTurnstileSiteKey(): string | null {
 /**
  * The `TRIAL_RATE_LIMITER` binding, when the running deployment declares one.
  *
- * Read structurally rather than off the generated `Cloudflare.Env`, which is what lets an
- * absent binding be a supported state instead of a crash: a deploy predating the
- * `ratelimits` entry, or a local runtime configured without it, still serves the page.
+ * Read structurally off `env`, so a deploy predating the `ratelimits` entry, or a local
+ * runtime without it, still serves the page with an absent binding treated as valid.
  *
  * @returns The binding, or `undefined` when this deployment has none.
  */
@@ -330,24 +257,20 @@ function rateLimiterBinding(): RateLimiterBinding | undefined {
 }
 
 /**
- * The caller budget's backend, built on the first request and reused after that: the
- * adapter reads a binding off `env`, which is not module-scope work.
+ * The caller budget's backend, built on the first request and reused after that, since a
+ * binding off `env` becomes available only once a request begins.
  */
 let callerLimiter: Adapter | undefined;
 
 /**
- * Backend counting the caller budget.
- *
- * The binding bills nothing per call, which is the whole reason it and not KV counts a
- * limit whose job is to be cheaper than the thing it protects. Without it the count falls
- * back to the isolate's own memory: weaker, since each isolate gets its own budget, but
- * free, and still enough to bound one connection hammering the form.
+ * Backend counting the caller budget. The binding bills nothing per call, keeping this
+ * limit cheaper than the thing it protects. Isolate memory serves as a fallback when no
+ * binding exists — weaker, since each isolate keeps its own count, but free.
  *
  * @returns The adapter to count with.
  */
 function createCallerAdapter(): Adapter {
 	let binding = rateLimiterBinding();
-	// `as const` keeps the window a duration literal rather than widening it to `string`.
 	let options = { limit: CALLER_LIMIT, window: CALLER_WINDOW } as const;
 
 	if (binding === undefined) return new MemoryAdapter(options);
@@ -355,15 +278,9 @@ function createCallerAdapter(): Adapter {
 }
 
 /**
- * Spends one probe from the calling address's budget.
- *
- * Only `CF-Connecting-IP` identifies the caller. `X-Forwarded-For` is supplied by the
- * client, so keying on it would let anyone mint a fresh bucket per request and the limit
- * would count nothing.
- *
- * A backend that cannot answer fails **open**: the address limit shapes traffic, while
- * {@link spendDailyBudget} is what bounds spend, so refusing every visitor because the
- * limiter is unreachable would trade a real outage for a hypothetical one.
+ * Spends one probe from the calling address's budget, keyed on `CF-Connecting-IP` since
+ * `X-Forwarded-For` is spoofable by the client. Fails **open** on a broken backend, since
+ * this limit only shapes traffic — {@link spendDailyBudget} is what bounds real spend.
  *
  * @param request - The request being served.
  * @returns A refusal when the address is over budget, `null` when it may proceed.
@@ -384,12 +301,9 @@ async function consumeCallerBudget(request: Request): Promise<TrialRefusal | nul
 }
 
 /**
- * Parses a canonical dotted-quad into a 32-bit number.
- *
- * Only the canonical form is accepted, and only the canonical form ever arrives: `URL`
- * normalizes every legacy IPv4 spelling — octal `0177.0.0.1`, hex `0x7f000001`, the bare
- * integer `2130706433` — into dotted decimal while parsing, which is exactly why the
- * blocklist runs against `url.hostname` and never against the string the visitor typed.
+ * Parses a canonical dotted-quad into a 32-bit number. `URL` normalizes every legacy
+ * spelling — octal, hex, bare integers — into dotted decimal while parsing, which is why
+ * the blocklist safely runs against the already-normalized `url.hostname`.
  *
  * @param literal - A dotted-decimal address.
  * @returns The address as a number, or `null` when it is not one.
@@ -435,27 +349,28 @@ function parseIpv6Groups(parts: string[]): number[] | null {
 }
 
 /**
- * An IPv6 address, as the eight 16-bit groups it is made of. A tuple rather than an array
- * so the prefix table and {@link embeddedIpv4} can index it without every position being
- * possibly-absent.
+ * An IPv6 address, as the eight 16-bit groups it is made of: a tuple, so the prefix table
+ * and {@link embeddedIpv4} can index every position with a guaranteed value present.
  */
 type Ipv6Groups = readonly [number, number, number, number, number, number, number, number];
 
 /**
- * Narrows a list of groups to an address, rejecting any length but eight.
+ * Narrows a list of groups to an address, rejecting any length but eight. The destructured
+ * defaults below are unreachable once the length check passes; they exist only to give the
+ * destructure a tuple type.
  *
  * @param groups - The groups parsed out of a literal.
  * @returns The address, or `null` when there are not exactly eight groups.
  */
 function toIpv6Groups(groups: number[]): Ipv6Groups | null {
 	if (groups.length !== 8) return null;
-	// The defaults are unreachable past the length check; they exist to build a tuple.
 	let [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, g = 0, h = 0] = groups;
 	return [a, b, c, d, e, f, g, h];
 }
 
 /**
- * Parses an IPv6 literal into its eight groups.
+ * Parses an IPv6 literal into its eight groups. `rawTail` is `undefined` exactly when the
+ * literal used no `::` compression, which decides whether the groups need zero-padding.
  *
  * @param literal - An IPv6 address without surrounding brackets.
  * @returns Eight 16-bit groups, or `null` when the literal is not a valid address.
@@ -463,7 +378,6 @@ function toIpv6Groups(groups: number[]): Ipv6Groups | null {
 function parseIpv6(literal: string): Ipv6Groups | null {
 	let halves = literal.split("::");
 	if (halves.length > 2) return null;
-	// `rawTail` is `undefined` exactly when the literal used no `::` compression.
 	let [rawHead = "", rawTail] = halves;
 
 	let head = parseIpv6Groups(rawHead === "" ? [] : rawHead.split(":"));
@@ -478,14 +392,9 @@ function parseIpv6(literal: string): Ipv6Groups | null {
 }
 
 /**
- * The IPv4 address an IPv6 address carries inside it, for the prefixes that carry a real
- * one: `::ffff:0:0/96` IPv4-mapped, `64:ff9b::/96` the well-known NAT64 prefix, and
- * `2002::/16` 6to4.
- *
- * All three are ways to write an IPv4 destination in IPv6 notation, so all three are ways
- * to write `169.254.169.254` past a blocklist that only reads IPv6 prefixes. Unpacking and
- * re-checking the inner address is what closes that, and it is also what keeps a genuinely
- * public mapped address like `::ffff:8.8.8.8` usable.
+ * The IPv4 address an IPv6 address carries inside it: `::ffff:0:0/96` IPv4-mapped,
+ * `64:ff9b::/96` NAT64, and `2002::/16` 6to4 — three notations that could otherwise
+ * smuggle an address like `169.254.169.254` past an IPv6-only blocklist.
  *
  * @param groups - The eight groups of an IPv6 address.
  * @returns The embedded IPv4 as a number, or `null` when this address embeds none.
@@ -515,11 +424,9 @@ function embeddedIpv4(groups: Ipv6Groups): number | null {
 }
 
 /**
- * Whether an IPv4 address falls inside a `[network, prefix]` range.
- *
- * Compares by division rather than by bit masking: a 32-bit shift in JavaScript operates
- * on signed integers, so masking `240.0.0.0/4` there produces a negative number and the
- * comparison silently stops working for the top of the address space.
+ * Whether an IPv4 address falls inside a `[network, prefix]` range. Compares by division:
+ * a 32-bit shift in JavaScript operates on signed integers, so masking `240.0.0.0/4`
+ * would produce a negative number, breaking the comparison at the top of the address space.
  *
  * @param address - The address, as a number.
  * @param network - The range's network address, dotted-decimal.
@@ -545,11 +452,9 @@ function toBits(groups: Ipv6Groups): string {
 }
 
 /**
- * Whether an IPv6 address falls inside a `[network, prefix]` range.
- *
- * Compared bit by bit as text rather than by masking each group, because a prefix that
- * does not land on a group boundary — `fc00::/7`, `fe80::/10` — needs a partial mask, and
- * a wrong one silently widens or narrows the range instead of failing.
+ * Whether an IPv6 address falls inside a `[network, prefix]` range. Compared as text, bit
+ * by bit, since a prefix off a group boundary — `fc00::/7`, `fe80::/10` — needs a partial
+ * mask, and a wrong one would silently widen or narrow the range.
  *
  * @param address - The address, as eight groups.
  * @param network - The range's network address, in IPv6 notation.
@@ -565,8 +470,8 @@ function inIpv6Range(address: Ipv6Groups, network: string, prefix: number): bool
 /**
  * Whether an address literal is one a trial probe may be pointed at.
  *
- * Anything that is not a parseable IP literal is refused rather than allowed, so a form
- * this function does not understand cannot be the form that gets through.
+ * An unparseable literal is refused, so only a form this function fully recognizes can
+ * get through.
  *
  * @param literal - An IPv4 or IPv6 address, without brackets.
  * @returns Whether the address is on the public internet.
@@ -589,7 +494,7 @@ export function isPublicAddress(literal: string): boolean {
 }
 
 /**
- * The address a hostname *is*, when it is a literal rather than a name to be resolved.
+ * The bare address a hostname encodes directly, when the hostname is itself a literal.
  *
  * A bracketed hostname is IPv6 by definition; anything else is a literal only if it parses
  * as IPv4, since `URL` leaves those bare.
@@ -603,15 +508,9 @@ function addressLiteral(hostname: string): string | null {
 }
 
 /**
- * Whether a hostname is one a trial probe may be pointed at, judged on the name alone.
- *
- * A name with no dot in it is refused. Those are resolved through the resolver's search
- * domains, which is how `wiki` or `grafana` becomes an internal host, and no site worth
- * trying out is reachable at a single label.
- *
- * The root label is stripped before anything is compared. `URL` keeps a trailing dot, so
- * `localhost.` arrives as `localhost.` — a fully qualified name that resolves exactly like
- * `localhost` and matches none of the suffixes below unless the dot is removed first.
+ * Whether a hostname is one a trial probe may be pointed at, judged on the name alone. A
+ * single-label name is refused since resolver search domains could turn it into an
+ * internal host, and a trailing root dot is stripped first so `localhost.` still matches.
  *
  * @param hostname - A normalized hostname, already lowercased by `URL`.
  * @returns Whether the name may be probed.
@@ -623,20 +522,9 @@ function isAllowedHostname(hostname: string): boolean {
 }
 
 /**
- * Normalizes what the visitor typed and applies every rule that can be decided from the
- * URL itself, without asking the network anything.
- *
- * A bare domain gets `https://`, because that is what people type and refusing it would be
- * pedantry. A string that already names a scheme keeps it, and keeps it only if it is
- * `http` or `https` — the point of the trial is an HTTP check, and every other scheme is
- * either something we cannot check or something (`file:`, `gopher:`) whose only use here
- * would be reaching past the checks that follow.
- *
- * Credentials are refused: a URL carrying `user:password@` would have this Worker present
- * someone else's credentials to a third party. Ports are held to the two HTTP defaults,
- * which stops the page from being a port scanner pointed at whatever public host the
- * visitor names — the blocklist below stops it reaching private hosts, but nothing else
- * stops it enumerating open ports on public ones.
+ * Normalizes what the visitor typed and applies every rule decidable from the URL alone.
+ * Credentials are refused, since this Worker would otherwise relay them to a third party,
+ * and only the two HTTP default ports are allowed, keeping the page from scanning a host.
  *
  * @param target - The target as typed.
  * @returns The normalized URL, or a refusal naming the rule that fired.
@@ -685,18 +573,9 @@ export function checkTarget(target: string): Result<URL, TrialRefusal> {
 }
 
 /**
- * Resolves a hostname and checks every address it answers with.
- *
- * This is the check that matters. A literal blocklist stops `http://127.0.0.1`, which
- * nobody serious tries; the actual attack is `http://whatever.attacker.com` with an `A`
- * record of `127.0.0.1`, and only resolving the name first catches it. The cost is one
- * DNS-over-HTTPS round trip against an endpoint this app already depends on, which is
- * cheap next to the probe it gates.
- *
- * Both record types are queried, and a failure on either refuses the target. A name with
- * no `AAAA` answers successfully with an empty list, so an error here means the name does
- * not resolve or the resolver could not be reached — neither of which is a state to probe
- * on the strength of the other record type.
+ * Resolves a hostname and checks every address it answers with. A literal blocklist only
+ * stops `http://127.0.0.1`; the real attack is a public name whose `A` record points at an
+ * internal address — caught only by resolving the name first, so any resolution failure refuses the target.
  *
  * @param hostname - The hostname to resolve.
  * @returns The resolved public addresses, or a refusal.
@@ -729,22 +608,9 @@ async function checkResolvedAddresses(hostname: string): Promise<Result<string[]
 }
 
 /**
- * Verifies a Turnstile token server-side.
- *
- * Fails **closed** in every direction, including when Cloudflare's endpoint cannot be
- * reached and when this deployment has no secret at all: a challenge that was not verified
- * was not passed, and the page degrading is a smaller problem than the prober being open.
- * There is deliberately no escape hatch for an unconfigured environment — a secret rotated
- * away or dropped from a deploy would otherwise open the free prober to the whole internet
- * with nothing but a log line to show for it. The log stays, at error level on every
- * request, because it is the operator's only signal; what changes is that the request
- * stops there.
- *
- * The two ways a challenge can fail are kept apart, because they are different sentences
- * to show a visitor. No token at all is what an unticked widget looks like, and the person
- * who submitted the form early needs to finish it, not reload the page. A token Cloudflare
- * actively rejected — or one it could not be asked about — is the case the "try again"
- * wording was written for.
+ * Verifies a Turnstile token server-side. Fails **closed** in every direction, including
+ * an unconfigured deployment, since an open prober is worse than a degraded page. A
+ * missing token is kept distinct from a rejected one, since only it is a form to finish.
  *
  * @param token - The token the widget produced.
  * @param address - The calling address, which Turnstile cross-checks against the token.
@@ -793,18 +659,9 @@ async function verifyChallenge(
 }
 
 /**
- * Counts one probe against today's global budget.
- *
- * A KV counter keyed on the UTC day. **Approximate by construction**: KV has no atomic
- * increment and is eventually consistent, so concurrent requests can read the same count
- * and a burst can overshoot the cap. That is accepted, because the alternative — a Durable
- * Object or D1 row per probe — spends the kind of money this budget exists to bound, and
- * overshooting a cost fence by a handful is not a failure of the fence.
- *
- * The read failing is treated as exhaustion. A counter that cannot be read is a budget
- * that cannot be enforced, and the whole point of the budget is that unbounded spend is
- * the outcome to avoid; the page saying "not today" is the safe side of that. The write
- * failing is not, since the probe was already authorized and one lost increment is noise.
+ * Counts one probe against today's global budget in a KV counter keyed on the UTC day.
+ * **Approximate by construction**, since KV lacks atomic increment — a burst can slightly
+ * overshoot the cap, and a read failure counts as exhaustion, the safe side of that gap.
  *
  * @returns Probes left after this one, or a refusal when the day is spent.
  */
@@ -842,41 +699,9 @@ async function spendDailyBudget(): Promise<Result<number, TrialRefusal>> {
 }
 
 /**
- * Runs every control and answers whether this visitor gets their free probe.
- *
- * Call once per submission and branch on the result; a granted free probe has already been
- * counted against both budgets, so a caller that then decides not to probe has spent one
- * anyway. That is deliberate — the alternative is a second call to commit, and a control
- * that is only enforced when the caller remembers to finish the handshake is not a control.
- *
- * A `billed` probe is held to the target rules and the address resolution and to nothing
- * else, so it spends neither budget and is never challenged. Both halves of that matter:
- * the free-tier controls would be charging an account for protections it is not using, and
- * the SSRF controls are the ones that have nothing to do with who is paying.
- *
- * ## What this cannot promise
- *
- * The address checked is not the address fetched. `fetch` takes a URL and resolves the
- * name itself, and the Workers runtime offers no way to pin a connection to an address
- * already validated — so between this check and the probe, a record with a one-second TTL
- * can change from a public address to a private one. That is DNS rebinding, and this
- * design does not close it. Closing it needs the resolution and the connection to be the
- * same act, which means an egress proxy that validates the address it is about to connect
- * to, not a check in front of `fetch`.
- *
- * Two things blunt it without fixing it: the probe leaves through Cloudflare's network,
- * which has no route to RFC1918 space in the first place, and a rebind only reaches
- * whatever the *edge* can reach, not this account's private infrastructure — which is why
- * the residual risk is worth stating rather than worth blocking the feature over. Neither
- * is a guarantee, and neither should be quoted as one.
- *
- * Beyond that: only `A` and `AAAA` are checked, so a target reached through a `CNAME`
- * chain is judged on the addresses at the end of it and not on the chain; a resolver may
- * legitimately answer this Worker and the probe differently, since neither the DoH
- * endpoint here nor the resolver behind `fetch` is authoritative; and redirects are not
- * covered at all — a public URL answering `302 http://169.254.169.254/` is followed by
- * whoever performs the probe, so the probe itself must not follow redirects, or must
- * re-check each hop through {@link checkTarget}.
+ * Runs every control and answers whether this visitor gets their free probe. Call once
+ * per submission: a grant already counts against both budgets, so deciding not to probe
+ * afterward still spends one. A `billed` probe skips only the free-tier controls.
  *
  * @param probe - The visitor's submission.
  * @returns Permission to probe, or the reason they were refused.
@@ -898,7 +723,6 @@ export async function guardTrialProbe(
 		if (challenge !== null) return failure(challenge);
 	}
 
-	// A literal was already judged on its own value; there is no name to resolve.
 	let literal = addressLiteral(target.data.hostname);
 	let addresses = literal === null ? [] : [literal];
 	if (literal === null) {

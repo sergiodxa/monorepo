@@ -1,6 +1,6 @@
 /**
- * Tests for the flow monitor results fragment. `~/app/data/flow-monitor` doesn't import
- * `cloudflare:workers`, so no module mock is needed here. `getViewer()`/`ctx.team`/
+ * Tests for the flow monitor results fragment. `~/app/data/flow-monitor` imports only
+ * the database layer, so no module mock is needed here. `getViewer()`/`ctx.team`/
  * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for the real
  * `auth`/`requireUser`/`requireTeam` chain, matching the template in
  * `app/http/controllers/actions/monitors.test.ts`.
@@ -70,9 +70,9 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 }
 
 /**
- * Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s renderer. Frame
- * resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op — the
- * results fragment this page frames has its own test.
+ * Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s renderer.
+ * This test exercises only the page request, so `resolveFrame` stays a no-op — the
+ * results fragment this page frames is covered by its own test.
  */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {
@@ -157,7 +157,6 @@ describe("flowMonitorCardResults", () => {
 
 		let body = await response.text();
 		expect(body).toContain("signs in");
-		// Five lines, so a gutter counting to five.
 		for (let number of [1, 2, 3, 4, 5]) expect(body).toContain(String(number));
 	});
 
@@ -170,6 +169,10 @@ describe("flowMonitorCardResults", () => {
 		expect(body).toContain("Pass rate");
 	});
 
+	/**
+	 * The gutter marks only the line a failure names, so the marker's presence alone
+	 * confirms the right line was flagged.
+	 */
 	test("a failing run marks the line it failed on and quotes the failure", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await seedMonitor(db, team.id);
@@ -185,10 +188,13 @@ describe("flowMonitorCardResults", () => {
 		let body = await (await send(db, team, membership, monitor.id)).text();
 		expect(body).toContain("Failing");
 		expect(body).toContain("expected 200, observed 500");
-		// The gutter marker only appears when a line is marked, so its presence is the assertion.
 		expect(body).toContain("›");
 	});
 
+	/**
+	 * The pass rate's denominator counts only completed runs, so the sole completed,
+	 * passing run yields 100%.
+	 */
 	test("a run that could not happen shows its reason and is left out of the pass rate", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await seedMonitor(db, team.id);
@@ -204,7 +210,6 @@ describe("flowMonitorCardResults", () => {
 		let body = await (await send(db, team, membership, monitor.id)).text();
 		expect(body).toContain("Cannot run");
 		expect(body).toContain("no verified domain covers");
-		// One passing run and one that never ran: 100%, not 50%.
 		expect(body).toContain("100%");
 	});
 

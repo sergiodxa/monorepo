@@ -1,10 +1,9 @@
 /**
  * Tests the MCP cache against a real KV namespace.
  *
- * In the Workers pool, so `CACHE` is Cloudflare's own implementation rather than a stand-in
- * — which matters because the thing being asserted is that a value written under a key is
- * found again under the same key, and a hand-written double would prove only that the test
- * agrees with itself.
+ * In the Workers pool, so `CACHE` is Cloudflare's own implementation. That matters because
+ * the thing being asserted is that a value written under a key is found again under the
+ * same key — a guarantee only the real implementation can confirm.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -69,9 +68,9 @@ function toolContext(name: string, input: Record<string, unknown>): ToolContext 
 	} as ToolContext;
 }
 
+/** KV persists across tests in this pool, so each case must start from a clean slate. */
 beforeEach(async () => {
 	deferred = [];
-	// KV persists across tests in this pool, and every case here asserts a miss then a hit.
 	for (let key of (await env.CACHE.list({ prefix: "mcp:" })).keys) await env.CACHE.delete(key.name);
 });
 
@@ -151,8 +150,6 @@ describe("cacheToolResults", () => {
 	});
 
 	test("never caches a failed call", async () => {
-		// `isError` usually means a slug that does not exist yet. Storing that would keep
-		// answering "not found" for the whole TTL after the post appears.
 		let calls = 0;
 		let middleware = cacheToolResults();
 		let failing = async (): Promise<CallToolResult> => {

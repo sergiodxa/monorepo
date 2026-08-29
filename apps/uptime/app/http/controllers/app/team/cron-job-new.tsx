@@ -30,10 +30,8 @@ const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
 /**
  * GET /app/:team/cron-jobs/new — the new cron-job monitor form.
- *
- * UTC leads the timezone list and is marked `selected` directly on its own
- * `<option>`, since a `<select>` carries its default only through each option's
- * `selected` attribute.
+ * UTC leads the timezone list and is marked `selected` on its own `<option>`,
+ * since a `<select>` carries its default only through each option's attribute.
  */
 export default createAction(routes.app.team.cronJobs.new, {
 	middleware: [requireUser, requireTeam],

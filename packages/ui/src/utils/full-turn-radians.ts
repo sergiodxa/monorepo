@@ -1,10 +1,8 @@
 /**
  * The radian measure of a full turn around a circle — the shared constant
- * behind every polar or point-math computation that needs to recognize or
- * default to a complete revolution: detecting a pie wedge's sweep as a full
- * circle, defaulting a pie chart's total span to one full turn starting from
- * its start angle, and folding an angle or hue back into its wraparound
- * range.
+ * behind computations that recognize or default to a complete revolution:
+ * pie wedge sweep detection, a pie chart's default total span, and folding
+ * an angle or hue back into its wraparound range.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -50,7 +50,11 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	error: "neutral",
 };
 
-/** GET /app/:team/flows/:monitorId — a flow monitor's detail page. */
+/**
+ * GET /app/:team/flows/:monitorId — a flow monitor's detail page. The run
+ * button hydrates as an island under a request-scoped `IntlProvider`, so
+ * i18n state never leaks across concurrent requests in the Workers isolate.
+ */
 export default createAction(routes.app.team.flowMonitors.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -84,19 +88,6 @@ export default createAction(routes.app.team.flowMonitors.show, {
 					]}
 					actions={
 						<div mix={[flex(), items("center"), gap("12px"), nowrap()]}>
-							{/*
-							 * RunFlowButton is a `clientEntry` island whose render function runs both
-							 * server-side (the no-JS baseline markup) and client-side (after hydration).
-							 * Client-side, `intl(handle)` falls back to the module-scoped default
-							 * `bootstrap/browser.ts` registers via `setIntl()` — never set server-side, since
-							 * a module-scoped instance would leak across concurrent requests in a Workers
-							 * isolate — so the SSR pass needs this request-scoped `IntlProvider` ancestor.
-							 *
-							 * An island and not the plain `<form>` the other detail pages post with, because a
-							 * flow runs inline and may take most of thirty seconds: the hydrated path keeps the
-							 * button pending and toasts the outcome instead of holding a navigation open for
-							 * that long. The `<form>` inside it is still the no-JS baseline.
-							 */}
 							<IntlProvider i18n={ctx.i18next}>
 								<RunFlowButton
 									action={routes.actions.monitor.flow.check.href({ team: ctx.team.slug })}
@@ -104,11 +95,6 @@ export default createAction(routes.app.team.flowMonitors.show, {
 									name={monitor.name}
 								/>
 							</IntlProvider>
-							{/*
-							 * Hidden on a phone, where the header has room for one action and "Run now" is
-							 * the one somebody came for. Editing is still a tap away through the list's row
-							 * menu, so nothing becomes unreachable — the button is redundant, not essential.
-							 */}
 							<div mix={[hidden(), media("(min-width: 640px)", flex())]}>
 								<LinkButton
 									href={routes.app.team.flowMonitors.edit.href({
@@ -173,13 +159,6 @@ export default createAction(routes.app.team.flowMonitors.show, {
 							)}
 						</div>
 
-						{/*
-						 * `StatCardSkeleton` renders bare cards with no row of its own, so several frames
-						 * can share one row a caller lays out. This frame shares a row with nothing, so it
-						 * supplies the row its own placeholders sit in — otherwise the cards stack flush
-						 * while the page loads, which is not the shape the fragment resolves to. The gap
-						 * matches the stat row above.
-						 */}
 						<Frame
 							name="flow-monitor-card-results"
 							src={routes.app.team.flowMonitors.cards.results.href({

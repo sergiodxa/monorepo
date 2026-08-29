@@ -1,21 +1,9 @@
 /**
- * Edit HTTP monitor page controller: general settings form (posts to
- * `update-monitor`), the content-checks section, and the SSL monitoring settings
- * form. Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong
- * to the current team.
+ * Edit HTTP monitor page controller: general settings, content checks, and
+ * SSL monitoring settings. Requires `requireUser` + `requireTeam`; 404s when
+ * the monitor doesn't belong to the current team.
  *
- * Each group is its own bordered card with its own heading, description and — for
- * the three separately-posting forms — its own action row at the card's foot, so the
- * page reads as distinct settings groups rather than one continuous column. The
- * groups stay on separate `<form>` elements exactly as before: the main form, the
- * add-content-check form, the SSL form and the delete form each post to their own
- * action, and only the two main-form cards share a `<form>`.
- *
- * The content-checks table is `@pkg/ui`'s `Table` compound, and every delete
- * confirmation (a content check's own, and the monitor's own danger-zone one) is
- * `@pkg/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
- * convenience wrapper, since the confirming control in each case is a real
- * `<form method="post">` submit button rather than a `command="close"` action.
+ * Each settings group is its own bordered card, posted through its own `<form>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,7 +39,6 @@ import DocumentLayout from "~/resources/layouts/document";
 import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
 
-/** Translates a content check's `type` into its display label, aliasing `not_contains` to the `notContains` key. */
 function contentCheckTypeLabel(
 	i18next: ReturnType<typeof getContext>["i18next"],
 	type: SelectMonitorContentCheck["type"],
@@ -68,7 +55,11 @@ namespace ContentChecksSection {
 	}
 }
 
-/** Renders the monitor's existing content checks (each with its own delete-confirmation dialog) plus a form to add a new one, capped at 10 checks. */
+/**
+ * Renders the monitor's content checks, each with its own delete-confirmation
+ * dialog, plus a form to add one (capped at 10). The type select marks its
+ * default via `selected` since `<select>` carries no `defaultValue` attribute.
+ */
 function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 	return () => {
 		let { team, monitorId, contentChecks, i18next } = handle.props;
@@ -170,7 +161,6 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 
 						<SettingsSection.Body>
 							<Field label={i18next.t("contentMonitoring.form.checkType.label")}>
-								{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
 								<Select name="type">
 									<Select.Option value="contains" selected>
 										{i18next.t("contentMonitoring.form.checkType.options.contains")}

@@ -153,10 +153,9 @@ describe("dns-monitor-card-results", () => {
 	});
 
 	/**
-	 * Resolution time measures how fast our own resolver answered, not anything about the
-	 * visitor's DNS, so averaging it into a headline card states a fact about our
-	 * infrastructure as if it were one about theirs. The column stays on the check log,
-	 * where it can explain a single odd row.
+	 * Resolution time measures our own resolver's speed, an infrastructure fact that
+	 * would misrepresent the visitor's DNS if folded into a headline card. It stays
+	 * on the check log to explain a single odd row.
 	 */
 	test("never reduces resolution time into a headline card", async () => {
 		let { db, team, membership } = await createFixture();

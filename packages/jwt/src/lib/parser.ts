@@ -15,8 +15,7 @@
  * Base class for every failure this parser raises.
  *
  * A single base lets a caller distinguish malformed claims from a genuine bug
- * with one `instanceof` check, while subclasses still tell a missing claim
- * from a mistyped one.
+ * with one `instanceof` check; subclasses still tell missing from mistyped.
  */
 export class ParserError extends Error {
 	override name = "ParserError";
@@ -56,7 +55,7 @@ export class InvalidTypeError extends ParserError {
  * Reads values out of a plain object, checking the type of each one.
  *
  * Throws on a mismatch, so a `JWT` subclass's getters can return the claim's
- * own type without wrapping it for a `Result`.
+ * own type directly.
  *
  * @example
  * get email(): string {
@@ -97,7 +96,7 @@ export class ObjectParser {
 	}
 
 	/**
-	 * Reads a key without checking its type.
+	 * Reads a key exactly as stored, leaving the type check to the caller.
 	 *
 	 * @param key - Claim name to read.
 	 * @returns The raw value, which the typed readers narrow.
@@ -145,7 +144,7 @@ export class ObjectParser {
 	 * Reads a key as a boolean.
 	 *
 	 * Strict: only an actual boolean passes, so a stringly-typed `email_verified`
-	 * claim from an identity provider surfaces as a type error, never a coerced `true`.
+	 * claim from an identity provider surfaces as a type error.
 	 *
 	 * @param key - Claim name to read.
 	 * @returns The boolean value.

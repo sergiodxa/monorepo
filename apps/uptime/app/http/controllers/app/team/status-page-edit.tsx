@@ -262,9 +262,8 @@ export default createAction(routes.app.team.statusPages.edit, {
 													</div>
 
 													{/**
-													 * The island resolves copy through `intl(handle)`, which has no
-													 * module-scoped `setIntl()` default on the server, so it needs an
-													 * `IntlProvider` ancestor to resolve against.
+													 * The island resolves copy through `intl(handle)`, which relies on an
+													 * ancestor `IntlProvider` to supply request-scoped context on the server.
 													 */}
 													<IntlProvider i18n={ctx.i18next}>
 														<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
@@ -379,13 +378,9 @@ export default createAction(routes.app.team.statusPages.edit, {
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								{/**
-								 * The confirming control is a plain `Button` so `type="submit"` still drives
-								 * it: `AlertDialog.Action` always sets `command="close"`, and per the Invoker
-								 * Commands spec that command replaces a button's native type-based activation,
-								 * which would stop it from submitting the form. This delete flow depends on a
-								 * real `<form method="post">` POST that plain HTML delivers on its own, so
-								 * the submit control has to stay a plain button outside that command
-								 * wiring.
+								 * The confirming control stays a plain `Button` so `type="submit"` drives it
+								 * natively: `AlertDialog.Action` always sets `command="close"`, and per the
+								 * Invoker Commands spec that command takes over a button's native activation.
 								 */}
 								<form
 									method="post"

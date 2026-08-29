@@ -1,16 +1,9 @@
 /**
  * New maintenance window page controller. Requires `requireUser` + `requireTeam`.
- *
- * The fields are grouped into three bordered cards — what the window covers, when it
- * runs, and how it behaves while it is active — inside a single `<form>`, so the page
- * reads as distinct settings groups while still submitting as one request. The submit
- * control sits at the foot of the last card rather than loose under the fields.
- *
- * The field markup is written out here rather than reused from the shared
- * maintenance-window fields view: that view renders every field as one flat run, which
- * cannot be split across cards, and it is still rendered as-is by the edit page. The
- * scope picker is the exception — it offers every monitor of every type, plus a per-type
- * "all of them" choice, from the one control `MonitorScopeField` owns.
+ * Fields are grouped into three bordered cards — coverage, schedule, and behavior —
+ * inside one `<form>`, with the submit control anchored to the last card's footer.
+ * The scope picker comes from `MonitorScopeField`, the one control that offers every
+ * monitor of every type plus a per-type "all of them" choice.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,8 +39,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 
 		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 
-		// The field copy is shared with the edit page, so it is read from the
-		// maintenance-window form namespace rather than this page's own.
+		/** Shares its field copy with the edit page by reading the same maintenance-window form namespace. */
 		let t = ctx.i18next.getFixedT(null, "translation", "page.maintenanceWindows.form.fields");
 
 		return ctx.render(
@@ -137,7 +129,6 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										{/* The switches read as one group, so they sit on the tighter within-group rhythm. */}
 										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 											<Switch name="suppress_alerts" value="true" defaultChecked>
 												{t("suppressAlerts.label")}

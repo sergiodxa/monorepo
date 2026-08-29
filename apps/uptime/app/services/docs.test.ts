@@ -2,7 +2,8 @@
  * Tests `listDocs` and `getDocLoader` against the real Markdown files under
  * `resources/docs/**`: sections come back ordered by `section.order`, docs within a
  * section are ordered by their own `order`, a known slug resolves a loader whose
- * content matches the real file, and an unknown slug resolves to `null`. *
+ * content matches the real file, and an unknown slug resolves to `null`.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

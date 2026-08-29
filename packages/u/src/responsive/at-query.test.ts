@@ -1,7 +1,4 @@
 /**
- * Unit tests for `at-query.ts`, the literal-escape-hatch container-query
- * wrapper.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

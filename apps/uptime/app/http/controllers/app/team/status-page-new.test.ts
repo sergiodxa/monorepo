@@ -1,12 +1,9 @@
 /**
- * Tests for the new status-page form controller. `cloudflare:workers` is mocked
- * before the dynamic import because the controller's import chain pulls in
- * `~/app/data/monitor`, which touches the `QUEUE` binding at module scope; the
- * bindings behind it are in-memory implementations, and the env is strict, so a
- * binding this form reaches for without supplying fails by name.
- * `requireUser`/`requireTeam`/`i18n` are bypassed the same way auth is: a stand-in middleware seeds
- * `ctx.team`/`ctx.membership`/`ctx.i18next` directly, and `ctx.render` is backed by
- * a minimal renderer mirroring `bootstrap/app.tsx`'s `createHtmlRenderer`.
+ * Tests for the new status-page form controller. `cloudflare:workers` is
+ * mocked before the dynamic import since the import chain touches the
+ * `QUEUE` binding at module scope, and this strict env fails by name when a
+ * binding isn't supplied. `requireUser`, `requireTeam`, and `i18n` are
+ * bypassed the same way, through a stand-in middleware seeding `ctx.team`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,7 +60,11 @@ let { default: statusPageNewAction } = await import("./status-page-new");
  */
 let statusPageNewModule = statusPageNewAction as unknown as { handler: RequestHandler<any> };
 
-/** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
+/**
+ * Stand-in for `bootstrap/app.tsx`'s `renderWith(createHtmlRenderer)`, sized
+ * for a single-request page test where `resolveFrame` only ever returns a
+ * harmless no-op.
+ */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
@@ -79,7 +80,10 @@ let { i18n: i18nextInstance } = await createTranslator({
 	fallbackLanguage: "en",
 })();
 
-/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.i18next + Auth, standing in for requireUser+requireTeam+i18n. */
+/**
+ * Stands in for `requireUser`, `requireTeam`, and `i18n` by seeding the
+ * context fields they would otherwise populate, plus `Auth`.
+ */
 function seedTeam(
 	team: SelectTeam,
 	membership: SelectMembership,
@@ -102,7 +106,6 @@ function seedTeam(
 	};
 }
 
-/** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
 	let { db } = createTestDatabase();
 
@@ -237,10 +240,9 @@ describe("GET /app/:team/status-pages/new", () => {
 		let body = await (await container.scope(() => router.fetch(request))).text();
 
 		/**
-		 * The card states the field rhythm once, as a single gap rule; a per-field
-		 * trailing margin would double the gap before that field. The body pads all
-		 * four edges since the last field ends flush against it, and the two
-		 * visibility switches keep their own tighter gap as one group.
+		 * The card states the field rhythm once via a single gap rule, since a
+		 * per-field trailing margin would double the gap before that field; the body
+		 * pads all four edges, and the two visibility switches keep a tighter group gap.
 		 */
 		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
 		expect(body).not.toContain("margin-block-end: 28px");

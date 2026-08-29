@@ -1,22 +1,9 @@
 /**
  * Edit maintenance window page controller. Requires `requireUser` + `requireTeam`;
- * 404s when the window doesn't belong to the current team.
- *
- * The window's fields are split into bordered cards — what the window covers, when it
- * runs, how it behaves while it's running, and how it repeats — each with its own
- * heading and description, so the page reads as distinct settings groups rather than
- * one continuous column. All four cards stay inside the single update `<form>`, so the
- * submitted request is unchanged; the "end now" and delete forms remain separate forms
- * posting to their own actions, each in a card of its own.
- *
- * Ending a window early sits in a neutral card rather than the danger zone: it stops an
- * in-progress window but keeps the record (and its history) intact, so it isn't a
- * destructive action and shouldn't be framed as one.
- *
- * The field markup is inlined here rather than pulled from the shared field component
- * the create page also renders, because the grouping is specific to this page: the
- * create page draws the same fields as one block, and splitting the shared component
- * per card would force that page to change too.
+ * 404s when the window doesn't belong to the current team. Coverage, schedule,
+ * behavior, and recurrence fields sit in bordered cards inside one update `<form>`;
+ * ending a window early lives in its own neutral card, since it preserves the
+ * window's record and history for later review.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

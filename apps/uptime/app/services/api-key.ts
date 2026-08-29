@@ -12,11 +12,10 @@
 
 const KEY_PREFIX = "uptime_";
 const KEY_RANDOM_BYTES = 32;
-/** Length of the displayed prefix: `"uptime_"` plus the first 8 hex characters. */
 const DISPLAY_PREFIX_LENGTH = KEY_PREFIX.length + 8;
 
 export interface GeneratedApiKey {
-	/** The full plaintext key. Shown to the user once; never stored. */
+	/** The full plaintext key, shown to the user exactly once, at creation. */
 	key: string;
 	/** SHA-256 hex digest of `key`, stored and compared against on every request. */
 	keyHash: string;

@@ -1,12 +1,9 @@
 /**
- * One numbered item in a "how it works" list: a large centered counter medallion above
- * a centered title and description, with a connector line reaching toward the next
- * step. Both the number and the connector are pure CSS — a `counter()` in `::before`
- * and a positioned `::after` rule — so a three-step row needs no client script and no
- * index prop threaded in from the caller. Reuses `@pkg/ui`'s
- * `Card.Title`/`Card.Description` for its title/description typography — the same
- * pieces `card.tsx` composes — instead of re-declaring the same two `css()` blocks a
- * second time.
+ * One numbered item in a "how it works" list: a centered counter medallion
+ * above a title and description, with a connector line toward the next
+ * step. Both are pure CSS — a `counter()` in `::before`, a positioned
+ * `::after` — so a row of steps needs no client script or index prop.
+ * Reuses `@pkg/ui`'s `Card.Title`/`Card.Description` for typography.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,7 +39,11 @@ namespace MarketingStep {
 	}
 }
 
-/** Renders one numbered step entry with a title and description. */
+/**
+ * Renders a numbered step. The medallion sits in normal flow, centering
+ * the column; its connector shows only at ≥1024px's three-column grid;
+ * the heading uses `level={3}` below the page's `<h1>` and the list's `<h2>`.
+ */
 export default function MarketingStep(handle: Handle<MarketingStep.Props>) {
 	return () => (
 		<div
@@ -51,8 +52,6 @@ export default function MarketingStep(handle: Handle<MarketingStep.Props>) {
 				vstack({ align: "center" }),
 				textAlign("center"),
 				counterIncrement("marketing-step"),
-				// The step's number: a 64px brand-solid medallion in normal flow above the
-				// title, so the column centers itself without any absolute positioning.
 				before([
 					pseudoContent("counter(marketing-step)"),
 					flex(),
@@ -67,14 +66,6 @@ export default function MarketingStep(handle: Handle<MarketingStep.Props>) {
 					fontSize("2xl"),
 					weight(700),
 				]),
-				// The connector reaching from this medallion toward the next step's, drawn
-				// from the medallion's vertical center across the grid gap. Only at ≥1024px,
-				// where the steps grid is three columns wide and every non-last step really
-				// does have a sibling to its right — at the 768px two-column stage the line
-				// would point off the end of the row instead. Nested inside this one mixin
-				// rather than added as a second entry in the array so the `@media` block
-				// merges into the same rule as the `display: none` it overrides, which makes
-				// it immune to `@layer` ordering between separate mixins.
 				not(
 					":last-child",
 					after([
@@ -92,7 +83,6 @@ export default function MarketingStep(handle: Handle<MarketingStep.Props>) {
 				),
 			]}
 		>
-			{/* `level={3}`: nested below each page's own `<h1>` hero and `<h2>` "How it works" heading. */}
 			<HeadingScope level={3}>
 				<Card.Title mix={[fontSize("xl")]}>{handle.props.title}</Card.Title>
 			</HeadingScope>

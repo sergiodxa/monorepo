@@ -49,8 +49,8 @@ export interface PaginationQuery {
 }
 
 /**
- * Reads and clamps `limit`/`offset` query parameters, silently falling back to the
- * defaults on missing or non-numeric values rather than rejecting the request.
+ * Reads and clamps `limit`/`offset` query parameters, falling back to the defaults
+ * on missing or non-numeric values so every paginated endpoint stays answerable.
  */
 export function parsePaginationQuery(
 	url: URL,

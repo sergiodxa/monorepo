@@ -1,16 +1,14 @@
 /**
  * Edit flow monitor page controller: the settings form posting to `update-flow-monitor`, the
  * last run's outcome, and a danger-toned card for deletion. Requires `requireUser` +
- * `requireTeam`; 404s when the monitor doesn't belong to the current team.
+ * `requireTeam`; 404s when the monitor belongs to another team.
  *
- * The last result is rendered here rather than on a page of its own, and it is the reason this
- * type needs no `show` route: a flow's outcome is the assertion that broke and the line it is
- * written on, which belongs beside the source it refers to. Reading "expected 200, observed 500
- * on line 9" while looking at line 9 is the whole point.
+ * The last result renders on this page beside the source it explains: a flow's outcome is
+ * the assertion that broke and the line it broke on, clearest read right beside that line.
  *
- * The delete confirmation is `@pkg/ui`'s `AlertDialog` composed directly rather than through the
- * `Confirm` wrapper, since the confirming control is a real `<form method="post">` submit button
- * rather than a `command="close"` action — the same composition the other monitor types use.
+ * The delete confirmation composes `@pkg/ui`'s `AlertDialog` directly: confirming submits a
+ * real `<form method="post">` button, matching the composition the other monitor types use
+ * for their own delete flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

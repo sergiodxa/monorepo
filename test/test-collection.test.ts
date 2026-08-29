@@ -1,15 +1,8 @@
 /**
  * Repo-wide guard that every test file is actually collected by a Vitest project.
  *
- * This exists because the failure it catches is silent. A test file matched by no project's
- * `include` is not reported as skipped — it is never seen, and the suite still exits 0. That
- * was confirmed by dropping a guaranteed-failing test into an app missing from
- * `test.projects`: the run came back 1,058 files, all passed. Coverage can be deleted here by
- * adding an app and forgetting one config entry, with nothing in the output to say so.
- *
- * The scanners live beside this file in `test-collection.ts` and are exercised against
- * fixtures before they are trusted against the repo — a repo with zero current violations
- * cannot otherwise prove a scanner would catch one.
+ * A file matched by no project's `include` is never seen and never reported as
+ * skipped, so omitting a project entry deletes coverage without failing anything.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +17,10 @@ import config from "../vite.config";
 
 import { findUncollectablePackageTests, findUnregisteredApps } from "./test-collection";
 
-/** Repo root, resolved from this file so the scan does not depend on the working directory. */
+/**
+ * Repo root, resolved from this file so the scan always targets the same
+ * location no matter where the process runs from.
+ */
 const ROOT = join(import.meta.dirname, "..");
 
 /** The shape this file reads out of the config; `defineConfig`'s type is wider than this. */
@@ -69,7 +65,6 @@ describe("every test file is collected by a project", () => {
 				"packages/one/test/a.test.ts",
 			]);
 			expect(findUncollectablePackageTests(["packages/one/src/a.test.ts"])).toEqual([]);
-			// Nested under src/ still matches: the glob is `src/**`.
 			expect(findUncollectablePackageTests(["packages/one/src/deep/a.test.tsx"])).toEqual([]);
 		});
 	});
@@ -77,7 +72,6 @@ describe("every test file is collected by a project", () => {
 	test("every app that ships tests has a Vitest project rooted at it", () => {
 		let apps = appsWithTests();
 
-		// A scan that silently matched nothing would pass this test forever.
 		expect(apps.length).toBeGreaterThan(5);
 		expect(
 			findUnregisteredApps(apps, projectRoots()),

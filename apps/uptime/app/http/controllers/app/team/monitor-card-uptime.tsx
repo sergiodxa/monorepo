@@ -1,12 +1,9 @@
 /**
  * Monitor detail page "Uptime percentage" stat-card fragment controller. GET
- * /app/:team/monitors/:monitorId/cards/uptime — loads just this one monitor's daily
- * stats for the last 90 days and reduces them into an overall uptime percentage, with
- * no document shell, so the monitor page's uptime `Frame` can swap it in over its
- * skeleton fallback. Fetches `MonitorDailyStats.listRecentDays` independently of the
- * uptime-history fragment's own identical fetch — duplicated on purpose since each
- * `Frame` loads independently, matching the dashboard cards' convention. Requires
- * `requireUser` + `requireTeam`.
+ * /app/:team/monitors/:monitorId/cards/uptime — reduces the monitor's last 90 days of
+ * daily stats into an overall uptime percentage, with no document shell so the `Frame`
+ * can swap it in over its skeleton fallback. Duplicates the uptime-history fragment's
+ * fetch on purpose, since each `Frame` loads independently.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

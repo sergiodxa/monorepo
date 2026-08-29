@@ -1,15 +1,9 @@
 /**
- * Tests for the edit maintenance window page controller. `cloudflare:workers` is
- * mocked because `~/app/data/monitor` (used here to populate the monitor-scope
- * dropdown) reads `env` at module load — following the exact pattern established in
- * `app/http/controllers/actions/monitors.test.ts`. It's a plain GET handler with no
- * branch that re-renders the form with validation errors (that only happens in the
- * `actions/maintenance-windows.ts` form-submission controller, tested separately), so
- * this only covers the 404, the pre-filled-form 200 case, and the conditional "End
- * maintenance now" button that only renders while the window is currently active.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
- * matching the template in `app/http/controllers/app/team/http-monitors.test.ts`.
+ * Tests for the edit maintenance window page controller. `cloudflare:workers`
+ * is mocked because `~/app/data/monitor`, used to populate the monitor-scope
+ * dropdown, reads `env` at module load. `getViewer()`/`ctx.team`/
+ * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
+ * standing in for the real auth chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -151,6 +145,11 @@ describe("maintenanceWindowEdit", () => {
 		expect(body).not.toContain("End maintenance now");
 	});
 
+	/**
+	 * `<select>` has no `defaultValue`, so the saved scope is marked on the
+	 * option itself — otherwise the first one wins on re-save. Seeding the row
+	 * with no `monitor_type`, the pre-column shape, must still read back as HTTP.
+	 */
 	test("marks the scoped monitor's option as selected, not the all-monitors one", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
@@ -182,23 +181,15 @@ describe("maintenanceWindowEdit", () => {
 		let response = await send(db, team, membership, window.id);
 		let body = await response.text();
 
-		/*
-		 * `<select>` has no `defaultValue` attribute, so the saved scope has to be marked
-		 * on the option itself — otherwise the first one wins and re-saving this window
-		 * would widen it back to "all monitors". The row is seeded with no `monitor_type`,
-		 * the shape every window had before the column existed, so this also covers that
-		 * being read back as HTTP rather than as team-wide.
-		 */
 		expect(body).toContain(`value="monitor:http:${monitor.id}" selected`);
 		expect(body).not.toContain(`value="" selected`);
 		expect(body).not.toContain("defaultvalue");
 	});
 
 	/**
-	 * Without an option of its own the `<select>` would show its first — team-wide — and
-	 * saving the form untouched would silently widen the window to every monitor the team
-	 * has. It gets a selected option saying the monitor is gone instead, and the value it
-	 * carries fails the action's scope check until somebody picks one that exists.
+	 * Without an option of its own, the `<select>` would default to its first —
+	 * team-wide — silently widening the window on an untouched save. The gone
+	 * monitor gets a selected option instead, and its value fails the scope check.
 	 */
 	test("keeps a window scoped to a deleted monitor from reverting to team-wide", async () => {
 		let { db, team, membership } = await createFixture();
@@ -248,12 +239,10 @@ describe("maintenanceWindowEdit", () => {
 			return await (await send(db, team, membership, window.id)).text();
 		}
 
-		/*
-		 * Anchored to the attribute inside each switch's own tag rather than to the bare
-		 * word, which also appears in the component's `~ input:checked` CSS. `checked` is
-		 * an HTML boolean attribute: present at all — even as `checked="0"` for a `false`
-		 * that came back from SQLite as the integer 0 — means the switch renders ON, and
-		 * re-saving would flip the stored decision.
+		/**
+		 * The pattern anchors `checked` to the input's own tag, since the bare word
+		 * also appears in the component's `~ input:checked` CSS. `checked` is a
+		 * boolean attribute, so `checked="0"` for a stored `false` still renders ON.
 		 */
 		let checkedInputs = [
 			/<input[^>]*\bname="suppress_alerts"[^>]*\schecked/,

@@ -14,7 +14,6 @@ import { settings } from "../../database/schema";
 
 /** Blog-owner settings stored as JSON-encoded values in the `settings` table. */
 export class Settings {
-	/** Table reference shared by all queries. */
 	static table = settings;
 
 	/**

@@ -1,9 +1,9 @@
 /**
  * Monitor detail page "Slowest Result" stat-card fragment controller. GET
  * /app/:team/monitors/:monitorId/cards/slowest-result — loads just this one monitor's
- * slowest response time over the last 24 hours from Analytics Engine, with no
- * document shell, so the monitor page's slowest-result `Frame` can swap it in over its
- * skeleton fallback. Requires `requireUser` + `requireTeam`.
+ * slowest response time over the last 24 hours from Analytics Engine and returns just
+ * the card's markup, so the monitor page's slowest-result `Frame` can swap it in over
+ * its skeleton fallback. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

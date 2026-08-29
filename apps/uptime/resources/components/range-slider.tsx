@@ -1,21 +1,13 @@
 /**
- * Client island: a single-value range control matching the visual language of
- * `Field` (bold label, muted description). `@pkg/ui`'s `Slider` draws the
- * track/thumb, paired with a numeric readout (an `<output>`), low/high range
- * labels, and optional helper text.
+ * Client island: a single-value range control matching `Field`'s visual
+ * language, built on `@pkg/ui`'s `Slider`, a live readout, and range labels.
  *
- * This needs JS: `Slider` renders the value it was given — its `<output>` reports
- * that number and its track's fill bar is sized from it — so a drag moves the
- * native thumb while the readout and the colored fill stay wherever the server
- * left them. Holding the current value in the island and re-rendering on each
- * `input` event is what keeps all three in agreement, and it keeps the readout
- * and the fill following one value instead of a DOM listener patching each of
- * them on its own.
+ * `Slider` renders the value it's given, so a drag needs the island to hold
+ * that value and re-render on each `input` event — that's what keeps the
+ * thumb, readout, and fill bar in agreement from one source.
  *
- * No-JS baseline: the control still renders as a native `<input type="range">`,
- * keyboard-operable and posting `name`'s value with the surrounding form; only
- * the readout and the fill bar stay at the initial value until the island's
- * module lands.
+ * Before hydration, a native `<input type="range">` still submits `name`'s
+ * value with the form, keeping the readout and fill at their initial state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,52 +1,9 @@
 /**
- * What deleting an account actually does, and what a person is told it will do before they
- * ask for it. {@link planAccountErasure} answers the second — which teams disappear and how
- * many other people lose access with them — and {@link eraseAccount} performs the first, for
- * the daily sweep that works through the queue.
- *
- * ## The ownership rule
- *
- * Membership is not ownership. A subject who merely belongs to a team loses their membership
- * and the team carries on without them; a subject who *owns* a team takes the team with them,
- * including every other member's access to it. There is no owner-transfer feature in this app —
- * `teams.owner_id` is written when the team is created and by nothing afterwards — so "delete
- * the owner but keep the team" is not a state this schema can express, and offering it as
- * advice ("hand the team over first") would send people to a page that cannot do it. The plan
- * therefore names the teams that will be destroyed and counts the people who will lose them,
- * and the confirmation says so plainly.
- *
- * ## Billing is cancelled first, and the run stops if it cannot be
- *
- * The owner's subject id is the billing identity in three places — `subscriptions
- * .external_customer_id`, the ping meter's `externalCustomerId`, and checkout's owner check —
- * so an owner whose data is deleted while their subscription lives keeps being charged for
- * teams that no longer exist, with no surface left to cancel from: checkout and the customer
- * portal are reached from a team's billing page, and that page requires being the team's owner.
- * The failure in the other order is recoverable by comparison — a cancelled subscription with
- * the data still present is a person who is no longer billed and whose deletion runs tomorrow.
- * So cancellation happens first and a failure aborts the whole erasure.
- *
- * That is also why this module talks to `PolarClient` directly instead of calling
- * `Customer.cancelSubscriptions`, which swallows every Polar error by design (a Polar outage
- * must not block deleting a *team*). Swallowing is the wrong contract here, because it makes
- * "still being billed" indistinguishable from "cancelled", and the whole point of the ordering
- * is to be able to tell those apart and stop.
- *
- * ## The other members are snapshotted, not looked up
- *
- * Destroying a team destroys the membership rows that say who was in it, so the people who lose
- * access can only be identified while the team still exists. {@link eraseAccount} therefore reads
- * each owned team's other members immediately before deleting it and reports them in
- * {@link AccountErasureReport.deletedTeams}, purely so the sweep can tell them. Doing it after the
- * fact is not a worse ordering, it is an impossible one.
- *
- * ## Every step is idempotent
- *
- * A run that failed halfway has already deleted some of the account, and the queued row that
- * survived means the same work runs again tomorrow. So nothing here may assume a first
- * attempt: revoking an already-revoked subscription is a no-op because the list of *active*
- * subscriptions is empty, a team that is already gone is skipped rather than deleted twice,
- * and every remaining delete is a `DELETE … WHERE` that matches nothing on a second pass.
+ * Plans and performs account erasure for the daily deletion sweep. Owning a team destroys
+ * it along with every other member's access, since this schema has no owner-transfer
+ * feature; {@link planAccountErasure} previews that impact and {@link eraseAccount} performs
+ * it, cancelling billing first so a failed cancellation aborts the whole run and keeps
+ * billing accurate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -81,11 +38,9 @@ export interface JoinedTeamImpact {
 }
 
 /**
- * What deleting this account would do, in the terms the confirmation has to state.
- *
- * Counts rather than identities for the other members: the number is what makes the warning
- * concrete ("four people lose access to Acme"), and naming them would put other people's
- * personal data into a page about erasing one's own.
+ * What deleting this account would do, in the terms the confirmation has to state. The
+ * other-member counts make the warning concrete while keeping other people's identities
+ * out of a page about erasing one's own account.
  */
 export interface AccountErasurePlan {
 	ownedTeams: OwnedTeamImpact[];
@@ -95,13 +50,9 @@ export interface AccountErasurePlan {
 }
 
 /**
- * One destroyed team and the people who lost it, snapshotted so they can be told.
- *
- * Only the team's display name and the other members' subject ids: the name is what makes the
- * notice mean anything to a reader, and the ids are all that is needed to ask the identity
- * provider for an address. The erased subject is excluded — they get their own confirmation, and
- * a notice blaming them by name or address would put a deleted person's personal data into
- * somebody else's mailbox.
+ * One destroyed team and the people who lost it, snapshotted so they can be told. Carries
+ * only the team name and the other members' subject ids, enough to ask the identity
+ * provider for an address, and excludes the erased subject, who gets their own confirmation.
  */
 export interface DeletedTeamNotice {
 	/** Display name of the team that no longer exists. */
@@ -120,23 +71,17 @@ export interface AccountErasureReport {
 	/** Polar subscriptions revoked on this run; `0` on a re-run of an already-cancelled account. */
 	subscriptionsRevoked: number;
 	/**
-	 * The destroyed teams that had other members, for the sweep to notify.
-	 *
-	 * Empty for the common case of a personal team nobody else joined, and empty on a re-run of
-	 * an already-erased account — the membership rows this is read from are gone by then, which
-	 * is exactly why it is captured here, before the delete, rather than looked up afterwards.
+	 * The destroyed teams that had other members, for the sweep to notify. Empty for a
+	 * personal team nobody else joined, and also empty on a re-run of an already-erased
+	 * account, since the membership rows it reads from are already gone by then.
 	 */
 	deletedTeams: DeletedTeamNotice[];
 }
 
 /**
- * Assembles the warning shown before anything is deleted.
- *
- * Reads the subject's memberships and splits them on `owner_id`, which is the only fact that
- * decides whether a team survives. An owned team's `otherMemberCount` excludes the subject
- * themselves, so a personal team nobody else joined reports `0` and produces no warning at
- * all — most accounts are that case, and a confirmation that cried wolf on every one of them
- * would train people to ignore the one that matters.
+ * Assembles the warning shown before anything is deleted. Splits memberships on
+ * `owner_id`, the only fact that decides whether a team survives; an owned team's
+ * `otherMemberCount` excludes the subject, so a personal team nobody else joined warns for `0`.
  */
 export async function planAccountErasure(
 	db: Database,
@@ -170,16 +115,9 @@ export async function planAccountErasure(
 }
 
 /**
- * Cancels billing and then erases the account, in that order, aborting if billing cannot be
- * cancelled.
- *
- * Returns a failure rather than throwing so the sweep can leave the queued row in place and
- * move on to the next one: the row surviving *is* the retry, and a thrown error would end the
- * run for everybody behind this person in the queue.
- *
- * Does **not** remove the queued row. That is the caller's last step, taken only once the
- * confirmation mail has been accepted, because the row is the only thing that remembers the
- * address the mail goes to.
+ * Cancels billing before erasing anything, aborting the whole run if billing cannot be
+ * cancelled. Returns a failure instead of throwing, so the queued row survives as the retry;
+ * the caller removes that row itself, once the confirmation mail is accepted.
  *
  * @param db - Database handle.
  * @param polar - Polar client, used only to revoke the subject's active subscriptions.
@@ -203,16 +141,14 @@ export async function eraseAccount(
 	for (let { team, isOwner } of memberships) {
 		if (isOwner) {
 			/**
-			 * Who else is in this team is read *before* the delete and never after. The membership
-			 * rows are the only record of it and `Team.deleteById` removes them, so a caller that
-			 * wanted to tell those people anything would have nobody left to tell.
+			 * Who else is in this team is read while the team still exists, since the membership rows
+			 * are the only record of it and `Team.deleteById` removes them along with everything else
+			 * the team owns — which is what takes away their access.
 			 */
 			let others = (await Team.listMembersByTeam(db, team.id))
 				.map((member) => member.subject_id)
 				.filter((memberId) => memberId !== subjectId);
 
-			// Removes every membership on the team along with its monitors, alerts, status
-			// pages, keys and invites — which is what makes the other members lose access.
 			await Team.deleteById(db, team.id);
 			teamsDeleted++;
 			if (others.length > 0) deletedTeams.push({ teamName: team.name, memberIds: others });
@@ -223,23 +159,27 @@ export async function eraseAccount(
 		membershipsRemoved++;
 	}
 
-	// The local projection of Polar's state. Revoking upstream leaves a row saying "revoked",
-	// which is a record about a person who no longer exists; the invoices Polar keeps are the
-	// ones that have to survive, and they are not here.
+	/**
+	 * The local projection of Polar's state. Revoking upstream leaves a row saying "revoked"
+	 * about a person who no longer exists here, while the invoices that must survive stay on
+	 * Polar's side.
+	 */
 	await db.deleteMany(subscriptions, { where: { external_customer_id: subjectId } });
 
 	await db.deleteMany(userPreferences, { where: { subject_id: subjectId } });
 
-	// Pending invitations mentioning this person, in either direction. One addressed to their
-	// address is their own personal data sitting in somebody else's team; one they sent carries
-	// their subject id and is an offer from an account that is being deleted, so neither should
-	// outlive them. Accepted invites are already gone — accepting one writes a membership and
-	// the acceptance row is not what grants access.
+	/**
+	 * Pending invitations mentioning this person, in either direction: one addressed to them
+	 * is personal data sitting in somebody else's team, and one they sent is an offer from an
+	 * account being deleted. Accepted invites already vanished into a membership row.
+	 */
 	await db.deleteMany(invites, { where: { email } });
 	await db.deleteMany(invites, { where: { sender_id: subjectId } });
 
-	// If this address ever tried the public trial, the lead and its watches go too. `forget` is
-	// the same hard delete an unsubscribe performs, and it is a no-op when there is no lead.
+	/**
+	 * A trial lead tied to this address is forgotten too, so erasure reaches data captured
+	 * before any account existed. `forget` performs the same hard delete an unsubscribe does.
+	 */
 	let lead = await Lead.findByEmail(db, email);
 	if (lead) await Lead.forget(db, lead.id);
 
@@ -253,12 +193,9 @@ export async function eraseAccount(
 }
 
 /**
- * Revokes every active subscription the subject holds, and reports how many.
- *
- * Idempotent by construction: only *active* subscriptions are listed, so a second pass over an
- * already-cancelled account revokes nothing and succeeds with `0`. A Polar error is returned as
- * a failure, which is what aborts the erasure — see this module's docblock for why that is the
- * safe direction.
+ * Revokes every active subscription the subject holds and reports how many. Idempotent by
+ * construction: only *active* subscriptions are listed, so a second pass over an already-
+ * cancelled account revokes nothing and succeeds with `0`.
  */
 async function cancelBilling(
 	polar: PolarClient,

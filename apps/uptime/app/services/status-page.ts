@@ -1,10 +1,9 @@
 /**
  * Pure status-derivation helpers for the public status page: mapping each monitor
  * type's own status representation onto the shared `ServiceStatus` scale, and
- * combining every attached item's status into one page-level status using a
- * majority-based rule (down/degraded items outnumbering healthy ones tips the page
- * to "down", any at all tips it to "degraded") rather than "any failure means the
- * whole page is down".
+ * combining every attached item's status into one page-level status via a majority
+ * rule — down/degraded items outnumbering healthy ones tips the page to "down"; any
+ * at all tips it to "degraded".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

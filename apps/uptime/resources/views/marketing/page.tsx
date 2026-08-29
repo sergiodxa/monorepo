@@ -1,18 +1,10 @@
 /**
  * Generic marketing page view shared by `/features/:slug`, `/for/:slug`, and
- * `/use-cases/:slug`. Renders a split hero (copy plus the product screenshot), the
- * page's own trust-indicator strip, a feature grid, a numbered "how it works" row, a
- * two-column FAQ accordion (native `<details>`, no client JS), and a final call to
- * action. It exists so those three route families reuse one view instead of
- * near-duplicate ones, driven entirely by `resources/content/marketing.ts` data plus
- * a handful of translated section titles the calling controller threads through as
- * plain props (the same convention `AppShell` uses for its own `heading`/`breadcrumbs`
- * props).
- *
- * Those translated props are built by {@link buildMarketingPageChrome}, exported from
- * here so all three controllers share one set of `t()` calls instead of repeating a
- * dozen of them three times over — the same split `resources/layouts/marketing.tsx`
- * makes with its own `buildMarketingChrome`.
+ * `/use-cases/:slug`: a split hero, trust-indicator strip, feature grid, numbered
+ * "how it works" row, two-column FAQ accordion, and a final call to action, driven
+ * entirely by `resources/content/marketing.ts` plus translated section titles.
+ * {@link buildMarketingPageChrome} builds those titles once so all three
+ * controllers share one set of `t()` calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,15 +82,9 @@ function marketingContainer() {
 }
 
 /**
- * The one/two/three-column ladder every content grid on this page shares.
- *
- * The breakpoints are deliberately identical across sections rather than tuned per
- * grid: `css()` emits each mixin into its own `@layer rmx.<class>`, and layer order
- * follows each class's *first* appearance in the document — so between two
- * overlapping media rules on the same element, the one whose class the page happened
- * to emit later wins, regardless of which breakpoint is narrower. Sharing one ladder
- * keeps every grid's rules in ascending breakpoint order, which is the order the
- * cascade needs them in.
+ * The one/two/three-column ladder every content grid on this page shares. Every section
+ * keeps the same breakpoints on purpose: `css()` orders each mixin's `@layer` by first
+ * appearance in the document, so one shared ladder keeps every grid's rules in the ascending order the cascade needs.
  */
 function responsiveGrid() {
 	return [
@@ -109,10 +95,9 @@ function responsiveGrid() {
 }
 
 /**
- * Background for the alternating sections. One palette step off the page's own
- * `--ui-neutral-bg-tint` body color in each scheme, rather than the semantic
- * `bg("neutral.tint")` — that resolves to the *same* token the body already uses,
- * so the alternation it's meant to express renders as no change at all.
+ * Background for the alternating sections: one palette step off the page's own
+ * `--ui-neutral-bg-tint` body color in each scheme, keeping each band visually distinct
+ * against the page.
  */
 function tintedSection() {
 	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
@@ -152,12 +137,9 @@ namespace MarketingPageView {
 		/** Label for the hero's secondary CTA, linking to the homepage's pricing calculator (`landing.hero.cta.pricing`). */
 		pricingLabel: string;
 		/**
-		 * Label for the free-trial CTA, linking to `/try` (`landing.hero.cta.try`).
-		 *
-		 * The primary action for a visitor with no account, ahead of signing in. Every one of
-		 * these pages sells a seven-day free watch that needs no account and no card, and until
-		 * this existed not one of them had a link to it — the strongest offer on the page was
-		 * reachable only from the homepage and the nav.
+		 * Label for the free-trial CTA, linking to `/try` (`landing.hero.cta.try`). The primary
+		 * action for a visitor with no account: every page sells a seven-day free watch needing
+		 * neither account nor card, reachable before this label only from the homepage and nav.
 		 */
 		tryLabel: string;
 		/** Alternative text for the hero's product screenshot (`landing.hero.screenshot.alt`). */
@@ -188,19 +170,20 @@ namespace MarketingPageView {
 }
 
 /**
- * Resolves every page-agnostic string {@link MarketingPageView} needs, so the three
- * controllers rendering it (`/features/:slug`, `/for/:slug`, `/use-cases/:slug`) share
- * one definition instead of repeating the same dozen `t()` calls each. The view itself
- * never reads i18n — it only ever receives plain, already-translated strings.
+ * Resolves every page-agnostic string {@link MarketingPageView} needs, letting the three
+ * controllers rendering it (`/features/:slug`, `/for/:slug`, `/use-cases/:slug`) share one
+ * set of `t()` calls; the view itself renders only plain, already-translated strings.
  */
 export function buildMarketingPageChrome(t: TFunction): MarketingPageView.Chrome {
 	return {
 		startLabel: t("landing.hero.cta.out"),
 		dashboardLabel: t("landing.hero.cta.in"),
 		pricingLabel: t("landing.hero.cta.pricing"),
-		// The offer's length comes from the pricing module, so this label cannot outlive a change
-		// to it — it was written as a literal "7 days" in all six locales until a translator
-		// noticed the number had no source.
+		/**
+		 * The offer length comes from the pricing module here, so every locale's label tracks a
+		 * change to it automatically — a literal "7 days" once drifted out of sync in all six
+		 * locales before a translator caught the missing source.
+		 */
 		tryLabel: t("landing.hero.cta.try", { days: FREE_TRIAL_DAYS }),
 		screenshotAlt: t("landing.hero.screenshot.alt"),
 		everythingBadge: t("landing.marketingPage.everythingBadge"),
@@ -217,7 +200,11 @@ export function buildMarketingPageChrome(t: TFunction): MarketingPageView.Chrome
 	};
 }
 
-/** Renders the generic marketing page sections, populated entirely from `handle.props`. */
+/**
+ * Renders the generic marketing page sections, populated entirely from `handle.props`. The
+ * final CTA band sets `fg` explicitly on its heading and `neutral` on its button, since each
+ * would otherwise lose contrast against the brand-filled background.
+ */
 export default function MarketingPageView(handle: Handle<MarketingPageView.Props>) {
 	return () => {
 		let {
@@ -270,12 +257,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						}),
 					]}
 				>
-					{/*
-					 * Decorative halo behind the hero, centered on its top edge. Its soft
-					 * falloff comes from a radial gradient rather than a `blur()` filter —
-					 * the named blur scale tops out at 24px, which on an 800px circle reads
-					 * as a hard-edged disc rather than a glow.
-					 */}
 					<div
 						aria-hidden="true"
 						mix={[
@@ -362,10 +343,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								</p>
 
 								<div mix={[...ctaRow()]}>
-									{/* For a visitor with no account the free watch is the strongest thing on
-									offer — it needs no account and no card — so it leads, and signing in
-									becomes the secondary action. A signed-in reader has no use for it and
-									gets the dashboard link as primary instead. */}
 									{isSignedIn ? (
 										<AuthCta
 											isSignedIn
@@ -379,8 +356,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 											<ArrowRightIcon size={20} strokeWidth={1.5} />
 										</LinkButton>
 									)}
-									{/* Points at the homepage's pricing calculator: these pages carry
-									no pricing section of their own to anchor to. */}
 									<LinkButton
 										href={`${routes.home.href()}#pricing`}
 										color="neutral"
@@ -419,7 +394,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								</div>
 							</div>
 
-							{/* The product screenshot, one variant per color scheme. */}
 							<picture
 								mix={[
 									block(),
@@ -435,8 +409,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								<img
 									src={SCREENSHOT_LIGHT}
 									alt={screenshotAlt}
-									// Intrinsic size of both variants, so the hero reserves the
-									// right box before the image decodes instead of reflowing.
 									width={3216}
 									height={2080}
 									mix={[block(), is("full"), bs("auto")]}
@@ -446,8 +418,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					</div>
 				</section>
 
-				{/* Only pages carrying their own figures get the strip — an empty band would
-				read as a stray divider between the hero and the feature grid. */}
 				{trustIndicators && (
 					<MarketingTrustIndicators
 						indicators={trustIndicators.map((indicator) => ({
@@ -500,8 +470,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					<div mix={[...marketingContainer()]}>
 						<SectionHeader badge={faqBadge} title={faqTitle} description={faqDescription} />
 
-						{/* Two independent accordion columns — each item opens and closes on its
-						own (no shared `name`), so a visitor can compare several answers at once. */}
 						<div
 							mix={[
 								grid(),
@@ -534,10 +502,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					<div mix={[...marketingContainer()]}>
 						<Heading
 							level={2}
-							// `fg` explicitly, unlike the paragraph beside it: `Heading` sets its
-							// own `neutral.emphasis` color, which would otherwise win over the
-							// band's inherited on-solid color and render the title near-black
-							// against the brand background.
 							mix={[
 								m(0),
 								fontSize("3xl"),
@@ -550,7 +514,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						>
 							{finalCtaTitle}
 						</Heading>
-						{/* Slightly dimmed against the band so the heading still leads it. */}
 						<p
 							mix={[
 								m(0),
@@ -566,10 +529,6 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						</p>
 
 						<div mix={[...ctaRow()]}>
-							{/* `neutral` on this brand-filled band: a brand-toned button on a
-							brand fill reads only by its border. Neutral's solid background is
-							the theme's inverted shade, so it stays high-contrast in both
-							schemes. */}
 							<AuthCta
 								isSignedIn={isSignedIn}
 								startLabel={startLabel}

@@ -1,24 +1,7 @@
 /**
- * Shared chrome for the public marketing site: a sticky top nav (brand, feature/docs
- * links, sign-in or dashboard call to action) and a multi-column footer. Every
- * `/features/:slug`, `/for/:slug`, `/use-cases/:slug`, `/vs/:slug`, `/privacy`,
- * `/terms`, `/docs`, and the homepage compose their content into this layout. It
- * exists so those 40+ public pages share one header/footer instead of repeating
- * the chrome per page.
- *
- * Every piece of copy — the brand wordmark, nav labels, CTA labels, footer columns,
- * and the copyright line — arrives as a plain, already-translated prop, the same
- * convention `AppShell` uses for its own `heading`/`breadcrumbs` props: this layout
- * never reads `ctx.i18next` itself. {@link buildMarketingChrome} centralizes the
- * `t()` calls building those props (and the `routes`-derived hrefs alongside them)
- * so every calling controller (home, the marketing/legal pages) shares one
- * definition instead of repeating the same dozens of `t()` calls seven times over.
- *
- * The wordmark is paired with the brand glyph, inlined here as {@link BRAND_MARK_PATHS}
- * rather than composed from `resources/components/logo.tsx`: that component is the
- * *team* logo — a hydrated client island whose job is to swap a team's uploaded image
- * for its initials at runtime — so it renders neither this mark nor anything worth
- * shipping client JavaScript for on a static marketing page.
+ * Shared header nav and footer chrome that every public marketing page
+ * composes its content into: features, comparisons, use cases, docs, and
+ * legal pages all share this one layout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,10 +55,9 @@ namespace MarketingLayout {
 }
 
 /**
- * The Uptime brand glyph: the four `<path d>` values of the mark, authored against a
- * 10240-unit grid and flipped into the `<svg>`'s own 1024×1024 viewBox by the shared
- * `matrix(.1 0 0 -.1 0 1024)` on their wrapping `<g>`. Kept as data next to its one
- * call site so the header's JSX stays readable.
+ * The Uptime brand glyph: four `<path d>` values authored against a
+ * 10240-unit grid and flipped into the `<svg>`'s 1024×1024 viewBox by the
+ * shared `matrix(.1 0 0 -.1 0 1024)`, kept as data beside its one call site.
  */
 const BRAND_MARK_PATHS = [
 	"M2970 8530c-318-68-583-290-705-592-69-170-65-32-65-2155-1-1736 1-1927 15-1998 69-335 305-609 622-724 43-16 113-36 156-46l77-17v-332c0-303 2-334 19-366 26-49 62-72 119-78 66-6 99 10 317 153 99 65 349 229 555 364l375 246 1380 5c1369 6 1381 6 1460 27 187 50 337 135 466 263 142 142 233 309 274 503 22 102 22 3891 1 3994-70 332-301 600-614 713-175 63-53 60-2311 59-1948 0-2060-1-2141-19zm4313-337c216-82 369-241 422-439 15-53 16-245 16-1969-1-1685-3-1918-16-1970-60-227-241-406-471-465-75-19-116-20-1444-20-1143 0-1374-2-1407-14-22-8-73-35-114-61-258-166-847-550-860-561-8-8-19-14-22-14-4 0-7 123-7 273 0 252-1 274-20 304-28 47-64 61-176 69-210 14-339 69-470 199-64 63-90 98-123 165-76 155-71 11-71 2090 0 2064-4 1937 66 2078 84 172 245 301 433 347 47 11 409 13 2131 12l2075-2 58-22z",
@@ -91,8 +73,7 @@ export interface FooterColumn {
 
 /**
  * One entry per footer grid cell. Most cells hold a single column; the last
- * one bundles Documentation and Legal together into a single cell instead of
- * each getting its own.
+ * bundles Documentation and Legal together into one shared cell.
  */
 type FooterCell =
 	| { kind: "column"; column: FooterColumn }
@@ -108,10 +89,8 @@ function buildFooterGrid(footerColumns: FooterColumn[]): FooterCell[] {
 
 /**
  * Builds every translated, already-`t()`-resolved prop {@link MarketingLayout}
- * needs, from a controller's own `ctx.i18next.t`. Centralized here (rather than
- * repeated across every marketing/legal controller) since the nav/footer link
- * structure — which labels pair with which `routes.*` href — belongs to this
- * layout's own chrome, not to any one page's content.
+ * needs, from a controller's own `ctx.i18next.t`. Centralizes the nav/footer
+ * link structure — which labels pair with which `routes.*` href — as this layout's own chrome.
  *
  * @example
  * let chrome = buildMarketingChrome(ctx.i18next.t);
@@ -214,9 +193,9 @@ export function buildMarketingChrome(
 				{ label: t("landing.footer.sections.legal.terms"), href: routes.legal.terms.href() },
 				{ label: t("landing.footer.sections.legal.privacy"), href: routes.legal.privacy.href() },
 				/**
-				 * Grouped with the legal pages rather than with the product ones: like them it
-				 * is a standing statement about how the service is run, and a reader looking for
-				 * accountability looks in this corner of a footer first.
+				 * Grouped with the legal pages: like them, it is a standing statement
+				 * about how the service is run, and a reader looking for accountability
+				 * checks this corner of a footer first.
 				 */
 				{ label: t("trust.footerLink"), href: routes.trust.href() },
 			],
@@ -246,7 +225,11 @@ export function buildMarketingChrome(
 	};
 }
 
-/** Renders the sticky header nav and multi-column footer around `children`; the header's CTA switches on {@link MarketingLayout.Props.isSignedIn}. */
+/**
+ * Renders the sticky header nav and multi-column footer around `children`;
+ * the header's CTA switches on {@link MarketingLayout.Props.isSignedIn}, and
+ * the brand mark stays `aria-hidden` so its link's accessible name is just the wordmark.
+ */
 export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 	return () => {
 		let {
@@ -288,13 +271,6 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							fg("neutral.emphasis"),
 						]}
 					>
-						{/*
-						 * Purely decorative: `aria-hidden` (no `role="img"`, no `<title>`) keeps
-						 * the glyph out of the accessibility tree so this link's accessible name
-						 * is the wordmark alone, instead of naming the product twice. It inherits
-						 * `fill="currentColor"` from its own `fg("brand")` rather than the
-						 * wordmark's neutral, matching the brand-tinted mark of the old header.
-						 */}
 						<svg
 							viewBox="0 0 1024 1024"
 							width={36}
@@ -314,10 +290,6 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 					</a>
 
 					<nav mix={[hstack({ align: "center", gap: "20px" })]}>
-						{/*
-						 * Hidden entirely below `md` — no hamburger/drawer here,
-						 * only the logo and CTA remain visible on mobile.
-						 */}
 						{navLinks.map((link) => (
 							<NavLink
 								key={link.href}
@@ -389,7 +361,6 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 									))}
 								</div>
 							) : (
-								/** Bundles Documentation and Legal into a single footer grid cell. */
 								<div key="docs-legal" mix={[vstack({ gap: "32px" })]}>
 									{cell.columns.map((column) => (
 										<div key={column.title}>

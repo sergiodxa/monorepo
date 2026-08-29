@@ -79,10 +79,9 @@ export default {
 		},
 
 		/**
-		 * Las tres cosas que siguen siendo ciertas por mucho que alguien acabe monitoreando. El
-		 * precio y la cuota incluida se interpolan desde `~/app/lib/pricing.ts` en lugar de
-		 * escribirse aquí — un literal quedaría obsoleto el día que cambie el precio, y
-		 * `app/lib/public-claims.ts` hace fallar el build si aparece uno.
+		 * Las tres cosas que siguen siendo ciertas sin importar cuánto acabe monitoreando
+		 * alguien. El precio y la cuota se interpolan desde `~/app/lib/pricing.ts`, así que
+		 * un literal obsoleto aquí haría fallar el build de `app/lib/public-claims.ts`.
 		 */
 		benefits: {
 			badge: "Por qué Uptime",
@@ -1344,7 +1343,7 @@ export default {
 				dnsMoreFindings: "…y {{count}} más",
 			},
 
-			/** Said only where it applies: what a DNS diff means, not what it found. */
+			/** Explains what a DNS diff means, shown only where that meaning is needed. */
 			dns: {
 				recordSetEditNote:
 					"Un conjunto de registros con varios valores no tiene identidad por registro en DNS, así que un valor editado dentro de él se informa como un registro que deja de resolver más un registro nuevo.",
@@ -1664,9 +1663,9 @@ export default {
 		},
 
 		/**
-		 * Una importación masiva reporta dos números, y `partial` es el que importa: un envío en
-		 * el que algunas líneas entraron es un éxito con una lista de pendientes, no un fallo,
-		 * así que dice cuántos monitores existen antes de decir cuántas líneas hay que corregir.
+		 * Una importación masiva reporta dos números, y `partial` es el que importa: un
+		 * envío donde algunas líneas entraron cuenta como éxito con una lista de pendientes,
+		 * así que nombra cuántos monitores existen antes que las líneas por corregir.
 		 */
 		importMonitors: {
 			errors: {
@@ -2728,8 +2727,11 @@ export default {
 						description: "Un nombre para identificar la alerta.",
 					},
 
-					// The picker's own copy is shared with the maintenance-window form; only this
-					// sentence, which is about alerts, stays here. See `components.monitorScope`.
+					/**
+					 * Shared with the maintenance-window scope picker; this description covers
+					 * just the alerts-specific sentence. See `components.monitorScope` for the
+					 * rest of the picker's copy.
+					 */
 					scope: {
 						description:
 							"Qué vigila esta alerta. Déjala para todo el equipo, limítala a un tipo de monitor o apúntala a uno solo.",
@@ -3080,9 +3082,9 @@ export default {
 			},
 
 			/**
-			 * Las líneas rechazadas, mostradas encima de la caja en la que se vuelven a pegar.
-			 * Empieza por lo que *sí* se creó, para que una importación parcial no se lea como
-			 * una fallida.
+			 * Las líneas rechazadas, mostradas encima de la caja en la que se vuelven a
+			 * pegar. Empezar por lo que sí se creó hace que una importación parcial se
+			 * lea como un éxito.
 			 */
 			report: {
 				section: { title: "Última importación" },
@@ -3260,7 +3262,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				/** ADR-026 §14 requires this notice on the setup screen as well as in the docs. */
 				apexOnlyNotice:
 					"DNS no permite a nadie listar los registros de una zona. Sin un archivo de zona solo podemos vigilar el ápex de su dominio, nunca un subdominio.",
 
@@ -3397,7 +3399,7 @@ export default {
 
 				findings: "{{changed}} cambiados · {{missing}} faltantes · {{new}} nuevos",
 				noFindings: "Sin cambios",
-				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				/** Only successfully answered queries enter the diff, so a partial sweep reads as partial. */
 				queriesFailed_one: "{{count}} consulta no respondió",
 				queriesFailed_other: "{{count}} consultas no respondieron",
 			},
@@ -3440,9 +3442,8 @@ export default {
 		},
 
 		/**
-		 * The review step between creating a domain monitor and monitoring anything with it.
-		 * Its own page, so a reload lands back on the decision rather than on a detail page
-		 * that implies it was already made.
+		 * The review step between creating a domain monitor and monitoring anything
+		 * with it. Its own page keeps a reload landing back on this decision point.
 		 */
 		dnsMonitorReview: {
 			header: {
@@ -3451,7 +3452,7 @@ export default {
 					"Todos los registros que encontramos se vigilan de forma predeterminada. Desmarque aquello sobre lo que no quiera recibir alertas: se conserva de todos modos, así que nada de lo que descarte volverá más adelante como un registro nuevo.",
 			},
 
-			/** A line the parser could not use is reported, never silently dropped. */
+			/** Every line the parser could not use is still surfaced to the user. */
 			unparsed: {
 				title_one: "{{count}} línea no se importó",
 				title_other: "{{count}} líneas no se importaron",
@@ -3497,9 +3498,9 @@ export default {
 			},
 
 			/**
-			 * A line repeating a record an earlier line declared. Reported apart from the
-			 * rejections: nothing was lost, so calling it "not imported" would describe a
-			 * complete import as a partial one.
+			 * A line repeating a record an earlier line already declared. Kept apart
+			 * from the rejections, since nothing was lost — the record was imported
+			 * from whichever line named it first.
 			 */
 			duplicates: {
 				title_one: "{{count}} línea declaraba un registro que otra línea ya declaraba",
@@ -3509,7 +3510,7 @@ export default {
 				line: "Línea {{line}}: {{name}} {{type}} ya se había declarado en la línea {{firstLine}}.",
 			},
 
-			/** Said at review, where the cap is enforced, rather than at check time. */
+			/** The cap is enforced at review time, so this notice appears there too. */
 			namesCap: {
 				title: "Más nombres de los que un monitor puede vigilar",
 				description:
@@ -3525,7 +3526,7 @@ export default {
 					value: "Valor",
 				},
 
-				/** Each box names the record it decides, since the column heading is not read per row. */
+				/** Each box names the record it decides, so a row makes sense read on its own. */
 				watchRecord: "Vigilar {{name}} {{type}}",
 			},
 
@@ -4002,11 +4003,9 @@ export default {
 
 		trial: {
 			/**
-			 * El informe como página propia, accesible con el token de la vigilancia. Cada cifra
-			 * se calcula a partir de las comprobaciones guardadas, así que cada una tiene su
-			 * redacción de «todavía no hay nada que informar»: una vigilancia sin ninguna
-			 * comprobación terminada muestra una raya y explica por qué, y nunca afirma «sin
-			 * incidentes», porque nadie ha mirado aún.
+			 * El informe como página propia, accesible con el token de la vigilancia. Cada
+			 * cifra se calcula a partir de las comprobaciones guardadas, así que una vigilancia
+			 * sin comprobaciones muestra una raya con una explicación, ya que nada ha corrido aún.
 			 */
 			report: {
 				meta: {
@@ -4141,10 +4140,9 @@ export default {
 				submit: "Empezar el informe gratuito de {{days}} días",
 
 				/**
-				 * Lo que acepta un visitante, dicho junto al campo y no después. Cada línea es algo
-				 * que el sistema hace de verdad: la dirección es la que sondeamos y no una que
-				 * pueda reescribir, la frecuencia y la duración son las de la propia vigilancia, y
-				 * los tres correos que se nombran son los tres que existen.
+				 * Lo que acepta un visitante, dicho junto al campo. Cada línea nombra una
+				 * garantía que el sistema ya cumple: la dirección sondeada, la frecuencia y
+				 * duración propias de la vigilancia, y los tres correos que existen.
 				 */
 				expectations: {
 					target:

@@ -2,8 +2,7 @@
  * Barrel for the style-mixin layer: `css()` mixin factories a component
  * composes directly in its own `mix` array for a recurring border, focus
  * ring, panel chrome, or gradient recipe shared across several components,
- * each calling `css()` itself rather than handing back a plain object for a
- * component to spread.
+ * each producing its own mixin descriptor via a direct `css()` call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,12 +1,9 @@
 /**
- * Tests for the DNS monitor detail page controller. `~/app/data/dns-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain. The uptime bar and the
- * check history live behind `Frame`s, so what is asserted of those is the frames themselves;
- * the record list renders inline and is asserted in full, including the two readings the
- * data makes non-obvious — an RRset edit arriving as a removal plus an addition, and a
- * declared-but-unresolved record that is routine rather than broken.
+ * Tests for the DNS monitor detail page controller. Fake middleware seeds
+ * `ctx.team`/`ctx.membership`/`ctx.teams` and auth state in place of the real
+ * `auth`/`requireUser`/`requireTeam` chain. The uptime bar and check history live behind
+ * `Frame`s, so those are asserted only as frames; the record list renders inline and is
+ * asserted in full, including an RRset edit read as a removal plus an addition.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,9 +75,8 @@ async function seedRecord(
 
 /**
  * The CSS declarations a rendered element's classes resolve to, read out of the `<style>`
- * tags the renderer emits alongside the markup. `css()` mixins turn into generated class
- * names, so a layout assertion has to go through them rather than matching a class name
- * that changes whenever the rule does.
+ * tags the renderer emits — `css()` mixins turn into generated class names, so a layout
+ * assertion has to compare declarations, since the class name itself changes with the rule.
  */
 function declarationsFor(html: string, classAttribute: string): string {
 	let rules = new Map<string, string>();
@@ -117,7 +113,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
+/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`, with `resolveFrame` left a no-op for this single-request page test. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
@@ -154,6 +150,10 @@ async function send(
 }
 
 describe("dnsMonitorShow", () => {
+	/**
+	 * The history bar, the result summary and the check log are their own fragments now, so
+	 * the page only has to promise the frames that will fetch them.
+	 */
 	test("renders the monitor's configuration and the fragment frames", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
@@ -173,8 +173,6 @@ describe("dnsMonitorShow", () => {
 		let body = await response.text();
 		expect(body).toContain("Production DNS");
 		expect(body).toContain("example.com");
-		// The history bar, the result summary and the check log are their own fragments now,
-		// so the page only promises the frames that will fetch them.
 		expect(body).toContain(
 			routes.app.team.dnsMonitors.cards.uptimeHistory.href({
 				team: team.slug,
@@ -192,6 +190,10 @@ describe("dnsMonitorShow", () => {
 		);
 	});
 
+	/**
+	 * One of two seeded records is watched, so the discovered record offers accepting it
+	 * while the accepted one offers the reverse control.
+	 */
 	test("lists every tracked record with its state and a control that says what watching it would do", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
@@ -220,8 +222,6 @@ describe("dnsMonitorShow", () => {
 		expect(body).toContain("10 mail.acme.test");
 		expect(body).toContain("20 mail.attacker.test");
 		expect(body).toContain("New");
-		// One of two records is watched, and the discovered one offers the act of accepting
-		// it while the accepted one offers the reverse.
 		expect(body).toContain("1 of 2");
 		expect(body).toContain("Watch");
 		expect(body).toContain("Stop watching");
@@ -229,9 +229,9 @@ describe("dnsMonitorShow", () => {
 	});
 
 	/**
-	 * "Stop watching" is a phrase, not a word, and a column sized for the header broke it
-	 * over two lines — which made every row in the table taller. The column has to size to
-	 * its content instead, which is `1%` plus a cell that refuses to wrap.
+	 * "Stop watching" broke over two lines when the column sized to the header, so the column
+	 * sizes to its content instead — `1%` plus a cell that refuses to wrap. The records table
+	 * renders as the page's only inline table, so its last cells are the watch column's.
 	 */
 	test("sizes the watch column to its control, so the longer label stays on one line", async () => {
 		let { db, team, membership } = await createFixture();
@@ -245,9 +245,6 @@ describe("dnsMonitorShow", () => {
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
-		// The records table is the only one this page renders inline — the check history is
-		// behind a frame this harness resolves to nothing — so the last header cell and the
-		// last body cell in the document are the watch column's.
 		let header = [...body.matchAll(/<th[^>]*class="([^"]*)"/g)].at(-1);
 		let cell = [...body.matchAll(/<td[^>]*class="([^"]*)"/g)].at(-1);
 
@@ -259,9 +256,9 @@ describe("dnsMonitorShow", () => {
 	});
 
 	/**
-	 * A record identified by `(name, type, value)` cannot express an edit inside an RRset
-	 * that holds more than one record: the old value stops resolving and the new one has no
-	 * row, so the page must show both, side by side, rather than claim a single change.
+	 * A record identified by `(name, type, value)` cannot express an edit inside an RRset that
+	 * holds more than one record: the old value stops resolving and the new one has no row, so
+	 * the page shows both, side by side, as the removal and the addition they are.
 	 */
 	test("shows an edit inside a multi-record RRset as the removal and the addition it is", async () => {
 		let { db, team, membership } = await createFixture();
@@ -293,9 +290,9 @@ describe("dnsMonitorShow", () => {
 	});
 
 	/**
-	 * On a proxied zone a record the customer's own zone file declares routinely does not
-	 * resolve at all, so an unwatched `missing` record is the common case and must not be
-	 * drawn in the tone reserved for something being wrong.
+	 * A proxied zone commonly has a declared record that simply never resolves, so an unwatched
+	 * `missing` record renders neutrally, reserving the destructive tone for real trouble. Since
+	 * the page's own controls also draw that tone, danger counts are compared as deltas.
 	 */
 	test("draws a declared but unresolved record neutrally, and a watched missing one as a failure", async () => {
 		let { db, team, membership } = await createFixture();
@@ -305,8 +302,6 @@ describe("dnsMonitorShow", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		// The page draws destructively-toned controls of its own, so what is asserted is the
-		// change each record makes rather than the presence of the tone anywhere on it.
 		let baseline = dangerCount(await (await send(db, team, membership, monitor.id)).text());
 
 		await seedRecord(db, monitor.id, {

@@ -1,4 +1,12 @@
 /**
+ * Array helpers for presence checks, slicing, deduplication, and
+ * coercion to array.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Check if an array has any element inside
  */
 export function hasAny<Value>(list: Value[]): boolean {

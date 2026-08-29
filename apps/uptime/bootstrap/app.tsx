@@ -1,14 +1,13 @@
 /**
- * Application bootstrap that assembles the uptime fetch-router. It registers the
- * core middleware stack (async context, logging, form data, method override, session,
- * auth, language resolution for the HTML surface, cross-origin protection, HTML
- * rendering), and mounts the web routes with their auth guards. It exists as the
- * composition root shared by the worker and any other runtime entry point.
+ * Assembles the uptime fetch-router: the global middleware stack (async
+ * context, logging, mail, form data, method override, session, auth,
+ * language resolution, first-touch attribution, cross-origin protection,
+ * HTML rendering) followed by every route mapped to its controller. Shared
+ * by the worker and any other runtime entry point.
  *
- * The SSR renderer it installs lives in `~/app/http/render` rather than here, because
- * nothing can import this module in a test — the controllers it mounts pull in
- * bundler-only globs — and a renderer no test can reach is a renderer every page test
- * has to restate for itself.
+ * The SSR renderer lives in `~/app/http/render` so tests can reach it
+ * directly — the controllers mounted here pull in bundler-only globs that
+ * block any test from importing this module.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -228,10 +227,9 @@ import { createHtmlRenderer } from "~/app/http/render";
 import routes from "~/routes/web";
 
 /**
- * Path prefix of the JSON surface. Requests under it carry their own bearer-token
- * auth (see `requireApiKey`), are called server-to-server, and answer with JSON
- * that is never translated — so both cross-origin protection and language
- * resolution are scoped around this one boundary.
+ * Path prefix of the JSON surface: bearer-token auth, server-to-server
+ * calls only, and untranslated JSON responses — so cross-origin checks and
+ * language resolution skip it.
  */
 const API_PATH_PREFIX = "/api/";
 
@@ -243,10 +241,9 @@ const API_PATH_PREFIX = "/api/";
 const WEBHOOK_PATH_PREFIX = "/webhooks/";
 
 /**
- * Every prefix whose requests are machine-to-machine. They share one list because they
- * need the same three exemptions — no cross-origin protection, no language resolution, no
- * translated 404 — and adding a surface should be one edit here rather than three
- * `startsWith` checks that can drift apart.
+ * Prefixes whose requests are machine-to-machine. Sharing one list gives
+ * them the same exemption from cross-origin protection, language resolution,
+ * and translated 404s, so adding a surface takes a single edit.
  */
 const MACHINE_PATH_PREFIXES = [API_PATH_PREFIX, WEBHOOK_PATH_PREFIX];
 
@@ -263,20 +260,25 @@ namespace application {
 
 /** Builds the app's fetch-router: global middleware, then every route mapped to its controller. */
 export default function application(options: application.Options) {
-	// Non-tuple `Middleware[]`: values middleware expose on the context are declared
-	// via `declare module "remix/router"` augmentations in their own files,
-	// not through the transform-typed middleware chain (see AGENTS.md).
+	/**
+	 * Typed as `Middleware[]` because each entry publishes its context value
+	 * through a `declare module "remix/router"` augmentation in its own file,
+	 * so the router's context typing already comes from there (see AGENTS.md).
+	 */
 	let globalMiddleware: Middleware[] = [
-		// First, so everything after it — the session, the auth guard, cross-origin
-		// protection, the per-route API guards — sees a plain `GET` and treats a `HEAD`
-		// probe exactly as it would the request behind it.
+		/**
+		 * Runs first so the session, the auth guard, cross-origin protection, and
+		 * the per-route API guards all see a plain `GET` and treat a `HEAD` probe
+		 * exactly like the request behind it.
+		 */
 		headRequests(),
 		asyncContext(),
 		logger,
-		// Publishes `ctx.email` on every surface, machine ones included: the cron-job ping
-		// endpoint dispatches alerts too. It sits after the logger because the deferred
-		// queue it flushes once a handler has returned reports its failures through
-		// `ctx.logger`, which is still open at that point.
+		/**
+		 * Publishes `ctx.email` on every surface, including machine ones — the
+		 * cron-job ping endpoint dispatches alerts too. Sits after the logger so
+		 * failures from its deferred flush queue can still reach `ctx.logger`.
+		 */
 		mail({
 			transport: () => new CloudflareTransport(env.EMAIL),
 			from: MAIL_FROM,
@@ -286,20 +288,23 @@ export default function application(options: application.Options) {
 		methodOverride(),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
 		auth as Middleware,
-		// Stays after the session middleware, whose session the language detector reads
-		// the stored language from, and skips the machine surfaces: resolving a language and
-		// building an i18next instance is wasted work for a response nothing translates,
-		// the unauthenticated cron-ping and webhook endpoints included.
+		/**
+		 * Stays after the session middleware, whose stored language it reads.
+		 * Wrapped in `htmlOnly` because resolving a language and building an
+		 * i18next instance only pays off for a page a person actually reads.
+		 */
 		htmlOnly(i18n),
-		// First-touch acquisition, recorded while the visitor is still anonymous — which is the
-		// only time it is knowable. `htmlOnly` for the same reason as the language detector: a
-		// webhook or an API call has no campaign and no session worth writing to. It writes at
-		// most once per session and never on a `POST`, so the steady-state cost on every other
-		// page view is a session read.
+		/**
+		 * Records first-touch acquisition while the visitor is still anonymous —
+		 * the only time it's knowable. Wrapped in `htmlOnly` since a webhook or an
+		 * API call has no campaign and no session worth writing to.
+		 */
 		htmlOnly(attribution),
-		// Cross-origin protection doesn't apply to the machine surfaces either. A webhook
-		// sender authenticates by signing the request body, which is a stronger claim than an
-		// `Origin` header, and has no browser to send one from.
+		/**
+		 * Machine surfaces authenticate differently: a webhook sender proves itself
+		 * by signing the request body — a stronger claim than an `Origin` header —
+		 * from a caller with no browser to send one from.
+		 */
 		cop({
 			insecureBypassPatterns: MACHINE_PATH_PREFIXES.map((prefix) => `${prefix}{path...}`),
 		}),
@@ -309,10 +314,9 @@ export default function application(options: application.Options) {
 	let router = createRouter({
 		middleware: globalMiddleware,
 		/**
-		 * Renders the translated 404 page for unmatched paths. A path under one of the
-		 * {@link MACHINE_PATH_PREFIXES} that matches no route still lands here, and `htmlOnly`
-		 * skipped language resolution for it, so resolve the language for that one case
-		 * before rendering instead of translating through an absent `ctx.i18next`.
+		 * Renders the translated 404 page for unmatched paths. A path under
+		 * {@link MACHINE_PATH_PREFIXES} lands here too; since `htmlOnly` skipped it
+		 * earlier, this resolves the language itself before rendering.
 		 */
 		defaultHandler(context) {
 			if (!isMachinePath(context.url.pathname)) return defaultHandler(context);
@@ -328,21 +332,16 @@ export default function application(options: application.Options) {
 	router.map(routes.statusPage, statusPageController);
 	router.map(routes.invite, inviteController);
 
-	// The public try-it surface, outside every auth guard for the same reason the status
-	// page and the marketing pages are: its whole point is that somebody with no account
-	// can use it. Each leaf carries its own protection instead — the POST half of
-	// `trial.check` goes through `trial-guard.ts`, and `trial.unsubscribe` proves itself with
-	// the unguessable token in its own URL. Every POST stays under `cop`: they are
-	// same-origin form posts from pages this app serves, and the one cross-origin caller that
-	// matters — a mail client's RFC 8058 one-click unsubscribe — sends neither
-	// `Sec-Fetch-Site` nor `Origin`, which `cop` allows through by design.
+	/**
+	 * Public try-it surface: outside every auth guard since using it needs no
+	 * account. Each leaf guards itself instead — `trial-guard.ts` for
+	 * `trial.check`'s POST, an unguessable URL token for `trial.unsubscribe`.
+	 */
 	router.map(routes.trial.check, trialCheck);
 	router.map(routes.trial.lead, trialLead);
 	router.map(routes.trial.unsubscribe, trialUnsubscribe);
 	router.map(routes.trial.report, trialReport);
 
-	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous — no
-	// requireUser/requireTeam middleware.
 	router.map(routes.marketing.feature, marketingFeature);
 	router.map(routes.marketing.audience, marketingAudience);
 	router.map(routes.marketing.useCase, marketingUseCase);
@@ -354,10 +353,11 @@ export default function application(options: application.Options) {
 	router.map(routes.docs.show, docsShow);
 	router.map(routes.sitemap, sitemap);
 
-	// Each of these controllers bakes its own `requireUser`/`requireTeam` (and, where
-	// noted, `requireRole`) chain into its `createAction` call instead of supplying
-	// middleware here, so `router.map()` can take the controller's default export
-	// directly with no `RequestHandler` cast — see e.g. `app/team/dashboard.tsx`.
+	/**
+	 * Each controller bakes its own `requireUser`/`requireTeam` (and, where
+	 * noted, `requireRole`) chain into its `createAction` call, so `router.map()`
+	 * takes its default export directly, with no `RequestHandler` cast needed.
+	 */
 	router.map(routes.app.index, appIndex);
 	router.map(routes.app.team.index, teamIndex);
 	router.map(routes.app.team.dashboard.index, teamDashboard);
@@ -417,15 +417,11 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.apiKeys.new, apiKeyNew);
 	router.map(routes.app.team.checkout, checkout);
 
-	// `routes.actions` is now nested by resource (see its docblock in `routes/web.ts`),
-	// and `createController()` only accepts a route map whose every key is a leaf
-	// `Route` — a nested group key types as `never` in its `actions` object — so each
-	// leaf group below gets its own `router.map()`/`createController()` call instead of
-	// one call across the whole `actions` tree. All of them still share the same
-	// member-level `[requireUser, requireTeam]` chain, repeated as an inline array at
-	// each call site rather than a shared variable — inline arrays are what let
-	// TypeScript infer the middleware-provided context (see this file's imports'
-	// `remix/router` README on `createController()`).
+	/**
+	 * Each leaf group gets its own `router.map()`/`createController()` call — a
+	 * nested `routes.actions` key types as `never` for `createController()`. The
+	 * `[requireUser, requireTeam]` chain repeats inline so TypeScript can infer context.
+	 */
 	router.map(
 		routes.actions.monitor.http,
 		createController(routes.actions.monitor.http, {
@@ -514,18 +510,20 @@ export default function application(options: application.Options) {
 			actions: { create: createStatusPage, update: updateStatusPage, delete: deleteStatusPage },
 		}),
 	);
-	// `setDashboardTab` bakes its own `requireUser`/`requireTeam` chain into its own
-	// `createAction()` call (see `app/http/controllers/actions/dashboard.ts`), the same
-	// pattern the `app.team.*` page controllers above use, since it's a single `Route`
-	// rather than a `RouteMap` and so can't take a controller-level `middleware` option.
+	/**
+	 * `setDashboardTab` bakes its own `requireUser`/`requireTeam` chain into its
+	 * own `createAction()` call, the same pattern the `app.team.*` page
+	 * controllers above use — a single `Route` takes middleware only via `createAction()`.
+	 */
 	router.map(routes.actions.setDashboardTab, setDashboardTab);
-	// `runPing` is a single `Route` too, so it carries the same self-contained chain.
+	/** `runPing` is a single `Route` too, so it carries the same self-contained chain. */
 	router.map(routes.actions.runPing, runPing);
 
-	// A separate group (see `routes/web.ts`'s docblock on `teamAdminActions`), so
-	// `requireRole("admin")` layers on top of the member-level chain the `actions`
-	// group above uses, without restricting those member-level actions too. Same
-	// one-call-per-leaf-group constraint as `actions` above applies here too.
+	/**
+	 * A separate group from `actions` above (see `routes/web.ts`'s docblock on
+	 * `teamAdminActions`): `requireRole("admin")` layers on the same member-level
+	 * chain, scoped to this group alone — same one-call-per-leaf-group constraint applies.
+	 */
 	router.map(
 		routes.teamAdminActions.team,
 		createController(routes.teamAdminActions.team, {
@@ -566,8 +564,10 @@ export default function application(options: application.Options) {
 		}),
 	);
 
-	// Not team-scoped: reached from the account page, which lists every team the
-	// viewer belongs to rather than acting on the one team in its own URL.
+	/**
+	 * Guarded by `requireUser` alone. Reached from the account page, which lists
+	 * every team the viewer belongs to, so each action carries its own team id.
+	 */
 	router.map(
 		routes.accountActions,
 		createController(routes.accountActions, {
@@ -584,23 +584,25 @@ export default function application(options: application.Options) {
 		}),
 	);
 
-	// Public, unauthenticated: the cron-job ping endpoint (see its controller's
-	// docblock for why it doesn't sit behind `requireUser`/`requireTeam`, and for the
-	// per-caller budget it bakes into its own `createAction()` middleware in place of
-	// the auth chain every other route is bounded by).
+	/**
+	 * Public, unauthenticated cron-job ping endpoint. Its `createAction()`
+	 * middleware bakes in a per-caller budget; see its controller's docblock
+	 * for the full authorization rationale.
+	 */
 	router.map(routes.api.cronJobPing, cronJobPing);
 
-	// Inbound webhooks. Outside every auth guard and outside `cop` (via
-	// `MACHINE_PATH_PREFIXES` above) because the sender's proof is its signature over the
-	// request body, which each controller verifies before doing anything.
+	/**
+	 * Inbound webhooks, gated by `MACHINE_PATH_PREFIXES` above: the sender
+	 * proves itself with a signature over the request body, verified by each
+	 * controller before acting — standing in for the auth guard and `cop`.
+	 */
 	router.map(routes.webhooks.polar, polarWebhook);
 
-	// Bearer-API-key-gated REST API. Each file with 2+ actions is wired through a
-	// single `createController()` call keyed by that file's own exported route-map
-	// object (e.g. `monitorRoutes`), so read/write methods on the same resource can
-	// still require different scopes via each action's own `middleware` (see
-	// `routes/web.ts`'s docblock on the `api.v1` group). Single-action files stay
-	// plain `createAction()` default exports mapped directly to their one route.
+	/**
+	 * Bearer-API-key-gated REST API. Each file with 2+ actions wires through one
+	 * `createController()` call keyed by its own route-map object, so same-
+	 * resource methods can scope differently via each action's own `middleware`.
+	 */
 	router.map(routes.api.v1.status, statusShow);
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 	router.map(routes.api.v1.ping, pingCreate);
@@ -643,16 +645,14 @@ export default function application(options: application.Options) {
 	return router;
 }
 
-/** Whether a path belongs to one of the machine surfaces rather than the HTML one. */
 function isMachinePath(pathname: string): boolean {
 	return MACHINE_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 /**
  * Scopes a global middleware to the HTML surface: requests under one of the
- * {@link MACHINE_PATH_PREFIXES} skip it and go straight to the rest of the chain. Use it
- * for work only a rendered page benefits from, so the JSON surfaces never pay for it;
- * middleware they also need stays in the chain unwrapped.
+ * {@link MACHINE_PATH_PREFIXES} skip it and continue the chain unchanged. Use
+ * it for page-only work; middleware both surfaces need stays unwrapped.
  *
  * @param middleware - The middleware to run for everything outside those prefixes.
  * @returns A middleware that either delegates to it or continues the chain.

@@ -3,28 +3,17 @@
  * statically `import { env } from "cloudflare:workers"` load under Vitest without the
  * Workers runtime.
  *
- * Every binding read answers with a deterministic `test-<KEY>` placeholder. A test that
- * needs specific bindings still calls `vi.doMock("cloudflare:workers", …)` and dynamically
- * imports its subject, which overrides this default for that file.
- *
- * `waitUntil` and `DurableObject` are exported even though the default does nothing with
- * them: a module's export set is fixed at link time, so a source file that statically
- * imports either fails to load against a stub that omits it, before any `vi.doMock` can
- * replace it.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { Plugin } from "vite";
 
-/** The specifier source files import. */
 const SPECIFIER = "cloudflare:workers";
 
 /** Rollup convention: a leading NUL marks an id no other plugin should try to load. */
 const RESOLVED = `\0${SPECIFIER}`;
 
 /**
- * Builds the plugin.
  * @returns A Vite plugin serving the `cloudflare:workers` stub.
  */
 export function cloudflareWorkersStub(): Plugin {
@@ -40,7 +29,9 @@ export function cloudflareWorkersStub(): Plugin {
 		},
 
 		/**
-		 * Serves the stub's source.
+		 * Serves the stub's source. Every binding read answers a deterministic `test-<KEY>`
+		 * placeholder, and `waitUntil`/`DurableObject` stay exported even though unused, since
+		 * an omitted export breaks a static importer before any override can run.
 		 * @param id Resolved module id.
 		 */
 		load(id: string): string | undefined {

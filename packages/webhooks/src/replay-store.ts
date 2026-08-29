@@ -14,7 +14,7 @@ import type { DurationInput } from "@pkg/duration";
 
 import { toSeconds } from "@pkg/duration";
 
-/** Key prefix used when a caller does not choose one. */
+/** Key prefix used when a caller leaves the option unset. */
 const DEFAULT_PREFIX = "webhook-replay:";
 
 /** Shortest expiry Workers KV accepts; anything smaller is rejected by the binding. */
@@ -26,9 +26,8 @@ const SEEN_MARKER = "1";
 /**
  * Records which delivery ids have already been accepted.
  *
- * Implementations only need presence and expiry, so a KV namespace or a table
- * with a TTL column both fit; a false positive from `seen()` would reject an
- * authentic delivery.
+ * Implementations need only presence and expiry, so a KV namespace or a table
+ * with a TTL column both fit; a false positive here rejects a genuine delivery.
  */
 export interface ReplayStore {
 	/**
@@ -51,9 +50,8 @@ export interface ReplayStore {
 /**
  * The part of a Workers KV binding this store uses.
  *
- * Declared as the subset actually called, so a real `KVNamespace` binding
- * satisfies it with no cast and a test can stand in a two-method fake instead
- * of the full binding.
+ * Naming only the methods actually called lets a real `KVNamespace` binding
+ * satisfy it with no cast, and lets a test stand in a two-method fake.
  */
 export interface ReplayKVNamespace {
 	/** Reads a key as text, resolving `null` when it is absent or expired. */

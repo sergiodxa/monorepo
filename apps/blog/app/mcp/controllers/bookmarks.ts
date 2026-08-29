@@ -1,8 +1,8 @@
 /**
  * MCP tool answering `list_bookmarks`.
  *
- * A bookmark is a title and somebody else's URL, so there is nothing of ours to read in
- * full and no resource to declare for one.
+ * A bookmark is only a title and somebody else's URL, so a single tool response holds it
+ * in full.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,11 @@ import toolset from "~/app/mcp/tools";
 import { Post } from "~/app/repositories/post";
 import { LikePost } from "~/app/repositories/posts/like";
 
-/** Lists bookmarked links, newest first, paged. */
+/**
+ * Lists bookmarked links, newest first, paged.
+ *
+ * A row with an unparseable date sorts last, so every bookmark still appears in the page.
+ */
 export default createTool(toolset.bookmarks, async (ctx) => {
 	let bookmarks = await LikePost.findAll(getDatabase(ctx));
 
@@ -27,7 +31,6 @@ export default createTool(toolset.bookmarks, async (ctx) => {
 			return {
 				title: bookmark.meta.title,
 				url: bookmark.meta.url,
-				// A row with an unparseable date sorts last rather than being dropped.
 				timestamp: Number.isNaN(timestamp) ? 0 : timestamp,
 			};
 		})

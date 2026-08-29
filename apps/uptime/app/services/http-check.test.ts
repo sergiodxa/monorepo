@@ -1,23 +1,9 @@
 /**
  * Unit tests for `HttpCheck`, the three-step HTTP check the scheduled job and the ad-hoc
- * ping endpoint share. Each step is exercised on its own — `probe` against a mocked
- * `GEO_FETCH` binding, `evaluate` against content-check rules, `classify` against the
- * status model — and then `run` is checked to agree with calling the three by hand, which
- * is the property that lets the two callers pick either shape.
- *
- * The cases the probe is pinned on are the ones that have cost something before or would:
- * which location hints get an EU-pinned object (ADR-013 — `enam` was pinned to Europe and
- * measured the wrong continent), that a target keeps its shard forever (ADR-009 — a monitor
- * that drifted would show a step change in its latency series), that a body is fetched only
- * when a rule needs one, and that a timeout is a `down` target while any other stub failure
- * is an infrastructure fault that propagates. That last distinction is what stops an
- * unavailable Durable Object from being recorded as an outage the target never had.
- *
- * The Durable Object namespace is a binding mock rather than a mocked module under test: it
- * enforces the real binding's rule that an id carries the jurisdiction of whichever
- * namespace minted it, so minting from the wrong one fails here exactly as it would in
- * production, and it records every resolution so the object, region and jurisdiction a
- * probe was placed with can be read back.
+ * ping endpoint share. Each step is exercised on its own, and `run` is checked to agree
+ * with calling the three by hand. The Durable Object namespace mock enforces the real
+ * binding's jurisdiction rule, so minting from the wrong one fails here as it would in
+ * production.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,10 +34,8 @@ let doFetchMock = vi.fn(
 
 /**
  * The `GEO_FETCH` binding, handing every object it routes to the same {@link doFetchMock}.
- *
  * Its `resolutions` are the probes issued so far, in order, one per `get` — each carrying
- * the object's name, the region it was placed in, and the jurisdiction it was reached
- * through, which is what the sharding and jurisdiction suites assert on.
+ * the object's name, region, and jurisdiction, which the sharding and jurisdiction suites assert on.
  */
 let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchMock }));
 
@@ -64,7 +48,7 @@ vi.doMock("cloudflare:workers", () => ({
 		COSTS: costs,
 	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
-	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
+	/** Exists only as the base class `~/app/do/geo-fetch` extends at module load. */
 	DurableObject: class {},
 }));
 
@@ -130,7 +114,6 @@ async function flushing(body: () => Promise<void>): Promise<AnalyticsEngineDataP
 	return costs.dataPoints[costs.dataPoints.length - 1];
 }
 
-/** The quantity a written point recorded for one resource. */
 function quantity(point: AnalyticsEngineDataPoint | undefined, resource: CostResource): number {
 	return point?.doubles?.[COST_RESOURCES.indexOf(resource)] ?? 0;
 }
@@ -192,9 +175,6 @@ describe("HttpCheck probe jurisdiction", () => {
 	});
 
 	test("probes an 'enam' target from North America rather than the EU", async () => {
-		// Eastern *North America*: the region it asked for, and no jurisdiction to override
-		// it. Pinning it to the EU moved the probe to another continent, and every response
-		// time it recorded with it.
 		await new HttpCheck(options({ locationHint: "enam" })).probe();
 
 		expect(geoFetch.resolutions[0]?.locationHint).toBe("enam");
@@ -202,8 +182,6 @@ describe("HttpCheck probe jurisdiction", () => {
 	});
 
 	test("mints an EU-pinned target's id from the EU subnamespace", async () => {
-		// An id minted off the base namespace carries no jurisdiction, and handing that to
-		// the EU subnamespace's `get` is the mismatch the real binding rejects.
 		let result = await new HttpCheck(options({ locationHint: "eeur" })).probe();
 
 		expect(geoFetch.resolutions[0]?.jurisdiction).toBe("eu");
@@ -216,7 +194,6 @@ describe("HttpCheck probe sharding", () => {
 	test("probes through a shard of the target's region", async () => {
 		await new HttpCheck(options({ locationHint: "weur" })).probe();
 
-		// The region is still the location hint; eight shards per region, hence 0-7.
 		expect(derivedObjectNames()).toEqual([expect.stringMatching(/^weur:[0-7]$/)]);
 	});
 
@@ -233,7 +210,7 @@ describe("HttpCheck probe sharding", () => {
 	});
 
 	test("spreads distinct shard keys across the shards instead of collapsing onto one", async () => {
-		// Fixed keys so this asserts the hash's spread rather than which uuids came up.
+		/** Fixed keys make this assert the hash's own spread, independent of which uuids come up. */
 		for (let index = 0; index < 8; index++) {
 			await new HttpCheck(options({ shardKey: `monitor-${index}` })).probe();
 		}
@@ -286,8 +263,10 @@ describe("HttpCheck probe request", () => {
 		).probe();
 
 		expect(doFetchMock.mock.calls[0]?.[0]).toBe("https://example.com");
-		// A `Headers` instance rather than the object passed in, because the probe may add
-		// `X-No-Redirect` to it. Asserted by lookup so the caller's header is still pinned.
+		/**
+		 * A `Headers` instance, since the probe may add `X-No-Redirect` to whatever was passed
+		 * in; asserted by lookup so the caller's own header still reads back pinned.
+		 */
 		let sent = new Headers(lastRequestInit()?.headers);
 		expect(sent.get("X-Token")).toBe("secret");
 		expect(sent.has(NO_REDIRECT_HEADER)).toBe(false);
@@ -316,7 +295,6 @@ describe("HttpCheck probe request", () => {
 	});
 
 	test("reports no wall time rather than zero when the object didn't measure one", async () => {
-		// A measurement that didn't happen is not a handler that took no time.
 		let result = await new HttpCheck(options()).probe();
 
 		expect(result.doWallTimeMs).toBeNull();
@@ -325,9 +303,6 @@ describe("HttpCheck probe request", () => {
 
 describe("HttpCheck probe failures", () => {
 	test("an 'unreachable' response is a failed probe that keeps its wall time", async () => {
-		// How `GeoFetchDO` reports a request it couldn't complete. The wall time is kept
-		// anyway: a probe that failed still occupied the object, and that is the expensive
-		// case worth watching.
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response(null, {
@@ -349,8 +324,10 @@ describe("HttpCheck probe failures", () => {
 	});
 
 	test("ignores an 'unreachable' outcome the target set on itself", async () => {
-		// `GeoFetchDO` overwrites the header on every response it proxies, so a target
-		// echoing it back arrives tagged `responded` and is judged on its status.
+		/**
+		 * `GeoFetchDO` overwrites this header on every response it proxies, so a target
+		 * echoing it back arrives tagged `responded` and is judged on its status.
+		 */
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response("OK", {
@@ -382,8 +359,6 @@ describe("HttpCheck probe failures", () => {
 	});
 
 	test("any other stub failure propagates as the infrastructure fault it is", async () => {
-		// Nothing was learned about the target, so recording a `down` it didn't earn would
-		// be a lie the caller can never tell apart from a real outage.
 		doFetchMock.mockImplementation(async () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
@@ -424,7 +399,6 @@ describe("HttpCheck probe cost", () => {
 			await new HttpCheck(options({ timeoutSeconds: 0.02 })).probe();
 		});
 
-		// Billed for the call it made; nothing honest to charge for a window nobody measured.
 		expect(quantity(point, "doRequest")).toBe(1);
 		expect(quantity(point, "doDurationMs")).toBe(0);
 	});
@@ -451,8 +425,10 @@ describe("HttpCheck evaluate", () => {
 	});
 
 	test("delegates to the same matcher a stored monitor's checks use", () => {
-		// Case sensitivity is the evaluator's rule, not this class's, so a rule that only
-		// differs in case proves the delegation rather than a reimplementation.
+		/**
+		 * Case sensitivity is `ContentCheck`'s own rule, so a rule differing only in case
+		 * proves `evaluate` delegates to it.
+		 */
 		let check = new HttpCheck({
 			...options(),
 			contentChecks: [rule({ value: "TOKEN", case_sensitive: true })],
@@ -485,7 +461,7 @@ describe("HttpCheck classify", () => {
 	});
 
 	test("classifies a response at the degraded threshold as degraded", () => {
-		// At, not past: the threshold is inclusive.
+		/** Inclusive threshold: hitting `degradedAfterMs` exactly still counts as degraded. */
 		let result = new HttpCheck(options({ degradedAfterMs: 100 })).classify(
 			outcome({ responseTimeMs: 100 }),
 			true,

@@ -1,7 +1,7 @@
 /**
  * Tests the team-domains endpoints: list/add (`team-domains:read`/`team-domains:write`)
- * and remove one by id — `DELETE /api/v1/team-domains` has no id route segment, so the
- * id is read from the JSON body instead (see the controller's own docblock).
+ * and remove one by id — `DELETE /api/v1/team-domains` reads the id from the JSON body
+ * (see the controller's own docblock).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

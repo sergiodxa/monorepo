@@ -1,16 +1,9 @@
 /**
- * Title + description card used in marketing feature/use-case/pricing grids. Renders
- * as a link when `href` is given (e.g. a feature card linking to its own page) or a
- * plain panel otherwise (e.g. a pricing tile with no destination). Composes
- * `@pkg/ui`'s `Card`/`Card.Header`/`Card.Title`/`Card.Description` for its panel
- * chrome instead of a hand-rolled `css()` block; `Card` itself always renders a
- * `<section>` (no polymorphic `href`/`as` prop), so the link variant wraps that
- * panel in a plain block-level `<a>` instead.
- *
- * An `icon` renders in a tinted rounded tile above the title, and `learnMore` adds a
- * brand-colored label with a trailing arrow at the card's block-end edge. Both are
- * optional so the plain title+description grids (marketing page templates, pricing
- * tiles) keep rendering exactly as before.
+ * Title + description card for marketing feature/use-case/pricing grids.
+ * Renders as a link when `href` is given, or a plain panel otherwise.
+ * Composes `Card`'s `<section>` chrome directly since `Card` has no
+ * polymorphic `href`/`as` prop, so the link variant wraps that panel in
+ * its own `<a>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,34 +29,27 @@ namespace MarketingCard {
 		icon?: RemixNode;
 		/**
 		 * Already-translated "Learn more" label (`landing.features.learnMore`),
-		 * rendered with a trailing arrow below the description. Only meaningful
-		 * alongside {@link MarketingCard.Props.href} — the whole card is the link,
-		 * so this reads as its affordance rather than a second link of its own.
+		 * rendered with a trailing arrow below the description — meaningful only
+		 * alongside {@link MarketingCard.Props.href}, as the card's own link affordance.
 		 */
 		learnMore?: string;
 	}
 }
 
-/** Renders a marketing card, wrapped in a link when {@link MarketingCard.Props.href} is set. */
+/**
+ * Renders a marketing card, linked when {@link MarketingCard.Props.href} is set.
+ * Titles render at heading level 3, below a page's hero and section headings.
+ * The icon tile sits one step past `brand.tint` to stay visible on the card's fill.
+ */
 export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 	return () => {
 		let { title, description, href, icon, learnMore } = handle.props;
 
 		let card = (
-			// `level={3}`: every marketing page nests this grid below its own
-			// `<h1>` hero and `<h2>` section heading, so each card's own title
-			// renders as `<h3>` regardless of whatever (if any) ambient
-			// `HeadingScope` wraps the page.
 			<HeadingScope level={3}>
-				{/* `vstack` only when there's a footer to push to the block-end edge, so
-				every plain title+description card keeps its default block layout. */}
 				<Card mix={[href && bs("full"), learnMore && vstack({ justify: "between" })]}>
 					<Card.Header>
 						{icon && (
-							// The icon's own tile: a 48px brand-tinted rounded square, so the
-							// glyph reads as a card affordance rather than inline text. One
-							// palette step past `brand.tint` in each scheme — that token is the
-							// card's own background here, so the tile would be invisible.
 							<span
 								aria-hidden="true"
 								mix={[

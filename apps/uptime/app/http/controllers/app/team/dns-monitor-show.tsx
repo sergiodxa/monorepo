@@ -2,18 +2,9 @@
  * DNS monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s
  * when the monitor doesn't belong to the current team.
  *
- * A monitor is a domain rather than a record type, so the page's subject is the set of
- * records it tracks: the shell reads the monitor row and that record list, while the three
- * things that cost a query each — the result-derived summary, the 90-day uptime bar and
- * the check history — load into their own named `Frame`s over a skeleton fallback, so none
- * of them delays the page or each other.
- *
- * The order narrows from claim to evidence: what the domain is, how it has behaved in
- * summary, that behaviour day by day, the records being watched, and finally the raw check
- * log. The log goes last because it is the least-scanned thing on the page — nobody opens
- * a monitor to read every check, only to read the one that went wrong — and it sits under
- * a record table that is itself long, since a real zone runs to dozens of rows. Anything
- * placed below that table is effectively opt-in, which is exactly what the log should be.
+ * The summary, uptime history, and check history each cost a query, so each loads into
+ * its own `Frame` over a skeleton fallback while the page around it renders right away.
+ * The check log sits last, below the record table, since it's the least-scanned section.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,18 +46,9 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 };
 
 /**
- * The tone a tracked record's state is drawn in, which is where two of this feature's
- * least obvious truths are expressed.
- *
- * A record nobody watches is never drawn as a failure. On a proxied zone the commonest
- * record of all is one the customer's zone file declares while public DNS answers with the
- * proxy's own address instead — nothing is broken, the record genuinely is not published —
- * so `missing` on an unwatched row reads neutral. The same goes for a record the visitor
- * declined: we still look, and what we see is not a finding.
- *
- * A `new` record is the exception among unwatched rows. It is not an error either — we do
- * not know whether the visitor put it there — but it is the one state that is waiting on a
- * person, so it keeps the attention tone until they watch it or delete it.
+ * A disabled record reads neutral, since nobody has committed to watching it, so
+ * whatever it currently looks like is expected. A `new` record keeps the attention
+ * tone regardless, since it still awaits a person's decision to watch or delete it.
  */
 function recordStateTone(record: SelectDnsMonitorRecord): BadgeTone {
 	if (record.status === "new") return "degraded";
@@ -77,7 +59,12 @@ function recordStateTone(record: SelectDnsMonitorRecord): BadgeTone {
 	return "up";
 }
 
-/** GET /app/:team/dns/:monitorId — a DNS monitor's detail page. */
+/**
+ * GET /app/:team/dns/:monitorId — a DNS monitor's detail page.
+ *
+ * Records arrive already ordered by name, then type, then value, matching the table's
+ * display grouping, so edits within one RRset appear together.
+ */
 export default createAction(routes.app.team.dnsMonitors.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
@@ -89,9 +76,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 		let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		// Already ordered by name, then type, then value, which is the grouping the page
-		// renders: every record of one name arrives together, and the removal and addition
-		// an edited RRset produces land next to each other rather than pages apart.
 		let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
 		let watchedCount = records.filter((record) => record.is_enabled).length;
 
@@ -178,20 +162,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							/>
 						</div>
 
-						{/*
-						 * A `Frame` is a region rather than an element, so a margin set inside a
-						 * fragment does not reliably survive the swap. Every gap around a frame is
-						 * therefore owned here, on a wrapper this page renders, and it has to hold
-						 * for the resolved content just as it does for the skeleton.
-						 *
-						 * `StatCardSkeleton` also renders bare cards with no row of its own, so
-						 * several frames can share one row a caller lays out. None of the frames
-						 * here shares a row, so each opens its fallback with the row its own
-						 * placeholders sit in — otherwise the cards stack flush while the page
-						 * loads, which is not the shape any fragment resolves to. Each `count`
-						 * matches what the fragment actually resolves to, since a fallback of the
-						 * wrong height moves the page when it swaps.
-						 */}
 						<Frame
 							name="dns-monitor-card-results"
 							src={routes.app.team.dnsMonitors.cards.results.href({
@@ -220,11 +190,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							/>
 						</div>
 
-						{/*
-						 * The block above ends on a `Frame`, so the space between it and this table
-						 * lives here rather than as a trailing margin on a fragment this page does
-						 * not own.
-						 */}
 						<section mix={[vstack({ gap: 3 }), mbs("24px")]}>
 							<div mix={[vstack({ gap: 1 })]}>
 								<h2 mix={[m(0)]}>{ctx.i18next.t("page.dnsMonitorDetail.records.title")}</h2>
@@ -259,16 +224,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 												<Table.Column>
 													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.state")}
 												</Table.Column>
-												{/*
-												 * The control's label is a whole phrase ("Stop watching"), and a
-												 * column wide enough for one word breaks it over two lines, which
-												 * makes every row in the table taller. `1%` is the shrink-to-fit
-												 * width in an auto-laid-out table — the column takes what its
-												 * content demands and the value column absorbs the slack — and the
-												 * cell refuses to wrap so that demand is the label's full width.
-												 * The table scrolls in its own container, so nothing here can push
-												 * the page sideways.
-												 */}
 												<Table.Column mix={[is("1%"), nowrap()]}>
 													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.watched")}
 												</Table.Column>
@@ -281,10 +236,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 														<code>{record.name}</code>
 													</Table.Cell>
 													<Table.Cell>{record.record_type}</Table.Cell>
-													{/*
-													 * A TXT value is routinely a whole DKIM key, so the cell wraps
-													 * anywhere rather than pushing the row's own actions off-screen.
-													 */}
 													<Table.Cell>
 														<code mix={[overflowWrap("anywhere")]}>{record.value}</code>
 													</Table.Cell>
@@ -298,13 +249,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 															)}
 														</Badge>
 													</Table.Cell>
-													{/*
-													 * The control is the state: a row offering "Stop watching" is
-													 * watched, one offering "Watch" is not. A discovered record arrives
-													 * disabled on purpose — accepting it has to be something a person
-													 * did, not something that happened by not reading the email — and
-													 * this button is that act.
-													 */}
 													<Table.Cell mix={[is("1%"), nowrap()]}>
 														<form
 															method="post"
@@ -335,10 +279,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							)}
 						</section>
 
-						{/*
-						 * The raw log, last and below the record table, with the gap owned by this
-						 * wrapper for the same reason as above.
-						 */}
 						<div mix={[mbs("24px")]}>
 							<Frame
 								name="dns-monitor-card-check-history"

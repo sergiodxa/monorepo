@@ -30,20 +30,16 @@ export default route({
 	healthcheck: get("/healthcheck"),
 
 	/**
-	 * The Model Context Protocol endpoint, plus the page explaining it.
-	 *
-	 * `form()` rather than two routes: every MCP message is a `POST` to one path, and a
-	 * person who pastes that same URL into a browser arrives with a `GET`. Sharing the path
-	 * means the address somebody was given is the address that explains itself, rather than
-	 * a `404` for anyone who clicks instead of configuring.
+	 * The Model Context Protocol endpoint, plus the page explaining it. `form()`
+	 * answers both an agent's `POST` and a browser's `GET` to `/mcp`, so pasting
+	 * the URL in a browser renders the explainer at the same address.
 	 */
 	mcp: form("/mcp"),
 
 	/**
-	 * The same page as Markdown, for a reader who would rather read it the way the agents it
-	 * describes do. Its own route rather than an optional `(.:ext)` on {@link mcp}, so a
-	 * `POST` still matches only `/mcp` — the one path MCP clients speak to, and the one the
-	 * machine-surface middleware exemption is keyed on.
+	 * The same page as Markdown, for a reader who would rather read it the way the
+	 * agents it describes do. Declared on its own route, keeping `POST` matching
+	 * only `/mcp` — the one path MCP clients speak to and the exemption keys on.
 	 */
 	mcpMarkdown: get("/mcp.md"),
 

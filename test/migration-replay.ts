@@ -8,8 +8,7 @@
  * row. With DQS off the same statement is an error naming the column, which turns a silent
  * data-corruption bug into something a test can see.
  *
- * The production adapters run with DQS on, deliberately — see `@pkg/cloudflare-mocks/sqlite`.
- * This module exists to check the SQL itself, not to change how it executes.
+ * Production databases run with DQS on, deliberately; this check targets the SQL alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,8 +42,6 @@ export function replayMigrations(files: MigrationFile[]): ReplayFailure[] {
 
 	try {
 		for (let file of files) {
-			// Files without a breakpoint marker come back as a single chunk, which `exec`
-			// handles as a multi-statement script.
 			for (let statement of file.sql.split(STATEMENT_BREAKPOINT)) {
 				let text = statement.trim();
 				if (text === "") continue;

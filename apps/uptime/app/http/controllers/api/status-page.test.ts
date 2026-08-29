@@ -21,7 +21,11 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** `app/data/monitor.ts` imports `env` from `cloudflare:workers` for `Monitor.ping()`, which this route never calls, but the module-level import still needs a resolvable mock. */
+/**
+ * `app/data/monitor.ts` imports `env` from `cloudflare:workers` at module
+ * scope for `Monitor.ping()`; loading this controller evaluates that import
+ * eagerly, so the mock must resolve regardless of which handlers run.
+ */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: createQueue() }),
 	waitUntil: (promise: Promise<unknown>) => promise,

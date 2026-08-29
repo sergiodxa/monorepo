@@ -3,7 +3,7 @@
  *
  * The signature is checked against RFC 4231 test case 2 so interoperability with
  * other implementations is pinned, and verification is checked for both outcomes
- * plus the malformed-signature path that must fail closed rather than error.
+ * plus the malformed-signature path, which must resolve to `false`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

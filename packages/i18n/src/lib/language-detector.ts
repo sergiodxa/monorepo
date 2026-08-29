@@ -19,10 +19,9 @@ export type DetectionMethod = "searchParams" | "cookie" | "session" | "header" |
 /** Options that configure a {@link LanguageDetector}. */
 export interface LanguageDetectorOptions {
 	/**
-	 * The languages the application supports. Detected values are matched
-	 * against this list (strict, then loose by primary code) so the detector
-	 * never returns an unsupported language. Keep in sync with the
-	 * `supportedLngs` i18next option.
+	 * Detected values are matched against this list (strict, then loose by
+	 * primary code) so the detector only returns a supported language.
+	 * Keep in sync with the `supportedLngs` i18next option.
 	 */
 	supportedLanguages: string[];
 	/**
@@ -57,10 +56,9 @@ export interface LanguageDetectorOptions {
 	 */
 	searchParamKey?: string;
 	/**
-	 * The order in which detection methods run. The first supported match wins;
-	 * methods missing their required option are skipped. Defaults to
-	 * `searchParams`, `cookie`, `session`, `header`, with `custom` prepended when
-	 * `findLocale` is provided.
+	 * Order detection methods run in; first supported match wins, skipping methods
+	 * missing their required option. Defaults to `searchParams`, `cookie`,
+	 * `session`, `header`, with `custom` first when `findLocale` is set.
 	 */
 	order?: DetectionMethod[];
 	/**

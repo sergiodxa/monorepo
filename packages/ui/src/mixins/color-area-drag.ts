@@ -100,10 +100,9 @@ function mapToAxisValue(normalized: number, input: HTMLInputElement): number {
 }
 
 /**
- * Measures `point` against `host`'s own rectangle, maps the position onto
- * `xInput`'s and `yInput`'s own ranges — inverting the vertical position
- * since a picking surface's vertical channel increases upward while the
- * rectangle's runs top-to-bottom — and dispatches {@link ColorAreaChangeEvent} on `host`.
+ * Measures `point` against `host`, maps it onto `xInput`'s and `yInput`'s ranges
+ * — inverting the vertical axis since the surface increases upward while the
+ * rectangle runs top-down — then dispatches {@link ColorAreaChangeEvent}.
  *
  * @param host ColorArea root element the pointer position measures against.
  * @param xInput Horizontal-axis input to write.

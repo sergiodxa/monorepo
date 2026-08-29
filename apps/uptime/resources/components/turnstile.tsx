@@ -1,28 +1,14 @@
 /**
- * The Cloudflare Turnstile challenge, as every public form that can spend a free probe
- * carries it.
+ * The Cloudflare Turnstile challenge, included in every public form that can spend a
+ * free probe. Container and loader render as one component, since a container with
+ * no loader behind it writes no token and turns a submission into a silent refusal.
  *
- * Container and loader are one component rather than two things a page has to remember to
- * pair up, because half of the pair is worse than neither half: a `.cf-turnstile` div with
- * no `api.js` behind it is an inert box that renders nothing, writes no token into the
- * form, and turns every submission from that page into a refusal asking the visitor to
- * finish a challenge they were never shown — silently, and only in the deployments that
- * have a site key at all. That is exactly the
- * shape the landing page shipped in, so the two parts are no longer separable.
+ * The loader sits inside the form, after the container, because Turnstile's implicit
+ * scan for `.cf-turnstile` runs only once `api.js` loads, after the markup above it
+ * has already parsed.
  *
- * The loader sits after the container and inside the same form, rather than at the end of
- * the document. Turnstile's implicit rendering scans for `.cf-turnstile` when `api.js`
- * runs, and a script tag cannot run before the markup above it has been parsed, so the
- * container is always in the DOM by then. A `<script>` generates no box, so it costs the
- * form's layout nothing wherever it lands.
- *
- * The site key arrives as a prop rather than being read here. Everything under
- * `resources/` is globbed into the browser bundle by `bootstrap/browser.ts`, so reaching
- * for the key's own accessor would drag `cloudflare:workers` into a build that has no such
- * module — a break the type checker and the test suite both let through, and only
- * `bun run build` catches. Resolving the key is therefore the caller's job; deciding what
- * to do when there isn't one stays here, so no caller can gate one half and forget the
- * other.
+ * The site key arrives as a prop: reading it here would pull `cloudflare:workers`
+ * into the `resources/` bundle, a break only `bun run build` catches.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,10 +25,9 @@ export namespace Turnstile {
 	/** Props accepted by {@link Turnstile}. */
 	export interface Props {
 		/**
-		 * This deployment's site key, or `null` when none is configured — in which case
-		 * nothing renders at all. Verification does not skip to match: a form with no widget
-		 * submits no token, and a probe with no token is refused. A deployment missing the
-		 * key is therefore a deployment that runs no checks, which is the intended failure.
+		 * This deployment's site key, or `null` when none is configured, in which case
+		 * nothing renders. A form with no widget submits no token, and a probe with no
+		 * token is refused, so a deployment missing the key runs no checks by design.
 		 */
 		siteKey: string | null;
 	}

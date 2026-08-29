@@ -1,7 +1,6 @@
 /**
  * API v1 endpoints for the authenticated team's domains: list/add (`team-domains:read`/
- * `team-domains:write`) and remove one by id, given in the JSON body rather than as a
- * route param.
+ * `team-domains:write`) and remove one by id, given in the JSON body.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

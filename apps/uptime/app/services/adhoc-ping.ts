@@ -23,11 +23,11 @@ import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
 
 /**
- * The `monitorId` an ad-hoc ping is recorded under in Analytics Engine. A synthetic
- * constant rather than the ping's own id: every ad-hoc ping is a one-off, so per-ping
- * blobs would make a high-cardinality dimension nothing can group by, while one shared
- * value lets a team's ad-hoc traffic be counted as the single stream it is. The Polar
- * event identifies the ping by its own id instead; see {@link recordAdhocPing}.
+ * The `monitorId` an ad-hoc ping is recorded under in Analytics Engine. A shared synthetic
+ * value: every ad-hoc ping is a one-off, so per-ping ids would make a high-cardinality
+ * dimension nothing can group by, while this one counts a team's ad-hoc traffic as one stream.
+ *
+ * @see {@link recordAdhocPing} — the Polar event, which identifies the same ping by its own id.
  */
 export const ADHOC_MONITOR_ID = "adhoc";
 

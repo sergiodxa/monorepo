@@ -1,25 +1,9 @@
 /**
  * Dashboard quick-check fragment controller. GET /app/:team/dashboard/quick-ping —
- * renders the header's URL bar, and the previous check's answer as a toast when there is
- * one, with no document shell, so the dashboard's quick-ping `Frame` can swap it in on
- * its own. Requires `requireUser` + `requireTeam`.
- *
- * This fragment is the only reader — and the only remover — of the stored result. The
- * action that performs the check writes it and redirects; whichever way the page comes
- * back — a frame reload after a scripted submit, or a full navigation with no JavaScript
- * at all — this handler is what turns it into markup. Keeping that in one place is what
- * lets the two paths render the same thing, and keeping the removal here is what keeps the
- * dashboard document request from clearing a result it never rendered.
- *
- * The answer is a toast rather than a line under the field, because the bar now sits in
- * the header's fixed 64px row and there is no vertical room there for one. It is also the
- * honest shape for it: a check that saves nothing has nothing to leave behind, and the
- * toast fades on its own. The toast is still assembled here, on the server, from what the
- * session held — never in the browser — which is what keeps the scripted and unscripted
- * paths reporting the same check the same way.
- *
- * Below 768px the bar is a popover instead, opened by the trigger button rendered beside
- * it; see `quick-ping-form.tsx` for why one form covers both layouts rather than two.
+ * renders the header's URL bar and the previous check's result as a toast, with no
+ * document shell, so the dashboard's quick-ping `Frame` can swap it in on its own.
+ * A scripted frame reload and a full no-JavaScript navigation both resolve here,
+ * so this is the one place that turns a stored check result into markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,11 +38,9 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 		let ctx = getContext();
 
 		/**
-		 * Read and then removed here, which is what makes the answer show exactly once: a
-		 * later reload of this frame comes back to an empty form rather than to a toast about
-		 * a check nobody just ran. Removing it explicitly rather than relying on flash
-		 * semantics is load-bearing — see {@link QUICK_PING_RESULT} for the request-ordering
-		 * reason.
+		 * Read and removed together, the only place either happens, so the very next
+		 * reload renders a clean empty form and the answer appears exactly once. The
+		 * explicit `unset` call is what makes the timing work; see {@link QUICK_PING_RESULT} for why.
 		 */
 		let session = ctx.get(Session);
 		let outcome = session?.get(QUICK_PING_RESULT) as QuickPingOutcome | undefined;
@@ -67,8 +49,8 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 		let result = outcome?.kind === "result" ? outcome : undefined;
 
 		/**
-		 * The code the target answered with and how long it took, or the wording for a target
-		 * that never answered at all rather than a code it never sent.
+		 * The code the target answered with and how long it took, using dedicated
+		 * no-response wording when the target never answered at all.
 		 */
 		let detail: string | undefined;
 		if (result) {
@@ -82,11 +64,6 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 
 		return ctx.render(
 			<>
-				{/*
-				 * Only below 768px, where the bar beside it is a closed popover: the same
-				 * `commandfor`/`command="toggle-popover"` Invoker Commands relationship the
-				 * sidebar's own hamburger uses, so opening the sheet costs no script.
-				 */}
 				<button
 					type="button"
 					commandfor={QUICK_PING_FORM_ID}

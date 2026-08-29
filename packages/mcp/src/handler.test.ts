@@ -251,8 +251,8 @@ describe("tools/list", () => {
 		expect(body.result?.tools?.map((each) => each.name)).toContain("create_post");
 	});
 
+	/** A list that varies by credential must never be held by a shared intermediary. */
 	test("marks the list private when any tool is conditional", async () => {
-		// A list that varies by credential must never be held by a shared intermediary.
 		let { body } = await call(send("tools/list"));
 
 		expect(body.result?.cacheScope).toBe("private");
@@ -429,9 +429,11 @@ describe("middleware", () => {
 		expect(body.result?.isError).toBe(true);
 	});
 
+	/**
+	 * Reached only by a client working from a stale tool list, since `available` already
+	 * hid the tool from this caller.
+	 */
 	test("reports a ForbiddenError from middleware as a protocol error", async () => {
-		// Reached only by a client working from a stale tool list, since `available` already
-		// hid the tool from this caller.
 		let mcp = createHandler({ name: "guarded", version: "1.0.0" });
 		mcp.tools.map(toolset.posts, {
 			actions: {
@@ -532,9 +534,11 @@ describe("transport", () => {
 		expect(await response.text()).toBe("");
 	});
 
+	/**
+	 * The status is what lets a client tell a modern server missing a method from a
+	 * legacy server missing the endpoint.
+	 */
 	test("answers an unknown method with 404, not 200", async () => {
-		// The status is what lets a client tell a modern server missing a method from a
-		// legacy server missing the endpoint.
 		let { status, body } = await call(send("prompts/list"));
 
 		expect(status).toBe(404);

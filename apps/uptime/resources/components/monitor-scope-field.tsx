@@ -1,17 +1,12 @@
 /**
- * The "Scope" field shared by the alert and maintenance-window create and edit forms: one
- * `<select>` offering team-wide, every monitor of a type, and each individual monitor,
- * grouped by type.
- *
- * All three live in a single control because the scope is a single fact. Split across a
- * type picker and a monitor picker, a form with no JavaScript could be submitted saying
- * "DNS" beside an HTTP monitor's id, and the action would have to decide which half to
- * believe. Encoded into one option value (`~/app/lib/monitor-scope`), the contradictory
- * states are not expressible at all, and exactly one option carries `selected`.
- *
- * The option copy comes from one `components.monitorScope` namespace, because a monitor
- * type is named the same wherever it is offered; only the sentence describing what the
- * scope does to *this* form differs, and each page passes its own.
+ * The "Scope" field shared by the alert and maintenance-window create and edit
+ * forms: one `<select>` offering team-wide, every monitor of a type, and each
+ * individual monitor, grouped by type. All three live in a single control
+ * because the scope is a single fact — split across a type picker and a
+ * monitor picker, a no-JavaScript submit could pair "DNS" with an HTTP
+ * monitor's id, and encoding it as one option value keeps that contradiction
+ * unrepresentable. Option copy comes from one `components.monitorScope`
+ * namespace, since a monitor type is named the same wherever it is offered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,7 +36,11 @@ namespace MonitorScopeField {
 	}
 }
 
-/** Renders the scope picker with one option per scope the team can express. */
+/**
+ * Renders the scope picker with one option per scope the team can express.
+ * `<select>` takes no `defaultValue`, so the saved scope is marked by giving
+ * exactly one option a `selected` prop instead, however that scope is stored.
+ */
 export default function MonitorScopeField(handle: Handle<MonitorScopeField.Props>) {
 	return () => {
 		let { groups, selected, description, i18next } = handle.props;
@@ -58,22 +57,14 @@ export default function MonitorScopeField(handle: Handle<MonitorScopeField.Props
 		}
 
 		/**
-		 * A row scoped to a monitor that has since been deleted has no option of its own, and a
-		 * `<select>` with nothing selected shows its first one — so saving the form untouched
-		 * would quietly widen it to every monitor the team has. It gets its own selected option
-		 * instead, which says the monitor is gone and fails validation on save until somebody
-		 * picks a scope that exists.
+		 * A since-deleted monitor's scope has no option of its own, and a `<select>` with
+		 * nothing selected shows its first — silently widening an untouched save to every
+		 * monitor. This value marks the row unknown instead, failing validation until fixed.
 		 */
 		let danglingValue = offered.has(selectedValue) ? null : selectedValue;
 
 		return (
 			<Field label={t("label")} description={description}>
-				{/*
-				 * `<select>` has no `defaultValue` attribute, so naming the saved scope on the
-				 * host renders as inert markup and leaves the first option — team-wide — showing.
-				 * The selection is marked on the option itself, and comparing against one encoded
-				 * `selectedValue` is what keeps it exactly one option however the scope is stored.
-				 */}
 				<Select name="scope">
 					{danglingValue !== null && (
 						<Select.Option value={danglingValue} selected>

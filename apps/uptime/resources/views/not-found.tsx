@@ -25,7 +25,6 @@ namespace NotFoundView {
 	export interface Setup {
 		title: string;
 		description: string;
-		/** Link text for the link back to the homepage. */
 		goBackHomeLabel: string;
 	}
 }

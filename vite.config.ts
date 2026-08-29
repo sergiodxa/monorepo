@@ -20,25 +20,14 @@ import { defaultExclude } from "vitest/config";
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
 
 /**
- * The Workers-pool project: these tests execute inside workerd with the real bindings
- * `apps/blog/wrangler.jsonc` declares, so a KV or D1 assertion is against Cloudflare's own
- * implementation rather than a hand-written stand-in. Bindings are not restated here — the
- * app's own config is the single source.
- *
- * `node:sqlite` does not exist in workerd, so a test whose database comes from
- * `@pkg/cloudflare-mocks/sqlite` stays in the `blog` project on the threads pool. The
- * `*.workers.test.ts` suffix is what selects a file into this one.
- *
- * Declared apart from the `projects` array on purpose: inline, it is the one entry with no
- * `pool` of its own — the plugin supplies it — and type checking the array then compares this
- * shape against every sibling and exceeds TypeScript's comparison depth (TS2321).
+ * Executes inside workerd against the real bindings `apps/blog/wrangler.jsonc` declares.
+ * Declared outside `projects`: alone here it has no `pool` of its own, and inlining it
+ * sidesteps a TS2321 depth error from comparing this shape against every sibling in the array.
  */
 /**
- * The Workers-pool project for packages. Bindings are declared inline rather than read from a
- * wrangler config: a package has no Worker of its own, so there is no config to point at, and
- * miniflare will create whatever a test names here.
- *
- * Declared apart from the `projects` array for the same reason as {@link BLOG_WORKERS_PROJECT}.
+ * Bindings are declared inline rather than read from a wrangler config: a package has no
+ * Worker of its own, so there is no config to point at, and miniflare creates whatever a test
+ * names here. Sits outside `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
  */
 const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	plugins: [
@@ -60,23 +49,20 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 };
 
 /**
- * The Workers-pool project for `apps/uptime`, taking its bindings from the app's own wrangler
- * config. Only the tests that would otherwise stand in for a binding live here; the app's
- * database-backed tests need `node:sqlite`, which workerd does not have, so they stay on the
- * threads pool.
- *
- * Declared apart from the `projects` array for the same reason as {@link BLOG_WORKERS_PROJECT}.
+ * Takes its bindings from `apps/uptime`'s own wrangler config. Database-backed tests need
+ * `node:sqlite`, absent from workerd, so they stay on the threads pool instead. Declared apart
+ * from `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
  */
 const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	root: "apps/uptime",
 	plugins: [
 		cloudflareTest({
 			wrangler: { configPath: "./wrangler.jsonc" },
-			// The app declares `send_email` with `remote: true`, and the pool honours that by
-			// opening a remote proxy session to the real account. It needs credentials, so CI
-			// fails outright with "necessary to set a CLOUDFLARE_API_TOKEN" — and where
-			// credentials do exist, a local test run reaches production. Neither is wanted:
-			// these tests assert against local KV, so every binding stays local.
+			/**
+			 * The app declares `send_email` with `remote: true`, which would otherwise have the
+			 * pool open a proxy session to the real account — failing CI for missing credentials,
+			 * or reaching production where they exist. These tests assert against local KV instead.
+			 */
 			remoteBindings: false,
 		}),
 	],
@@ -93,9 +79,11 @@ const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	plugins: [
 		cloudflareTest({
 			wrangler: { configPath: "./wrangler.jsonc" },
-			// Every binding stays local. The app has no `remote: true` binding today; declaring
-			// this keeps a future one from opening a proxy session to the real account, which
-			// needs credentials CI does not have and would point tests at production.
+			/**
+			 * Every binding stays local. The app has no `remote: true` binding today; declaring
+			 * this keeps a future one from opening a proxy session to the real account, which
+			 * needs credentials CI does not have and would point tests at production.
+			 */
 			remoteBindings: false,
 		}),
 	],
@@ -110,13 +98,11 @@ const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 export default defineConfig({
 	run: {
 		tasks: {
-			// Named apart from the `check` script, which Vite Task refuses to shadow; the
-			// script delegates here so `bun check` keeps working and gets the content-based
-			// cache — a no-change re-run replays in ~240ms instead of ~9s.
-			//
-			// `test` is deliberately not a task. Vite Task reports it "modified its input":
-			// apps/pkmn's dev-export tests write into the workspace while running, which is
-			// what they assert, so the run invalidates its own cache every time.
+			/**
+			 * Named apart from the `check` script, which Vite Task refuses to shadow, so `bun
+			 * check` still gets the content-based cache. `test` stays a plain script: apps/pkmn's
+			 * tests write into the workspace as their assertion, which busts the cache every run.
+			 */
 			"check:all": "vp check",
 		},
 	},
@@ -124,8 +110,10 @@ export default defineConfig({
 	test: {
 		projects: [
 			{
-				// The repo-root `test/` directory: cross-cutting guards that scan every workspace,
-				// so they belong to no single one.
+				/**
+				 * The repo-root `test/` directory: cross-cutting guards that scan every workspace,
+				 * so they belong to no single one.
+				 */
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "root",
@@ -135,41 +123,53 @@ export default defineConfig({
 				},
 			},
 			{
-				// One project covers every package: none of them uses a `~/*` alias or ships a
-				// Vite config, so the root tsconfig resolves them all. `.spec` files belong to
-				// `@pkg/spec`'s own runner and never match this glob.
+				/**
+				 * One project covers every package: none of them uses a `~/*` alias or ships a
+				 * Vite config, so the root tsconfig resolves them all. `.spec` files belong to
+				 * `@pkg/spec`'s own runner and never match this glob.
+				 */
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "packages",
 					include: ["packages/*/src/**/*.test.ts?(x)"],
-					// `*.workers.test.ts` belongs to `packages-workers`: those files import
-					// `cloudflare:test`, which exists only inside the Workers pool. Vitest's
-					// defaults are spread back in because naming `exclude` replaces them.
+					/**
+					 * `*.workers.test.ts` belongs to `packages-workers`: those files import
+					 * `cloudflare:test`, which exists only inside the Workers pool. Vitest's
+					 * defaults are spread back in because naming `exclude` replaces them.
+					 */
 					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
 			{
-				// Rooted at the app so its own tsconfig — and therefore the `~/*` aliases and
-				// `jsxImportSource` — apply, which a root-rooted run cannot see.
+				/**
+				 * Rooted at the app so its own tsconfig — and therefore the `~/*` aliases and
+				 * `jsxImportSource` — apply, which a root-rooted run cannot see.
+				 */
 				root: "apps/uptime",
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "uptime",
 					include: ["**/*.test.ts?(x)"],
-					// `*.workers.test.ts` belongs to `uptime-workers`. Vitest's defaults are spread
-					// back in because naming `exclude` replaces them.
+					/**
+					 * `*.workers.test.ts` belongs to `uptime-workers`. Vitest's defaults are spread
+					 * back in because naming `exclude` replaces them.
+					 */
 					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
@@ -180,16 +180,18 @@ export default defineConfig({
 				test: {
 					name: "blog",
 					include: ["**/*.test.ts?(x)"],
-					// `*.workers.test.ts` belongs to the `blog-workers` project: those files import
-					// `cloudflare:test`, which exists only inside the Workers pool. Vitest's
-					// defaults have to be spread back in — naming `exclude` replaces them, and
-					// dropping `**/node_modules/**` sends this glob through the app's symlinked
-					// workspace dependencies and collects the whole repo.
+					/**
+					 * `*.workers.test.ts` belongs to `blog-workers`, whose files need `cloudflare:test`
+					 * from the Workers pool. Defaults are spread back in: dropping the `node_modules`
+					 * default would send this glob through the app's symlinked deps, collecting the whole repo.
+					 */
 					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
@@ -202,13 +204,11 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "r3-auth",
-					// Most tests here build a whole app in `beforeEach` — every migration against a
-					// fresh in-memory database, and an RSA signing key generated into R2 on the
-					// first request that needs one. That fits inside the 10s default hook timeout
-					// when this project runs alone, but not while the other projects are competing
-					// for the same cores, which showed up as hooks timing out in roughly one run in
-					// two. Set on the project because a `test` option beside `projects` is not
-					// inherited by them.
+					/**
+					 * Building a whole app in `beforeEach` — full migration plus an RSA key generated
+					 * into R2 — fits the 10s default alone, but competing with the other projects' cores
+					 * pushed hooks past it roughly one run in two. Set here since `test` isn't inherited.
+					 */
 					hookTimeout: 60_000,
 					testTimeout: 60_000,
 					include: ["**/*.test.ts?(x)"],
@@ -223,9 +223,11 @@ export default defineConfig({
 					name: "books",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
@@ -237,9 +239,11 @@ export default defineConfig({
 					name: "auth-saas",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
@@ -251,30 +255,37 @@ export default defineConfig({
 					name: "blog-saas",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
 			{
-				// The one app whose sources live under `src/`, and the one with no Cloudflare
-				// bindings — nothing here imports `cloudflare:workers`, so the stub plugin has
-				// nothing to stand in for. Rooted at the app for its `~/*` aliases.
+				/**
+				 * The one app whose sources live under `src/`, and the one with no Cloudflare
+				 * bindings — nothing here imports `cloudflare:workers`, so the stub plugin has
+				 * nothing to stand in for. Rooted at the app for its `~/*` aliases.
+				 */
 				root: "apps/pkmn",
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "pkmn",
-					// Four of the dev-export tests snapshot, write and restore the app's real
-					// manifest and `src/assets`, which they do deliberately — writing to the real
-					// paths is what they assert. That only survived because `bun test` ran files
-					// one at a time; in parallel one file's restore clobbers another's write.
+					/**
+					 * Four dev-export tests snapshot, write and restore the app's real manifest and
+					 * `src/assets` as their assertion. `bun test` ran files one at a time; in
+					 * parallel, one file's restore clobbers another's write.
+					 */
 					fileParallelism: false,
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
-					// Not inherited from the top-level `test` block: a project ignores it, so the
-					// 5s default applies unless set here. The slowest files spend ~4s applying
-					// every migration to a fresh database before their first assertion runs.
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The slowest files spend ~4s applying
+					 * every migration to a fresh database before their first assertion runs.
+					 */
 					testTimeout: 20_000,
 				},
 			},
@@ -282,9 +293,11 @@ export default defineConfig({
 	},
 
 	fmt: {
-		// Vendored third-party content. Oxfmt reformats fenced code inside markdown, which
-		// would rewrite 600+ files nobody here authored and make the next vendor sync a
-		// conflict; they are read, not maintained.
+		/**
+		 * Vendored third-party content. Oxfmt reformats fenced code inside markdown, which
+		 * would rewrite 600+ files nobody here authored and make the next vendor sync a
+		 * conflict; treat them as read-only.
+		 */
 		ignorePatterns: [".agents/**", "docs/vendor/**"],
 		useTabs: true,
 		experimentalSortPackageJson: true,
@@ -342,9 +355,11 @@ export default defineConfig({
 		globals: {},
 		overrides: [
 			{
-				// These components render an anchor, image or label whose content, `alt` text and
-				// associated control are supplied by the caller, so the rules cannot see them
-				// here. Ported from the package's own `.oxlintrc.json`, which this replaces.
+				/**
+				 * These components render an anchor, image or label whose content, `alt` text
+				 * and associated control are supplied by the caller, so the rules cannot see
+				 * them here.
+				 */
 				files: ["packages/ui/**"],
 				rules: {
 					"jsx_a11y/anchor-has-content": "allow",

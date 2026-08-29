@@ -459,10 +459,9 @@ async function cookie(
 }
 
 /**
- * `browser.ua value` — send a custom `User-Agent` header on every request
- * from here on, so an app can distinguish a spec run from a real visitor.
- * Only the network header changes; `navigator.userAgent` in page script
- * still reports the browser's own identity.
+ * `browser.ua value` — send a custom `User-Agent` header on every request, so
+ * an app can distinguish a spec run from a real visitor; `navigator.userAgent`
+ * in page script still reports the browser's own identity.
  */
 async function userAgent(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	let value = stringArg(args, 0, "ua", "value");
@@ -882,9 +881,9 @@ function executable(path: string): string | null {
 }
 
 /**
- * Run the browser CLI to completion and collect both output streams. The exit
- * code is deliberately discarded: `agent-browser` exits 0 even when a command
- * fails, so the caller reads success from the JSON envelope instead.
+ * Run the browser CLI to completion and collect both output streams. Success
+ * is read from the JSON envelope, since `agent-browser` exits 0 even when a
+ * command fails.
  *
  * @param args - Arguments to pass after the binary name.
  * @returns The child's stdout and stderr, decoded as UTF-8.

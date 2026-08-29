@@ -1,13 +1,12 @@
 /**
- * A single server-rendered toast, in its own fixed region, that fades itself out with no
- * script driving its removal. Used for the two things this app reports that way: the
- * outcome a redirect flashed into the session, and the answer to a quick check.
+ * A single server-rendered toast, in its own fixed region, that fades out on a
+ * CSS timer. Used for the two things this app reports that way: the outcome a
+ * redirect flashed into the session, and the answer to a quick check.
  *
- * It exists as a component because both of those are rendered by different requests —
- * one by the page shell, one by a fragment that streams into it — so neither could hand
- * the other a queue to push onto. Each renders its own region; they sit in the same
- * corner, which is only ever a pile if one request carries both, and a request that
- * flashes a message is not also one that ran a check.
+ * It exists as a component because both of those are rendered by different
+ * requests — one by the page shell, one by a fragment that streams into it —
+ * so each gets its own region in the same corner, populated at most once per
+ * request since a flash and a check result belong to separate requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,10 +19,8 @@ import { Toast } from "@pkg/ui";
 import { easings } from "@pkg/ui/animations";
 
 /**
- * Total time, in ms, the toast stays visible before fading out — matches `@pkg/ui`'s own
- * `Toaster` behavior's default auto-dismiss delay, even though this is a single
- * SSR-rendered element rather than a JS-driven queue, so there's no `Toaster` instance
- * here to actually read that default from.
+ * Total time, in ms, the toast stays visible before it fades, long enough for
+ * a visitor to read a short status line.
  */
 const VISIBLE_MS = 5000;
 
@@ -34,18 +31,13 @@ const VISIBLE_MS = 5000;
 const FADE_NAME = "uptime-toast-fade";
 
 /**
- * The animation name this toast fades under: {@link FADE_NAME} on its own, or suffixed
- * with `occurrence` when the caller has something that tells this toast apart from the
- * one before it.
+ * The animation name this toast fades under: {@link FADE_NAME}, suffixed with
+ * `occurrence` so a toast patched onto a frame's prior element still gets its
+ * own fresh animation name and replays its fade.
  *
- * That suffix is the whole reason the prop exists. A toast rendered into a frame is
- * patched onto whatever element the last render left behind, not built fresh, so it
- * inherits that element's already-finished fade — held at `opacity: 0` by
- * `animation-fill-mode`, and never restarted, because re-applying the same animation to
- * the same element does nothing. A different name is a different animation, which plays.
- *
- * Sanitized rather than trusted: the value is an identifier from somewhere else in the
- * app, and anything outside an ident would produce a `@keyframes` rule no browser parses.
+ * @param occurrence - Sanitized to safe identifier characters, since the raw
+ * value could otherwise produce a `@keyframes` rule no browser parses.
+ * @returns The animation name to apply to this toast's fade.
  */
 function fadeName(occurrence?: string): string {
 	let suffix = occurrence?.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -53,15 +45,9 @@ function fadeName(occurrence?: string): string {
 }
 
 /**
- * One-shot fade: holds full opacity, then fades to fully transparent over the tail of
- * {@link VISIBLE_MS}, with no JS driving its removal — the toast simply becomes
- * invisible in place once the animation ends. `@pkg/ui/animations`'s `fade()`/
- * `enterExit()` factories are state-driven (`[open]`/`:popover-open`, or a custom
- * attribute a script would need to flip), which doesn't fit a toast with no open/close
- * state of its own — this reuses their `easings.standard` curve so the motion still
- * settles into the same rhythm as every other transition in the catalog. Built on
- * `@pkg/u/animation`'s `animation()`, which emits the `@keyframes` rule plus the
- * longhand host declarations.
+ * One-shot fade: holds full opacity, then fades to transparent over the tail of
+ * {@link VISIBLE_MS}, with the toast becoming invisible in place once it ends.
+ * Uses `easings.standard` so the motion settles into the same rhythm as the rest.
  */
 function autoFade(occurrence?: string) {
 	return animation(fadeName(occurrence), {
@@ -83,10 +69,9 @@ namespace FlashToast {
 		/** Accessible name for the region landmark holding the toast. */
 		label: string;
 		/**
-		 * Identifies the thing being reported, for callers that render this into a frame:
-		 * two answers in a row are patched onto one element, and only a value that changes
-		 * between them gets the fade to play a second time. Omit it where every render is a
-		 * fresh document, which is where the element is new anyway.
+		 * Identifies the thing being reported, for callers that render this into a
+		 * frame: two answers patched onto one element only replay the fade when this
+		 * value changes between them. Omit it when every render is a fresh document.
 		 */
 		occurrence?: string;
 		/** Optional bold first line, for a message whose body needs naming. */

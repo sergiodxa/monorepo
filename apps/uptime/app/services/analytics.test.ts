@@ -1,13 +1,9 @@
 /**
  * Unit tests for the Analytics Engine service: the raw SQL query helper and its
- * success/failure `Result` mapping, the KV-cached variant's cache-hit vs cache-miss
- * branching, the cache-key/TTL helpers, the ping-result write path, and every derived
- * dashboard query (team summaries' health-derivation rules, sparkline
- * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings are
- * an in-memory KV namespace and a recording Analytics Engine dataset installed through
- * `vi.doMock("cloudflare:workers", ...)`, so a cache hit is a value the writer really
- * stored; the SQL HTTP API is intercepted with MSW, so every assertion about a query reads
- * the request that actually went out rather than the arguments a stand-in was handed.
+ * `Result` mapping, the KV-cached variant's hit/miss branching, the cache-key/TTL
+ * helpers, the ping-result write path, and every derived dashboard query. The
+ * Cloudflare bindings are an in-memory KV namespace and a recording Analytics Engine
+ * dataset; the SQL HTTP API is intercepted with MSW.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,8 +25,8 @@ let kv = createKVNamespace();
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /**
- * The cache is spied on as well as stored to: a write's `expirationTtl` and a read that
- * never happened are the two things a stored value cannot express.
+ * The cache is spied on as well as stored to: the spies reveal a write's
+ * `expirationTtl` and whether a read ever happened, facts only the call itself carries.
  */
 let kvGet = vi.spyOn(kv, "get");
 let kvPut = vi.spyOn(kv, "put");
@@ -100,8 +96,10 @@ function interceptSql(respond: () => Response): SqlRequest[] {
 }
 
 beforeEach(async () => {
-	// The namespace outlives the test that seeded it, so every key goes before the next one
-	// runs — a cache entry inherited from an earlier test would turn a miss into a hit.
+	/**
+	 * The namespace outlives the test that seeded it, so every key goes before the next
+	 * one runs — a cache entry inherited from an earlier test would turn a miss into a hit.
+	 */
 	let { keys } = await kv.list();
 	for (let key of keys) await kv.delete(key.name);
 
@@ -164,7 +162,7 @@ describe("queryAnalyticsCached", () => {
 
 		expect(queries).toEqual([]);
 		if (isFailure(result)) throw new Error("expected success");
-		// Parsed rows rather than the stored text, so the read asked KV to decode the JSON.
+		/** The read asks KV to decode the JSON, so this checks the parsed rows it returns. */
 		expect(result.data).toEqual([{ cached: true }]);
 		expect(kvGet).toHaveBeenCalledWith("cache:key", "json");
 	});
@@ -177,7 +175,7 @@ describe("queryAnalyticsCached", () => {
 		if (isFailure(result)) throw new Error("expected success");
 		expect(result.data).toEqual([{ fresh: true }]);
 		expect(await kv.get("cache:key")).toBe(JSON.stringify([{ fresh: true }]));
-		// A stored key does not report the TTL it was written with, so the option is asserted.
+		/** A key's TTL is only visible via the write call's own options, so this asserts those. */
 		expect(kvPut).toHaveBeenCalledWith("cache:key", JSON.stringify([{ fresh: true }]), {
 			expirationTtl: 120,
 		});
@@ -268,8 +266,10 @@ describe("writePingResult", () => {
 		});
 
 		let [point] = pingResults.dataPoints;
-		// Zero already spells "unknown" for HTTP itself, so a missing status reads the same
-		// way as an unreachable target's and no query has to special-case it.
+		/**
+		 * Zero already means "unknown" for HTTP responses, so a missing status here reads
+		 * the same as an unreachable target's, and every query can treat it uniformly.
+		 */
 		expect(point?.doubles).toEqual([0, 1, 0, 0]);
 	});
 
@@ -399,8 +399,10 @@ describe("getTeamHttpSummaries", () => {
 		await getTeamHttpSummaries("team-9");
 
 		expect(queries[0]?.body).toContain("index1 = 'team-9'");
-		// The rows as the query returned them, under the versioned key, with the dashboard's
-		// floor TTL — which only the write's options can say.
+		/**
+		 * The rows as the query returned them, under the versioned key, with the
+		 * dashboard's floor TTL — visible only in the write call's own options.
+		 */
 		expect(await kv.get<unknown[]>("cache:team-9:dashboard:v1:httpSummaries", "json")).toEqual([
 			{
 				monitorId: "m1",
@@ -682,8 +684,10 @@ describe("getHttpP99ResponseTime", () => {
 	});
 
 	test("degrades to a failure Result instead of throwing when the KV read throws", async () => {
-		// Cached text that is not JSON, so the decode the read asks for is what fails. A KV
-		// read really can throw, and a dashboard must not go down with it.
+		/**
+		 * Cached text that isn't JSON, so the decode this read asks for fails — a KV read
+		 * can genuinely throw, and the dashboard needs to survive that.
+		 */
 		await kv.put("cache:team-1:dashboard:v1:p99", "}not json{");
 		let queries = interceptSql(() => {
 			throw new Error("a failed cache read must not fall through to Analytics Engine");

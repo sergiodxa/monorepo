@@ -1,7 +1,7 @@
 /**
  * Tests for the milliseconds conversion: that bare numbers pass through, that
  * every accepted string form resolves to the same value the parser reports, and
- * that a bypassed type degrades to `NaN` instead of throwing.
+ * that a bypassed type degrades to `NaN`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,15 +1,8 @@
 /**
- * Shared alert-dispatch pipeline used by every check path (`CheckHttpJob`,
- * `CheckDnsJob`, `CheckTcpJob`, `CheckCronJobsJob`, and the cron-job ping endpoint) —
- * one module instead of one dispatch implementation duplicated per monitor type. For
- * every qualifying event it: skips entirely when an active, suppressing maintenance
- * window covers the monitor; otherwise resolves the applicable alerts (the ones scoped
- * to that monitor, to its type, or to nothing at all — see `app/data/alert.ts`), skips
- * any repeat notification still inside its cooldown,
- * delivers the rest (email/webhook/Slack/Discord), and records every outcome to
- * `alert_events`.
- * Cooldown and recovery notifications, and a real HMAC-SHA256 signature on webhook
- * deliveries, are enforced uniformly for every monitor type.
+ * Shared alert-dispatch pipeline used by every check path. For each qualifying event
+ * it skips monitors under an active maintenance window, resolves the alerts that
+ * apply, skips any repeat still inside its cooldown, delivers the rest, and records
+ * every outcome to `alert_events`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,40 +45,14 @@ import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 /**
- * Floor on the cooldown a *repeat* notification is spaced by, in minutes.
- *
- * This replaces the per-incident send ceiling this constant's slot used to hold (10 sends per
- * incident, ADR-004). The ceiling existed for one reason: `cooldown_minutes: 0` is a legal
- * stored value, and without a bound a down monitor checked every minute is one email per
- * minute for as long as the outage lasts. But the ceiling bounded the wrong axis. The policy
- * is that an ongoing outage keeps alerting at its configured cadence for as long as it lasts,
- * and a ceiling of 10 silences an hourly alert after ten hours of downtime — exactly the
- * outage worth being told about. So the total is deliberately unbounded now, and the rate is
- * bounded twice: by the alert's own `cooldown_minutes`, and by this floor underneath it.
- *
- * A floor was chosen over the alternatives because it is the only one that reaches the rows
- * that need reaching. Raising the validator's minimum above 0 would leave every row already
- * storing 0 spamming, and would reject the values the edit form loads from those same rows.
- * Treating 0 as a sentinel for the default would fix 0 and leave `1` — also legal, also one
- * email per check on a 1-minute monitor — untouched. Flooring the effective value covers
- * stored rows, form-created rows, and API-created rows at once, honours every configured
- * value at or above it, and needs no data migration.
- *
- * Five minutes: the fastest check this app schedules is every 60 seconds, so any floor above
- * one minute makes "one notification per check" unrepresentable, and five keeps the worst
- * case at 12 notifications an hour — the same order of magnitude the old ceiling allowed per
- * incident, without ever going silent.
- *
- * It applies to repeats only. The first notification of an incident has no earlier send to be
- * spaced from and is never suppressed, so no floor can delay it, and a recovery is
- * edge-triggered and keeps the alert's own cooldown as its only gate.
+ * Floor on the cooldown a *repeat* notification is spaced by, in minutes. It replaces
+ * a former per-incident send cap (ADR-004) that silenced long outages by capping
+ * their total; the total is now unbounded, and only the rate is floored.
  */
 /**
- * The cooldown a repeat notification for `alert` is actually spaced by.
- *
- * The numbers themselves live in `~/app/lib/alert-policy`, which has no imports: the alert form
- * quotes the floor to explain it to a customer, and a view importing this module for it pulled
- * `~/app/services/cost` and `cloudflare:workers` into the client bundle.
+ * The cooldown a repeat notification for `alert` is actually spaced by. The numbers
+ * live in `~/app/lib/alert-policy`, which has no imports, so the alert form can quote
+ * the floor without pulling `~/app/services/cost` or `cloudflare:workers` into its bundle.
  */
 function repeatCooldown(alert: SelectAlert): number {
 	return repeatCooldownMinutes(alert.cooldown_minutes);
@@ -102,10 +69,9 @@ export function dashboardUrl(path: string): string {
 
 export type AlertEventType = SelectAlertEvent["event_type"];
 /**
- * `"ssl"` isn't a real monitor table — SSL checks run against an HTTP monitor's own
- * row — so it's resolved and suppressed exactly like `"http"` (same monitor id, same
- * maintenance windows) but recorded as its own `alert_events.monitor_type` for
- * accurate history.
+ * `"ssl"` names a virtual monitor type: SSL checks run against an HTTP monitor's own
+ * row, so it resolves and suppresses like `"http"` while recording its own
+ * `alert_events.monitor_type` for accurate history.
  */
 export type AlertMonitorKind = MonitorScopeType | "ssl";
 
@@ -126,11 +92,9 @@ export interface DispatchAlertsParams {
 }
 
 /**
- * Runs the full alert pipeline for one monitor status transition.
- *
- * This is also the one place every alerting path passes through, so it is where the unit of
- * work running it is told whose team it is for (ADR-007 §5) — before the maintenance-window
- * check can return early, because the lookups leading up to that point are cost too.
+ * Runs the full alert pipeline for one monitor status transition. The one place every
+ * alerting path passes through, so team cost is recorded here (ADR-007 §5) before the
+ * maintenance-window check can return early — the lookups before it cost too.
  */
 export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void> {
 	apportionCostByTeam([params.teamId]);
@@ -165,31 +129,15 @@ export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void
 
 /**
  * Every reason an alert is recorded without being delivered — by convention every
- * `alert_events.status` of `skipped_*`, which is also what lets the history view tone and
- * label them as a group instead of enumerating them.
+ * `alert_events.status` of `skipped_*`, which is also what lets the history view tone
+ * and label them together as one group.
  */
 type SuppressionReason = Extract<SelectAlertEvent["status"], `skipped_${string}`>;
 
 /**
- * Why this alert must not be delivered right now, or `null` to deliver it. The one reason
- * bounds the rate of a level-triggered repeat, and nothing bounds the total: an outage that
- * lasts a day keeps saying so at its configured cadence.
- *
- * The three cases the policy is written in terms of are all here:
- *
- * - The **first** notification of an incident goes out immediately. It's recognised by having
- *   no `sent` event since the last recovery, which is what makes it structurally impossible
- *   for a cooldown — the alert's own, or {@link MIN_REPEAT_COOLDOWN_MINUTES} — to delay the
- *   news that something just went down, however long that cooldown is.
- * - A **repeat** while it's still down waits out {@link repeatCooldownMinutes}, then fires
- *   again, and again, for as long as the outage lasts.
- * - A **recovery** is edge-triggered: it's only dispatched on a genuine transition back to
- *   healthy, and it ends the incident. It keeps the alert's configured cooldown as its only
- *   gate, unfloored, because that cooldown is all that stands between a flapping monitor and
- *   a "recovered" email per flap.
- *
- * Another reason belongs here as another branch: add the `skipped_*` value to
- * `alert_events.status` and return it, and recording, toning, and labelling it follow.
+ * Why `alert` must not be delivered right now, or `null` to deliver it. The first
+ * notification of an incident always goes out; a repeat waits out its cooldown and
+ * repeats indefinitely; a recovery is edge-triggered and gated only by that cooldown.
  */
 async function suppressionReason(
 	alert: SelectAlert,
@@ -206,7 +154,7 @@ async function suppressionReason(
 		return recentRecovery ? "skipped_cooldown" : null;
 	}
 
-	// Bounded at 1: this only asks whether the incident has been notified at all yet.
+	/** Bounded at 1: this only asks whether the incident has been notified at all yet. */
 	let alreadyNotified = await AlertEvent.countSentSinceRecovery(
 		params.db,
 		alert.id,
@@ -269,9 +217,8 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 
 /**
  * The notification as the channel-agnostic pipeline builds it. `subject` and `text`
- * are what the chat and webhook strategies put on the wire verbatim; the email
- * strategy renders its own translated body and reads only {@link AlertMessage.incident}
- * from here.
+ * go on the wire verbatim for the chat and webhook strategies; the email strategy
+ * renders its own translated body and reads only {@link AlertMessage.incident} here.
  */
 interface AlertMessage {
 	subject: string;
@@ -287,16 +234,9 @@ function statusWord(eventType: AlertEventType): string {
 }
 
 /**
- * How each finding is named in the plain-text body.
- *
- * The word for a `missing` record says what was observed — it stopped resolving — rather
- * than that it was deleted, because a sweep sees an absence and cannot see the act that
- * caused it, and a record can vanish from an answer for reasons nobody performed.
- *
- * These are not translated, like every other line this function builds: the text part is
- * what the webhook, Slack and Discord strategies put on the wire, and a webhook has no
- * reader whose language could be looked up. The email renders the same findings from the
- * snapshot in the recipient's language instead.
+ * How each finding is named in the plain-text body. `missing` reports what a sweep
+ * observes — a record stopped resolving — since a sweep can't see what caused that.
+ * Only email translates these words; webhook, Slack, and Discord readers have no locale.
  */
 const DNS_FINDING_WORDS: Record<DnsFinding["kind"], string> = {
 	missing: "no longer resolving",
@@ -331,8 +271,10 @@ function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 				),
 			];
 
-			// The counters are the totals and the findings a capped sample of those same
-			// buckets, so the difference is exactly what this body is not listing.
+			/**
+			 * The counters count every finding while `findings` holds only a capped sample
+			 * of them, so this gap is exactly how many are hidden here.
+			 */
 			let hidden =
 				snapshot.recordsMissing +
 				snapshot.recordsChanged +
@@ -381,18 +323,20 @@ function buildMessage(params: DispatchAlertsParams): AlertMessage {
 }
 
 /**
- * Runs one alert's configured strategy and reports the outcome as a value, so the
- * caller records `sent` or `failed` by branching instead of by catching. The three
- * HTTP-based strategies still signal failure by throwing, so they are wrapped here
- * rather than each rewritten; the mail path already answers with a `Result`.
+ * Runs one alert's configured strategy and reports the outcome as a `Result`, so the
+ * caller records `sent` or `failed` by checking it. The three HTTP-based strategies
+ * signal failure by throwing, so `wrap` turns that into the same `Result` shape.
  */
 async function deliver(
 	alert: SelectAlert,
 	message: AlertMessage,
 	params: DispatchAlertsParams,
 ): Promise<Result<unknown, Error>> {
-	// Each config is read into a local first: the discriminated union narrows the
-	// property, but a closure would widen it back to every strategy's shape.
+	/**
+	 * Each case reads its config into a local first: the discriminated union narrows
+	 * the property there, but a closure passed to `wrap` would widen it back to the
+	 * whole union.
+	 */
 	switch (alert.config.strategy) {
 		case "email":
 			return await deliverEmail(alert.config.config, message, params);
@@ -412,15 +356,9 @@ async function deliver(
 }
 
 /**
- * Sends one alert email, awaiting the outcome because it is what the pipeline records
- * against the alert.
- *
- * Counted before the send rather than after, because a rejected send is still a billed
- * one — and email is by far the most expensive thing this app does, at roughly 26× the
- * cost of the HTTP check that triggered it.
- *
- * The language is the app's fallback: an alert is addressed to a mailbox rather than to
- * an account, so there is no stored preference to read and no locale on the row.
+ * Sends one alert email and awaits the outcome for the pipeline to record. Cost is
+ * counted before the send since even a rejected send is billed, and email costs far
+ * more than the check that triggered it; language falls back to the app default since an alert addresses a mailbox with no stored locale to read.
  */
 async function deliverEmail(
 	config: { to: string; subjectPrefix: string },
@@ -522,13 +460,9 @@ function recovered<Status extends string>(previousStatus: Status | null, healthy
 }
 
 /**
- * Whether a TCP result warrants an alert at all: every non-`up` result does, and an
- * `up` one only when it's a genuine recovery.
- *
- * Exported so a sweep can decide whether a transition is worth enqueuing a `notify`
- * message for (ADR-008) using the exact same policy {@link notifyTcpResult} applies —
- * the sweep never has to duplicate the rule, and re-checking it in the consumer keeps a
- * redelivered message harmless.
+ * Whether a TCP result warrants an alert: every non-`up` result does, and `up` only
+ * on a genuine recovery. Exported so a sweep can reuse this exact policy to decide
+ * whether a transition is worth enqueuing (ADR-008), and re-checking it in the consumer keeps a redelivered message harmless.
  */
 export function shouldNotifyTcpResult(
 	previousStatus: TcpCheckStatus | null,
@@ -546,20 +480,9 @@ export function shouldNotifyDnsResult(
 }
 
 /**
- * See {@link shouldNotifyTcpResult}; `healthy` is the cron-job-equivalent state, and
- * neither a monitor moving to `new` nor one recovering from `new` is alert-worthy.
- *
- * `late` is the single opt-in transition: it's an early warning, so it only notifies when
- * the monitor has `alert_on_late` set. `missed` — the actual failure — always notifies.
- *
- * A recovery only notifies when the failure it ends was itself notified. This used to be
- * the other way around, on the reasoning that the flag withholds the notification and
- * never the state — true of the state machine, but it produced an incoherent inbox: a
- * monitor with `alert_on_late` off would flap `healthy` → `late` → `healthy` and send a
- * "recovered" for a failure the owner was never told about. In production every single
- * cron alert was an `up`, several an hour, with no `down` anywhere among them. An alert
- * announcing the end of an event nobody heard start is worse than no alert, because it
- * teaches its reader to ignore the channel.
+ * See {@link shouldNotifyTcpResult}; `healthy` is the cron-job-equivalent state, `late`
+ * is the single opt-in transition gated by `alert_on_late`, and `missed` always
+ * notifies. A recovery only fires when the failure it ends was itself notified, so no one gets a "recovered" email for an outage they were never told started.
  */
 export function shouldNotifyCronJobResult(
 	previousStatus: CronJobStatus | null,
@@ -575,9 +498,8 @@ export function shouldNotifyCronJobResult(
 
 /**
  * Per-monitor-type policy on top of {@link dispatchAlerts}: alert on every non-healthy
- * result (cooldown is what prevents repeat spam), and only alert `up` on a genuine
- * recovery (the previous result was not healthy). A `previousStatus` of `null` (never
- * checked before) never counts as a recovery.
+ * result (cooldown bounds the repeat rate) and alert `up` only on a genuine recovery.
+ * A `previousStatus` of `null` (never checked before) never counts as a recovery.
  */
 export async function notifyHttpResult(
 	db: Database,
@@ -611,25 +533,16 @@ export async function notifyHttpResult(
 }
 
 /**
- * How many findings one snapshot quotes.
- *
- * `alert_events.snapshot` is stored JSON, written once per alert per event, and the number
- * of findings a sweep can produce is set by the customer's zone rather than by us — a
- * nameserver change makes every record at every tracked name a finding at once. Five is
- * as many as a body can list before it stops being a notification and becomes a report,
- * and the counters beside them carry the totals, so capping the list loses the sixth
- * record's identity and nothing else.
+ * How many findings one snapshot quotes. A customer's zone sets how many a sweep can
+ * produce — one nameserver change can make every tracked record a finding at once —
+ * and five is as many as a notification can list before it reads like a report; the counters beside the list still carry the true totals.
  */
 const MAX_SNAPSHOT_FINDINGS = 5;
 
 /**
- * What a domain sweep found, as the alert pipeline needs it.
- *
- * The counters are totals over the whole sweep and `findings` holds every one of them
- * before {@link notifyDnsResult} caps the stored list, so
- * `recordsMissing + recordsChanged + recordsNew === findings.length` always holds here.
- * Both constructors below maintain it, and the email relies on it to say how many
- * findings it is not showing.
+ * What a domain sweep found, as the alert pipeline needs it. The counters total the
+ * whole sweep while `findings` holds the same records before {@link notifyDnsResult}
+ * caps the list, so the email can report how many findings the cap hides.
  */
 export interface DnsAlertResult {
 	status: DnsCheckStatus;
@@ -640,12 +553,9 @@ export interface DnsAlertResult {
 }
 
 /**
- * The alert's view of one check, from the diff that check produced.
- *
- * This is the payload the sweep hands over: it knows exactly what changed at the moment
- * of the transition, which is more precise than anything reconstructed afterwards. The
- * `seen`, `absent` and `ok` buckets are deliberately not findings — a declined record
- * that stopped resolving is the user's own decision playing out, not news.
+ * The alert's view of one check, from the diff that check produced at the exact
+ * moment of transition — more precise than anything reconstructed later. `seen`,
+ * `absent`, and `ok` records log the user's own decision playing out; only real changes become findings.
  */
 export function dnsAlertResultFromDiff(
 	status: DnsCheckStatus,
@@ -673,18 +583,9 @@ export function dnsAlertResultFromDiff(
 }
 
 /**
- * The same view, rebuilt from the records themselves — what the `notify` queue consumer
- * has, since the diff was computed in another invocation and was never put on the queue.
- *
- * It reports what is outstanding *now* rather than replaying the sweep, which is the only
- * honest thing a message redelivered an hour later can say, and is what the repeat
- * notifications of an ongoing incident report anyway (ADR-026 §11).
- *
- * A record's status is a state of the record and not of a check, so this reads it
- * directly. Disabled records are excluded with one exception: a newly discovered record
- * is imported disabled by construction, and it is precisely the thing waiting to be
- * accepted or fixed. A record the user declined and that later stops resolving is not a
- * finding at all — that is what declining it meant.
+ * The same view, rebuilt from the records themselves for the `notify` queue consumer,
+ * which never received the original diff. It reports what's outstanding right now —
+ * the only honest answer a redelivered message can give — and skips disabled records except newly discovered ones still awaiting a decision.
  */
 export function dnsAlertResultFromRecords(
 	status: DnsCheckStatus,
@@ -726,13 +627,9 @@ function toFinding(
 }
 
 /**
- * See {@link notifyHttpResult}; `ok` is the DNS-equivalent healthy state.
- *
- * A domain monitor's detail is the sweep's findings, so `result` carries them rather than
- * a resolved value: a monitor covers every record at every tracked name, and "the domain
- * changed" without saying which record is a notification a reader cannot act on. Build it
- * with {@link dnsAlertResultFromDiff} or {@link dnsAlertResultFromRecords} instead of by
- * hand, so the counters and the findings can never describe different events.
+ * See {@link notifyHttpResult}; `ok` is the DNS-equivalent healthy state. `result`
+ * carries the sweep's findings, naming which of a monitor's many tracked records
+ * changed, built via {@link dnsAlertResultFromDiff} or {@link dnsAlertResultFromRecords} so the counters and findings always describe the same event.
  */
 export async function notifyDnsResult(
 	db: Database,
@@ -842,14 +739,9 @@ export async function notifyCronJobResult(
 }
 
 /**
- * Unlike the other `notify*` helpers, this isn't edge-triggered — it fires every day
- * {@link shouldAlertOnSslStatus} says to, matching `docs/ssl-monitoring.md`'s "alerts
- * happen around key warning thresholds... and again on expiry" (repeated reminders,
- * not a one-time transition). Per-alert cooldown, floored by
- * {@link MIN_REPEAT_COOLDOWN_MINUTES}, throttles the repetition; nothing bounds the total, so
- * a certificate nobody renews is one email a day until it's renewed or the alert is turned
- * off. SSL never dispatches an `up` event, so an SSL reminder's "incident" is every reminder
- * that alert has ever sent for that monitor, and only the very first one skipped the cooldown.
+ * Fires every day {@link shouldAlertOnSslStatus} says to, per `docs/ssl-monitoring.md`'s
+ * repeated reminders around warning thresholds and on expiry, throttled only by cooldown
+ * and never capped in total. An SSL "incident" is every reminder ever sent for that monitor, since SSL never dispatches an `up` event.
  */
 export async function notifySslResult(
 	db: Database,

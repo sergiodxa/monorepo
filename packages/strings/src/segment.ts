@@ -1,18 +1,16 @@
 /**
  * Grapheme and word segmentation helpers built on `Intl.Segmenter`, so a
- * "character" in this package always means a user-perceived character instead
- * of a UTF-16 code unit. Segmenters are memoized per locale because building
- * one costs far more than segmenting a short string, and the text helpers run
- * once per record in list views.
+ * "character" in this package always means a user-perceived grapheme
+ * cluster. Segmenters are memoized per locale because building one costs
+ * far more than segmenting a short string, and the text helpers run once
+ * per record in list views.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/** Memoized grapheme segmenters keyed by the requested locale. */
 const GRAPHEME_SEGMENTERS = new Map<string, Intl.Segmenter>();
 
-/** Memoized word segmenters keyed by the requested locale. */
 const WORD_SEGMENTERS = new Map<string, Intl.Segmenter>();
 
 /**
@@ -127,7 +125,7 @@ export function lowerFirst(value: string, locale?: Intl.LocalesArgument): string
 
 /**
  * Applies a transform to the first grapheme cluster only, returning the input
- * untouched when it is empty so callers never need a length guard.
+ * untouched when it is empty so every call site can treat both cases alike.
  */
 function replaceFirstGrapheme(
 	value: string,

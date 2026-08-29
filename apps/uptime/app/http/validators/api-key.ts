@@ -13,7 +13,6 @@ import * as f from "remix/data-schema/form-data";
 
 import { apiKeyScopes } from "~/database/schema";
 
-/** Parses a `date` input value into epoch milliseconds at end of day, or `null` when blank. */
 const optionalExpiresAt = s.optional(s.string()).transform((value) => {
 	if (!value) return null;
 	let date = new Date(`${value}T23:59:59`);

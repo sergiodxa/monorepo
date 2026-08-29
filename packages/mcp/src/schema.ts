@@ -1,17 +1,14 @@
 /**
- * The JSON Schema subset a tool declares its arguments with, and the type-level
- * mapper that turns one of those declarations into the argument type its handler
- * receives.
+ * The JSON Schema subset a tool declares its arguments with, and the type-level mapper
+ * that turns one of those declarations into the argument type its handler receives.
  *
- * MCP puts JSON Schema on the wire, so the schema a client reads has to exist as a
- * literal object either way. Declaring it here and deriving the TypeScript type from
- * it means the wire format, the runtime validation, and the handler's parameter all
- * come from one declaration and cannot drift apart — which is the failure a separate
- * validator schema alongside a hand-written JSON Schema invites.
+ * MCP puts JSON Schema on the wire, so declaring it here and deriving the TypeScript
+ * type from it keeps the wire format, the runtime validation, and the handler's
+ * parameter from ever drifting apart.
  *
- * The subset is deliberately narrow: objects of scalars, enums, and arrays. Tool
- * arguments are filled in by a language model, and every keyword beyond these makes
- * the schema harder for it to satisfy without making the tool more capable.
+ * The subset stays narrow — objects of scalars, enums, and arrays — because a language
+ * model fills in tool arguments, and every keyword beyond these only makes the schema
+ * harder for it to satisfy without making the tool more capable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,11 +27,11 @@ export interface StringSchema extends Described {
 	readonly type: "string";
 	/** Allowed values; narrows the derived type to the union of these literals. */
 	readonly enum?: readonly string[];
-	/** Advisory only — the validator does not interpret it. */
+	/** Advisory only — validation relies solely on the schema's `type`. */
 	readonly format?: string;
 	readonly minLength?: number;
 	readonly maxLength?: number;
-	/** Anchored implicitly at neither end, matching JSON Schema's `pattern` semantics. */
+	/** Matches anywhere in the string, per JSON Schema's `pattern` semantics. */
 	readonly pattern?: string;
 	/** Substituted when the argument is absent, so an optional argument still arrives. */
 	readonly default?: string;
@@ -63,12 +60,9 @@ export interface ArraySchema extends Described {
 }
 
 /**
- * An object argument, and the shape of a tool's whole argument set.
- *
- * A property missing from `required` is optional, which is the only place optionality
- * is expressed — the subset has no `nullable` and no union types, because a model
- * given a choice between a value and `null` supplies `null` far more often than the
- * tool's author intended.
+ * An object argument, and the shape of a tool's whole argument set. A property missing
+ * from `required` is optional, and every property keeps a single concrete type, since
+ * a model given a choice between a value and `null` reaches for `null` far more often.
  */
 export interface ObjectSchema extends Described {
 	readonly type: "object";
@@ -86,7 +80,7 @@ export type PropertySchema =
 	| ArraySchema
 	| ObjectSchema;
 
-/** Flattens an intersection so a hover shows one object rather than `A & B`. */
+/** Flattens an intersection into a single readable object type for hover tooltips. */
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
 /** The property names {@link ObjectSchema.required} lists, narrowed to real properties. */
@@ -96,12 +90,9 @@ type RequiredKeys<S extends ObjectSchema> = S["required"] extends readonly (infe
 	: never;
 
 /**
- * The property names carrying a `default`.
- *
- * They join {@link RequiredKeys} in the derived type even though a caller may omit
- * them, because the validator substitutes the default and the handler therefore
- * always receives a value. Typing them optional would make every handler write a
- * `?? fallback` that restates the default the schema already states.
+ * The property names carrying a `default`. They join {@link RequiredKeys} in the
+ * derived type because the validator substitutes the default, so the handler always
+ * receives that resolved value directly, with the default declared in exactly one place.
  */
 type DefaultedKeys<S extends ObjectSchema> = {
 	[name in keyof S["properties"]]: S["properties"][name] extends { default: unknown }
@@ -116,12 +107,9 @@ type PresentKeys<S extends ObjectSchema> = RequiredKeys<S> | DefaultedKeys<S>;
 type OptionalKeys<S extends ObjectSchema> = Exclude<keyof S["properties"], PresentKeys<S>>;
 
 /**
- * The TypeScript type a value satisfying `S` has.
- *
- * A `string` schema carrying `enum` derives the union of its literals rather than
- * `string`, which is what makes a handler's `switch` over an enumerated argument
- * exhaustive. That only holds when the declaration preserves its literal types, which
- * `defineTool`'s `const` type parameter arranges without an `as const` at the call site.
+ * The TypeScript type a value satisfying `S` has: a `string` schema carrying `enum` derives
+ * the union of its literals, keeping a handler's `switch` over it exhaustive; `tool`'s
+ * `const` type parameter preserves those literals without an `as const` at the call site.
  */
 export type FromSchema<S extends PropertySchema> = S extends {
 	type: "string";

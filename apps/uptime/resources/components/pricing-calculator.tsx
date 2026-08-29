@@ -1,21 +1,13 @@
 /**
  * Client island: the homepage's usage-based pricing calculator. One slider per
- * monitor sets that monitor's check frequency in minutes; the island sums the
- * resulting monthly pings across every monitor and prices them against the base
- * subscription, re-rendering on each drag. Monitors can be added and removed, so the
- * shape of the estimate — not just its numbers — is the visitor's to change.
+ * monitor sets its check frequency in minutes; the island sums the resulting
+ * monthly pings across every monitor and prices them against the base
+ * subscription, re-rendering on each drag. Monitors can be added and removed.
  *
- * This needs JS: the whole point is a running total that responds to a drag, which
- * no server round trip and no CSS-only trick can produce. Server-side it renders the
- * same markup with the initial frequencies, so the panel is never blank and the
- * sliders still work as native `<input type="range">` controls before hydration —
- * only the totals stay at their initial values until the island's module lands.
- *
- * Its copy reads through `@pkg/i18n/ui`'s `intl(handle)` rather than arriving as a
- * dozen already-translated props, since the numbers themselves also need the active
- * language for `Intl.NumberFormat`. Server-side that resolves the `IntlProvider` its
- * caller wraps it in; client-side, the module-scoped instance `bootstrap/browser.ts`
- * registers with `setIntl()`.
+ * Renders server-side with the initial frequencies so sliders work as native
+ * controls before hydration, totals settling in once the island's module
+ * lands. Copy reads through `@pkg/i18n/ui`'s `intl(handle)`, since the totals
+ * need the active language for `Intl.NumberFormat` too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,7 +78,11 @@ function totalPingsPerMonth(monitors: CalculatorMonitor[]): number {
 	);
 }
 
-/** Renders one slider per monitor and the running monthly cost they add up to. */
+/**
+ * Renders one slider per monitor and the running monthly cost they add up to.
+ * Wrapped in `level={2}` since the calculator sits under the pricing
+ * section's own `<h2>`, making its card title an `<h3>` and its panels `<h4>`.
+ */
 export const PricingCalculator = clientEntry(
 	"/resources/components/pricing-calculator.tsx#PricingCalculator",
 	function PricingCalculator(handle: Handle<PricingCalculatorProps>) {
@@ -110,6 +106,7 @@ export const PricingCalculator = clientEntry(
 			void handle.update();
 		}
 
+		/** Removes the monitor by id; the last one stays so there is always something to price. */
 		function removeMonitor(id: string) {
 			monitors = monitors.filter((monitor) => monitor.id !== id);
 			void handle.update();
@@ -135,10 +132,9 @@ export const PricingCalculator = clientEntry(
 			});
 			let count = new Intl.NumberFormat(language, { maximumFractionDigits: 0 });
 			/**
-			 * Every amount this panel can show is a whole dollar — the base price plus
-			 * some number of whole blocks — so the cents stay off. The two digits are
-			 * available rather than forbidden so that a price that *did* land on cents
-			 * would render honestly instead of being silently rounded.
+			 * Every amount here is a whole dollar — the base price plus whole blocks —
+			 * so cents stay off. Two fraction digits stay available so a price that did
+			 * land on cents would still render exactly, in the visitor's own locale.
 			 */
 			let money = new Intl.NumberFormat(language, {
 				style: "currency",
@@ -148,14 +144,18 @@ export const PricingCalculator = clientEntry(
 			});
 
 			let pingsPerMonth = totalPingsPerMonth(monitors);
+			/**
+			 * `billedBlocks` is what the copy quotes for the overage charge, so it always
+			 * agrees with the flat per-block price shown beside it — 10,001 pings over
+			 * still bills as one full $2 block.
+			 */
 			let { additionalPings, billedBlocks, additionalCostUsd, totalUsd } =
 				monthlyCost(pingsPerMonth);
 
 			/**
-			 * The model's own figures, formatted for the visitor's locale, for the copy
-			 * that quotes them. Every pricing string interpolates these rather than
-			 * spelling the numbers out, so `app/lib/pricing.ts` stays the only place a
-			 * price is stated — see that module's docblock.
+			 * The model's own figures, formatted for the visitor's locale, ready for the
+			 * copy that quotes them — every pricing string interpolates these, keeping
+			 * `app/lib/pricing.ts` the one place a price is stated (see its docblock).
 			 */
 			let pricingCopyValues = {
 				price: money.format(BASE_PRICE_USD),
@@ -165,8 +165,6 @@ export const PricingCalculator = clientEntry(
 			};
 
 			return (
-				// `level={2}`: the calculator sits under the pricing section's own `<h2>`,
-				// so its card title is an `<h3>` and the panels inside it `<h4>`.
 				<HeadingScope level={2}>
 					<Card>
 						<Card.Header
@@ -211,7 +209,6 @@ export const PricingCalculator = clientEntry(
 									m(0),
 									p(0),
 									listStyle("none"),
-									// Two columns only once there's a second monitor to put in one.
 									monitors.length > 1 &&
 										media("(min-width: 1024px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
 								]}
@@ -232,8 +229,6 @@ export const PricingCalculator = clientEntry(
 													<Label htmlFor={monitor.id} mix={[fontSize("sm"), weight(500)]}>
 														{t("landing.pricing.calculator.monitor.label")}
 													</Label>
-													{/* The last monitor can't be removed — an empty calculator
-													has nothing to price. */}
 													{monitors.length > 1 && (
 														<Button
 															type="button"
@@ -344,10 +339,6 @@ export const PricingCalculator = clientEntry(
 											</dd>
 										</div>
 										<p mix={[m(0), pis(4), fontSize("sm"), fg("neutral.muted")]}>
-											{/* Shows the *blocks* billed, not the ping volume times a unit
-											rate: blocks are indivisible, so a rate-shaped line would
-											disagree with the charge beside it — 10,001 pings over is $2,
-											not $1.01. */}
 											{t("landing.pricing.calculator.stats.additionalPingsCost", {
 												...pricingCopyValues,
 												blocks: count.format(billedBlocks),
@@ -402,8 +393,6 @@ export const PricingCalculator = clientEntry(
 										{(["first", "second", "third"] as const).map((step) => (
 											<li
 												key={step}
-												// Numbered by a CSS counter drawn in a brand-solid circle at
-												// the item's inline-start edge — no client script involved.
 												mix={[
 													relative(),
 													pis(10),

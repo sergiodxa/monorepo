@@ -3,8 +3,8 @@
  *
  * The schema on the wire and the schema checked here are the same object, so a client
  * cannot be told one contract and held to another. Validation runs before a handler is
- * entered, which is what lets a handler treat its argument as the type
- * `FromObjectSchema` derived rather than re-checking it.
+ * entered, so a handler's argument arrives already checked, typed as `FromObjectSchema`
+ * derives it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,15 +19,9 @@ import type { ObjectSchema, PropertySchema } from "./schema";
 import { InvalidArgumentsError } from "./errors";
 
 /**
- * Checks `value` against `schema`, filling in defaults and dropping unknown properties.
- *
- * Unknown properties are dropped rather than refused because a model that invents an
- * extra argument has still asked for something the tool can do, and failing the call
- * teaches it nothing it can act on. A missing or mistyped *declared* argument is a
- * refusal, since running the handler on it would be guessing.
- *
- * Every constraint is checked before returning, so a caller that got two arguments wrong
- * learns about both in one round trip instead of discovering them one call at a time.
+ * Checks `value` against `schema`, filling in defaults and dropping unknown properties:
+ * a model's stray argument still names something the tool can do, so only a missing or
+ * mistyped *declared* argument is a refusal, with every constraint checked before returning.
  *
  * @param schema The tool's argument schema.
  * @param value The `arguments` object from a `tools/call` request, possibly absent.
@@ -40,8 +34,6 @@ export function validateArguments(
 	value: unknown,
 ): Result<Record<string, unknown>, InvalidArgumentsError> {
 	let issues: string[] = [];
-	// A tool taking no arguments is called with `arguments` omitted entirely, which is a
-	// valid call rather than a missing object.
 	let candidate = value === undefined || value === null ? {} : value;
 	let checked = checkObject(schema, candidate, "", issues);
 
@@ -61,11 +53,9 @@ function join(path: string, key: string | number): string {
 }
 
 /**
- * Checks one value against one schema.
- *
- * Failures are pushed onto `issues` rather than returned, so a caller reads the whole
- * list once at the end and every checker can keep collecting past the first problem.
- * The return value is the coerced value, and is meaningless when `issues` grew.
+ * Checks one value against one schema, pushing failures onto `issues` so a caller reads
+ * the whole list once at the end while every checker keeps collecting past the first
+ * problem; the return value is meaningless once `issues` has grown.
  */
 function check(schema: PropertySchema, value: unknown, path: string, issues: string[]): unknown {
 	switch (schema.type) {
@@ -118,16 +108,17 @@ function checkString(
 	return value;
 }
 
-/** Checks a finite number, its integer-ness where required, and its range. */
+/**
+ * Checks a finite number, its integer-ness where required, and its range. Confirms
+ * finiteness explicitly, since JSON has no `NaN` or `Infinity` literal that a lenient
+ * encoder might still let through, past every bound below.
+ */
 function checkNumber(
 	schema: Extract<PropertySchema, { type: "number" | "integer" }>,
 	value: unknown,
 	path: string,
 	issues: string[],
 ): number | undefined {
-	// `Number.isFinite` rather than a `typeof` test alone: JSON has no `NaN` or
-	// `Infinity` literal, but a client may still send one through a lenient encoder, and
-	// every bound below would silently pass it.
 	if (typeof value !== "number" || !Number.isFinite(value)) {
 		issues.push(`${label(path)}: expected a number`);
 		return undefined;
@@ -168,7 +159,12 @@ function checkArray(
 	return value.map((item, index) => check(schema.items, item, join(path, index), issues));
 }
 
-/** Checks required properties, validates declared ones, and applies defaults. */
+/**
+ * Checks required properties, validates declared ones, and applies defaults.
+ *
+ * A property counts as absent whether a client spells it `null` or omits the key
+ * entirely — JSON carries no `undefined`, so both mean the same thing here.
+ */
 function checkObject(
 	schema: ObjectSchema,
 	value: unknown,
@@ -185,8 +181,6 @@ function checkObject(
 	let checked: Record<string, unknown> = {};
 
 	for (let [name, property] of Object.entries(schema.properties)) {
-		// `undefined` counts as absent: a client that spells an omitted argument as `null`
-		// or leaves the key out entirely means the same thing, and JSON has no `undefined`.
 		let present =
 			Object.hasOwn(source, name) && source[name] !== undefined && source[name] !== null;
 

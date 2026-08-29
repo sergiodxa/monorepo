@@ -45,7 +45,7 @@ function monitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMonitor {
 	};
 }
 
-/** The inner markup of one named `<select>`, so option assertions can't match another field's options. */
+/** The inner markup of one named `<select>`, scoped so option assertions only match that field's own options. */
 function optionsOf(html: string, name: string): string {
 	let match = new RegExp(`<select[^>]*\\bname="${name}"[^>]*>([\\s\\S]*?)</select>`).exec(html);
 	if (match?.[1] === undefined) throw new Error(`The form rendered no <select name="${name}">`);
@@ -78,8 +78,9 @@ describe("DnsMonitorFormFields", () => {
 	});
 
 	/**
-	 * A domain monitor sweeps every supported type at every known name, so the 300-second
-	 * cadence the other monitor types offer is not a bound this form puts one click away.
+	 * A domain monitor sweeps every supported type at every known name, a
+	 * heavier job that keeps this form's fastest offered cadence at 900
+	 * seconds.
 	 */
 	test("offers no interval below the domain-monitor floor", async () => {
 		let html = await renderToString(

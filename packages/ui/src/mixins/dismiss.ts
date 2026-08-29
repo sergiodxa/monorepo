@@ -74,11 +74,9 @@ export class DismissEvent extends Event {
 }
 
 /**
- * Adds an auto-dismiss countdown to an alert or notification host, pausing
- * it while the pointer hovers the host or focus rests inside it, and
- * answers the `--ui-dismiss` invoker command from any trigger targeting the
- * host, dispatching {@link DismissEvent} for either path and leaving the
- * consuming island to decide what dismissal means.
+ * Adds an auto-dismiss countdown to a host, pausing while the pointer or
+ * focus is inside, and answers the `--ui-dismiss` invoker command from any
+ * trigger targeting it, dispatching {@link DismissEvent} either way.
  *
  * @param options Duration and hover-pause configuration; see
  * {@link Dismiss.Options}. A call that omits it receives the mixin

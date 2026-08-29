@@ -17,7 +17,6 @@ import type { ParseError } from "./errors";
 import { parse } from "./parser";
 import { positionAt } from "./source";
 
-/** Parse text that must succeed, throwing the failure otherwise. */
 function parseOk(text: string): SpecFileNode {
 	let result = parse({ path: "test.spec", text });
 	if (!isSuccess(result)) throw new Error(`expected parse to succeed: ${result.error.message}`);

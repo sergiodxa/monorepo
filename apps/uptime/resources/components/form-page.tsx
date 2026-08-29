@@ -1,23 +1,9 @@
 /**
- * Centers a page's primary form (plus anything below it, like a cancel link or a
- * danger-zone section) in a readable-width column instead of letting it stretch
- * across the full content area next to the sidebar. Every simple create/edit page
- * controller (monitors, alerts, cron jobs, DNS/TCP monitors, maintenance windows,
- * status pages, API keys) renders its `<form>` inside this as the sole child of
- * `AppShell`, matching the width `resources/layouts/app-shell.tsx`'s settings page
- * already uses for its sections. It exists so that width doesn't get repeated as a
- * literal across every one of those controller files.
- *
- * A form whose fields don't fit that default column — a multi-column option list,
- * say — passes {@link FormPage.Props.maxWidth} rather than opting out of the
- * wrapper, so widening one page can't drag the rest of them along with it.
- *
- * Reviewed as part of the `@pkg/ui` migration and intentionally left as a
- * plain composed `<div>`: it carries no color (nothing to route through
- * `--ui-*` custom properties) and `@pkg/ui`'s `Section`/`Group` primitives
- * are shaped for listbox groups and control clusters, not a centered
- * max-width content column, so reaching for either here would force-fit an
- * ill-suited abstraction rather than simplify anything.
+ * Centers a page's primary form in a readable-width column instead of
+ * stretching across the full content area next to the sidebar, so the
+ * width isn't repeated as a literal across every create/edit controller. A
+ * form needing extra room passes {@link FormPage.Props.maxWidth} instead
+ * of opting out of the wrapper.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

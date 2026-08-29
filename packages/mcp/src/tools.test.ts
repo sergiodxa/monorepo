@@ -39,8 +39,6 @@ describe("tool", () => {
 	});
 
 	test("leaves undeclared descriptor keys absent rather than null", () => {
-		// A strict client validates the descriptor against the MCP schema, where an explicit
-		// null is not the same as an omitted optional.
 		expect(searchPosts.descriptor).not.toHaveProperty("title");
 		expect(searchPosts.descriptor).not.toHaveProperty("outputSchema");
 	});
@@ -68,7 +66,6 @@ describe("tool", () => {
 
 		expectTypeOf<Input["query"]>().toEqualTypeOf<string>();
 		expectTypeOf<Input["type"]>().toEqualTypeOf<"articles" | "tutorials" | undefined>();
-		// Defaulted, so the validator always supplies it and the type says so.
 		expectTypeOf<Input["limit"]>().toEqualTypeOf<number>();
 	});
 });

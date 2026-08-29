@@ -1,6 +1,4 @@
 /**
- * Unit tests for `sticky()`'s fixed `position: sticky` declaration.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
