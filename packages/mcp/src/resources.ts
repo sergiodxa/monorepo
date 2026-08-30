@@ -7,8 +7,8 @@
  * keeping the two in lockstep with the tool's argument type derived from its JSON Schema.
  *
  * A tool is chosen by the model; a resource is picked by the person or attached by their
- * client — which is why the blog's posts live here too, for a reader who wants to hand
- * one to their agent with no slug to give a tool.
+ * client, useful for content someone wants to hand their agent directly, with no
+ * argument to give a tool.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,7 +45,7 @@ export interface ResourceDescriptor extends ResourceDeclaration {
 /** Brands a declared resource so a group can tell one from a nested group. */
 const RESOURCE = Symbol.for("@pkg/mcp.resource");
 
-/** A declared resource. Holds no handler — `map()` binds that. */
+/** A declared resource. Its handler is bound separately, by `map()`. */
 export interface Resource<Pattern extends string = string> {
 	readonly [RESOURCE]: true;
 	/** The `route-pattern` source this resource matches and builds URIs from. */

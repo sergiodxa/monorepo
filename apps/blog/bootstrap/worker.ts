@@ -34,8 +34,8 @@ let providers: ServiceProvider[] = [
 for (let provider of providers) provider.register(container);
 
 /**
- * Handles incoming Worker requests by creating the app router with
- * environment-backed dependencies and forwarding the request to it.
+ * Runs each request inside its own container scope, keeping its resolved
+ * service instances isolated from every other in-flight request.
  */
 export default {
 	async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext) {

@@ -4,10 +4,9 @@
  *
  * Revision `2026-07-28` removed the `initialize` handshake, so every request states its
  * own protocol version, client identity, and client capabilities — once in `_meta` and
- * again in HTTP headers, which intermediaries route on without parsing the body. The two
- * copies have to agree, and checking that is a security boundary rather than a
- * formality: a gateway authorizing on a header while the server executes the body is
- * exactly the split this validation closes.
+ * again in HTTP headers, which intermediaries route on without parsing the body. Validating
+ * that the two copies agree closes a real security gap: a gateway could authorize on the
+ * header while the server executes a differing body.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,7 +38,7 @@ export const NAME_HEADER = "Mcp-Name";
 export const MetaKey = {
 	/** The revision the request is written against. Required. */
 	ProtocolVersion: "io.modelcontextprotocol/protocolVersion",
-	/** The client's name and version. Advisory, and not verified. */
+	/** The client's self-reported name and version, advisory only. */
 	ClientInfo: "io.modelcontextprotocol/clientInfo",
 	/** What the client can do. Required, and may be empty. */
 	ClientCapabilities: "io.modelcontextprotocol/clientCapabilities",
@@ -79,7 +78,7 @@ export interface MetadataProblem {
  *
  * @param params The message's `params`, which may be absent.
  * @returns The metadata, or the reason it could not be read. A missing required field is
- * `-32602` at the call site, since the request is malformed rather than unsupported.
+ * `-32602` at the call site, since the request itself is malformed.
  */
 export function readRequestMetadata(
 	params: Record<string, unknown> | undefined,

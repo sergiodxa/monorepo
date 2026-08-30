@@ -50,7 +50,7 @@ export namespace PostSearch {
 		url: string;
 		excerpt: string | undefined;
 		tags: Array<string>;
-		/** Publication instant as ISO 8601, or `null` when the post carries no date. */
+		/** Publication instant as ISO 8601 when the post has one, or `null` otherwise. */
 		publishedAt: string | null;
 	}
 }
@@ -226,7 +226,7 @@ export class PostSearch {
 	}
 
 	/**
-	 * Where a needle matched, or `undefined` when it did not match at all.
+	 * Where a needle matched, or `undefined` when nothing matched.
 	 *
 	 * @param result The projected post.
 	 * @param needle The query, already trimmed and lowercased.

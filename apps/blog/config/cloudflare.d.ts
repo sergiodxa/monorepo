@@ -51,7 +51,7 @@ declare global {
 			AUTH: KVNamespace;
 			REDIRECTS: KVNamespace;
 			CACHE: KVNamespace;
-			/** Optional: a deploy predating the `ratelimits` entry has no binding here. */
+			/** Present only once a deploy's bindings include the `ratelimits` entry. */
 			MCP_RATE_LIMITER?: RateLimit;
 			CLIENT_ID: SecretsStoreSecret;
 			CLIENT_SECRET: SecretsStoreSecret;
@@ -60,10 +60,9 @@ declare global {
 	}
 
 	/**
-	 * Minimal Worker handler shape used by the bootstrap export.
-	 *
-	 * The execution context is part of the signature so the bootstrap can hand `waitUntil`
-	 * to the cache, which defers its writes rather than making a miss wait on KV.
+	 * Minimal Worker handler shape used by the bootstrap export. The execution
+	 * context is part of the signature so the bootstrap can hand `waitUntil` to
+	 * the cache, letting a miss return its response while the write finishes later.
 	 */
 	interface ExportedHandler<Env = unknown> {
 		fetch(request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response>;

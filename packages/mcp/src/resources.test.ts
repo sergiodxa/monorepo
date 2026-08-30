@@ -1,11 +1,11 @@
 /**
  * Tests for resource declaration and serving.
  *
- * The declaration cases cover the RFC 6570 conversion, which is where a mistake would
- * otherwise surface as a template a client expands into a URI this server never matches.
- * The serving cases go through real requests, and the last group checks the two things
- * resources do differently from tools: which list a declaration lands in, and the fact that
- * a read has no way to say anything to the model.
+ * The declaration cases cover the RFC 6570 conversion, where a mistake would surface as
+ * a template a client expands into a URI this server never matches. The serving cases go
+ * through real requests, and the last group covers what sets resources apart from tools:
+ * which list a declaration lands in, and how a read reports its outcome solely through a
+ * JSON-RPC error.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -98,7 +98,6 @@ function build(overrides: { onError?: () => void; hidden?: boolean } = {}) {
 	return mcp;
 }
 
-/** Sends a request and reads the body. */
 async function call(request: Request, mcp = build()) {
 	let response = await mcp.fetch(new RequestContext(request));
 	return { status: response.status, body: (await response.json()) as Body };
@@ -245,8 +244,8 @@ describe("resources/read", () => {
 	});
 
 	/**
-	 * A read has no isError channel — MCP gives resources only JSON-RPC errors — so the
-	 * error message reaching the client must never leak the real failure.
+	 * MCP resources report failure only through a JSON-RPC error, so the message reaching
+	 * the client must never leak the real failure.
 	 */
 	test("hides an unexpected error and reports it to onError instead", async () => {
 		let onError = vi.fn();

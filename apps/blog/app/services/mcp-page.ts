@@ -51,7 +51,7 @@ const sources = import.meta.glob<string>("../../resources/content/mcp/*.md", {
 export interface McpPage {
 	locale: McpPageLocale;
 	frontmatter: McpPageFrontmatter;
-	/** The body as written, without frontmatter, for serving as Markdown. */
+	/** The body content alone, for serving as Markdown. */
 	body: string;
 	/** The body as a render tree, for the HTML view. */
 	content: MarkdownType.Parsed<McpPageFrontmatter>["content"];
@@ -68,7 +68,7 @@ export function isMcpPageLocale(value: string): value is McpPageLocale {
  * regional tag identifies the written dialect, independent of the intended reader.
  *
  * @param tag A language tag, from a header or a query parameter.
- * @returns The language to serve, or `undefined` when the page is in none like it.
+ * @returns The language to serve, or `undefined` when nothing matches.
  */
 function matchLocale(tag: string): McpPageLocale | undefined {
 	let wanted = tag.trim().toLowerCase();

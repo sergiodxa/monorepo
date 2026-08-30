@@ -16,8 +16,8 @@ import { PostSearch } from "~/app/repositories/search";
 /**
  * Searches the published corpus.
  *
- * Answers an empty `results` array rather than an error when nothing matches: a query that
- * found nothing is a fact the model should act on, not a failed call.
+ * Answers an empty `results` array when nothing matches, since a query that found nothing
+ * is a fact the model should act on.
  */
 export default createTool(toolset.searchPosts, async (ctx) => {
 	let results = await PostSearch.query(getDatabase(ctx), {

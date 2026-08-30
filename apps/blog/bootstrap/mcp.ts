@@ -31,8 +31,8 @@ const LIST_TTL_MS = 600_000;
 /**
  * The blog's MCP server.
  *
- * Built once at module scope, like the route table in `routes/web.ts`: mapping is pure
- * object construction, so there is no work here to defer to a request.
+ * Built once at module scope, like the route table in `routes/web.ts`: mapping
+ * is pure object construction, complete before any request arrives.
  */
 const mcp = createHandler({
 	name: "sergiodxa-blog",

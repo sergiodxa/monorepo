@@ -1,13 +1,9 @@
 /**
  * The posts this blog offers as resources, declared as URL patterns.
  *
- * Resources sit beside the tools because they're picked differently: a tool is what the
- * model chooses once it already has a slug, while a resource is what a person browses from
- * a list in their client before any slug exists.
- *
- * The URIs reuse this blog's own `.md` URLs, already served as Markdown by
- * `app/http/controllers/post.tsx` — the `https://` scheme MCP calls for when a client
- * fetches a post directly. The extension holds regardless of what the client sends.
+ * A resource is what a person browses before a slug exists; a tool is what a model calls
+ * once it has one. URIs reuse this blog's own `.md` URLs, already served as Markdown, so
+ * a client's direct fetch matches what a tool call returns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

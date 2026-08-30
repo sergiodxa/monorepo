@@ -1,14 +1,8 @@
 /**
- * View for the `/mcp` page.
- *
- * Renders the way a post does: title, a "view as Markdown" link, and the body inside the
- * design system's `Typeset` reading rhythm, because it is the same kind of thing, prose
- * written in Markdown. It is not the post view itself, since that one builds its links from
- * a post type and slug this page has neither of.
- *
- * The page carries no language chrome. Which translation a reader gets is settled before the
- * view runs, and a label naming it, or a link offering the other one, would be the only
- * furniture on the page that exists to explain the page rather than the server.
+ * View for the `/mcp` page. Renders the parsed Markdown body inside the
+ * design system's `Typeset` reading rhythm, the same presentation a post
+ * uses for its own prose. The server picks the reader's translation before
+ * the view runs, so it renders exactly that language's content.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,8 +39,6 @@ export namespace McpView {
 }
 
 /**
- * Builds the page renderer.
- *
  * The body panel bleeds over the layout's inline padding and takes the same tinted card as
  * a post's, so a reader arriving from an article finds the same shape.
  *

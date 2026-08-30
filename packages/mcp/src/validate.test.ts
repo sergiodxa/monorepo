@@ -4,7 +4,7 @@
  * Arguments arrive from a language model, so the cases that matter are the ones a model
  * actually produces: a missing optional, an invented extra, a `null` where nothing was
  * meant, a number sent as a string. Each is asserted for the behaviour that keeps a call
- * useful — filled, dropped, treated as absent, refused — rather than for strictness.
+ * useful: filled, dropped, treated as absent, or refused.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

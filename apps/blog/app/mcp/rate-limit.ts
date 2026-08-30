@@ -2,7 +2,7 @@
  * The caller budget for the MCP endpoint.
  *
  * The endpoint is public, unauthenticated, and every search reads the whole published
- * corpus's metadata, so it needs a bound that does not depend on anyone behaving well.
+ * corpus's metadata, so it needs a bound enforced regardless of how any caller behaves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,7 +17,7 @@ import { rateLimit } from "@pkg/rate-limit/middleware";
  * Requests one caller may spend per {@link WINDOW}.
  *
  * Kept equal by hand to the `MCP_RATE_LIMITER` binding's `simple.limit` in `wrangler.jsonc`,
- * unreadable back from the binding; set high as an abuse bound, not a usage cap.
+ * the sole place that value is set; set high to catch abuse, well above ordinary use.
  */
 export const MCP_RATE_LIMIT = 60;
 

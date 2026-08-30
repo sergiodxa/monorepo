@@ -19,12 +19,12 @@ declare global {
 			AUTH: KVStore;
 			REDIRECTS: KVStore;
 			/**
-			 * The platform binding rather than the app's `KVStore` contract, because its only
-			 * consumer is `@pkg/kv-cache`, which needs the real namespace. The narrow contract
-			 * exists to keep repositories and services off the binding; a cache is neither.
+			 * Typed as the raw platform binding because its only consumer,
+			 * `@pkg/kv-cache`, needs the real namespace; `AUTH` and `REDIRECTS`
+			 * keep the narrower `KVStore` contract for repositories and services.
 			 */
 			CACHE: KVNamespace;
-			/** Absent when the running deployment declares no `ratelimits` binding. */
+			/** Present only once the deployment's bindings include a `ratelimits` entry. */
 			MCP_RATE_LIMITER: RateLimit | undefined;
 			/** Lets a deferred write finish after the response has been sent. */
 			waitUntil(promise: Promise<unknown>): void;

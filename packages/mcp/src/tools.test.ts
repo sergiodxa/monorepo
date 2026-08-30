@@ -2,7 +2,7 @@
  * Tests for the tool declaration tree.
  *
  * Declaration is where the mistakes are cheapest to catch, so both of the ones that would
- * otherwise surface far away — a name a client cannot put in a header, and two tools
+ * otherwise surface far away — a name invalid for the Mcp-Name header, and two tools
  * answering to the same name — fail here instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

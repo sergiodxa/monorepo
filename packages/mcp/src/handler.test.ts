@@ -194,7 +194,6 @@ function send(
 	});
 }
 
-/** Sends a request through a handler and reads the body. */
 async function call(
 	request: Request,
 	options: { scopes?: readonly string[]; db?: Database; mcp?: ReturnType<typeof build> } = {},
@@ -207,12 +206,10 @@ async function call(
 	return { status: response.status, body: (await response.json()) as Body };
 }
 
-/** A `tools/call` params object. */
 function callParams(name: string, args?: unknown) {
 	return { name, arguments: args };
 }
 
-/** The text of a result's first content block. */
 function firstText(body: Body): string {
 	return body.result?.content?.[0]?.text ?? "";
 }

@@ -654,7 +654,6 @@ function hasJsonBody(request: Request): boolean {
 	return contentType !== null && contentType.split(";")[0]?.trim() === "application/json";
 }
 
-/** Whether a request's `Origin` is one the application accepts. */
 function isAllowedOrigin(origin: string, allowed: HandlerOptions["allowedOrigins"]): boolean {
 	if (allowed === undefined) return true;
 	if (typeof allowed === "function") return allowed(origin);

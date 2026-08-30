@@ -41,12 +41,10 @@ export function validateArguments(
 	return success(checked as Record<string, unknown>);
 }
 
-/** Names a property for an issue message, using `(root)` for the argument object itself. */
 function label(path: string): string {
 	return path === "" ? "(root)" : path;
 }
 
-/** Joins a parent path with a child property name or array index. */
 function join(path: string, key: string | number): string {
 	if (typeof key === "number") return `${label(path)}[${key}]`;
 	return path === "" ? key : `${path}.${key}`;
@@ -80,7 +78,6 @@ function check(schema: PropertySchema, value: unknown, path: string, issues: str
 	}
 }
 
-/** Checks a string, its enum membership, and its length and pattern bounds. */
 function checkString(
 	schema: Extract<PropertySchema, { type: "string" }>,
 	value: unknown,
@@ -137,7 +134,6 @@ function checkNumber(
 	return value;
 }
 
-/** Checks an array's length bounds and every element against the item schema. */
 function checkArray(
 	schema: Extract<PropertySchema, { type: "array" }>,
 	value: unknown,

@@ -1,11 +1,9 @@
 /**
- * The contexts a tool or resource handler receives, and the keys the dispatcher
- * publishes them through.
- *
- * Both contexts are the request's own `RequestContext` — the one the surrounding
- * remix middleware wrote to — with a couple of properties installed on it, so
- * `ctx.get(Database)` inside a tool reads exactly what the app's database middleware
- * provided, all through that one shared context.
+ * The contexts a tool or resource handler receives, and the keys the
+ * dispatcher publishes them through. Both are the request's own
+ * `RequestContext` — the one the surrounding remix middleware wrote to —
+ * with a couple of properties installed on it, so `ctx.get(Database)`
+ * inside a tool reads through that same shared context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

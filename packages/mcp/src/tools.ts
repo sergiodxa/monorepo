@@ -15,15 +15,15 @@ import type { FromObjectSchema, ObjectSchema } from "./schema";
 
 /**
  * Hints a client may weigh when shaping the approval prompt a person sees before a tool
- * runs — `readOnlyHint` in particular is what lets a client run the tool without
- * stopping to ask.
+ * runs — `readOnlyHint` in particular is what lets a client run the tool right away,
+ * skipping that prompt.
  */
 export interface ToolAnnotations {
 	/** Human-readable name, shown in place of the tool's identifier. */
 	readonly title?: string;
 	/** The tool only reads. */
 	readonly readOnlyHint?: boolean;
-	/** The tool may remove or overwrite something that cannot be recovered. */
+	/** The tool may remove or overwrite something permanently. */
 	readonly destructiveHint?: boolean;
 	/** Calling twice with the same arguments has the same effect as calling once. */
 	readonly idempotentHint?: boolean;
@@ -67,7 +67,7 @@ export interface ToolDescriptor {
 /** Brands a declared tool so a group can tell one from a nested group. */
 const TOOL = Symbol.for("@pkg/mcp.tool");
 
-/** A declared tool. Holds no handler — `map()` binds that. */
+/** A declared tool; `map()` binds its handler separately. */
 export interface Tool<Schema extends ObjectSchema = ObjectSchema> {
 	readonly [TOOL]: true;
 	/** The name a client calls, and the tool's identity in every response. */
@@ -92,7 +92,7 @@ const TOOL_NAME = /^[a-zA-Z0-9_.-]{1,128}$/;
  * 128 characters.
  * @param definition What the tool takes and what it is for.
  * @returns The declared tool, ready to be mapped to a handler.
- * @throws Error When the name is not one MCP allows.
+ * @throws Error When the name breaks the pattern MCP allows.
  * @example
  * let getPost = tool("get_post", {
  * 	description: "Reads one published post in full, as Markdown.",
@@ -126,7 +126,7 @@ export interface ToolGroup {
 	readonly [key: string]: Tool | ToolGroup;
 }
 
-/** Reports whether a node of a declaration tree is a tool rather than a nested group. */
+/** True for a tool in a declaration tree; false for a nested group of tools. */
 export function isTool(value: Tool | ToolGroup): value is Tool<never> {
 	return TOOL in value;
 }
@@ -194,7 +194,7 @@ export interface CallToolResult {
 	content: TextContent[];
 	/** Present only when the tool declared an output schema, as MCP requires. */
 	structuredContent?: unknown;
-	/** True when the tool ran and could not do what was asked. */
+	/** True when the tool ran and its outcome is a failure. */
 	isError?: boolean;
 }
 
@@ -209,10 +209,8 @@ export type ToolMiddleware<Input = Record<string, unknown>> = (
 ) => Awaitable<CallToolResult>;
 
 /**
- * Does the work.
- *
  * A returned string becomes the answer verbatim; any other value is serialized as JSON.
- * Throw `ToolError` to tell the model the call could not be completed.
+ * Throw `ToolError` to report a failed call to the model.
  */
 export type ToolHandler<Input = Record<string, unknown>> = (
 	ctx: ToolContext<Input>,
@@ -222,8 +220,8 @@ export type ToolHandler<Input = Record<string, unknown>> = (
 export interface Action<Schema extends ObjectSchema = ObjectSchema> {
 	/**
 	 * Whether this tool exists for this caller. A tool this returns `false` for is absent
-	 * from `tools/list` and reported by `tools/call` as unknown, so a read-only credential
-	 * never learns a write tool exists — checked before any argument is read.
+	 * from `tools/list` and reported by `tools/call` as unknown, keeping a write tool
+	 * invisible to a read-only credential — checked before any argument is read.
 	 */
 	available?(ctx: AnyRequestContext): boolean;
 	middleware?: ToolMiddleware<FromObjectSchema<Schema>>[];
@@ -237,8 +235,8 @@ export type ActionOrHandler<Schema extends ObjectSchema = ObjectSchema> =
 
 /**
  * Handlers for every tool in one group, under a shared middleware chain. A nested group
- * resolves to `never`, so it cannot be answered here — it needs its own call, keeping
- * each controller responsible for exactly one level of the tree.
+ * resolves to `never`, requiring its own call and keeping each controller responsible
+ * for exactly one level of the tree.
  */
 export interface Controller<Group extends ToolGroup> {
 	middleware?: ToolMiddleware[];

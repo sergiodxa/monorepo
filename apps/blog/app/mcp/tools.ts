@@ -2,12 +2,8 @@
  * The tools this blog offers an agent, declared the way routes are: a name, a description
  * that is the prompt a model chooses by, and the JSON Schema its arguments must satisfy.
  *
- * Handlers live in `app/mcp/controllers/**` and are bound in `bootstrap/mcp.ts`, the same
- * split as `routes/web.ts` and `app/http/controllers/**`.
- *
- * Every tool is read-only, so each declares `readOnlyHint` — which is what lets a client
- * run one without stopping to ask a person — and `openWorldHint: false`, since nothing here
- * reaches past this blog's own database.
+ * Every tool declares `readOnlyHint`, letting a client run it without asking a person, and
+ * `openWorldHint: false`, since nothing here reaches past this blog's own database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,14 +11,13 @@
 
 import { tool, tools } from "@pkg/mcp";
 
-/** Behavioural hints every tool here shares: it reads, and it reaches nothing external. */
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 
 /**
  * The tool tree the MCP handler is mapped against.
  *
- * Grouped by content area rather than flat, so one controller file owns one group and a
- * tool added here is a type error until it is answered.
+ * Grouped by content area, so one controller file owns one group and a tool added here is a
+ * type error until it is answered.
  */
 export default tools({
 	searchPosts: tool("search_posts", {
