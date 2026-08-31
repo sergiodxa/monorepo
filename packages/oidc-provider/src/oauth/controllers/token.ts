@@ -272,12 +272,13 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("server_error", "No signing keys available");
 	}
 
-	let accessToken = AccessToken.generate(
-		`https://${issuer}`,
-		client.id,
-		subject.id,
-		authzData.scope,
-	);
+	let accessToken = AccessToken.generate({
+		issuer: `https://${issuer}`,
+		audience: client.id,
+		subjectId: subject.id,
+		clientId: client.id,
+		scope: authzData.scope,
+	});
 	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	let idToken = IdToken.generate(
@@ -425,7 +426,12 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("server_error", "No signing keys available");
 	}
 
-	let accessToken = AccessToken.generate(`https://${issuer}`, client.id, subject.id);
+	let accessToken = AccessToken.generate({
+		issuer: `https://${issuer}`,
+		audience: client.id,
+		subjectId: subject.id,
+		clientId: client.id,
+	});
 	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	let authTime = Math.floor(new Date(session.created_at).getTime() / 1000);
@@ -560,7 +566,14 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	let audience = [`https://${issuer}`, ...resources];
 	let scopeArray = requestedScopes.isEmpty() ? undefined : requestedScopes.toArray();
 
-	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, scopeArray);
+	// No resource owner takes part in this grant, so RFC 9068 has `sub` name the client.
+	let accessToken = AccessToken.generate({
+		issuer: `https://${issuer}`,
+		audience,
+		subjectId: client.id,
+		clientId: client.id,
+		scope: scopeArray,
+	});
 	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	log.info("Token issued successfully", {

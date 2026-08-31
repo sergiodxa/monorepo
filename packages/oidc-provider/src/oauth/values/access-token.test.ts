@@ -21,52 +21,102 @@ beforeAll(async () => {
 describe(AccessToken.name, () => {
 	describe("generate", () => {
 		test("creates token with correct issuer", () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			expect(token.issuer).toBe("https://auth.example.com");
 		});
 
 		test("creates token with subject ID (sub claim)", () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			expect(token.subject).toBe("subject-456");
 		});
 
 		test("creates token with single audience (client ID)", () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			expect(token.audience).toBe("client-123");
 		});
 
+		test("creates token with client ID (client_id claim)", () => {
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "https://api.example.com",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
+
+			expect(token.clientId).toBe("client-123");
+		});
+
+		test("creates token whose subject matches the client for client credentials", () => {
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: ["https://auth.example.com", "https://api.example.com"],
+				subjectId: "client-123",
+				clientId: "client-123",
+			});
+
+			expect(token.subject).toBe(token.clientId);
+		});
+
 		test("creates token with multiple audiences", () => {
-			let token = AccessToken.generate(
-				"https://auth.example.com",
-				["https://api.example.com", "https://other.example.com"],
-				"subject-456",
-			);
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: ["https://api.example.com", "https://other.example.com"],
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			expect(token.audience).toEqual(["https://api.example.com", "https://other.example.com"]);
 		});
 
 		test("creates token with scope claim when provided", () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456", [
-				"openid",
-				"profile",
-				"email",
-			]);
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+				scope: ["openid", "profile", "email"],
+			});
 
 			expect(token.scope).toBe("openid profile email");
 		});
 
 		test("creates token without scope claim when not provided", () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			expect(() => token.scope).toThrow();
 		});
 
 		test("creates token with expiry (exp claim)", () => {
 			let beforeGeneration = Math.floor(Date.now() / 1000);
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 			let afterGeneration = Math.floor(Date.now() / 1000);
 
 			let expectedMinExp = beforeGeneration + AccessToken.ttl;
@@ -78,7 +128,12 @@ describe(AccessToken.name, () => {
 
 		test("creates token with issued at (iat claim)", () => {
 			let beforeGeneration = Math.floor(Date.now() / 1000);
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 			let afterGeneration = Math.floor(Date.now() / 1000);
 
 			let issuedAtTimestamp = Math.floor(token.issuedAt.getTime() / 1000);
@@ -89,7 +144,12 @@ describe(AccessToken.name, () => {
 
 		test("creates token with not before (nbf claim)", () => {
 			let beforeGeneration = Math.floor(Date.now() / 1000);
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 			let afterGeneration = Math.floor(Date.now() / 1000);
 
 			let nbfTimestamp = Math.floor(token.notBefore.getTime() / 1000);
@@ -99,8 +159,18 @@ describe(AccessToken.name, () => {
 		});
 
 		test("creates token with unique ID (jti claim)", () => {
-			let token1 = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
-			let token2 = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token1 = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
+			let token2 = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			expect(token1.id).toBeDefined();
 			expect(token2.id).toBeDefined();
@@ -115,7 +185,12 @@ describe(AccessToken.name, () => {
 
 		test("token expiry matches TTL", () => {
 			let now = Math.floor(Date.now() / 1000);
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			let expiresIn = token.expiresIn - now;
 
@@ -126,7 +201,12 @@ describe(AccessToken.name, () => {
 
 	describe("sign and verify", () => {
 		test("signs token and returns valid JWT string", async () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 
@@ -135,10 +215,13 @@ describe(AccessToken.name, () => {
 		});
 
 		test("verifies valid signed token and returns claims", async () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456", [
-				"openid",
-				"profile",
-			]);
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+				scope: ["openid", "profile"],
+			});
 
 			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 			let verified = await JWT.verify(signedToken, testKeyPair);
@@ -147,11 +230,17 @@ describe(AccessToken.name, () => {
 			expect(verified?.payload.sub).toBe("subject-456");
 			expect(verified?.payload.aud).toBe("client-123");
 			expect(verified?.payload.iss).toBe("https://auth.example.com");
+			expect(verified?.payload.client_id).toBe("client-123");
 			expect(verified?.payload.scope).toBe("openid profile");
 		});
 
 		test("throws for token with invalid signature", async () => {
-			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
+			let token = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+			});
 
 			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 
@@ -247,14 +336,31 @@ describe(AccessToken.name, () => {
 		});
 	});
 
+	describe("clientId", () => {
+		test("throws when the client_id claim is absent", () => {
+			let token = new AccessToken({
+				aud: "client-123",
+				exp: Math.floor(Date.now() / 1000) + 3600,
+				iat: Math.floor(Date.now() / 1000),
+				iss: "https://auth.example.com",
+				jti: crypto.randomUUID(),
+				nbf: Math.floor(Date.now() / 1000),
+				sub: "subject-456",
+			});
+
+			expect(() => token.clientId).toThrow();
+		});
+	});
+
 	describe("parsing existing tokens", () => {
 		test("parses signed token into AccessToken instance", async () => {
-			let originalToken = AccessToken.generate(
-				"https://auth.example.com",
-				"client-123",
-				"subject-456",
-				["openid", "profile"],
-			);
+			let originalToken = AccessToken.generate({
+				issuer: "https://auth.example.com",
+				audience: "client-123",
+				subjectId: "subject-456",
+				clientId: "client-123",
+				scope: ["openid", "profile"],
+			});
 
 			let signedToken = await originalToken.sign(JWK.Algorithm.ES256, testKeyPair);
 			let verified = await JWT.verify(signedToken, testKeyPair);
@@ -266,6 +372,7 @@ describe(AccessToken.name, () => {
 			expect(parsedToken.subject).toBe("subject-456");
 			expect(parsedToken.audience).toBe("client-123");
 			expect(parsedToken.issuer).toBe("https://auth.example.com");
+			expect(parsedToken.clientId).toBe("client-123");
 			expect(parsedToken.scope).toBe("openid profile");
 			expect(parsedToken.id).toBe(originalToken.id);
 		});

@@ -134,23 +134,28 @@ export default createAction(
 				algorithms: [JWK.Algorithm.ES256],
 			});
 
+			// Reading these two off the payload keeps a token that carries no scope, or one
+			// minted before the client_id claim existed, active for its remaining lifetime:
+			// an absent claim is omitted from the response instead of throwing below.
+			let { client_id: tokenClientId, scope } = accessToken.payload;
+
 			log.info("Access token introspected successfully", {
 				clientId: client_id,
 				subjectId: accessToken.subject,
-				scope: accessToken.scope,
+				scope,
 			});
 
 			return ok(
 				{
 					active: true,
 					sub: accessToken.subject,
-					client_id: accessToken.audience as string,
+					client_id: tokenClientId,
 					exp: accessToken.expirationTime,
 					iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
 					iss: accessToken.issuer,
 					aud: accessToken.audience,
 					token_type: "Bearer",
-					scope: accessToken.scope,
+					scope,
 				},
 				{ headers },
 			);

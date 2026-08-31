@@ -15,7 +15,7 @@ const ACCESS_TOKEN_TTL = 60 * 60 * 1000;
 
 /**
  * Value Object for OAuth 2.0 access tokens.
- * Covers the RFC 9068 claim set: sub, aud, exp, iat, nbf, jti, and scope.
+ * Covers the RFC 9068 claim set: sub, aud, client_id, exp, iat, nbf, jti, and scope.
  */
 export default class AccessToken extends JWT {
 	/**
@@ -79,33 +79,47 @@ export default class AccessToken extends JWT {
 	}
 
 	/**
-	 * Generates a new access token with the given parameters.
-	 * @param issuer - Token issuer URL
-	 * @param audience - Intended audience (single or multiple)
-	 * @param subjectId - Subject identifier
-	 * @param scope - Optional array of scope strings
+	 * Client the token was issued to (client_id claim).
+	 */
+	get clientId() {
+		return this.parser.string("client_id");
+	}
+
+	/**
+	 * Generates a new access token with the given claims. Named claims keep the
+	 * issuer, audience, subject, and client from being transposed at a call site.
+	 * @param claims - Issuer URL, audience, subject identifier, client identifier,
+	 * and an optional array of scope strings
 	 * @returns New AccessToken instance
 	 * @example
-	 * let token = AccessToken.generate(issuer, resource.identifier, subject.id, ["read"]);
+	 * let token = AccessToken.generate({
+	 * 	issuer,
+	 * 	audience: resource.identifier,
+	 * 	subjectId: subject.id,
+	 * 	clientId: client.id,
+	 * 	scope: ["read"],
+	 * });
 	 */
-	static generate(
-		issuer: string,
-		audience: string | string[],
-		subjectId: string,
-		scope?: string[],
-	) {
+	static generate(claims: {
+		issuer: string;
+		audience: string | string[];
+		subjectId: string;
+		clientId: string;
+		scope?: string[];
+	}) {
 		let now = Math.floor(Date.now() / 1000);
 		let expiresAt = now + Math.floor(ACCESS_TOKEN_TTL / 1000);
 
 		return new AccessToken({
-			aud: audience,
+			aud: claims.audience,
+			client_id: claims.clientId,
 			exp: expiresAt,
 			iat: now,
-			iss: issuer,
+			iss: claims.issuer,
 			jti: crypto.randomUUID(),
 			nbf: now,
-			sub: subjectId,
-			...(scope && { scope: scope.join(" ") }),
+			sub: claims.subjectId,
+			...(claims.scope && { scope: claims.scope.join(" ") }),
 		});
 	}
 
