@@ -1,7 +1,7 @@
 /**
- * Authentication controllers for the blog: guest-only login and logout pages plus the
- * OIDC callback that finishes the authorization-code flow, reconciles the provider's
- * profile with the local account, and establishes the signed-in session.
+ * Authentication controllers for the blog: the guest-only login page, the logout
+ * confirmation and sign-out, and the OIDC callback that finishes the authorization-code
+ * flow, reconciles the provider's profile with the local account, and opens the session.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,6 +37,12 @@ const FAILURE_MESSAGES: Partial<Record<AuthErrorCode, string>> = {
 	[AuthErrorCode.MissingCode]: "Authentication failed. Missing callback params.",
 	[AuthErrorCode.MissingIdToken]: "Authentication failed. Missing token response.",
 };
+
+/**
+ * Tells the browser to drop every other copy of this origin's state, so a shared
+ * machine keeps nothing readable behind after a sign-out.
+ */
+const LOGOUT_HEADERS = { "Clear-Site-Data": '"*"' };
 
 /**
  * Turns a refused login into the sentence the login screen shows. A refusal the
@@ -90,33 +96,64 @@ export let loginController = createController(routes.auth.login, {
 	},
 });
 
+/**
+ * Answers a sign-out that ends here, sending the reader to the feed with the client
+ * state cleared, which is where a person who is already signed out belongs.
+ *
+ * @returns 303 redirect to the feed.
+ */
+function signedOut(): Response {
+	return redirect(routes.feed.href(), {
+		status: redirect.Status.SeeOther,
+		headers: LOGOUT_HEADERS,
+	});
+}
+
 /** Logout route controller for confirmation and local session teardown. */
 export let logoutController = createController(routes.auth.logout, {
-	middleware: guestOnlyMiddleware,
 	actions: {
-		/** Renders the logout confirmation screen shown before session teardown. */
+		/**
+		 * Renders the logout confirmation screen shown before session teardown. A reader
+		 * carrying no session reads the feed instead: there is nothing to confirm, and a
+		 * login prompt would answer the opposite of what they asked for.
+		 * @returns The confirmation page, or a 303 redirect to the feed.
+		 */
 		async index(ctx) {
+			if (!isAuthenticated()) {
+				return redirect(routes.feed.href(), { status: redirect.Status.SeeOther });
+			}
+
 			return ctx.render(LogoutView, {});
 		},
 
 		/**
-		 * Hands off to the provider logout endpoint with an `id_token_hint` so the upstream
-		 * session ends too, and clears client state through `Clear-Site-Data`.
-		 * @returns 303 redirect to the provider logout endpoint.
+		 * Ends the session on both sides: the provider is handed the `id_token_hint` that
+		 * names its own session, and this app's session is destroyed whatever the provider
+		 * answers, so a handoff that cannot be built still signs the person out here. A
+		 * request already carrying no session is answered the same way, which keeps the
+		 * sign-out click in a tab left open overnight terminal.
+		 * @returns 303 redirect to the provider logout endpoint, or to the feed.
 		 */
 		async action(ctx) {
-			let endpoint = await relyingParty(ctx.url).endSession(ctx, {
-				returnTo: routes.feed.href(),
-				redirect: false,
-			});
+			if (!isAuthenticated()) {
+				logout();
+				return signedOut();
+			}
+
+			let ended = await wrap(() =>
+				relyingParty(ctx.url).endSession(ctx, {
+					returnTo: routes.feed.href(),
+					redirect: false,
+				}),
+			);
 
 			logout();
 
-			return redirect(endpoint, {
+			if (isFailure(ended)) return signedOut();
+
+			return redirect(ended.data, {
 				status: redirect.Status.SeeOther,
-				headers: {
-					"Clear-Site-Data": '"*"',
-				},
+				headers: LOGOUT_HEADERS,
 			});
 		},
 	},
