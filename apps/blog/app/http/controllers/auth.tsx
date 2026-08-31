@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@pkg/http/response";
+import { Location } from "@pkg/location";
 import { Logger } from "@pkg/logger";
 import { inject } from "@pkg/service-container";
 import { startExternalAuth } from "remix/auth";
@@ -206,10 +207,11 @@ export let callbackAction = createAction(routes.auth.callback, {
 				username: user.username,
 			});
 
-			let returnTo =
-				transaction.returnTo && transaction.returnTo.startsWith("/")
-					? transaction.returnTo
-					: routes.cms.dashboard.href();
+			// Path normalization turns a target such as `/..//evil.com` into the
+			// protocol-relative `//evil.com`, which a leading-slash check accepts.
+			let returnTo = Location.safe(transaction.returnTo, {
+				fallback: routes.cms.dashboard.href(),
+			});
 			return redirect(returnTo, { status: redirect.Status.SeeOther });
 		},
 	),
