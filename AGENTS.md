@@ -114,6 +114,12 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 ### Documentation
 
+Comments are JSDoc, and a comment earns its place by answering **why**: the symbol's
+name already says *what* it is, and the code already says *how* it works. Before writing
+one, ask what a reader cannot recover from the name and the code — a constraint, a
+guarantee, an invariant, an ordering requirement, a consequence, a deliberately handled
+edge case. If the answer is nothing, write nothing.
+
 - MUST start every module (every file) under `apps/` and `packages/` with a module-level JSDoc comment at the very top of the file, describing in ~3 lines what the module is, what it does, and why it exists, followed by `@author` and `@copyright` tags, using this exact style:
 
   ```
@@ -125,16 +131,17 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
    */
   ```
 
-  When a `#!` shebang must be first, place the block immediately after it.
+  The whole block stays within 10 lines, tag lines included. When a `#!` shebang must be first, place the block immediately after it.
 
+- MUST write every comment as a JSDoc block (`/** … */`) attached to a symbol — never `//` line comments or plain `/* … */` blocks, inside function bodies included. When a step inside a function seems to need narration, the comment is describing WHAT/HOW: either the step is obvious and needs no comment, the reason belongs in the enclosing symbol's JSDoc, or the step deserves extraction into a named, documented function.
+- MUST keep tooling directives as the only non-JSDoc comments: `@ts-expect-error`, `@ts-ignore`, `@ts-nocheck`, `oxlint-disable(-next-line)`, `biome-ignore`, `eslint-disable(-next-line)`, `prettier-ignore`, `/// <reference … />`, `@jsxImportSource`, `@vitest-environment`, coverage markers (`v8 ignore`, `c8 ignore`, `istanbul ignore`), and `#__PURE__`. Keep them verbatim — including the `-- reason` text oxlint requires — on the line directly above what they suppress.
 - MUST write JSDoc comments for every exported class, function, method, variable, type, interface, and constant in this app or package.
 - MUST write JSDoc comments for non-exported, non-private module symbols when they are part of a file's behavior contract (helpers, mappers, normalizers, comparators, etc.).
 - MUST write JSDoc comments for every non-private member of exported classes (including static members, instance methods, getters/setters, and constructor when present).
 - MUST write JSDoc comments for inline controller callbacks (middleware callbacks, action handlers, and route handlers) inside controller definitions.
-- MUST make JSDoc describe the exported symbol behavior/purpose, never the export mechanics (for example, avoid comments like "Exports the module default value.").
-- MUST make JSDoc explain intent and contract (the why/guarantee), not only restate syntax or obvious code behavior.
-- MUST document non-obvious behavior and invariants when relevant (fallbacks, ordering assumptions, publish/preview semantics, normalization rules, nullability contracts, redirect/404 behavior).
-- MUST keep JSDoc descriptions short and focused (1 to 3 lines when a description is needed).
+- MUST make JSDoc state the why — intent, contract, guarantee, non-obvious invariant (fallbacks, ordering assumptions, publish/preview semantics, normalization rules, nullability contracts, redirect/404 behavior) — never the export mechanics ("Exports the module default value.") and never a re-reading of the signature or the code below it.
+- MUST phrase comments affirmatively: describe what the code is, does, and guarantees — never what it is not, does not do, or deliberately avoids ("this is not cached", "unlike the sync version", "rather than using X"). When the point is an absence, state its positive consequence instead ("callers receive a freshly computed value on every call").
+- MUST keep a symbol JSDoc description within 3 prose lines; tag sections (`@param`, `@returns`, `@throws`, `@example`, `@template`, `@see`, `@deprecated`, `@default`) do not count toward the limit. Cut to the load-bearing why rather than wrapping tighter.
 - MUST keep JSDoc examples hyper-focused and inline (no fenced Markdown code blocks inside `@example`).
 
 - MAY include JSDoc `@param` tags with concise descriptions for each parameter when there are parameters.
@@ -144,9 +151,12 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 - SHOULD use `@param` and `@returns` on handlers/repository methods where request context, side effects, or response contracts are not obvious.
 - SHOULD document edge-case behavior (empty inputs, invalid params, missing records, legacy data shapes) when a symbol intentionally handles those cases.
+- SHOULD add `@yields` to a generator function's JSDoc — `jsdoc/require-yields` flags a documented generator without one.
 
+- MUST use `@default` for default values, never `@defaultValue` — oxlint's `jsdoc/check-tag-names` rejects the latter.
 - MUST NOT use placeholder or template wording in JSDoc (for example: "Defines ...", "Represents ...", or "Handles ..." without meaningful contract detail).
 - MUST NOT duplicate type names or signatures in prose when that adds no new information.
+- MUST NOT restate a symbol's name as its documentation — `/** Parent post id. */ post_id: string` says nothing the name doesn't; a self-evident field or local symbol carries no comment at all. When an exported symbol genuinely has no why beyond its name, state its contract or guarantee concisely instead of padding.
 
 ### Testing
 
