@@ -4,7 +4,7 @@
 
 **Accepted** - 2026-08-31
 
-The package is built and tested. The cutover in the Implementation Plan is what remains.
+The package is built and tested and the cutover has landed. Deployment is what remains.
 
 ## Background
 
@@ -46,8 +46,8 @@ The protocol has distinct actors; each gets a class, and no class does another's
 
 ```ts
 // The server every other class talks to. One per issuer, shared by all of them.
-let issuer = new Issuer(env.OIDC_ISSUER, {
-	cache: new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise)),
+let issuer = Issuer.for(env.OIDC_ISSUER, {
+	cache: () => new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise)),
 });
 
 // Signing a person in through the browser: the login, callback, and logout routes.
@@ -65,9 +65,15 @@ let admin = new ManagementClient(service);
 
 `Issuer` is the server: discovery metadata, JWKS, and the cache over both live behind it, so an issuer's documents are fetched once no matter how many roles an app plays. It takes inline `metadata` for apps that skip discovery, validated and identity-checked the same way a fetched document is. A read that failed is not remembered, so the next call retries rather than replaying the error for the life of the isolate.
 
+`Issuer.for(url, options)` is how an app gets that instance. The memos live on the instance, so realizing "fetched once" was the caller's job, and three consumers solved it three ways: a module-level `instance ??=`, a module-level `Map` keyed by origin, and a fresh instance per request that threw the memo away. A registry keyed on the configuration removes the choice: `url`, `identifier`, `ttl`, and `metadata` name the instance, because each changes what it answers, and the cache tier does not, so the store the first ask supplies is the one the instance keeps.
+
+That registry is a different thing from the module-scope caching Alternative 5 rejects, which holds the _documents_ at module scope, where a cold isolate re-fetches all of them. Every read still goes through the shared cache a cold isolate fills from KV; what the registry removes is the duplicate fetch inside one isolate, which is the in-isolate memo tier Decision 8 already describes, given a home so every caller gets it.
+
+`cache` accordingly takes a store or a factory for one. An app whose bindings arrive with the request builds its store over a `waitUntil` belonging to one request, so an instance outliving that request would reach for a `waitUntil` whose request has already answered, and the cache write behind it fails. The factory arm resolves on every read, so the store belongs to the read reaching for it; an app on the ambient `waitUntil` from `cloudflare:workers` passes a store directly.
+
 The cache seam is `Issuer.CacheStore`, a `read`/`write`/`fetch` interface this package declares and `Cache.KVStore` satisfies, so the dependency is on the shape rather than on the class. The audiences a `ResourceServer` answers for are what Decision 4 says `aud` holds — the client id, or the issuer plus each requested resource — and its `introspection` is what opens the path for a credential carrying no claims of its own.
 
-The OIDC Discovery §4.3 check that a document names the issuer it was asked for compares a stated value rather than a guessed one. `identifier` on the `Issuer` says what the provider publishes and writes into every `iss`, while the constructor's `url` stays where discovery is fetched from and every endpoint resolves against: our own provider publishes a scheme-less identifier, frozen because relying parties compare it byte for byte, and a bare host carries no origin to build an endpoint on. Absent `identifier` the URL is the expected value. A value that parses as a URL is compared normalized, because `new Issuer("https://x")` has to match a document publishing `https://x/` and host case carries no meaning in a URL either; an identifier that is not a URL is compared byte for byte. Either way a document naming anything else is `issuer_mismatch`, and `identifier()` answers the document's verbatim `issuer`, so the token-level `iss` comparison stays exact.
+The OIDC Discovery §4.3 check that a document names the issuer it was asked for compares a stated value rather than a guessed one. `identifier` on the `Issuer` says what the provider publishes and writes into every `iss`, while the `url` an instance is built with stays where discovery is fetched from and every endpoint resolves against: our own provider publishes a scheme-less identifier, frozen because relying parties compare it byte for byte, and a bare host carries no origin to build an endpoint on. Absent `identifier` the URL is the expected value. A value that parses as a URL is compared normalized, because `Issuer.for("https://x")` has to match a document publishing `https://x/` and host case carries no meaning in a URL either; an identifier that is not a URL is compared byte for byte. Either way a document naming anything else is `issuer_mismatch`, and `identifier()` answers the document's verbatim `issuer`, so the token-level `iss` comparison stays exact.
 
 ### 3. The Browser Flow Is Three Methods
 
@@ -190,6 +196,8 @@ RFC 8176 §2 registers exactly twenty values — `face`, `fpt`, `geo`, `hwk`, `i
 `acr` gets no union at all, because there is no registry behind it — its values are whatever an identity provider publishes in `acr_values_supported`. That asymmetry between the two claims is the reason `mfa()` is configured rather than hard-coded to `["mfa"]`.
 
 `IdToken`'s accessors otherwise mirror the provider's server-side `IdToken` claim for claim and name for name, so one claim is not called two things in one repo.
+
+`subject` stays the one accessor that throws. Typing it `string` is what keeps a null check off every call site, and OpenID Connect requires `sub`, so a token carrying none is malformed rather than sparse. A total accessor beside it would give one claim two names, which is what this decision otherwise rules out; a caller wanting a single branch for a malformed token wraps the claim reads and branches on the failure, which is the shape the README documents.
 
 One provider behavior shapes how `ResourceServer` is configured: `aud` is the client id on an authorization-code token, and the issuer plus the requested resources on a client-credentials one. A `sub` equal to `client_id` is what marks the latter as a service rather than a person, which RFC 9068 §2.2.1 prescribes. `AccessToken.issuedToService` is where that comparison lives, and it reads a token carrying one of the two claims, or neither, as a person's.
 
@@ -358,6 +366,8 @@ Two throws answer a person rather than a caller. The authorization helpers throw
 
 `rp.verifyIdToken(raw)` returns a verified `IdToken` for a token an app obtained elsewhere — a native client, a test fixture, an IdP-initiated flow. It is the same verifier `callback` uses, minus the `nonce` check the redirect flow supplies.
 
+`issuer.verifyIdToken(raw, { audience, algorithms, clockTolerance })` is that same verifier one level down, where an app reaches it without a relying party. `RelyingParty` requires a `redirectUri` and carries the whole browser-flow surface, so an app that only verifies a token hand-assembled `identifier()`, `keys()`, and `IdToken.verify` — a fifth verifier under another name. It lives on `Issuer` because the signature, `iss`, and `aud` checks read only what the issuer publishes; `rp.callback` and `rp.verifyIdToken` both go through it and add the two bindings the flow alone knows, the transaction's `nonce` and the `at_hash` over the access token issued beside the ID token, so the verification of the token itself exists once. `clockTolerance` defaults to the 60 seconds the flow already applied.
+
 `api.verifyAccessToken(credential)` is the mirror for an access token with no request to read it from: a queued job whose payload carries one, a connection authenticated once at its upgrade, a credential that arrived somewhere other than an `Authorization` header. It accepts whichever form the issuer hands out and runs every check the scheme runs, throwing `invalid_token` where the scheme would answer a `401`.
 
 ## Consequences
@@ -365,7 +375,7 @@ Two throws answer a person rather than a caller. The authorization helpers throw
 ### Positive
 
 - One ID-token verifier, signature included, replacing four.
-- One discovery fetch per issuer per KV TTL instead of one per isolate, three times over.
+- One discovery fetch per issuer per KV TTL, and one per isolate under it, handed out by `Issuer.for` rather than re-established in each app three different ways.
 - A login costs two round-trips instead of three.
 - No database, so the package is testable with MSW alone and adds no migration to any app.
 - Rate limiting arrives through an adapter the repo already ships, on the native binding.
@@ -390,7 +400,7 @@ Two throws answer a person rather than a caller. The authorization helpers throw
 
 ## Implementation Plan
 
-Specs first, per the repo convention. Steps 1 through 7 are built and covered by 349 tests; step 8 is what remains.
+Specs first, per the repo convention. Every step below is done, and the package carries 373 tests.
 
 Two prerequisites sit outside this package, and both are already in place. `Location.safe` lives in `@pkg/location` rather than a package of its own, because `Location.from` discards an origin by construction and a separate package would have depended on it for one function. `@pkg/catch-response-middleware` is what the throwing helpers need, and its ordering constraint is tested in both directions.
 
@@ -401,16 +411,17 @@ Two prerequisites sit outside this package, and both are already in place. `Loca
 5. **Authorization helpers** — the two families, over `remix/middleware/async-context`, behind `createAuthorization`. Built, with the bare-statement guard in `test/capability-statements.test.ts`.
 6. **Management client** — `fetchSubjectById`, widened only on demand. Built.
 7. **Rate limiting** — the adapter seam through both client classes. Built.
-8. **Cutover**, per the table below. `ManagementClient`'s failure taxonomy is the one behavior change to carry across deliberately: the old package answered not-found for every non-2xx, so each read that relied on that best-effort behavior re-establishes it with an `instanceof SubjectNotFoundError` test rather than inheriting it.
+8. **Cutover**, per the table below. Done: both old packages are deleted and every consumer reads this one. `ManagementClient`'s failure taxonomy is the one behavior change carried across deliberately: the old package answered not-found for every non-2xx, so each read that relied on that best-effort behavior re-establishes it with an `instanceof SubjectNotFoundError` test rather than inheriting it.
 
 | Deleted                                          | Rewritten                                                                                           |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
 | `packages/auth-sdk`, `packages/oidc-client`      | `apps/uptime`: OAuth service, auth controller, subjects service, container, two jobs, team settings |
 | `apps/uptime/app/auth/value-objects/id-token.ts` | `apps/blog`: OAuth service, auth controller, auth middleware                                        |
 | `apps/blog/app/auth/value-objects/id-token.ts`   | `apps/blog-saas/app/http/controllers/auth.tsx`                                                      |
-| `apps/auth-saas/app/lib/id-token-verify.ts`      | `@pkg/blog-engine`: OIDC module, auth controller, auth middleware                                   |
+|                                                  | `@pkg/blog-engine`: OIDC module, auth controller, auth middleware                                   |
+|                                                  | `apps/auth-saas/app/lib/id-token-verify.ts`                                                         |
 
-`apps/auth-saas` is the narrow row in that table. It holds an HMAC-signed self-contained cookie rather than a `remix/session`, it names no `remix/middleware/auth` scheme, and it is the one app in the repo that checks the `nonce` today. What it takes from this package is `verifyIdToken` and `IdToken`'s claims; `AuthSession.from(ctx)` and `rp.scheme` have no place there.
+`apps/auth-saas` is the narrow row in that table. It holds an HMAC-signed self-contained cookie rather than a `remix/session`, it names no `remix/middleware/auth` scheme, and it is the one app in the repo that checks the `nonce` today. What it takes from this package is `verifyIdToken` and `IdToken`'s claims; `AuthSession.from(ctx)` and `rp.scheme` have no place there. Its verifier is a thin adapter over `issuer.verifyIdToken` answering `IdToken | null`, because its callback answers a failed check with a rendered page and takes one branch to get there.
 
 ## Alternatives Considered
 
