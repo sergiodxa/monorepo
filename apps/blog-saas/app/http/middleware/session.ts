@@ -1,9 +1,8 @@
 /**
  * The dashboard session middleware and its typed accessors: a signed-cookie session
- * holding the authenticated account id and the in-flight OIDC PKCE transaction, with
- * defensive read/write helpers used across the auth flow. The cookie is signed, so
- * its payload is visible to the browser; only the local account id lives there, and
- * RP-initiated logout identifies the client by its configured `client_id`.
+ * holding the authenticated account id, with defensive read/write helpers used across
+ * the auth flow. The cookie is signed, so its payload is visible to the browser, and
+ * it carries the account id alongside the token set the OIDC client keeps there.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,17 +15,9 @@ import { session } from "remix/middleware/session";
 import { Session } from "remix/session";
 import { createCookieSessionStorage } from "remix/session-storage/cookie";
 
-/** OIDC PKCE transaction stored between login start and callback. */
-export interface AuthTransaction {
-	state: string;
-	codeVerifier: string;
-	returnTo?: string;
-}
-
-/** Signed-cookie session payload for the dashboard. */
+/** The dashboard's own entry in the signed-cookie session payload. */
 export interface SessionData {
 	accountId?: string;
-	auth?: AuthTransaction;
 }
 
 const SESSION_COOKIE = "blog_saas_session";
@@ -66,36 +57,28 @@ function current(): Session {
 }
 
 /**
- * Reads the current session data, validating each field's runtime shape so callers
- * always receive well-formed values, even from a malformed cookie.
+ * Reads the dashboard's session entry, validating its runtime shape so callers always
+ * receive well-formed values, even from a malformed cookie.
  *
  * @returns The validated session data (fields absent when missing or invalid).
  */
-export function getSessionData(): SessionData {
+function getSessionData(): SessionData {
 	let store = current();
 	let data: SessionData = {};
 	let accountId = store.get("accountId");
 	if (typeof accountId === "string") data.accountId = accountId;
-	let auth = store.get("auth");
-	if (auth && typeof auth === "object") data.auth = auth as AuthTransaction;
 	return data;
 }
 
 /**
- * Applies a partial update to the session data. A key present in the patch with an
- * `undefined` value is unset; other keys are written.
+ * Records the account a completed login resolved, which is what every dashboard route
+ * reads the current viewer from.
  *
- * @param patch The session fields to set or unset.
+ * @param accountId The local account id to store.
  * @returns Nothing.
  */
-export function updateSessionData(patch: Partial<SessionData>): void {
-	let store = current();
-	for (let key of ["accountId", "auth"] as const) {
-		if (!(key in patch)) continue;
-		let value = patch[key];
-		if (value === undefined) store.unset(key);
-		else store.set(key, value);
-	}
+export function setAccountId(accountId: string): void {
+	current().set("accountId", accountId);
 }
 
 /**

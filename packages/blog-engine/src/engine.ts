@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Issuer } from "@pkg/auth/issuer";
 import type { Logger } from "@pkg/logger/request";
 import type { Middleware } from "remix/router";
 
@@ -45,6 +46,8 @@ export interface EngineRouterDeps {
 	logger: Logger;
 	sessionMiddleware: Middleware;
 	oidc: EngineAuthConfig;
+	/** Held by the engine instance, so a blog reads its provider's documents once. */
+	issuer: Issuer;
 }
 
 /**
@@ -58,7 +61,7 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [
 		trailingSlash,
 		loggerMiddleware(deps.logger),
-		oidcMiddleware(deps.oidc),
+		oidcMiddleware(deps.oidc, deps.issuer),
 		renderMiddleware as Middleware,
 		asyncContext(),
 		deps.sessionMiddleware,

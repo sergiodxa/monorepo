@@ -102,14 +102,14 @@ let response = await engine.fetch(request);
 
 ### `BlogEngineConfig`
 
-| Field         | Type                                                              | Description                                                                       |
-| ------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `database`    | `DatabaseDriver`                                                  | SQL access (D1 or SqlStorage adapter).                                            |
-| `auth`        | `{ issuer, clientId, clientSecret, metadata?, scopes?, admins? }` | OIDC relying-party config; `admins` are emails/subjects mapped to the admin role. |
-| `session`     | `{ secret, storage?, cookieName? }`                               | Cookie signing secret + optional storage override.                                |
-| `migrations?` | `"auto" \| "manual"`                                              | `"auto"` (default) migrates lazily; `"manual"` for the DO host.                   |
-| `isProd?`     | `boolean`                                                         | Controls `Secure` cookies (default `false`).                                      |
-| `waitUntil?`  | `(p: Promise<unknown>) => void`                                   | Host hook for background work.                                                    |
+| Field         | Type                                                                                    | Description                                                                                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `database`    | `DatabaseDriver`                                                                        | SQL access (D1 or SqlStorage adapter).                                                                                                                                 |
+| `auth`        | `{ issuer, clientId, clientSecret, metadata?, scopes?, admins?, bootstrapFirstAdmin? }` | OIDC relying-party config; `admins` are emails/subjects mapped to the admin role, and `metadata` is an `OIDCMetadata` discovery document served in place of discovery. |
+| `session`     | `{ secret, storage?, cookieName? }`                                                     | Cookie signing secret + optional storage override.                                                                                                                     |
+| `migrations?` | `"auto" \| "manual"`                                                                    | `"auto"` (default) migrates lazily; `"manual"` for the DO host.                                                                                                        |
+| `isProd?`     | `boolean`                                                                               | Controls `Secure` cookies (default `false`).                                                                                                                           |
+| `waitUntil?`  | `(p: Promise<unknown>) => void`                                                         | Host hook for background work.                                                                                                                                         |
 
 ### Subpath exports
 
@@ -138,6 +138,7 @@ the last admin cannot be demoted or deleted.
 
 - [`@pkg/data-table-d1`](/packages/data-table-d1) — D1 adapter for self-hosting
 - [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) — Durable Object adapter
+- [`@pkg/auth`](/packages/auth) — the OIDC client behind the admin panel's login
 - [`@pkg/markdown/server`](/packages/markdown) — markdown parsing for post content
 - [`@pkg/oidc-provider`](/packages/oidc-provider) — the OIDC provider the SaaS authenticates against
 

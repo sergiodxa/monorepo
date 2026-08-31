@@ -29,7 +29,7 @@ let metadata: OIDCMetadata = {
 	token_endpoint: "https://auth.example.com/oauth/token",
 	userinfo_endpoint: "https://auth.example.com/userinfo",
 	jwks_uri: "https://auth.example.com/.well-known/jwks.json",
-} as OIDCMetadata;
+};
 
 /**
  * Builds the real blog engine over an in-memory database adapter (migrations run

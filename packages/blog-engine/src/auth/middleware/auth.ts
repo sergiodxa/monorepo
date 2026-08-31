@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { AuthSession } from "@pkg/auth/auth-session";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
@@ -19,9 +20,8 @@ import type { Permission } from "../../shared/permissions";
 import { Role } from "../../roles/models/role";
 import { User } from "../../users/models/user";
 
-/** Session keys owned by the auth layer. */
+/** The session key holding the signed-in user's local row id. */
 const USER_ID_KEY = "userId";
-const ID_TOKEN_KEY = "idToken";
 
 /** Cached per-request permission set. */
 let permissionsKey = createContextKey<Set<Permission>>();
@@ -43,7 +43,7 @@ export const authMiddleware = auth({
 			},
 			invalidate(session) {
 				session.unset(USER_ID_KEY);
-				session.unset(ID_TOKEN_KEY);
+				AuthSession.from(getContext())?.clear();
 			},
 		}),
 	],
@@ -110,21 +110,4 @@ export function login(user: SelectUser): void {
 /** Destroys the session. */
 export function logout(): void {
 	getSession().destroy();
-}
-
-/**
- * Reads the stored OIDC id token (used as the logout `id_token_hint`).
- * @returns The id token, or `null` when none is stored.
- */
-export function getIdToken(): string | null {
-	let value = getSession().get(ID_TOKEN_KEY);
-	return typeof value === "string" ? value : null;
-}
-
-/**
- * Stores the OIDC id token in the session for use at logout.
- * @param token - The id token returned by the provider.
- */
-export function setIdToken(token: string): void {
-	getSession().set(ID_TOKEN_KEY, token);
 }

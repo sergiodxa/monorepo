@@ -13,11 +13,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/auth": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/markdown": "workspace:*",
-		"@pkg/oidc-client": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
 		"@pkg/service-container": "workspace:*",
@@ -28,7 +28,9 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260815.1",
 		"@pkg/cloudflare-mocks": "workspace:*",
+		"@pkg/jwt": "workspace:*",
 		"@types/bun": "^1.3.14",
+		"msw": "^2.15.0",
 		"vitest": "4.1.10"
 	}
 }

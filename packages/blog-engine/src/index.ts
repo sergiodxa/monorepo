@@ -16,6 +16,7 @@ import { Database } from "remix/data-table";
 
 import type { OIDCMetadata } from "./auth/oidc";
 
+import { createIssuer } from "./auth/oidc";
 import { runMigrations } from "./database/migrations";
 import { createEngineRouter } from "./engine";
 import { createSessionMiddleware } from "./shared/middleware/session";
@@ -35,7 +36,7 @@ export interface BlogEngineConfig {
 		issuer: string;
 		clientId: string;
 		clientSecret: string;
-		/** Static endpoints; when omitted the engine discovers them once per isolate. */
+		/** Static endpoints; when omitted the engine discovers them once per instance. */
 		metadata?: OIDCMetadata;
 		/** OAuth scopes. Default `["openid", "profile", "email"]`. */
 		scopes?: string[];
@@ -99,6 +100,7 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 		storage: config.session.storage,
 	});
 	let oidc = config.auth;
+	let issuer = createIssuer(oidc);
 
 	let migrated: Promise<{ applied: string[] }> | null = null;
 	function migrate() {
@@ -112,7 +114,7 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 
 			let logger = new Logger(request);
 			try {
-				let router = createEngineRouter({ logger, sessionMiddleware, oidc });
+				let router = createEngineRouter({ logger, sessionMiddleware, oidc, issuer });
 				let response = await container.scope(() => router.fetch(request));
 				logger.response = response;
 				return response;

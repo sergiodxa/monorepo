@@ -1,17 +1,18 @@
 /**
  * Auth controllers for the admin panel's OIDC login/logout flow: the sign-in and
- * sign-out screens, the flow start (PKCE), and the callback that establishes the
- * local session. Includes `safeNext`, the same-origin redirect guard for `next`.
+ * sign-out screens, the flow start, and the callback that turns a verified login
+ * into a local session. Includes `safeNext`, the same-origin guard for `next`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
 import { Location } from "@pkg/location";
+import { isFailure, wrap } from "@pkg/result";
 import { inject } from "@pkg/service-container";
-import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction, createController } from "remix/router";
@@ -19,8 +20,8 @@ import { createAction, createController } from "remix/router";
 import routes from "../../routes";
 import * as s from "../../shared/components/styles";
 import { User } from "../../users/models/user";
-import { getIdToken, login as signIn, logout as signOut, setIdToken } from "../middleware/auth";
-import { createProvider, resolveEndSessionEndpoint, toAuthProfile } from "../oidc";
+import { login as signIn, logout as signOut } from "../middleware/auth";
+import { toAuthProfile } from "../oidc";
 
 /**
  * Standalone centered page shell for the auth screens (login/logout), with an
@@ -62,23 +63,12 @@ export function safeNext(value: string | null | undefined): string | undefined {
 	return Location.from(value).toString();
 }
 
-/**
- * Builds the absolute `/auth/callback` URL for this request's host (the OIDC
- * redirect URI), derived per request so it works on any host or subdomain.
- * @param request - The current request.
- * @returns The absolute callback URL.
- */
-function callbackUri(request: Request): string {
-	return new URL(routes.auth.callback.href(), request.url).toString();
-}
-
 /** `/auth/login` — renders the sign-in screen (GET) and starts the flow (POST). */
 export const login = createController(routes.auth.login, {
 	actions: {
 		async index(ctx) {
-			let url = new URL(ctx.request.url);
-			let next = url.searchParams.get("next");
-			let errorParam = url.searchParams.get("error");
+			let next = safeNext(ctx.url.searchParams.get("next"));
+			let errorParam = ctx.url.searchParams.get("error");
 			let formAction =
 				routes.auth.login.action.href() + (next ? `?next=${encodeURIComponent(next)}` : "");
 			return ctx.render(
@@ -94,9 +84,9 @@ export const login = createController(routes.auth.login, {
 		},
 
 		async action(ctx) {
-			let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
-			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"));
-			return startExternalAuth(provider, ctx, { returnTo: next });
+			return ctx.relyingParty.authorize(ctx, {
+				returnTo: safeNext(ctx.url.searchParams.get("next")),
+			});
 		},
 	},
 });
@@ -107,26 +97,27 @@ export const callback = createAction(
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let log = ctx.logger.loader("/auth/callback");
-		let loginUrl = routes.auth.login.index.href();
-		let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
 
-		try {
-			let { result, returnTo } = await finishExternalAuth(provider, ctx);
-			let user = await User.findOrCreateFromAuthProfile(db, toAuthProfile(result.profile), {
-				admins: ctx.oidc.admins,
-				bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin,
-			});
+		let completed = await wrap(async () => {
+			let grant = await ctx.relyingParty.callback(ctx);
+			let user = await User.findOrCreateFromAuthProfile(
+				db,
+				toAuthProfile(grant.profile, grant.subject),
+				{ admins: ctx.oidc.admins, bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin },
+			);
 			signIn(user);
-			if (typeof result.tokens.idToken === "string") setIdToken(result.tokens.idToken);
-			log.info("Login completed", { userId: user.id });
-			let dest = safeNext(returnTo) ?? routes.cms.dashboard.href();
-			return redirect(dest, { status: redirect.Status.SeeOther });
-		} catch (error) {
-			log.error("Login failed", { error: String(error) });
-			return redirect(`${loginUrl}?error=authentication_failed`, {
+			return { userId: user.id, next: grant.returnTo };
+		});
+
+		if (isFailure(completed)) {
+			log.error("Login failed", { error: String(completed.error) });
+			return redirect(`${routes.auth.login.index.href()}?error=authentication_failed`, {
 				status: redirect.Status.SeeOther,
 			});
 		}
+
+		log.info("Login completed", { userId: completed.data.userId });
+		return redirect(completed.data.next, { status: redirect.Status.SeeOther });
 	}),
 );
 
@@ -146,22 +137,31 @@ export const logout = createController(routes.auth.logout, {
 			);
 		},
 
+		/**
+		 * Reads the end-session URL before dropping the local session, so the request
+		 * carries the `id_token_hint` that ends the provider's session too, and lands
+		 * the visitor on the blog's home page when the provider publishes no endpoint.
+		 */
 		async action(ctx) {
-			let idToken = getIdToken();
-			let origin = new URL(ctx.request.url).origin;
-			let endSession = await resolveEndSessionEndpoint(ctx.oidc);
+			let endSession = await wrap(() =>
+				ctx.relyingParty.endSession(ctx, {
+					returnTo: routes.feed.href(),
+					redirect: false,
+				}),
+			);
 			signOut();
 
-			if (endSession) {
-				let logoutUrl = new URL(endSession);
-				if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
-				logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
-				return redirect(logoutUrl.toString(), {
-					status: redirect.Status.SeeOther,
-					headers: { "Clear-Site-Data": '"*"' },
+			if (isFailure(endSession)) {
+				ctx.logger.loader("/auth/logout").error("Provider sign-out skipped", {
+					error: String(endSession.error),
 				});
+				return redirect(routes.feed.href(), { status: redirect.Status.SeeOther });
 			}
-			return redirect("/", { status: redirect.Status.SeeOther });
+
+			return redirect(endSession.data.toString(), {
+				status: redirect.Status.SeeOther,
+				headers: { "Clear-Site-Data": '"*"' },
+			});
 		},
 	},
 });

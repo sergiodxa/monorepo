@@ -1,37 +1,32 @@
 /**
  * The auth controllers implementing the dashboard's OIDC login flow: the sign-in and
- * sign-out screens, the authorization-code start (with PKCE + state stored in the
- * session), and the callback that verifies the ID token and creates the session.
+ * sign-out screens, the authorization-code start, the callback that verifies the ID
+ * token and opens the session, and the RP-initiated sign-out that closes it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
 import { redirect } from "@pkg/http/response";
-import {
-	buildAuthorizationUrl,
-	createPkce,
-	discover,
-	exchangeCode,
-	verifyIdToken,
-} from "@pkg/oidc-client";
+import { isFailure, wrap } from "@pkg/result";
 import { inject } from "@pkg/service-container";
-import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction, createController } from "remix/router";
 
-import { clearSession, getSessionData, updateSessionData } from "~/app/http/middleware/session";
+import { relyingParty } from "~/app/auth/relying-party";
+import { clearSession, setAccountId } from "~/app/http/middleware/session";
 import Account from "~/app/models/account";
 import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
 /**
- * `/auth/login` controller: renders the sign-in screen on `GET` and, on `POST`,
- * starts the OIDC authorization-code flow — creating a PKCE pair and state, saving
- * them in the session, and redirecting to the IdP.
+ * `/auth/login` controller: renders the sign-in screen on `GET` and, on `POST`, starts
+ * the OIDC authorization-code flow, which writes the login's `state`, PKCE verifier,
+ * and `nonce` to the session before handing the browser to the provider.
  *
- * @returns The sign-in page (`index`) or a redirect to the IdP (`action`).
+ * @returns The sign-in page (`index`) or a redirect to the provider (`action`).
  */
 export const login = createController(routes.auth.login, {
 	actions: {
@@ -39,7 +34,7 @@ export const login = createController(routes.auth.login, {
 			return ctx.render(
 				<Page title="Sign in">
 					<h1>Sign in</h1>
-					<form method="post" action="/auth/login">
+					<form method="post" action={routes.auth.login.action.href()}>
 						<button mix={[s.button]} type="submit">
 							Continue with SSO
 						</button>
@@ -49,68 +44,49 @@ export const login = createController(routes.auth.login, {
 		},
 
 		async action(ctx) {
-			let metadata = await discover(env.OIDC_ISSUER);
-			let pkce = await createPkce();
-			let state = crypto.randomUUID();
-			updateSessionData({ auth: { state, codeVerifier: pkce.verifier } });
-
-			let url = buildAuthorizationUrl(metadata, {
-				clientId: env.OIDC_CLIENT_ID,
-				redirectUri: new URL("/auth/callback", ctx.request.url).toString(),
-				state,
-				challenge: pkce.challenge,
+			return relyingParty(ctx.url).authorize(ctx, {
+				returnTo: ctx.url.searchParams.get("returnTo"),
 			});
-			return redirect(url, { status: redirect.Status.SeeOther });
 		},
 	},
 });
 
 /**
- * `GET /auth/callback` controller: completes the OIDC flow — validates the stored
- * state, exchanges the code, and verifies the ID token, then opens the dashboard
- * session holding only the local account id.
+ * `GET /auth/callback` controller: completes the OIDC flow — correlating the callback
+ * with the login it answers, exchanging the code, and verifying the ID token against
+ * the provider's keys and the login's `nonce` — then opens the dashboard session.
  *
- * @returns A redirect to `/dashboard` on success, or back to `/auth/login` if the
- *   transaction is missing or the state/code check fails.
+ * @returns A redirect to the login's destination, or back to `/auth/login` when the
+ *   callback answers no login this session started.
  */
 export const callback = createAction(
 	routes.auth.callback,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let url = new URL(ctx.request.url);
-		let transaction = getSessionData().auth;
-		if (!transaction) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-		let state = url.searchParams.get("state");
-		let code = url.searchParams.get("code");
-		if (!state || !code || state !== transaction.state) {
-			return redirect("/auth/login", { status: redirect.Status.SeeOther });
+		let completed = await wrap(async () => {
+			let grant = await relyingParty(ctx.url).callback(ctx);
+			let account = await Account.findOrCreateFromProfile(db, {
+				subject: grant.subject,
+				email: grant.profile.email ?? "",
+				displayName: grant.profile.name,
+			});
+			setAccountId(account.id);
+			return grant.returnTo;
+		});
+
+		if (isFailure(completed)) {
+			return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 		}
 
-		let metadata = await discover(env.OIDC_ISSUER);
-		let { idToken } = await exchangeCode(metadata, {
-			clientId: env.OIDC_CLIENT_ID,
-			clientSecret: env.OIDC_CLIENT_SECRET,
-			code,
-			codeVerifier: transaction.codeVerifier,
-			redirectUri: new URL("/auth/callback", ctx.request.url).toString(),
-		});
-		let profile = verifyIdToken(idToken, { issuer: env.OIDC_ISSUER, clientId: env.OIDC_CLIENT_ID });
-
-		let account = await Account.findOrCreateFromProfile(db, {
-			subject: profile.subject,
-			email: profile.email,
-			displayName: profile.displayName,
-		});
-		updateSessionData({ accountId: account.id, auth: undefined });
-		return redirect("/dashboard", { status: redirect.Status.SeeOther });
+		return redirect(completed.data, { status: redirect.Status.SeeOther });
 	}),
 );
 
 /**
- * `/auth/logout` controller: renders the sign-out confirmation on `GET` and, on
- * `POST`, clears the session and ends it at the IdP by `client_id` (the session
- * holds only the account id), falling back to `/` when the IdP advertises none.
+ * `/auth/logout` controller: renders the sign-out confirmation on `GET` and, on `POST`,
+ * ends the login at the provider with the `id_token_hint` the session holds before
+ * dropping the session, falling back to `/` when the provider advertises no endpoint.
  *
  * @returns The sign-out page (`index`) or a logout redirect (`action`).
  */
@@ -120,7 +96,7 @@ export const logout = createController(routes.auth.logout, {
 			return ctx.render(
 				<Page title="Sign out">
 					<h1>Sign out</h1>
-					<form method="post" action="/auth/logout">
+					<form method="post" action={routes.auth.logout.action.href()}>
 						<button mix={[s.button]} type="submit">
 							Sign out
 						</button>
@@ -129,17 +105,24 @@ export const logout = createController(routes.auth.logout, {
 			);
 		},
 
+		/**
+		 * Reads the end-session URL before dropping the session, so the request carries
+		 * the `id_token_hint` that ends the provider's session too.
+		 */
 		async action(ctx) {
+			let endSession = await wrap(() =>
+				relyingParty(ctx.url).endSession(ctx, {
+					returnTo: routes.index.href(),
+					redirect: false,
+				}),
+			);
 			clearSession();
-			let origin = new URL(ctx.request.url).origin;
-			let metadata = await discover(env.OIDC_ISSUER).catch(() => null);
-			if (metadata?.end_session_endpoint) {
-				let logoutUrl = new URL(metadata.end_session_endpoint);
-				logoutUrl.searchParams.set("client_id", env.OIDC_CLIENT_ID);
-				logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
-				return redirect(logoutUrl.toString(), { status: redirect.Status.SeeOther });
+
+			if (isFailure(endSession)) {
+				return redirect(routes.index.href(), { status: redirect.Status.SeeOther });
 			}
-			return redirect("/", { status: redirect.Status.SeeOther });
+
+			return redirect(endSession.data.toString(), { status: redirect.Status.SeeOther });
 		},
 	},
 });
