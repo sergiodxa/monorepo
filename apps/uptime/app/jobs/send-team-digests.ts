@@ -9,10 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Subject } from "@pkg/auth-sdk";
 import type { TFunction } from "@pkg/i18n";
 
-import { AuthSDK } from "@pkg/auth-sdk";
+import { ManagementClient } from "@pkg/auth/management-client";
 import { subDays, toDayKey } from "@pkg/dates";
 import { Job } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
@@ -96,7 +95,7 @@ abstract class SendTeamDigestsJob extends Job {
 		let { period } = this;
 		let db = getServiceContainer().get(Database);
 		let mailer = getServiceContainer().get(Mailer);
-		let sdk = getServiceContainer().get(AuthSDK);
+		let admin = getServiceContainer().get(ManagementClient);
 
 		/**
 		 * One instant for the whole run, so the window every digest reports, the bound every
@@ -128,7 +127,7 @@ abstract class SendTeamDigestsJob extends Job {
 		let [teams, profiles] = await Promise.all([
 			Team.findByIds(db, [...byTeam.keys()]),
 			resolveSubjects(
-				sdk,
+				admin,
 				wanted.map((recipient) => recipient.subjectId),
 			),
 		]);
@@ -200,7 +199,7 @@ abstract class SendTeamDigestsJob extends Job {
 			now: number;
 			members: DigestRecipient[];
 			team: SelectTeam | null;
-			profiles: Map<string, Subject>;
+			profiles: Map<string, ManagementClient.Subject>;
 			preferences: Map<string, SelectUserPreferences>;
 		},
 	): Promise<{ sent: number; skipped: number }> {

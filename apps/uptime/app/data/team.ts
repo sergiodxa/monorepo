@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { IdToken } from "@pkg/auth/id-token";
 import type { Database } from "remix/data-table";
 
 import { generateUUID, isUUID } from "@pkg/uuid";
 import { inList } from "remix/data-table";
 
-import type IdToken from "~/app/auth/value-objects/id-token";
 import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import {
@@ -120,7 +120,7 @@ export default class Team {
 	 * hostname, and returns the first such team.
 	 */
 	static async joinByDomain(db: Database, idToken: IdToken) {
-		let hostname = idToken.email.split("@").at(-1);
+		let hostname = (idToken.email ?? "").split("@").at(-1);
 		if (!hostname) throw new Error("Invalid email format");
 
 		let domains = await db.findMany(teamDomains, { where: { hostname } });
@@ -147,15 +147,22 @@ export default class Team {
 		return firstTeam;
 	}
 
-	/** Creates a personal team for a subject and makes them its owning admin. */
+	/**
+	 * Creates a personal team for a subject and makes them its owning admin.
+	 *
+	 * The display claims are optional at the identity provider, so the subject id
+	 * stands in for a missing name or username: it is always present, which keeps a
+	 * sparse profile from blocking a sign-up.
+	 */
 	static async createTeam(db: Database, idToken: IdToken) {
+		let username = idToken.username ?? idToken.subject;
 		let team = await db.create(
 			teams,
 			{
 				id: generateUUID(),
 				owner_id: idToken.subject,
-				name: `${idToken.name}'s Team`,
-				slug: `${idToken.username.toLowerCase()}-team`,
+				name: `${idToken.name ?? username}'s Team`,
+				slug: `${username.toLowerCase()}-team`,
 				logo: idToken.picture || null,
 			},
 			{ touch: true, returnRow: true },

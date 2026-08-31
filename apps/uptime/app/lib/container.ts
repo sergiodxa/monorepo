@@ -1,8 +1,8 @@
 /**
  * Wires up the app-wide dependency-injection container (ADR-008) and registers the
- * shared {@link Database} singleton backed by the production D1 database and the
- * shared {@link PolarClient} singleton for billing. Controllers, middleware, and jobs
- * resolve their dependencies from this container.
+ * shared {@link Database} singleton backed by the production D1 database, the shared
+ * {@link PolarClient} singleton for billing, and the identity provider's management
+ * client. Controllers, middleware, and jobs resolve their dependencies from here.
  *
  * It also connects the database's per-statement row counts to the cost ledger (ADR-019,
  * ADR-007), which is what makes D1 cost measurable — and priceable — per job type.
@@ -11,7 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { AuthSDK } from "@pkg/auth-sdk";
+import { ManagementClient } from "@pkg/auth/management-client";
+import { ServiceClient } from "@pkg/auth/service-client";
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { setJobUsageTracker } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
@@ -21,9 +22,9 @@ import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
+import { issuer } from "~/app/auth/issuer";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { recordD1Statement, trackJobCost } from "~/app/services/cost";
-import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
 /**
  * The app service container (ADR-008). Registered once per isolate; the worker wraps
@@ -69,8 +70,18 @@ container.singleton(
 			replyTo: MAIL_REPLY_TO,
 		}),
 );
-container.singleton(IdTokenVerificationKeyService, () => new IdTokenVerificationKeyService());
+/**
+ * Reads other people's profiles from the identity provider, for the surfaces that
+ * need more than the signed-in viewer's own claims. It authenticates as this app
+ * rather than as anybody, so the two jobs with no request behind them reach it too.
+ */
 container.singleton(
-	AuthSDK,
-	() => new AuthSDK({ client: { id: env.CLIENT_ID, secret: env.CLIENT_SECRET } }),
+	ManagementClient,
+	() =>
+		new ManagementClient(
+			new ServiceClient(issuer(), {
+				clientId: env.CLIENT_ID,
+				clientSecret: env.CLIENT_SECRET,
+			}),
+		),
 );

@@ -13,7 +13,12 @@ import type { NormalizedMessage, Transport } from "@pkg/mail";
 import type { PolarClient } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
-import { AuthSDK, SubjectNotFoundError } from "@pkg/auth-sdk";
+import {
+	ManagementClient,
+	ManagementError,
+	ManagementErrorCode,
+	SubjectNotFoundError,
+} from "@pkg/auth/management-client";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -36,12 +41,12 @@ import { memberships, monitors, teams } from "~/database/schema";
 let transport = new MemoryTransport();
 
 /**
- * Addresses the fake auth server can produce, by subject id. A subject with no entry is one whose
- * profile fails to resolve, which is how the "notify everybody you could" rule is exercised.
+ * Addresses the fake provider can produce, by subject id. A subject with no entry is one the
+ * provider holds no record for, which is how the "notify everybody you could" rule is exercised.
  */
 let addresses = new Map<string, string>();
 
-/** Whether the fake auth server's client-credentials exchange succeeds at all. */
+/** Whether the fake provider honours this app's credentials at all. */
 let authenticates = true;
 
 /** A transport that accepts nothing, for the cases about what a failed send must not do. */
@@ -71,14 +76,22 @@ class SelectiveTransport implements Transport {
 }
 
 /**
- * The auth server as this job sees it: one profile lookup per former member, answering only for
- * the addresses a test seeded.
+ * The identity provider as this job sees it: one profile lookup per former member,
+ * answering only for the addresses a test seeded. With `authenticates` off it reports
+ * a refusal instead, the condition a retry could survive.
  */
-function fakeSdk(): AuthSDK {
+function fakeAdmin(): ManagementClient {
 	return {
-		authenticate: async () =>
-			authenticates ? success("token") : failure(new Error("auth server unavailable")),
 		fetchSubjectById: async (subjectId: string) => {
+			if (!authenticates) {
+				return failure(
+					new ManagementError("client_credentials rejected", {
+						code: ManagementErrorCode.Unauthorized,
+						status: 401,
+					}),
+				);
+			}
+
 			let email = addresses.get(subjectId);
 			if (!email) return failure(new SubjectNotFoundError(subjectId));
 
@@ -93,7 +106,7 @@ function fakeSdk(): AuthSDK {
 				emailAddress: email,
 			});
 		},
-	} as unknown as AuthSDK;
+	} as unknown as ManagementClient;
 }
 
 /** The addresses every `TeamDeletedEmail` this run produced was sent to. */
@@ -131,7 +144,7 @@ async function runJob(
 	container.singleton(DatabaseClass, () => db);
 	container.singleton(Mailer, () => new Mailer({ transport: mailTransport, from: MAIL_FROM }));
 	container.instance(PolarClientClass, polar as unknown as PolarClient);
-	container.instance(AuthSDK, fakeSdk());
+	container.instance(ManagementClient, fakeAdmin());
 
 	let job = new DeleteAccountsJob({ logger: new BatchedLogger("test") }, {});
 	await container.scope(() => job.perform());
@@ -374,7 +387,7 @@ describe("DeleteAccountsJob", () => {
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
 	});
 
-	test("finishes the deletion when the auth server cannot be reached at all", async () => {
+	test("finishes the deletion when the provider refuses this app's credentials", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, "subject-1");

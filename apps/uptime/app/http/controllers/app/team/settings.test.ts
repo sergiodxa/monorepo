@@ -2,8 +2,8 @@
  * Tests for the team settings page controller. No `cloudflare:workers` mock is
  * needed since this controller only touches `~/app/data/invite`, `~/app/data/team`,
  * `~/app/data/team-domain`, and `~/app/services/subjects`, none of which depend on
- * a queue binding. A fake `AuthSDK` is made to fail so `resolveSubjects()` falls
- * back to rendering members by raw `subject_id`.
+ * a queue binding. A fake `ManagementClient` answers that it holds no record for the
+ * seeded members, so the page renders them by raw `subject_id`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,7 @@
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { AuthSDK } from "@pkg/auth-sdk";
+import { ManagementClient, SubjectNotFoundError } from "@pkg/auth/management-client";
 import { createTranslator } from "@pkg/i18n";
 import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
@@ -100,10 +100,12 @@ async function renderSettings(db: Database, team: SelectTeam, membership: Select
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 
-	let authSdk = {
-		authenticate: vi.fn(async () => failure(new Error("no auth in tests"))),
-	} as unknown as AuthSDK;
-	container.instance(AuthSDK, authSdk);
+	let admin = {
+		fetchSubjectById: vi.fn(async (subjectId: string) =>
+			failure(new SubjectNotFoundError(subjectId)),
+		),
+	} as unknown as ManagementClient;
+	container.instance(ManagementClient, admin);
 
 	let request = new Request(
 		new URL(routes.app.team.settings.href({ team: team.slug }), "https://uptime.test"),

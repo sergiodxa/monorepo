@@ -11,12 +11,12 @@
 
 import type { Database } from "remix/data-table";
 
+import { IdToken } from "@pkg/auth/id-token";
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
 
-import IdToken from "~/app/auth/value-objects/id-token";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";

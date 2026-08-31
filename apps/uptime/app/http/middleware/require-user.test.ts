@@ -1,7 +1,7 @@
 /**
  * Integration tests for `requireUser`. They run the real `remix/middleware/session`
  * + this app's own `auth` middleware ahead of `requireUser`, seeding the session via
- * `login()` from a preceding test-only middleware, to verify authenticated requests
+ * `signIn()` from a preceding test-only middleware, to verify authenticated requests
  * pass through untouched while anonymous requests are redirected home (303) with a
  * `returnTo` cookie remembering the originally requested path and query string.
  *
@@ -17,8 +17,9 @@ import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
 import { returnTo } from "~/app/http/cookies";
-import { auth, login, type Viewer } from "~/app/http/middleware/auth";
+import { auth, type Viewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
+import { signIn } from "~/app/lib/test/auth";
 
 let viewer: Viewer = {
 	id: "user_1",
@@ -36,7 +37,7 @@ async function dispatch(path: string, options: { signedIn?: boolean } = {}) {
 			asyncContext(),
 			session(cookie, storage),
 			(ctx, next) => {
-				if (options.signedIn) login(viewer);
+				if (options.signedIn) signIn(viewer);
 				return next();
 			},
 			auth,

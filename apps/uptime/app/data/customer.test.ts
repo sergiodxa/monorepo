@@ -11,9 +11,9 @@
 
 import type { Customer as PolarCustomer, PolarClient, Subscription } from "@pkg/polar";
 
+import { IdToken } from "@pkg/auth/id-token";
 import { describe, expect, test } from "vitest";
 
-import IdToken from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";
 import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 

@@ -20,8 +20,9 @@ import { describe, expect, test } from "vitest";
 
 import UserPreferences from "~/app/data/user-preferences";
 import { language } from "~/app/http/cookies";
-import { auth, login, type Viewer } from "~/app/http/middleware/auth";
+import { auth, type Viewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
+import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -60,7 +61,7 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 			asyncContext(),
 			session(cookie, storage),
 			(_ctx, next) => {
-				if (options.viewer) login(options.viewer);
+				if (options.viewer) signIn(options.viewer);
 				return next();
 			},
 			auth,

@@ -10,7 +10,7 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { AuthSDK } from "@pkg/auth-sdk";
+import { ManagementClient } from "@pkg/auth/management-client";
 import {
 	BadgeMinusIcon,
 	ExternalLinkIcon,
@@ -158,7 +158,7 @@ function textInput() {
  */
 export default createAction(routes.app.team.settings, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],
-	handler: inject([Database, AuthSDK] as const, async (db, authSdk) => {
+	handler: inject([Database, ManagementClient] as const, async (db, admin) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -170,7 +170,7 @@ export default createAction(routes.app.team.settings, {
 		]);
 
 		let subjectsById = await resolveSubjects(
-			authSdk,
+			admin,
 			members.map((member) => member.subject_id),
 		);
 

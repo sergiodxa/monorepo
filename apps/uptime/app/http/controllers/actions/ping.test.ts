@@ -35,8 +35,9 @@ import type { QuickPingOutcome, QuickPingResult } from "~/app/http/controllers/a
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
-import { auth, login } from "~/app/http/middleware/auth";
+import { auth } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
+import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, teams } from "~/database/schema";
@@ -154,7 +155,7 @@ function createTestRouter(db: Db) {
 			asyncContext(),
 			session(sessionCookie, sessionStorage),
 			(_ctx, next) => {
-				login(viewer);
+				signIn(viewer);
 				return next();
 			},
 			auth,

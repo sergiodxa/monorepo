@@ -1,14 +1,15 @@
 /**
  * Logout controller for `/logout`. The `index` (GET) shows a confirmation page; the
- * `action` (POST) destroys the local session and redirects through the auth server's
- * RP-initiated logout endpoint (SSO sign-out), also sending `Clear-Site-Data` so the
- * browser drops any other locally cached state.
+ * `action` (POST) drops the local session and redirects through the identity
+ * provider's RP-initiated logout endpoint (SSO sign-out), also sending
+ * `Clear-Site-Data` so the browser drops any other locally cached state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { redirect } from "@pkg/http/response";
+import { isFailure, wrap } from "@pkg/result";
 import { border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap, items } from "@pkg/u/layout";
@@ -17,10 +18,17 @@ import { m, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
 import { Button } from "@pkg/ui";
 import { createController } from "remix/router";
+import { Session } from "remix/session";
 
-import { getIdToken, logout } from "~/app/http/middleware/auth";
+import { relyingParty } from "~/app/auth/relying-party";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/**
+ * Tells the browser to drop every other copy of this origin's state, so a shared
+ * machine keeps nothing readable behind after a sign-out.
+ */
+const LOGOUT_HEADERS = { "Clear-Site-Data": '"*"' };
 
 export default createController(routes.logout, {
 	actions: {
@@ -52,22 +60,35 @@ export default createController(routes.logout, {
 			);
 		},
 
-		/** POST /logout — destroys the session and signs out of the identity provider. */
-		action(ctx) {
-			let idToken = getIdToken();
-
-			let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
-			if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
-			logoutUrl.searchParams.set(
-				"post_logout_redirect_uri",
-				new URL(routes.home.href(), ctx.request.url).toString(),
+		/**
+		 * POST /logout — drops the local session and signs out of the identity
+		 * provider, whose `end_session_endpoint` the discovery document names.
+		 *
+		 * A provider this app cannot reach still signs the person out here: the local
+		 * session is destroyed and the browser goes home, so an outage upstream never
+		 * leaves somebody stuck signed in on this side.
+		 */
+		async action(ctx) {
+			let ended = await wrap(() =>
+				relyingParty(ctx.url).endSession(ctx, {
+					returnTo: routes.home.href(),
+					redirect: false,
+				}),
 			);
 
-			logout();
+			if (isFailure(ended)) {
+				ctx.logger.error("auth.end_session_failed", { error: ended.error.message });
+				ctx.get(Session)?.destroy();
 
-			return redirect(logoutUrl, {
+				return redirect(routes.home.href(), {
+					status: redirect.Status.SeeOther,
+					headers: LOGOUT_HEADERS,
+				});
+			}
+
+			return redirect(ended.data, {
 				status: redirect.Status.SeeOther,
-				headers: { "Clear-Site-Data": '"*"' },
+				headers: LOGOUT_HEADERS,
 			});
 		},
 	},

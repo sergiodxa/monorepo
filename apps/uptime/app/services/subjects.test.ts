@@ -1,23 +1,28 @@
 /**
- * Unit tests for `resolveSubjects`, the best-effort batch profile lookup used by
- * the team settings member list and the account page's team list. A fake
- * `AuthSDK` stands in for the real server-to-server client so every outcome
- * (empty input, auth failure, per-subject success/failure, mixed results) is
+ * Unit tests for `resolveSubjects`, the batch profile lookup behind the team settings
+ * member list, the account page's team list, and the digest job. A fake
+ * `ManagementClient` stands in for the identity provider so every outcome — empty
+ * input, a subject with no record, a provider that could not answer, and a mix — is
  * exercised without a real network call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { AuthSDK, Subject } from "@pkg/auth-sdk";
 import type { Result } from "@pkg/result";
 
-import { AuthenticationError, SubjectNotFoundError } from "@pkg/auth-sdk";
+import {
+	ManagementClient,
+	ManagementError,
+	ManagementErrorCode,
+	SubjectNotFoundError,
+} from "@pkg/auth/management-client";
 import { failure, success } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { resolveSubjects } from "~/app/services/subjects";
 
-function subject(id: string): Subject {
+/** One subject as the management API publishes it. */
+function subject(id: string): ManagementClient.Subject {
 	return {
 		id,
 		createdAt: new Date("2026-01-01T00:00:00Z"),
@@ -30,84 +35,128 @@ function subject(id: string): Subject {
 	};
 }
 
-function fakeSdk(
-	authenticateResult: Awaited<ReturnType<AuthSDK["authenticate"]>>,
-	subjectsById: Map<string, Awaited<ReturnType<AuthSDK["fetchSubjectById"]>>>,
-) {
+/** The read the provider answers for a subject it holds no record under. */
+function notFound(id: string): SubjectRead {
+	return failure(new SubjectNotFoundError(id));
+}
+
+/** The read the provider answers when it throttled this app rather than refusing an id. */
+function throttled(): SubjectRead {
+	return failure(
+		new ManagementError("too many reads", {
+			code: ManagementErrorCode.RateLimited,
+			status: 429,
+		}),
+	);
+}
+
+/** The read the provider answers for a subject it holds a record under. */
+function found(id: string): SubjectRead {
+	return success(subject(id));
+}
+
+/** What one seeded lookup answers with. */
+type SubjectRead = Result<ManagementClient.Subject, SubjectNotFoundError | ManagementError>;
+
+/** A management client answering only for the ids a test seeded. */
+function fakeAdmin(subjectsById: Map<string, SubjectRead>) {
 	return {
-		authenticate: async () => authenticateResult,
 		fetchSubjectById: async (subjectId: string) => {
 			let result = subjectsById.get(subjectId);
 			if (!result) throw new Error(`unexpected subjectId: ${subjectId}`);
 			return result;
 		},
-	} as unknown as AuthSDK;
+	} as unknown as ManagementClient;
 }
 
 describe("resolveSubjects", () => {
-	test("returns an empty map without authenticating when there are no subject ids", async () => {
-		let authenticate = async () => success("token");
-		let sdk = { authenticate } as unknown as AuthSDK;
+	test("returns an empty map without reading anything when there are no subject ids", async () => {
+		let admin = fakeAdmin(new Map());
 
-		let map = await resolveSubjects(sdk, []);
-
-		expect(map.size).toBe(0);
-	});
-
-	test("returns an empty map when authentication fails", async () => {
-		let sdk = fakeSdk(
-			failure(new AuthenticationError("client_credentials rejected", "invalid_client")),
-			new Map(),
-		);
-
-		let map = await resolveSubjects(sdk, ["id-1"]);
+		let map = await resolveSubjects(admin, []);
 
 		expect(map.size).toBe(0);
 	});
 
 	test("resolves every subject id to its profile on success", async () => {
-		let sdk = fakeSdk(
-			success("token"),
+		let admin = fakeAdmin(
 			new Map([
-				["id-1", success(subject("id-1"))],
-				["id-2", success(subject("id-2"))],
+				["id-1", found("id-1")],
+				["id-2", found("id-2")],
 			]),
 		);
 
-		let map = await resolveSubjects(sdk, ["id-1", "id-2"]);
+		let map = await resolveSubjects(admin, ["id-1", "id-2"]);
 
 		expect(map.size).toBe(2);
 		expect(map.get("id-1")).toEqual(subject("id-1"));
 		expect(map.get("id-2")).toEqual(subject("id-2"));
 	});
 
-	test("best-effort: drops subject ids that fail to resolve, keeping the rest", async () => {
-		let sdk = fakeSdk(
-			success("token"),
-			new Map<string, Result<Subject, SubjectNotFoundError>>([
-				["id-1", success(subject("id-1"))],
-				["id-2", failure(new SubjectNotFoundError("id-2"))],
+	test("best-effort: drops subject ids the provider holds no record for, keeping the rest", async () => {
+		let admin = fakeAdmin(
+			new Map([
+				["id-1", found("id-1")],
+				["id-2", notFound("id-2")],
 			]),
 		);
 
-		let map = await resolveSubjects(sdk, ["id-1", "id-2"]);
+		let map = await resolveSubjects(admin, ["id-1", "id-2"]);
 
 		expect(map.size).toBe(1);
 		expect(map.get("id-1")).toEqual(subject("id-1"));
 		expect(map.has("id-2")).toBe(false);
 	});
 
-	test("returns an empty map when every subject lookup fails", async () => {
-		let sdk = fakeSdk(
-			success("token"),
-			new Map<string, Result<Subject, SubjectNotFoundError>>([
-				["id-1", failure(new SubjectNotFoundError("id-1"))],
-				["id-2", failure(new SubjectNotFoundError("id-2"))],
+	test("returns an empty map when the provider holds a record for none of them", async () => {
+		let admin = fakeAdmin(
+			new Map([
+				["id-1", notFound("id-1")],
+				["id-2", notFound("id-2")],
 			]),
 		);
 
-		let map = await resolveSubjects(sdk, ["id-1", "id-2"]);
+		let map = await resolveSubjects(admin, ["id-1", "id-2"]);
 
 		expect(map.size).toBe(0);
+	});
+
+	/**
+	 * A throttle, a refusal, or a provider fault can succeed on a later attempt, so a
+	 * caller has to hear about it rather than reading a short list as the whole truth.
+	 */
+	test("raises a condition the provider may answer later instead of dropping the subject", async () => {
+		let admin = fakeAdmin(
+			new Map([
+				["id-1", found("id-1")],
+				["id-2", throttled()],
+			]),
+		);
+
+		await expect(resolveSubjects(admin, ["id-1", "id-2"])).rejects.toBeInstanceOf(ManagementError);
+	});
+
+	test("reports the code and status behind a raised condition", async () => {
+		let admin = fakeAdmin(new Map([["id-1", throttled()]]));
+
+		await expect(resolveSubjects(admin, ["id-1"])).rejects.toMatchObject({
+			code: ManagementErrorCode.RateLimited,
+			status: 429,
+		});
+	});
+
+	test("looks each duplicated subject id up once", async () => {
+		let reads: string[] = [];
+		let admin = {
+			fetchSubjectById: async (subjectId: string) => {
+				reads.push(subjectId);
+				return success(subject(subjectId));
+			},
+		} as unknown as ManagementClient;
+
+		let map = await resolveSubjects(admin, ["id-1", "id-1", "id-2"]);
+
+		expect(reads).toEqual(["id-1", "id-2"]);
+		expect(map.size).toBe(2);
 	});
 });

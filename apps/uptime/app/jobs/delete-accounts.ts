@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { AuthSDK } from "@pkg/auth-sdk";
+import { ManagementClient } from "@pkg/auth/management-client";
 import { Job } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { PolarClient } from "@pkg/polar";
@@ -35,7 +35,7 @@ export class DeleteAccountsJob extends Job {
 		let mailer = getServiceContainer().get(Mailer);
 		let polar = getServiceContainer().get(PolarClient);
 		/** Only ever used to turn a former member's subject id into an address to notify. */
-		let sdk = getServiceContainer().get(AuthSDK);
+		let admin = getServiceContainer().get(ManagementClient);
 
 		let pending = await AccountDeletion.listPending(db);
 
@@ -49,7 +49,7 @@ export class DeleteAccountsJob extends Job {
 		 */
 		for (let request of pending) {
 			try {
-				if (await this.erase(db, mailer, polar, sdk, request)) deleted++;
+				if (await this.erase(db, mailer, polar, admin, request)) deleted++;
 				else errorCount++;
 			} catch (error) {
 				errorCount++;
@@ -77,7 +77,7 @@ export class DeleteAccountsJob extends Job {
 		db: Database,
 		mailer: Mailer,
 		polar: PolarClient,
-		sdk: AuthSDK,
+		admin: ManagementClient,
 		request: SelectAccountDeletion,
 	): Promise<boolean> {
 		let erased = await eraseAccount(db, polar, request.subject_id, request.email);
@@ -101,7 +101,7 @@ export class DeleteAccountsJob extends Job {
 		 * later retry would find nobody to notify. Its own `try` isolates the deletion request.
 		 */
 		try {
-			await this.notifyFormerMembers(db, mailer, sdk, erased.data.deletedTeams);
+			await this.notifyFormerMembers(db, mailer, admin, erased.data.deletedTeams);
 		} catch (error) {
 			this.logger.error("job.delete_accounts.notify_members_failed", {
 				subjectId: request.subject_id,
@@ -151,14 +151,14 @@ export class DeleteAccountsJob extends Job {
 	private async notifyFormerMembers(
 		db: Database,
 		mailer: Mailer,
-		sdk: AuthSDK,
+		admin: ManagementClient,
 		teams: DeletedTeamNotice[],
 	): Promise<void> {
 		if (teams.length === 0) return;
 
 		let subjectIds = teams.flatMap((team) => team.memberIds);
 		let [profiles, preferences] = await Promise.all([
-			resolveSubjects(sdk, subjectIds),
+			resolveSubjects(admin, subjectIds),
 			UserPreferences.findBySubjectIds(db, subjectIds),
 		]);
 

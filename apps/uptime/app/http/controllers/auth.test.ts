@@ -1,8 +1,9 @@
 /**
- * Tests the `/auth` controller: POST starts the OIDC flow and clears the
- * `returnTo` cookie; GET completes it, provisions the Polar customer, resolves
- * or creates the subject's team, converts any owed trial targets, writes the
- * session, seeds the `language` cookie, and redirects.
+ * Tests the `/auth` controller against a stubbed identity provider: POST starts the
+ * OIDC flow, writes the login transaction, and clears the `returnTo` cookie; GET
+ * completes it, provisions the Polar customer, resolves or creates the subject's
+ * team, converts any owed trial targets, stores the token set, seeds the `language`
+ * cookie, and redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,75 +13,138 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
+import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { JWK, JWT } from "@pkg/jwt";
 import logger from "@pkg/logger/middleware";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
 import UserPreferences from "~/app/data/user-preferences";
-import { language as languageCookie } from "~/app/http/cookies";
-import auth from "~/app/http/middleware/auth";
-import i18n from "~/app/http/middleware/i18n";
+import { language as languageCookie, returnTo } from "~/app/http/cookies";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** Standing in for the `remix/auth` PKCE runtime, mocked so no real HTTP call is made. */
-let finishExternalAuthImpl: () => Promise<unknown> = async () => ({
-	result: { tokens: { idToken: "raw-id-token" } },
-	returnTo: undefined,
-});
-let finishExternalAuthMock = vi.fn(() => finishExternalAuthImpl());
-let startExternalAuthMock = vi.fn(
-	async () =>
-		new Response(null, {
-			status: 302,
-			headers: { Location: "https://auth.sergiodxa.com/authorize?state=abc" },
-		}),
-);
+/** The identity provider this app's accounts live at. */
+const ISSUER = "https://auth.sergiodxa.com";
+
+/** The client this app is registered as, matching the mocked `CLIENT_ID` binding. */
+const CLIENT_ID = "client-id";
+
+/** Seconds in an hour, the lifetime every fixture token carries. */
+const ONE_HOUR = 3600;
+
+/** The session key `@pkg/auth` holds the login transaction under. */
+const TRANSACTION_SESSION_KEY = "auth:transaction";
+
+/** The session key `@pkg/auth` holds the signed-in token set under. */
+const TOKENS_SESSION_KEY = "auth";
 
 /**
- * The real provider's internals are never exercised — `finishExternalAuth`/
- * `startExternalAuth` are fully replaced below — so a bare stub is enough to
- * satisfy `createAuthProvider`'s call to it.
+ * The claims the provider's ID token carries beyond the fixture profile, set per test
+ * so a callback can be given the `nonce` its own transaction asked for.
  */
-vi.doMock("remix/auth", () => ({
-	createOIDCAuthProvider: () => ({ name: "sergiodxa" }),
-	finishExternalAuth: finishExternalAuthMock,
-	startExternalAuth: startExternalAuthMock,
-}));
+let idTokenClaims: Record<string, unknown> = {};
 
-/** Standing in for a verified ID token; every field the controller/`Team`/`Customer` touch. */
-let fakeIdToken = {
-	subject: "user-1",
-	name: "Ada Lovelace",
-	email: "ada@example.com",
-	picture: "https://example.com/ada.png",
-	username: "ada",
-	emailVerified: true,
-};
-let verifyIdTokenMock = vi.fn(async () => fakeIdToken);
+/** What the token endpoint answers with, replaced by a test exercising a refusal. */
+let tokenResponse: () => Promise<Response> = grantedTokens;
 
-vi.doMock("~/app/auth/value-objects/id-token", () => ({
-	verifyIdToken: verifyIdTokenMock,
-}));
+let keys: JWK.KeyPair[];
+
+/**
+ * The provider's endpoints. Discovery and the key set answer for the whole file, so a
+ * per-test handler reset leaves every login working.
+ */
+let server = setupServer(
+	http.get(`${ISSUER}/.well-known/openid-configuration`, () =>
+		HttpResponse.json({
+			issuer: ISSUER,
+			authorization_endpoint: `${ISSUER}/authorize`,
+			token_endpoint: `${ISSUER}/oauth/token`,
+			jwks_uri: `${ISSUER}/.well-known/jwks.json`,
+			userinfo_endpoint: `${ISSUER}/userinfo`,
+			end_session_endpoint: `${ISSUER}/oidc/logout`,
+		}),
+	),
+	http.get(`${ISSUER}/.well-known/jwks.json`, () => HttpResponse.json(JWK.toJSON(keys))),
+	http.post(`${ISSUER}/oauth/token`, () => tokenResponse()),
+);
 
 vi.doMock("cloudflare:workers", () => ({
-	env: createEnv<Env>({ CLIENT_ID: "client-id", CLIENT_SECRET: "client-secret" }),
+	env: createEnv<Env>({
+		CLIENT_ID,
+		CLIENT_SECRET: "client-secret",
+		KV: createKVNamespace(),
+	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
+/**
+ * Imported after the binding mock, since the middleware chain reaches the shared
+ * issuer, which reads the KV binding the moment it is built.
+ */
+let { default: auth } = await import("~/app/http/middleware/auth");
+let { default: i18n } = await import("~/app/http/middleware/i18n");
 let { default: authController } = await import("./auth");
+
+/** Signs a token for the fixture issuer with the key set discovery publishes. */
+function signToken(claims: Record<string, unknown>): Promise<string> {
+	return new JWT({
+		iss: ISSUER,
+		aud: CLIENT_ID,
+		exp: "1h",
+		iat: Math.floor(Date.now() / 1000),
+		...claims,
+	}).sign(JWK.Algorithm.ES256, keys);
+}
+
+/** The grant the provider answers a login's code with, refresh token included. */
+async function grantedTokens(): Promise<Response> {
+	return HttpResponse.json({
+		access_token: await signToken({ sub: "user-1", client_id: CLIENT_ID, scope: "openid" }),
+		id_token: await signIdToken(),
+		refresh_token: "refresh-1",
+		token_type: "Bearer",
+		expires_in: ONE_HOUR,
+	});
+}
+
+/** The ID token the provider issues for the person every test signs in as. */
+function signIdToken(): Promise<string> {
+	return signToken({
+		sub: "user-1",
+		name: "Ada Lovelace",
+		email: "ada@example.com",
+		email_verified: true,
+		picture: "https://example.com/ada.png",
+		preferred_username: "ada",
+		...idTokenClaims,
+	});
+}
+
+beforeAll(async () => {
+	keys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
+	server.listen({ onUnhandledRequest: "error" });
+});
+
+beforeEach(() => {
+	idTokenClaims = {};
+	tokenResponse = grantedTokens;
+});
+
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 /** A `PolarClient` stand-in whose `getExternalCustomer` short-circuits `Customer.findOrCreate`. */
 function createFakePolar() {
@@ -115,9 +179,6 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 	container.instance(PolarClient, createFakePolar() as unknown as PolarClient);
-	container.instance(IdTokenVerificationKeyService, {
-		value: Promise.resolve(null),
-	} as unknown as IdTokenVerificationKeyService);
 
 	let router = createRouter({
 		middleware: [
@@ -134,81 +195,214 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 	return { container, router };
 }
 
+/** One browser: a session that carries across both legs of a login. */
+interface Agent {
+	session: Session;
+	/** Runs POST /auth, optionally presenting a `returnTo` cookie. */
+	start(returnToCookie?: string): Promise<Response>;
+	/** The login transaction the authorization redirect left on the server. */
+	transaction(): { state: string; nonce: string; returnTo: string };
+	/** Runs GET /auth carrying a code correlated with the stored transaction. */
+	finish(): Promise<Response>;
+	/** Runs any request through this agent's router and session. */
+	visit(request: Request): Promise<Response>;
+	/** The token set a completed login stored. */
+	tokens(): { idToken: string; accessToken: string; refreshToken: string | null } | undefined;
+}
+
+/**
+ * Drives both legs of a login through one router and one session, so the callback
+ * answers the transaction the authorization request actually wrote.
+ */
+function createAgent(db: ReturnType<typeof createTestDatabase>["db"]): Agent {
+	let session = new Session();
+	let { container, router } = createTestRouter(db, session);
+
+	return {
+		session,
+
+		async start(returnToCookie) {
+			let headers = new Headers();
+			if (returnToCookie !== undefined) {
+				headers.set("Cookie", await returnTo.serialize(returnToCookie));
+			}
+
+			let request = new Request(`https://uptime.test${routes.auth.action.href()}`, {
+				method: "POST",
+				headers,
+			});
+			return await container.scope(() => router.fetch(request));
+		},
+
+		transaction() {
+			return session.get(TRANSACTION_SESSION_KEY) as {
+				state: string;
+				nonce: string;
+				returnTo: string;
+			};
+		},
+
+		async finish() {
+			let { state, nonce } = this.transaction();
+			idTokenClaims = { ...idTokenClaims, nonce };
+
+			return await this.visit(new Request(callbackUrl(state)));
+		},
+
+		async visit(request) {
+			return await container.scope(() => router.fetch(request));
+		},
+
+		tokens() {
+			return session.get(TOKENS_SESSION_KEY) as
+				| { idToken: string; accessToken: string; refreshToken: string | null }
+				| undefined;
+		},
+	};
+}
+
+/** The callback URL the provider sends a browser back to, correlated by `state`. */
+function callbackUrl(state: string): URL {
+	let url = new URL(routes.auth.index.href(), "https://uptime.test");
+	url.searchParams.set("code", "code-1");
+	url.searchParams.set("state", state);
+	return url;
+}
+
+/** Signs a person in end to end and answers with the callback's response. */
+async function signInThrough(agent: Agent, returnToCookie?: string): Promise<Response> {
+	await agent.start(returnToCookie);
+	return await agent.finish();
+}
+
+/** Seeds the team `user-1` already belongs to, so the callback resolves rather than creates. */
+async function seedExistingTeam(
+	db: ReturnType<typeof createTestDatabase>["db"],
+	slug = "ada-team",
+) {
+	let { memberships } = await import("~/database/schema");
+	let team = await db.create(
+		teams,
+		{ id: crypto.randomUUID(), owner_id: "user-1", name: "Ada's Team", slug, logo: null },
+		{ touch: true, returnRow: true },
+	);
+	await db.create(
+		memberships,
+		{ id: crypto.randomUUID(), subject_id: "user-1", team_id: team.id, role: "admin" },
+		{ touch: true, returnRow: true },
+	);
+
+	return team;
+}
+
 describe("POST /auth", () => {
-	test("delegates to startExternalAuth and clears the returnTo cookie", async () => {
+	test("redirects to the provider's authorization endpoint and clears the returnTo cookie", async () => {
 		let { db } = createTestDatabase();
-		let { container, router } = createTestRouter(db, new Session());
+		let agent = createAgent(db);
 
-		let request = new Request(`https://uptime.test${routes.auth.action.href()}`, {
-			method: "POST",
-		});
-
-		let response = await container.scope(() => router.fetch(request));
+		let response = await agent.start();
 
 		expect(response.status).toBe(302);
-		expect(response.headers.get("Location")).toBe("https://auth.sergiodxa.com/authorize?state=abc");
+		let location = new URL(response.headers.get("Location")!);
+		expect(location.origin + location.pathname).toBe(`${ISSUER}/authorize`);
+		expect(location.searchParams.get("client_id")).toBe(CLIENT_ID);
+		expect(location.searchParams.get("redirect_uri")).toBe(
+			`https://uptime.test${routes.auth.index.href()}`,
+		);
+		expect(location.searchParams.get("code_challenge_method")).toBe("S256");
+		expect(location.searchParams.get("state")).toBe(agent.transaction().state);
+		/** `offline_access` is what keeps a session alive past the access token's hour. */
+		expect(location.searchParams.get("scope")?.split(" ")).toContain("offline_access");
+
 		let setCookieHeaders = response.headers.getSetCookie();
 		expect(setCookieHeaders.some((value) => value.startsWith("uptime:return-to="))).toBe(true);
 		expect(setCookieHeaders.some((value) => /max-age=0/i.test(value))).toBe(true);
 	});
+
+	test("carries the returnTo cookie's path into the login transaction", async () => {
+		let { db } = createTestDatabase();
+		let agent = createAgent(db);
+
+		await agent.start("/app/ada-team/monitors?tab=dns#latest");
+
+		expect(agent.transaction().returnTo).toBe("/app/ada-team/monitors?tab=dns#latest");
+	});
+
+	test("falls back to /app when the returnTo cookie names nothing", async () => {
+		let { db } = createTestDatabase();
+		let agent = createAgent(db);
+
+		await agent.start();
+
+		expect(agent.transaction().returnTo).toBe(routes.app.index.href());
+	});
+
+	/**
+	 * Each payload survives a leading-slash test yet resolves to an attacker origin
+	 * once a browser follows it, so none of them may reach the transaction.
+	 */
+	test.each([["//evil.com"], ["/\\/evil.com"], ["/\\evil.com"], ["/..//evil.com"]])(
+		"stores /app instead of the returnTo cookie %j",
+		async (target) => {
+			let { db } = createTestDatabase();
+			let agent = createAgent(db);
+
+			await agent.start(target);
+
+			expect(agent.transaction().returnTo).toBe(routes.app.index.href());
+		},
+	);
 });
 
 describe("GET /auth", () => {
 	test("signs in an existing team member and redirects to /app", async () => {
 		let { db } = createTestDatabase();
-		let team = await db.create(
-			teams,
-			{
-				id: crypto.randomUUID(),
-				owner_id: "user-1",
-				name: "Ada's Team",
-				slug: "ada-team",
-				logo: null,
-			},
-			{ touch: true, returnRow: true },
-		);
-		let { memberships } = await import("~/database/schema");
-		await db.create(
-			memberships,
-			{ id: crypto.randomUUID(), subject_id: "user-1", team_id: team.id, role: "admin" },
-			{ touch: true, returnRow: true },
-		);
+		await seedExistingTeam(db);
+		let agent = createAgent(db);
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let session = new Session();
-		let { container, router } = createTestRouter(db, session);
-
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(agent);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.app.index.href());
 
-		expect(session.get("id")).toBe("user-1");
-		expect(session.get("name")).toBe("Ada Lovelace");
-		expect(session.get("email")).toBe("ada@example.com");
-		expect(session.get("avatar")).toBe("https://example.com/ada.png");
-		expect(session.get("idToken")).toBe("raw-id-token");
+		let tokens = agent.tokens();
+		expect(tokens).toBeDefined();
+		expect(JWT.decode(tokens!.idToken).subject).toBe("user-1");
+	});
+
+	/** Without it the session would end with the access token, an hour after signing in. */
+	test("stores the refresh token the grant carried", async () => {
+		let { db } = createTestDatabase();
+		await seedExistingTeam(db);
+		let agent = createAgent(db);
+
+		await signInThrough(agent);
+
+		expect(agent.tokens()?.refreshToken).toBe("refresh-1");
+	});
+
+	/** The transaction answers one callback, so a replayed callback URL signs nobody in. */
+	test("refuses a callback whose transaction was already spent", async () => {
+		let { db } = createTestDatabase();
+		await seedExistingTeam(db);
+		let agent = createAgent(db);
+
+		await agent.start();
+		let { state } = agent.transaction();
+
+		expect((await agent.finish()).status).toBe(303);
+
+		let replayed = await agent.visit(new Request(callbackUrl(state)));
+
+		expect(replayed.status).toBe(400);
+		expect(await replayed.text()).toContain("Sign-in failed");
 	});
 
 	test("creates a personal team when the subject has none and no domain matches", async () => {
 		let { db } = createTestDatabase();
 		expect(await db.findMany(teamDomains, { where: { hostname: "example.com" } })).toHaveLength(0);
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let session = new Session();
-		let { container, router } = createTestRouter(db, session);
-
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(createAgent(db));
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.app.index.href());
@@ -220,34 +414,9 @@ describe("GET /auth", () => {
 
 	test("redirects to the saved returnTo path instead of /app when one was preserved", async () => {
 		let { db } = createTestDatabase();
-		let team = await db.create(
-			teams,
-			{
-				id: crypto.randomUUID(),
-				owner_id: "user-1",
-				name: "Ada's Team",
-				slug: "ada-team-2",
-				logo: null,
-			},
-			{ touch: true, returnRow: true },
-		);
-		let { memberships } = await import("~/database/schema");
-		await db.create(
-			memberships,
-			{ id: crypto.randomUUID(), subject_id: "user-1", team_id: team.id, role: "admin" },
-			{ touch: true, returnRow: true },
-		);
+		await seedExistingTeam(db, "ada-team-2");
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: "/app/ada-team/settings",
-		});
-
-		let session = new Session();
-		let { container, router } = createTestRouter(db, session);
-
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(createAgent(db), "/app/ada-team/settings");
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("/app/ada-team/settings");
@@ -256,57 +425,17 @@ describe("GET /auth", () => {
 	test("preserves the query string and hash of a saved returnTo path", async () => {
 		let { db } = createTestDatabase();
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: "/app/ada-team/monitors?tab=dns#latest",
-		});
-
-		let { container, router } = createTestRouter(db, new Session());
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(createAgent(db), "/app/ada-team/monitors?tab=dns#latest");
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("/app/ada-team/monitors?tab=dns#latest");
 	});
 
-	/**
-	 * Each payload survives a leading-slash test yet resolves to an attacker origin
-	 * once a browser follows it, so sign-in has to land on `/app` instead.
-	 */
-	test.each([["//evil.com"], ["/\\/evil.com"], ["/\\evil.com"], ["/..//evil.com"]])(
-		"redirects to /app when the saved returnTo is %j",
-		async (target) => {
-			let { db } = createTestDatabase();
-
-			finishExternalAuthImpl = async () => ({
-				result: { tokens: { idToken: "raw-id-token" } },
-				returnTo: target,
-			});
-
-			let { container, router } = createTestRouter(db, new Session());
-			let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-			let response = await container.scope(() => router.fetch(request));
-
-			expect(response.status).toBe(303);
-			expect(response.headers.get("Location")).toBe(routes.app.index.href());
-			expect(new URL(response.headers.get("Location") ?? "", "https://uptime.test").origin).toBe(
-				"https://uptime.test",
-			);
-		},
-	);
-
 	test("seeds the language cookie from the subject's stored preference", async () => {
 		let { db } = createTestDatabase();
 		await UserPreferences.setLanguage(db, "user-1", "es");
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let { container, router } = createTestRouter(db, new Session());
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(createAgent(db));
 
 		expect(response.status).toBe(303);
 		expect(response.headers.getSetCookie()).toContain(await languageCookie.serialize("es"));
@@ -315,14 +444,7 @@ describe("GET /auth", () => {
 	test("sets no language cookie when the subject has no stored preference", async () => {
 		let { db } = createTestDatabase();
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let { container, router } = createTestRouter(db, new Session());
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(createAgent(db));
 
 		expect(response.status).toBe(303);
 		expect(
@@ -330,11 +452,7 @@ describe("GET /auth", () => {
 		).toBe(false);
 	});
 
-	test("renders the sign-in-failed page when the provider callback fails", async () => {
-		finishExternalAuthImpl = async () => {
-			throw new Error("invalid state");
-		};
-
+	test("renders the sign-in-failed page when the provider refuses the authorization request", async () => {
 		let { db } = createTestDatabase();
 		let { container, router } = createTestRouter(db, new Session());
 
@@ -347,18 +465,48 @@ describe("GET /auth", () => {
 		expect(body).toContain("The sign-in attempt could not be completed");
 	});
 
-	test("renders the sign-in-failed page when the provider returns no id token", async () => {
-		finishExternalAuthImpl = async () => ({ result: { tokens: {} }, returnTo: undefined });
-
+	test("renders the sign-in-failed page when the token response carries no id token", async () => {
 		let { db } = createTestDatabase();
-		let { container, router } = createTestRouter(db, new Session());
+		let agent = createAgent(db);
 
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		tokenResponse = async () =>
+			HttpResponse.json({
+				access_token: await signToken({ sub: "user-1", client_id: CLIENT_ID }),
+				token_type: "Bearer",
+				expires_in: ONE_HOUR,
+			});
+
+		let response = await signInThrough(agent);
 
 		expect(response.status).toBe(400);
-		let body = await response.text();
-		expect(body).toContain("The identity provider did not return an ID token.");
+		expect(await response.text()).toContain("The identity provider did not return an ID token.");
+	});
+
+	/** A token signed by a key the provider does not publish never becomes a session. */
+	test("renders the sign-in-failed page when the id token fails verification", async () => {
+		let { db } = createTestDatabase();
+		let agent = createAgent(db);
+		let strangerKeys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
+
+		tokenResponse = async () =>
+			HttpResponse.json({
+				access_token: await signToken({ sub: "user-1", client_id: CLIENT_ID }),
+				id_token: await new JWT({
+					iss: ISSUER,
+					aud: CLIENT_ID,
+					sub: "user-1",
+					exp: "1h",
+					...idTokenClaims,
+				}).sign(JWK.Algorithm.ES256, strangerKeys),
+				token_type: "Bearer",
+				expires_in: ONE_HOUR,
+			});
+
+		let response = await signInThrough(agent);
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Sign-in failed");
+		expect(agent.tokens()).toBeUndefined();
 	});
 });
 
@@ -375,7 +523,7 @@ describe("GET /auth trial conversion", () => {
 	/** A lead for the signing-in address with one claimable target. */
 	async function seedClaimableTarget(db: ReturnType<typeof createTestDatabase>["db"]) {
 		let lead = await Lead.upsertByEmail(db, {
-			email: fakeIdToken.email,
+			email: "ada@example.com",
 			locale: "en",
 			consented: false,
 		});
@@ -387,14 +535,7 @@ describe("GET /auth trial conversion", () => {
 		let { db } = createTestDatabase();
 		let watch = await seedClaimableTarget(db);
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let { container, router } = createTestRouter(db, new Session());
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await signInThrough(createAgent(db));
 
 		expect(response.status).toBe(303);
 
@@ -425,14 +566,7 @@ describe("GET /auth trial conversion", () => {
 			);
 		}
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let { container, router } = createTestRouter(db, new Session());
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		await container.scope(() => router.fetch(request));
+		await signInThrough(createAgent(db));
 
 		let owned = await db.findOne(teams, { where: { slug: "ada-own-team" } });
 		let created = await db.findMany(monitors, {});
@@ -444,19 +578,12 @@ describe("GET /auth trial conversion", () => {
 		await seedClaimableTarget(db);
 		vi.spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
 
-		finishExternalAuthImpl = async () => ({
-			result: { tokens: { idToken: "raw-id-token" } },
-			returnTo: undefined,
-		});
-
-		let session = new Session();
-		let { container, router } = createTestRouter(db, session);
-		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let agent = createAgent(db);
+		let response = await signInThrough(agent);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.app.index.href());
-		expect(session.get("id")).toBe("user-1");
+		expect(JWT.decode(agent.tokens()!.idToken).subject).toBe("user-1");
 		expect(await db.findMany(monitors, {})).toHaveLength(0);
 	});
 });

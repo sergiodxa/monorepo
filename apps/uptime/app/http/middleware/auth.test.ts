@@ -1,32 +1,25 @@
 /**
- * Integration tests for the auth middleware's session-identity helpers. They
- * exercise the real `remix/middleware/session` + `auth()` chain, seeding the
- * session via `login()` in a preceding test-only middleware, so the auth
- * scheme's `read`/`verify`/`invalidate` hooks run against real session
- * storage.
+ * Integration tests for the auth middleware and the viewer accessor. They run the
+ * real `remix/middleware/session` + `auth` chain over a token set written into the
+ * session, so the OIDC session scheme resolves the viewer the way a signed-in
+ * request does, and a request carrying no token set reads as anonymous.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createCookie } from "remix/cookie";
-import { asyncContext, getContext } from "remix/middleware/async-context";
+import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
 import { createRouter, type Middleware } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
-import {
-	auth,
-	getIdToken,
-	getViewer,
-	isAuthenticated,
-	login,
-	logout,
-	setIdToken,
-	type Viewer,
-} from "~/app/http/middleware/auth";
+import type { Viewer } from "~/app/http/middleware/auth";
+
+import { auth, getViewer, isAuthenticated } from "~/app/http/middleware/auth";
+import { signIn } from "~/app/lib/test/auth";
 
 let viewer: Viewer = {
 	id: "user_1",
@@ -51,8 +44,8 @@ function run<const middleware extends readonly Middleware<any>[]>(
 	return router.fetch(new Request("https://example.com/", init));
 }
 
-describe("auth middleware session helpers", () => {
-	test("getViewer returns null and isAuthenticated is false when nobody has logged in", async () => {
+describe("auth middleware", () => {
+	test("getViewer returns null and isAuthenticated is false when nobody is signed in", async () => {
 		let { cookie, storage } = createSessionSetup();
 
 		let response = await run([
@@ -67,14 +60,14 @@ describe("auth middleware session helpers", () => {
 		expect(body.authenticated).toBe(false);
 	});
 
-	test("login makes the viewer resolvable via getViewer/isAuthenticated within the same request", async () => {
+	test("resolves the viewer from the signed-in request's ID token claims", async () => {
 		let { cookie, storage } = createSessionSetup();
 
 		let response = await run([
 			asyncContext(),
 			session(cookie, storage),
 			(_ctx, next) => {
-				login(viewer);
+				signIn(viewer);
 				return next();
 			},
 			auth,
@@ -86,61 +79,65 @@ describe("auth middleware session helpers", () => {
 		expect(body.authenticated).toBe(true);
 	});
 
-	test("login regenerates the session id to guard against session fixation", async () => {
-		let { cookie, storage } = createSessionSetup();
-		let ids: { before?: string; after?: string } = {};
-
-		await run([
-			asyncContext(),
-			session(cookie, storage),
-			() => {
-				let currentSession = getContext().get(Session);
-				if (!currentSession) throw new Error("Session middleware did not set a session.");
-				ids.before = currentSession.id;
-				login(viewer);
-				ids.after = currentSession.id;
-				return new Response("ok");
-			},
-		]);
-
-		expect(ids.before).toBeDefined();
-		expect(ids.after).toBeDefined();
-		expect(ids.before).not.toBe(ids.after);
-	});
-
-	test("setIdToken/getIdToken round-trip the upstream OIDC id token in the session", async () => {
+	/**
+	 * Every field but the subject is a display claim the provider sends only with the
+	 * scope that turns it on, so a sparse token still resolves a viewer.
+	 */
+	test("reads an absent display claim as empty text rather than refusing the session", async () => {
 		let { cookie, storage } = createSessionSetup();
 
 		let response = await run([
 			asyncContext(),
 			session(cookie, storage),
-			() => {
-				let before = getIdToken();
-				setIdToken("upstream-id-token");
-				return Response.json({ before, after: getIdToken() });
+			(_ctx, next) => {
+				signIn({ id: "user_2", name: "", email: "", avatar: "" });
+				return next();
 			},
+			auth,
+			() => Response.json({ viewer: getViewer() }),
 		]);
 
-		let body = (await response.json()) as { before: string | null; after: string | null };
-		expect(body.before).toBeNull();
-		expect(body.after).toBe("upstream-id-token");
+		let body = (await response.json()) as { viewer: Viewer };
+		expect(body.viewer).toEqual({ id: "user_2", name: "", email: "", avatar: "" });
 	});
 
-	test("logout destroys the session so a later request with the cleared cookie is anonymous", async () => {
+	/**
+	 * The session arrives from a cookie, so a record an earlier version of the app
+	 * wrote answers as signed out and the visitor logs in again.
+	 */
+	test("reads a session whose stored shape no longer parses as anonymous", async () => {
+		let { cookie, storage } = createSessionSetup();
+
+		let response = await run([
+			asyncContext(),
+			session(cookie, storage),
+			(ctx, next) => {
+				ctx.get(Session)?.set("auth", { idToken: "only-this" });
+				return next();
+			},
+			auth,
+			() => Response.json({ authenticated: isAuthenticated() }),
+		]);
+
+		let body = (await response.json()) as { authenticated: boolean };
+		expect(body.authenticated).toBe(false);
+	});
+
+	test("clearing the token set leaves a later request with the same cookie anonymous", async () => {
 		let { cookie, storage } = createSessionSetup();
 
 		let first = await run([
 			asyncContext(),
 			session(cookie, storage),
 			(_ctx, next) => {
-				login(viewer);
+				signIn(viewer);
 				return next();
 			},
 			auth,
-			() => {
+			(ctx) => {
 				expect(isAuthenticated()).toBe(true);
-				logout();
-				return new Response("logged out");
+				ctx.get(Session)?.unset("auth");
+				return new Response("signed out");
 			},
 		]);
 
@@ -163,14 +160,8 @@ describe("auth middleware session helpers", () => {
 	});
 
 	test("throws a clear error when the session middleware has not run", async () => {
-		await expect(
-			run([
-				asyncContext(),
-				() => {
-					login(viewer);
-					return new Response("unreachable");
-				},
-			]),
-		).rejects.toThrow("Session not found in context. Make sure to use the session middleware.");
+		await expect(run([asyncContext(), auth, () => new Response("unreachable")])).rejects.toThrow(
+			"@pkg/auth needs remix/middleware/session installed on the router",
+		);
 	});
 });

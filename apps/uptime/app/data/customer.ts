@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { IdToken } from "@pkg/auth/id-token";
 import type { PolarClient } from "@pkg/polar";
-
-import type IdToken from "~/app/auth/value-objects/id-token";
 
 import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 
@@ -23,8 +22,9 @@ export default class Customer {
 		let customer = await polar.getExternalCustomer(idToken.subject);
 		if (customer) return customer;
 
-		customer = await polar.findCustomerByEmail(idToken.email);
-		if (!customer) return await polar.createCustomer(idToken.email, idToken.name);
+		let email = idToken.email ?? "";
+		customer = await polar.findCustomerByEmail(email);
+		if (!customer) return await polar.createCustomer(email, idToken.name);
 		if (customer.externalId) return customer;
 
 		return await polar.updateCustomer(customer.id, { externalId: idToken.subject });

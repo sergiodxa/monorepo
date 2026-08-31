@@ -1,74 +1,61 @@
 /**
- * Auth middleware and session-identity helpers. The whole viewer profile (subject id, name,
- * email, avatar) is written into the session at login, making the session itself the source
- * of truth the auth scheme reads back. Exposes helpers to read the current viewer, log
- * in/out, and get/set the upstream OIDC id token used for SSO logout.
+ * Auth middleware and the app-wide viewer accessor. The signed-in request's tokens
+ * are the source of truth: the OIDC session scheme reads them, renews an access
+ * token that has lapsed, and projects the ID token's claims into the {@link Viewer}
+ * every controller and view reads through `getViewer()`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AuthSession } from "@pkg/auth/auth-session";
+import type { Middleware } from "remix/router";
+
 import { getContext } from "remix/middleware/async-context";
-import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/middleware/auth";
-import { Session } from "remix/session";
+import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
+
+import { relyingParty } from "~/app/auth/relying-party";
 
 /**
- * The authenticated viewer's profile, resolved entirely from session data.
+ * The authenticated viewer, as the app names the claims it shows a person back to
+ * themselves with. Every field but `id` is display data, so an absent claim reads
+ * as empty text rather than putting a null check in every view.
  */
 export interface Viewer {
-	/** OIDC subject id from the upstream identity provider. */
+	/** OIDC subject id, which every record this app owns is keyed on. */
 	id: string;
 	name: string;
 	email: string;
 	avatar: string;
 }
 
-enum SESSION_KEYS {
-	ID = "id",
-	NAME = "name",
-	EMAIL = "email",
-	AVATAR = "avatar",
-	ID_TOKEN = "idToken",
+/**
+ * Projects the signed-in session's ID token into the viewer shape.
+ *
+ * @param auth - The token set the OIDC session scheme resolved.
+ */
+function toViewer(auth: AuthSession): Viewer {
+	let idToken = auth.idToken;
+
+	return {
+		id: idToken.subject,
+		name: idToken.name ?? "",
+		email: idToken.email ?? "",
+		avatar: idToken.picture ?? "",
+	};
 }
 
 /**
- * Reads a profile field out of the session as text. Session values are untyped, so
- * anything that is not a string — an absent key, or one left by an older cookie shape —
- * reads as empty rather than as that value's default stringification.
+ * Resolves the viewer from the request's stored token set.
+ *
+ * Built per request because the scheme's relying party is, so the renewal it may
+ * run presents the credentials for the origin the request arrived on.
  */
-function toText(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
-
-/**
- * Auth middleware that resolves the viewer from session data.
- */
-export let auth = createAuthMiddleware({
-	schemes: [
-		createSessionAuthScheme<Viewer, Viewer>({
-			read(session) {
-				let id = session.get(SESSION_KEYS.ID);
-				if (typeof id !== "string") return null;
-				return {
-					id,
-					name: toText(session.get(SESSION_KEYS.NAME)),
-					email: toText(session.get(SESSION_KEYS.EMAIL)),
-					avatar: toText(session.get(SESSION_KEYS.AVATAR)),
-				};
-			},
-			verify(viewer) {
-				return viewer;
-			},
-			invalidate(session) {
-				session.unset(SESSION_KEYS.ID);
-				session.unset(SESSION_KEYS.NAME);
-				session.unset(SESSION_KEYS.EMAIL);
-				session.unset(SESSION_KEYS.AVATAR);
-				session.unset(SESSION_KEYS.ID_TOKEN);
-			},
-		}),
-	],
-});
+export let auth: Middleware = (ctx, next) => {
+	return createAuthMiddleware({
+		schemes: [relyingParty(ctx.url).scheme({ verify: toViewer })],
+	})(ctx, next);
+};
 
 export default auth;
 
@@ -86,46 +73,4 @@ export function getViewer(): Viewer | null {
  */
 export function isAuthenticated(): boolean {
 	return getViewer() !== null;
-}
-
-/**
- * Regenerates the session id and writes the viewer's profile into it.
- */
-export function login(viewer: Viewer): void {
-	let session = readSession();
-	session.regenerateId();
-	session.set(SESSION_KEYS.ID, viewer.id);
-	session.set(SESSION_KEYS.NAME, viewer.name);
-	session.set(SESSION_KEYS.EMAIL, viewer.email);
-	session.set(SESSION_KEYS.AVATAR, viewer.avatar);
-}
-
-/**
- * Destroys the current session, signing the viewer out.
- */
-export function logout(): void {
-	readSession().destroy();
-}
-
-/**
- * Returns the upstream OIDC id token stored at login, used for SSO logout.
- */
-export function getIdToken(): string | null {
-	let idToken = readSession().get(SESSION_KEYS.ID_TOKEN);
-	return typeof idToken === "string" ? idToken : null;
-}
-
-/**
- * Stores the upstream OIDC id token in the session.
- */
-export function setIdToken(idToken: string): void {
-	readSession().set(SESSION_KEYS.ID_TOKEN, idToken);
-}
-
-function readSession() {
-	let session = getContext().get(Session);
-	if (!session) {
-		throw new Error("Session not found in context. Make sure to use the session middleware.");
-	}
-	return session;
 }

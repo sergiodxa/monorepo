@@ -18,8 +18,9 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
-import { auth, login, type Viewer } from "~/app/http/middleware/auth";
+import { auth, type Viewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
+import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams } from "~/database/schema";
 
@@ -58,7 +59,7 @@ async function dispatch(db: Db, idOrSlug: string, viewer?: Viewer) {
 			asyncContext(),
 			session(cookie, storage),
 			(_ctx, next) => {
-				if (viewer) login(viewer);
+				if (viewer) signIn(viewer);
 				return next();
 			},
 			auth,

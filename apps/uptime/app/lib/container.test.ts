@@ -1,35 +1,41 @@
 /**
  * Smoke tests for the app service container (ADR-008): every service registered in
  * `./container` resolves to an instance of the right class without throwing. `env.*` is
- * an in-memory binding set, which is enough because every service — including
- * `IdTokenVerificationKeyService`, whose resolver only goes to the network once a
- * token needs a key — stores its config at construction time and defers I/O until
- * it's actually needed. Only the bindings the registrations read are supplied, so a
+ * an in-memory binding set, which is enough because every service — the management
+ * client included, whose issuer reads its documents only once a token needs
+ * verifying — stores its config at construction time and defers I/O until it's
+ * actually needed. Only the bindings the registrations read are supplied, so a
  * service that grows a new dependency fails here naming the binding it reached for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createD1Database, createEnv, createSendEmail } from "@pkg/cloudflare-mocks";
+import {
+	createD1Database,
+	createEnv,
+	createKVNamespace,
+	createSendEmail,
+} from "@pkg/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		DB: createD1Database(),
 		EMAIL: createSendEmail(),
+		KV: createKVNamespace(),
 		POLAR_ACCESS_TOKEN: "test-polar-token",
 		CLIENT_ID: "test-client-id",
 		CLIENT_SECRET: "test-client-secret",
 	}),
+	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
-let { AuthSDK } = await import("@pkg/auth-sdk");
+let { ManagementClient } = await import("@pkg/auth/management-client");
 let { Mailer } = await import("@pkg/mail");
 let { PolarClient } = await import("@pkg/polar");
 let { ServiceContainer } = await import("@pkg/service-container");
 let { Database } = await import("remix/data-table");
-let { IdTokenVerificationKeyService } = await import("~/app/services/id-token-verification-key");
 let { container } = await import("./container");
 
 describe("container", () => {
@@ -51,13 +57,6 @@ describe("container", () => {
 		expect(container.get(PolarClient)).toBe(client);
 	});
 
-	test("resolves an IdTokenVerificationKeyService singleton without a real network call", () => {
-		let service = container.get(IdTokenVerificationKeyService);
-
-		expect(service).toBeInstanceOf(IdTokenVerificationKeyService);
-		expect(container.get(IdTokenVerificationKeyService)).toBe(service);
-	});
-
 	test("resolves a Mailer singleton for the send paths with no request behind them", () => {
 		let mailer = container.get(Mailer);
 
@@ -65,10 +64,10 @@ describe("container", () => {
 		expect(container.get(Mailer)).toBe(mailer);
 	});
 
-	test("resolves an AuthSDK singleton", () => {
-		let sdk = container.get(AuthSDK);
+	test("resolves a ManagementClient singleton without a real network call", () => {
+		let admin = container.get(ManagementClient);
 
-		expect(sdk).toBeInstanceOf(AuthSDK);
-		expect(container.get(AuthSDK)).toBe(sdk);
+		expect(admin).toBeInstanceOf(ManagementClient);
+		expect(container.get(ManagementClient)).toBe(admin);
 	});
 });

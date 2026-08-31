@@ -3,7 +3,7 @@
  * a membership is the unit of delivery, and that the send stamp moves only for the sends the
  * transport accepted.
  *
- * A fake `AuthSDK` stands in for the auth server, since a member's address is the one thing
+ * A fake `ManagementClient` stands in for the identity provider, since a member's address is the one thing
  * this job cannot read from its own database.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@
 
 import type { Transport } from "@pkg/mail";
 
-import { AuthSDK, SubjectNotFoundError } from "@pkg/auth-sdk";
+import { ManagementClient, SubjectNotFoundError } from "@pkg/auth/management-client";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -55,12 +55,11 @@ class RefusingTransport implements Transport {
 }
 
 /**
- * The auth server as this job sees it: a client-credentials exchange that succeeds, and one
- * profile lookup per member that answers only for the addresses a test seeded.
+ * The identity provider as this job sees it: one profile lookup per member, answering
+ * only for the addresses a test seeded.
  */
-function fakeSdk(): AuthSDK {
+function fakeAdmin(): ManagementClient {
 	return {
-		authenticate: async () => success("token"),
 		fetchSubjectById: async (subjectId: string) => {
 			let email = addresses.get(subjectId);
 			if (!email) return failure(new SubjectNotFoundError(subjectId));
@@ -76,7 +75,7 @@ function fakeSdk(): AuthSDK {
 				emailAddress: email,
 			});
 		},
-	} as unknown as AuthSDK;
+	} as unknown as ManagementClient;
 }
 
 /** Runs one digest, the way a cron trigger's queue message would. */
@@ -87,7 +86,7 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 		Mailer,
 		() => new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }),
 	);
-	container.instance(AuthSDK, fakeSdk());
+	container.instance(ManagementClient, fakeAdmin());
 
 	/** The period picks the class and its message type, exactly as the worker's routing does. */
 	let [Digest, body] =
