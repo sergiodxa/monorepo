@@ -1,10 +1,8 @@
 /**
  * Tests for the two team-digest jobs' shared `perform()`: which class sends which digest, that
  * a membership is the unit of delivery, and that the send stamp moves only for the sends the
- * transport accepted.
+ * transport accepted, with a fake `ManagementClient` supplying each member's address.
  *
- * A fake `ManagementClient` stands in for the identity provider, since a member's address is the one thing
- * this job cannot read from its own database.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

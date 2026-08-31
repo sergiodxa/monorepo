@@ -66,6 +66,7 @@ export function safeNext(value: string | null | undefined): string | undefined {
 /** `/auth/login` — renders the sign-in screen (GET) and starts the flow (POST). */
 export const login = createController(routes.auth.login, {
 	actions: {
+		/** GET — the sign-in screen, carrying any usable `next` into its form action. */
 		async index(ctx) {
 			let next = safeNext(ctx.url.searchParams.get("next"));
 			let errorParam = ctx.url.searchParams.get("error");
@@ -83,6 +84,7 @@ export const login = createController(routes.auth.login, {
 			);
 		},
 
+		/** POST — starts the flow, remembering only a `next` this blog itself serves. */
 		async action(ctx) {
 			return ctx.relyingParty.authorize(ctx, {
 				returnTo: safeNext(ctx.url.searchParams.get("next")),
@@ -124,6 +126,7 @@ export const callback = createAction(
 /** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
 export const logout = createController(routes.auth.logout, {
 	actions: {
+		/** GET — the sign-out confirmation, which posts to end the session. */
 		async index(ctx) {
 			return ctx.render(
 				<AuthPage title="Sign out">

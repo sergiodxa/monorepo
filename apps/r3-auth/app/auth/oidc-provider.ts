@@ -564,7 +564,7 @@ export class OIDC {
 	 * of its lifetime.
 	 * @throws {InvalidClientError} When the client credentials do not check out.
 	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer
-	 * describes this server rather than the token.
+	 * describes this server as the reason.
 	 */
 	async introspect(args: {
 		clientId: string;
@@ -645,7 +645,7 @@ export class OIDC {
 	 * @throws When the token fails signature, issuer or expiry verification.
 	 * @throws {InvalidTokenError} When the token was not issued with the `openid` scope.
 	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer
-	 * names this server as the reason rather than the token the caller presented.
+	 * names this server as the reason.
 	 */
 	async userinfo(args: { accessToken: string; clientId?: string }) {
 		let signingKeys = await wrap(() => this.repository.getSigningKey());
@@ -672,13 +672,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Ends every session the subject holds, so sign-out is global across relying parties.
-	 * `post_logout_redirect_uri` is honored on an exact match with a registered logout URI
-	 * and dropped otherwise; the parties to notify are read while their rows still exist.
-	 *
-	 * Every refused `id_token_hint` is reported with the reason it failed verification, so
-	 * a cause shared by every client — a retired signing key, say — is legible behind the
-	 * single answer the specification allows.
+	 * Ends every session the subject holds, so sign-out is global across relying parties. A
+	 * `post_logout_redirect_uri` is honored on an exact match with a registered logout URI and
+	 * dropped otherwise; the parties to notify are read while their rows still exist.
 	 *
 	 * @returns The subject logged out, the initiating client, the verified redirect to honor if any, and whom to notify.
 	 * @throws {InvalidRequestError} When the hint is unusable, neither hint nor session is given, or a parameter contradicts the hint.
@@ -911,10 +907,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Notifies every relying party with a back-channel logout URI that a subject signed
-	 * out, skipping the client that initiated the logout. Reaching the recipients is best
-	 * effort throughout — reading them included — and every failure is reported, so the
-	 * sign-out the person asked for completes on its own terms.
+	 * Notifies every relying party with a back-channel logout URI that a subject signed out,
+	 * skipping the client that initiated the logout. Reaching them is best effort throughout —
+	 * reading them included — and every failure is reported, so the sign-out still completes.
 	 */
 	async sendBackchannelLogoutTokens(subjectId: string, excludeClientId?: string): Promise<void> {
 		let sessions = await wrap(() =>
@@ -1047,10 +1042,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Turns already-collected sessions into the iframe URLs the browser loads, so the
-	 * RP-initiated flow can build the list from sessions it read before deleting them.
-	 * A stored address that no longer parses is reported and skipped, which keeps one
-	 * relying party's configuration from ending everybody else's sign-out.
+	 * Turns already-collected sessions into the iframe URLs the browser loads, so the flow
+	 * builds the list from sessions it read before deleting them. A stored address that fails
+	 * to parse is reported and skipped, so one client's configuration ends only its own frame.
 	 *
 	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
 	 */

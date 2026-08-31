@@ -27,19 +27,17 @@ const ID_TOKEN_CLOCK_TOLERANCE = 60;
 const ID_TOKEN_ALGORITHMS = [JWK.Algorithm.ES256];
 
 /**
- * Verifies the token's signature, `iss`, `aud`, and lifetime claims. The echoed
- * `nonce` reaches the caller unchecked, since only the login that started the flow
- * knows the value it has to match.
- *
- * Documents are read from the origin serving them while every token is held to the
- * identifier the platform domain publishes, so a local run verifies against the keys
- * it can actually reach.
+ * Verifies the token's signature, `iss`, `aud`, and lifetime claims, reading the provider's
+ * documents from the origin serving them while holding the token to the identifier the
+ * platform domain publishes, so a local run verifies against keys it can actually reach.
  *
  * @param raw - The ID token as the token response carried it.
  * @param options - Where the signing provider answers, and the client it issued to.
  * @param options.origin - Scheme and host the provider serves its documents on.
  * @param options.audience - The client id the token carries as its audience.
- * @returns The verified token, and `null` where a check on it failed.
+ * @returns The verified token, and `null` where a check on it failed. Its echoed `nonce`
+ *   reaches the caller unchecked, since only the login that started the flow knows the
+ *   value it has to match.
  * @example
  * let idToken = await verifyIdToken(raw, { origin: baseUrl, audience: "dashboard" });
  * if (!idToken || idToken.nonce !== expectedNonce) return renderError("…");

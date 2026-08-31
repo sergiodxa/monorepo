@@ -1,11 +1,7 @@
 /**
- * Wires up the app-wide dependency-injection container (ADR-008) and registers the
- * shared {@link Database} singleton backed by the production D1 database, the shared
- * {@link PolarClient} singleton for billing, and the identity provider's management
- * client. Controllers, middleware, and jobs resolve their dependencies from here.
- *
- * It also connects the database's per-statement row counts to the cost ledger (ADR-019,
- * ADR-007), which is what makes D1 cost measurable — and priceable — per job type.
+ * Wires up the app-wide dependency-injection container (ADR-008) that controllers, middleware
+ * and jobs resolve their dependencies from, and connects the database's per-statement row
+ * counts to the cost ledger (ADR-019, ADR-007), which makes D1 cost priceable per job type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,9 +67,9 @@ container.singleton(
 		}),
 );
 /**
- * Reads other people's profiles from the identity provider, for the surfaces that
- * need more than the signed-in viewer's own claims. It authenticates as this app
- * rather than as anybody, so the two jobs with no request behind them reach it too.
+ * Reads other people's profiles from the identity provider, for the surfaces that need
+ * more than the signed-in viewer's own claims. It authenticates as this app itself, so the
+ * two jobs with no request behind them reach it too.
  */
 container.singleton(
 	ManagementClient,

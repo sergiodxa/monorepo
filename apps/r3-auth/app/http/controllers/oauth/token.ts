@@ -44,11 +44,9 @@ function serverError(): Response {
 }
 
 /**
- * Turns an engine failure into the OAuth error envelope its `error` code names.
- *
- * A protocol error is the client's to fix and answers `400` with the code RFC 6749 §5.2
- * defines for it; a fault in this server answers `500`, so a client that reads
- * retryability off the status retries instead of discarding a grant that is still good.
+ * Turns an engine failure into the OAuth error envelope its `error` code names: a protocol
+ * error is the client's to fix and answers `400` with the code RFC 6749 §5.2 defines for it,
+ * and a fault here answers the `500` a client retries on, keeping a still-good grant alive.
  */
 function tokenError(error: unknown): Response {
 	let ctx = getContext();

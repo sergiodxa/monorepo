@@ -1,8 +1,7 @@
 /**
- * Router-level tests of the UserInfo endpoint, focused on scope gating: `sub` is
- * always returned, and every other claim appears only when the access token was issued
- * with the scope that entitles the caller to it, plus how a fault in this server is
- * reported once the challenge on the wire is the same either way.
+ * Router-level tests of the UserInfo endpoint, focused on scope gating: `sub` is always
+ * returned, and every other claim appears only when the access token was issued with the
+ * scope that entitles the caller to it. A fault here is reported behind the same challenge.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -194,9 +193,9 @@ describe("GET /userinfo", () => {
 	});
 
 	/**
-	 * A key store this endpoint cannot read leaves every token unverifiable, good ones
-	 * included, so the challenge stays the one description a caller ever earns while the
-	 * log names the fault at the level that pages — the token is not what went wrong.
+	 * An unreadable key store leaves every token unverifiable, good ones included, so the
+	 * challenge stays the one description a caller earns while the log names the fault at
+	 * the level that pages.
 	 */
 	test("logs unreadable signing keys at error behind the same challenge", async () => {
 		let accessToken = await tokenWithScope("openid email");

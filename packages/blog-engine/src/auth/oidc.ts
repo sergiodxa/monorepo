@@ -60,13 +60,9 @@ export function createIssuer(config: EngineAuthConfig): Issuer {
 }
 
 /**
- * Builds the client for one request, so the callback URL it presents is the host the
- * request arrived on and a blog reachable at both its subdomain and a custom domain
- * finishes a login on the hostname that started it.
- *
- * Claims come from the verified ID token, and a provider that leaves the display
- * claims out of it is read at the userinfo endpoint instead, since the admin
- * allow-list is matched on `email` and an empty one would silently deny the owner.
+ * Builds the client for one request, so a blog reachable at both its subdomain and a
+ * custom domain finishes a login on the hostname that started it. Display claims absent
+ * from the ID token are read at userinfo, so the `email` the admin allow-list matches arrives.
  *
  * @param issuer - The blog's issuer.
  * @param config - The blog's relying-party configuration.

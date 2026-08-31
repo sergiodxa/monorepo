@@ -27,16 +27,13 @@ function issuer(): Issuer {
 }
 
 /**
- * The client for the request's own origin, so a local run and production each present
- * the callback URL they are registered under, and a login that names no destination
- * lands on the dashboard.
- *
- * Claims come from the verified ID token, and a provider that leaves the display
- * claims out of it is read at the userinfo endpoint instead, since the account record
- * holds the email address and the display name a login resolves.
+ * The client for the request's own origin, so a local run and production each present the
+ * callback URL they are registered under. Display claims absent from the ID token are read
+ * at userinfo, since the account record holds the email address and the display name.
  *
  * @param url - The current request's URL, which the callback URL is built against.
- * @returns The client the auth routes drive.
+ * @returns The client the auth routes drive, landing a login that named no destination on
+ *   the dashboard.
  * @example let grant = await relyingParty(ctx.url).callback(ctx);
  */
 export function relyingParty(url: URL): RelyingParty {

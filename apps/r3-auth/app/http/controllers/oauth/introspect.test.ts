@@ -1,8 +1,7 @@
 /**
- * Router-level tests of the introspection endpoint, focused on the one answer RFC 7662
- * gives for a token this server cannot resolve: an inactive report, whatever the reason.
- * A fault in this server reads the same on the wire, so the log level is what separates
- * it from a token that is simply not live, and that is what these tests hold in place.
+ * Router-level tests of the introspection endpoint, focused on the one answer RFC 7662 gives
+ * for a token this server fails to resolve: an inactive report, whatever the reason. A fault
+ * here reads the same on the wire, so these tests hold the log level that separates them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,9 +54,8 @@ describe("POST /oauth/introspect", () => {
 	});
 
 	/**
-	 * A key store this endpoint cannot read leaves it unable to say anything about the
-	 * token, and RFC 7662 has one shape for that, so the report stays inactive while the
-	 * log names the fault at the level that pages — the token is not what went wrong.
+	 * RFC 7662 has one shape for an answer this endpoint cannot give, so an unreadable key
+	 * store still reports inactive while the log names the fault at the level that pages.
 	 */
 	test("reports unreadable signing keys as inactive and logs the fault at error", async () => {
 		let [response, logs] = await withLogs(

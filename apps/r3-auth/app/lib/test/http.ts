@@ -181,12 +181,9 @@ export interface TestApp {
 }
 
 /**
- * Runs `work` against a bucket that refuses every read, which is how a test reaches the
- * answers this server gives for signing keys it cannot load. The held keys are dropped on
- * both sides, so the first read after `work` goes back to the bucket.
- *
- * The service module is imported here rather than at the top of this file, because a static
- * import is hoisted above the `cloudflare:workers` mock and would capture the real binding.
+ * Runs `work` against a bucket that refuses every read, reaching the answers this server
+ * gives for signing keys it cannot load. Held keys are dropped on entry and on exit, and the
+ * service module is imported inside to stay below the `cloudflare:workers` mock.
  *
  * @param app - The instance whose bucket refuses the reads.
  * @param work - The requests to run while the keys are unreadable.

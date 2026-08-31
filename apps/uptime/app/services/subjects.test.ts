@@ -1,9 +1,7 @@
 /**
  * Unit tests for `resolveSubjects`, the batch profile lookup behind the team settings
- * member list, the account page's team list, and the digest job. A fake
- * `ManagementClient` stands in for the identity provider so every outcome — empty
- * input, a subject with no record, a provider that could not answer, and a mix — is
- * exercised without a real network call.
+ * member list, the account page's team list, and the digest job. A fake `ManagementClient`
+ * covers every outcome: empty input, a subject with no record, an unanswered read, a mix.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,7 +38,7 @@ function notFound(id: string): SubjectRead {
 	return failure(new SubjectNotFoundError(id));
 }
 
-/** The read the provider answers when it throttled this app rather than refusing an id. */
+/** The read the provider answers while a throttle is holding this app off. */
 function throttled(): SubjectRead {
 	return failure(
 		new ManagementError("too many reads", {
@@ -122,8 +120,8 @@ describe("resolveSubjects", () => {
 	});
 
 	/**
-	 * A throttle, a refusal, or a provider fault can succeed on a later attempt, so a
-	 * caller has to hear about it rather than reading a short list as the whole truth.
+	 * A throttle, a refusal, or a provider fault can succeed on a later attempt, so the
+	 * caller hears about it and decides whether a short list is usable.
 	 */
 	test("raises a condition the provider may answer later instead of dropping the subject", async () => {
 		let admin = fakeAdmin(

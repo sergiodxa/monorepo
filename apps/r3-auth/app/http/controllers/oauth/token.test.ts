@@ -1,12 +1,7 @@
 /**
- * Router-level tests of the token endpoint: refresh-token rotation, the
- * client-credentials grant through both HTTP Basic and body credentials, client
- * authentication failures, how a fault here is told apart from a client's mistake, and
- * the no-store headers every response carries.
- *
- * The body-credentials tests guard a frozen contract: the relying parties' OIDC client
- * library defaults to sending `client_id`/`client_secret` in the body, so accepting
- * Basic alone fails every sign-in at once — which has happened once already.
+ * Router-level tests of the token endpoint: refresh-token rotation, the client-credentials
+ * grant, client authentication failures, a fault here told apart from a client's mistake, and
+ * the no-store headers. Body credentials are a frozen contract: Basic alone 400s every login.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,8 +25,8 @@ import {
 import routes from "~/routes/web";
 
 /**
- * The `code_verifier` the PKCE exchanges below present. Its `S256` challenge is written
- * down rather than derived, so a test can take the digest away and keep the fixture.
+ * The `code_verifier` the PKCE exchanges below present. Its `S256` challenge is written out
+ * as a constant, so a test can take the digest away and keep the fixture.
  */
 const VERIFIER = "test-code-verifier-that-is-long-enough";
 
@@ -217,8 +212,8 @@ describe("a fault in this server", () => {
 
 	/**
 	 * A digest the runtime refuses is this server failing while the grant it was handed is
-	 * still good, so the client is owed the `500` it retries on rather than a `400` that
-	 * would have it discard the code — and the log line is owed the level that pages.
+	 * still good, so the client is owed the `500` it retries on, which keeps the code alive,
+	 * and the log line is owed the level that pages.
 	 */
 	test("a refused digest answers server_error and is logged at error", async () => {
 		let code = await pkceCode();

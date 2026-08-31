@@ -1,10 +1,7 @@
 /**
- * Authentication controller for `/auth`. The `action` (POST) starts the OIDC
- * authorization-code flow; the `index` (GET) completes the callback, provisions the
- * Polar customer, resolves the subject's team (existing membership, then domain
- * join, then a new personal team), turns any trial targets that address is still
- * owed into real monitors in that team, and redirects to the saved `returnTo` path
- * or `/app`.
+ * Authentication controller for `/auth`: the POST starts the OIDC authorization-code flow
+ * and the GET completes the callback, provisioning everything a first sign-in needs — the
+ * Polar customer, a team, any trial monitors that address is owed — before it redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,11 +42,7 @@ import { convertTrialWatches } from "~/app/services/trial-conversion";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/**
- * Narrowed shape of `remix/router`'s `RequestContext` this helper reads.
- * `i18next` is declared explicitly even though the global `i18n` middleware
- * already populates `ctx.i18next` for every action this controller handles.
- */
+/** The slice of `remix/router`'s `RequestContext` the sign-in failure page renders from. */
 interface AuthErrorContext {
 	render: Renderer<RemixNode>;
 	i18next: i18n;
@@ -138,11 +131,13 @@ function authError(ctx: AuthErrorContext, message: string) {
 
 export default createController(routes.auth, {
 	actions: {
-		/** POST /auth — starts the OIDC authorization-code flow. */
+		/**
+		 * POST /auth — starts the OIDC authorization-code flow, moving any pending `returnTo`
+		 * from its cookie into the session-backed login transaction the callback reads.
+		 */
 		async action(ctx) {
 			let cookieReturnTo = await returnTo.parse(ctx.request.headers.get("Cookie"));
 			let response = await relyingParty(ctx.url).authorize(ctx, { returnTo: cookieReturnTo });
-			/** The value now lives in the session-backed login transaction; drop the cookie. */
 			response.headers.append("Set-Cookie", await returnTo.serialize("", { maxAge: 0 }));
 			return response;
 		},

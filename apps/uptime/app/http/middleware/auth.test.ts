@@ -1,8 +1,7 @@
 /**
- * Integration tests for the auth middleware and the viewer accessor. They run the
- * real `remix/middleware/session` + `auth` chain over a token set written into the
- * session, so the OIDC session scheme resolves the viewer the way a signed-in
- * request does, and a request carrying no token set reads as anonymous.
+ * Integration tests for the auth middleware and the viewer accessor, running the real
+ * `remix/middleware/session` + `auth` chain over a token set written into the session, so
+ * the OIDC session scheme resolves a viewer the way it does for a signed-in request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

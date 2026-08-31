@@ -148,11 +148,9 @@ export default class Team {
 	}
 
 	/**
-	 * Creates a personal team for a subject and makes them its owning admin.
-	 *
-	 * The display claims are optional at the identity provider, so the subject id
-	 * stands in for a missing name or username: it is always present, which keeps a
-	 * sparse profile from blocking a sign-up.
+	 * Creates a personal team for a subject and makes them its owning admin. Name and
+	 * username are optional at the identity provider, so the subject id stands in for
+	 * either and a sparse profile still completes a sign-up.
 	 */
 	static async createTeam(db: Database, idToken: IdToken) {
 		let username = idToken.username ?? idToken.subject;

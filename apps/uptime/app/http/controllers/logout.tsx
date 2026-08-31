@@ -1,8 +1,7 @@
 /**
- * Logout controller for `/logout`. The `index` (GET) shows a confirmation page; the
- * `action` (POST) drops the local session and redirects through the identity
- * provider's RP-initiated logout endpoint (SSO sign-out), also sending
- * `Clear-Site-Data` so the browser drops any other locally cached state.
+ * Logout controller for `/logout`: the GET shows a confirmation page and the POST drops the
+ * local session, redirects through the identity provider's RP-initiated logout endpoint, and
+ * sends `Clear-Site-Data` so the browser clears what it cached for this origin.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,12 +60,9 @@ export default createController(routes.logout, {
 		},
 
 		/**
-		 * POST /logout — drops the local session and signs out of the identity
-		 * provider, whose `end_session_endpoint` the discovery document names.
-		 *
-		 * A provider this app cannot reach still signs the person out here: the local
-		 * session is destroyed and the browser goes home, so an outage upstream never
-		 * leaves somebody stuck signed in on this side.
+		 * POST /logout — drops the local session and signs out of the identity provider,
+		 * whose `end_session_endpoint` the discovery document names. The local session is
+		 * destroyed either way, so an unreachable provider still ends the session here.
 		 */
 		async action(ctx) {
 			let ended = await wrap(() =>

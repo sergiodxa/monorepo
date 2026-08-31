@@ -46,8 +46,8 @@ const USER_INFO_ENDPOINT = `${ISSUER}/userinfo`;
 const END_SESSION_ENDPOINT = `${ISSUER}/end-session`;
 
 /**
- * The headers a browser submits an HTML form with, written out rather than left to a
- * `URLSearchParams` body, which the request interceptor cannot re-read.
+ * The headers a browser submits an HTML form with, stated here so the body stays a plain
+ * string the request interceptor can read back.
  */
 const FORM_POST_HEADERS = { "content-type": "application/x-www-form-urlencoded" };
 
@@ -99,8 +99,7 @@ function createEngine() {
 }
 
 /**
- * Reads a header the flow is asserted on, failing loudly rather than asserting
- * against an empty string.
+ * Reads a header the flow is asserted on, failing loudly when the response omits it.
  *
  * @param response - The response to read.
  * @param name - The header to read.
@@ -224,7 +223,7 @@ describe("the admin panel's OIDC login", () => {
 	});
 
 	/**
-	 * No userinfo handler is registered, so the unhandled-request guard fails this
+	 * The userinfo endpoint is left unhandled, so the unhandled-request guard fails this
 	 * test if the flow spends a third round-trip on claims the ID token already holds.
 	 */
 	test("signs the allow-listed owner in from the ID token alone", async () => {
@@ -252,9 +251,8 @@ describe("the admin panel's OIDC login", () => {
 	});
 
 	/**
-	 * A provider that keeps the display claims out of its ID tokens would otherwise
-	 * leave `email` empty, which reads as "not the owner" and lands the blog's own
-	 * owner on the reader role.
+	 * The admin allow-list matches on `email`, so a provider that publishes its display
+	 * claims only at userinfo still lands the blog's owner on the admin role.
 	 */
 	test("reads the display claims from userinfo when the ID token carries none", async () => {
 		let { engine, sqliteDb } = createEngine();

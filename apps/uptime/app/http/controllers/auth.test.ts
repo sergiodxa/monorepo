@@ -1,9 +1,7 @@
 /**
- * Tests the `/auth` controller against a stubbed identity provider: POST starts the
- * OIDC flow, writes the login transaction, and clears the `returnTo` cookie; GET
- * completes it, provisions the Polar customer, resolves or creates the subject's
- * team, converts any owed trial targets, stores the token set, seeds the `language`
- * cookie, and redirects.
+ * Tests the `/auth` controller against a stubbed identity provider: POST starts the OIDC
+ * flow and leaves a login transaction behind; GET completes that transaction, provisions
+ * customer, team and owed trial targets, stores the token set, and redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -170,7 +168,7 @@ function createFakePolar() {
 	};
 }
 
-/** Renders through `renderToString` — these pages render no `<Frame>`, so no `resolveFrame` is needed. */
+/** Renders straight through `renderToString`, the whole document these pages produce. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);
@@ -289,7 +287,7 @@ async function signInThrough(agent: Agent, returnToCookie?: string): Promise<Res
 	return await agent.finish();
 }
 
-/** Seeds the team `user-1` already belongs to, so the callback resolves rather than creates. */
+/** Seeds the team `user-1` already belongs to, so the callback lands in an existing team. */
 async function seedExistingTeam(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	slug = "ada-team",
@@ -384,7 +382,7 @@ describe("GET /auth", () => {
 		expect(JWT.decode(tokens!.idToken).subject).toBe("user-1");
 	});
 
-	/** Without it the session would end with the access token, an hour after signing in. */
+	/** The refresh token is what keeps a session alive past the access token's hour. */
 	test("stores the refresh token the grant carried", async () => {
 		let { db } = createTestDatabase();
 		await seedExistingTeam(db);

@@ -30,6 +30,7 @@ import routes from "~/routes/web";
  */
 export const login = createController(routes.auth.login, {
 	actions: {
+		/** GET — the sign-in screen, whose only control posts to start the flow. */
 		async index(ctx) {
 			return ctx.render(
 				<Page title="Sign in">
@@ -43,6 +44,7 @@ export const login = createController(routes.auth.login, {
 			);
 		},
 
+		/** POST — starts the flow, remembering the `returnTo` the caller asked for. */
 		async action(ctx) {
 			return relyingParty(ctx.url).authorize(ctx, {
 				returnTo: ctx.url.searchParams.get("returnTo"),
@@ -92,6 +94,7 @@ export const callback = createAction(
  */
 export const logout = createController(routes.auth.logout, {
 	actions: {
+		/** GET — the sign-out confirmation, which posts to end the session. */
 		async index(ctx) {
 			return ctx.render(
 				<Page title="Sign out">

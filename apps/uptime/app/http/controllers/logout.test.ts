@@ -1,10 +1,7 @@
 /**
- * Tests the `/logout` controller: the GET confirmation page renders its heading and a
- * form posting to the logout action; the POST action drops the stored token set,
- * redirects through the provider's RP-initiated logout endpoint with a
- * `post_logout_redirect_uri` back to the homepage (plus `id_token_hint` when a token
- * set was stored), sends `Clear-Site-Data`, and still signs the person out locally
- * when the provider cannot be reached.
+ * Tests the `/logout` controller: the GET renders a confirmation form, and the POST drops
+ * the stored token set, redirects through the provider's end-session endpoint carrying
+ * `post_logout_redirect_uri` and `id_token_hint`, and sends `Clear-Site-Data`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -95,7 +92,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
+/** Renders straight through `renderToString`, the whole document this page produces. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
 		let html = await renderToString(node);
@@ -167,11 +164,9 @@ describe("GET /logout", () => {
 
 describe("POST /logout", () => {
 	/**
-	 * A provider outage must not trap somebody in a session they asked to end, so the
-	 * local record goes regardless and the browser lands on the homepage.
-	 *
-	 * Stated first because a document only reaches the shared cache once it has been
-	 * read successfully, and this is the one case that needs it unread.
+	 * The local record goes regardless, so a provider outage still ends the session somebody
+	 * asked to end. Stated first: a discovery document reaches the shared cache once it has
+	 * been read, and this is the one case that needs it unread.
 	 */
 	test("destroys the session and goes home when the provider cannot be reached", async () => {
 		server.use(

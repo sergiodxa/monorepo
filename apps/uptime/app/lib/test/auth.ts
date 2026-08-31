@@ -1,8 +1,7 @@
 /**
- * Signs a request in from a test, by writing the token set the auth middleware reads.
- * Exists so a test covering something downstream of authentication — a route guard,
- * language resolution, an action — states who is signed in and runs the real
- * middleware chain, with no identity provider to reach.
+ * Signs a request in from a test by writing the token set the auth middleware reads, so a
+ * test covering something downstream of authentication — a route guard, language
+ * resolution, an action — names who is signed in and runs the real middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,9 +24,9 @@ function base64url(value: string): string {
 }
 
 /**
- * A compact JWS carrying the given claims. The signature stays a placeholder because
- * a stored token set is read for its claims rather than re-verified — verification
- * happened at the callback that wrote it.
+ * A compact JWS carrying the given claims. The signature stays a placeholder because a
+ * stored token set is read for its claims alone; verification happened at the callback
+ * that wrote it.
  */
 function token(claims: Record<string, unknown>): string {
 	let header = base64url(JSON.stringify({ alg: "ES256", typ: "JWT" }));

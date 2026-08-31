@@ -1,7 +1,7 @@
 /**
  * Middleware that attaches the engine's OIDC config and the request's relying-party
- * client to the request context, and the module augmentation that types them. Lets
- * the auth controllers read both without threading them through every call.
+ * client to the request context, and the module augmentation that types them, so the auth
+ * controllers read both straight off the request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

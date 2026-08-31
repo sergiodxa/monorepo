@@ -86,8 +86,7 @@ function createAgent() {
 }
 
 /**
- * Reads a parameter the assertion is about, failing loudly rather than asserting
- * against an empty string.
+ * Reads a parameter the assertion is about, failing loudly when the URL omits it.
  *
  * @param url - The URL to read.
  * @param name - The parameter to read.

@@ -1,7 +1,7 @@
 /**
  * Test-only reader for what a request actually logged. The request logger batches a whole
  * request and flushes it to one console channel, so a test proving the level an event was
- * recorded at reads it back out of the flushed entry rather than out of a logger double.
+ * recorded at reads that level back out of the flushed entry itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

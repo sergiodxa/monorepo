@@ -1,11 +1,7 @@
 /**
- * Smoke tests for the app service container (ADR-008): every service registered in
- * `./container` resolves to an instance of the right class without throwing. `env.*` is
- * an in-memory binding set, which is enough because every service — the management
- * client included, whose issuer reads its documents only once a token needs
- * verifying — stores its config at construction time and defers I/O until it's
- * actually needed. Only the bindings the registrations read are supplied, so a
- * service that grows a new dependency fails here naming the binding it reached for.
+ * Smoke tests for the app service container (ADR-008): every registration resolves against
+ * an in-memory binding set, since each service stores its config at construction and defers
+ * I/O. Only the bindings a registration reads are supplied, so a new dependency fails here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

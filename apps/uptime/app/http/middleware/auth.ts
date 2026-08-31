@@ -1,8 +1,7 @@
 /**
- * Auth middleware and the app-wide viewer accessor. The signed-in request's tokens
- * are the source of truth: the OIDC session scheme reads them, renews an access
- * token that has lapsed, and projects the ID token's claims into the {@link Viewer}
- * every controller and view reads through `getViewer()`.
+ * Auth middleware and the app-wide viewer accessor. The request's stored tokens are the
+ * source of truth: the OIDC session scheme reads them, renews a lapsed access token, and
+ * projects the ID token's claims into the {@link Viewer} that `getViewer()` answers with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,8 +17,8 @@ import { relyingParty } from "~/app/auth/relying-party";
 
 /**
  * The authenticated viewer, as the app names the claims it shows a person back to
- * themselves with. Every field but `id` is display data, so an absent claim reads
- * as empty text rather than putting a null check in every view.
+ * themselves with. Every field but `id` is display data, so an absent claim reads as
+ * empty text and a view can print it straight.
  */
 export interface Viewer {
 	/** OIDC subject id, which every record this app owns is keyed on. */
@@ -59,18 +58,14 @@ export let auth: Middleware = (ctx, next) => {
 
 export default auth;
 
-/**
- * Returns the current authenticated viewer, or `null` when signed out.
- */
+/** The current authenticated viewer, or `null` for a request nobody is signed in on. */
 export function getViewer(): Viewer | null {
 	let state = getContext().get(Auth) as { ok: boolean; identity: Viewer };
 	if (!state.ok) return null;
 	return state.identity;
 }
 
-/**
- * Indicates whether the current request has an authenticated viewer.
- */
+/** True when the request carried a token set the auth middleware could resolve. */
 export function isAuthenticated(): boolean {
 	return getViewer() !== null;
 }

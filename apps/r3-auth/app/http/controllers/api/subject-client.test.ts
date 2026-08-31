@@ -1,8 +1,7 @@
 /**
- * Drives the client library relying parties read this server with against the router
- * itself, so the subject payload is parsed and the token grant is sent by the code
- * every one of them depends on. The library is pointed at this app's own origin, and
- * every request aimed there is handed to the router.
+ * Drives the client library relying parties read this server with against the router itself,
+ * so the subject payload is parsed and the token grant is sent by the code every one of them
+ * depends on. The library is pointed at this app's origin, and every request there is routed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,9 +27,8 @@ import { ORIGIN, seed } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
 /**
- * The endpoints this server serves, stated rather than discovered: the published
- * document names the production host on every endpoint, and a test drives the app
- * instance in front of it.
+ * The endpoints this server serves, written out here: the published document names the
+ * production host on every endpoint, while a test drives the app instance in front of it.
  */
 const METADATA: Issuer.Metadata = {
 	issuer: ISSUER,
@@ -43,10 +41,9 @@ let app: TestApp;
 let fixtures: Fixtures;
 
 /**
- * Copies an intercepted request into a `Request` of this realm, which is the shape the
- * router reads. The headers travel as plain entries: a body-derived `content-type` is
- * stamped on with a third internal argument that survives interception as a raw-header
- * record the router cannot rebuild a `Headers` from.
+ * Copies an intercepted request into a `Request` of this realm, which is the shape the router
+ * reads. The headers travel as plain entries, since a body-derived `content-type` survives
+ * interception as a raw-header record only plain entries carry through.
  *
  * @param request - The request the library sent.
  */

@@ -77,8 +77,8 @@ class SelectiveTransport implements Transport {
 
 /**
  * The identity provider as this job sees it: one profile lookup per former member,
- * answering only for the addresses a test seeded. With `authenticates` off it reports
- * a refusal instead, the condition a retry could survive.
+ * answering only for the addresses a test seeded, or — with `authenticates` off — the
+ * refusal a later run could survive.
  */
 function fakeAdmin(): ManagementClient {
 	return {

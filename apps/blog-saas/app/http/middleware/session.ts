@@ -1,8 +1,7 @@
 /**
  * The dashboard session middleware and its typed accessors: a signed-cookie session
- * holding the authenticated account id, with defensive read/write helpers used across
- * the auth flow. The cookie is signed, so its payload is visible to the browser, and
- * it carries the account id alongside the token set the OIDC client keeps there.
+ * carrying the authenticated account id alongside the token set the OIDC client keeps
+ * there. Signing makes the payload readable in the browser and tamper-evident here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

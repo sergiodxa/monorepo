@@ -1,8 +1,7 @@
 /**
- * The confidential client that signs a person in: the authorization redirect, the
- * callback that verifies the ID token, RP-initiated logout, and the session scheme
- * the auth middleware resolves a viewer through. Built per request so the callback
- * URL it presents is the origin the request arrived on.
+ * The confidential client that signs a person in: the authorization redirect, the ID-token
+ * callback, RP-initiated logout, and the session scheme the auth middleware resolves a
+ * viewer through. Built per request, so its callback URL is the origin the request hit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,9 +15,8 @@ import routes from "~/routes/web";
 
 /**
  * Scopes every login asks for. `offline_access` earns its place: it is what makes the
- * provider issue a refresh token, so a person stays signed in past the hour their
- * access token is good for and the auth middleware renews it without a round trip
- * through the browser.
+ * provider issue a refresh token, so the auth middleware renews a lapsed access token on
+ * the server and a person stays signed in past its hour.
  */
 const LOGIN_SCOPES = ["openid", "profile", "email", "offline_access"];
 
