@@ -136,15 +136,14 @@ export class Issuer {
 	 * @param url - Where the issuer serves its documents, as an absolute URL.
 	 * @param options - The published identifier, the shared cache, inline metadata,
 	 *   and the cache TTL.
-	 * @throws `DiscoveryFailed` when the URL carries no scheme, since discovery is
-	 *   fetched from it. A provider whose published identifier carries no scheme is
-	 *   reached by stating its origin here and that identifier as `identifier`.
+	 * @throws `Error` when the URL carries no scheme, since discovery is fetched from
+	 *   it. A provider whose published identifier carries no scheme is reached by
+	 *   stating its origin here and that identifier as `identifier`.
 	 */
 	constructor(url: string | URL, options: Issuer.Options = {}) {
 		if (typeof url === "string" && !URL.canParse(url)) {
-			throw new AuthError(
-				`Discovery for ${url} needs an absolute URL. State the issuer's origin here, and the identifier it publishes as \`identifier\`.`,
-				{ code: AuthErrorCode.DiscoveryFailed },
+			throw new Error(
+				`Discovery for ${url} is fetched from this URL, so it needs an absolute URL carrying a scheme. State the issuer's origin here, and the identifier it publishes as \`identifier\`.`,
 			);
 		}
 

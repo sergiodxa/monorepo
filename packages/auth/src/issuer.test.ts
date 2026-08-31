@@ -404,8 +404,10 @@ describe("an identifier stated apart from the URL", () => {
 	test("refuses a bare identifier as the URL discovery is fetched from", () => {
 		let build = () => new Issuer(SCHEMELESS_ISSUER);
 
-		expect(build).toThrow(AuthError);
+		expect(build).toThrow(Error);
 		expect(build).toThrow(/absolute URL/);
+		expect(build).toThrow(/`identifier`/);
+		expect(build).not.toThrow(AuthError);
 	});
 });
 
