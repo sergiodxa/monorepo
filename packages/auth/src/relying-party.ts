@@ -613,7 +613,9 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * client, an IdP-initiated sign-in, a fixture.
 	 *
 	 * Runs every check the callback runs against the token itself: the signature
-	 * over the issuer's published keys, `iss`, `aud`, and the lifetime claims.
+	 * over the issuer's published keys, `iss`, `aud`, and the lifetime claims. It reads
+	 * the client id and the skew off this relying party, which is what it adds over
+	 * `Issuer.verifyIdToken` — the call an app with no browser flow reaches for.
 	 *
 	 * @param raw - The compact-serialized ID token.
 	 * @returns The verified token.
@@ -854,8 +856,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * Verifies an ID token's signature and claims, then the bindings the caller can
-	 * supply: the `nonce` the redirect flow held, and the access token an `at_hash`
+	 * Puts an ID token through the issuer's verification, then the bindings only this
+	 * flow knows: the `nonce` the transaction held, and the access token an `at_hash`
 	 * commits to.
 	 *
 	 * @param raw - The compact-serialized ID token.
@@ -867,25 +869,11 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		raw: string,
 		bindings: { nonce?: string; accessToken?: string },
 	): Promise<IdToken> {
-		let [identifier, keys] = await Promise.all([this.#issuer.identifier(), this.#issuer.keys()]);
-
-		let verified = await wrap(() =>
-			IdToken.verify(raw, keys, {
-				issuer: identifier,
-				audience: this.#clientId,
-				algorithms: this.#algorithms,
-				clockTolerance: this.#clockTolerance,
-			}),
-		);
-
-		if (isFailure(verified)) {
-			throw new AuthError("The ID token failed verification", {
-				code: AuthErrorCode.InvalidToken,
-				cause: verified.error,
-			});
-		}
-
-		let idToken = verified.data;
+		let idToken = await this.#issuer.verifyIdToken(raw, {
+			audience: this.#clientId,
+			algorithms: this.#algorithms,
+			clockTolerance: this.#clockTolerance,
+		});
 
 		if (bindings.nonce !== undefined) {
 			let nonce = idToken.nonce;

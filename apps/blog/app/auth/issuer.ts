@@ -32,16 +32,18 @@ const AUTH_METADATA: Issuer.Metadata = {
 };
 
 /**
- * The provider for the current request, reading its key set through the KV cache so
- * one fetch per TTL serves every isolate.
+ * The shared provider, whose key set is read through the KV cache so one fetch per TTL
+ * serves every isolate. The cache is stated as a factory because its bindings and its
+ * `waitUntil` arrive with each request, so every read resolves the store belonging to
+ * the request making it.
  *
  * @returns The issuer the relying party is built on.
  * @example let keys = await issuer().keys();
  */
 export function issuer(): Issuer {
-	return new Issuer(AUTH_ORIGIN, {
+	return Issuer.for(AUTH_ORIGIN, {
 		identifier: AUTH_IDENTIFIER,
 		metadata: AUTH_METADATA,
-		cache: new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")),
+		cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")),
 	});
 }

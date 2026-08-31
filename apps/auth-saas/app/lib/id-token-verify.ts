@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { IdToken } from "@pkg/auth/id-token";
+import type { IdToken } from "@pkg/auth/id-token";
+
 import { Issuer } from "@pkg/auth/issuer";
 import { JWK } from "@pkg/jwt";
 import { isFailure, wrap } from "@pkg/result";
@@ -26,32 +27,13 @@ const ID_TOKEN_CLOCK_TOLERANCE = 60;
 const ID_TOKEN_ALGORITHMS = [JWK.Algorithm.ES256];
 
 /**
- * Providers kept by the origin serving them, so the discovery document and the key set
- * are read once however many logins one isolate answers.
- */
-const ISSUERS = new Map<string, Issuer>();
-
-/**
- * The provider serving the given origin, whose documents are read there while every
- * token it signs is held to the identifier the platform domain publishes, so a local
- * run verifies against the keys it can actually reach.
- *
- * @param origin - Scheme and host the provider's endpoints answer on.
- */
-function platformIssuer(origin: string): Issuer {
-	let held = ISSUERS.get(origin);
-	if (held) return held;
-
-	let issuer = new Issuer(origin, { identifier: `https://${env.PLATFORM_DOMAIN}` });
-	ISSUERS.set(origin, issuer);
-
-	return issuer;
-}
-
-/**
  * Verifies the token's signature, `iss`, `aud`, and lifetime claims. The echoed
  * `nonce` reaches the caller unchecked, since only the login that started the flow
  * knows the value it has to match.
+ *
+ * Documents are read from the origin serving them while every token is held to the
+ * identifier the platform domain publishes, so a local run verifies against the keys
+ * it can actually reach.
  *
  * @param raw - The ID token as the token response carried it.
  * @param options - Where the signing provider answers, and the client it issued to.
@@ -66,17 +48,15 @@ export async function verifyIdToken(
 	raw: string,
 	options: { origin: string; audience: string },
 ): Promise<IdToken | null> {
-	let verified = await wrap(async () => {
-		let issuer = platformIssuer(options.origin);
-		let [identifier, keys] = await Promise.all([issuer.identifier(), issuer.keys()]);
+	let issuer = Issuer.for(options.origin, { identifier: `https://${env.PLATFORM_DOMAIN}` });
 
-		return await IdToken.verify(raw, keys, {
-			issuer: identifier,
+	let verified = await wrap(() =>
+		issuer.verifyIdToken(raw, {
 			audience: options.audience,
 			algorithms: ID_TOKEN_ALGORITHMS,
 			clockTolerance: ID_TOKEN_CLOCK_TOLERANCE,
-		});
-	});
+		}),
+	);
 
 	if (isFailure(verified)) return null;
 

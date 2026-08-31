@@ -1,8 +1,8 @@
 /**
  * Covers what an `Issuer` promises its callers: a validated discovery document, an
  * identity check against the issuer it was asked for, a named error for every way
- * discovery and the key set can fail, keys a token verifies against, and one fetch
- * per document however many callers, isolates, or concurrent calls ask for it.
+ * discovery and the key set can fail, a verified ID token, one instance per
+ * configuration, and one fetch per document however many callers ask for it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,6 +35,9 @@ const SCHEMELESS_ISSUER = "auth.test";
 
 /** Pinned so a token claiming another algorithm fails rather than being honored. */
 const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
+
+/** The client every ID token in this file is issued to. */
+const AUDIENCE = "dashboard";
 
 let server = setupServer();
 
@@ -160,6 +163,62 @@ function respondAs(url: string, body: string, contentType?: string): void {
  */
 function count(url: string): number {
 	return requests.get(url) ?? 0;
+}
+
+/** Origins handed out so far, so each test reads a provider no other test shares. */
+let providers = 0;
+
+/**
+ * Serves a provider on an origin no earlier test asked for, so the instance registry
+ * hands each test a memo of its own.
+ *
+ * @param pair - The key the provider publishes.
+ * @returns The origin, and the two URLs its reads are counted under.
+ */
+function freshProvider(pair: JWK.KeyPair): { origin: string; discovery: string; jwks: string } {
+	providers += 1;
+
+	let origin = `https://issuer-${providers}.test`;
+	let discovery = `${origin}/.well-known/openid-configuration`;
+	let jwks = `${origin}/.well-known/jwks.json`;
+
+	respond(discovery, {
+		issuer: origin,
+		authorization_endpoint: `${origin}/oauth/authorize`,
+		token_endpoint: `${origin}/oauth/token`,
+		jwks_uri: jwks,
+	});
+	respond(jwks, JWK.toJSON([pair]));
+
+	return { origin, discovery, jwks };
+}
+
+/**
+ * Signs an ID token the way a provider does, letting a test override the claims that
+ * make a fixture valid or invalid.
+ *
+ * @param origin - The issuer the token names.
+ * @param pair - The key it is signed with.
+ * @param claims - Claims layered over a well-formed token.
+ * @param algorithm - The algorithm its header presents.
+ */
+function signIdToken(
+	origin: string,
+	pair: JWK.KeyPair,
+	claims: Record<string, unknown> = {},
+	algorithm: JWK.Algorithm = JWK.Algorithm.ES256,
+): Promise<string> {
+	let now = Math.floor(Date.now() / 1000);
+
+	return new JWT({
+		iss: origin,
+		aud: AUDIENCE,
+		sub: "user-123",
+		iat: now,
+		nbf: now,
+		exp: now + 300,
+		...claims,
+	}).sign(algorithm, [pair]);
 }
 
 /**
@@ -564,5 +623,249 @@ describe("caching", () => {
 
 		expect(verified.subject).toBe("user-123");
 		expect(cache.entries.size).toBe(2);
+	});
+});
+
+describe("Issuer.for", () => {
+	test("spends one fetch per document across two acquisitions", async () => {
+		let pair = await keyPair();
+		let { origin, discovery, jwks } = freshProvider(pair);
+
+		let first = Issuer.for(origin);
+		await first.metadata();
+		await first.keys();
+
+		let second = Issuer.for(origin);
+		await second.metadata();
+		await second.keys();
+
+		expect(second).toBe(first);
+		expect(count(discovery)).toBe(1);
+		expect(count(jwks)).toBe(1);
+	});
+
+	test("keys an instance on the identifier a token's `iss` is held to", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		expect(Issuer.for(origin, { identifier: origin })).not.toBe(Issuer.for(origin));
+	});
+
+	test("keys an instance on the TTL its documents are shared for", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		expect(Issuer.for(origin, { ttl: "5 minutes" })).not.toBe(Issuer.for(origin, { ttl: "1 day" }));
+	});
+
+	test("keys an instance on the metadata it serves in place of a fetched document", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		let metadata: Issuer.Metadata = {
+			issuer: origin,
+			authorization_endpoint: `${origin}/oauth/authorize`,
+			token_endpoint: `${origin}/oauth/token`,
+			jwks_uri: `${origin}/.well-known/jwks.json`,
+		};
+
+		expect(Issuer.for(origin, { metadata })).not.toBe(Issuer.for(origin));
+	});
+
+	test("reads a trailing slash as the same address", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		expect(Issuer.for(`${origin}/`)).toBe(Issuer.for(origin));
+	});
+
+	test("refuses an address carrying no scheme", () => {
+		expect(() => Issuer.for("auth.test")).toThrow(/absolute URL/);
+	});
+});
+
+describe("a cache stated as a factory", () => {
+	test("resolves the store belonging to the read reaching for it", async () => {
+		let pair = await keyPair();
+		let { origin, discovery, jwks } = freshProvider(pair);
+
+		let first = new MemoryCacheStore();
+		let second = new MemoryCacheStore();
+		let current = first;
+
+		let issuer = Issuer.for(origin, { cache: () => current });
+
+		await issuer.metadata();
+		expect(first.entries.size).toBe(1);
+
+		current = second;
+		await issuer.keys();
+
+		expect(second.entries.size).toBe(1);
+		expect(first.entries.size).toBe(1);
+		expect(count(discovery)).toBe(1);
+		expect(count(jwks)).toBe(1);
+	});
+
+	test("shares what an earlier store already held", async () => {
+		let pair = await keyPair();
+		let { origin, discovery } = freshProvider(pair);
+
+		let cache = new MemoryCacheStore();
+
+		let warm = new Issuer(origin, { cache: () => cache });
+		await warm.metadata();
+
+		server.resetHandlers();
+
+		let cold = new Issuer(origin, { cache: () => cache });
+
+		await expect(cold.identifier()).resolves.toBe(origin);
+		expect(count(discovery)).toBe(1);
+	});
+});
+
+describe("verifyIdToken", () => {
+	test("answers with the claims a session is minted from", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		let idToken = await Issuer.for(origin).verifyIdToken(
+			await signIdToken(origin, pair, { email: "owner@example.test", sid: "session-1" }),
+			{ audience: AUDIENCE },
+		);
+
+		expect(idToken.subject).toBe("user-123");
+		expect(idToken.email).toBe("owner@example.test");
+		expect(idToken.sessionId).toBe("session-1");
+	});
+
+	test("leaves the `nonce` for the login that asked for it to compare", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		let idToken = await Issuer.for(origin).verifyIdToken(
+			await signIdToken(origin, pair, { nonce: "nonce-abc" }),
+			{ audience: AUDIENCE },
+		);
+
+		expect(idToken.nonce).toBe("nonce-abc");
+	});
+
+	test("tolerates a minute of drift on the lifetime claims", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+		let now = Math.floor(Date.now() / 1000);
+
+		let idToken = await Issuer.for(origin).verifyIdToken(
+			await signIdToken(origin, pair, { exp: now - 30, nbf: now - 300 }),
+			{ audience: AUDIENCE },
+		);
+
+		expect(idToken.subject).toBe("user-123");
+	});
+
+	test("refuses a token expired beyond the tolerated drift", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+		let now = Math.floor(Date.now() / 1000);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(
+				await signIdToken(origin, pair, { exp: now - 3600, nbf: now - 7200 }),
+				{ audience: AUDIENCE },
+			),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("holds the drift to the seconds the caller states", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+		let now = Math.floor(Date.now() / 1000);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(
+				await signIdToken(origin, pair, { exp: now - 30, nbf: now - 300 }),
+				{ audience: AUDIENCE, clockTolerance: 0 },
+			),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("refuses a token naming another issuer", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(
+				await signIdToken(origin, pair, { iss: "https://evil.test" }),
+				{ audience: AUDIENCE },
+			),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("refuses a token issued for another client", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(await signIdToken(origin, pair), {
+				audience: "some-other-client",
+			}),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("accepts a token naming any one of the audiences stated", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		let idToken = await Issuer.for(origin).verifyIdToken(await signIdToken(origin, pair), {
+			audience: ["another-client", AUDIENCE],
+		});
+
+		expect(idToken.subject).toBe("user-123");
+	});
+
+	test("refuses a token signed by a key the issuer does not publish", async () => {
+		let pair = await keyPair();
+		let other = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(await signIdToken(origin, other), {
+				audience: AUDIENCE,
+			}),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("refuses a token presenting an algorithm outside the ones stated", async () => {
+		let edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.EdDSA));
+		let { origin } = freshProvider(edwards);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(
+				await signIdToken(origin, edwards, {}, JWK.Algorithm.EdDSA),
+				{ audience: AUDIENCE, algorithms: [JWK.Algorithm.ES256] },
+			),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("refuses a credential that is not a JWT at all", async () => {
+		let pair = await keyPair();
+		let { origin } = freshProvider(pair);
+
+		await expect(
+			Issuer.for(origin).verifyIdToken("not.a.jwt", { audience: AUDIENCE }),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
+	});
+
+	test("reports an unreadable key set as the issuer failure it is", async () => {
+		let pair = await keyPair();
+		let { origin, jwks } = freshProvider(pair);
+
+		respond(jwks, { keys: [] });
+
+		await expect(
+			Issuer.for(origin).verifyIdToken(await signIdToken(origin, pair), { audience: AUDIENCE }),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.JwksFailed));
 	});
 });

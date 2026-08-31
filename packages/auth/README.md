@@ -9,6 +9,7 @@ browser, acting as a service with no person present, verifying a bearer token so
 presents to this app, and reading the provider's own records. Each of those is a distinct
 actor in the protocol, so each gets a class, and all four share one `Issuer` — the
 discovery document and the JWKS are fetched once however many roles an app plays.
+`Issuer.for` is what hands that one instance out, so sharing it costs no wiring.
 
 It is a client, not a framework. There is no user table, no account linking, no password
 or 2FA flow, and no client-side JavaScript. What it persists is a token set in a
@@ -46,8 +47,8 @@ import { ServiceClient } from "@pkg/auth/service-client";
 import { Cache } from "@pkg/kv-cache";
 import { env } from "cloudflare:workers";
 
-/** The server every other class talks to. One per issuer. */
-let issuer = new Issuer(env.OIDC_ISSUER, {
+/** The server every other class talks to. One per issuer, `for` handing it out. */
+let issuer = Issuer.for(env.OIDC_ISSUER, {
 	cache: new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise)),
 });
 
@@ -134,7 +135,40 @@ auth.clear(); // signs out, leaving every other session entry alone
 
 An OpenID Connect provider, addressed by its issuer identifier.
 
+#### `Issuer.for(url: string | URL, options?: Issuer.Options): Issuer`
+
+The issuer for a configuration, built on the first ask and handed out on every later one.
+Reach for this rather than the constructor: the documents are then read once per isolate
+however many roles, routes, and requests ask for them, and no app has to hold the instance
+itself.
+
+```typescript
+export function issuer(): Issuer {
+	return Issuer.for(AUTH_ORIGIN, {
+		identifier: AUTH_IDENTIFIER,
+		cache: new Cache.KVStore(env.CACHE, (promise) => waitUntil(promise)),
+	});
+}
+```
+
+`url`, `identifier`, `ttl`, and `metadata` name the instance, because each of them changes
+what it answers; the cache tier does not, so the store the first ask supplies is the one
+the instance keeps. Where that store is built over per-request values — a `waitUntil`
+belonging to one request among them — state it as a factory, and every read resolves a
+store belonging to the request making it:
+
+```typescript
+Issuer.for(AUTH_ORIGIN, {
+	metadata: AUTH_METADATA,
+	cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")),
+});
+```
+
+**Throws:** `Error` when the URL carries no scheme, the same as the constructor.
+
 #### `new Issuer(url: string | URL, options?: Issuer.Options)`
+
+An instance with memos nothing else shares, for a test or a one-off read.
 
 **Parameters:**
 
@@ -145,7 +179,8 @@ An OpenID Connect provider, addressed by its issuer identifier.
   token's `iss`, for a provider whose identifier is something other than that URL
   (defaults to the URL)
 - `options.cache`: A store shared across isolates, so one fetch per TTL serves every
-  isolate reading the same issuer
+  isolate reading the same issuer, or a factory resolved on every read where the store is
+  built over per-request values
 - `options.metadata`: A discovery document supplied inline, served in place of the
   provider's and validated the same way
 - `options.ttl`: How long a fetched document stays in the shared cache (default
@@ -176,6 +211,35 @@ picks a key per token from the token's `kid`, so tokens signed by any key the is
 publishes keep verifying across a rotation.
 
 **Throws:** `jwks_failed` when the set cannot be fetched, read, or holds no key.
+
+#### `issuer.verifyIdToken(raw, options): Promise<IdToken>`
+
+The verification the browser flow runs, reachable without a relying party. It checks the
+signature against the published key the token's `kid` names, then `iss` against the
+identifier the provider publishes, `aud` against the client the token was issued to, and
+the lifetime claims. An app that only verifies a token — one that arrived from a native
+client, an IdP-initiated flow, or a fixture — needs nothing else.
+
+```typescript
+let idToken = await issuer.verifyIdToken(raw, { audience: CLIENT_ID });
+```
+
+**Parameters:**
+
+- `options.audience`: The client id the token names as its `aud`, or the ids any one of
+  which it may name
+- `options.algorithms`: The signature algorithms accepted, so a token presenting any other
+  one is refused before a key is chosen for it (defaults to every algorithm the published
+  key set supports)
+- `options.clockTolerance`: Seconds of clock skew tolerated on the lifetime claims
+  (default `60`)
+
+The `nonce` and the `at_hash` are the two checks it leaves out, because only the flow that
+started the login knows the values they are held to. `rp.callback` adds both, and
+`rp.verifyIdToken` is the same call with this relying party's client id and skew filled in.
+
+**Throws:** `invalid_token` when any check on the token fails; `discovery_failed` or
+`jwks_failed` when the issuer's own documents are unreadable.
 
 #### Endpoint accessors
 
@@ -294,6 +358,9 @@ await rp.endSession(ctx, { returnTo: "/", redirect: false }); // URL
 Verifies an ID token obtained outside the redirect flow — a native client, an
 IdP-initiated sign-in, a fixture. Every check the callback runs against the token itself,
 without the `nonce` comparison the redirect flow supplies.
+
+It is `issuer.verifyIdToken` with this relying party's client id, algorithms, and skew
+filled in. An app that holds no relying party calls the issuer directly.
 
 **Throws:** `invalid_token`.
 
@@ -491,7 +558,7 @@ it names the ones a login turns on:
 
 | Accessor        | Claim                | Answers                                                      |
 | --------------- | -------------------- | ------------------------------------------------------------ |
-| `subject`       | `sub`                | The identity anchor. Never null, and throws when absent      |
+| `subject`       | `sub`                | The identity anchor, typed `string` and throwing when absent |
 | `nonce`         | `nonce`              | Binds the token to the login that asked for it               |
 | `authTime`      | `auth_time`          | When the person authenticated, as a `Date`                   |
 | `sessionId`     | `sid`                | The join key between a login and the logout token ending it  |
@@ -506,6 +573,20 @@ it names the ones a login turns on:
 
 Any claim without an accessor reads through by name, so a provider-specific claim is
 available as it was sent.
+
+`subject` is the one accessor that throws rather than answering `null`, and the contract is
+deliberate: OpenID Connect requires `sub` in an ID token, so a token carrying none is
+malformed rather than sparse, and typing it `string` is what lets every call site key a
+record on it directly. Every other accessor answers a legitimately absent claim with `null`
+or `false`, so reading claims off a verified token needs no guard.
+
+A caller that wants one branch for a malformed token wraps the claim reads and branches on
+the failure:
+
+```typescript
+let identity = wrap(() => ({ subjectId: idToken.subject, email: idToken.email }));
+if (isFailure(identity)) return renderError("Authentication failed. Please try again.");
+```
 
 `AUTHENTICATION_METHODS` names the twenty values RFC 8176 §2 registers, keyed so
 autocomplete spells out what the wire abbreviates. `IdToken.AuthenticationMethod` accepts
@@ -674,6 +755,29 @@ interface CacheStore {
 }
 ```
 
+#### `Issuer.CacheSource`
+
+What `options.cache` accepts: a store, or a factory resolved on every read.
+
+```typescript
+type CacheSource = CacheStore | (() => CacheStore);
+```
+
+A store built over per-request values goes in as the factory arm, so an instance that
+outlives the request resolves one belonging to the read reaching for it.
+
+#### `Issuer.IdTokenVerification`
+
+What an ID token is held to beyond the issuer's own signature and identifier.
+
+```typescript
+interface IdTokenVerification {
+	audience: string | string[];
+	algorithms?: JWK.Algorithm[];
+	clockTolerance?: number;
+}
+```
+
 #### `RelyingParty.Profile`
 
 What `mapProfile` replaces, each member answering the same nullability its ID-token
@@ -818,7 +922,7 @@ import { Cache } from "@pkg/kv-cache";
 
 let cache = new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise));
 
-let issuer = new Issuer(env.OIDC_ISSUER, { cache, ttl: "1 hour" });
+let issuer = Issuer.for(env.OIDC_ISSUER, { cache, ttl: "1 hour" });
 
 let rp = new RelyingParty(issuer, {
 	clientId,
@@ -840,6 +944,16 @@ The discovery document and the key set are keyed per issuer; a `client_credentia
 is keyed per client, resource set, and scope set, with both sets sorted so the order a
 caller writes them in carries no meaning. The login budget is keyed by the client IP, and
 the grant budget by the client id.
+
+`Issuer.for` is what puts the in-isolate tier under the shared one: it hands the same
+instance, and so the same memos, to every role and every request in the isolate, while each
+read still goes through the `CacheStore` a cold isolate reads from KV. An app whose bindings
+arrive with the request states its cache as a factory, so a long-lived instance never holds
+a `waitUntil` belonging to a request that has already answered:
+
+```typescript
+Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")) });
+```
 
 ## Behavior
 
