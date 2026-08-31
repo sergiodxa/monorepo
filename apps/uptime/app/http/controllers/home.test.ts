@@ -276,9 +276,10 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body.match(/<details/g)).toHaveLength(19);
+		expect(body.match(/<details/g)).toHaveLength(20);
 		expect(body).toContain("How does Uptime monitor my services?");
 		expect(body).toContain("From which regions can I monitor my services?");
+		expect(body).toContain("Can I monitor a login or a checkout flow?");
 	});
 
 	/**

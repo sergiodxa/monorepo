@@ -124,6 +124,7 @@ export function buildMarketingChrome(
 				{ label: t("landing.footer.sections.features.teams"), slug: "teams" },
 				{ label: t("landing.footer.sections.features.analytics"), slug: "analytics" },
 				{ label: t("landing.footer.sections.features.api"), slug: "api" },
+				{ label: t("landing.footer.sections.features.flowMonitors"), slug: "flows" },
 			].map((link) => ({
 				label: link.label,
 				href: routes.marketing.feature.href({ slug: link.slug }),
@@ -142,6 +143,10 @@ export function buildMarketingChrome(
 				{ label: t("landing.footer.sections.useCases.cronJobs"), slug: "cron-jobs" },
 				{ label: t("landing.footer.sections.useCases.microservices"), slug: "microservices" },
 				{ label: t("landing.footer.sections.useCases.healthChecks"), slug: "healthcheck" },
+				{
+					label: t("landing.footer.sections.useCases.loginFlows"),
+					slug: "login-flow-monitoring",
+				},
 			].map((link) => ({
 				label: link.label,
 				href: routes.marketing.useCase.href({ slug: link.slug }),

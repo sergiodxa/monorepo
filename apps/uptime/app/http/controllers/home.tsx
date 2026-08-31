@@ -33,6 +33,7 @@ import {
 	ShieldCheckIcon,
 	TimerIcon,
 	UsersIcon,
+	WorkflowIcon,
 } from "@pkg/lucide-remix";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
@@ -186,7 +187,7 @@ export default createAction(routes.home, async (ctx) => {
 	let TRUST_INDICATORS: TrustIndicator[] = [
 		{
 			icon: <ActivityIcon size={24} strokeWidth={1.5} />,
-			value: "5",
+			value: "6",
 			label: t("landing.trustIndicators.monitorTypes"),
 		},
 		{
@@ -242,6 +243,12 @@ export default createAction(routes.home, async (ctx) => {
 			description: t("landing.features.list.seventh.description"),
 			slug: "integrations",
 			icon: <MessageSquareIcon size={24} strokeWidth={1.5} />,
+		},
+		{
+			title: t("landing.features.list.eighth.title"),
+			description: t("landing.features.list.eighth.description"),
+			slug: "flows",
+			icon: <WorkflowIcon size={24} strokeWidth={1.5} />,
 		},
 	];
 
@@ -340,6 +347,7 @@ export default createAction(routes.home, async (ctx) => {
 		"seventeenth",
 		"eighteenth",
 		"nineteenth",
+		"twentieth",
 	].map((key) => ({
 		question: t(`landing.faq.list.${key}.q`),
 		answer: t(`landing.faq.list.${key}.a`, pricingCopyValues),
