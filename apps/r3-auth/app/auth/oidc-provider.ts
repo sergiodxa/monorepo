@@ -672,9 +672,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Ends every session the subject holds, so sign-out is global across relying parties. A
-	 * `post_logout_redirect_uri` is honored on an exact match with a registered logout URI and
-	 * dropped otherwise; the parties to notify are read while their rows still exist.
+	 * Ends every session the subject holds, so sign-out is global across relying parties. Only an
+	 * exact match with a registered logout URI becomes the redirect, and the parties to notify are
+	 * read while their rows still exist.
 	 *
 	 * @returns The subject logged out, the initiating client, the verified redirect to honor if any, and whom to notify.
 	 * @throws {InvalidRequestError} When the hint is unusable, neither hint nor session is given, or a parameter contradicts the hint.
@@ -691,40 +691,11 @@ export class OIDC {
 		let client: Awaited<ReturnType<typeof this.repository.findClientById>> | null = null;
 
 		if (args.idTokenHint) {
-			let hint = args.idTokenHint;
-			let signingKeys = await this.repository.getSigningKey();
+			let hinted = await this.subjectAndClientFromIdTokenHint(args.idTokenHint, args.clientId);
 
-			let verified = await wrap(() =>
-				IdToken.verify(hint, signingKeys, {
-					issuer: this.issuer,
-					algorithms: [JWK.Algorithm.ES256],
-					clockTolerance: ID_TOKEN_HINT_CLOCK_TOLERANCE,
-				}),
-			);
-
-			if (isFailure(verified)) {
-				this.logger.error("logout_hint_verification_failed", {
-					clientId: args.clientId,
-					error: verified.error.message,
-				});
-
-				throw new InvalidRequestError("Invalid id_token_hint");
-			}
-
-			let idToken = verified.data;
-
-			if (!idToken.subject) throw new InvalidRequestError("Invalid subject");
-			if (!idToken.audience) throw new InvalidRequestError("Invalid audience");
-			if (Array.isArray(idToken.audience)) throw new InvalidRequestError("Invalid audience");
-
-			subjectId = idToken.subject;
-			clientId = idToken.audience;
-
-			if (args.clientId && args.clientId !== idToken.audience) {
-				throw new InvalidRequestError("client_id does not match id_token_hint audience");
-			}
-
-			client = await this.repository.findClientById(idToken.audience);
+			subjectId = hinted.subjectId;
+			clientId = hinted.clientId;
+			client = await this.repository.findClientById(hinted.clientId);
 		} else if (args.sessionSubject) {
 			subjectId = args.sessionSubject;
 			clientId = args.clientId;
@@ -768,6 +739,52 @@ export class OIDC {
 			backchannelSessions,
 			frontchannelUrls: this.buildFrontchannelLogoutUrls(frontchannelSessions),
 		};
+	}
+
+	/**
+	 * A refusal records the reason verification failed, so a cause shared by every client — a
+	 * retired signing key, say — stays legible behind the single answer the specification allows.
+	 * A hint whose audience contradicts the request's `client_id` is refused too.
+	 *
+	 * @param hint - The `id_token_hint` as received.
+	 * @param requestedClientId - The `client_id` the request carried, recorded with a refusal.
+	 * @returns The subject the hint identifies and the relying party it was issued to.
+	 * @throws {InvalidRequestError} When verification fails, the hint names no single subject and audience, or its audience contradicts `client_id`.
+	 */
+	private async subjectAndClientFromIdTokenHint(
+		hint: string,
+		requestedClientId?: string,
+	): Promise<{ subjectId: string; clientId: string }> {
+		let signingKeys = await this.repository.getSigningKey();
+
+		let verified = await wrap(() =>
+			IdToken.verify(hint, signingKeys, {
+				issuer: this.issuer,
+				algorithms: [JWK.Algorithm.ES256],
+				clockTolerance: ID_TOKEN_HINT_CLOCK_TOLERANCE,
+			}),
+		);
+
+		if (isFailure(verified)) {
+			this.logger.error("logout_hint_verification_failed", {
+				clientId: requestedClientId,
+				error: verified.error.message,
+			});
+
+			throw new InvalidRequestError("Invalid id_token_hint");
+		}
+
+		let idToken = verified.data;
+
+		if (!idToken.subject) throw new InvalidRequestError("Invalid subject");
+		if (!idToken.audience) throw new InvalidRequestError("Invalid audience");
+		if (Array.isArray(idToken.audience)) throw new InvalidRequestError("Invalid audience");
+
+		if (requestedClientId && requestedClientId !== idToken.audience) {
+			throw new InvalidRequestError("client_id does not match id_token_hint audience");
+		}
+
+		return { subjectId: idToken.subject, clientId: idToken.audience };
 	}
 
 	/**
