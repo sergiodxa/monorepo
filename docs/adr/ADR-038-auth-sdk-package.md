@@ -67,7 +67,7 @@ let admin = new ManagementClient(service);
 
 The cache seam is `Issuer.CacheStore`, a `read`/`write`/`fetch` interface this package declares and `Cache.KVStore` satisfies, so the dependency is on the shape rather than on the class. The audiences a `ResourceServer` answers for are what Decision 4 says `aud` holds — the client id, or the issuer plus each requested resource — and its `introspection` is what opens the path for a credential carrying no claims of its own.
 
-The OIDC Discovery §4.3 check that a document names the issuer it was asked for is normalized rather than byte-identical, because `new Issuer("https://x")` has to match a document publishing `https://x/`, and host case carries no meaning in a URL either. `identifier()` then answers the document's verbatim `issuer`, so the token-level `iss` comparison stays exact.
+The OIDC Discovery §4.3 check that a document names the issuer it was asked for compares a stated value rather than a guessed one. `identifier` on the `Issuer` says what the provider publishes and writes into every `iss`, while the constructor's `url` stays where discovery is fetched from and every endpoint resolves against: our own provider publishes a scheme-less identifier, frozen because relying parties compare it byte for byte, and a bare host carries no origin to build an endpoint on. Absent `identifier` the URL is the expected value. A value that parses as a URL is compared normalized, because `new Issuer("https://x")` has to match a document publishing `https://x/` and host case carries no meaning in a URL either; an identifier that is not a URL is compared byte for byte. Either way a document naming anything else is `issuer_mismatch`, and `identifier()` answers the document's verbatim `issuer`, so the token-level `iss` comparison stays exact.
 
 ### 3. The Browser Flow Is Three Methods
 
@@ -82,7 +82,7 @@ router.get(routes.auth.callback, async (ctx) => {
 router.post(routes.auth.logout, (ctx) => rp.endSession(ctx, { returnTo: "/" }));
 ```
 
-`authorize` generates `state`, the PKCE verifier, and the `nonce`, writes the transaction to the session, and returns the redirect. `callback` checks `state`, exchanges the code, verifies the ID token, checks the `nonce`, checks `at_hash` when the issuer sends one, and clears the transaction. `endSession` clears the local session and redirects to `end_session_endpoint` with `id_token_hint`; `{ redirect: false }` returns the URL instead.
+`authorize` generates `state`, the PKCE verifier, and the `nonce`, writes the transaction to the session, and returns the redirect. `callback` checks `state`, exchanges the code, verifies the ID token, checks the `nonce`, checks `at_hash` when the issuer sends one, and clears the transaction. `endSession` clears the local session and redirects to `end_session_endpoint` with `id_token_hint`; `{ redirect: false }` returns the URL instead. Both `authorize` and `endSession` answer `303`, since a form post reaches either one and the browser has to follow it with a `GET`.
 
 Because the transaction lives in the session and never travels to the browser, everything in it is server-trusted. Better Auth needs two slots for state — client-supplied `additionalData` and server-only `serverContext` — and this design needs one.
 
@@ -296,28 +296,29 @@ The helpers that throw, and a rate-limited `authorize`, depend on a middleware t
 
 ### 7. Every Step Has A Named Override
 
-| Need                                                  | Option                                                                  |
-| ----------------------------------------------------- | ----------------------------------------------------------------------- |
-| Claims from the ID token, with no userinfo request    | `userInfo: "never"` (default), `"always"`, `"when-missing"`             |
-| A profile shape of the app's own                      | `mapProfile(claims, tokens)`                                            |
-| An identity anchor that is not `sub`                  | `subject(claims)`                                                       |
-| Extra authorization parameters                        | `authorizationParams`                                                   |
-| Extra token parameters                                | `tokenParams`                                                           |
-| `client_secret_basic` instead of `client_secret_post` | `clientAuth`                                                            |
-| No discovery document                                 | `metadata` on the `Issuer`                                              |
-| Rate limiting on the flow                             | `rateLimit`                                                             |
-| An authentication context class, for step-up          | `acrValues` on `authorize`                                              |
-| A maximum authentication age                          | `maxAge` on `authorize`                                                 |
-| Forcing re-authentication                             | `prompt: "login"` on `authorize`                                        |
-| Which `amr`/`acr` values count as MFA                 | `mfa` on the `RelyingParty`                                             |
-| Introspection for a credential carrying no claims     | `introspection` on the `ResourceServer`                                 |
-| A description the issuer gives with no audience       | `acceptUnscopedIntrospection` on the `ResourceServer` (default `false`) |
-| Revocation that outlives the response                 | `waitUntil` on the `ServiceClient`                                      |
-| How much of a service token's life is held in reserve | `expirationMargin` on the `ServiceClient`                               |
+| Need                                                              | Option                                                                                 |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Claims from the ID token, with no userinfo request                | `userInfo: "never"` (default), `"always"`, `"when-missing"` (any display claim absent) |
+| A profile shape of the app's own                                  | `mapProfile(claims, tokens)`                                                           |
+| An identity anchor that is not `sub`                              | `subject(claims)`                                                                      |
+| Extra authorization parameters                                    | `authorizationParams`                                                                  |
+| Extra token parameters                                            | `tokenParams`                                                                          |
+| `client_secret_basic` instead of `client_secret_post`             | `clientAuth`                                                                           |
+| No discovery document                                             | `metadata` on the `Issuer`                                                             |
+| An issuer identifier that is not the URL discovery is served from | `identifier` on the `Issuer`                                                           |
+| Rate limiting on the flow                                         | `rateLimit`                                                                            |
+| An authentication context class, for step-up                      | `acrValues` on `authorize`                                                             |
+| A maximum authentication age                                      | `maxAge` on `authorize`                                                                |
+| Forcing re-authentication                                         | `prompt: "login"` on `authorize`                                                       |
+| Which `amr`/`acr` values count as MFA                             | `mfa` on the `RelyingParty`                                                            |
+| Introspection for a credential carrying no claims                 | `introspection` on the `ResourceServer`                                                |
+| A description the issuer gives with no audience                   | `acceptUnscopedIntrospection` on the `ResourceServer` (default `false`)                |
+| Revocation that outlives the response                             | `waitUntil` on the `ServiceClient`                                                     |
+| How much of a service token's life is held in reserve             | `expirationMargin` on the `ServiceClient`                                              |
 
 `mapProfile` cannot set the subject — profile mapping and account recognition are separate concerns, and conflating them is how a mutable claim like `email` ends up as an identity key. Reserved authorization parameters (`state`, `client_id`, `redirect_uri`, `response_type`, `scope`, `code_challenge`, `code_challenge_method`, `nonce`) are rejected rather than merged, so a caller cannot break callback correlation.
 
-Owning the flow is what makes `userInfo: "never"` possible: the ID token is verified, so its claims are trustworthy, and the third round-trip is optional rather than mandatory.
+Owning the flow is what makes `userInfo: "never"` possible: the ID token is verified, so its claims are trustworthy, and the third round-trip is optional rather than mandatory. `"when-missing"` spends it whenever the ID token withholds any of `name`, `email`, `preferred_username`, `picture`, so a provider that sends `name` and withholds `email` still resolves a whole claim set. That is what an app authorizing on `email` depends on: an admin allow-list matched against an absent claim reads it as an empty entry, matches nobody, and silently downgrades the person's role.
 
 `expirationMargin` does two jobs, which is why it is one knob: it is the reserve a handed-out token still has left, covering the request it is about to authenticate plus the clock skew at the service checking it, and it is what gates the shared-cache write. A grant with under 60 seconds of shareable life stays in the isolate, because 60 seconds is the shortest TTL a KV write accepts.
 
@@ -387,7 +388,7 @@ Two throws answer a person rather than a caller. The authorization helpers throw
 
 ## Implementation Plan
 
-Specs first, per the repo convention. Steps 1 through 7 are built and covered by 338 tests; step 8 is what remains.
+Specs first, per the repo convention. Steps 1 through 7 are built and covered by 349 tests; step 8 is what remains.
 
 Two prerequisites sit outside this package, and both are already in place. `Location.safe` lives in `@pkg/location` rather than a package of its own, because `Location.from` discards an origin by construction and a separate package would have depended on it for one function. `@pkg/catch-response-middleware` is what the throwing helpers need, and its ordering constraint is tested in both directions.
 
