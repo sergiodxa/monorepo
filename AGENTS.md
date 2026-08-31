@@ -115,7 +115,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 ### Documentation
 
 Comments are JSDoc, and a comment earns its place by answering **why**: the symbol's
-name already says *what* it is, and the code already says *how* it works. Before writing
+name already says _what_ it is, and the code already says _how_ it works. Before writing
 one, ask what a reader cannot recover from the name and the code — a constraint, a
 guarantee, an invariant, an ordering requirement, a consequence, a deliberately handled
 edge case. If the answer is nothing, write nothing.

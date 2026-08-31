@@ -12,12 +12,10 @@ export namespace Location {
 	}
 
 	export interface OriginOptions {
-		/** Origin whose absolute URLs count as our own, reduced to a path when they match. */
 		origin?: string | URL;
 	}
 
 	export interface SafeOptions extends OriginOptions {
-		/** Destination used whenever the input fails validation. */
 		fallback: string | URL | Location;
 	}
 }
@@ -26,7 +24,7 @@ export class Location implements Omit<
 	URL,
 	"origin" | "protocol" | "username" | "password" | "host" | "hostname" | "port" | "href"
 > {
-	/** Resolving against an unregistrable TLD keeps a real caller origin from matching it. */
+	// An unregistrable TLD, so a real caller origin can never match the sentinel.
 	static #safeBase = "https://location.invalid";
 
 	#pathname: string;
@@ -91,14 +89,6 @@ export class Location implements Omit<
 		throw new TypeError("Location.from expects a string, URL, or Location");
 	}
 
-	/**
-	 * Validates an untrusted redirect target, substituting `fallback` for anything that
-	 * could send a browser to another origin.
-	 *
-	 * Comparing origins after resolution is the only reliable test: `//evil.com`,
-	 * `/\evil.com` and `/..//evil.com` all pass a `startsWith("/")` check yet resolve
-	 * off-origin.
-	 */
 	static safe(
 		input: string | URL | Location | null | undefined,
 		options: Location.SafeOptions,
@@ -106,7 +96,6 @@ export class Location implements Omit<
 		return Location.#resolveSafe(input, options) ?? Location.#resolveFallback(options.fallback);
 	}
 
-	/** Reports whether an untrusted redirect target stays on our own origin. */
 	static isSafe(input: unknown, options: Location.OriginOptions = {}): boolean {
 		return Location.#resolveSafe(input, options) !== null;
 	}
@@ -153,15 +142,13 @@ export class Location implements Omit<
 		return new Location({ pathname: url.pathname, search: url.search, hash: url.hash.slice(1) });
 	}
 
-	/**
-	 * A second leading slash turns a path into a protocol-relative URL, which `/..//evil.com`
-	 * reaches through path normalization while keeping our origin during resolution.
-	 */
+	// A second leading slash makes a path protocol-relative, which path normalization can
+	// produce while resolution still reports our own origin.
 	static #isRootRelative(pathname: string): boolean {
 		return pathname.startsWith("/") && !/^\/[/\\]/.test(pathname);
 	}
 
-	/** `URL#hash` carries the leading `#`, which `toString` adds back on its own. */
+	// `URL#hash` carries the leading `#`, which `toString` adds back on its own.
 	static #normalizeHash(value: string | undefined): string {
 		if (!value) return "";
 		return value.startsWith("#") ? value.slice(1) : value;

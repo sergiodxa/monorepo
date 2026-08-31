@@ -207,8 +207,6 @@ export let callbackAction = createAction(routes.auth.callback, {
 				username: user.username,
 			});
 
-			// Path normalization turns a target such as `/..//evil.com` into the
-			// protocol-relative `//evil.com`, which a leading-slash check accepts.
 			let returnTo = Location.safe(transaction.returnTo, {
 				fallback: routes.cms.dashboard.href(),
 			});

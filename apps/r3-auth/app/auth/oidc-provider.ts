@@ -564,10 +564,8 @@ export class OIDC {
 				{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
 			);
 
-			// Both identifiers are reported from their own claims: `aud` holds the issuer
-			// plus every requested resource on a `client_credentials` token, so it never
-			// named the client. Each reads as absent instead of throwing, which keeps a
-			// token minted before `client_id` existed active for the rest of its lifetime.
+			// Each identifier reads as absent instead of throwing, which keeps a token
+			// minted before the `client_id` claim existed active for its remaining lifetime.
 			return {
 				active: true,
 				sub: accessToken.subject,
