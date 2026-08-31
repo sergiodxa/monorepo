@@ -10,12 +10,25 @@ export namespace Location {
 		search?: string | URLSearchParams;
 		hash?: string;
 	}
+
+	export interface OriginOptions {
+		/** Origin whose absolute URLs count as our own, reduced to a path when they match. */
+		origin?: string | URL;
+	}
+
+	export interface SafeOptions extends OriginOptions {
+		/** Destination used whenever the input fails validation. */
+		fallback: string | URL | Location;
+	}
 }
 
 export class Location implements Omit<
 	URL,
 	"origin" | "protocol" | "username" | "password" | "host" | "hostname" | "port" | "href"
 > {
+	/** Resolving against an unregistrable TLD keeps a real caller origin from matching it. */
+	static #safeBase = "https://location.invalid";
+
 	#pathname: string;
 	#search: URLSearchParams;
 	#hash: string;
@@ -23,7 +36,7 @@ export class Location implements Omit<
 	constructor(input: URL | Location | Location.Options) {
 		this.#pathname = input.pathname;
 		this.#search = new URLSearchParams(input.search);
-		this.#hash = input.hash || "";
+		this.#hash = Location.#normalizeHash(input.hash);
 	}
 
 	get pathname() {
@@ -52,7 +65,7 @@ export class Location implements Omit<
 	}
 
 	set hash(value: string) {
-		this.#hash = value;
+		this.#hash = Location.#normalizeHash(value);
 	}
 
 	toString() {
@@ -76,6 +89,82 @@ export class Location implements Omit<
 		if (input instanceof URL) return new Location(input);
 
 		throw new TypeError("Location.from expects a string, URL, or Location");
+	}
+
+	/**
+	 * Validates an untrusted redirect target, substituting `fallback` for anything that
+	 * could send a browser to another origin.
+	 *
+	 * Comparing origins after resolution is the only reliable test: `//evil.com`,
+	 * `/\evil.com` and `/..//evil.com` all pass a `startsWith("/")` check yet resolve
+	 * off-origin.
+	 */
+	static safe(
+		input: string | URL | Location | null | undefined,
+		options: Location.SafeOptions,
+	): Location {
+		return Location.#resolveSafe(input, options) ?? Location.#resolveFallback(options.fallback);
+	}
+
+	/** Reports whether an untrusted redirect target stays on our own origin. */
+	static isSafe(input: unknown, options: Location.OriginOptions = {}): boolean {
+		return Location.#resolveSafe(input, options) !== null;
+	}
+
+	static #resolveSafe(input: unknown, options: Location.OriginOptions): Location | null {
+		if (input instanceof Location) return Location.#resolveSafe(input.toString(), options);
+		if (input instanceof URL) return Location.#resolveSafe(input.href, options);
+		if (typeof input !== "string" || !input) return null;
+
+		// `new URL` trims leading spaces and C0 controls and strips tabs and newlines from
+		// anywhere in the value, so a target carrying one hides its real destination from
+		// every string-level check, and a newline would split the `Location` header.
+		for (let char of input) {
+			let code = char.charCodeAt(0);
+			if (code <= 0x20 || code === 0x7f) return null;
+		}
+
+		if (!URL.canParse(input, Location.#safeBase)) return null;
+		let url = new URL(input, Location.#safeBase);
+
+		if (url.origin === Location.#safeBase) {
+			// A relative target such as `ok` resolves against the current path rather than the
+			// root, so accepting it would silently redirect somewhere the caller never named.
+			if (!input.startsWith("/")) return null;
+		} else if (!Location.#matchesOrigin(url, options.origin)) return null;
+
+		return Location.#fromSafePath(url);
+	}
+
+	static #resolveFallback(fallback: string | URL | Location): Location {
+		// `Location.from` discards the origin, so the remaining risk is a `//host` pathname.
+		let location = Location.from(fallback);
+		return Location.#isRootRelative(location.pathname) ? location : new Location({ pathname: "/" });
+	}
+
+	static #matchesOrigin(url: URL, origin: string | URL | undefined): boolean {
+		if (origin === undefined) return false;
+		if (!URL.canParse(origin)) return false;
+		return url.origin === new URL(origin).origin;
+	}
+
+	static #fromSafePath(url: URL): Location | null {
+		if (!Location.#isRootRelative(url.pathname)) return null;
+		return new Location({ pathname: url.pathname, search: url.search, hash: url.hash.slice(1) });
+	}
+
+	/**
+	 * A second leading slash turns a path into a protocol-relative URL, which `/..//evil.com`
+	 * reaches through path normalization while keeping our origin during resolution.
+	 */
+	static #isRootRelative(pathname: string): boolean {
+		return pathname.startsWith("/") && !/^\/[/\\]/.test(pathname);
+	}
+
+	/** `URL#hash` carries the leading `#`, which `toString` adds back on its own. */
+	static #normalizeHash(value: string | undefined): string {
+		if (!value) return "";
+		return value.startsWith("#") ? value.slice(1) : value;
 	}
 
 	static canParse(input: unknown): boolean {

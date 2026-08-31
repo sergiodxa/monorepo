@@ -103,6 +103,49 @@ let loc2 = Location.from(new URL("https://example.com/users?page=1"));
 let loc3 = Location.from(loc1); // Clone
 ```
 
+#### `Location.safe(input, options): Location`
+
+Validates an untrusted redirect target - a `?returnTo=` or `?next=` query param - and returns the `fallback` for anything that could send a browser to another origin. It always returns a usable `Location`, so a caller can never forward an attacker's value by accident.
+
+**Parameters:**
+
+- `input`: The untrusted value (`string | URL | Location | null | undefined`)
+- `options.fallback`: The destination used whenever `input` fails validation
+- `options.origin`: Optional origin whose absolute URLs count as our own
+
+```typescript
+Location.safe("/dashboard?tab=1", { fallback: "/" }).toString(); // "/dashboard?tab=1"
+Location.safe("//evil.com", { fallback: "/" }).toString(); // "/"
+Location.safe("/..//evil.com", { fallback: "/" }).toString(); // "/"
+Location.safe("https://evil.com/x", { fallback: "/" }).toString(); // "/"
+Location.safe(null, { fallback: "/" }).toString(); // "/"
+```
+
+A `startsWith("/")` check is not enough: `//evil.com`, `/\evil.com` and `/..//evil.com` all pass it and still resolve to `https://evil.com`. `Location.safe` resolves the value against a base URL and compares origins instead, then rejects the result unless it is an unambiguous root-relative path.
+
+Rejected: absolute URLs, protocol-relative URLs, backslash variants, non-HTTP schemes such as `javascript:` and `data:`, relative paths with no leading slash, empty values, `null`, `undefined`, and any value carrying raw whitespace or a control character - `new URL` strips those before parsing, so they hide the real destination from string-level checks, and a newline would split the `Location` header.
+
+Preserved: the pathname, search, and hash of a root-relative path, including percent-encoding.
+
+By default only root-relative paths are accepted, because an absolute URL cannot be judged without knowing which origin is ours. Pass `origin` where that is known and matching absolute URLs are reduced to their path:
+
+```typescript
+let options = { fallback: "/", origin: "https://app.example.com" };
+
+Location.safe("https://app.example.com/foo", options).toString(); // "/foo"
+Location.safe("https://evil.com/foo", options).toString(); // "/"
+```
+
+#### `Location.isSafe(input, options?): boolean`
+
+Reports whether an untrusted redirect target stays on our own origin, for callers that branch rather than substitute. It runs the same validation as `Location.safe` and takes the same optional `origin`.
+
+```typescript
+Location.isSafe("/dashboard"); // true
+Location.isSafe("//evil.com"); // false
+Location.isSafe("https://app.example.com/foo", { origin: "https://app.example.com" }); // true
+```
+
 #### `Location.canParse(input: unknown): boolean`
 
 Checks if the input can be parsed as a Location.
@@ -145,6 +188,18 @@ let location = new Location({
 });
 
 return redirect(location);
+```
+
+### Validating an untrusted redirect target
+
+`redirect()` forwards a string target as-is, which is what makes redirecting to an external URL possible. Run any target that came from the request through `Location.safe` first:
+
+```typescript
+let returnTo = Location.safe(url.searchParams.get("returnTo"), {
+	fallback: "/dashboard",
+});
+
+return redirect(returnTo);
 ```
 
 ### Integration with redirect()
@@ -195,7 +250,9 @@ return redirect(location);
 
 2. **Location automatically handles encoding of search params** - When you use `searchParams.set()` or pass values to the constructor, special characters are automatically URL-encoded.
 
-3. **Use `Location.from()` to parse existing URLs or paths** - This is the easiest way to create a Location from a request URL, a full URL string, or an existing path that you want to modify.
+3. **Never pass a request-supplied redirect target straight to `redirect()`** - `Location.safe` is the only check that holds, and `startsWith("/")` is not one.
+
+4. **Use `Location.from()` to parse existing URLs or paths** - This is the easiest way to create a Location from a request URL, a full URL string, or an existing path that you want to modify.
 
 ## Related Packages
 
