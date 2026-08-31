@@ -528,11 +528,11 @@ export class OIDC {
 		| {
 				active: true;
 				sub: string;
-				client_id: string;
+				client_id?: string;
 				exp: number;
 				iat: number;
 				iss: string;
-				aud: string | string[];
+				aud?: string | string[];
 				token_type: "Bearer";
 		  }
 	> {
@@ -564,14 +564,18 @@ export class OIDC {
 				{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
 			);
 
+			// Both identifiers are reported from their own claims: `aud` holds the issuer
+			// plus every requested resource on a `client_credentials` token, so it never
+			// named the client. Each reads as absent instead of throwing, which keeps a
+			// token minted before `client_id` existed active for the rest of its lifetime.
 			return {
 				active: true,
 				sub: accessToken.subject,
-				client_id: accessToken.audience as string,
+				client_id: accessToken.clientId ?? undefined,
 				exp: accessToken.expirationTime,
 				iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
 				iss: accessToken.issuer,
-				aud: accessToken.audience,
+				aud: accessToken.audience ?? undefined,
 				token_type: "Bearer",
 			};
 		} catch {
@@ -1042,7 +1046,14 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(subjectId);
 		if (!subject) throw new InvalidGrantError("Subject not found");
 
-		let accessToken = await this.signJWT(AccessToken.generate(clientId, subjectId, authz.scope));
+		let accessToken = await this.signJWT(
+			AccessToken.generate({
+				audience: clientId,
+				subjectId,
+				clientId,
+				scope: authz.scope,
+			}),
+		);
 
 		let idToken = await this.signJWT(
 			IdToken.generate(
@@ -1080,8 +1091,14 @@ export class OIDC {
 			throw new InvalidClientError("Client is not registered");
 		}
 
+		// No resource owner takes part in this grant, so RFC 9068 §2.2.1 has `sub` name
+		// the client, and that is what marks the token as a service one downstream.
 		let accessToken = await this.signJWT(
-			AccessToken.generate([this.issuer, ...args.resource], args.clientId),
+			AccessToken.generate({
+				audience: [this.issuer, ...args.resource],
+				subjectId: args.clientId,
+				clientId: args.clientId,
+			}),
 		);
 
 		return {
@@ -1115,7 +1132,12 @@ export class OIDC {
 		if (!subject) throw new InvalidGrantError("Subject not found");
 
 		let accessToken = await this.signJWT(
-			AccessToken.generate(session.clientId, session.subjectId, ["openid"]),
+			AccessToken.generate({
+				audience: session.clientId,
+				subjectId: session.subjectId,
+				clientId: session.clientId,
+				scope: ["openid"],
+			}),
 		);
 
 		let authTime = Math.floor(session.createdAt.getTime() / 1000);

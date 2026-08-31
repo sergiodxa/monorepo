@@ -1,8 +1,9 @@
 /**
  * Test suite for the OIDC engine. Exercises the token endpoint's three
  * grant types, plus revoke, introspect, userinfo, logout, ID-token claim
- * behavior, and the password login flow — including the upgrade of a hash
- * written under an outdated cost — against a mocked repository.
+ * behavior, the RFC 9068 claims of the access tokens it mints, and the password
+ * login flow — including the upgrade of a hash written under an outdated cost —
+ * against a mocked repository.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -117,6 +118,28 @@ describe("OAuth2Provider", () => {
 			expect(result.refresh_token).toBe(testSession.id);
 			expect(result.expires_in).toBe(AccessToken.ttl);
 			expect(result.id_token).toBeDefined();
+		});
+
+		test("issues an access token carrying the RFC 9068 claims", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let result = (await provider.token({
+				type: "authorization_code",
+				code: "valid-code",
+				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+			})) as OIDCTokenResponse;
+
+			let decoded = AccessToken.decode(result.access_token);
+
+			expect(decoded.issuer).toBe(ISSUER);
+			expect(decoded.subject).toBe(testSubject.id);
+			expect(decoded.clientId).toBe(testClient.id);
+			expect(decoded.audience).toBe(testClient.id);
+			expect(decoded.scopes).toEqual(["openid"]);
+			expect(decoded.id).toBeDefined();
 		});
 
 		test("rejects invalid authorization code", async () => {
@@ -273,6 +296,22 @@ describe("OAuth2Provider", () => {
 			expect(repo.touchSession).toHaveBeenCalled();
 		});
 
+		test("issues an access token naming the session's client", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let result = (await provider.token({
+				type: "refresh_token",
+				refreshToken: testSession.id,
+			})) as OIDCTokenResponse;
+
+			let decoded = AccessToken.decode(result.access_token);
+
+			expect(decoded.subject).toBe(testSession.subjectId);
+			expect(decoded.clientId).toBe(testSession.clientId);
+			expect(decoded.audience).toBe(testSession.clientId);
+		});
+
 		test("rejects invalid refresh token", async () => {
 			let repo = createMockRepository();
 			repo.findSessionById = vi.fn(async () => null);
@@ -301,6 +340,25 @@ describe("OAuth2Provider", () => {
 
 			expect(result.access_token).toBeDefined();
 			expect(result.expires_in).toBe(AccessToken.ttl);
+		});
+
+		test("issues a service token whose subject is the client itself", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let result = await provider.token({
+				type: "client_credentials",
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+				resource: ["https://api.example.com"],
+			});
+
+			let decoded = AccessToken.decode(result.access_token);
+
+			expect(decoded.clientId).toBe(testClient.id);
+			expect(decoded.subject).toBe(decoded.clientId);
+			expect(decoded.audience).toEqual([ISSUER, "https://api.example.com"]);
+			expect(decoded.scopes).toEqual([]);
 		});
 
 		test("rejects invalid client secret", async () => {
@@ -432,8 +490,60 @@ describe("OAuth2Provider", () => {
 			expect(result.active).toBe(true);
 			if (result.active) {
 				expect(result.sub).toBe(testSubject.id);
+				expect(result.client_id).toBe(testClient.id);
+				expect(result.aud).toBe(testClient.id);
 				expect(result.token_type).toBe("Bearer");
 			}
+		});
+
+		test("introspects a client_credentials access token", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let tokenResult = await provider.token({
+				type: "client_credentials",
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+				resource: ["https://api.example.com"],
+			});
+
+			let result = await provider.introspect({
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+				token: tokenResult.access_token,
+				tokenTypeHint: "access_token",
+			});
+
+			expect(result.active).toBe(true);
+			if (result.active) {
+				expect(result.client_id).toBe(testClient.id);
+				expect(result.aud).toEqual([ISSUER, "https://api.example.com"]);
+			}
+		});
+
+		test("keeps a token minted before the client_id claim active", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let now = Math.floor(Date.now() / 1000);
+			let legacyToken = await new AccessToken({
+				aud: testClient.id,
+				exp: now + AccessToken.ttl,
+				iat: now,
+				iss: ISSUER,
+				jti: crypto.randomUUID(),
+				sub: testSubject.id,
+			}).sign(JWK.Algorithm.ES256, testKeyPair);
+
+			let result = await provider.introspect({
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+				token: legacyToken,
+				tokenTypeHint: "access_token",
+			});
+
+			expect(result.active).toBe(true);
+			if (result.active) expect(result.client_id).toBeUndefined();
 		});
 
 		test("returns inactive for expired/invalid token", async () => {

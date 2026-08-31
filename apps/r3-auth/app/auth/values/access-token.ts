@@ -1,8 +1,8 @@
 /**
  * The OAuth 2.0 access token this server issues: a JWT with typed accessors for the
- * claims RFC 9068 defines, plus the generator that mints one for an audience and
- * subject. A value object, so every endpoint reads and writes the bearer token
- * through one description of its claim set.
+ * claims RFC 9068 defines, plus the generator that mints one for an audience, a
+ * subject and a client. A value object, so every endpoint reads and writes the
+ * bearer token through one description of its claim set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,11 +17,6 @@ export default class AccessToken extends JWT {
 	/** Unique token id (`jti`), which makes a token individually identifiable. */
 	override get id() {
 		return this.parser.string("jti");
-	}
-
-	/** Who the token was issued for (`aud`): the client, or a requested resource. */
-	override get audience() {
-		return this.parser.string("aud");
 	}
 
 	/** Expiry as the raw `exp` claim, in seconds since the epoch. */
@@ -60,26 +55,48 @@ export default class AccessToken extends JWT {
 	}
 
 	/**
+	 * The client the token was issued to (`client_id`), which RFC 9068 §2.2 requires.
+	 * Absent yields `null` rather than throwing, so a token minted before the claim
+	 * existed stays readable for the rest of its lifetime.
+	 */
+	get clientId(): string | null {
+		if (!this.parser.has("client_id")) return null;
+		return this.parser.string("client_id");
+	}
+
+	/**
 	 * Mints an access token valid for {@link ACCESS_TOKEN_TTL}. Timestamps are seconds
 	 * since the epoch, the NumericDate form RFC 7519 defines, and `scope` is written
 	 * only when scopes were granted, as RFC 9068 requires.
 	 *
-	 * @param audience - Client id, or the client plus every requested resource.
-	 * @param subjectId - The person the token speaks for.
-	 * @param scope - Granted scopes, joined into the space-separated claim.
+	 * Claims are named rather than positional, so the audience, the subject and the
+	 * client cannot be transposed at a call site and the required client is stated
+	 * by the type.
+	 *
+	 * @param claims.audience - Client id, or the client plus every requested resource.
+	 * @param claims.subjectId - The person the token speaks for, or the client itself
+	 *   for `client_credentials`, where RFC 9068 §2.2.1 has `sub` name the client.
+	 * @param claims.clientId - The client that asked for the token.
+	 * @param claims.scope - Granted scopes, joined into the space-separated claim.
 	 */
-	static generate(audience: string | string[], subjectId: string, scope?: string[]) {
+	static generate(claims: {
+		audience: string | string[];
+		subjectId: string;
+		clientId: string;
+		scope?: string[];
+	}) {
 		let now = Math.floor(Date.now() / 1000);
 		let expiresAt = now + Math.floor(ACCESS_TOKEN_TTL / 1000);
 
 		return new AccessToken({
-			aud: audience,
+			aud: claims.audience,
+			client_id: claims.clientId,
 			exp: expiresAt,
 			iat: now,
 			iss: ISSUER,
 			jti: crypto.randomUUID(),
-			sub: subjectId,
-			...(scope && { scope: scope.join(" ") }),
+			sub: claims.subjectId,
+			...(claims.scope && { scope: claims.scope.join(" ") }),
 		});
 	}
 
