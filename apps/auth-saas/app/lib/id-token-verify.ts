@@ -1,69 +1,84 @@
 /**
- * Verifies platform-issued ID tokens for the onboarding callback: fetches the
- * platform tenant's JWKS, checks the ES256 signature, and requires the issuer,
- * audience, and time claims before trusting any claim to mint a dashboard
- * session. The echoed nonce lets the caller match it against the value stored
- * when the flow started.
+ * Verifies the platform-issued ID token the onboarding callback receives against the
+ * keys the provider publishes and the identifier it writes into every `iss`. The
+ * answer is a value the callback branches on, so one path covers every failed check.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JSONValue } from "@pkg/types";
-
-import { JWK, JWT } from "@pkg/jwt";
+import { IdToken } from "@pkg/auth/id-token";
+import { Issuer } from "@pkg/auth/issuer";
+import { JWK } from "@pkg/jwt";
+import { isFailure, wrap } from "@pkg/result";
+import { env } from "cloudflare:workers";
 
 /**
- * Clock skew tolerance (in seconds) allowed when verifying the ID token's time claims,
- * covering minor drift between the platform tenant and the worker.
+ * Clock skew tolerated on the token's lifetime claims, covering the drift between the
+ * tenant that signed the token and the worker reading it.
  */
 const ID_TOKEN_CLOCK_TOLERANCE = 60;
 
-/** The verified ID token's claims plus its echoed nonce (for the caller's nonce check). */
-export interface VerifiedIdToken {
-	/** The full, verified claim set (safe to read from once verification succeeds). */
-	claims: JSONValue;
-	nonce: string | null;
+/**
+ * The algorithm the provider signs ID tokens with, stated so a token presenting any
+ * other one is refused before a key is chosen for it.
+ */
+const ID_TOKEN_ALGORITHMS = [JWK.Algorithm.ES256];
+
+/**
+ * Providers kept by the origin serving them, so the discovery document and the key set
+ * are read once however many logins one isolate answers.
+ */
+const ISSUERS = new Map<string, Issuer>();
+
+/**
+ * The provider serving the given origin, whose documents are read there while every
+ * token it signs is held to the identifier the platform domain publishes, so a local
+ * run verifies against the keys it can actually reach.
+ *
+ * @param origin - Scheme and host the provider's endpoints answer on.
+ */
+function platformIssuer(origin: string): Issuer {
+	let held = ISSUERS.get(origin);
+	if (held) return held;
+
+	let issuer = new Issuer(origin, { identifier: `https://${env.PLATFORM_DOMAIN}` });
+	ISSUERS.set(origin, issuer);
+
+	return issuer;
 }
 
 /**
- * Fetches the platform tenant's JWKS, then verifies the token's ES256
- * signature, issuer, audience, and time claims, confirming the algorithm
- * before any key is chosen. The caller still checks the returned nonce.
+ * Verifies the token's signature, `iss`, `aud`, and lifetime claims. The echoed
+ * `nonce` reaches the caller unchecked, since only the login that started the flow
+ * knows the value it has to match.
  *
- * @param idToken - The raw ID token (JWT) from the token response.
- * @param options - JWKS location and expected issuer/audience.
- * @param options.jwksUrl - URL of the platform tenant's `/.well-known/jwks.json`.
- * @param options.issuer - Expected `iss` claim (e.g. `https://auth.example.com`).
- * @param options.audience - Expected `aud` claim (the dashboard client id).
- * @returns The verified claims and nonce, or `null` when verification fails.
+ * @param raw - The ID token as the token response carried it.
+ * @param options - Where the signing provider answers, and the client it issued to.
+ * @param options.origin - Scheme and host the provider serves its documents on.
+ * @param options.audience - The client id the token carries as its audience.
+ * @returns The verified token, and `null` where a check on it failed.
  * @example
- * let verified = await verifyIdToken(idToken, { jwksUrl, issuer, audience: "dashboard" });
- * if (!verified || verified.nonce !== expectedNonce) return renderError(...);
+ * let idToken = await verifyIdToken(raw, { origin: baseUrl, audience: "dashboard" });
+ * if (!idToken || idToken.nonce !== expectedNonce) return renderError("…");
  */
 export async function verifyIdToken(
-	idToken: string,
-	options: { jwksUrl: string; issuer: string; audience: string },
-): Promise<VerifiedIdToken | null> {
-	try {
-		let jwksResponse = await fetch(options.jwksUrl);
-		if (!jwksResponse.ok) return null;
+	raw: string,
+	options: { origin: string; audience: string },
+): Promise<IdToken | null> {
+	let verified = await wrap(async () => {
+		let issuer = platformIssuer(options.origin);
+		let [identifier, keys] = await Promise.all([issuer.identifier(), issuer.keys()]);
 
-		let jwks = (await jwksResponse.json()) as { keys?: unknown[] };
-		if (!jwks.keys || jwks.keys.length === 0) return null;
-
-		let publicKeys = await JWK.importLocal(jwks as Parameters<typeof JWK.importLocal>[0]);
-
-		let verified = await JWT.verify(idToken, publicKeys, {
-			issuer: options.issuer,
+		return await IdToken.verify(raw, keys, {
+			issuer: identifier,
 			audience: options.audience,
+			algorithms: ID_TOKEN_ALGORITHMS,
 			clockTolerance: ID_TOKEN_CLOCK_TOLERANCE,
-			algorithms: [JWK.Algorithm.ES256],
 		});
+	});
 
-		let nonce = typeof verified.payload.nonce === "string" ? verified.payload.nonce : null;
-		return { claims: verified.payload as JSONValue, nonce };
-	} catch {
-		return null;
-	}
+	if (isFailure(verified)) return null;
+
+	return verified.data;
 }

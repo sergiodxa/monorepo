@@ -23,6 +23,7 @@
     "apps/auth-saas": {
       "name": "@apps/auth-saas",
       "dependencies": {
+        "@pkg/auth": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/data-table-sqlstorage": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",

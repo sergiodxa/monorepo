@@ -15,6 +15,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/auth": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/data-table-sqlstorage": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",

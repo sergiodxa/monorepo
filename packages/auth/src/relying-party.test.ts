@@ -1717,6 +1717,45 @@ describe("verifyIdToken", () => {
 
 		expect(idToken.nonce).toBeNull();
 	});
+
+	test("accepts a token just past its expiry, within the tolerated drift", async () => {
+		let rp = createRelyingParty();
+		let now = Math.floor(Date.now() / 1000);
+
+		let idToken = await rp.verifyIdToken(await signIdToken({ exp: now - 30, nbf: now - 300 }));
+
+		expect(idToken.subject).toBe("user-1");
+	});
+
+	test("rejects a token expired beyond the tolerated drift", async () => {
+		let rp = createRelyingParty();
+		let now = Math.floor(Date.now() / 1000);
+
+		let error = await rp
+			.verifyIdToken(await signIdToken({ exp: now - ONE_HOUR, nbf: now - 2 * ONE_HOUR }))
+			.catch((thrown) => thrown);
+
+		expect(AuthError.is(error, AuthErrorCode.InvalidToken)).toBe(true);
+	});
+
+	test("rejects a token whose `nbf` places it in the future", async () => {
+		let rp = createRelyingParty();
+		let now = Math.floor(Date.now() / 1000);
+
+		let error = await rp
+			.verifyIdToken(await signIdToken({ nbf: now + ONE_HOUR, exp: now + 2 * ONE_HOUR }))
+			.catch((thrown) => thrown);
+
+		expect(AuthError.is(error, AuthErrorCode.InvalidToken)).toBe(true);
+	});
+
+	test("rejects a credential that is not a JWT at all", async () => {
+		let rp = createRelyingParty();
+
+		let error = await rp.verifyIdToken("not.a.jwt").catch((thrown) => thrown);
+
+		expect(AuthError.is(error, AuthErrorCode.InvalidToken)).toBe(true);
+	});
 });
 
 describe("exchangeRefreshToken", () => {

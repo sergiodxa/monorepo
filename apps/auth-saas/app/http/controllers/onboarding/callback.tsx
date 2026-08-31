@@ -10,7 +10,7 @@
 
 import type { JSONValue } from "@pkg/types";
 
-import { isFailure } from "@pkg/result";
+import { isFailure, wrap } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
@@ -45,19 +45,12 @@ let TokenResponseSchema = s.object({
 	refresh_token: s.optional(s.string()),
 });
 
-let IdTokenClaimsSchema = s.object({
-	sub: s.string(),
-	email: s.optional(s.string()),
-	email_verified: s.optional(s.boolean()),
-	sid: s.optional(s.string()),
-});
-
 const DASHBOARD_CLIENT_ID = "dashboard";
 
 /**
  * Exchanges the authorization code for tokens, then verifies the ID token's
- * signature, issuer, audience, and nonce against the platform JWKS so only a
- * valid, unreplayed token can establish a platform session.
+ * signature, issuer, audience, and nonce against the keys the platform provider
+ * publishes, so only a valid, unreplayed token can establish a platform session.
  */
 export default createAction(
 	routes.onboarding.callback,
@@ -134,28 +127,31 @@ export default createAction(
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		let verifiedClaims = await verifyIdToken(idToken, {
-			jwksUrl: new URL("/.well-known/jwks.json", baseUrl).toString(),
-			issuer: `https://${env.PLATFORM_DOMAIN}`,
+		let verifiedIdToken = await verifyIdToken(idToken, {
+			origin: baseUrl,
 			audience: DASHBOARD_CLIENT_ID,
 		});
-		if (!verifiedClaims) {
+		if (!verifiedIdToken) {
 			log.error("ID token verification failed");
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		if (verifiedClaims.nonce !== expectedNonce) {
+		if (verifiedIdToken.nonce !== expectedNonce) {
 			log.error("ID token nonce mismatch");
 			return renderError("Security validation failed. Please try again.");
 		}
 
-		let claimsResult = await validate(verifiedClaims.claims, IdTokenClaimsSchema);
-		if (isFailure(claimsResult)) {
-			log.error("Invalid ID token claims", { issues: claimsResult.error.issues });
+		let identity = wrap(() => ({
+			subjectId: verifiedIdToken.subject,
+			email: verifiedIdToken.email,
+			tenantSessionId: verifiedIdToken.sessionId ?? undefined,
+		}));
+		if (isFailure(identity)) {
+			log.error("Invalid ID token claims", { error: identity.error.message });
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		let { sub: subjectId, email, sid: tenantSessionId } = claimsResult.data;
+		let { subjectId, email, tenantSessionId } = identity.data;
 		if (!email) {
 			log.error("No email in ID token");
 			return renderError("Email is required for authentication.");
