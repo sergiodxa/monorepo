@@ -50,6 +50,7 @@ describe("listDocs", () => {
 			"/docs/concepts/http-monitors",
 			"/docs/concepts/dns-monitors",
 			"/docs/concepts/tcp-monitors",
+			"/docs/concepts/flow-monitors",
 			"/docs/concepts/cron-jobs",
 			"/docs/concepts/alerts",
 			"/docs/concepts/status-pages",

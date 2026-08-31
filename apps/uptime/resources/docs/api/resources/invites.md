@@ -4,7 +4,7 @@ description: Create and manage team invitations. Invite new members via email.
 section:
   title: API Resources
   order: 5
-order: 10
+order: 11
 lastUpdated: 2026-02-14
 ---
 

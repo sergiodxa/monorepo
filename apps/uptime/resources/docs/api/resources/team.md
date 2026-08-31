@@ -4,7 +4,7 @@ description: Get and update team settings. Manage team domains for custom status
 section:
   title: API Resources
   order: 5
-order: 9
+order: 10
 lastUpdated: 2026-02-14
 ---
 

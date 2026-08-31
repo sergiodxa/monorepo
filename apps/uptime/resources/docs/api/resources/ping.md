@@ -4,7 +4,7 @@ description: Run a one-off HTTP, DNS, or TCP probe without creating a monitor. B
 section:
   title: API Resources
   order: 5
-order: 12
+order: 13
 lastUpdated: 2026-08-01
 ---
 

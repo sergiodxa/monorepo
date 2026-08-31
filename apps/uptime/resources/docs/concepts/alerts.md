@@ -4,7 +4,7 @@ description: Get notified when your monitors detect issues. Configure alerts via
 section:
   title: Concepts
   order: 2
-order: 6
+order: 7
 lastUpdated: 2026-08-04
 ---
 

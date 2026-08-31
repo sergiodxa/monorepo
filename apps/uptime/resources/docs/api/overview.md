@@ -33,6 +33,7 @@ All responses are returned as JSON. Successful responses include a `data` field,
 - [HTTP Monitors](/docs/api/resources/http-monitors) - Monitor websites and HTTP endpoints
 - [DNS Monitors](/docs/api/resources/dns-monitors) - Watch a domain's DNS records for changes
 - [TCP Monitors](/docs/api/resources/tcp-monitors) - Monitor TCP ports and services
+- [Flow Monitors](/docs/api/resources/flow-monitors) - Run a multi-request spec on a schedule
 - [Cron Jobs](/docs/api/resources/cron-jobs) - Monitor scheduled tasks and cron jobs
 - [Alerts](/docs/api/resources/alerts) - Configure alert channels and notifications
 - [Status Pages](/docs/api/resources/status-pages) - Manage public and private status pages

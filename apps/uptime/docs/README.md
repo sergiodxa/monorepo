@@ -9,6 +9,7 @@ This folder documents the product features observed in `apps/uptime` from a beha
 - `dns-monitors.md`
 - `tcp-monitors.md`
 - `ssl-monitoring.md`
+- `flow-monitors.md`
 - `ad-hoc-pings.md`
 - `alerts.md`
 - `cron-job-monitoring.md`

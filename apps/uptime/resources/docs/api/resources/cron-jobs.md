@@ -4,7 +4,7 @@ description: Create and manage cron job monitors. Record pings and get execution
 section:
   title: API Resources
   order: 5
-order: 5
+order: 6
 lastUpdated: 2026-08-02
 ---
 

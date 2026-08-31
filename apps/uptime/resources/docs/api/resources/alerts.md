@@ -4,7 +4,7 @@ description: Create and manage alerts for email, Slack, Discord, and webhook not
 section:
   title: API Resources
   order: 5
-order: 6
+order: 7
 lastUpdated: 2026-08-04
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Understanding Monitors
-description: Monitors continuously check the health of your services and alert you when something goes wrong. Learn about HTTP, DNS, TCP, and cron job monitors.
+description: Monitors continuously check the health of your services and alert you when something goes wrong. Learn about HTTP, DNS, TCP, cron job, and flow monitors.
 section:
   title: Concepts
   order: 2
@@ -18,7 +18,7 @@ Monitors provide:
 
 ## Types of Monitors
 
-Uptime offers four types of monitors, each designed for different use cases.
+Uptime offers five types of monitors, each designed for different use cases.
 
 ### HTTP Monitors
 
@@ -63,6 +63,17 @@ Cron job monitors work differently—instead of Uptime checking your service, yo
 - Any recurring process that should run on a schedule
 
 If a job fails to check in within its expected window, you'll know something went wrong. See [Cron Job Monitors](/docs/concepts/cron-jobs) for details.
+
+### Flow Monitors
+
+A flow monitor checks a sequence of requests rather than a single one. You write the sequence as a short spec — sign in, take the token, call the endpoint it authorises — and every step asserts on what came back. They answer the question the other types cannot:
+
+- Do credentials still mint a working token?
+- Does an OAuth exchange still return a token your issuer signed?
+- Does a protected endpoint still refuse a caller without one?
+- Does a two-step API still hold together after a deploy?
+
+Because a flow drives a sequence rather than sending one anonymous request, **it can only reach hosts covered by a domain your team has verified**. There is no browser: a flow makes HTTP requests and asserts on responses. See [Flow Monitors](/docs/concepts/flow-monitors) for details.
 
 ## Common Concepts
 
@@ -163,4 +174,5 @@ Review your monitors periodically:
 - [DNS Monitors](/docs/concepts/dns-monitors) — Learn how a domain's records are watched
 - [TCP Monitors](/docs/concepts/tcp-monitors) — Monitor services at the network level
 - [Cron Job Monitors](/docs/concepts/cron-jobs) — Track scheduled jobs
+- [Flow Monitors](/docs/concepts/flow-monitors) — Check a sequence of requests, not just one
 - [Understanding Alerts](/docs/concepts/alerts) — Configure how you get notified

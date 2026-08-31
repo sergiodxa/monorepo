@@ -4,7 +4,7 @@ description: Create public or private status pages to communicate service health
 section:
   title: Concepts
   order: 2
-order: 7
+order: 8
 lastUpdated: 2026-02-14
 ---
 

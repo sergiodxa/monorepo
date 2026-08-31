@@ -4,7 +4,7 @@ description: Schedule maintenance windows to prevent false alerts during planned
 section:
   title: Concepts
   order: 2
-order: 8
+order: 9
 lastUpdated: 2026-08-11
 ---
 

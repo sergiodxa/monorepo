@@ -4,7 +4,7 @@ description: Create and manage public status pages. Associate monitors and custo
 section:
   title: API Resources
   order: 5
-order: 7
+order: 8
 lastUpdated: 2026-02-14
 ---
 

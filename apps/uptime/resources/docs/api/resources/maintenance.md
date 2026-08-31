@@ -4,7 +4,7 @@ description: Schedule and manage maintenance windows. Suppress alerts during pla
 section:
   title: API Resources
   order: 5
-order: 8
+order: 9
 lastUpdated: 2026-08-11
 ---
 

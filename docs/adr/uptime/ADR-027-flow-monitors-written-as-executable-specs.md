@@ -15,9 +15,24 @@ answer ([§7b](#7b-an-http-only-flow-is-metered-in-pings-not-browser-seconds)).
 Landed as of 2026-08-11: the `@pkg/spec` Workers seam ([§9](#9-what-pkgspec-has-to-grow)),
 `flow_monitors` and `flow_monitor_results`, the check service, the sweep, retention,
 per-request metering, and the app surface — list, detail, create, edit, delete, and a manual run
-whose result arrives as a toast rather than as a navigation held open for half a minute. Not yet
-built: alerting, the public API, and everything browser ([§5](#5-two-phases-stateless-first)),
-whose prices in [§7](#7-cost) stay unspent until then.
+whose result arrives as a toast rather than as a navigation held open for half a minute.
+
+Landed as of 2026-08-31, and with it phase one is complete: alerting on the shared pipeline,
+the public REST API, the daily roll-up and team digests, presence on public status pages, and
+the customer-facing docs [§10](#10-honest-limits-stated-in-the-docs) asked for. Alerting fires
+on `down` and on recovery out of `down`; `error` never notifies, which is what keeps a mistyped
+spec or an un-verified domain from paging anyone. The API accepts `source` and returns it from
+nothing, since a spec carries the credentials the flow signs in with.
+
+Still unbuilt: everything browser ([§5](#5-two-phases-stateless-first)), whose prices in
+[§7](#7-cost) stay unspent until then.
+
+Two things this ADR asserts that the implementation settled differently, recorded here so the
+document does not read as describing what shipped. The run caps are pre-call gates on the `http`
+tools rather than a hard wall-clock abort, so a slow in-flight request can carry a run past the
+cap; and both caps report `error` rather than `down` — [§3](#3-one-run-is-one-session-under-one-wall-clock-cap)
+treats only the request cap that way, but a run stopped before it could answer reads the same to
+a customer whichever cap stopped it, and the alert path is the reason the distinction matters.
 
 Nothing here is a migration of existing rows: there is no monitor type being replaced. The
 five existing types (`http`, `dns`, `tcp`, `ssl`, `cron`) are untouched.

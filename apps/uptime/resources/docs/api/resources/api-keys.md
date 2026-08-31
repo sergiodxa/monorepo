@@ -4,7 +4,7 @@ description: Create and manage API keys programmatically. Keys can only be viewe
 section:
   title: API Resources
   order: 5
-order: 11
+order: 12
 lastUpdated: 2026-02-14
 ---
 
