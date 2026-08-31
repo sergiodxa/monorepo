@@ -25,7 +25,11 @@ import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
 import routes from "~/routes/web";
 
-/** POST /oauth/introspect — reports a token's validity and claims. */
+/**
+ * POST /oauth/introspect — reports a token's validity and claims. RFC 7662 gives one
+ * answer for a token this endpoint cannot resolve, so a fault in this server is reported
+ * inactive like any other and named in the log at error level, where it stays visible.
+ */
 export default createAction(
 	routes.oauth.introspect,
 	inject([Database, RateLimiters] as const, async (db, limiters) => {
@@ -64,7 +68,12 @@ export default createAction(
 
 			return ok(introspection);
 		} catch (error) {
-			if (error instanceof OIDC.Error) {
+			if (error instanceof OIDC.InternalServerError) {
+				ctx.logger.error("introspect_server_error", {
+					clientId: credentials.clientId,
+					error: error.description,
+				});
+			} else if (error instanceof OIDC.Error) {
 				ctx.logger.info("introspect_error", { clientId: credentials.clientId, code: error.code });
 			} else {
 				ctx.logger.error("introspect_unexpected_error", {

@@ -32,13 +32,31 @@ import routes from "~/routes/web";
 const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
 
 /**
+ * The answer a fault in this server earns. RFC 6749 §5.2 reserves `400` for the six
+ * codes it lists, every one of them the client's to fix, so a fault here carries the
+ * `500` a client retries on and the `server_error` code of §4.1.2.1.
+ */
+function serverError(): Response {
+	return internalServerError(
+		{ error: "server_error", error_description: "An unexpected error occurred." },
+		{ headers: NO_STORE_HEADERS },
+	);
+}
+
+/**
  * Turns an engine failure into the OAuth error envelope its `error` code names.
  *
- * A protocol error is the client's to fix and answers `400` with its own code; anything
- * else is this server's fault and answers an opaque `server_error`.
+ * A protocol error is the client's to fix and answers `400` with the code RFC 6749 §5.2
+ * defines for it; a fault in this server answers `500`, so a client that reads
+ * retryability off the status retries instead of discarding a grant that is still good.
  */
 function tokenError(error: unknown): Response {
 	let ctx = getContext();
+
+	if (error instanceof OIDC.InternalServerError) {
+		ctx.logger.error("token_server_error", { error: error.description });
+		return serverError();
+	}
 
 	if (error instanceof OIDC.Error) {
 		ctx.logger.info("token_oauth2_error", { code: error.code });
@@ -52,10 +70,7 @@ function tokenError(error: unknown): Response {
 		error: error instanceof Error ? error.message : "Unknown error",
 	});
 
-	return internalServerError(
-		{ error: "server_error", error_description: "An unexpected error occurred." },
-		{ headers: NO_STORE_HEADERS },
-	);
+	return serverError();
 }
 
 /**

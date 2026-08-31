@@ -181,6 +181,41 @@ export interface TestApp {
 }
 
 /**
+ * Runs `work` against a bucket that refuses every read, which is how a test reaches the
+ * answers this server gives for signing keys it cannot load. The held keys are dropped on
+ * both sides, so the first read after `work` goes back to the bucket.
+ *
+ * The service module is imported here rather than at the top of this file, because a static
+ * import is hoisted above the `cloudflare:workers` mock and would capture the real binding.
+ *
+ * @param app - The instance whose bucket refuses the reads.
+ * @param work - The requests to run while the keys are unreadable.
+ * @returns Whatever `work` returned.
+ */
+export async function withUnreadableSigningKeys<T>(
+	app: TestApp,
+	work: () => Promise<T>,
+): Promise<T> {
+	let { invalidateSigningKeys } = await import("~/app/services/signing-keys");
+
+	let bucket = app.r2 as unknown as Record<string, unknown>;
+	let stored = { get: bucket.get, list: bucket.list, put: bucket.put };
+	let refuse = () => Promise.reject(new Error("The bucket is unavailable"));
+
+	bucket.get = refuse;
+	bucket.list = refuse;
+	bucket.put = refuse;
+	invalidateSigningKeys();
+
+	try {
+		return await work();
+	} finally {
+		Object.assign(bucket, stored);
+		invalidateSigningKeys();
+	}
+}
+
+/**
  * Builds an app instance with fresh KV and R2 bindings, kept in a local reference so it
  * keeps its own storage once a later call points the shared bindings elsewhere, and
  * registers mail under production's key so a test exercises the real mailer path.

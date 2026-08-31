@@ -13,6 +13,7 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
+import { OIDC } from "~/app/auth/oidc-provider";
 import { createOidcProvider } from "~/app/auth/repository";
 import { ISSUER } from "~/app/config";
 import routes from "~/routes/web";
@@ -34,8 +35,8 @@ function invalidToken(description: string, challenge: string): Response {
 
 /**
  * GET /userinfo — returns the signed-in subject's claims for a bearer access token.
- * `sub` is unconditional per OIDC Core §5.4; every other claim is gated on the scope
- * the access token was issued with.
+ * `sub` is unconditional per OIDC Core §5.4; every other claim is gated on the scope the
+ * access token was issued with. A fault here answers the same challenge, named in the log.
  */
 export default createAction(
 	routes.userinfo,
@@ -78,9 +79,13 @@ export default createAction(
 
 			return ok(claims);
 		} catch (error) {
-			ctx.logger.info("userinfo_invalid_token", {
-				error: error instanceof Error ? error.message : "Unknown error",
-			});
+			if (error instanceof OIDC.InternalServerError) {
+				ctx.logger.error("userinfo_server_error", { error: error.description });
+			} else {
+				ctx.logger.info("userinfo_invalid_token", {
+					error: error instanceof Error ? error.message : "Unknown error",
+				});
+			}
 
 			return invalidToken(
 				"Invalid or expired access token",

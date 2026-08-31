@@ -1,7 +1,8 @@
 /**
  * Router-level tests of the UserInfo endpoint, focused on scope gating: `sub` is
  * always returned, and every other claim appears only when the access token was issued
- * with the scope that entitles the caller to it.
+ * with the scope that entitles the caller to it, plus how a fault in this server is
+ * reported once the challenge on the wire is the same either way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +13,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import { createTestApp } from "~/app/lib/test/http";
+import { createTestApp, withUnreadableSigningKeys } from "~/app/lib/test/http";
+import { loggedEvents, withLogs } from "~/app/lib/test/logs";
 import { authorizeUrl, exchangeCode, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
@@ -189,5 +191,31 @@ describe("GET /userinfo", () => {
 			error: "invalid_token",
 			error_description: "Subject not found",
 		});
+	});
+
+	/**
+	 * A key store this endpoint cannot read leaves every token unverifiable, good ones
+	 * included, so the challenge stays the one description a caller ever earns while the
+	 * log names the fault at the level that pages — the token is not what went wrong.
+	 */
+	test("logs unreadable signing keys at error behind the same challenge", async () => {
+		let accessToken = await tokenWithScope("openid email");
+
+		let [response, logs] = await withLogs(
+			async () => await withUnreadableSigningKeys(app, async () => await userinfo(accessToken)),
+		);
+
+		expect(response.status).toBe(401);
+		expect(await response.json()).toEqual({
+			error: "invalid_token",
+			error_description: "Invalid or expired access token",
+		});
+
+		expect(loggedEvents(logs.error)).toContainEqual(
+			expect.objectContaining({ level: "error", event: "userinfo_server_error" }),
+		);
+		expect(loggedEvents(logs.error)).toContainEqual(
+			expect.objectContaining({ level: "error", event: "userinfo_signing_key_failed" }),
+		);
 	});
 });

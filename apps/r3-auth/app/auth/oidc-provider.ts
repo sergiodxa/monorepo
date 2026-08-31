@@ -644,13 +644,22 @@ export class OIDC {
 	 *
 	 * @throws When the token fails signature, issuer or expiry verification.
 	 * @throws {InvalidTokenError} When the token was not issued with the `openid` scope.
+	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer
+	 * names this server as the reason rather than the token the caller presented.
 	 */
 	async userinfo(args: { accessToken: string; clientId?: string }) {
-		let accessToken = await AccessToken.verify(
-			args.accessToken,
-			await this.repository.getSigningKey(),
-			{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
-		);
+		let signingKeys = await wrap(() => this.repository.getSigningKey());
+
+		if (isFailure(signingKeys)) {
+			this.logger.error("userinfo_signing_key_failed", { error: signingKeys.error.message });
+
+			throw new InternalServerError();
+		}
+
+		let accessToken = await AccessToken.verify(args.accessToken, signingKeys.data, {
+			issuer: this.issuer,
+			algorithms: [JWK.Algorithm.ES256],
+		});
 
 		let scope = accessToken.scopes;
 		if (!scope.includes("openid")) {
@@ -767,13 +776,14 @@ export class OIDC {
 
 	/**
 	 * Opens a session, records consent, and issues a single-use authorization code for
-	 * the relying party to redeem. Returns a `Result` because its callers are browser
-	 * redirects: a failure becomes an `error=` parameter on the client's redirect URI.
+	 * the relying party to redeem. A failure becomes an `error=` parameter on the client's
+	 * redirect URI, so it carries a fixed description and reports its detail to the log.
 	 *
 	 * @param input - The subject, client, and authorization request being answered.
+	 * @returns The redirect carrying the code, or the failure to redirect in its place.
 	 */
 	async generateAuthzCode(input: OIDC.GenerateAuthzCodeInput) {
-		try {
+		let issued = await wrap(async () => {
 			let authTime = Math.floor(Date.now() / 1000);
 
 			let [session, _grant] = await Promise.all([
@@ -806,18 +816,25 @@ export class OIDC {
 				);
 			}
 
-			return success({
+			return {
 				redirectUri: input.redirectUri,
 				params,
 				responseMode: input.responseMode ?? "query",
 				subjectId: input.subjectId,
+			};
+		});
+
+		if (isFailure(issued)) {
+			this.logger.error("authz_code_issue_failed", {
+				clientId: input.clientId,
+				subjectId: input.subjectId,
+				error: issued.error.message,
 			});
-		} catch (error) {
-			if (error instanceof Error) {
-				return failure(new InternalServerError(error.message));
-			}
+
 			return failure(new InternalServerError());
 		}
+
+		return success(issued.data);
 	}
 
 	/**

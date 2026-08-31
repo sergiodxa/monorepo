@@ -1,7 +1,8 @@
 /**
  * Router-level tests of the token endpoint: refresh-token rotation, the
  * client-credentials grant through both HTTP Basic and body credentials, client
- * authentication failures, and the no-store headers every response carries.
+ * authentication failures, how a fault here is told apart from a client's mistake, and
+ * the no-store headers every response carries.
  *
  * The body-credentials tests guard a frozen contract: the relying parties' OIDC client
  * library defaults to sending `client_id`/`client_secret` in the body, so accepting
@@ -11,14 +12,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { createTestApp } from "~/app/lib/test/http";
-import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { loggedEvents, withLogs } from "~/app/lib/test/logs";
+import {
+	authorizeUrl,
+	exchangeCode,
+	ORIGIN,
+	seed,
+	signIn,
+	submitSignIn,
+} from "~/app/lib/test/seed";
 import routes from "~/routes/web";
+
+/**
+ * The `code_verifier` the PKCE exchanges below present. Its `S256` challenge is written
+ * down rather than derived, so a test can take the digest away and keep the fixture.
+ */
+const VERIFIER = "test-code-verifier-that-is-long-enough";
+
+/** The unpadded base64url SHA-256 of {@link VERIFIER}. */
+const CHALLENGE = "aR4qcDehlTqFSADsPqglVn-eSmvea8v0ge0m7JBXcFw";
 
 let app: TestApp;
 let fixtures: Fixtures;
@@ -175,5 +193,78 @@ describe("the client_credentials grant", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: "invalid_client" });
+	});
+});
+
+describe("a fault in this server", () => {
+	/** Parks an `S256` authorization request, signs in, and returns the code it issued. */
+	async function pkceCode(): Promise<string> {
+		await app.fetch(
+			new Request(
+				authorizeUrl(fixtures, { code_challenge: CHALLENGE, code_challenge_method: "S256" }),
+			),
+		);
+
+		let login = await submitSignIn(app);
+		let location = login.headers.get("location");
+		if (!location) throw new Error("Sign-in did not redirect back to the client");
+
+		let code = new URL(location).searchParams.get("code");
+		if (!code) throw new Error("Sign-in did not produce an authorization code");
+
+		return code;
+	}
+
+	/**
+	 * A digest the runtime refuses is this server failing while the grant it was handed is
+	 * still good, so the client is owed the `500` it retries on rather than a `400` that
+	 * would have it discard the code — and the log line is owed the level that pages.
+	 */
+	test("a refused digest answers server_error and is logged at error", async () => {
+		let code = await pkceCode();
+
+		let digest = vi
+			.spyOn(crypto.subtle, "digest")
+			.mockRejectedValue(new Error("digest unavailable"));
+
+		let [response, logs] = await withLogs(
+			async () => await exchangeCode(app, fixtures, { code, code_verifier: VERIFIER }),
+		);
+		digest.mockRestore();
+
+		expect(response.status).toBe(500);
+		expect(await response.json()).toEqual({
+			error: "server_error",
+			error_description: "An unexpected error occurred.",
+		});
+		expect(response.headers.get("cache-control")).toBe("no-store");
+
+		expect(loggedEvents(logs.error)).toContainEqual(
+			expect.objectContaining({ level: "error", event: "token_server_error" }),
+		);
+	});
+
+	/**
+	 * The same code path with the digest working: a verifier that derives a different
+	 * challenge is the client's own mistake, so it keeps the `400` and the `invalid_grant`
+	 * code RFC 6749 §5.2 names, and stays at the level a refused exchange belongs on.
+	 */
+	test("a verifier that does not match stays the client's invalid_grant", async () => {
+		let code = await pkceCode();
+
+		let [response, logs] = await withLogs(
+			async () =>
+				await exchangeCode(app, fixtures, {
+					code,
+					code_verifier: "a-different-verifier-that-is-long-enough",
+				}),
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({ error: "invalid_grant" });
+
+		expect(loggedEvents(logs.info)).toContainEqual(
+			expect.objectContaining({ level: "info", event: "token_oauth2_error" }),
+		);
 	});
 });

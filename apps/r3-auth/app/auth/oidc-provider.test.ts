@@ -1563,3 +1563,48 @@ describe("loginWithCredential()", () => {
 		expect(signIn.status).toBe("success");
 	});
 });
+
+describe("generateAuthzCode", () => {
+	/** The authorization request the failing storage below is asked to answer. */
+	const INPUT = {
+		subjectId: testSubject.id,
+		clientId: testClient.id,
+		ip: null,
+		ua: null,
+		redirectUri: testClient.redirectUri,
+		state: "state-123",
+	};
+
+	/**
+	 * The description travels to the relying party as an `error_description` query
+	 * parameter on its redirect URI, so it stays a fixed sentence: a runtime message put
+	 * there would reach the client's logs, its browser history and its `Referer` headers.
+	 */
+	test("reports a storage failure with a fixed description and logs the detail", async () => {
+		let logger = createMockLogger();
+		let repo = {
+			...createMockRepository(),
+			createSession: vi.fn(async () => {
+				throw new Error("D1_ERROR: no such table: sessions");
+			}),
+			findOrCreateGrant: vi.fn(async () => ({ id: "grant-123" })),
+			storeAuthorizationCode: vi.fn(async () => {}),
+		} as unknown as OIDC.Repository;
+
+		let result = await new OIDC(ISSUER, repo, logger).generateAuthzCode(INPUT);
+
+		expect(result.status).toBe("failure");
+		if (result.status !== "failure") return;
+
+		expect(result.error).toBeInstanceOf(OIDC.InternalServerError);
+		expect(result.error.code).toBe("internal_server_error");
+		expect(result.error.description).toBe("Internal server error");
+		expect(result.error.description).not.toContain("D1_ERROR");
+
+		expect(logger.error).toHaveBeenCalledWith("authz_code_issue_failed", {
+			clientId: testClient.id,
+			subjectId: testSubject.id,
+			error: "D1_ERROR: no such table: sessions",
+		});
+	});
+});
