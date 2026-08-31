@@ -9,6 +9,7 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
+import { Location } from "@pkg/location";
 import { inject } from "@pkg/service-container";
 import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
@@ -47,28 +48,18 @@ function AuthPage(handle: Handle<{ title: string; error?: string; children: Remi
 }
 
 /**
- * Validates a post-login `next`/`returnTo` target so it can only be a same-origin
- * path. Rejects protocol-relative (`//host`) and backslash (`/\host`) tricks and any
- * absolute URL to another origin — an open-redirect guard for the auth flow.
+ * Narrows a post-login `next`/`returnTo` target to a path this app serves, keeping its
+ * query string and hash. Yields `undefined` for an unusable target, leaving the caller
+ * to choose where the visitor lands.
  * @param value - The candidate redirect target from the query or session.
- * @param request - The current request, used to resolve the origin.
- * @returns The normalized same-origin path, or `undefined` when unsafe.
+ * @returns The normalized same-origin path, or `undefined`.
  * @example
- * safeNext("/cms/posts", request); // "/cms/posts"
- * safeNext("//evil.example", request); // undefined
+ * safeNext("/cms/posts?tab=drafts"); // "/cms/posts?tab=drafts"
+ * safeNext("//evil.example"); // undefined
  */
-export function safeNext(value: string | null | undefined, request: Request): string | undefined {
-	if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
-		return undefined;
-	}
-	try {
-		let base = new URL(request.url);
-		let resolved = new URL(value, base);
-		if (resolved.origin !== base.origin) return undefined;
-		return resolved.pathname + resolved.search + resolved.hash;
-	} catch {
-		return undefined;
-	}
+export function safeNext(value: string | null | undefined): string | undefined {
+	if (!value || !Location.isSafe(value)) return undefined;
+	return Location.from(value).toString();
 }
 
 /**
@@ -104,7 +95,7 @@ export const login = createController(routes.auth.login, {
 
 		async action(ctx) {
 			let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
-			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"), ctx.request);
+			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"));
 			return startExternalAuth(provider, ctx, { returnTo: next });
 		},
 	},
@@ -128,7 +119,7 @@ export const callback = createAction(
 			signIn(user);
 			if (typeof result.tokens.idToken === "string") setIdToken(result.tokens.idToken);
 			log.info("Login completed", { userId: user.id });
-			let dest = safeNext(returnTo, ctx.request) ?? routes.cms.dashboard.href();
+			let dest = safeNext(returnTo) ?? routes.cms.dashboard.href();
 			return redirect(dest, { status: redirect.Status.SeeOther });
 		} catch (error) {
 			log.error("Login failed", { error: String(error) });
