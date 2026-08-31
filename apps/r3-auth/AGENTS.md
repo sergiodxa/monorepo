@@ -13,8 +13,7 @@ never overrides it.
 ## Frozen Contracts
 
 These are the things relying parties depend on. Breaking one is a coordinated release of
-every client app, not a change to this app. `apps/blog`, `apps/uptime` and
-`packages/auth-sdk` pin them.
+every client app, not a change to this app. `apps/blog` and `apps/uptime` pin them.
 
 - MUST keep the `iss` claim and the discovery `issuer` as the **scheme-less** string
   `auth.sergiodxa.com` (`ISSUER` in `app/config.ts`). Clients compare that exact string when

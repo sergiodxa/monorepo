@@ -93,7 +93,6 @@ Run from the repository root:
 | ------------------------------------------------------- | ------------------------------------------------------------- |
 | [api-client](packages/api-client)                       | Base class for clients of a remote HTTP API                   |
 | [arrays](packages/arrays)                               | Array utility functions                                       |
-| [auth-sdk](packages/auth-sdk)                           | OAuth 2.0 client SDK for auth.sergiodxa.com                   |
 | [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                                     |
 | [cloudflare-mocks](packages/cloudflare-mocks)           | In-memory Cloudflare binding mocks for tests                  |
 | [cron](packages/cron)                                   | Cron schedules with zone-aware occurrences and descriptors    |
@@ -116,7 +115,6 @@ Run from the repository root:
 | [mail](packages/mail)                                   | Transactional email with pluggable transports                 |
 | [markdown](packages/markdown)                           | Markdown parsing and Remix UI rendering                       |
 | [mcp](packages/mcp)                                     | MCP servers over stateless Streamable HTTP                    |
-| [oidc-client](packages/oidc-client)                     | OIDC client utilities                                         |
 | [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                                   |
 | [pagination](packages/pagination)                       | Offset and keyset pagination with Link headers                |
 | [polar](packages/polar)                                 | Polar billing integration utilities                           |
