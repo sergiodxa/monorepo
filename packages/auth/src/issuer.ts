@@ -1,8 +1,7 @@
 /**
- * The authorization server every other class in this package talks to. It reads the
- * issuer's discovery document, hands out each endpoint the provider advertises by
- * name, resolves the published key set, and verifies an ID token against both. One
- * instance per issuer serves every role an app plays, and `Issuer.for` hands it out.
+ * The authorization server every other class in this package talks to: it reads the
+ * discovery document, hands out each advertised endpoint, resolves the published key
+ * set, and verifies an ID token against both. `Issuer.for` shares one instance per URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,8 +32,8 @@ const DEFAULT_TTL: DurationInput = "1 hour";
 const CACHE_PREFIX = "auth:issuer";
 
 /**
- * Seconds of clock skew a verification tolerates on a token's lifetime claims, which
- * covers the drift between the provider that signed it and the server reading it.
+ * Covers the drift between the provider that signed a token and the server reading its
+ * lifetime claims.
  */
 const DEFAULT_CLOCK_TOLERANCE_SECONDS = 60;
 
@@ -110,9 +109,8 @@ function sameIssuer(left: string, right: string): boolean {
 }
 
 /**
- * Names one configuration of an issuer, covering every option that changes what an
- * instance answers, so two callers asking for the same provider on the same terms are
- * handed the same instance and its memos.
+ * Names one configuration of an issuer by the options that change what it answers, so a
+ * differing cache tier still resolves to one shared instance.
  *
  * @param url - Where the issuer serves its documents.
  * @param options - The rest of the configuration.
@@ -130,11 +128,9 @@ function instanceKey(url: string | URL, options: Issuer.Options): string {
 }
 
 /**
- * An OpenID Connect provider, addressed by its issuer identifier.
- *
- * Every document it publishes is fetched once per cache TTL, however many callers
- * ask for it and however many isolates serve them, and every read of it is checked
- * against the issuer it was asked for.
+ * An OpenID Connect provider, addressed by its issuer identifier. Every document it
+ * publishes is fetched once per cache TTL, however many callers and isolates ask for it,
+ * and every read of it is checked against the issuer it was asked for.
  *
  * @example
  * let issuer = Issuer.for(env.OIDC_ISSUER, { cache: new Cache.KVStore(env.CACHE, waitUntil) });
@@ -144,24 +140,19 @@ function instanceKey(url: string | URL, options: Issuer.Options): string {
  * let issuer = Issuer.for("https://auth.example.com", { identifier: "auth.example.com" });
  */
 export class Issuer {
-	/**
-	 * The instance `for` hands out per configuration, so the memos behind `metadata()`
-	 * and `keys()` are shared by every caller reading the same issuer.
-	 */
+	/** Held for the life of the isolate, so the memos behind a configuration are shared. */
 	static #instances = new Map<string, Issuer>();
 
 	/**
-	 * The issuer for a configuration, built on the first ask and handed out on every
-	 * later one, so the documents are read once per isolate however many roles, routes,
-	 * and requests reach for them.
-	 *
-	 * The cache tier the first ask supplies is the one the instance keeps. State it as a
-	 * factory where the store is built over per-request values, so every read resolves
-	 * one belonging to the request making it.
+	 * The issuer for a configuration, handed to every later caller asking on the same
+	 * terms, so its documents are read once per isolate. The cache the first ask supplies
+	 * is the one the instance keeps, so a per-request store goes in as a factory.
 	 *
 	 * @param url - Where the issuer serves its documents, as an absolute URL.
 	 * @param options - The published identifier, the shared cache, inline metadata, and
-	 *   the cache TTL. Everything but the cache names the instance.
+	 *   the cache TTL. Everything but the cache names the instance, and every name asked
+	 *   for is held for the life of the isolate, so these come from a fixed configuration
+	 *   and a value that varies per request goes to the constructor.
 	 * @returns The issuer for that configuration.
 	 * @throws `Error` when the URL carries no scheme.
 	 * @example
@@ -193,9 +184,8 @@ export class Issuer {
 	#keys: Promise<JWK.KeyResolver> | null = null;
 
 	/**
-	 * Points an instance at an issuer, with memos of its own. `Issuer.for` is what an
-	 * app calls, so one set of memos serves every role, route, and request; a direct
-	 * construction is for a caller that wants an instance nothing else shares.
+	 * Points an instance at an issuer, with memos of its own, for a test or a one-off
+	 * read.
 	 *
 	 * @param url - Where the issuer serves its documents, as an absolute URL.
 	 * @param options - The published identifier, the shared cache, inline metadata,
@@ -266,16 +256,13 @@ export class Issuer {
 	}
 
 	/**
-	 * Verifies an ID token this issuer signed: its signature against the published key
-	 * the token's `kid` names, then its `iss` against the identifier the provider
-	 * publishes, its `aud` against the client it was issued to, and its lifetime.
-	 *
-	 * This is the verification the browser flow runs, so a token that arrived out of
-	 * band — from a native client, an IdP-initiated flow, or a test fixture — is held to
-	 * the same checks. The flow adds the `nonce` and `at_hash` bindings it alone knows.
+	 * The verification the browser flow runs, so a token that arrived out of band — from a
+	 * native client, an IdP-initiated flow, a fixture — is held to the same checks. The
+	 * `nonce` and `at_hash` bindings come from the flow that started the login.
 	 *
 	 * @param raw - The token as the provider serialized it.
-	 * @param options - The audience it names, the algorithms accepted, and the skew.
+	 * @param options - The audience it names, the algorithms accepted, and the skew
+	 *   tolerated, which stands at a minute when the caller states none.
 	 * @returns The verified token, whose claims are trustworthy from here on.
 	 * @throws {AuthError} `invalid_token` when any check on the token fails, and
 	 *   `DiscoveryFailed` or `JwksFailed` when the issuer's own documents are unreadable.
@@ -592,9 +579,8 @@ export namespace Issuer {
 	}
 
 	/**
-	 * Where an instance reads its shared cache tier from. A factory is resolved on every
-	 * read, so a store built over per-request values — a `waitUntil` belonging to one
-	 * request among them — stays current for an instance that outlives the request.
+	 * A factory is resolved on every read, so a store built over per-request values — a
+	 * `waitUntil` among them — stays current for an instance that outlives the request.
 	 */
 	export type CacheSource = CacheStore | (() => CacheStore);
 
@@ -622,10 +608,9 @@ export namespace Issuer {
 	/** How an {@link Issuer} is configured. */
 	export interface Options {
 		/**
-		 * The identifier the provider publishes and writes into every token's `iss`,
-		 * for a provider whose identifier is something other than the URL its documents
-		 * are served from. The document's `issuer` is held to this value, and
-		 * `identifier()` keeps answering with the document's own.
+		 * The identifier the provider publishes and writes into every token's `iss`, for one
+		 * whose identifier stands apart from the URL its documents are served from. The
+		 * document's `issuer` is held to this value, and `identifier()` answers with its own.
 		 *
 		 * @default the URL the instance was constructed with
 		 */
@@ -633,9 +618,8 @@ export namespace Issuer {
 
 		/**
 		 * Where fetched documents are shared across isolates. Omitting it keeps the
-		 * documents for the life of the instance. State it as a factory where the store is
-		 * built over per-request values, so every read resolves one belonging to that
-		 * request.
+		 * documents for the life of the instance, and a store built over per-request values
+		 * goes in as a factory.
 		 */
 		cache?: CacheSource;
 

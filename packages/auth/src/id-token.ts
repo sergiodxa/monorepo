@@ -40,11 +40,9 @@ export const AUTHENTICATION_METHODS = {
 } as const;
 
 /**
- * A verified OpenID Connect ID token.
- *
- * The claims a login turns on — identity, step-up, and profile — arrive as named
- * accessors with their nullability stated, and any claim with no accessor reads
- * through by name, so a provider-specific claim is available as it was sent.
+ * A verified OpenID Connect ID token. The claims a login turns on — identity,
+ * step-up, and profile — arrive as named accessors with their nullability stated, and
+ * any other claim reads through by name, as the provider sent it.
  *
  * @example
  * let idToken = await IdToken.verify(raw, await issuer.keys(), { issuer, audience });
@@ -73,11 +71,9 @@ export class IdToken extends JWT {
 	}
 
 	/**
-	 * When the person actually authenticated, from the seconds `auth_time` stores.
-	 *
-	 * It survives every token refresh, so it is what decides whether to re-prompt
-	 * before a sensitive action, and the provider sends it whenever `max_age` was
-	 * requested.
+	 * When the person actually authenticated, from the seconds `auth_time` stores. It
+	 * survives every token refresh, so it is what decides whether to re-prompt before a
+	 * sensitive action, and the provider sends it whenever `max_age` was requested.
 	 */
 	get authTime(): Date | null {
 		if (this.parser.has("auth_time")) {
@@ -139,11 +135,9 @@ export class IdToken extends JWT {
 	}
 
 	/**
-	 * Whether the provider vouches for the email address.
-	 *
-	 * `false` for an absent claim, so an authorization decision reads a plain
-	 * boolean, and a provider that serializes the claim as the string `"true"`
-	 * normalizes here.
+	 * Whether the provider vouches for the email address. An absent claim reads as
+	 * `false`, so an authorization decision gets a plain boolean, and a provider that
+	 * serializes the claim as the string `"true"` normalizes here.
 	 */
 	get emailVerified(): boolean {
 		if (!this.parser.has("email_verified")) return false;
@@ -153,8 +147,8 @@ export class IdToken extends JWT {
 	}
 
 	/**
-	 * The `preferred_username` claim, display-only and mutable, named for the role it
-	 * plays so one claim goes by one name throughout.
+	 * The `preferred_username` claim: display-only, and mutable at the provider, so
+	 * records stay keyed on `subject`.
 	 */
 	get username(): string | null {
 		if (this.parser.has("preferred_username")) return this.parser.string("preferred_username");
@@ -173,11 +167,9 @@ export class IdToken extends JWT {
 
 export namespace IdToken {
 	/**
-	 * One authentication method reference, as `amr` carries it.
-	 *
-	 * The twenty registered values give autocomplete, and any other string is
-	 * accepted too: RFC 8176 §3 keeps the registry open under Expert Review, and
-	 * providers use that room to send values of their own.
+	 * One authentication method reference, as `amr` carries it. The twenty registered
+	 * values give autocomplete, and any other string is accepted too: RFC 8176 §3 keeps
+	 * the registry open, and providers use that room to send values of their own.
 	 */
 	export type AuthenticationMethod =
 		| (typeof AUTHENTICATION_METHODS)[keyof typeof AUTHENTICATION_METHODS]

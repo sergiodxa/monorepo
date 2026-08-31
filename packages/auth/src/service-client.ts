@@ -1,8 +1,7 @@
 /**
- * The client an app runs as itself, with no person present: it holds the
- * `client_credentials` grant for cron jobs, queue consumers and server-to-server
- * reads, hands out one cached token per client and resource set, and asks the
- * issuer to describe or to stop honoring a token.
+ * The client an app runs as itself, with no person present. It holds the
+ * `client_credentials` grant for cron jobs, queue consumers and server-to-server reads,
+ * hands out one cached token per client and resource set, and describes or revokes one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,14 +137,9 @@ function toDate(value: number | undefined): Date | null {
 }
 
 /**
- * A confidential client acting on its own behalf.
- *
- * One token is granted per client and resource set however many callers ask and
- * however many of them ask at once, and each token is handed out only while it has
- * enough life left to be accepted by the service it is sent to.
- *
- * A signed token's own `exp` states that life, `expires_in` states it for an opaque
- * token, and a token stating neither is granted afresh every time it is asked for.
+ * A confidential client acting on its own behalf. One token is granted per client and
+ * resource set however many callers ask and however many of them ask at once, and a token
+ * is handed out only while it has life enough left for the service it is sent to.
  *
  * @example
  * let service = new ServiceClient(issuer, { clientId, clientSecret });
@@ -423,11 +417,9 @@ export class ServiceClient {
 	}
 
 	/**
-	 * Spends one unit of the client's budget for the grant.
-	 *
-	 * A backend that cannot answer lets the attempt through: the budget is there to
-	 * keep a runaway loop off the issuer, scheduled work keeps running through a
-	 * limiter outage, and the issuer enforces its own limit on every grant it sees.
+	 * Spends one unit of the client's budget for the grant. A backend that cannot answer
+	 * lets the attempt through, so scheduled work keeps running through a limiter outage,
+	 * and the issuer enforces its own limit on every grant it sees.
 	 *
 	 * @throws `RateLimited` when the budget for this client is spent.
 	 */
@@ -545,10 +537,9 @@ export class ServiceClient {
 	}
 
 	/**
-	 * Where a resource set's grant is cached. The client id and both requested sets
-	 * are part of the key, so a token scoped to one set is served only to callers
-	 * asking for that same set, and the sets are sorted so the order a caller writes
-	 * them in carries no meaning.
+	 * Where a resource set's grant is cached. The client id and both requested sets are
+	 * part of the key, so a token scoped to one set serves only callers asking for that
+	 * same set, and each set is sorted so a caller's ordering carries no meaning.
 	 *
 	 * @param options - The resources and scopes the token is for.
 	 */

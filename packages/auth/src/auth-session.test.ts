@@ -24,8 +24,8 @@ function base64url(bytes: Uint8Array): string {
 }
 
 /**
- * Builds a compact JWS carrying the given claims. `AuthSession` reads a stored
- * token rather than verifying it, so the signature segment stays a placeholder.
+ * Builds a compact JWS carrying the given claims. `AuthSession` reads a stored token
+ * that was verified when it was written, so the signature segment stays a placeholder.
  */
 function token(claims: Record<string, unknown>): string {
 	let header = base64url(new TextEncoder().encode(JSON.stringify({ alg: "ES256", typ: "JWT" })));

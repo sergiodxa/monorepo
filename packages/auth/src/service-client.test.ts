@@ -1,8 +1,7 @@
 /**
- * Covers the grant a service runs for itself: the wire format of its resource
- * indicators, the caching and single-flighting that keep one token per resource
- * set, client authentication in both methods, and introspection and revocation.
- * The raw request body is asserted, since that is where a scoping bug shows.
+ * Covers the grant a service runs for itself: the wire format of its resource indicators,
+ * the caching and single-flighting that keep one token per resource set, both client
+ * authentication methods, introspection, and revocation. The raw body is asserted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

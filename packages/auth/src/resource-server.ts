@@ -1,8 +1,7 @@
 /**
- * The role an app plays when someone else calls it. It turns the access token a caller
- * presents into the claims behind it, and answers either as a `remix/middleware/auth`
- * scheme a route reads through `getContext().get(Auth)`, or as a direct call for an app
- * holding a token and no request to read it from.
+ * The role an app plays when someone else calls it: it turns the access token a caller
+ * presents into the claims behind it, either as a `remix/middleware/auth` scheme a route
+ * reads through `getContext().get(Auth)`, or as a direct call on a token an app holds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,9 +33,9 @@ const AUTHORIZATION_HEADER = /^(\S+)[ \t]+(\S.*)$/;
 const COMPACT_JWS = /^[\w-]+\.[\w-]+\.[\w-]+$/;
 
 /**
- * The answer a presented credential this server does not accept is reported with. The
- * challenge is the one RFC 6750 §3 pairs with a rejected token, and the middleware
- * forwards it as `WWW-Authenticate` so a client knows to obtain a new one.
+ * The answer a credential this server declines is reported with. The challenge is the
+ * one RFC 6750 §3 pairs with a rejected token, and the middleware forwards it as
+ * `WWW-Authenticate` so a client knows to obtain a new one.
  */
 const REJECTED: AuthSchemeFailure = {
 	status: "failure",
@@ -78,15 +77,9 @@ function readBearerCredential(header: string | null): string | null {
 }
 
 /**
- * An API this app exposes to callers holding an access token.
- *
- * A token signed by the issuer is verified against the key set the issuer publishes; a
- * token carrying no claims of its own is described by the issuer over RFC 7662
- * introspection.
- *
- * Both paths end at the same `AccessToken`, and both hold the token to one of this
- * server's audiences, so the audiences configured here are the whole of what a caller
- * reaches whichever path answered.
+ * An API this app exposes to callers holding an access token. A signed token is verified
+ * against the key set the issuer publishes and a claimless one is described over RFC 7662
+ * introspection; both paths end at an `AccessToken` held to one of this server's audiences.
  *
  * @example
  * let api = new ResourceServer(issuer, { audience: clientId, introspection: service });
@@ -114,19 +107,14 @@ export class ResourceServer {
 	}
 
 	/**
-	 * A `remix/middleware/auth` scheme that resolves the request's bearer token into
-	 * the identity the app's `verify` returns.
-	 *
-	 * A request carrying no bearer credential is left to the next scheme and to a
-	 * public route, which is the middleware's ordinary path. A presented credential
-	 * this server does not accept is reported as a failure carrying RFC 6750's
-	 * challenge, so the request stops here with a `401` naming the reason.
-	 *
-	 * An issuer that cannot serve its own documents surfaces as the `AuthError` it is,
-	 * keeping an outage a fault the app handles rather than a caller holding a bad token.
+	 * A `remix/middleware/auth` scheme that resolves the request's bearer token into the
+	 * identity the app's `verify` returns. A request carrying no bearer credential is left
+	 * to the next scheme, and one this server declines stops here with RFC 6750's `401`.
 	 *
 	 * @param options - The app's `verify`, and the method name to report.
 	 * @returns A scheme for `auth({ schemes: [...] })`.
+	 * @throws {AuthError} When the issuer cannot serve its own documents, so an outage
+	 *   stays a fault the app handles.
 	 * @example
 	 * api.scheme({ verify: (token) => users.getBySubject(token.subject) });
 	 * @example
@@ -164,12 +152,8 @@ export class ResourceServer {
 
 	/**
 	 * Verifies an access token an app obtained outside a request — a queued job whose
-	 * payload carries one, a connection authenticated once at its upgrade, a token that
-	 * arrived somewhere other than an `Authorization` header, a fixture.
-	 *
-	 * Accepts whichever form the issuer hands out, and runs every check the scheme runs,
-	 * answering with the reason a credential was declined so a caller with no scheme
-	 * chain behind it can act on it.
+	 * payload carries one, a connection authenticated once at its upgrade, a fixture. It
+	 * accepts whichever form the issuer hands out and runs every check the scheme runs.
 	 *
 	 * @param credential - The access token as presented.
 	 * @returns The token this server accepted.
@@ -196,7 +180,7 @@ export class ResourceServer {
 	 * issuer itself.
 	 *
 	 * @param credential - The credential as presented.
-	 * @returns The token, or `null` when this server does not accept the credential.
+	 * @returns The token, or `null` when this server declines the credential.
 	 */
 	async #resolve(credential: string): Promise<AccessToken | null> {
 		if (COMPACT_JWS.test(credential)) return await this.#verify(credential);
@@ -204,12 +188,9 @@ export class ResourceServer {
 	}
 
 	/**
-	 * Verifies a JWT access token: its signature against the key the issuer publishes
-	 * for the `kid` it names, then its `iss`, its `aud`, and its lifetime.
-	 *
-	 * Reading the key set before the verification keeps an issuer that cannot publish
-	 * one reported as the `AuthError` it is, and keeps a rejected token reported as a
-	 * credential this server declines.
+	 * Verifies a JWT access token against the key set the issuer publishes. Reading that
+	 * set precedes the verification, so an issuer outage surfaces as an `AuthError` and
+	 * `null` answers only a token that failed a check here.
 	 *
 	 * @param credential - The compact-serialized token.
 	 * @returns The verified token, or `null` when a check on it fails.
@@ -226,20 +207,13 @@ export class ResourceServer {
 	}
 
 	/**
-	 * Asks the issuer to describe a credential, and rebuilds the answer as an
-	 * `AccessToken` so both paths hand the app the same claims.
-	 *
-	 * A description is accepted when it names one of this server's audiences, holding
-	 * the introspection path to what the local path checks in `aud`.
-	 *
-	 * RFC 7662 §2.2 leaves `aud` optional, so a description naming none is accepted
-	 * where `acceptUnscopedIntrospection` puts the issuer's own scoping in its place.
-	 *
-	 * A description naming its issuer is accepted when that issuer is this one, and a
-	 * server configured with no introspector accepts JWT access tokens.
+	 * Asks the issuer to describe a credential, and rebuilds the answer as an `AccessToken`
+	 * so both paths hand the app the same claims. A description is accepted when it names
+	 * one of this server's audiences and names this server's issuer.
 	 *
 	 * @param credential - The credential as presented.
-	 * @returns The token the issuer described, or `null` when it stands behind none.
+	 * @returns The token the issuer described, `null` when the issuer stands behind none,
+	 *   and `null` for a server configured with no introspector.
 	 */
 	async #introspect(credential: string): Promise<AccessToken | null> {
 		if (this.#introspection === null) return null;
@@ -275,12 +249,9 @@ export namespace ResourceServer {
 	/** How a {@link ResourceServer} is configured. */
 	export interface Options {
 		/**
-		 * The audiences this server answers for. A token is accepted when its `aud`,
-		 * written by the provider as one value or as a list, carries any of them.
-		 *
-		 * An authorization-code token names the client id it was issued to, and a
-		 * client-credentials token names the issuer alongside the resources it asked
-		 * for, so a server reachable by both is configured with both.
+		 * The audiences this server answers for; a token is accepted when its `aud`, written
+		 * as one value or as a list, carries any of them. An authorization-code token names
+		 * the client id, a client-credentials token the issuer and the resources it asked for.
 		 */
 		audience: string | string[];
 
@@ -291,11 +262,8 @@ export namespace ResourceServer {
 		introspection?: Introspector;
 
 		/**
-		 * Whether a token the issuer describes without naming any audience is accepted
-		 * on the issuer's scoping alone.
-		 *
-		 * Left off, such a description is refused, so every accepted credential has
-		 * named this server. Turn it on for an issuer whose introspection endpoint
+		 * Whether a token the issuer describes without naming any audience is accepted on
+		 * the issuer's scoping alone. Turn it on for an issuer whose introspection endpoint
 		 * answers only for tokens this server may honor.
 		 *
 		 * @default false

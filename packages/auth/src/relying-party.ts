@@ -1,8 +1,7 @@
 /**
- * The browser login flow: the authorization redirect, the callback that turns a
- * code into a verified token set, and RP-initiated logout. It owns `state`, PKCE,
- * the `nonce`, and the step-up contract, so every claim an app reads is checked
- * against what the request asked for.
+ * The browser login flow: the authorization redirect, the callback that turns a code
+ * into a verified token set, and RP-initiated logout. It owns `state`, PKCE, the `nonce`,
+ * and step-up, so every claim an app reads is checked against what the request asked for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -309,12 +308,9 @@ function defaultProfile(claims: JWT.Payload): RelyingParty.Profile {
 }
 
 /**
- * A confidential OpenID Connect client driving a person's login through the
- * browser.
- *
- * The three route methods share one transaction, held in the session, so the
- * `state`, PKCE verifier, `nonce`, and step-up request a login was started with
- * are the ones its callback is measured against.
+ * A confidential OpenID Connect client for a person's browser login. Its three route
+ * methods share one transaction, held in the session, so a callback is measured against
+ * the `state`, PKCE verifier, `nonce`, and step-up its own login asked for.
  *
  * @template profile - What `mapProfile` produces, carried on the `Grant`.
  * @example
@@ -371,25 +367,16 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * Starts a login: writes the transaction to the session and redirects to the
-	 * issuer.
-	 *
-	 * `returnTo` is resolved through `Location.safe`, so what reaches the
-	 * transaction names this app's own origin as both a URL and a pathname, and
-	 * anything else takes the configured fallback.
-	 *
-	 * The budget is spent before anything else happens, so a refused login leaves
-	 * the session as it was and asks the issuer for nothing.
-	 *
-	 * A spent budget answers the person at the browser directly, as a thrown `429`
-	 * response, so a router carrying a configured `rateLimit` installs
-	 * `catchResponse()` from `@pkg/catch-response-middleware` to deliver it.
+	 * Starts a login, spending the browser's budget before the session is touched, so a
+	 * refused login leaves it as it was. `returnTo` resolves through `Location.safe`, taking
+	 * the configured fallback for anything naming another origin.
 	 *
 	 * @param ctx - The request context the session middleware wrote to.
 	 * @param options - Where to return to, and what to ask the issuer for.
 	 * @returns The `303` redirect to the authorization endpoint.
 	 * @throws {Response} `429` with `Retry-After` when the calling browser's login
-	 *   budget is spent.
+	 *   budget is spent, which `catchResponse()` from `@pkg/catch-response-middleware`
+	 *   delivers as the reply.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
 	 *   authorization endpoint, `reserved_parameter` for an extra parameter the flow
 	 *   writes itself.
@@ -452,11 +439,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * Finishes a login: correlates the callback with its transaction, exchanges the
-	 * code, verifies the ID token, and signs the request in.
-	 *
-	 * The transaction is spent the moment it is read, so one login answers exactly
-	 * one callback.
+	 * Finishes a login and signs the request in. The transaction the callback is correlated
+	 * against is spent the moment it is read, so one login answers exactly one callback.
 	 *
 	 * @param ctx - The request context the callback route received.
 	 * @returns The verified tokens, the subject, the mapped profile, and where to go.
@@ -609,13 +593,9 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * Verifies an ID token an app obtained outside the redirect flow — a native
-	 * client, an IdP-initiated sign-in, a fixture.
-	 *
-	 * Runs every check the callback runs against the token itself: the signature
-	 * over the issuer's published keys, `iss`, `aud`, and the lifetime claims. It reads
-	 * the client id and the skew off this relying party, which is what it adds over
-	 * `Issuer.verifyIdToken` — the call an app with no browser flow reaches for.
+	 * Verifies an ID token an app obtained outside the redirect flow — a native client,
+	 * an IdP-initiated sign-in, a fixture. Runs every check the callback runs against the
+	 * token itself, with this relying party's client id, algorithms, and skew.
 	 *
 	 * @param raw - The compact-serialized ID token.
 	 * @returns The verified token.
@@ -673,12 +653,9 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * An `AuthScheme` for `remix/middleware/auth` that resolves identity from the
-	 * session, renewing an access token that has reached its expiry first, so the
-	 * app's `verify` always sees a live token set.
-	 *
-	 * A signed-out request is skipped, so the schemes behind it in the ordered
-	 * fallback still get their turn.
+	 * An `AuthScheme` for `remix/middleware/auth` that renews an access token past its
+	 * expiry before the app's `verify` runs, so `verify` always sees a live token set, and
+	 * passes a signed-out request to the schemes behind it in the ordered fallback.
 	 *
 	 * @param options - The app's `verify`, and the name the scheme reports.
 	 * @returns The scheme to list in `auth({ schemes })`.
@@ -723,10 +700,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * Spends one unit of the calling browser's budget for starting a login.
-	 *
-	 * A backend that cannot answer lets the attempt through: the budget is there to
-	 * keep a scripted flood off the issuer, people keep signing in through a limiter
+	 * Spends one unit of the calling browser's budget for starting a login. A backend that
+	 * cannot answer lets the attempt through, so people keep signing in through a limiter
 	 * outage, and the issuer enforces its own limit on every request it sees.
 	 *
 	 * @param ctx - The request context the login starts from.
@@ -952,12 +927,9 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * Resolves the claim set a profile is built from.
-	 *
-	 * The verified ID token is enough on its own, so the userinfo round-trip is
-	 * spent only where it is asked for, and `"when-missing"` asks for it while any
-	 * display claim is absent; a userinfo response is bound to the login by its
-	 * `sub`, which OpenID Connect Core §5.3.2 requires before its values count.
+	 * Resolves the claim set a profile is built from: the verified ID token, plus a userinfo
+	 * round-trip where `"when-missing"` finds a display claim absent, whose answer OpenID
+	 * Connect Core §5.3.2 binds to the login by its `sub`.
 	 *
 	 * @param idToken - The verified ID token.
 	 * @param accessToken - The access token to present at the userinfo endpoint.

@@ -29,8 +29,8 @@ const TIMESTAMP_SCHEMA = s
 
 /**
  * The envelope a subject read answers with. The provider publishes these member
- * names and ISO-8601 timestamps as a frozen contract, so a payload that misses one
- * is a provider a caller cannot read rather than a subject with a gap in it.
+ * names and ISO-8601 timestamps as a frozen contract, so a payload missing one is
+ * reported as a provider the caller cannot read.
  */
 const SUBJECT_SCHEMA = s.object({
 	subject: s.object({
@@ -58,11 +58,11 @@ export const ManagementErrorCode = {
 	ProviderFailed: "provider_failed",
 	/** The request reached no answer at all. */
 	RequestFailed: "request_failed",
-	/** The answer arrived in a shape the record's contract does not allow. */
+	/** The answer arrived in a shape outside the record's contract. */
 	InvalidResponse: "invalid_response",
 } as const;
 
-/** One of the {@link ManagementErrorCode} values. */
+/** Which way a read failed, exhaustive so a `switch` over it closes. */
 export type ManagementErrorCode = (typeof ManagementErrorCode)[keyof typeof ManagementErrorCode];
 
 /** Diagnostic context attached to a {@link ManagementError}. */
@@ -114,8 +114,8 @@ export class ManagementError extends Error {
 
 /**
  * The failure a management read reports when the provider holds no record under the
- * requested id. It is the provider's answer rather than a fault, so a caller
- * resolving several ids may leave this one out and keep the rest.
+ * requested id. This is a definite answer from the provider, so a caller resolving
+ * several ids may leave this one out and keep the rest.
  */
 export class SubjectNotFoundError extends Error {
 	/** The id the provider found no record under. */
@@ -171,8 +171,7 @@ export class ManagementClient {
 	/**
 	 * Reads one subject by id. An id the provider holds no record under answers
 	 * `SubjectNotFoundError`, and a provider that refused, throttled, failed, or
-	 * answered unreadably answers `ManagementError`, so a caller resolving many ids
-	 * decides which of the two it survives.
+	 * answered unreadably answers `ManagementError`.
 	 *
 	 * @param subjectId - The subject to read.
 	 * @returns The subject, the absence of a record, or why no record arrived.
@@ -218,10 +217,9 @@ export class ManagementClient {
 	}
 
 	/**
-	 * Reads an answered body as the record it is contracted to hold, so a payload
-	 * that arrives in another shape is reported as one the caller cannot read. An
-	 * answer declaring a media type other than JSON is reported from that header
-	 * alone, with the type it named.
+	 * Reads an answered body as the record it is contracted to hold, so a payload in
+	 * another shape is reported as one the caller cannot read. An answer declaring a
+	 * media type other than JSON is reported from that header alone.
 	 *
 	 * @param endpoint - Where the answer came from, named in the failure message.
 	 * @param response - The answer, with its body still unread.

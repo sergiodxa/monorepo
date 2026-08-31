@@ -138,7 +138,7 @@ An OpenID Connect provider, addressed by its issuer identifier.
 #### `Issuer.for(url: string | URL, options?: Issuer.Options): Issuer`
 
 The issuer for a configuration, built on the first ask and handed out on every later one.
-Reach for this rather than the constructor: the documents are then read once per isolate
+This is the entry point every role reaches for: the documents are read once per isolate
 however many roles, routes, and requests ask for them, and no app has to hold the instance
 itself.
 
@@ -234,9 +234,9 @@ let idToken = await issuer.verifyIdToken(raw, { audience: CLIENT_ID });
 - `options.clockTolerance`: Seconds of clock skew tolerated on the lifetime claims
   (default `60`)
 
-The `nonce` and the `at_hash` are the two checks it leaves out, because only the flow that
-started the login knows the values they are held to. `rp.callback` adds both, and
-`rp.verifyIdToken` is the same call with this relying party's client id and skew filled in.
+The `nonce` and the `at_hash` are held to values only the flow that started the login
+knows, so `rp.callback` is where those two are checked. `rp.verifyIdToken` is this call
+with the relying party's client id, algorithms, and skew filled in.
 
 **Throws:** `invalid_token` when any check on the token fails; `discovery_failed` or
 `jwks_failed` when the issuer's own documents are unreadable.
@@ -780,8 +780,8 @@ interface IdTokenVerification {
 
 #### `RelyingParty.Profile`
 
-What `mapProfile` replaces, each member answering the same nullability its ID-token
-accessor does.
+The display claims a login produces by default — the shape `options.mapProfile` answers
+with in its place — each member answering the same nullability its ID-token accessor does.
 
 ```typescript
 interface Profile {

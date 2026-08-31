@@ -1,8 +1,7 @@
 /**
- * Covers what an `Issuer` promises its callers: a validated discovery document, an
- * identity check against the issuer it was asked for, a named error for every way
- * discovery and the key set can fail, a verified ID token, one instance per
- * configuration, and one fetch per document however many callers ask for it.
+ * Covers what an `Issuer` promises its callers: a validated discovery document held to
+ * the issuer it was asked for, a named error for every way discovery and the key set can
+ * fail, a verified ID token, and one instance and one fetch per configuration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,11 +28,11 @@ const JWKS_URL = `${ISSUER}/.well-known/jwks.json`;
 
 /**
  * The identifier a provider publishes without a scheme, standing in for one whose
- * `iss` is a bare host rather than the URL its documents are served from.
+ * `iss` is a bare host.
  */
 const SCHEMELESS_ISSUER = "auth.test";
 
-/** Pinned so a token claiming another algorithm fails rather than being honored. */
+/** Pinned so a token claiming another algorithm fails. */
 const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
 
 /** The client every ID token in this file is issued to. */
@@ -590,7 +589,7 @@ describe("caching", () => {
 	test("accepts a KV-backed store as its cache", () => {
 		/**
 		 * The assignment is the assertion: a `cache` option a KV-backed store cannot be
-		 * passed to fails typechecking here rather than at an app's call site.
+		 * passed to fails typechecking here, at the package's own boundary.
 		 */
 		let accept = (store: Cache.KVStore): Issuer.CacheStore => store;
 

@@ -107,10 +107,6 @@ export class AuthSession {
 	 * Whether the stored token set has reached its end, counting a 30-second reserve so
 	 * a token nearing that end is renewed before the request reaches for it.
 	 *
-	 * The access token's own signed `exp` states the end, the lifetime the token
-	 * endpoint stated answers for an opaque access token, and the ID token's `exp`,
-	 * required by OpenID Connect Core §2, answers for a set carrying neither.
-	 *
 	 * @returns `true` for a set whose end has arrived, and for one that states no end
 	 *   at all, which is a set nothing vouches for.
 	 */
@@ -119,11 +115,9 @@ export class AuthSession {
 	}
 
 	/**
-	 * Spends the refresh token on a new access token and rewrites the session with
-	 * what came back, so the rest of the request reads the renewed set.
-	 *
-	 * A response carrying only a new access token leaves the stored ID and refresh
-	 * tokens in place, so a session survives a provider that reissues just the one.
+	 * Spends the refresh token on a new access token and rewrites the session, so the
+	 * rest of the request reads the renewed set. A response carrying only a new access
+	 * token leaves the stored ID and refresh tokens in place.
 	 *
 	 * @param client - The relying party that holds the credentials for the exchange.
 	 * @returns This session, now carrying the renewed tokens.

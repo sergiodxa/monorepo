@@ -28,14 +28,9 @@ export function signedExpiry(credential: string): number | null {
 }
 
 /**
- * When an access token stops being accepted, in seconds since the epoch.
- *
- * The token's own `exp` answers first: RFC 9068 §2.2 requires it of a JWT access
- * token, it is signed, and it is the value a resource server enforces, so the answer
- * tracks the credential itself.
- *
- * A lifetime the token endpoint stated answers for an opaque token, whose claims no
- * holder reads.
+ * When an access token stops being accepted, in seconds since the epoch. The token's
+ * own signed `exp` answers first, since that is the value a resource server enforces;
+ * a lifetime the token endpoint stated answers for an opaque token.
  *
  * @param credential - The access token as the issuer serialized it.
  * @param stated - Seconds since the epoch derived from `expires_in`, and `null`
@@ -48,11 +43,9 @@ export function accessTokenExpiry(credential: string, stated: number | null): nu
 }
 
 /**
- * Whether a token has less life left than the reserve its holder needs, which is
- * the question behind reusing a cached token and behind renewing a stored one.
- *
- * An expiry no source states reads as already spent, because nothing about the
- * credential vouches for it and one round-trip buys a credential that does.
+ * Whether a token has less life left than the reserve its holder needs, which is the
+ * question behind reusing a cached token and behind renewing a stored one. An expiry
+ * no source states reads as already spent, since nothing vouches for the credential.
  *
  * @param expiry - Seconds since the epoch the token expires at, absent as `null`.
  * @param reserve - Seconds of life a token must still have to be worth handing on,

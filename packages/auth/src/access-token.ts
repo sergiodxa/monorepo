@@ -10,11 +10,9 @@
 import { JWT } from "@pkg/jwt";
 
 /**
- * A JWT access token, per RFC 9068.
- *
- * `audience` reads either shape of `aud`: the client id on an authorization-code
- * token, and the issuer plus every requested resource on a client-credentials one,
- * where a `sub` equal to `client_id` marks the caller as a service.
+ * A JWT access token, per RFC 9068. `audience` reads either shape of `aud`: the client
+ * id on an authorization-code token, and the issuer plus every requested resource on
+ * a client-credentials one.
  *
  * @example
  * let token = await AccessToken.verify(raw, await issuer.keys(), { issuer, audience });

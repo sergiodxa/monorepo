@@ -1,7 +1,7 @@
 /**
- * Reads the media type an answer declares, so a client spends one header read to
- * tell a body worth parsing as JSON from one the server already described as
- * something else, and names that description in the failure it reports.
+ * Reads the media type an answer declares, so one header read tells a body worth
+ * parsing as JSON from one the server described as something else, and names that
+ * media type in the failure it reports.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

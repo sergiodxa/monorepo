@@ -1,8 +1,7 @@
 /**
- * Repo-wide guard against a capability helper called as a statement: `scope("x");`
- * reads like a permission check, compiles, and authorizes nothing, since the helper
- * answers with a boolean and never throws. Lint judges an expression's shape, and a
- * call is a shape it accepts, so this call form is checked here instead.
+ * Repo-wide guard against a capability helper called as a statement: `scope("x");` reads
+ * like a permission check, compiles, and authorizes nothing, since the helper answers with
+ * a boolean and never throws. Lint accepts the shape, so the call form is checked here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -139,12 +138,9 @@ describe("capability helpers called as statements, repo-wide", () => {
 	});
 
 	/**
-	 * Test files are scanned along with everything else, since a route defined in one gets
-	 * the same helpers and the same bypass. The names are what the guard matches, so a call
-	 * site that renames a helper at the point it re-exports it — `export { scope as can }` —
-	 * passes unseen; keeping the app's re-export under the package's own names keeps the
-	 * whole vocabulary in view. The 4,000-file floor catches a scan that quietly stops
-	 * matching, and parsing the tree costs about a second.
+	 * Test files are scanned too: a route in one gets the same helpers and bypass. The guard
+	 * matches names, so an app re-exports them under those names, and the file floor catches
+	 * a rename that slips past. Walking every module costs about a second, hence the timeout.
 	 */
 	test("no first-party module calls a capability helper as a statement", () => {
 		let violations: string[] = [];

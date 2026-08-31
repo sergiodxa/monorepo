@@ -1,8 +1,7 @@
 /**
  * Covers what a `ResourceServer` promises each of its callers: the middleware, where a
- * request with no bearer credential is left for the next scheme and a token the issuer
- * stands behind resolves to an identity, and an app calling it directly, where a
- * declined credential is named. Tokens are signed for real against a key set over HTTP.
+ * request with no bearer credential is left for the next scheme, and an app calling it
+ * directly, where a declined credential is named. Tokens are signed for real.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -136,8 +135,8 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 /**
- * A resource server over a fresh `Issuer`, so each test reads the published key set
- * rather than another test's memo of it.
+ * A resource server over a fresh `Issuer`, so each test reads the published key set for
+ * itself.
  *
  * @param options - Configuration to add or replace.
  */

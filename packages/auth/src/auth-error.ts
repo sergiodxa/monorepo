@@ -1,8 +1,7 @@
 /**
- * The failure every protocol violation in this package is reported as: a bad
- * `state`, a mismatched `nonce`, an invalid signature, a step-up request the
- * provider left unsatisfied. Each carries a stable code, so a route branches on
- * the reason itself and a log groups failures by it.
+ * The failure every protocol violation in this package is reported as: a bad `state`,
+ * a mismatched `nonce`, an invalid signature, a step-up request the provider left
+ * unsatisfied. Each carries a stable code a route branches on and a log groups by.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,9 +22,9 @@ export const AuthErrorCode = {
 	JwksFailed: "jwks_failed",
 	/** No login transaction was in the session when the callback ran. */
 	MissingTransaction: "missing_transaction",
-	/** The `state` the provider returned does not match the transaction's. */
+	/** The `state` the provider returned differs from the transaction's. */
 	StateMismatch: "state_mismatch",
-	/** The `nonce` in the ID token does not match the transaction's. */
+	/** The `nonce` in the ID token differs from the transaction's. */
 	NonceMismatch: "nonce_mismatch",
 	/** The authorization response carried an error, or no readable response at all. */
 	AuthorizationFailed: "authorization_failed",
@@ -37,7 +36,7 @@ export const AuthErrorCode = {
 	MissingIdToken: "missing_id_token",
 	/** An ID token or access token failed verification. */
 	InvalidToken: "invalid_token",
-	/** `at_hash` was present and does not match the access token beside it. */
+	/** `at_hash` was present and differs from the access token beside it. */
 	AtHashMismatch: "at_hash_mismatch",
 	/** `acr_values` was requested and no requested value came back. */
 	AcrNotSatisfied: "acr_not_satisfied",
@@ -57,7 +56,7 @@ export const AuthErrorCode = {
 	ReservedParameter: "reserved_parameter",
 } as const;
 
-/** One of the {@link AuthErrorCode} values. */
+/** The reason an {@link AuthError} carries, exhaustive so a `switch` over it closes. */
 export type AuthErrorCode = (typeof AuthErrorCode)[keyof typeof AuthErrorCode];
 
 /** Diagnostic context attached to an {@link AuthError}. */
@@ -73,9 +72,8 @@ export interface AuthErrorOptions {
 }
 
 /**
- * Error thrown when a protocol step cannot be completed safely. Every code it
- * carries means the request has to stop, so throwing is what makes ignoring one
- * impossible at the call site.
+ * Error thrown when a protocol step cannot be completed safely. Every code it carries
+ * means the request has to stop.
  */
 export class AuthError extends Error {
 	/** Why the step failed. */

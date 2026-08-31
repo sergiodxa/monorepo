@@ -1,8 +1,7 @@
 /**
- * Covers every claim `IdToken` names, in both the present and the absent case,
- * because a nullability contract is what the call sites are written against.
- * A signed round-trip is asserted beside them, so verification keeps answering with
- * an `IdToken` and keeps checking the signature.
+ * Covers every claim `IdToken` names, in both the present and the absent case, because
+ * a nullability contract is what the call sites are written against. A signed round-trip
+ * is asserted beside them, so verification keeps answering with a checked `IdToken`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

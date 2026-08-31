@@ -97,11 +97,8 @@ function createHelpers(overrides: Partial<Authorization.Options> = {}): Authoriz
 
 /**
  * Runs a handler behind the chain the helpers depend on: `session()` above
- * `catchResponse()` so a thrown redirect still carries the session cookie, and
- * `asyncContext()` so an argument-free helper finds the request at all.
- *
- * The route is a wildcard, so a request whose own path is hostile still reaches
- * the handler that asks the question about it.
+ * `catchResponse()` so a thrown redirect still carries the session cookie, `asyncContext()`
+ * so an argument-free helper finds the request, and a wildcard route so a hostile path lands.
  *
  * @param handler - The route under test, called with no arguments of its own.
  * @param stored - The token set to sign the request in with, or `null` for a

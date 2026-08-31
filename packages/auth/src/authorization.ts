@@ -39,8 +39,8 @@ function readAuthSession(): AuthSession | null {
 }
 
 /**
- * Answers `null` where a stored token no longer parses, which is what lets a
- * capability helper promise a boolean to a view that is mid-render.
+ * Answers `null` where reading a claim throws, which is what lets a capability helper
+ * promise a boolean to a view that is mid-render.
  *
  * @param result - The attempted claim read.
  * @template value - What the claim reads as.
@@ -66,9 +66,6 @@ function readAccessToken(): AccessToken | null {
 /**
  * Binds the routes and the MFA policy every decision is measured against, and
  * answers with the helpers an app re-exports as its own authorization vocabulary.
- *
- * The relying party is read on each `mfa()` call rather than captured once, so an
- * app may hand over an instance it builds per request.
  *
  * @param options - The login route, where a signed-in visitor belongs, and the
  *   relying party holding the `amr`/`acr` values that count as several factors.
@@ -240,11 +237,9 @@ export namespace Authorization {
 		scope: (name: string) => boolean;
 
 		/**
-		 * Whether anyone is here and authenticated within the given window.
-		 *
-		 * The window is measured from `auth_time`, which records when the person
-		 * proved who they are and survives every token refresh, so a long-lived
-		 * session reads as authenticated while a step-up window has run out.
+		 * Whether anyone is here and authenticated within the given window, measured
+		 * from `auth_time`, which survives every token refresh, so a long-lived session
+		 * can read as authenticated while a step-up window has run out.
 		 *
 		 * @param duration - How recent the authentication must be, as a duration
 		 *   string or milliseconds. Called with none, it answers whether anyone is

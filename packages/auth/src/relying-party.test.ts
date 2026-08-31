@@ -1,8 +1,7 @@
 /**
- * Specs for the browser login flow, driven through a real session middleware and
- * a cookie jar so the transaction travels the way it does in production. Every
- * correlation value, the PKCE derivation, the `returnTo` payloads that were live
- * exploits, and the step-up contract are asserted end to end.
+ * Specs for the browser login flow, driven through a real session middleware and a
+ * cookie jar so the transaction travels the way it does in production. Every correlation
+ * value, the PKCE derivation, hostile `returnTo` payloads, and step-up are covered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

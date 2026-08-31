@@ -1,8 +1,7 @@
 /**
- * Scanner behind the capability-guard rule: reports every place a capability helper
- * — `scope`, `authenticated`, `mfa` — is called as a statement whose value goes
- * nowhere, which reads like a guard while authorizing nothing. Parses each module so
- * a match is the syntax itself, not text that resembles it.
+ * Scanner behind the capability-guard rule: parses each module and reports every place
+ * a capability helper — `scope`, `authenticated`, `mfa` — is called as a statement whose
+ * value goes nowhere, which reads like a guard while authorizing nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,10 +10,9 @@
 import ts from "typescript";
 
 /**
- * The helpers that answer every request with a boolean and never throw, so the
- * caller's own branch is the only thing that can stop a request. `currentSession`
- * and `anonymous` throw the redirect themselves, which makes a statement of one of
- * them the guard, and they stay out of this list.
+ * The helpers that answer every request with a boolean and never throw, so the caller's
+ * own branch is the only thing that can stop a request. `currentSession` and `anonymous`
+ * throw the redirect themselves, so a statement of one of them is the guard.
  */
 const GUARDED = ["scope", "authenticated", "mfa"];
 
@@ -68,9 +66,8 @@ function droppedCall(expression: ts.Expression): ts.CallExpression | null {
 
 /**
  * The guarded helper a dropped call names, and `null` for every other callee. Only a
- * plain identifier counts: an app receives these helpers from `createAuthorization`
- * and re-exports them as free functions, while `x.scope(...)` belongs to something
- * else entirely — the service container's request scope, for one.
+ * plain identifier counts, since an app receives these helpers from `createAuthorization`
+ * and re-exports them as free functions, while `x.scope(...)` names a method of its own.
  */
 function guardedCallee(call: ts.CallExpression): string | null {
 	let callee = call.expression;
