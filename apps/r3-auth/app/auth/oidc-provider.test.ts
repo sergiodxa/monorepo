@@ -12,9 +12,12 @@
 import { Base64Url, Hex, password, randomBytes, sha256 } from "@pkg/crypto";
 import { JWK } from "@pkg/jwt";
 import { unwrap } from "@pkg/result";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { OIDC } from "~/app/auth/oidc-provider";
+import LogoutToken from "~/app/auth/values/logout-token";
 import { ISSUER } from "~/app/config";
 
 let AccessToken = OIDC.AccessToken;
@@ -88,12 +91,53 @@ function createMockRepository(): MockRepository {
 	} as unknown as MockRepository;
 }
 
+/**
+ * Logger double for the engine, recording every reported failure so a test can assert a
+ * recovery the engine made on its own was surfaced rather than swallowed.
+ */
+function createMockLogger() {
+	return { error: vi.fn() };
+}
+
+/** A relying party whose back-channel endpoint accepts the token it is sent. */
+const HEALTHY_BACKCHANNEL = "https://healthy.example.com/backchannel-logout";
+
+/** A relying party whose back-channel endpoint answers, and answers with a server error. */
+const REFUSING_BACKCHANNEL = "https://refusing.example.com/backchannel-logout";
+
+/** A relying party whose back-channel endpoint the request never reaches. */
+const UNREACHABLE_BACKCHANNEL = "https://unreachable.example.com/backchannel-logout";
+
+let server = setupServer();
+
+/**
+ * A session ready for the logout fan-out, with session-specific logout on so the token
+ * carries the same `sid` a production recipient asking for one would receive.
+ *
+ * @param clientId - The relying party being notified.
+ * @param backchannelLogoutUri - Endpoint the logout token is posted to.
+ */
+function backchannelSession(clientId: string, backchannelLogoutUri: string) {
+	return {
+		sessionId: `session-${clientId}`,
+		clientId,
+		backchannelLogoutUri,
+		backchannelLogoutSessionRequired: "true",
+		frontchannelLogoutUri: null,
+		frontchannelLogoutSessionRequired: "false",
+	} satisfies OIDC.SessionWithClient;
+}
+
 beforeAll(async () => {
 	let rawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 	testKeyPair = [await JWK.importKeyPair(rawKeyPair)];
+	server.listen({ onUnhandledRequest: "error" });
 });
 
+afterAll(() => server.close());
+
 afterEach(() => {
+	server.resetHandlers();
 	testAuthzCode.pkce = null;
 	testAuthzCode.nonce = null;
 	testAuthzCode.scope = ["openid"];
@@ -104,7 +148,7 @@ describe("OAuth2Provider", () => {
 	describe("token() - authorization_code grant", () => {
 		test("exchanges valid authorization code for tokens", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "authorization_code",
@@ -122,7 +166,7 @@ describe("OAuth2Provider", () => {
 
 		test("issues an access token carrying the RFC 9068 claims", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "authorization_code",
@@ -147,7 +191,7 @@ describe("OAuth2Provider", () => {
 			repo.findAuthorizationCodeData = vi.fn(async () => {
 				throw new Error("Authorization code not found.");
 			});
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -162,7 +206,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects mismatched redirect URI", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -188,7 +232,7 @@ describe("OAuth2Provider", () => {
 			testAuthzCode.pkce = { challenge, method: "S256" };
 
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.token({
 				type: "authorization_code",
@@ -206,7 +250,7 @@ describe("OAuth2Provider", () => {
 			testAuthzCode.pkce = { challenge: "some-challenge", method: "S256" };
 
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -219,11 +263,47 @@ describe("OAuth2Provider", () => {
 			).rejects.toThrow(OIDC.InvalidRequestError);
 		});
 
+		/**
+		 * A digest the runtime refuses is this server failing, so reporting a mismatch would
+		 * accuse the client of forging a verifier it in fact presented correctly.
+		 */
+		test("reports a refused digest as a server failure rather than a PKCE mismatch", async () => {
+			testAuthzCode.pkce = { challenge: "some-challenge", method: "S256" };
+
+			let repo = createMockRepository();
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, repo, logger);
+
+			let digest = vi
+				.spyOn(crypto.subtle, "digest")
+				.mockRejectedValue(new Error("digest unavailable"));
+
+			try {
+				await expect(
+					provider.token({
+						type: "authorization_code",
+						code: "valid-code",
+						redirectUri: testClient.redirectUri,
+						clientId: testClient.id,
+						clientSecret: testClient.secret,
+						codeVerifier: "test-code-verifier-that-is-long-enough",
+					}),
+				).rejects.toThrow(OIDC.InternalServerError);
+			} finally {
+				digest.mockRestore();
+			}
+
+			expect(logger.error).toHaveBeenCalledWith("pkce_digest_failed", {
+				clientId: testClient.id,
+				error: expect.any(String),
+			});
+		});
+
 		test("rejects expired session", async () => {
 			testSession.expiresAt = new Date(Date.now() - 1000);
 
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -238,7 +318,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects missing client credentials for confidential client", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -251,7 +331,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects wrong client credentials", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -266,7 +346,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects mismatched client ID", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -283,7 +363,7 @@ describe("OAuth2Provider", () => {
 	describe("token() - refresh_token grant", () => {
 		test("refreshes valid token", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "refresh_token",
@@ -298,7 +378,7 @@ describe("OAuth2Provider", () => {
 
 		test("issues an access token naming the session's client", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "refresh_token",
@@ -315,7 +395,7 @@ describe("OAuth2Provider", () => {
 		test("rejects invalid refresh token", async () => {
 			let repo = createMockRepository();
 			repo.findSessionById = vi.fn(async () => null);
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -329,7 +409,7 @@ describe("OAuth2Provider", () => {
 	describe("token() - client_credentials grant", () => {
 		test("issues token for valid client credentials", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.token({
 				type: "client_credentials",
@@ -344,7 +424,7 @@ describe("OAuth2Provider", () => {
 
 		test("issues a service token whose subject is the client itself", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.token({
 				type: "client_credentials",
@@ -363,7 +443,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects invalid client secret", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -378,7 +458,7 @@ describe("OAuth2Provider", () => {
 		test("rejects unknown client", async () => {
 			let repo = createMockRepository();
 			repo.findClientById = vi.fn(async () => null);
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.token({
@@ -394,7 +474,7 @@ describe("OAuth2Provider", () => {
 	describe("revoke()", () => {
 		test("revokes valid refresh token (session)", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await provider.revoke({
 				clientId: testClient.id,
@@ -409,7 +489,7 @@ describe("OAuth2Provider", () => {
 		test("returns success for already-revoked token (per RFC 7009)", async () => {
 			let repo = createMockRepository();
 			repo.findSessionById = vi.fn(async () => null);
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await provider.revoke({
 				clientId: testClient.id,
@@ -424,7 +504,7 @@ describe("OAuth2Provider", () => {
 				...testSession,
 				clientId: "different-client",
 			}));
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.revoke({
@@ -437,7 +517,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects invalid client credentials", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.revoke({
@@ -452,7 +532,7 @@ describe("OAuth2Provider", () => {
 	describe("introspect()", () => {
 		test("introspects valid refresh token", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.introspect({
 				clientId: testClient.id,
@@ -470,7 +550,7 @@ describe("OAuth2Provider", () => {
 
 		test("introspects valid access token (JWT)", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let tokenResult = await provider.token({
 				type: "authorization_code",
@@ -498,7 +578,7 @@ describe("OAuth2Provider", () => {
 
 		test("introspects a client_credentials access token", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let tokenResult = await provider.token({
 				type: "client_credentials",
@@ -523,7 +603,7 @@ describe("OAuth2Provider", () => {
 
 		test("keeps a token minted before the client_id claim active", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let now = Math.floor(Date.now() / 1000);
 			let legacyToken = await new AccessToken({
@@ -549,7 +629,7 @@ describe("OAuth2Provider", () => {
 		test("returns inactive for expired/invalid token", async () => {
 			let repo = createMockRepository();
 			repo.findSessionById = vi.fn(async () => null);
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.introspect({
 				clientId: testClient.id,
@@ -562,7 +642,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects invalid client credentials", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(
 				provider.introspect({
@@ -572,6 +652,34 @@ describe("OAuth2Provider", () => {
 				}),
 			).rejects.toThrow(OIDC.InvalidClientError);
 		});
+
+		/**
+		 * A key store that cannot answer knows nothing about the token, so introspection
+		 * reports its own failure rather than asserting a live token is dead.
+		 */
+		test("reports a signing-key failure rather than calling the token inactive", async () => {
+			let repo = createMockRepository();
+			repo.getSigningKey = vi.fn(async () => {
+				throw new Error("key store unavailable");
+			});
+
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, repo, logger);
+
+			await expect(
+				provider.introspect({
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
+					token: "an-access-token",
+					tokenTypeHint: "access_token",
+				}),
+			).rejects.toThrow(OIDC.InternalServerError);
+
+			expect(logger.error).toHaveBeenCalledWith("introspect_signing_key_failed", {
+				clientId: testClient.id,
+				error: "key store unavailable",
+			});
+		});
 	});
 });
 
@@ -579,7 +687,7 @@ describe("OIDC", () => {
 	describe("userinfo()", () => {
 		test("returns user info for valid access token", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let tokenResult = await provider.token({
 				type: "authorization_code",
@@ -601,7 +709,7 @@ describe("OIDC", () => {
 	describe("logout()", () => {
 		test("logs out user with valid id_token_hint", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let idToken = IdToken.generate(
 				{
@@ -633,7 +741,7 @@ describe("OIDC", () => {
 		 */
 		test("accepts an expired id_token_hint", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let expiredAt = Math.floor(Date.now() / 1000) - 60 * 60;
 			let idToken = new IdToken({
@@ -658,7 +766,7 @@ describe("OIDC", () => {
 
 		test("rejects an id_token_hint this server did not sign", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
 			let idToken = IdToken.generate(
@@ -683,7 +791,7 @@ describe("OIDC", () => {
 
 		test("rejects an id_token_hint issued by somebody else", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let idToken = new IdToken({
 				sub: testSubject.id,
@@ -704,7 +812,7 @@ describe("OIDC", () => {
 
 		test("rejects a malformed id_token_hint", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(provider.logout({ idTokenHint: "not-a-jwt" })).rejects.toThrow(
 				OIDC.InvalidRequestError,
@@ -715,7 +823,7 @@ describe("OIDC", () => {
 
 		test("logs out user with session subject (no id_token_hint)", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
@@ -727,7 +835,7 @@ describe("OIDC", () => {
 
 		test("rejects mismatched client_id and id_token_hint audience", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let idToken = IdToken.generate(
 				{
@@ -756,7 +864,7 @@ describe("OIDC", () => {
 		 */
 		test("drops an unregistered post_logout_redirect_uri but still logs out", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let idToken = IdToken.generate(
 				{
@@ -782,7 +890,7 @@ describe("OIDC", () => {
 
 		test("requires id_token_hint or session subject", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			await expect(provider.logout({})).rejects.toThrow(OIDC.InvalidRequestError);
 		});
@@ -793,7 +901,7 @@ describe("OIDC", () => {
 		 */
 		test("honors a registered post_logout_redirect_uri with no hint and no client_id", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
@@ -811,7 +919,7 @@ describe("OIDC", () => {
 		 */
 		test("drops an unregistered post_logout_redirect_uri when no client is identified", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
@@ -828,7 +936,7 @@ describe("OIDC", () => {
 		 */
 		test("does not exclude the client that merely registered the redirect from the fan-out", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = await provider.logout({
 				sessionSubject: testSubject.id,
@@ -865,7 +973,7 @@ describe("OIDC", () => {
 			repo.findSessionsForBackchannelLogout = vi.fn(async () => (deleted ? [] : [target]));
 			repo.findSessionsForFrontchannelLogout = vi.fn(async () => (deleted ? [] : [target]));
 
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 			let result = await provider.logout({ sessionSubject: testSubject.id });
 
 			expect(result.backchannelSessions).toEqual([target]);
@@ -897,11 +1005,158 @@ describe("OIDC", () => {
 				throw new Error("key store unavailable");
 			});
 
-			let provider = new OIDC(ISSUER, repo);
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, repo, logger);
 
 			expect(
 				await provider.deliverBackchannelLogoutTokens(testSubject.id, [target]),
 			).toBeUndefined();
+
+			expect(logger.error).toHaveBeenCalledWith("backchannel_logout_signing_failed", {
+				subjectId: testSubject.id,
+				recipientCount: 1,
+				error: "key store unavailable",
+			});
+		});
+
+		/**
+		 * A relying party that answered and refused the token and one the request never
+		 * reached are separate diagnoses, reported under their own events; either one leaves
+		 * the healthy relying parties logged out and the sign-out complete.
+		 */
+		test("reports every back-channel delivery failure and still delivers to the healthy clients", async () => {
+			let delivered: string[] = [];
+
+			server.use(
+				http.post(HEALTHY_BACKCHANNEL, async ({ request }) => {
+					let body = new URLSearchParams(await request.text());
+					delivered.push(body.get("logout_token") ?? "");
+					return new HttpResponse(null, { status: 200 });
+				}),
+				http.post(REFUSING_BACKCHANNEL, () => new HttpResponse(null, { status: 500 })),
+				http.post(UNREACHABLE_BACKCHANNEL, () => HttpResponse.error()),
+			);
+
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, createMockRepository(), logger);
+
+			expect(
+				await provider.deliverBackchannelLogoutTokens(testSubject.id, [
+					backchannelSession("refusing-client", REFUSING_BACKCHANNEL),
+					backchannelSession("unreachable-client", UNREACHABLE_BACKCHANNEL),
+					backchannelSession("healthy-client", HEALTHY_BACKCHANNEL),
+				]),
+			).toBeUndefined();
+
+			expect(logger.error).toHaveBeenCalledWith("backchannel_logout_refused", {
+				subjectId: testSubject.id,
+				clientId: "refusing-client",
+				host: "refusing.example.com",
+				status: 500,
+			});
+
+			expect(logger.error).toHaveBeenCalledWith("backchannel_logout_unreachable", {
+				subjectId: testSubject.id,
+				clientId: "unreachable-client",
+				host: "unreachable.example.com",
+				error: expect.any(String),
+			});
+
+			expect(logger.error).toHaveBeenCalledTimes(2);
+
+			expect(delivered).toHaveLength(1);
+
+			let token = LogoutToken.decode(delivered[0] as string);
+			expect(token.audience).toBe("healthy-client");
+			expect(token.subject).toBe(testSubject.id);
+			expect(token.sessionId).toBe("session-healthy-client");
+		});
+
+		/**
+		 * A hint that every client starts failing to present, as happens once a signing key
+		 * is retired, is legible only in the recorded reason behind the one answer sent.
+		 */
+		test("records why an id_token_hint was refused", async () => {
+			let repo = createMockRepository();
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, repo, logger);
+
+			await expect(
+				provider.logout({ idTokenHint: "not-a-jwt", clientId: testClient.id }),
+			).rejects.toThrow(OIDC.InvalidRequestError);
+
+			expect(logger.error).toHaveBeenCalledWith("logout_hint_verification_failed", {
+				clientId: testClient.id,
+				error: expect.any(String),
+			});
+		});
+
+		/**
+		 * A stored logout address that no longer parses belongs to one relying party, so
+		 * the sign-out completes and every other party still receives its iframe.
+		 */
+		test("skips a client whose stored front-channel logout URI no longer parses", async () => {
+			let repo = createMockRepository();
+
+			let broken: OIDC.SessionWithClient = {
+				sessionId: "session-broken",
+				clientId: "broken-client",
+				backchannelLogoutUri: null,
+				backchannelLogoutSessionRequired: "false",
+				frontchannelLogoutUri: "not a url",
+				frontchannelLogoutSessionRequired: "false",
+			};
+
+			let healthy: OIDC.SessionWithClient = {
+				sessionId: "session-healthy",
+				clientId: "healthy-client",
+				backchannelLogoutUri: null,
+				backchannelLogoutSessionRequired: "false",
+				frontchannelLogoutUri: "https://healthy.example.com/frontchannel",
+				frontchannelLogoutSessionRequired: "true",
+			};
+
+			repo.findSessionsForFrontchannelLogout = vi.fn(async () => [broken, healthy]);
+
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, repo, logger);
+
+			let result = await provider.logout({ sessionSubject: testSubject.id });
+
+			expect(result.frontchannelUrls).toEqual([
+				{
+					clientId: "healthy-client",
+					url: `https://healthy.example.com/frontchannel?iss=https%3A%2F%2F${ISSUER}&sid=session-healthy`,
+				},
+			]);
+
+			expect(logger.error).toHaveBeenCalledWith("frontchannel_logout_uri_invalid", {
+				clientId: "broken-client",
+				error: expect.any(String),
+			});
+
+			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
+		});
+
+		/**
+		 * The sessions are already deleted by the time the relying parties are told, so a
+		 * repository that cannot list the recipients leaves the sign-out complete.
+		 */
+		test("keeps the caller's sign-out complete when the recipient lookup fails", async () => {
+			let repo = createMockRepository();
+			repo.findSessionsForBackchannelLogout = vi.fn(async () => {
+				throw new Error("sessions table unavailable");
+			});
+
+			let logger = createMockLogger();
+			let provider = new OIDC(ISSUER, repo, logger);
+
+			expect(await provider.sendBackchannelLogoutTokens(testSubject.id)).toBeUndefined();
+
+			expect(logger.error).toHaveBeenCalledWith("backchannel_logout_lookup_failed", {
+				subjectId: testSubject.id,
+				error: "sessions table unavailable",
+			});
 		});
 	});
 
@@ -910,7 +1165,7 @@ describe("OIDC", () => {
 			testAuthzCode.nonce = "test-nonce-123";
 
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "authorization_code",
@@ -926,7 +1181,7 @@ describe("OIDC", () => {
 
 		test("includes auth_time claim", async () => {
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "authorization_code",
@@ -945,7 +1200,7 @@ describe("OIDC", () => {
 			testAuthzCode.scope = ["openid", "email"];
 
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "authorization_code",
@@ -964,7 +1219,7 @@ describe("OIDC", () => {
 			testAuthzCode.scope = ["openid", "profile"];
 
 			let repo = createMockRepository();
-			let provider = new OIDC(ISSUER, repo);
+			let provider = new OIDC(ISSUER, repo, createMockLogger());
 
 			let result = (await provider.token({
 				type: "authorization_code",
@@ -1131,7 +1386,7 @@ function loginInput(
 describe("loginWithCredential()", () => {
 	test("authenticates a subject whose stored hash is behind the current cost policy", async () => {
 		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
 
@@ -1140,7 +1395,7 @@ describe("loginWithCredential()", () => {
 
 	test("upgrades an outdated hash to the current policy after a successful sign-in", async () => {
 		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
 
@@ -1154,7 +1409,7 @@ describe("loginWithCredential()", () => {
 
 	test("verifies against the upgraded hash on the next sign-in, without upgrading again", async () => {
 		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
 		state.storedHash = state.upgraded[0] ?? null;
@@ -1168,7 +1423,7 @@ describe("loginWithCredential()", () => {
 
 	test("rejects a wrong password against an outdated hash and leaves it alone", async () => {
 		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput({ password: "wrong password" }));
 
@@ -1179,7 +1434,7 @@ describe("loginWithCredential()", () => {
 
 	test("rejects a wrong password against a PBKDF2 hash", async () => {
 		let state = loginState({ storedHash: unwrap(await password.hash(LOGIN_PASSWORD)) });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput({ password: "wrong password" }));
 
@@ -1189,7 +1444,7 @@ describe("loginWithCredential()", () => {
 
 	test("refuses a hash it cannot read instead of letting the sign-in through", async () => {
 		let state = loginState({ storedHash: "not-a-hash-at-all" });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
 
@@ -1202,7 +1457,7 @@ describe("loginWithCredential()", () => {
 			storedHash: await outdatedHash(LOGIN_PASSWORD),
 			upgradeError: new Error("database unavailable"),
 		});
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
 
@@ -1210,12 +1465,30 @@ describe("loginWithCredential()", () => {
 		expect(state.upgraded).toHaveLength(0);
 	});
 
+	test("reports the failed upgrade while still signing the subject in", async () => {
+		let state = loginState({
+			storedHash: await outdatedHash(LOGIN_PASSWORD),
+			upgradeError: new Error("database unavailable"),
+		});
+		let logger = createMockLogger();
+		let provider = new OIDC(ISSUER, createLoginRepository(state), logger);
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("success");
+		expect(state.upgraded).toHaveLength(0);
+		expect(logger.error).toHaveBeenCalledWith("password_rehash_write_failed", {
+			subjectId: testSubject.id,
+			error: "database unavailable",
+		});
+	});
+
 	test("refuses an unverified credential without checking the password", async () => {
 		let state = loginState({
 			storedHash: await outdatedHash(LOGIN_PASSWORD),
 			verifiedAt: null,
 		});
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
 
@@ -1227,7 +1500,7 @@ describe("loginWithCredential()", () => {
 
 	test("writes a PBKDF2 hash when the subject has no credential yet, and refuses the sign-in", async () => {
 		let state = loginState();
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
 
@@ -1240,7 +1513,7 @@ describe("loginWithCredential()", () => {
 
 	test("stores that hash unverified, so a stranger cannot password-protect somebody else's account", async () => {
 		let state = loginState();
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
 
@@ -1249,7 +1522,7 @@ describe("loginWithCredential()", () => {
 
 	test("gives a brand-new subject a hex-digest gravatar and a PBKDF2 credential", async () => {
 		let state = loginState({ subjectMissing: true });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
 
@@ -1260,7 +1533,7 @@ describe("loginWithCredential()", () => {
 
 	test("registers an unknown email and answers with a code instead of refusing it", async () => {
 		let state = loginState({ subjectMissing: true });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
 
@@ -1274,7 +1547,7 @@ describe("loginWithCredential()", () => {
 	 */
 	test("registers the credential verified, so the account it just created can sign in", async () => {
 		let state = loginState({ subjectMissing: true });
-		let provider = new OIDC(ISSUER, createLoginRepository(state));
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
 

@@ -14,6 +14,7 @@ import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
+import { getContext } from "remix/middleware/async-context";
 
 import type { SelectClient, SelectSession } from "~/database/schema";
 
@@ -288,13 +289,12 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 }
 
 /**
- * Builds the OIDC engine for this authorization server, bound to the given database.
- *
- * The issuer is fixed to {@link ISSUER} because it is written into every token and
- * relying parties verify it against a pinned string.
+ * Builds the OIDC engine bound to the given database and to the current request's logger,
+ * so a failure the engine recovers from lands in that request's log entry; call it from
+ * inside a request. The issuer is fixed to {@link ISSUER}, the value relying parties pin.
  *
  * @param db - The database the engine's storage reads and writes through.
  */
 export function createOidcProvider(db: Database): OIDC {
-	return new OIDC(ISSUER, createOidcRepository(db));
+	return new OIDC(ISSUER, createOidcRepository(db), getContext().logger);
 }

@@ -8,10 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@pkg/result";
+
 import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@pkg/crypto";
 import { elapsed } from "@pkg/dates";
 import { JWK, JWT } from "@pkg/jwt";
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success, wrap } from "@pkg/result";
 
 import AccessToken from "~/app/auth/values/access-token";
 import IdToken from "~/app/auth/values/id-token";
@@ -163,8 +165,31 @@ class InvalidTokenError extends OAuth2Error {
 /** Absence is a legitimate answer from storage, so every boundary states it in the type. */
 type Nullable<T> = T | null;
 
+/**
+ * What one back-channel logout delivery achieved. A relying party that answered and
+ * refused the token stays apart from one that could not be reached, since a rejecting
+ * deployment and a network fault call for different investigations.
+ */
+type BackchannelDelivery = { clientId: string; host: string | null } & (
+	| { outcome: "delivered" }
+	| { outcome: "refused"; status: number }
+	| { outcome: "unreachable"; error: string }
+);
+
 /** Data shapes the engine exchanges with its storage layer and its callers. */
 export namespace OIDC {
+	/**
+	 * Where the engine reports a failure it recovers from on its own, so a recovery
+	 * that keeps failing stays visible while the request it happened on succeeds.
+	 */
+	export interface Logger {
+		/**
+		 * @param event - Stable event name, matched on when querying logs.
+		 * @param payload - Structured detail about the failure; carries no credential material.
+		 */
+		error(event: string, payload?: Record<string, unknown>): void;
+	}
+
 	/** A person who can sign in, reduced to the identity claims the engine needs. */
 	export interface Subject {
 		id: string;
@@ -200,6 +225,22 @@ export namespace OIDC {
 		backchannelLogoutSessionRequired: string | null;
 		frontchannelLogoutUri: string | null;
 		frontchannelLogoutSessionRequired: string | null;
+	}
+
+	/**
+	 * A session whose client registered a back-channel logout endpoint, which is what
+	 * makes it a recipient of a logout token.
+	 */
+	export interface BackchannelRecipient extends Omit<SessionWithClient, "backchannelLogoutUri"> {
+		backchannelLogoutUri: string;
+	}
+
+	/**
+	 * A session whose client registered a front-channel logout endpoint, which is what
+	 * earns it an iframe in the logout page.
+	 */
+	export interface FrontchannelRecipient extends Omit<SessionWithClient, "frontchannelLogoutUri"> {
+		frontchannelLogoutUri: string;
 	}
 
 	/**
@@ -426,10 +467,12 @@ export class OIDC {
 	/**
 	 * @param issuer - The `iss` value written into tokens and compared when verifying them.
 	 * @param repository - Storage and signing keys the engine reads and writes through.
+	 * @param logger - Sink for the failures the engine recovers from while answering a request.
 	 */
 	constructor(
 		private issuer: string,
 		private repository: OIDC.Repository,
+		private logger: OIDC.Logger,
 	) {}
 
 	/**
@@ -513,10 +556,15 @@ export class OIDC {
 
 	/**
 	 * Reports whether a token is currently usable, and its claims when it is (RFC 7662).
-	 * An unresolvable token is reported inactive, so introspection stays silent about the
-	 * reason a token failed.
+	 * A token that fails to resolve is reported inactive, so introspection stays silent
+	 * about the reason; a key store that cannot answer is reported as this server failing.
 	 *
+	 * @returns The token's claims, with an identifier a token predates — such as the
+	 * `client_id` claim — reported as absent, which keeps that token usable for the rest
+	 * of its lifetime.
 	 * @throws {InvalidClientError} When the client credentials do not check out.
+	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer
+	 * describes this server rather than the token.
 	 */
 	async introspect(args: {
 		clientId: string;
@@ -557,28 +605,36 @@ export class OIDC {
 			}
 		}
 
-		try {
-			let accessToken = await AccessToken.verify(
-				args.token,
-				await this.repository.getSigningKey(),
-				{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
-			);
+		let signingKeys = await wrap(() => this.repository.getSigningKey());
 
-			// Each identifier reads as absent instead of throwing, which keeps a token
-			// minted before the `client_id` claim existed active for its remaining lifetime.
-			return {
-				active: true,
-				sub: accessToken.subject,
-				client_id: accessToken.clientId ?? undefined,
-				exp: accessToken.expirationTime,
-				iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
-				iss: accessToken.issuer,
-				aud: accessToken.audience ?? undefined,
-				token_type: "Bearer",
-			};
-		} catch {
-			return { active: false };
+		if (isFailure(signingKeys)) {
+			this.logger.error("introspect_signing_key_failed", {
+				clientId: args.clientId,
+				error: signingKeys.error.message,
+			});
+
+			throw new InternalServerError();
 		}
+
+		let accessToken = await wrap(() =>
+			AccessToken.verify(args.token, signingKeys.data, {
+				issuer: this.issuer,
+				algorithms: [JWK.Algorithm.ES256],
+			}),
+		);
+
+		if (isFailure(accessToken)) return { active: false };
+
+		return {
+			active: true,
+			sub: accessToken.data.subject,
+			client_id: accessToken.data.clientId ?? undefined,
+			exp: accessToken.data.expirationTime,
+			iat: Math.floor(accessToken.data.issuedAt.getTime() / 1000),
+			iss: accessToken.data.issuer,
+			aud: accessToken.data.audience ?? undefined,
+			token_type: "Bearer",
+		};
 	}
 
 	/**
@@ -611,6 +667,10 @@ export class OIDC {
 	 * `post_logout_redirect_uri` is honored on an exact match with a registered logout URI
 	 * and dropped otherwise; the parties to notify are read while their rows still exist.
 	 *
+	 * Every refused `id_token_hint` is reported with the reason it failed verification, so
+	 * a cause shared by every client — a retired signing key, say — is legible behind the
+	 * single answer the specification allows.
+	 *
 	 * @returns The subject logged out, the initiating client, the verified redirect to honor if any, and whom to notify.
 	 * @throws {InvalidRequestError} When the hint is unusable, neither hint nor session is given, or a parameter contradicts the hint.
 	 */
@@ -626,18 +686,27 @@ export class OIDC {
 		let client: Awaited<ReturnType<typeof this.repository.findClientById>> | null = null;
 
 		if (args.idTokenHint) {
+			let hint = args.idTokenHint;
 			let signingKeys = await this.repository.getSigningKey();
-			let idToken: IdToken;
 
-			try {
-				idToken = await IdToken.verify(args.idTokenHint, signingKeys, {
+			let verified = await wrap(() =>
+				IdToken.verify(hint, signingKeys, {
 					issuer: this.issuer,
 					algorithms: [JWK.Algorithm.ES256],
 					clockTolerance: ID_TOKEN_HINT_CLOCK_TOLERANCE,
+				}),
+			);
+
+			if (isFailure(verified)) {
+				this.logger.error("logout_hint_verification_failed", {
+					clientId: args.clientId,
+					error: verified.error.message,
 				});
-			} catch {
+
 				throw new InvalidRequestError("Invalid id_token_hint");
 			}
+
+			let idToken = verified.data;
 
 			if (!idToken.subject) throw new InvalidRequestError("Invalid subject");
 			if (!idToken.audience) throw new InvalidRequestError("Invalid audience");
@@ -826,22 +895,31 @@ export class OIDC {
 
 	/**
 	 * Notifies every relying party with a back-channel logout URI that a subject signed
-	 * out, skipping the client that initiated the logout. Delivery is best effort and
-	 * settled in parallel, so the logout the person asked for completes regardless.
+	 * out, skipping the client that initiated the logout. Reaching the recipients is best
+	 * effort throughout — reading them included — and every failure is reported, so the
+	 * sign-out the person asked for completes on its own terms.
 	 */
 	async sendBackchannelLogoutTokens(subjectId: string, excludeClientId?: string): Promise<void> {
-		let sessions = await this.repository.findSessionsForBackchannelLogout(
-			subjectId,
-			excludeClientId,
+		let sessions = await wrap(() =>
+			this.repository.findSessionsForBackchannelLogout(subjectId, excludeClientId),
 		);
 
-		await this.deliverBackchannelLogoutTokens(subjectId, sessions);
+		if (isFailure(sessions)) {
+			this.logger.error("backchannel_logout_lookup_failed", {
+				subjectId,
+				error: sessions.error.message,
+			});
+
+			return;
+		}
+
+		await this.deliverBackchannelLogoutTokens(subjectId, sessions.data);
 	}
 
 	/**
 	 * Delivers back-channel logout tokens to an already-collected set of sessions, since
-	 * the RP-initiated flow reads them before deleting them. Delivery is best effort: the
-	 * sign-out is already a fact, so an unreachable relying party or key store stays quiet.
+	 * the RP-initiated flow reads them before deleting them. Every recipient is attempted,
+	 * each failure is reported, and the person's sign-out completes on its own terms.
 	 *
 	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
 	 */
@@ -849,37 +927,89 @@ export class OIDC {
 		subjectId: string,
 		sessions: OIDC.SessionWithClient[],
 	): Promise<void> {
-		let clientsToNotify = sessions.filter((s) => s.backchannelLogoutUri);
+		let recipients = sessions.filter(
+			(session): session is OIDC.BackchannelRecipient => session.backchannelLogoutUri !== null,
+		);
 
-		if (clientsToNotify.length === 0) {
+		if (recipients.length === 0) return;
+
+		let signingKeys = await wrap(() => this.repository.getSigningKey());
+
+		if (isFailure(signingKeys)) {
+			this.logger.error("backchannel_logout_signing_failed", {
+				subjectId,
+				recipientCount: recipients.length,
+				error: signingKeys.error.message,
+			});
+
 			return;
 		}
 
-		try {
-			let signingKeys = await this.repository.getSigningKey();
+		let keys = signingKeys.data;
 
-			await Promise.allSettled(
-				clientsToNotify.map(async (client) => {
-					let sessionId =
-						client.backchannelLogoutSessionRequired === "true" ? client.sessionId : undefined;
+		let deliveries = await Promise.all(
+			recipients.map((recipient) => this.deliverBackchannelLogoutToken(subjectId, recipient, keys)),
+		);
 
-					let logoutToken = LogoutToken.generate(subjectId, client.clientId, sessionId);
-					let signedToken = await logoutToken.sign(JWK.Algorithm.ES256, signingKeys);
+		for (let delivery of deliveries) {
+			if (delivery.outcome === "refused") {
+				this.logger.error("backchannel_logout_refused", {
+					subjectId,
+					clientId: delivery.clientId,
+					host: delivery.host,
+					status: delivery.status,
+				});
+			}
 
-					let response = await fetch(client.backchannelLogoutUri!, {
-						method: "POST",
-						headers: { "Content-Type": "application/x-www-form-urlencoded" },
-						body: new URLSearchParams({ logout_token: signedToken }),
-					});
+			if (delivery.outcome === "unreachable") {
+				this.logger.error("backchannel_logout_unreachable", {
+					subjectId,
+					clientId: delivery.clientId,
+					host: delivery.host,
+					error: delivery.error,
+				});
+			}
+		}
+	}
 
-					if (!response.ok) {
-						throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-					}
+	/**
+	 * Sends one relying party its logout token and answers with what the endpoint did,
+	 * settling for every outcome so each recipient's fate stays its own.
+	 *
+	 * @param recipient - The session to notify, joined to its client's logout configuration.
+	 * @param signingKeys - Keys the logout token is signed with.
+	 */
+	private async deliverBackchannelLogoutToken(
+		subjectId: string,
+		recipient: OIDC.BackchannelRecipient,
+		signingKeys: JWK.KeyPair[],
+	): Promise<BackchannelDelivery> {
+		let clientId = recipient.clientId;
+		let host = endpointHost(recipient.backchannelLogoutUri);
 
-					return { clientId: client.clientId, status: "success" };
-				}),
-			);
-		} catch {}
+		let response = await wrap(async () => {
+			let sessionId =
+				recipient.backchannelLogoutSessionRequired === "true" ? recipient.sessionId : undefined;
+
+			let logoutToken = LogoutToken.generate(subjectId, clientId, sessionId);
+			let signedToken = await logoutToken.sign(JWK.Algorithm.ES256, signingKeys);
+
+			return await fetch(recipient.backchannelLogoutUri, {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({ logout_token: signedToken }),
+			});
+		});
+
+		if (isFailure(response)) {
+			return { clientId, host, outcome: "unreachable", error: response.error.message };
+		}
+
+		if (!response.data.ok) {
+			return { clientId, host, outcome: "refused", status: response.data.status };
+		}
+
+		return { clientId, host, outcome: "delivered" };
 	}
 
 	/**
@@ -900,33 +1030,43 @@ export class OIDC {
 	}
 
 	/**
-	 * Turns already-collected sessions into the iframe URLs the browser loads. Pure, so
-	 * the RP-initiated flow can build the list from sessions it read before deleting them.
+	 * Turns already-collected sessions into the iframe URLs the browser loads, so the
+	 * RP-initiated flow can build the list from sessions it read before deleting them.
+	 * A stored address that no longer parses is reported and skipped, which keeps one
+	 * relying party's configuration from ending everybody else's sign-out.
 	 *
 	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
 	 */
 	private buildFrontchannelLogoutUrls(
 		sessions: OIDC.SessionWithClient[],
 	): OIDC.FrontchannelLogoutUrl[] {
-		let clientsToNotify = sessions.filter((s) => s.frontchannelLogoutUri);
-
-		if (clientsToNotify.length === 0) {
-			return [];
-		}
+		let recipients = sessions.filter(
+			(session): session is OIDC.FrontchannelRecipient => session.frontchannelLogoutUri !== null,
+		);
 
 		let urls: OIDC.FrontchannelLogoutUrl[] = [];
 
-		for (let client of clientsToNotify) {
-			let logoutUrl = new URL(client.frontchannelLogoutUri!);
-			logoutUrl.searchParams.set("iss", `https://${this.issuer}`);
+		for (let recipient of recipients) {
+			let logoutUrl = wrap(() => new URL(recipient.frontchannelLogoutUri));
 
-			if (client.frontchannelLogoutSessionRequired === "true") {
-				logoutUrl.searchParams.set("sid", client.sessionId);
+			if (isFailure(logoutUrl)) {
+				this.logger.error("frontchannel_logout_uri_invalid", {
+					clientId: recipient.clientId,
+					error: logoutUrl.error.message,
+				});
+
+				continue;
+			}
+
+			logoutUrl.data.searchParams.set("iss", `https://${this.issuer}`);
+
+			if (recipient.frontchannelLogoutSessionRequired === "true") {
+				logoutUrl.data.searchParams.set("sid", recipient.sessionId);
 			}
 
 			urls.push({
-				clientId: client.clientId,
-				url: logoutUrl.toString(),
+				clientId: recipient.clientId,
+				url: logoutUrl.data.toString(),
 			});
 		}
 
@@ -1030,8 +1170,18 @@ export class OIDC {
 			}
 
 			if (pkce.method === "S256") {
-				let isValid = await CodeChallenge.validate(args.codeVerifier, pkce.challenge, pkce.method);
-				if (!isValid) throw new InvalidGrantError("PKCE validation failed");
+				let matches = await CodeChallenge.validate(args.codeVerifier, pkce.challenge, pkce.method);
+
+				if (isFailure(matches)) {
+					this.logger.error("pkce_digest_failed", {
+						clientId,
+						error: matches.error.message,
+					});
+
+					throw new InternalServerError();
+				}
+
+				if (!matches.data) throw new InvalidGrantError("PKCE validation failed");
 			} else if (pkce.method === "plain") {
 				if (args.codeVerifier !== pkce.challenge) {
 					throw new InvalidGrantError("PKCE validation failed");
@@ -1077,6 +1227,11 @@ export class OIDC {
 		};
 	}
 
+	/**
+	 * Issues a service access token to a client acting for itself. No resource owner takes
+	 * part, so RFC 9068 §2.2.1 has `sub` name the client, and that is what marks the token
+	 * as a service one downstream.
+	 */
 	private async clientCredentialsGrant(args: {
 		resource: string[];
 		clientId: string;
@@ -1089,8 +1244,6 @@ export class OIDC {
 			throw new InvalidClientError("Client is not registered");
 		}
 
-		// No resource owner takes part in this grant, so RFC 9068 §2.2.1 has `sub` name
-		// the client, and that is what marks the token as a service one downstream.
 		let accessToken = await this.signJWT(
 			AccessToken.generate({
 				audience: [this.issuer, ...args.resource],
@@ -1169,11 +1322,11 @@ export class OIDC {
 	}
 
 	/**
-	 * Replaces a stored hash that is behind current policy, at the one moment the
-	 * plaintext exists: a successful sign-in. Best effort — a failed re-hash or write
-	 * leaves the verified hash in place and the next sign-in retries the upgrade.
+	 * Replaces a stored hash that is behind current policy, at the one moment the plaintext
+	 * exists: a successful sign-in. Correct credentials authenticate even when the upgrade
+	 * fails, and every failure is reported, so a migration stuck on one is visible.
 	 *
-	 * @param subjectId - Owner of the credential being upgraded.
+	 * @param subjectId - Owner of the credential being upgraded, and the only identifier logged.
 	 * @param stored - The hash that was just verified.
 	 * @param plaintext - The password that verified against it.
 	 */
@@ -1185,11 +1338,24 @@ export class OIDC {
 		if (!password.needsRehash(stored)) return;
 
 		let rehashed = await password.hash(plaintext);
-		if (isFailure(rehashed)) return;
+		if (isFailure(rehashed)) {
+			this.logger.error("password_rehash_failed", {
+				subjectId,
+				error: rehashed.error.message,
+			});
+			return;
+		}
 
-		try {
-			await this.repository.updateCredentialPasswordHash(subjectId, rehashed.data);
-		} catch {}
+		let written = await wrap(() =>
+			this.repository.updateCredentialPasswordHash(subjectId, rehashed.data),
+		);
+
+		if (isFailure(written)) {
+			this.logger.error("password_rehash_write_failed", {
+				subjectId,
+				error: written.error.message,
+			});
+		}
 	}
 }
 
@@ -1201,38 +1367,40 @@ class CodeChallenge {
 	 *
 	 * @param verifier - The `code_verifier` presented at the token endpoint.
 	 * @param method - The method recorded with the authorization code.
-	 * @returns The derived challenge, or `null` when the digest could not be taken.
+	 * @returns The derived challenge, or the reason the runtime refused the digest.
 	 */
 	private static async generate(
 		verifier: string,
 		method: "S256" | "plain",
-	): Promise<string | null> {
-		if (method === "plain") return verifier;
+	): Promise<Result<string, Error>> {
+		if (method === "plain") return success(verifier);
 
 		let digest = await sha256(verifier);
-		if (isFailure(digest)) return null;
+		if (isFailure(digest)) return digest;
 
-		return Base64Url.encode(digest.data);
+		return success(Base64Url.encode(digest.data));
 	}
 
 	/**
-	 * Checks a verifier against the stored challenge. Fails closed: a digest the runtime
-	 * refuses is reported as a mismatch, so a grant passes only on a proven match.
+	 * Checks a verifier against the stored challenge. A grant passes only on a proven
+	 * match, and a digest the runtime refuses is reported as its own failure, which keeps
+	 * a fault in this server distinct from a verifier that does not match.
 	 *
 	 * @param verifier - The `code_verifier` presented at the token endpoint.
 	 * @param challenge - The `code_challenge` stored with the authorization code.
 	 * @param method - The challenge method; defaults to `S256`.
-	 * @returns Whether the verifier derives exactly the stored challenge.
+	 * @returns Whether the verifier derives exactly the stored challenge, or the reason
+	 * the derivation could not be performed.
 	 */
 	static async validate(
 		verifier: string,
 		challenge: string,
 		method: "S256" | "plain" = "S256",
-	): Promise<boolean> {
+	): Promise<Result<boolean, Error>> {
 		let generatedChallenge = await CodeChallenge.generate(verifier, method);
-		if (generatedChallenge === null) return false;
+		if (isFailure(generatedChallenge)) return generatedChallenge;
 
-		return timingSafeEqual(generatedChallenge, challenge);
+		return success(timingSafeEqual(generatedChallenge.data, challenge));
 	}
 }
 
@@ -1249,4 +1417,16 @@ async function sha256Hex(message: string): Promise<string> {
 	if (isFailure(digest)) throw new InternalServerError(digest.error.message);
 
 	return Hex.encode(digest.data);
+}
+
+/**
+ * Names an outbound endpoint by host alone, which is what ties a delivery failure to a
+ * relying party's deployment while the rest of the address stays out of the logs.
+ *
+ * @returns The host, or `null` for an address that no longer parses as a URL.
+ */
+function endpointHost(uri: string): string | null {
+	let url = wrap(() => new URL(uri));
+
+	return isFailure(url) ? null : url.data.host;
 }
