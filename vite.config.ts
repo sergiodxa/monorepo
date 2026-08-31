@@ -341,6 +341,15 @@ export default defineConfig({
 			"jsx_a11y/control-has-associated-label": "allow",
 			"jsx_a11y/no-noninteractive-element-interactions": "allow",
 			"jsx_a11y/prefer-tag-over-role": "allow",
+
+			/**
+			 * A statement that computes a value and drops it reads like an action while doing
+			 * nothing. The strictest form applies, with no `allowShortCircuit` or `allowTernary`,
+			 * because no expression in the repo needs them. A bare function call stays legal
+			 * here: the rule judges the expression's form, so it says nothing about whether a
+			 * caller uses what a call returns.
+			 */
+			"no-unused-expressions": "deny",
 		},
 		settings: {
 			"jsx-a11y": {
