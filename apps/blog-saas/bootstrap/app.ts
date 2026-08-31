@@ -67,7 +67,7 @@ export function createDashboardRouter() {
 
 	router.map(routes.auth.login, auth.login);
 	router.map(routes.auth.callback, auth.callback);
-	router.map(routes.auth.logout, auth.logout_);
+	router.map(routes.auth.logout, auth.logout);
 
 	router.map(routes.api.webhooks.polar, polarWebhook);
 

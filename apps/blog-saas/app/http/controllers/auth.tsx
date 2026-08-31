@@ -114,7 +114,7 @@ export const callback = createAction(
  *
  * @returns The sign-out page (`index`) or a logout redirect (`action`).
  */
-export const logout_ = createController(routes.auth.logout, {
+export const logout = createController(routes.auth.logout, {
 	actions: {
 		async index(ctx) {
 			return ctx.render(
