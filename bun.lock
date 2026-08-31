@@ -311,6 +311,18 @@
         "vitest": "4.1.10",
       },
     },
+    "packages/catch-response-middleware": {
+      "name": "@pkg/catch-response-middleware",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-beta.6",
+      },
+      "devDependencies": {
+        "@pkg/response": "workspace:*",
+        "@types/bun": "^1.3.14",
+        "vitest": "4.1.10",
+      },
+    },
     "packages/cloudflare-mocks": {
       "name": "@pkg/cloudflare-mocks",
       "version": "0.0.1",
@@ -1351,6 +1363,8 @@
     "@pkg/auth-sdk": ["@pkg/auth-sdk@workspace:packages/auth-sdk"],
 
     "@pkg/blog-engine": ["@pkg/blog-engine@workspace:packages/blog-engine"],
+
+    "@pkg/catch-response-middleware": ["@pkg/catch-response-middleware@workspace:packages/catch-response-middleware"],
 
     "@pkg/cloudflare-mocks": ["@pkg/cloudflare-mocks@workspace:packages/cloudflare-mocks"],
 
