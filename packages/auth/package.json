@@ -1,0 +1,40 @@
+{
+	"name": "@pkg/auth",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		"./access-token": "./src/access-token.ts",
+		"./auth-error": "./src/auth-error.ts",
+		"./auth-session": "./src/auth-session.ts",
+		"./authorization": "./src/authorization.ts",
+		"./id-token": "./src/id-token.ts",
+		"./issuer": "./src/issuer.ts",
+		"./management-client": "./src/management-client.ts",
+		"./relying-party": "./src/relying-party.ts",
+		"./resource-server": "./src/resource-server.ts",
+		"./service-client": "./src/service-client.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/catch-response-middleware": "workspace:*",
+		"@pkg/crypto": "workspace:*",
+		"@pkg/duration": "workspace:*",
+		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/jwt": "workspace:*",
+		"@pkg/location": "workspace:*",
+		"@pkg/rate-limit": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"remix": "3.0.0-beta.6"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260815.1",
+		"@pkg/kv-cache": "workspace:*",
+		"@types/bun": "^1.3.14",
+		"msw": "^2.15.0",
+		"vitest": "4.1.10"
+	}
+}
