@@ -446,6 +446,15 @@ function callbackPath(params: Record<string, string>): string {
 }
 
 describe("authorize", () => {
+	test("sends the browser on with a 303, so a form post is followed by a GET", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty();
+
+		let response = await agent.run("/login", (ctx) => rp.authorize(ctx));
+
+		expect(response.status).toBe(303);
+	});
+
 	test("redirects to the authorization endpoint with every required parameter", async () => {
 		let agent = createAgent();
 		let rp = createRelyingParty();
@@ -453,7 +462,7 @@ describe("authorize", () => {
 		let response = await agent.run("/login", (ctx) => rp.authorize(ctx));
 		let params = authorizeParams(response);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toContain(AUTHORIZATION_ENDPOINT);
 		expect(params.get("response_type")).toBe("code");
 		expect(params.get("client_id")).toBe(CLIENT_ID);
@@ -1343,9 +1352,58 @@ describe("overrides", () => {
 		expect(grant.profile.name).toBe("Ada");
 	});
 
-	test("leans on the ID token when the profile claims are already there", async () => {
+	test("leans on the ID token when every profile claim is already there", async () => {
 		let agent = createAgent();
 		let rp = createRelyingParty({ userInfo: "when-missing" });
+		let params = await startLogin(agent, rp);
+
+		stubTokenEndpoint(() =>
+			tokenResponse({
+				nonce: params.get("nonce"),
+				claims: {
+					name: "Ada Lovelace",
+					email: "ada@example.com",
+					preferred_username: "ada",
+					picture: "https://example.com/ada.png",
+				},
+			}),
+		);
+
+		let grant = await agent.run(
+			callbackPath({ code: "code-1", state: params.get("state") ?? "" }),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(grant.profile.name).toBe("Ada Lovelace");
+		expect(grant.profile.email).toBe("ada@example.com");
+	});
+
+	test("reads the userinfo endpoint for a claim the ID token withholds", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty({ userInfo: "when-missing" });
+		let params = await startLogin(agent, rp);
+
+		stubTokenEndpoint(() =>
+			tokenResponse({ nonce: params.get("nonce"), claims: { name: "Ada Lovelace" } }),
+		);
+		server.use(
+			http.get(USER_INFO_ENDPOINT, () =>
+				HttpResponse.json({ sub: "user-1", email: "ada@example.com" }),
+			),
+		);
+
+		let grant = await agent.run(
+			callbackPath({ code: "code-1", state: params.get("state") ?? "" }),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(grant.profile.name).toBe("Ada Lovelace");
+		expect(grant.profile.email).toBe("ada@example.com");
+	});
+
+	test("leaves the userinfo endpoint alone when the client never asks for it", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty({ userInfo: "never" });
 		let params = await startLogin(agent, rp);
 
 		stubTokenEndpoint(() =>
@@ -1358,6 +1416,7 @@ describe("overrides", () => {
 		);
 
 		expect(grant.profile.name).toBe("Ada Lovelace");
+		expect(grant.profile.email).toBeNull();
 	});
 
 	test("throws endpoint_unsupported when the issuer advertises no userinfo endpoint", async () => {
@@ -1491,7 +1550,7 @@ describe("rateLimit", () => {
 		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 1, window: "1 minute" }) });
 		let visit = createLoginApp(rp);
 
-		expect((await visit(CLIENT_IP)).status).toBe(302);
+		expect((await visit(CLIENT_IP)).status).toBe(303);
 
 		let refused = await visit(CLIENT_IP);
 
@@ -1534,6 +1593,16 @@ describe("endSession", () => {
 		return idToken;
 	}
 
+	test("sends the browser on with a 303, so a form post is followed by a GET", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty();
+		await signIn(agent);
+
+		let response = await agent.run("/logout", (ctx) => rp.endSession(ctx));
+
+		expect(response.status).toBe(303);
+	});
+
 	test("redirects to the end-session endpoint with the ID token as the hint", async () => {
 		let agent = createAgent();
 		let rp = createRelyingParty();
@@ -1542,7 +1611,7 @@ describe("endSession", () => {
 		let response = await agent.run("/logout", (ctx) => rp.endSession(ctx, { returnTo: "/bye" }));
 		let url = new URL(response.headers.get("location") ?? "", ISSUER);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(url.origin + url.pathname).toBe(END_SESSION_ENDPOINT);
 		expect(url.searchParams.get("id_token_hint")).toBe(idToken);
 		expect(url.searchParams.get("client_id")).toBe(CLIENT_ID);

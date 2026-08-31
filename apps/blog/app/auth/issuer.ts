@@ -24,24 +24,12 @@ const AUTH_IDENTIFIER = "auth.sergiodxa.com";
 
 /** The provider's endpoints, stated here so a login spends no round-trip on discovery. */
 const AUTH_METADATA: Issuer.Metadata = {
-	issuer: AUTH_ORIGIN,
+	issuer: AUTH_IDENTIFIER,
 	authorization_endpoint: `${AUTH_ORIGIN}/authorize`,
 	token_endpoint: `${AUTH_ORIGIN}/oauth/token`,
 	jwks_uri: `${AUTH_ORIGIN}/.well-known/jwks.json`,
 	end_session_endpoint: `${AUTH_ORIGIN}/oidc/logout`,
 };
-
-/**
- * The provider, addressed by the origin its documents are served from and answering
- * with the identifier its tokens actually carry, which is what an ID token's `iss` is
- * held to.
- */
-class AuthIssuer extends Issuer {
-	/** The `iss` every token this provider signs carries. */
-	override identifier(): Promise<string> {
-		return Promise.resolve(AUTH_IDENTIFIER);
-	}
-}
 
 /**
  * The provider for the current request, reading its key set through the KV cache so
@@ -51,7 +39,8 @@ class AuthIssuer extends Issuer {
  * @example let keys = await issuer().keys();
  */
 export function issuer(): Issuer {
-	return new AuthIssuer(AUTH_ORIGIN, {
+	return new Issuer(AUTH_ORIGIN, {
+		identifier: AUTH_IDENTIFIER,
 		metadata: AUTH_METADATA,
 		cache: new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")),
 	});

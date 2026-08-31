@@ -36,8 +36,15 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** The identity provider this app's accounts live at. */
-const ISSUER = "https://auth.sergiodxa.com";
+/** Origin the identity provider this app's accounts live at serves its documents on. */
+const AUTH_ORIGIN = "https://auth.sergiodxa.com";
+
+/**
+ * The `iss` the provider publishes and writes into every token it signs, carried
+ * without a scheme exactly as production does, so a login that only works against a
+ * URL identifier fails here.
+ */
+const AUTH_IDENTIFIER = "auth.sergiodxa.com";
 
 /** The client this app is registered as, matching the mocked `CLIENT_ID` binding. */
 const CLIENT_ID = "client-id";
@@ -63,22 +70,29 @@ let tokenResponse: () => Promise<Response> = grantedTokens;
 let keys: JWK.KeyPair[];
 
 /**
- * The provider's endpoints. Discovery and the key set answer for the whole file, so a
+ * The provider's endpoints, answering with the document production publishes down to
+ * its scheme-less `issuer`. Discovery and the key set answer for the whole file, so a
  * per-test handler reset leaves every login working.
  */
 let server = setupServer(
-	http.get(`${ISSUER}/.well-known/openid-configuration`, () =>
+	http.get(`${AUTH_ORIGIN}/.well-known/openid-configuration`, () =>
 		HttpResponse.json({
-			issuer: ISSUER,
-			authorization_endpoint: `${ISSUER}/authorize`,
-			token_endpoint: `${ISSUER}/oauth/token`,
-			jwks_uri: `${ISSUER}/.well-known/jwks.json`,
-			userinfo_endpoint: `${ISSUER}/userinfo`,
-			end_session_endpoint: `${ISSUER}/oidc/logout`,
+			issuer: AUTH_IDENTIFIER,
+			authorization_endpoint: `${AUTH_ORIGIN}/authorize`,
+			token_endpoint: `${AUTH_ORIGIN}/oauth/token`,
+			jwks_uri: `${AUTH_ORIGIN}/.well-known/jwks.json`,
+			userinfo_endpoint: `${AUTH_ORIGIN}/userinfo`,
+			end_session_endpoint: `${AUTH_ORIGIN}/oidc/logout`,
+			revocation_endpoint: `${AUTH_ORIGIN}/oauth/revoke`,
+			introspection_endpoint: `${AUTH_ORIGIN}/oauth/introspect`,
+			scopes_supported: ["openid", "email", "profile"],
+			response_types_supported: ["code"],
+			token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post"],
+			code_challenge_methods_supported: ["S256", "plain"],
 		}),
 	),
-	http.get(`${ISSUER}/.well-known/jwks.json`, () => HttpResponse.json(JWK.toJSON(keys))),
-	http.post(`${ISSUER}/oauth/token`, () => tokenResponse()),
+	http.get(`${AUTH_ORIGIN}/.well-known/jwks.json`, () => HttpResponse.json(JWK.toJSON(keys))),
+	http.post(`${AUTH_ORIGIN}/oauth/token`, () => tokenResponse()),
 );
 
 vi.doMock("cloudflare:workers", () => ({
@@ -101,7 +115,7 @@ let { default: authController } = await import("./auth");
 /** Signs a token for the fixture issuer with the key set discovery publishes. */
 function signToken(claims: Record<string, unknown>): Promise<string> {
 	return new JWT({
-		iss: ISSUER,
+		iss: AUTH_IDENTIFIER,
 		aud: CLIENT_ID,
 		exp: "1h",
 		iat: Math.floor(Date.now() / 1000),
@@ -302,9 +316,9 @@ describe("POST /auth", () => {
 
 		let response = await agent.start();
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let location = new URL(response.headers.get("Location")!);
-		expect(location.origin + location.pathname).toBe(`${ISSUER}/authorize`);
+		expect(location.origin + location.pathname).toBe(`${AUTH_ORIGIN}/authorize`);
 		expect(location.searchParams.get("client_id")).toBe(CLIENT_ID);
 		expect(location.searchParams.get("redirect_uri")).toBe(
 			`https://uptime.test${routes.auth.index.href()}`,
@@ -492,7 +506,7 @@ describe("GET /auth", () => {
 			HttpResponse.json({
 				access_token: await signToken({ sub: "user-1", client_id: CLIENT_ID }),
 				id_token: await new JWT({
-					iss: ISSUER,
+					iss: AUTH_IDENTIFIER,
 					aud: CLIENT_ID,
 					sub: "user-1",
 					exp: "1h",

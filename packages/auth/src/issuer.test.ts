@@ -27,6 +27,12 @@ const DISCOVERY_URL = `${ISSUER}/.well-known/openid-configuration`;
 /** Where the documents in this file say the key set is published. */
 const JWKS_URL = `${ISSUER}/.well-known/jwks.json`;
 
+/**
+ * The identifier a provider publishes without a scheme, standing in for one whose
+ * `iss` is a bare host rather than the URL its documents are served from.
+ */
+const SCHEMELESS_ISSUER = "auth.test";
+
 /** Pinned so a token claiming another algorithm fails rather than being honored. */
 const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
 
@@ -221,6 +227,20 @@ describe("metadata", () => {
 		await expect(new Issuer(`${ISSUER}/`).identifier()).resolves.toBe(`${ISSUER}/`);
 	});
 
+	test("accepts a host named in another case on either side of the identity check", async () => {
+		respond(DISCOVERY_URL, document({ issuer: "https://AUTH.test" }));
+
+		await expect(new Issuer(ISSUER).identifier()).resolves.toBe("https://AUTH.test");
+	});
+
+	test("reports an empty issuer as a discovery failure", async () => {
+		respond(DISCOVERY_URL, document({ issuer: "" }));
+
+		await expect(new Issuer(ISSUER).metadata()).rejects.toSatisfy((error: unknown) =>
+			AuthError.is(error, AuthErrorCode.DiscoveryFailed),
+		);
+	});
+
 	test("refuses a document naming another issuer", async () => {
 		respond(DISCOVERY_URL, document({ issuer: "https://evil.test" }));
 
@@ -327,6 +347,65 @@ describe("metadata", () => {
 		await expect(issuer.metadata()).rejects.toSatisfy((error: unknown) =>
 			AuthError.is(error, AuthErrorCode.IssuerMismatch),
 		);
+	});
+});
+
+describe("an identifier stated apart from the URL", () => {
+	test("verifies a token whose `iss` is the bare identifier the provider publishes", async () => {
+		let pair = await keyPair();
+		respond(DISCOVERY_URL, document({ issuer: SCHEMELESS_ISSUER }));
+		respond(JWKS_URL, JWK.toJSON([pair]));
+
+		let issuer = new Issuer(ISSUER, { identifier: SCHEMELESS_ISSUER });
+		let signed = await new JWT({ sub: "user-123", iss: SCHEMELESS_ISSUER, exp: "1h" }).sign(
+			JWK.Algorithm.ES256,
+			[pair],
+		);
+
+		await expect(issuer.identifier()).resolves.toBe(SCHEMELESS_ISSUER);
+		await expect(issuer.tokenEndpoint()).resolves.toEqual(new URL(`${ISSUER}/oauth/token`));
+
+		let verified = await JWT.verify(signed, await issuer.keys(), {
+			...VERIFY,
+			issuer: await issuer.identifier(),
+		});
+
+		expect(verified.subject).toBe("user-123");
+		expect(count(DISCOVERY_URL)).toBe(1);
+		expect(count(JWKS_URL)).toBe(1);
+	});
+
+	test("checks configured metadata against the stated identifier", async () => {
+		let issuer = new Issuer(ISSUER, {
+			identifier: SCHEMELESS_ISSUER,
+			metadata: document({ issuer: SCHEMELESS_ISSUER }),
+		});
+
+		await expect(issuer.identifier()).resolves.toBe(SCHEMELESS_ISSUER);
+		expect(count(DISCOVERY_URL)).toBe(0);
+	});
+
+	test("refuses a document publishing the URL where a bare identifier was stated", async () => {
+		respond(DISCOVERY_URL, document({ issuer: ISSUER }));
+
+		await expect(
+			new Issuer(ISSUER, { identifier: SCHEMELESS_ISSUER }).metadata(),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.IssuerMismatch));
+	});
+
+	test("refuses a document publishing another bare host", async () => {
+		respond(DISCOVERY_URL, document({ issuer: "evil.test" }));
+
+		await expect(
+			new Issuer(ISSUER, { identifier: SCHEMELESS_ISSUER }).metadata(),
+		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.IssuerMismatch));
+	});
+
+	test("refuses a bare identifier as the URL discovery is fetched from", () => {
+		let build = () => new Issuer(SCHEMELESS_ISSUER);
+
+		expect(build).toThrow(AuthError);
+		expect(build).toThrow(/absolute URL/);
 	});
 });
 

@@ -12,8 +12,15 @@ import { Issuer } from "@pkg/auth/issuer";
 import { Cache } from "@pkg/kv-cache";
 import { env, waitUntil } from "cloudflare:workers";
 
-/** The provider this app's accounts live at, and the `iss` its tokens carry. */
-export const AUTH_ISSUER = "https://auth.sergiodxa.com";
+/** Origin the provider serves its discovery document and every endpoint on. */
+const AUTH_ORIGIN = "https://auth.sergiodxa.com";
+
+/**
+ * The `iss` the provider writes into every token it signs and publishes as its
+ * discovery `issuer`. It carries no scheme, and a verification compares it byte for
+ * byte, so it is stated apart from the origin the documents are served from.
+ */
+const AUTH_IDENTIFIER = "auth.sergiodxa.com";
 
 /** Reused for the life of the isolate, so a second read of the metadata is free. */
 let instance: Issuer | null = null;
@@ -26,7 +33,8 @@ let instance: Issuer | null = null;
  * @example let keys = await issuer().keys();
  */
 export function issuer(): Issuer {
-	instance ??= new Issuer(AUTH_ISSUER, {
+	instance ??= new Issuer(AUTH_ORIGIN, {
+		identifier: AUTH_IDENTIFIER,
 		cache: new Cache.KVStore(env.KV, (promise) => waitUntil(promise)),
 	});
 

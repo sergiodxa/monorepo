@@ -138,8 +138,12 @@ An OpenID Connect provider, addressed by its issuer identifier.
 
 **Parameters:**
 
-- `url`: The issuer identifier, which is also where `/.well-known/openid-configuration` is
-  served from
+- `url`: Where `/.well-known/openid-configuration` is served from, and the origin every
+  endpoint URL resolves against. It carries a scheme; a string without one throws
+  `discovery_failed` at construction
+- `options.identifier`: The identifier the provider publishes and writes into every
+  token's `iss`, for a provider whose identifier is something other than that URL
+  (defaults to the URL)
 - `options.cache`: A store shared across isolates, so one fetch per TTL serves every
   isolate reading the same issuer
 - `options.metadata`: A discovery document supplied inline, served in place of the
@@ -149,8 +153,8 @@ An OpenID Connect provider, addressed by its issuer identifier.
 
 #### `issuer.url`
 
-The identifier this instance was constructed with, as a `URL`. `identifier()` answers with
-the value the provider itself publishes, which is what tokens carry as `iss`.
+Where the provider serves its documents, as a `URL`. `identifier()` answers with the value
+the provider itself publishes, which is what tokens carry as `iss`.
 
 #### `issuer.metadata(): Promise<Issuer.Metadata>`
 
@@ -233,8 +237,8 @@ parameter the flow writes itself.
 
 #### `rp.authorize(ctx, options?): Promise<Response>`
 
-Starts a login: spends the budget, writes the transaction, and redirects to the
-authorization endpoint.
+Starts a login: spends the budget, writes the transaction, and answers with a `303`
+redirect to the authorization endpoint.
 
 **Parameters:**
 
@@ -275,7 +279,8 @@ correlation failure standing in for it.
 
 #### `rp.endSession(ctx, options?): Promise<Response | URL>`
 
-Ends the login locally and hands the browser to the provider's end-session endpoint.
+Ends the login locally and hands the browser to the provider's end-session endpoint with a
+`303`.
 
 ```typescript
 await rp.endSession(ctx, { returnTo: "/" }); // Response
@@ -845,9 +850,13 @@ the grant budget by the client id.
    before it: a redirect thrown above the session middleware unwinds past its commit and
    reaches the browser without its `Set-Cookie`, which loses the login transaction and the
    `returnTo` with it.
-2. **`userInfo` defaults to `"never"`** - The ID token is verified, so its claims are
-   trustworthy and a login costs two round-trips rather than three. `"always"` and
-   `"when-missing"` opt into the third; both then need the provider to advertise a
+2. **`userInfo` defaults to `"never"`, and `"when-missing"` means any claim missing** -
+   The ID token is verified, so its claims are trustworthy and a login costs two
+   round-trips rather than three. `"always"` and `"when-missing"` opt into the third.
+   `"when-missing"` spends it unless the ID token carries every one of `name`, `email`,
+   `preferred_username`, and `picture`, so a provider that sends `name` and withholds
+   `email` still resolves a whole claim set — which is what an app matching `email`
+   against an allow-list depends on. Both then need the provider to advertise a
    `userinfo_endpoint`, and both bind the response to the login by its `sub` — a response
    naming anyone else is `invalid_token`.
 3. **Reserved parameters are rejected, not merged** - `state`, `client_id`, `redirect_uri`,
@@ -951,6 +960,21 @@ the grant budget by the client id.
     read and write of the token set and the login transaction goes through
     `remix/middleware/session`. That failure is a wiring mistake rather than a protocol
     violation, so it is not an `AuthError` with a code.
+23. **A provider whose identifier is not a URL is configured with `identifier`** - A
+    provider is free to publish a bare host as its `issuer`, and relying parties compare
+    that exact string. The constructor's `url` stays the place discovery is fetched from,
+    and `identifier` states what the document publishes and what tokens carry as `iss`.
+    The identity check then holds the document to that value — byte for byte for an
+    identifier that is not a URL, and normalized for host case and a trailing slash for
+    one that is — so a document naming anything else is still `issuer_mismatch`, and
+    `identifier()` keeps answering with the document's own value, which is what
+    `JWT.verify` is given. Point a fixture at the identifier production publishes: a
+    document naming the URL instead passes locally and fails against the provider.
+24. **`authorize` and `endSession` answer `303`** - A form post reaches both in practice,
+    and `303` is what tells the browser to follow the redirect with a `GET` rather than
+    repeating the post against the issuer. `endSession`'s `{ redirect: false }` hands back
+    the URL for a caller building its own response, and a spent login budget still throws
+    its `429`.
 
 ## Related Packages
 
@@ -999,3 +1023,9 @@ the grant budget by the client id.
 9. **Put the app's vocabulary in the app** - `currentUser()`, `permission()`, and `role()`
    read app data; build them over `subject()` and the claims so the name tells you which
    layer you are in.
+10. **In a test, import the module that reads `env` below the `vi.doMock`** - An `Issuer`
+    takes its KV binding the moment it is built, so a static import of the module that
+    builds one runs before `vi.doMock("cloudflare:workers", …)` is installed and the
+    binding arrives as the stub's plain string, failing later with
+    `this.kv.get is not a function`. Reach for the subject with `await import(...)` after
+    the mock instead.

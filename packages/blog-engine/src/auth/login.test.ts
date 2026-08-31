@@ -296,7 +296,12 @@ describe("the admin panel's OIDC login", () => {
 
 	test("ends the provider's session with the ID token the login stored", async () => {
 		let { engine } = createEngine();
-		let { cookie } = await signIn(engine, { email: OWNER_EMAIL, name: "The Owner" });
+		let { cookie } = await signIn(engine, {
+			email: OWNER_EMAIL,
+			name: "The Owner",
+			preferred_username: "owner",
+			picture: "https://cdn.example.com/owner.png",
+		});
 
 		let response = await engine.fetch(
 			new Request(`${APP_ORIGIN}/auth/logout`, {

@@ -47,8 +47,15 @@ vi.doMock("cloudflare:workers", () => ({
 let { default: i18n } = await import("~/app/http/middleware/i18n");
 let { default: logoutController } = await import("./logout");
 
-/** The identity provider this app's accounts live at. */
-const ISSUER = "https://auth.sergiodxa.com";
+/** Origin the identity provider this app's accounts live at serves its documents on. */
+const AUTH_ORIGIN = "https://auth.sergiodxa.com";
+
+/**
+ * The `iss` the provider publishes and writes into every token it signs, carried
+ * without a scheme exactly as production does, so a logout that only works against a
+ * URL identifier fails here.
+ */
+const AUTH_IDENTIFIER = "auth.sergiodxa.com";
 
 /** The session key `@pkg/auth` holds the signed-in token set under. */
 const TOKENS_SESSION_KEY = "auth";
@@ -61,17 +68,27 @@ const STORED_TOKENS = {
 	expiresAt: null,
 };
 
-/** The provider's discovery document, which names the end-session endpoint. */
+/**
+ * The provider's discovery document, matching what production publishes down to its
+ * scheme-less `issuer`, and naming the end-session endpoint the logout is handed to.
+ */
 const DISCOVERY = {
-	issuer: ISSUER,
-	authorization_endpoint: `${ISSUER}/authorize`,
-	token_endpoint: `${ISSUER}/oauth/token`,
-	jwks_uri: `${ISSUER}/.well-known/jwks.json`,
-	end_session_endpoint: `${ISSUER}/oidc/logout`,
+	issuer: AUTH_IDENTIFIER,
+	authorization_endpoint: `${AUTH_ORIGIN}/authorize`,
+	token_endpoint: `${AUTH_ORIGIN}/oauth/token`,
+	jwks_uri: `${AUTH_ORIGIN}/.well-known/jwks.json`,
+	userinfo_endpoint: `${AUTH_ORIGIN}/userinfo`,
+	end_session_endpoint: `${AUTH_ORIGIN}/oidc/logout`,
+	revocation_endpoint: `${AUTH_ORIGIN}/oauth/revoke`,
+	introspection_endpoint: `${AUTH_ORIGIN}/oauth/introspect`,
+	scopes_supported: ["openid", "email", "profile"],
+	response_types_supported: ["code"],
+	token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post"],
+	code_challenge_methods_supported: ["S256", "plain"],
 };
 
 let server = setupServer(
-	http.get(`${ISSUER}/.well-known/openid-configuration`, () => HttpResponse.json(DISCOVERY)),
+	http.get(`${AUTH_ORIGIN}/.well-known/openid-configuration`, () => HttpResponse.json(DISCOVERY)),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -157,7 +174,9 @@ describe("POST /logout", () => {
 	 * read successfully, and this is the one case that needs it unread.
 	 */
 	test("destroys the session and goes home when the provider cannot be reached", async () => {
-		server.use(http.get(`${ISSUER}/.well-known/openid-configuration`, () => HttpResponse.error()));
+		server.use(
+			http.get(`${AUTH_ORIGIN}/.well-known/openid-configuration`, () => HttpResponse.error()),
+		);
 
 		let session = new Session();
 		session.set(TOKENS_SESSION_KEY, STORED_TOKENS);
@@ -180,7 +199,7 @@ describe("POST /logout", () => {
 		expect(response.headers.get("Clear-Site-Data")).toBe('"*"');
 
 		let location = new URL(response.headers.get("Location")!);
-		expect(location.origin + location.pathname).toBe(`${ISSUER}/oidc/logout`);
+		expect(location.origin + location.pathname).toBe(`${AUTH_ORIGIN}/oidc/logout`);
 		expect(location.searchParams.get("id_token_hint")).toBe("raw-id-token");
 		expect(location.searchParams.get("post_logout_redirect_uri")).toBe(
 			`https://uptime.test${routes.home.href()}`,

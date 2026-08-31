@@ -13,7 +13,7 @@ import type { DurationInput } from "@pkg/duration";
 import { JWK } from "@pkg/jwt";
 import { isFailure, wrap } from "@pkg/result";
 import * as s from "remix/data-schema";
-import { url } from "remix/data-schema/checks";
+import { minLength, url } from "remix/data-schema/checks";
 
 import { AuthError, AuthErrorCode } from "./auth-error";
 import { nonJsonMediaType } from "./content-type";
@@ -37,6 +37,13 @@ const TRAILING_SLASHES = /\/+$/;
 /** A metadata member holding one absolute URL. */
 const URL_SCHEMA = s.string().pipe(url());
 
+/**
+ * The `issuer` member, held to being a string a provider could publish. A provider
+ * is free to publish an identifier that is not a URL, and the identity check is what
+ * holds the value to the issuer the caller asked for.
+ */
+const IDENTIFIER_SCHEMA = s.string().pipe(minLength(1));
+
 /** A metadata member holding a list of advertised values. */
 const VALUES_SCHEMA = s.optional(s.array(s.string()));
 
@@ -45,7 +52,7 @@ const VALUES_SCHEMA = s.optional(s.array(s.string()));
  * dropped, so a provider may publish as many as it likes.
  */
 const METADATA_SCHEMA = s.object({
-	issuer: URL_SCHEMA,
+	issuer: IDENTIFIER_SCHEMA,
 	authorization_endpoint: URL_SCHEMA,
 	token_endpoint: URL_SCHEMA,
 	jwks_uri: URL_SCHEMA,
@@ -73,17 +80,26 @@ type EndpointName = Extract<keyof Issuer.Metadata, `${string}_endpoint` | "jwks_
 type ValuesName = Extract<keyof Issuer.Metadata, `${string}_supported`>;
 
 /**
- * Reports whether two identifiers name the same issuer. Both are read as URLs, so
- * host case and a trailing slash carry no meaning and every other difference does.
+ * An identifier in the form it compares. A URL identifier is read as a URL, so host
+ * case and a trailing slash carry no meaning; every other identifier stands exactly
+ * as it was published, so the comparison over it is byte for byte.
+ *
+ * @param identifier - The identifier to read.
+ */
+function comparableIssuer(identifier: string): string {
+	if (!URL.canParse(identifier)) return identifier;
+	return new URL(identifier).href.replace(TRAILING_SLASHES, "");
+}
+
+/**
+ * Reports whether two identifiers name the same issuer, which is the check every
+ * read of a discovery document is trusted on.
  *
  * @param left - One identifier.
  * @param right - The other identifier.
  */
 function sameIssuer(left: string, right: string): boolean {
-	return (
-		new URL(left).href.replace(TRAILING_SLASHES, "") ===
-		new URL(right).href.replace(TRAILING_SLASHES, "")
-	);
+	return comparableIssuer(left) === comparableIssuer(right);
 }
 
 /**
@@ -96,13 +112,20 @@ function sameIssuer(left: string, right: string): boolean {
  * @example
  * let issuer = new Issuer(env.OIDC_ISSUER, { cache: new Cache.KVStore(env.CACHE, waitUntil) });
  * let token = await IdToken.verify(raw, await issuer.keys(), { issuer: await issuer.identifier() });
+ *
+ * @example
+ * let issuer = new Issuer("https://auth.example.com", { identifier: "auth.example.com" });
  */
 export class Issuer {
-	/** The issuer identifier this instance was constructed with. */
+	/**
+	 * Where the issuer serves its documents, which discovery appends its path to and
+	 * every endpoint URL is resolved against.
+	 */
 	readonly url: URL;
 
 	#cache: Issuer.CacheStore | null;
 	#configured: Issuer.Metadata | null;
+	#expected: string;
 	#ttl: DurationInput;
 	#metadata: Promise<Issuer.Metadata> | null = null;
 	#keys: Promise<JWK.KeyResolver> | null = null;
@@ -110,13 +133,25 @@ export class Issuer {
 	/**
 	 * Points an instance at an issuer.
 	 *
-	 * @param url - The issuer identifier, which is also where its document is found.
-	 * @param options - The shared cache, inline metadata, and the cache TTL.
+	 * @param url - Where the issuer serves its documents, as an absolute URL.
+	 * @param options - The published identifier, the shared cache, inline metadata,
+	 *   and the cache TTL.
+	 * @throws `DiscoveryFailed` when the URL carries no scheme, since discovery is
+	 *   fetched from it. A provider whose published identifier carries no scheme is
+	 *   reached by stating its origin here and that identifier as `identifier`.
 	 */
 	constructor(url: string | URL, options: Issuer.Options = {}) {
+		if (typeof url === "string" && !URL.canParse(url)) {
+			throw new AuthError(
+				`Discovery for ${url} needs an absolute URL. State the issuer's origin here, and the identifier it publishes as \`identifier\`.`,
+				{ code: AuthErrorCode.DiscoveryFailed },
+			);
+		}
+
 		this.url = new URL(url);
 		this.#cache = options.cache ?? null;
 		this.#configured = options.metadata ?? null;
+		this.#expected = options.identifier ?? this.url.href;
 		this.#ttl = options.ttl ?? DEFAULT_TTL;
 	}
 
@@ -281,9 +316,9 @@ export class Issuer {
 			});
 		}
 
-		if (!sameIssuer(result.value.issuer, this.url.href)) {
+		if (!sameIssuer(result.value.issuer, this.#expected)) {
 			throw new AuthError(
-				`The document at ${this.url.href} names the issuer ${result.value.issuer}.`,
+				`The document at ${this.url.href} names the issuer ${result.value.issuer} where ${this.#expected} was configured.`,
 				{ code: AuthErrorCode.IssuerMismatch },
 			);
 		}
@@ -453,6 +488,16 @@ export namespace Issuer {
 
 	/** How an {@link Issuer} is configured. */
 	export interface Options {
+		/**
+		 * The identifier the provider publishes and writes into every token's `iss`,
+		 * for a provider whose identifier is something other than the URL its documents
+		 * are served from. The document's `issuer` is held to this value, and
+		 * `identifier()` keeps answering with the document's own.
+		 *
+		 * @default the URL the instance was constructed with
+		 */
+		identifier?: string;
+
 		/**
 		 * Where fetched documents are shared across isolates. Omitting it keeps the
 		 * documents for the life of the instance.

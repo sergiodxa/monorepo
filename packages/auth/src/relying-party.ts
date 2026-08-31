@@ -58,6 +58,13 @@ const RATE_LIMIT_PREFIX = "auth:authorize";
  */
 const UNKNOWN_CLIENT_IP = "unknown";
 
+/**
+ * The status the login and logout redirects carry, per RFC 9110 §15.4.4. A form post
+ * starts both, and 303 is what tells the browser to reach the destination with a GET
+ * rather than repeating the post against it.
+ */
+const SEE_OTHER_STATUS = 303;
+
 /** The status a spent login budget answers a browser with, per RFC 6585 §4. */
 const RATE_LIMITED_STATUS = 429;
 
@@ -101,8 +108,9 @@ const RESERVED_TOKEN_PARAMS = [
 ];
 
 /**
- * The claims a profile is built from, and the ones `userInfo: "when-missing"`
- * looks for before it spends a round-trip on the userinfo endpoint.
+ * The claims a profile is built from. `userInfo: "when-missing"` spends its
+ * round-trip unless the ID token carries every one of them, so a provider that sends
+ * some and withholds the rest still resolves a whole profile.
  */
 const PROFILE_CLAIMS = ["name", "email", "preferred_username", "picture"];
 
@@ -379,7 +387,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 *
 	 * @param ctx - The request context the session middleware wrote to.
 	 * @param options - Where to return to, and what to ask the issuer for.
-	 * @returns The redirect to the authorization endpoint.
+	 * @returns The `303` redirect to the authorization endpoint.
 	 * @throws {Response} `429` with `Retry-After` when the calling browser's login
 	 *   budget is spent.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
@@ -440,7 +448,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 			url.searchParams.set(name, value);
 		}
 
-		return redirect(url.toString());
+		return redirect(url.toString(), SEE_OTHER_STATUS);
 	}
 
 	/**
@@ -547,7 +555,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 *
 	 * @param ctx - The request context the logout route received.
 	 * @param options - Where to come back to once the issuer has signed the person out.
-	 * @returns The redirect to the end-session endpoint.
+	 * @returns The `303` redirect to the end-session endpoint.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
 	 *   end-session endpoint.
 	 * @example
@@ -597,7 +605,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		);
 
 		if (options.redirect === false) return url;
-		return redirect(url.toString());
+		return redirect(url.toString(), SEE_OTHER_STATUS);
 	}
 
 	/**
@@ -959,8 +967,9 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * Resolves the claim set a profile is built from.
 	 *
 	 * The verified ID token is enough on its own, so the userinfo round-trip is
-	 * spent only where it is asked for; a userinfo response is bound to the login by
-	 * its `sub`, which OpenID Connect Core §5.3.2 requires before its values count.
+	 * spent only where it is asked for, and `"when-missing"` asks for it while any
+	 * display claim is absent; a userinfo response is bound to the login by its
+	 * `sub`, which OpenID Connect Core §5.3.2 requires before its values count.
 	 *
 	 * @param idToken - The verified ID token.
 	 * @param accessToken - The access token to present at the userinfo endpoint.
@@ -973,8 +982,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		if (this.#userInfo === "never") return idToken.payload;
 
 		if (this.#userInfo === "when-missing") {
-			let present = PROFILE_CLAIMS.some((claim) => idToken.payload[claim] !== undefined);
-			if (present) return idToken.payload;
+			let complete = PROFILE_CLAIMS.every((claim) => idToken.payload[claim] !== undefined);
+			if (complete) return idToken.payload;
 		}
 
 		let endpoint = await this.#issuer.userInfoEndpoint();
@@ -1036,7 +1045,11 @@ export namespace RelyingParty {
 	/** How the client presents its secret at the token endpoint. */
 	export type ClientAuth = "client_secret_post" | "client_secret_basic";
 
-	/** When the flow spends a round-trip on the userinfo endpoint. */
+	/**
+	 * When the flow spends a round-trip on the userinfo endpoint. `"when-missing"`
+	 * spends it whenever the ID token withholds any display claim, so a claim an app
+	 * authorizes on arrives whole rather than empty.
+	 */
 	export type UserInfoMode = "never" | "always" | "when-missing";
 
 	/** The values `prompt` takes, per OpenID Connect Core §3.1.2.1. */
@@ -1088,7 +1101,8 @@ export namespace RelyingParty {
 		clientAuth?: ClientAuth;
 		/**
 		 * When claims are read from the userinfo endpoint. The default leans on the
-		 * verified ID token, which a login already holds.
+		 * verified ID token, which a login already holds. `"when-missing"` reaches for
+		 * userinfo unless the ID token carries every display claim.
 		 *
 		 * @default "never"
 		 */
