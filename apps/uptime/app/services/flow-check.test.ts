@@ -188,7 +188,7 @@ describe("runFlowCheck", () => {
 		expect(result.failureDetail).toContain("too many requests");
 	});
 
-	test("a run past its deadline stops, and that is the flow being down", async () => {
+	test("a run past its deadline stops, and reports that as an error", async () => {
 		server.use(
 			http.get(`${ORIGIN}/slow`, async () => {
 				await delay(40);
@@ -210,7 +210,7 @@ describe("runFlowCheck", () => {
 			timeoutMs: 20,
 		});
 
-		expect(result.status).toBe("down");
+		expect(result.status).toBe("error");
 		expect(result.requestsMade).toBe(1);
 		expect(result.failureDetail).toContain("ran out of time");
 	});

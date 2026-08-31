@@ -119,7 +119,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	let failed = suite.results.find((result) => result.status === "failed");
 
 	return {
-		status: statusOf(failed, budget.overspent()),
+		status: statusOf(failed, budget.exhausted()),
 		testsTotal: suite.results.length,
 		testsPassed: suite.passed,
 		testsFailed: suite.failed,
@@ -142,15 +142,17 @@ const MISCONFIGURED = new Set(["permission-denied", "unknown-name", "ambiguous-n
 /**
  * Which status a completed run reports.
  *
- * Checked ahead of the failing test's own error code, so a run cut off for making too many
- * requests is treated as a monitor problem to fix.
+ * Checked ahead of the failing test's own error code, so a run cut off for exceeding one of
+ * its caps is treated as a monitor problem to fix. Both caps read the same way to a customer
+ * — the run was stopped before it could answer — so both keep the flow out of outage history
+ * and away from the alert path.
  *
  * @param failed - The first failing test, or `undefined` when every test passed.
- * @param overspent - Whether the run was cut off for making too many requests.
+ * @param exhausted - Whether the run was cut off for running past its time or request cap.
  */
-function statusOf(failed: TestResult | undefined, overspent: boolean): FlowStatus {
+function statusOf(failed: TestResult | undefined, exhausted: boolean): FlowStatus {
 	if (failed === undefined) return "up";
-	if (overspent) return "error";
+	if (exhausted) return "error";
 	let code = failed.error?.code;
 	return code !== undefined && MISCONFIGURED.has(code) ? "error" : "down";
 }
@@ -389,15 +391,15 @@ function* fromExpression(expression: ExpressionNode): Generator<string> {
 function createRequestBudget(limits: { maxRequests: number; timeoutMs: number }): {
 	wrap(plugin: Plugin): Plugin;
 	spent(): number;
-	overspent(): boolean;
+	exhausted(): boolean;
 } {
 	let spent = 0;
-	let overspent = false;
+	let exhausted = false;
 	let deadline = Date.now() + limits.timeoutMs;
 
 	return {
 		spent: () => spent,
-		overspent: () => overspent,
+		exhausted: () => exhausted,
 		wrap(plugin) {
 			return {
 				namespace: plugin.namespace,
@@ -409,6 +411,7 @@ function createRequestBudget(limits: { maxRequests: number; timeoutMs: number })
 					context: ToolContext,
 				): Promise<Result<Value, SpecError>> {
 					if (Date.now() > deadline) {
+						exhausted = true;
 						return failure(
 							new ToolError(
 								`This flow ran out of time: a run may take at most ${limits.timeoutMs}ms.`,
@@ -416,7 +419,7 @@ function createRequestBudget(limits: { maxRequests: number; timeoutMs: number })
 						);
 					}
 					if (spent >= limits.maxRequests) {
-						overspent = true;
+						exhausted = true;
 						return failure(
 							new ToolError(
 								`This flow made too many requests: a run may make at most ${limits.maxRequests}.`,
