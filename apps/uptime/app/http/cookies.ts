@@ -14,8 +14,8 @@ import { createCookie } from "remix/cookie";
 
 /**
  * Remembers the path to return to after a successful sign-in. Left unsigned: the
- * value is validated as a same-origin relative path with `safeReturnTo` before use,
- * so tampering can only redirect within the app.
+ * value is narrowed to a same-origin relative path before use, so tampering can
+ * only redirect within the app.
  */
 export const returnTo = createCookie("uptime:return-to", {
 	path: "/",
@@ -45,14 +45,3 @@ export const dashboardTab = createCookie("uptime:dashboard-tab", {
 	sameSite: "Lax",
 	secure: import.meta.env.PROD,
 });
-
-/**
- * Narrows a `returnTo` value to a safe same-origin relative path, falling back to
- * `fallback` for anything else (missing, absolute, or protocol-relative `//host`).
- */
-export function safeReturnTo(value: string | null | undefined, fallback: string): string {
-	if (!value) return fallback;
-	if (!value.startsWith("/")) return fallback;
-	if (value.startsWith("//")) return fallback;
-	return value;
-}

@@ -253,6 +253,48 @@ describe("GET /auth", () => {
 		expect(response.headers.get("Location")).toBe("/app/ada-team/settings");
 	});
 
+	test("preserves the query string and hash of a saved returnTo path", async () => {
+		let { db } = createTestDatabase();
+
+		finishExternalAuthImpl = async () => ({
+			result: { tokens: { idToken: "raw-id-token" } },
+			returnTo: "/app/ada-team/monitors?tab=dns#latest",
+		});
+
+		let { container, router } = createTestRouter(db, new Session());
+		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+		let response = await container.scope(() => router.fetch(request));
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe("/app/ada-team/monitors?tab=dns#latest");
+	});
+
+	/**
+	 * Each payload survives a leading-slash test yet resolves to an attacker origin
+	 * once a browser follows it, so sign-in has to land on `/app` instead.
+	 */
+	test.each([["//evil.com"], ["/\\/evil.com"], ["/\\evil.com"], ["/..//evil.com"]])(
+		"redirects to /app when the saved returnTo is %j",
+		async (target) => {
+			let { db } = createTestDatabase();
+
+			finishExternalAuthImpl = async () => ({
+				result: { tokens: { idToken: "raw-id-token" } },
+				returnTo: target,
+			});
+
+			let { container, router } = createTestRouter(db, new Session());
+			let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+			let response = await container.scope(() => router.fetch(request));
+
+			expect(response.status).toBe(303);
+			expect(response.headers.get("Location")).toBe(routes.app.index.href());
+			expect(new URL(response.headers.get("Location") ?? "", "https://uptime.test").origin).toBe(
+				"https://uptime.test",
+			);
+		},
+	);
+
 	test("seeds the language cookie from the subject's stored preference", async () => {
 		let { db } = createTestDatabase();
 		await UserPreferences.setLanguage(db, "user-1", "es");

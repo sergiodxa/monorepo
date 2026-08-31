@@ -15,6 +15,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
+import { Location } from "@pkg/location";
 import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
@@ -38,7 +39,7 @@ import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";
 import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
-import { language as languageCookie, returnTo, safeReturnTo } from "~/app/http/cookies";
+import { language as languageCookie, returnTo } from "~/app/http/cookies";
 import { TRIAL_ATTRIBUTION } from "~/app/http/middleware/attribution";
 import { login, setIdToken } from "~/app/http/middleware/auth";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
@@ -212,7 +213,8 @@ export default createController(routes.auth, {
 				});
 				setIdToken(idTokenRaw);
 
-				return redirect(safeReturnTo(finished.returnTo, routes.app.index.href()), {
+				let target = Location.safe(finished.returnTo, { fallback: routes.app.index.href() });
+				return redirect(target, {
 					status: redirect.Status.SeeOther,
 					headers: await languageHeaders(db, idToken.subject),
 				});
