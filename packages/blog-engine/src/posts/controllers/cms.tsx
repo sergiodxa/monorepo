@@ -287,8 +287,10 @@ export default createController(routes.cms.posts, {
 			let permissions = await getPermissions();
 
 			let codec = createMetaCodec(type);
-			let posts = await Post.findManyForType(db, type.name, codec);
-			let siteTitle = await Settings.siteTitle(db);
+			let [posts, siteTitle] = await Promise.all([
+				Post.findManyForType(db, type.name, codec),
+				Settings.siteTitle(db),
+			]);
 
 			return ctx.render(
 				<CmsLayout

@@ -28,9 +28,11 @@ export default createAction(
 		if (!user) {
 			return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 		}
-		let permissions = await getPermissions();
-		let siteTitle = await Settings.siteTitle(db);
-		let types = await PostType.findAll(db);
+		let [permissions, siteTitle, types] = await Promise.all([
+			getPermissions(),
+			Settings.siteTitle(db),
+			PostType.findAll(db),
+		]);
 
 		let rows = await Promise.all(
 			types.map(async (type) => ({ type, count: await Post.count(db, type.name) })),

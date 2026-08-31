@@ -27,10 +27,15 @@ export default createAction(
 		sitemap.append(new URL("/", origin));
 
 		let types = await PostType.findVisible(db);
-		for (let type of types) {
+		let postsByType = await Promise.all(
+			types.map(async (type) => ({
+				type,
+				posts: await Post.findManyForType(db, type.name, createMetaCodec(type)),
+			})),
+		);
+
+		for (let { type, posts } of postsByType) {
 			sitemap.append(new URL(`/${type.path}`, origin));
-			let codec = createMetaCodec(type);
-			let posts = await Post.findManyForType(db, type.name, codec);
 			for (let post of posts) {
 				if (!Post.isPublished(post.published_at)) continue;
 				sitemap.append(new URL(`/${type.path}/${post.slug}`, origin), {

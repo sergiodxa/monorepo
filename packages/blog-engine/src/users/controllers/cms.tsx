@@ -45,8 +45,11 @@ export default createController(routes.cms.users, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { user, permissions, siteTitle } = await chrome(db);
-			let [users, roles] = await Promise.all([User.findAll(db), Role.findAll(db)]);
+			let [{ user, permissions, siteTitle }, users, roles] = await Promise.all([
+				chrome(db),
+				User.findAll(db),
+				Role.findAll(db),
+			]);
 			let roleName = new Map(roles.map((role) => [role.id, role.label]));
 
 			return ctx.render(
@@ -85,8 +88,8 @@ export default createController(routes.cms.users, {
 		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { id } = ds.parse(RouteParams, ctx.params);
-			let { user, permissions, siteTitle } = await chrome(db);
-			let [target, roles, users] = await Promise.all([
+			let [{ user, permissions, siteTitle }, target, roles, users] = await Promise.all([
+				chrome(db),
 				User.findById(db, id),
 				Role.findAll(db),
 				User.findAll(db),

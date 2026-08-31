@@ -176,50 +176,50 @@ export default createAction(
 		let tcpMonitorsById = new Map(allTcpMonitors.map((monitor) => [monitor.id, monitor]));
 		let cronJobsById = new Map(allCronJobs.map((monitor) => [monitor.id, monitor]));
 
-		let httpServices = await Promise.all(
-			attachments.monitors
-				.flatMap((row) => {
-					let monitor = monitorsById.get(row.monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "http" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
-					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "http"),
-				})),
-		);
-
-		let dnsServices = await Promise.all(
-			attachments.dnsMonitors
-				.flatMap((row) => {
-					let monitor = dnsMonitorsById.get(row.dns_monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "dns" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveDnsStatus(monitor.last_status),
-					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "dns"),
-				})),
-		);
-
-		let tcpServices = await Promise.all(
-			attachments.tcpMonitors
-				.flatMap((row) => {
-					let monitor = tcpMonitorsById.get(row.tcp_monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "tcp" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveTcpStatus(monitor.last_status),
-					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp"),
-				})),
-		);
+		let [httpServices, dnsServices, tcpServices] = await Promise.all([
+			Promise.all(
+				attachments.monitors
+					.flatMap((row) => {
+						let monitor = monitorsById.get(row.monitor_id);
+						return monitor ? [{ displayName: row.display_name, monitor }] : [];
+					})
+					.map(async ({ displayName, monitor }) => ({
+						kind: "http" as const,
+						id: monitor.id,
+						name: publicName(displayName, monitor.name),
+						status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
+						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "http"),
+					})),
+			),
+			Promise.all(
+				attachments.dnsMonitors
+					.flatMap((row) => {
+						let monitor = dnsMonitorsById.get(row.dns_monitor_id);
+						return monitor ? [{ displayName: row.display_name, monitor }] : [];
+					})
+					.map(async ({ displayName, monitor }) => ({
+						kind: "dns" as const,
+						id: monitor.id,
+						name: publicName(displayName, monitor.name),
+						status: deriveDnsStatus(monitor.last_status),
+						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "dns"),
+					})),
+			),
+			Promise.all(
+				attachments.tcpMonitors
+					.flatMap((row) => {
+						let monitor = tcpMonitorsById.get(row.tcp_monitor_id);
+						return monitor ? [{ displayName: row.display_name, monitor }] : [];
+					})
+					.map(async ({ displayName, monitor }) => ({
+						kind: "tcp" as const,
+						id: monitor.id,
+						name: publicName(displayName, monitor.name),
+						status: deriveTcpStatus(monitor.last_status),
+						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp"),
+					})),
+			),
+		]);
 
 		let cronServices = attachments.cronJobs
 			.flatMap((row) => {

@@ -97,22 +97,15 @@ export default class Tenant {
 	): Promise<TenantWithRole[]> {
 		let TenantMember = (await import("./tenant-member")).default;
 
-		let ownedTenants = await db.findMany(Tenant.table, {
-			where: { owner_subject_id: subjectId },
-		});
+		let [ownedTenants, pendingOwnedTenants, memberships] = await Promise.all([
+			db.findMany(Tenant.table, { where: { owner_subject_id: subjectId } }),
+			db.findMany(Tenant.table, { where: { owner_subject_id: `pending:${email}` } }),
+			TenantMember.listBySubject(db, subjectId),
+		]);
 
-		let pendingOwnedTenants = await db.findMany(Tenant.table, {
-			where: { owner_subject_id: `pending:${email}` },
-		});
-
-		let memberships = await TenantMember.listBySubject(db, subjectId);
-
-		let memberTenantIds = memberships.map((m) => m.tenant_id);
-		let memberTenants: Array<Awaited<ReturnType<typeof Tenant.show>>> = [];
-		for (let tenantId of memberTenantIds) {
-			let tenant = await Tenant.show(db, tenantId);
-			if (tenant) memberTenants.push(tenant);
-		}
+		let memberTenants = (
+			await Promise.all(memberships.map((m) => Tenant.show(db, m.tenant_id)))
+		).filter((tenant) => tenant !== null);
 
 		let results: TenantWithRole[] = [];
 
@@ -125,7 +118,6 @@ export default class Tenant {
 		}
 
 		for (let tenant of memberTenants) {
-			if (!tenant) continue;
 			if (results.some((t) => t.id === tenant.id)) continue;
 			let membership = memberships.find((m) => m.tenant_id === tenant.id);
 			if (!membership) continue;

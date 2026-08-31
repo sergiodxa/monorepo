@@ -31,8 +31,10 @@ export class ReconcileSubscriptionsJob extends Job {
 		let db = getServiceContainer().get(Database);
 		let polar = getServiceContainer().get(PolarClient);
 
-		let live = await polar.listActiveSubscriptionsByProduct(SUBSCRIPTION_PRODUCT_ID);
-		let stored = await Subscription.listAll(db);
+		let [live, stored] = await Promise.all([
+			polar.listActiveSubscriptionsByProduct(SUBSCRIPTION_PRODUCT_ID),
+			Subscription.listAll(db),
+		]);
 
 		let liveIds = new Set(live.map((subscription) => subscription.id));
 		let activeStoredIds = new Set(

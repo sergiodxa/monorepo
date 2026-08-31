@@ -160,25 +160,32 @@ export async function buildAccountExport(
 		UserPreferences.findBySubjectId(db, subject.id),
 	]);
 
-	let memberships: ExportedMembership[] = [];
-	let ownedTeams: ExportedOwnedTeam[] = [];
+	let perTeam = await Promise.all(
+		rows.map(async ({ team, role, isOwner }) => {
+			let [members, owned] = await Promise.all([
+				Team.listMembersByTeam(db, team.id),
+				isOwner ? exportOwnedTeam(db, team.id, team.name, team.slug) : null,
+			]);
+			let own = members.find((member) => member.subject_id === subject.id);
 
-	for (let { team, role, isOwner } of rows) {
-		let members = await Team.listMembersByTeam(db, team.id);
-		let own = members.find((member) => member.subject_id === subject.id);
+			let membership: ExportedMembership = {
+				teamId: team.id,
+				name: team.name,
+				slug: team.slug,
+				role,
+				isOwner,
+				joinedAt: own ? new Date(own.created_at).toISOString() : null,
+				memberCount: members.length,
+			};
 
-		memberships.push({
-			teamId: team.id,
-			name: team.name,
-			slug: team.slug,
-			role,
-			isOwner,
-			joinedAt: own ? new Date(own.created_at).toISOString() : null,
-			memberCount: members.length,
-		});
+			return { membership, owned };
+		}),
+	);
 
-		if (isOwner) ownedTeams.push(await exportOwnedTeam(db, team.id, team.name, team.slug));
-	}
+	let memberships: ExportedMembership[] = perTeam.map((entry) => entry.membership);
+	let ownedTeams: ExportedOwnedTeam[] = perTeam.flatMap((entry) =>
+		entry.owned ? [entry.owned] : [],
+	);
 
 	return {
 		format: ACCOUNT_EXPORT_FORMAT,
@@ -227,20 +234,18 @@ async function exportOwnedTeam(
 		db.findMany(teamDomains, { where: { team_id: teamId } }),
 	]);
 
-	let contentChecks =
+	let [contentChecks, dnsRecords] = await Promise.all([
 		http.length === 0
 			? []
-			: await db.findMany(monitorContentChecks, {
+			: db.findMany(monitorContentChecks, {
 					where: inList(
 						"monitor_id",
 						http.map((monitor) => monitor.id),
 					),
-				});
-
-	let dnsRecords =
+				}),
 		dns.length === 0
 			? []
-			: await db.findMany(dnsMonitorRecords, {
+			: db.findMany(dnsMonitorRecords, {
 					where: inList(
 						"dns_monitor_id",
 						dns.map((monitor) => monitor.id),
@@ -252,7 +257,8 @@ async function exportOwnedTeam(
 						["value", "asc"],
 					],
 					limit: MAX_EXPORTED_DNS_RECORDS_PER_TEAM + 1,
-				});
+				}),
+	]);
 
 	let dnsRecordsTruncated = dnsRecords.length > MAX_EXPORTED_DNS_RECORDS_PER_TEAM;
 	let exportedDnsRecords = dnsRecordsTruncated

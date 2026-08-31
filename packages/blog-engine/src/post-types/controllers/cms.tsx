@@ -191,8 +191,10 @@ export default createController(routes.cms.postTypes, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { user, permissions, siteTitle } = await chrome(db);
-			let types = await PostType.findAll(db);
+			let [{ user, permissions, siteTitle }, types] = await Promise.all([
+				chrome(db),
+				PostType.findAll(db),
+			]);
 			return ctx.render(
 				<CmsLayout
 					title="Post Types"

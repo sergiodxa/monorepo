@@ -162,8 +162,10 @@ export default createController(routes.cms.roles, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { user, permissions, siteTitle } = await chrome(db);
-			let roles = await Role.findAll(db);
+			let [{ user, permissions, siteTitle }, roles] = await Promise.all([
+				chrome(db),
+				Role.findAll(db),
+			]);
 			return ctx.render(
 				<CmsLayout
 					title="Roles"

@@ -67,10 +67,12 @@ export class SendFunnelReportJob extends Job {
 		 * this run's cost to the platform, which is the accurate owner.
 		 */
 
-		let leads = await Lead.countFunnelActivity(db, start, end);
-		let watches = await TrialWatch.countFunnelActivity(db, start, end);
-		let paid = await TrialConversion.listPaidBetween(db, start, end);
-		let signups = await TrialConversion.listSignedUpBetween(db, start, end);
+		let [leads, watches, paid, signups] = await Promise.all([
+			Lead.countFunnelActivity(db, start, end),
+			TrialWatch.countFunnelActivity(db, start, end),
+			TrialConversion.listPaidBetween(db, start, end),
+			TrialConversion.listSignedUpBetween(db, start, end),
+		]);
 
 		let counters: TrialDailyCounters = {
 			newLeads: leads.created,

@@ -125,10 +125,12 @@ export default class AlertEvent {
 			gt("sent_at", since),
 		);
 
-		let sent = await db.count(alertEvents, { where: and(incident, eq("status", "sent")) });
-		let suppressed = await db.count(alertEvents, {
-			where: and(incident, inList("status", ["skipped_cooldown", "skipped_cap"])),
-		});
+		let [sent, suppressed] = await Promise.all([
+			db.count(alertEvents, { where: and(incident, eq("status", "sent")) }),
+			db.count(alertEvents, {
+				where: and(incident, inList("status", ["skipped_cooldown", "skipped_cap"])),
+			}),
+		]);
 
 		return { sent, suppressed };
 	}

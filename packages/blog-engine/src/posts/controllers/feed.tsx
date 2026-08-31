@@ -23,13 +23,17 @@ export default createAction(
 	routes.feed,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let chrome = await loadSiteChrome(db);
-		let types = await PostType.findVisible(db);
+		let [chrome, types] = await Promise.all([loadSiteChrome(db), PostType.findVisible(db)]);
+
+		let postsByType = await Promise.all(
+			types.map(async (type) => ({
+				type,
+				posts: await Post.findManyForType(db, type.name, createMetaCodec(type), { limit: 20 }),
+			})),
+		);
 
 		let items: PostListItem[] = [];
-		for (let type of types) {
-			let codec = createMetaCodec(type);
-			let posts = await Post.findManyForType(db, type.name, codec, { limit: 20 });
+		for (let { type, posts } of postsByType) {
 			for (let post of posts) {
 				if (!Post.isPublished(post.published_at)) continue;
 				items.push({
