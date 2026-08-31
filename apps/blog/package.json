@@ -13,6 +13,7 @@
 		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote"
 	},
 	"dependencies": {
+		"@pkg/auth": "workspace:*",
 		"@pkg/crypto": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/http": "workspace:*",
@@ -35,8 +36,10 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.52.1",
+		"@pkg/cloudflare-mocks": "workspace:*",
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/node": "^26.2.0",
+		"msw": "^2.15.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.2.1",
 		"vitest": "4.1.10",

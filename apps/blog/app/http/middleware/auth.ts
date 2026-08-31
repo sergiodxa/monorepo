@@ -1,54 +1,45 @@
 /**
- * Session-based authentication: the session carries the user id, which is
- * verified against the user repository on every request so handlers always see
- * a live user record.
+ * Session-based authentication: the session carries the signed-in account's id
+ * alongside the tokens the login stored, and the account is read from the user
+ * repository on every request so handlers always see a live user record.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Middleware } from "remix/router";
+
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
-import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/middleware/auth";
+import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
 import { createContextKey } from "remix/router";
 import { Session } from "remix/session";
 
 import type * as schema from "~/database/schema";
 
+import { relyingParty } from "~/app/auth/relying-party";
 import { User } from "~/app/repositories/user";
 
 /**
  * Session key used to store the authenticated user id.
  */
 export let AUTH_SESSION_USER_ID_KEY = "userId";
-/**
- * Session key used to store the upstream identity token.
- */
-export let AUTH_SESSION_ID_TOKEN_KEY = "idToken";
 
 let authUserKey = createContextKey<schema.SelectUser | null>();
 
 /**
- * Auth middleware that reads, verifies, and invalidates the session identity.
+ * Auth middleware that resolves the signed-in account from the session, renewing the
+ * stored tokens when they lapse. Built per request because the client credentials and
+ * the cache it reads the provider's keys through come from request-scoped bindings.
  */
-export let auth = createAuthMiddleware({
-	schemes: [
-		createSessionAuthScheme({
-			read(session) {
-				let userId = session.get(AUTH_SESSION_USER_ID_KEY);
-				return typeof userId === "string" ? userId : null;
-			},
-			verify(userId) {
-				return User.findById(readDatabase(), userId);
-			},
-			invalidate(session) {
-				session.unset(AUTH_SESSION_USER_ID_KEY);
-				session.unset(AUTH_SESSION_ID_TOKEN_KEY);
-			},
-		}),
-	],
-});
+export let auth: Middleware = (ctx, next) => {
+	let middleware = createAuthMiddleware({
+		schemes: [relyingParty(ctx.url).scheme({ verify: readSessionUser })],
+	});
+
+	return middleware(ctx, next);
+};
 
 export default auth;
 
@@ -110,22 +101,13 @@ export function logout() {
 }
 
 /**
- * Reads the identity token held in the session, or `null` when the session
- * holds none.
+ * Reads the account the login recorded, so a handler sees the row as it stands now
+ * rather than a copy captured when the person signed in.
  */
-export function getIdToken() {
-	let session = readSession();
-	let idToken = session.get(AUTH_SESSION_ID_TOKEN_KEY);
-	if (typeof idToken !== "string") return null;
-	return idToken;
-}
-
-/**
- * Stores an identity token in the current session.
- */
-export function setIdToken(token: string) {
-	let session = readSession();
-	session.set(AUTH_SESSION_ID_TOKEN_KEY, token);
+function readSessionUser() {
+	let userId = readSession().get(AUTH_SESSION_USER_ID_KEY);
+	if (typeof userId !== "string") return null;
+	return User.findById(readDatabase(), userId);
 }
 
 function readSession() {

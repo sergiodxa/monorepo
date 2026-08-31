@@ -24,7 +24,6 @@ export namespace SessionMiddleware {
 	 */
 	export interface Values extends Record<string, unknown> {
 		userId?: string;
-		idToken?: string;
 	}
 }
 
