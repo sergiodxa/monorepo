@@ -11,7 +11,7 @@
 
 export type { BinaryLike, Bytes } from "./lib/bytes";
 
-export { Base64Url, Hex } from "./encoding";
+export { Base64, Base64Url, Hex } from "./encoding";
 export {
 	CryptoError,
 	DecryptionError,
@@ -21,7 +21,7 @@ export {
 	MalformedHashError,
 	UnsupportedAlgorithmError,
 } from "./errors";
-export { sha256 } from "./hash";
+export { sha256, sha384, sha512 } from "./hash";
 export { hmac } from "./hmac";
 export { password } from "./password";
 export { randomBytes, randomToken } from "./random";

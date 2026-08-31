@@ -15,7 +15,7 @@ Every asynchronous operation, and every decode that can fail, returns a `Result`
 ### Encoding And Digests
 
 ```typescript
-import { Hex, Base64Url, sha256 } from "@pkg/crypto";
+import { Hex, Base64, Base64Url, sha256 } from "@pkg/crypto";
 import { isSuccess } from "@pkg/result";
 
 let digest = await sha256(apiKey);
@@ -24,6 +24,7 @@ if (isSuccess(digest)) {
 }
 
 Base64Url.encode(new Uint8Array([255, 224])); // "_-A", no padding
+Base64.encode("Aladdin:open sesame"); // "QWxhZGRpbjpvcGVuIHNlc2FtZQ==", padded
 Hex.decode("zz"); // failure(InvalidEncodingError)
 ```
 
@@ -124,7 +125,38 @@ Encodes bytes as base64url without `=` padding, using only `A-Z`, `a-z`, `0-9`, 
 
 #### `Base64Url.decode(text: string): Result<Bytes, InvalidEncodingError>`
 
-Decodes base64url text with or without padding. Standard base64 (`+` and `/`) is rejected, so two different strings can never decode to the same bytes.
+Decodes base64url text with or without padding. The URL-safe alphabet is the whole accepted input set, and a short final group's leftover bits must be zero, so two accepted strings decode to the same bytes exactly when they differ only in trailing `=`.
+
+#### `Base64.encode(data: BinaryLike): string`
+
+Encodes bytes as standard base64 with `=` padding, using `A-Z`, `a-z`, `0-9`, `+`, and `/` — the alphabet RFC 4648 §4 defines. Strings are encoded as UTF-8 first, so a payload outside Latin-1 travels as the octets a peer decodes it back from, which is what the `user:password` credentials of HTTP Basic authentication require (RFC 7617 §2.1).
+
+**Parameters:**
+
+- `data`: Text or binary payload
+
+**Returns:**
+
+- Padded base64 string, always a multiple of four characters
+
+**Example:**
+
+```typescript
+Base64.encode("Aladdin:open sesame"); // "QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
+Base64.encode(new Uint8Array([251, 255])); // "+/8="
+```
+
+#### `Base64.decode(text: string): Result<Bytes, InvalidEncodingError>`
+
+Decodes standard base64 text carrying its full padding. The standard alphabet at a padded length is the whole accepted input set, and a short final group's leftover bits must be zero, so one byte string has exactly one accepted spelling.
+
+**Parameters:**
+
+- `text`: Padded base64 string
+
+**Returns:**
+
+- Decoded bytes, or `InvalidEncodingError`
 
 ### Hashing And HMAC
 
@@ -137,6 +169,22 @@ Hashes a payload with SHA-256. Deterministic and unsalted, which makes it right 
 ```typescript
 let digest = unwrap(await sha256(apiKey));
 let row = await findByKeyHash(Hex.encode(digest));
+```
+
+#### `sha384(data: BinaryLike): Promise<Result<Bytes, CryptoError>>`
+
+Hashes a payload with SHA-384, returning 48 bytes.
+
+#### `sha512(data: BinaryLike): Promise<Result<Bytes, CryptoError>>`
+
+Hashes a payload with SHA-512, returning 64 bytes.
+
+The three digests share one signature, so a protocol that picks its hash at runtime can select from a map built at the call site. OpenID Connect token hash claims (`at_hash`, `c_hash`, `s_hash`) work that way: the digest follows the ID token's `alg`, where `*256` means SHA-256, `*384` SHA-384, and `*512` SHA-512 (OpenID Connect Core §3.1.3.6).
+
+```typescript
+let digests = { "SHA-256": sha256, "SHA-384": sha384, "SHA-512": sha512 };
+let digest = unwrap(await digests[hashFor(header.alg)](accessToken));
+let atHash = Base64Url.encode(digest.subarray(0, digest.length / 2));
 ```
 
 #### `hmac.sign(secret: BinaryLike, payload: BinaryLike, options?: hmac.Options): Promise<Result<Bytes, CryptoError>>`
@@ -340,7 +388,7 @@ Every failure extends `CryptoError`, so one `instanceof` check covers the packag
 | Error                       | Raised when                                                |
 | --------------------------- | ---------------------------------------------------------- |
 | `CryptoError`               | Base class, and unexpected WebCrypto failures              |
-| `InvalidEncodingError`      | A string is not valid hex, base64url, or base32            |
+| `InvalidEncodingError`      | A string is not valid hex, base64, base64url, or base32    |
 | `MalformedHashError`        | A stored password hash does not follow the encoded format  |
 | `UnsupportedAlgorithmError` | An algorithm identifier is valid but not supported here    |
 | `InvalidKeyError`           | Key material is the wrong size or rejected by the runtime  |
@@ -430,12 +478,13 @@ if (isSuccess(confirmed) && confirmed.data) await enableSecondFactor(user.id, se
 ## Tips
 
 1. **Hash for lookup, seal for retrieval** - `sha256` is deterministic and searchable; `seal` is neither. Pick by whether the value must be found or read back.
-2. **Never use `sha256` for passwords** - it is unsalted and fast, which is the opposite of what a password needs. Use `password.hash`.
-3. **Raise the iteration count in one place** - `PBKDF2_ITERATIONS` in `src/password.ts` is the whole policy; stored hashes keep verifying with the count they recorded.
-4. **Treat `needsRehash` as the migration signal** - it also returns `true` for hashes written by another scheme, which is what makes a legacy compatibility path finite.
-5. **Compare secrets with `timingSafeEqual`** - `===` on a token, a verifier, or a MAC leaks how many bytes matched.
-6. **Prefer `hmac.verify` over comparing signatures yourself** - it recomputes and compares in constant time in one call.
-7. **Keep the seal key out of the code** - read it from the environment, and remember that rotating it means re-sealing every stored value, since the envelope version does not identify the key.
-8. **`randomToken` prefixes pay for themselves** - a leaked `sk_...` in a log is recognizable and revocable without decoding anything.
-9. **Match TOTP options between generation and verification** - a mismatched `digits`, `step`, or `algorithm` fails silently as a wrong code.
-10. **Let failures stay values** - a `Failure` from `open` or `verify` means "could not check", not "invalid". Reject on both, but do not log the value that failed.
+2. **Pick the codec by where the value travels** - `Base64Url` for URLs, headers, and file names; `Base64` where a spec calls for the standard padded alphabet, such as HTTP Basic credentials. Each decoder accepts only its own alphabet.
+3. **Never use `sha256` for passwords** - it is unsalted and fast, which is the opposite of what a password needs. Use `password.hash`.
+4. **Raise the iteration count in one place** - `PBKDF2_ITERATIONS` in `src/password.ts` is the whole policy; stored hashes keep verifying with the count they recorded.
+5. **Treat `needsRehash` as the migration signal** - it also returns `true` for hashes written by another scheme, which is what makes a legacy compatibility path finite.
+6. **Compare secrets with `timingSafeEqual`** - `===` on a token, a verifier, or a MAC leaks how many bytes matched.
+7. **Prefer `hmac.verify` over comparing signatures yourself** - it recomputes and compares in constant time in one call.
+8. **Keep the seal key out of the code** - read it from the environment, and remember that rotating it means re-sealing every stored value, since the envelope version does not identify the key.
+9. **`randomToken` prefixes pay for themselves** - a leaked `sk_...` in a log is recognizable and revocable without decoding anything.
+10. **Match TOTP options between generation and verification** - a mismatched `digits`, `step`, or `algorithm` fails silently as a wrong code.
+11. **Let failures stay values** - a `Failure` from `open` or `verify` means "could not check", not "invalid". Reject on both, but do not log the value that failed.
