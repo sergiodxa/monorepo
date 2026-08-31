@@ -18,6 +18,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type { DigestPeriod } from "~/app/data/team-digest";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
@@ -28,6 +29,7 @@ import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import { SendTeamDailyDigestsJob, SendTeamWeeklyDigestsJob } from "~/app/jobs/send-team-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
+	flowMonitors,
 	memberships,
 	monitorDailyStats,
 	monitors,
@@ -132,19 +134,35 @@ async function seedMonitor(db: Database, teamId: string, name: string) {
 	});
 }
 
+/** An enabled flow monitor, which its team's digest reports on like any other kind. */
+async function seedFlowMonitor(db: Database, teamId: string, name: string) {
+	return await db.create(
+		flowMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name,
+			source: 'get "https://example.com"',
+			is_enabled: true,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
 /** One day of the roll-up the digests read, which is the only source either window has. */
 async function seedDay(
 	db: Database,
 	monitorId: string,
 	date: string,
 	day: { checks: number; successful: number; status: MonitorStatus },
+	type: DailyStatsMonitorType = "http",
 ) {
 	await db.create(
 		monitorDailyStats,
 		{
 			id: crypto.randomUUID(),
 			monitor_id: monitorId,
-			monitor_type: "http",
+			monitor_type: type,
 			date,
 			total_checks: day.checks,
 			successful_checks: day.successful,
@@ -346,6 +364,43 @@ describe("SendTeamDigestsJob recipients", () => {
 			job.logger.events.find((event) => event.event === "job.send_team_digests.profile_missing"),
 		).toBeDefined();
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
+	});
+});
+
+describe("SendTeamDigestsJob monitors", () => {
+	/**
+	 * A team running flows is billed for them, so a digest that quietly left them out would
+	 * report a morning as clean that the dashboard reports as broken.
+	 */
+	test("reports a team's flow monitors beside the rest of its monitors", async () => {
+		let { db } = createTestDatabase();
+		let team = await seedTeam(db, "Acme");
+		await seedMember(db, team.id, "subject-1", "ada@example.com");
+		let http = await seedMonitor(db, team.id, "Api");
+		let flow = await seedFlowMonitor(db, team.id, "Checkout");
+		await seedDay(db, http.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
+		await seedDay(db, flow.id, utcDay(1), { checks: 4, successful: 3, status: "degraded" }, "flow");
+
+		await runJob(db, "daily");
+
+		let text = transport.last?.text ?? "";
+		expect(text).toContain("Checkout");
+		expect(text).toContain("75.0%");
+		expect(transport.last?.subject).toBe("Acme: 1 of 2 monitors up yesterday");
+	});
+
+	/** A flow with no day of its own is still named, so the count matches what the team runs. */
+	test("makes a team with only flow monitors reportable at all", async () => {
+		let { db } = createTestDatabase();
+		let team = await seedTeam(db, "Acme");
+		await seedMember(db, team.id, "subject-1", "ada@example.com");
+		let flow = await seedFlowMonitor(db, team.id, "Checkout");
+		await seedDay(db, flow.id, utcDay(1), { checks: 4, successful: 4, status: "up" }, "flow");
+
+		await runJob(db, "daily");
+
+		expect(dailyDigests()).toHaveLength(1);
+		expect(transport.last?.text ?? "").toContain("Checkout");
 	});
 });
 

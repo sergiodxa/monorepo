@@ -17,7 +17,7 @@ import { and, eq, gte } from "remix/data-table";
 import { monitorDailyStats } from "~/database/schema";
 
 /** The monitor types that participate in daily aggregation (matches `monitor_daily_stats.monitor_type`). */
-export type DailyStatsMonitorType = "http" | "dns" | "tcp" | "cron";
+export type DailyStatsMonitorType = "http" | "dns" | "tcp" | "cron" | "flow";
 
 /**
  * How many trailing days of history the app reads and renders. Matches the number of

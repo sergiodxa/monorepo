@@ -111,6 +111,8 @@ export const apiKeyScopes = [
 	 */
 	"tcp-monitors:read",
 	"tcp-monitors:write",
+	"flow-monitors:read",
+	"flow-monitors:write",
 	"alerts:read",
 	"alerts:write",
 	"status-pages:read",
@@ -547,8 +549,8 @@ export const alerts = table({
 		 * means every monitor of every type. Cast because a nullable enum column infers as
 		 * `string | null`, which would otherwise leak into every scope comparison.
 		 */
-		monitor_type: c.enum(["http", "dns", "tcp", "cron"]).nullable() as ColumnBuilder<
-			"http" | "dns" | "tcp" | "cron" | null
+		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"]).nullable() as ColumnBuilder<
+			"http" | "dns" | "tcp" | "cron" | "flow" | null
 		>,
 		monitor_id: c.text().nullable(),
 		name: c.text(),
@@ -612,6 +614,23 @@ export type AlertEventSnapshot =
 			cronExpression: string;
 			timezone: string;
 	  }
+	/**
+	 * A flow's counters plus the one assertion that broke it, which is the whole incident
+	 * artifact (ADR-027 §8): a run reports the first failure and stops, so a reader gets the
+	 * test that failed and why instead of a status code to go and interpret.
+	 */
+	| {
+			type: "flow";
+			status: string;
+			testsTotal: number;
+			testsPassed: number;
+			testsFailed: number;
+			failedTest: string | null;
+			/** 1-based line of the spec source the failure happened on. */
+			failedAtLine: number | null;
+			failureDetail: string | null;
+			durationMs: number | null;
+	  }
 	| {
 			type: "ssl";
 			status: string;
@@ -641,7 +660,7 @@ export const alertEvents = table({
 		event_type: c.enum(["down", "up", "degraded"]),
 		status: c.enum(alertEventStatuses),
 		error_message: c.text().nullable(),
-		monitor_type: c.enum(["http", "dns", "tcp", "cron", "ssl"]).nullable(),
+		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow", "ssl"]).nullable(),
 		monitor_name: c.text().nullable(),
 		snapshot: (c.json() as ColumnBuilder<AlertEventSnapshot>).nullable(),
 	},
@@ -663,8 +682,8 @@ export const maintenanceWindows = table({
 		 * both columns means every monitor of every type. Cast because the nullable enum
 		 * infers as `string | null`, which would otherwise leak into scope comparisons.
 		 */
-		monitor_type: c.enum(["http", "dns", "tcp", "cron"]).nullable() as ColumnBuilder<
-			"http" | "dns" | "tcp" | "cron" | null
+		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"]).nullable() as ColumnBuilder<
+			"http" | "dns" | "tcp" | "cron" | "flow" | null
 		>,
 		monitor_id: c.text().nullable(),
 		name: c.text(),
@@ -790,6 +809,27 @@ export const statusPageSslMonitors = table({
 export type SelectStatusPageSslMonitor = TableRow<typeof statusPageSslMonitors>;
 export type InsertStatusPageSslMonitor = InsertRow<typeof statusPageSslMonitors>;
 
+/**
+ * Which flow monitors a status page publishes. `display_name` is how a team names the
+ * journey for its own users, and the only text this table holds: a flow's `source` is
+ * credentialed and never reaches a public page (ADR-027 §8).
+ */
+export const statusPageFlowMonitors = table({
+	name: "status_page_flow_monitors",
+	timestamps: { createdAt: "created_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		status_page_id: c.text(),
+		flow_monitor_id: c.text(),
+		display_name: c.text().nullable(),
+		order: c.integer().default(0),
+	},
+});
+
+export type SelectStatusPageFlowMonitor = TableRow<typeof statusPageFlowMonitors>;
+export type InsertStatusPageFlowMonitor = InsertRow<typeof statusPageFlowMonitors>;
+
 export const monitorDailyStats = table({
 	name: "monitor_daily_stats",
 	timestamps: { createdAt: "created_at" },
@@ -797,7 +837,7 @@ export const monitorDailyStats = table({
 		id: c.text().primaryKey(),
 		created_at: c.integer(),
 		monitor_id: c.text(),
-		monitor_type: c.enum(["http", "dns", "tcp", "cron"]),
+		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"]),
 		/**
 		 * @example "2026-02-14"
 		 */

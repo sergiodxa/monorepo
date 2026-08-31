@@ -25,13 +25,20 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	cronJobMonitors,
 	dnsMonitors,
+	flowMonitors,
 	memberships,
 	monitors,
 	tcpMonitors,
 } from "~/database/schema";
 
-/** Every type the union covers, so a case that must hold for all four is written once. */
-const MONITOR_TYPES = ["http", "dns", "tcp", "cron"] as const satisfies DailyStatsMonitorType[];
+/** Every type the union covers, so a case that must hold for all of them is written once. */
+const MONITOR_TYPES = [
+	"http",
+	"dns",
+	"tcp",
+	"cron",
+	"flow",
+] as const satisfies DailyStatsMonitorType[];
 
 /** Both periods, for the cases that must hold whichever stamp is in play. */
 const PERIODS = ["daily", "weekly"] as const satisfies DigestPeriod[];
@@ -86,7 +93,7 @@ async function seedMembership(
  * One monitor of the given type on `teamId`, enabled unless told otherwise.
  *
  * The two spellings of "off" are the point: `monitors` and `cron_job_monitors` are disabled by a
- * null `enabled_at`, `dns_monitors` and `tcp_monitors` by `is_enabled = 0`.
+ * null `enabled_at`, `dns_monitors`, `tcp_monitors` and `flow_monitors` by `is_enabled = 0`.
  */
 async function seedMonitor(
 	type: DailyStatsMonitorType,
@@ -128,6 +135,14 @@ async function seedMonitor(
 		await db.create(
 			cronJobMonitors,
 			{ ...shared, cron_expression: "0 0 * * *", enabled_at: enabled ? Date.now() : null },
+			write,
+		);
+	}
+
+	if (type === "flow") {
+		await db.create(
+			flowMonitors,
+			{ ...shared, source: 'get "https://example.com"', is_enabled: enabled },
 			write,
 		);
 	}

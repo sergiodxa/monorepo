@@ -1,6 +1,6 @@
 /**
  * Tests for the status-page create/update/delete actions: a successful create/update
- * saves the page and curates its four attached monitor-type id lists, a taken slug is
+ * saves the page and curates its five attached monitor-type id lists, a taken slug is
  * rejected without mutating, an invalid submission redirects back, and update/delete
  * 404 when the page doesn't belong to the acting team.
  *
@@ -21,7 +21,15 @@ import { describe, expect, test } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
+import {
+	flowMonitors,
+	memberships,
+	monitors,
+	statusPageFlowMonitors,
+	statusPageMonitors,
+	statusPages,
+	teams,
+} from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -58,7 +66,23 @@ async function createFixture() {
 		{ touch: true, returnRow: true },
 	);
 
-	return { db, team, membership, monitor };
+	let flowMonitor = await db.create(
+		flowMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "Sign in and check out",
+			source: 'post "/session" { body: { password: "hunter2" } }',
+			interval_seconds: 3600,
+			next_due_at: null,
+			is_enabled: true,
+			last_checked_at: null,
+			last_status: null,
+		},
+		{ touch: true, returnRow: true },
+	);
+
+	return { db, team, membership, monitor, flowMonitor };
 }
 
 /** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`. */
@@ -126,6 +150,33 @@ describe("createStatusPage", () => {
 
 		let attached = await db.findMany(statusPageMonitors, { where: { status_page_id: page!.id } });
 		expect(attached.map((row) => row.monitor_id)).toEqual([monitor.id]);
+	});
+
+	test("attaches the flow monitors the form submitted", async () => {
+		let { db, team, membership, flowMonitor } = await createFixture();
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.statusPage.create,
+			createStatusPage as RequestHandler<any>,
+			"POST",
+			[
+				["name", "Public status"],
+				["slug", "flow-status"],
+				["title", "Acme Status"],
+				["flow_monitor_ids", flowMonitor.id],
+			],
+		);
+
+		expect(response.status).toBe(303);
+
+		let page = await db.findOne(statusPages, { where: { team_id: team.id, slug: "flow-status" } });
+		let attached = await db.findMany(statusPageFlowMonitors, {
+			where: { status_page_id: page!.id },
+		});
+		expect(attached.map((row) => row.flow_monitor_id)).toEqual([flowMonitor.id]);
 	});
 
 	test("rejects a slug already used by another status page without creating one", async () => {
@@ -240,6 +291,60 @@ describe("updateStatusPage", () => {
 
 		let attached = await db.findMany(statusPageMonitors, { where: { status_page_id: page.id } });
 		expect(attached.map((row) => row.monitor_id)).toEqual([monitor.id]);
+	});
+
+	/** Curation replaces the full set, so an unchecked flow is an omitted field, not a flag. */
+	test("re-curates flow monitors, dropping the ones the form no longer submits", async () => {
+		let { db, team, membership, flowMonitor } = await createFixture();
+		let page = await db.create(
+			statusPages,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Original",
+				slug: "flow-original",
+				title: "Original",
+				description: null,
+				logo_url: null,
+				custom_domain: null,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let fields: [string, string][] = [
+			["status_page_id", page.id],
+			["name", "Original"],
+			["slug", "flow-original"],
+			["title", "Original"],
+		];
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.statusPage.update,
+			updateStatusPage as RequestHandler<any>,
+			"POST",
+			[...fields, ["flow_monitor_ids", flowMonitor.id]],
+		);
+
+		expect(
+			await db.findMany(statusPageFlowMonitors, { where: { status_page_id: page.id } }),
+		).toHaveLength(1);
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.statusPage.update,
+			updateStatusPage as RequestHandler<any>,
+			"POST",
+			fields,
+		);
+
+		expect(
+			await db.findMany(statusPageFlowMonitors, { where: { status_page_id: page.id } }),
+		).toEqual([]);
 	});
 
 	test("responds 404 for a page that doesn't belong to the team", async () => {

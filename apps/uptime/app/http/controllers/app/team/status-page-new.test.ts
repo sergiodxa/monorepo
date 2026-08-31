@@ -33,7 +33,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, monitors, teams } from "~/database/schema";
+import { flowMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** The bindings the import chain captures on load, so they live at module scope. */
@@ -146,6 +146,44 @@ describe("GET /app/:team/status-pages/new", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("Create Status Page");
+	});
+
+	test("offers a flow monitor as a selectable service, without its spec source", async () => {
+		let { db, team, membership } = await createFixture();
+
+		await db.create(
+			flowMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Sign in and load the dashboard",
+				source:
+					'test "a member can sign in" {\n\twhen {\n\t\tlet session = http.post "https://app.example.com/login" form { password: "hunter2" }\n\t}\n}',
+				interval_seconds: 3_600,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let router = createRouter({
+			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		});
+		router.map(routes.app.team.statusPages.new, {
+			middleware: [seedTeam(team, membership)],
+			handler: statusPageNewModule.handler,
+		});
+
+		let request = new Request(
+			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
+		);
+		let response = await container.scope(() => router.fetch(request));
+		let body = await response.text();
+
+		expect(body).toContain("Sign in and load the dashboard");
+		expect(body).toContain("flow_monitor_ids");
+		expect(body).not.toContain("hunter2");
 	});
 
 	test("posts every field to the create action from one form", async () => {

@@ -1,8 +1,9 @@
 /**
  * Unit tests for the `StatusPage` data-access model: CRUD scoped to a team, slug
  * uniqueness (global, with self-exclusion for edits), public-slug lookup, the full
- * delete cascade over its four attachment tables, and the replace-the-full-set
- * semantics of `setMonitors`/`setDnsMonitors`/`setTcpMonitors`/`setCronJobs`.
+ * delete cascade over its five attachment tables, the replace-the-full-set semantics of
+ * `setMonitors`/`setDnsMonitors`/`setTcpMonitors`/`setFlowMonitors`/`setCronJobs`, and the
+ * projection that keeps a flow's spec source off the public read path.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +15,30 @@ import type { InsertStatusPage } from "~/database/schema";
 
 import StatusPage from "~/app/data/status-page";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { statusPages } from "~/database/schema";
+import { flowMonitors, statusPages } from "~/database/schema";
+
+/** Seeds a flow monitor whose source is the thing a public page must never publish. */
+async function createFlowMonitor(
+	db: ReturnType<typeof createTestDatabase>["db"],
+	teamId: string,
+	overrides: { name?: string; source?: string; last_status?: "up" | "down" | "error" | null } = {},
+) {
+	return await db.create(
+		flowMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name: overrides.name ?? "Sign in and read back",
+			source: overrides.source ?? 'post "/session" { body: { password: "hunter2" } }',
+			interval_seconds: 3600,
+			next_due_at: null,
+			is_enabled: true,
+			last_checked_at: Date.now(),
+			last_status: overrides.last_status ?? "up",
+		},
+		{ touch: true, returnRow: true },
+	);
+}
 
 /** A valid `StatusPage.create` input, with any field overridable per test. */
 function statusPageInput(overrides: Partial<InsertStatusPage> = {}): InsertStatusPage {
@@ -169,11 +193,13 @@ describe("StatusPage.deleteById", () => {
 		let monitorId = crypto.randomUUID();
 		let dnsMonitorId = crypto.randomUUID();
 		let tcpMonitorId = crypto.randomUUID();
+		let flowMonitorId = crypto.randomUUID();
 		let cronJobId = crypto.randomUUID();
 
 		await StatusPage.setMonitors(db, page.id, [monitorId]);
 		await StatusPage.setDnsMonitors(db, page.id, [dnsMonitorId]);
 		await StatusPage.setTcpMonitors(db, page.id, [tcpMonitorId]);
+		await StatusPage.setFlowMonitors(db, page.id, [flowMonitorId]);
 		await StatusPage.setCronJobs(db, page.id, [cronJobId]);
 
 		await StatusPage.deleteById(db, page.id);
@@ -183,6 +209,7 @@ describe("StatusPage.deleteById", () => {
 			monitorIds: [],
 			dnsMonitorIds: [],
 			tcpMonitorIds: [],
+			flowMonitorIds: [],
 			cronJobIds: [],
 		});
 	});
@@ -242,6 +269,67 @@ describe("StatusPage.setTcpMonitors", () => {
 	});
 });
 
+describe("StatusPage.setFlowMonitors", () => {
+	test("replaces the full set of attached flow monitors in the given order", async () => {
+		let { db } = createTestDatabase();
+		let page = await StatusPage.create(db, crypto.randomUUID(), statusPageInput());
+		let [flowA, flowB] = [crypto.randomUUID(), crypto.randomUUID()];
+
+		await StatusPage.setFlowMonitors(db, page.id, [flowA, flowB]);
+		expect((await StatusPage.getAttachedIds(db, page.id)).flowMonitorIds).toEqual([flowA, flowB]);
+
+		await StatusPage.setFlowMonitors(db, page.id, []);
+		expect((await StatusPage.getAttachedIds(db, page.id)).flowMonitorIds).toEqual([]);
+	});
+
+	test("orders the attachments as curated, so the public page renders them in that order", async () => {
+		let { db } = createTestDatabase();
+		let page = await StatusPage.create(db, crypto.randomUUID(), statusPageInput());
+		let [flowA, flowB] = [crypto.randomUUID(), crypto.randomUUID()];
+
+		await StatusPage.setFlowMonitors(db, page.id, [flowB, flowA]);
+
+		let attachments = await StatusPage.listAttachments(db, page.id);
+		expect(attachments.flowMonitors.map((row) => row.flow_monitor_id)).toEqual([flowB, flowA]);
+		expect(attachments.flowMonitors.map((row) => row.order)).toEqual([0, 1]);
+	});
+});
+
+describe("StatusPage.listPublicFlowMonitors", () => {
+	test("returns a team's flow monitors with the status the page renders", async () => {
+		let { db } = createTestDatabase();
+		let teamId = crypto.randomUUID();
+		let flow = await createFlowMonitor(db, teamId, { name: "Checkout", last_status: "down" });
+
+		let rows = await StatusPage.listPublicFlowMonitors(db, teamId);
+
+		expect(rows).toEqual([{ id: flow.id, name: "Checkout", last_status: "down" }]);
+	});
+
+	/**
+	 * The source holds the credentials the flow signs in with, so the guarantee has to be
+	 * that the column is never selected — not that some later hop remembers to drop it.
+	 */
+	test("never returns the spec source, in any form", async () => {
+		let { db } = createTestDatabase();
+		let teamId = crypto.randomUUID();
+		await createFlowMonitor(db, teamId, { source: 'header "Authorization" "Bearer s3cr3t"' });
+
+		let rows = await StatusPage.listPublicFlowMonitors(db, teamId);
+
+		expect(rows.map((row) => Object.keys(row))).toEqual([["id", "name", "last_status"]]);
+		expect(JSON.stringify(rows)).not.toContain("s3cr3t");
+	});
+
+	test("never returns another team's flow monitors", async () => {
+		let { db } = createTestDatabase();
+		let teamId = crypto.randomUUID();
+		await createFlowMonitor(db, teamId);
+
+		expect(await StatusPage.listPublicFlowMonitors(db, crypto.randomUUID())).toEqual([]);
+	});
+});
+
 describe("StatusPage.setCronJobs", () => {
 	test("replaces the full set of attached cron jobs in the given order", async () => {
 		let { db } = createTestDatabase();
@@ -265,6 +353,7 @@ describe("StatusPage.getAttachedIds", () => {
 			monitorIds: [],
 			dnsMonitorIds: [],
 			tcpMonitorIds: [],
+			flowMonitorIds: [],
 			cronJobIds: [],
 		});
 	});
@@ -281,6 +370,7 @@ describe("StatusPage.listAttachments", () => {
 		expect(attachments.monitors.map((row) => row.monitor_id)).toEqual([monitorA, monitorB]);
 		expect(attachments.dnsMonitors).toEqual([]);
 		expect(attachments.tcpMonitors).toEqual([]);
+		expect(attachments.flowMonitors).toEqual([]);
 		expect(attachments.cronJobs).toEqual([]);
 	});
 });

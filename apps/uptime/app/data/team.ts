@@ -66,7 +66,8 @@ export default class Team {
 			   FROM (SELECT team_id FROM monitors
 			         UNION ALL SELECT team_id FROM tcp_monitors
 			         UNION ALL SELECT team_id FROM dns_monitors
-			         UNION ALL SELECT team_id FROM cron_job_monitors)
+			         UNION ALL SELECT team_id FROM cron_job_monitors
+			         UNION ALL SELECT team_id FROM flow_monitors)
 			  GROUP BY team_id`,
 		);
 

@@ -13,6 +13,7 @@ import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
 
 import CronJob from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
+import FlowMonitor from "~/app/data/flow-monitor";
 import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
@@ -30,9 +31,9 @@ export interface ScopeMonitorGroup {
 }
 
 /**
- * The four monitor models behind the four scope types. They share a
- * `listByTeam`/`findByIdForTeam` signature, so the whole per-type branch is this table
- * plus an index, and a new scope type is one entry here.
+ * The monitor models behind the scope types. They share a `listByTeam`/`findByIdForTeam`
+ * signature, so the whole per-type branch is this table plus an index, and a new scope
+ * type is one entry here.
  */
 const SCOPE_MONITOR_MODELS: Record<
 	MonitorScopeType,
@@ -45,6 +46,7 @@ const SCOPE_MONITOR_MODELS: Record<
 	dns: DnsMonitor,
 	tcp: TcpMonitor,
 	cron: CronJob,
+	flow: FlowMonitor,
 };
 
 /**

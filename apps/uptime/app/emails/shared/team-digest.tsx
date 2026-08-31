@@ -79,7 +79,8 @@ export function teamDigestTypeKey(type: DailyStatsMonitorType): string {
 	if (type === "http") return "emails.teamDigest.types.http";
 	if (type === "dns") return "emails.teamDigest.types.dns";
 	if (type === "tcp") return "emails.teamDigest.types.tcp";
-	return "emails.teamDigest.types.cron";
+	if (type === "cron") return "emails.teamDigest.types.cron";
+	return "emails.teamDigest.types.flow";
 }
 
 /**
@@ -168,7 +169,7 @@ export function teamDigestUnsubscribeHeaders(preferencesUrl: string): Record<str
 
 /**
  * Every monitor as one row, keyed on its kind and id together since two monitors can share a
- * name across the four monitor tables that generate ids independently. Real
+ * name across the monitor tables that generate ids independently. Real
  * `<th scope="col">` headers let a screen reader announce each column per row.
  *
  * @example <TeamDigestMonitorList monitors={sortTeamDigestMonitors(monitors)} t={t} />

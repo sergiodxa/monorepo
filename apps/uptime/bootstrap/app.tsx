@@ -115,6 +115,9 @@ import dnsMonitorRecordsController, {
 	dnsMonitorRecordsRoutes,
 } from "~/app/http/controllers/api/dns-monitor-records";
 import dnsMonitorsController, { dnsMonitorsRoutes } from "~/app/http/controllers/api/dns-monitors";
+import flowMonitorsController, {
+	flowMonitorsRoutes,
+} from "~/app/http/controllers/api/flow-monitors";
 import { inviteDestroy } from "~/app/http/controllers/api/invite";
 import invitesController, { invitesRoutes } from "~/app/http/controllers/api/invites";
 import maintenanceController, { maintenanceRoutes } from "~/app/http/controllers/api/maintenance";
@@ -617,6 +620,8 @@ export default function application(options: application.Options) {
 
 	router.map(tcpMonitorsRoutes, tcpMonitorsController);
 	router.map(tcpMonitorRoutes, tcpMonitorController);
+
+	router.map(flowMonitorsRoutes, flowMonitorsController);
 
 	router.map(cronJobsRoutes, cronJobsController);
 	router.map(cronJobRoutes, cronJobController);

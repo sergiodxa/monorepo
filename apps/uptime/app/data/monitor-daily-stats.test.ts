@@ -106,6 +106,21 @@ describe("MonitorDailyStats.upsertDay", () => {
 		expect(untouched?.id).toBe(dayOne.id);
 	});
 
+	/** Flow monitors roll up into this same table, so their days round-trip like any other's. */
+	test("stores a flow monitor's day under its own type", async () => {
+		let { db } = createTestDatabase();
+		let monitorId = crypto.randomUUID();
+
+		let row = await MonitorDailyStats.upsertDay(
+			db,
+			dailyStatsInput({ monitor_id: monitorId, monitor_type: "flow", date: dateDaysAgo(1) }),
+		);
+
+		expect(row.monitor_type).toBe("flow");
+		let rows = await MonitorDailyStats.listRecentDays(db, monitorId, "flow");
+		expect(rows.map((each) => each.id)).toEqual([row.id]);
+	});
+
 	test("leaves a different monitor_type's row for the same monitor/date untouched", async () => {
 		let { db } = createTestDatabase();
 		let monitorId = crypto.randomUUID();

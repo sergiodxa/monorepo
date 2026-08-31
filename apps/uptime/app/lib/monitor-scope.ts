@@ -16,7 +16,7 @@
  * `maintenance_windows.monitor_type`. An SSL check reports through its HTTP monitor's own
  * id, so a certificate event stays scoped and matched by whatever watches that monitor.
  */
-export const MONITOR_SCOPE_TYPES = ["http", "dns", "tcp", "cron"] as const;
+export const MONITOR_SCOPE_TYPES = ["http", "dns", "tcp", "cron", "flow"] as const;
 
 /** One of {@link MONITOR_SCOPE_TYPES}. */
 export type MonitorScopeType = (typeof MONITOR_SCOPE_TYPES)[number];

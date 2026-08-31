@@ -150,6 +150,11 @@ export default {
 					description:
 						"Integrazioni dirette con Slack e Discord con notifiche avanzate, non solo webhook di base.",
 				},
+				eighth: {
+					title: "Monitori interi flussi",
+					description:
+						"Esegua più richieste in ordine e verifichi cosa risponde il servizio: accedere, leggere il token, chiamare l'endpoint che quel token autorizza. La domanda che un singolo controllo non può porre.",
+				},
 			},
 		},
 
@@ -398,6 +403,11 @@ export default {
 					q: "Da quali regioni posso monitorare i miei servizi?",
 					a: "Uptime supporta il monitoraggio da più regioni: Africa, Asia-Pacifico, Europa Orientale e Occidentale, Nord America Orientale e Occidentale, Medio Oriente, Oceania e Sud America.\n\nPuò scegliere una regione per monitor. La regione è trattata come un suggerimento, il ping effettivo proverrà da un server in quella regione o nelle vicinanze.",
 				},
+
+				twentieth: {
+					q: "Posso monitorare un flusso di accesso o di acquisto?",
+					a: "Sì. Un monitor di flusso esegue più richieste in ordine con asserzioni tra una e l'altra, quindi può accedere, rileggere il token ottenuto e chiamare l'endpoint che quel token autorizza. Un flusso viene eseguito a livello HTTP e non in un browser, e solo verso domini che il suo team ha verificato.",
+				},
 			},
 		},
 
@@ -426,6 +436,7 @@ export default {
 					teams: "Team",
 					analytics: "Analisi",
 					api: "Accesso API",
+					flowMonitors: "Monitor di flusso",
 				},
 				useCases: {
 					title: "Casi d'uso",
@@ -436,6 +447,7 @@ export default {
 					cronJobs: "Monitoraggio Cron Job",
 					microservices: "Microservizi",
 					healthChecks: "Health check",
+					loginFlows: "Monitoraggio dei flussi di accesso",
 				},
 				solutions: {
 					title: "Soluzioni",
@@ -1325,6 +1337,10 @@ export default {
 				expiresAt: "Scade il",
 				records: "Record",
 				findings: "Che cosa è cambiato",
+				tests: "Test",
+				failedTest: "Test fallito",
+				failureDetail: "Che cosa è fallito",
+				duration: "Durata",
 			},
 
 			values: {
@@ -1346,6 +1362,8 @@ export default {
 				},
 
 				dnsMoreFindings: "…e altri {{count}}",
+				flowTests: "{{passed}} su {{total}} superati",
+				flowFailedTest: "{{title}} (riga {{line}})",
 			},
 
 			/** Explains what a DNS diff means, shown only where that meaning is needed. */
@@ -1374,6 +1392,7 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cron: "Cron job",
+				flow: "Flusso",
 			},
 
 			columns: {
@@ -1561,12 +1580,14 @@ export default {
 				dns: "Monitor DNS",
 				tcp: "Monitor TCP",
 				cron: "Processi pianificati",
+				flow: "Monitor di flusso",
 			},
 			allOfType: {
 				http: "Tutti i monitor HTTP",
 				dns: "Tutti i monitor DNS",
 				tcp: "Tutti i monitor TCP",
 				cron: "Tutti i processi pianificati",
+				flow: "Tutti i monitor di flusso",
 			},
 		},
 	},
@@ -2883,6 +2904,7 @@ export default {
 						dns: "Tutti i monitor DNS",
 						tcp: "Tutti i monitor TCP",
 						cron: "Tutti i processi pianificati",
+						flow: "Tutti i monitor di flusso",
 					},
 				},
 
@@ -5267,6 +5289,9 @@ export default {
 							"tcp-monitors:read":
 								"Elenca e legge i monitor TCP e i risultati di connessione registrati.",
 							"tcp-monitors:write": "Crea, aggiorna ed elimina i monitor TCP.",
+							"flow-monitors:read":
+								"Elenca e legge i monitor di flusso e i risultati delle loro esecuzioni. Il codice del flusso non viene mai restituito, poiché contiene le credenziali con cui il flusso accede.",
+							"flow-monitors:write": "Crea, aggiorna ed elimina i monitor di flusso.",
 							"alerts:read":
 								"Elenca e legge gli avvisi e gli eventi che hanno generato. Gli URL dei webhook e gli altri segreti dei canali non vengono mai restituiti.",
 							"alerts:write":

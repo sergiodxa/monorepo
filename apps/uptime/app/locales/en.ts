@@ -150,6 +150,11 @@ export default {
 					description:
 						"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
 				},
+				eighth: {
+					title: "Monitor entire flows",
+					description:
+						"Run several requests in order and check what comes back \u2014 sign in, read the token, call the endpoint it authorises. The question a single check cannot ask.",
+				},
 			},
 		},
 
@@ -450,6 +455,11 @@ export default {
 					q: "From which regions can I monitor my services?",
 					a: "Uptime supports monitoring from multiple regions: Africa, Asia-Pacific, Eastern and Western Europe, Eastern and Western North America, Middle East, Oceania, and South America.\n\nYou can choose one region per monitor. The region is treated as a hint, the actual ping will originate from a server in or near that region.",
 				},
+
+				twentieth: {
+					q: "Can I monitor a login or a checkout flow?",
+					a: "Yes. A flow monitor runs several requests in order with assertions between them, so it can sign in, read the token back, and call the endpoint that token authorises. A flow runs at the HTTP level rather than in a browser, and only against domains your team has verified.",
+				},
 			},
 		},
 
@@ -478,6 +488,7 @@ export default {
 					teams: "Teams",
 					analytics: "Analytics",
 					api: "API Access",
+					flowMonitors: "Flow Monitors",
 				},
 				useCases: {
 					title: "Use Cases",
@@ -488,6 +499,7 @@ export default {
 					cronJobs: "Cron Job Monitoring",
 					microservices: "Microservices",
 					healthChecks: "Health Checks",
+					loginFlows: "Login Flow Monitoring",
 				},
 				solutions: {
 					title: "Solutions",
@@ -1357,6 +1369,10 @@ export default {
 				expiresAt: "Expires at",
 				records: "Records",
 				findings: "What changed",
+				tests: "Tests",
+				failedTest: "Failed test",
+				failureDetail: "What failed",
+				duration: "Duration",
 			},
 
 			values: {
@@ -1377,6 +1393,8 @@ export default {
 				},
 
 				dnsMoreFindings: "…and {{count}} more",
+				flowTests: "{{passed}} of {{total}} passed",
+				flowFailedTest: "{{title}} (line {{line}})",
 			},
 
 			/** Explains what a DNS diff means, shown only where that meaning is needed. */
@@ -1405,6 +1423,7 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cron: "Cron job",
+				flow: "Flow",
 			},
 
 			columns: {
@@ -1588,12 +1607,14 @@ export default {
 				dns: "DNS Monitors",
 				tcp: "TCP Monitors",
 				cron: "Cron Jobs",
+				flow: "Flow Monitors",
 			},
 			allOfType: {
 				http: "Every HTTP monitor",
 				dns: "Every DNS monitor",
 				tcp: "Every TCP monitor",
 				cron: "Every cron job",
+				flow: "Every flow monitor",
 			},
 		},
 	},
@@ -2900,6 +2921,7 @@ export default {
 						dns: "All DNS monitors",
 						tcp: "All TCP monitors",
 						cron: "All cron jobs",
+						flow: "All flow monitors",
 					},
 				},
 
@@ -5271,6 +5293,9 @@ export default {
 							"tcp-monitors:read":
 								"List and read TCP monitors and the connection results they recorded.",
 							"tcp-monitors:write": "Create, update and delete TCP monitors.",
+							"flow-monitors:read":
+								"List and read flow monitors and the results of their runs. The spec source is never returned, since it carries the credentials the flow signs in with.",
+							"flow-monitors:write": "Create, update and delete flow monitors.",
 							"alerts:read":
 								"List and read alerts and the events they fired. Webhook URLs and other channel secrets are never returned.",
 							"alerts:write":

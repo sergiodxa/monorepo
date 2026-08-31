@@ -35,6 +35,7 @@ import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
+import FlowMonitor from "~/app/data/flow-monitor";
 import Monitor from "~/app/data/monitor";
 import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";
@@ -75,17 +76,21 @@ export default createAction(routes.app.team.statusPages.edit, {
 		let page = await StatusPage.findByIdForTeam(db, ctx.team.id, statusPageId);
 		if (!page) return notFound("Not Found");
 
-		let [monitors, dnsMonitors, tcpMonitors, cronJobs, attachedIds] = await Promise.all([
-			Monitor.listByTeam(db, ctx.team.id),
-			DnsMonitor.listByTeam(db, ctx.team.id),
-			TcpMonitor.listByTeam(db, ctx.team.id),
-			CronJobMonitor.listByTeam(db, ctx.team.id),
-			StatusPage.getAttachedIds(db, statusPageId),
-		]);
+		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs, attachedIds] =
+			await Promise.all([
+				Monitor.listByTeam(db, ctx.team.id),
+				DnsMonitor.listByTeam(db, ctx.team.id),
+				TcpMonitor.listByTeam(db, ctx.team.id),
+				FlowMonitor.listByTeam(db, ctx.team.id),
+				CronJobMonitor.listByTeam(db, ctx.team.id),
+				StatusPage.getAttachedIds(db, statusPageId),
+			]);
 
 		/**
-		 * HTTP, DNS, and TCP monitors render as one flat checkbox list; each keeps the
-		 * `name` of its source table so the update action can tell them apart.
+		 * HTTP, DNS, TCP, and flow monitors render as one flat checkbox list; each keeps the
+		 * `name` of its source table so the update action can tell them apart. Only a flow's
+		 * name is carried over — its spec source stays out of the markup, here as on the
+		 * public page it curates (ADR-027 §8).
 		 */
 		let selectableMonitors = [
 			...monitors.map((monitor) => ({
@@ -105,6 +110,12 @@ export default createAction(routes.app.team.statusPages.edit, {
 				name: monitor.name,
 				fieldName: "tcp_monitor_ids",
 				checked: attachedIds.tcpMonitorIds.includes(monitor.id),
+			})),
+			...flowMonitors.map((monitor) => ({
+				id: monitor.id,
+				name: monitor.name,
+				fieldName: "flow_monitor_ids",
+				checked: attachedIds.flowMonitorIds.includes(monitor.id),
 			})),
 		];
 

@@ -150,6 +150,11 @@ export default {
 					description:
 						"Direkte Slack- und Discord-Integrationen mit umfangreichen Benachrichtigungen, nicht nur einfache Webhooks.",
 				},
+				eighth: {
+					title: "Überwachen Sie ganze Flows",
+					description:
+						"Führen Sie mehrere Anfragen in Reihe aus und prüfen Sie, was zurückkommt — anmelden, Token lesen, den damit autorisierten Endpunkt aufrufen. Die Frage, die eine einzelne Prüfung nicht stellen kann.",
+				},
 			},
 		},
 
@@ -403,6 +408,11 @@ export default {
 					q: "Aus welchen Regionen kann ich meine Dienste überwachen?",
 					a: "Uptime unterstützt die Überwachung aus mehreren Regionen: Afrika, Asien-Pazifik, Ost- und Westeuropa, Ost- und West-Nordamerika, Naher Osten, Ozeanien und Südamerika.\n\nSie können eine Region pro Monitor wählen. Die Region wird als Hinweis behandelt, der tatsächliche Ping stammt von einem Server in oder nahe dieser Region.",
 				},
+
+				twentieth: {
+					q: "Kann ich einen Login- oder Checkout-Flow überwachen?",
+					a: "Ja. Ein Flow-Monitor führt mehrere Anfragen in Reihe aus, mit Zusicherungen dazwischen: Er kann sich anmelden, das zurückgegebene Token lesen und den Endpunkt aufrufen, den dieses Token autorisiert. Ein Flow läuft auf HTTP-Ebene statt in einem Browser, und nur gegen Domains, die Ihr Team verifiziert hat.",
+				},
 			},
 		},
 
@@ -431,6 +441,7 @@ export default {
 					teams: "Teams",
 					analytics: "Analytik",
 					api: "API-Zugang",
+					flowMonitors: "Flow-Monitore",
 				},
 				useCases: {
 					title: "Anwendungsfälle",
@@ -441,6 +452,7 @@ export default {
 					cronJobs: "Cron-Job-Überwachung",
 					microservices: "Microservices",
 					healthChecks: "Health Checks",
+					loginFlows: "Login-Flow-Überwachung",
 				},
 				solutions: {
 					title: "Lösungen",
@@ -1325,6 +1337,10 @@ export default {
 				expiresAt: "Läuft ab am",
 				records: "Einträge",
 				findings: "Was sich geändert hat",
+				tests: "Tests",
+				failedTest: "Fehlgeschlagener Test",
+				failureDetail: "Was fehlgeschlagen ist",
+				duration: "Dauer",
 			},
 
 			values: {
@@ -1345,6 +1361,8 @@ export default {
 				},
 
 				dnsMoreFindings: "… und {{count}} weitere",
+				flowTests: "{{passed}} von {{total}} erfolgreich",
+				flowFailedTest: "{{title}} (Zeile {{line}})",
 			},
 
 			/** Said only where it applies, naming what a DNS diff means. */
@@ -1373,6 +1391,7 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cron: "Cron-Job",
+				flow: "Flow",
 			},
 
 			columns: {
@@ -1559,12 +1578,14 @@ export default {
 				dns: "DNS-Monitore",
 				tcp: "TCP-Monitore",
 				cron: "Cron-Jobs",
+				flow: "Flow-Monitore",
 			},
 			allOfType: {
 				http: "Jeder HTTP-Monitor",
 				dns: "Jeder DNS-Monitor",
 				tcp: "Jeder TCP-Monitor",
 				cron: "Jeder Cron-Job",
+				flow: "Jeder Flow-Monitor",
 			},
 		},
 	},
@@ -2892,6 +2913,7 @@ export default {
 						dns: "Alle DNS-Monitore",
 						tcp: "Alle TCP-Monitore",
 						cron: "Alle Cron-Jobs",
+						flow: "Alle Flow-Monitore",
 					},
 				},
 
@@ -5304,6 +5326,9 @@ export default {
 							"tcp-monitors:read":
 								"TCP-Monitore und die von ihnen aufgezeichneten Verbindungsergebnisse auflisten und lesen.",
 							"tcp-monitors:write": "TCP-Monitore erstellen, ändern und löschen.",
+							"flow-monitors:read":
+								"Flow-Monitore und die Ergebnisse ihrer Läufe auflisten und lesen. Der Quelltext des Flows wird nie zurückgegeben, da er die Zugangsdaten enthält, mit denen sich der Flow anmeldet.",
+							"flow-monitors:write": "Flow-Monitore erstellen, ändern und löschen.",
 							"alerts:read":
 								"Benachrichtigungen und die von ihnen ausgelösten Ereignisse auflisten und lesen. Webhook-URLs und andere Kanal-Geheimnisse werden nie zurückgegeben.",
 							"alerts:write":

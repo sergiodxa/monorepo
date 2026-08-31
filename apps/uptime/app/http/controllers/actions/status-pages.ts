@@ -1,6 +1,6 @@
 /**
  * Form actions for status-page create/update/delete. Each follows the validate →
- * mutate → flash → redirect pattern; create/update also curate the four attached
+ * mutate → flash → redirect pattern; create/update also curate the five attached
  * monitor-type id lists after saving the page's own fields.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -44,6 +44,7 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		monitor_ids,
 		dns_monitor_ids,
 		tcp_monitor_ids,
+		flow_monitor_ids,
 		cron_job_ids,
 		description,
 		logo_url,
@@ -71,6 +72,7 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		StatusPage.setMonitors(db, page.id, monitor_ids),
 		StatusPage.setDnsMonitors(db, page.id, dns_monitor_ids),
 		StatusPage.setTcpMonitors(db, page.id, tcp_monitor_ids),
+		StatusPage.setFlowMonitors(db, page.id, flow_monitor_ids),
 		StatusPage.setCronJobs(db, page.id, cron_job_ids),
 	]);
 
@@ -103,6 +105,7 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		monitor_ids,
 		dns_monitor_ids,
 		tcp_monitor_ids,
+		flow_monitor_ids,
 		cron_job_ids,
 		description,
 		logo_url,
@@ -133,6 +136,7 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		StatusPage.setMonitors(db, status_page_id, monitor_ids),
 		StatusPage.setDnsMonitors(db, status_page_id, dns_monitor_ids),
 		StatusPage.setTcpMonitors(db, status_page_id, tcp_monitor_ids),
+		StatusPage.setFlowMonitors(db, status_page_id, flow_monitor_ids),
 		StatusPage.setCronJobs(db, status_page_id, cron_job_ids),
 	]);
 

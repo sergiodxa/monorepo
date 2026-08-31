@@ -35,6 +35,7 @@ import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
+import FlowMonitor from "~/app/data/flow-monitor";
 import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
@@ -68,18 +69,20 @@ export default createAction(routes.app.team.statusPages.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let [monitors, dnsMonitors, tcpMonitors, cronJobs] = await Promise.all([
+		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs] = await Promise.all([
 			Monitor.listByTeam(db, ctx.team.id),
 			DnsMonitor.listByTeam(db, ctx.team.id),
 			TcpMonitor.listByTeam(db, ctx.team.id),
+			FlowMonitor.listByTeam(db, ctx.team.id),
 			CronJobMonitor.listByTeam(db, ctx.team.id),
 		]);
 
 		let t = ctx.i18next.getFixedT(null, "translation", "page.statusPages.form.fields");
 
 		/**
-		 * HTTP, DNS and TCP monitors share one list, but each checkbox keeps the `name` of the
-		 * table its monitor belongs to so the create action can still tell the three apart.
+		 * HTTP, DNS, TCP and flow monitors share one list, but each checkbox keeps the `name` of
+		 * the table its monitor belongs to so the create action can still tell them apart. A flow
+		 * contributes only its id and name here, keeping its spec source off a form that lists it.
 		 */
 		let selectableMonitors = [
 			...monitors.map((monitor) => ({ id: monitor.id, name: monitor.name, field: "monitor_ids" })),
@@ -92,6 +95,11 @@ export default createAction(routes.app.team.statusPages.new, {
 				id: monitor.id,
 				name: monitor.name,
 				field: "tcp_monitor_ids",
+			})),
+			...flowMonitors.map((monitor) => ({
+				id: monitor.id,
+				name: monitor.name,
+				field: "flow_monitor_ids",
 			})),
 		];
 

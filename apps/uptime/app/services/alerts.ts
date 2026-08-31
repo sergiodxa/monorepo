@@ -23,11 +23,14 @@ import type {
 	AlertEventSnapshot,
 	CronJobStatus,
 	DnsFinding,
+	FlowStatus,
 	SelectAlert,
 	SelectAlertEvent,
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
 	SelectDnsMonitorRecord,
+	SelectFlowMonitor,
+	SelectFlowMonitorResult,
 	SelectMonitor,
 	SelectTcpMonitor,
 } from "~/database/schema";
@@ -300,6 +303,30 @@ function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 				`Last ping: ${snapshot.lastPingAt ?? "never"}`,
 				`Next expected: ${snapshot.nextExpectedAt ?? "—"}`,
 			];
+		case "flow": {
+			let lines = [
+				`Status: ${snapshot.status}`,
+				`Tests: ${snapshot.testsPassed} of ${snapshot.testsTotal} passed`,
+			];
+
+			/**
+			 * The failing assertion is the incident (ADR-027 §8), quoted here as the run
+			 * reported it. A recovery carries none, so each line is written only when the
+			 * run actually produced it.
+			 */
+			if (snapshot.failedTest !== null) {
+				lines.push(
+					snapshot.failedAtLine === null
+						? `Failed test: ${snapshot.failedTest}`
+						: `Failed test: ${snapshot.failedTest} (line ${snapshot.failedAtLine})`,
+				);
+			}
+			if (snapshot.failureDetail !== null) lines.push(snapshot.failureDetail);
+
+			lines.push(`Duration: ${snapshot.durationMs === null ? "—" : `${snapshot.durationMs}ms`}`);
+
+			return lines;
+		}
 		case "ssl":
 			return [
 				`Hostname: ${snapshot.hostname}`,
@@ -477,6 +504,22 @@ export function shouldNotifyDnsResult(
 	status: DnsCheckStatus,
 ): boolean {
 	return status !== "ok" || recovered(previousStatus, "ok");
+}
+
+/**
+ * See {@link shouldNotifyTcpResult}. A flow splits a broken flow from an unrunnable one
+ * (ADR-027 §1): `down` is a failed assertion and always notifies, while `error` is this
+ * app failing to find out — an unparsable spec, a host outside the team's verified
+ * domains, a run past its cap — and pages nobody. Recovery therefore fires only out of
+ * `down`, the one state anyone was told about.
+ */
+export function shouldNotifyFlowResult(
+	previousStatus: FlowStatus | null,
+	status: FlowStatus,
+): boolean {
+	if (status === "error") return false;
+	if (status === "down") return true;
+	return previousStatus === "down";
 }
 
 /**
@@ -734,6 +777,97 @@ export async function notifyCronJobResult(
 		},
 		dashboardUrl: dashboardUrl(
 			routes.app.team.cronJobs.show.href({ team: monitor.team_id, monitorId: monitor.id }),
+		),
+	});
+}
+
+/**
+ * What a flow run concluded, as the alert pipeline needs it: the counters and the first
+ * failing assertion, which is what the notification quotes verbatim (ADR-027 §8).
+ */
+export interface FlowAlertResult {
+	status: FlowStatus;
+	testsTotal: number;
+	testsPassed: number;
+	testsFailed: number;
+	failedTest: string | null;
+	failedAtLine: number | null;
+	failureDetail: string | null;
+	durationMs: number | null;
+}
+
+/**
+ * The alert's view of one run, rebuilt from the result row the sweep persisted, for the
+ * `notify` queue consumer, which receives only the transition. A monitor whose history
+ * row is already gone still reports its transition, with the counters a run that left no
+ * record can honestly claim.
+ */
+export function flowAlertResultFromResult(
+	status: FlowStatus,
+	result: SelectFlowMonitorResult | undefined,
+): FlowAlertResult {
+	if (result === undefined) {
+		return {
+			status,
+			testsTotal: 0,
+			testsPassed: 0,
+			testsFailed: 0,
+			failedTest: null,
+			failedAtLine: null,
+			failureDetail: null,
+			durationMs: null,
+		};
+	}
+
+	return {
+		status,
+		testsTotal: result.tests_total,
+		testsPassed: result.tests_passed,
+		testsFailed: result.tests_failed,
+		failedTest: result.failed_test,
+		failedAtLine: result.failed_at_line,
+		failureDetail: result.failure_detail,
+		durationMs: result.duration_ms,
+	};
+}
+
+/**
+ * See {@link notifyHttpResult}; `up` is the flow-equivalent healthy state and every
+ * outage is a `down` event, since a flow either holds or it does not — see
+ * {@link shouldNotifyFlowResult} for why an `error` reaches nobody.
+ */
+export async function notifyFlowResult(
+	db: Database,
+	mailer: Mailer,
+	monitor: SelectFlowMonitor,
+	previousStatus: FlowStatus | null,
+	result: FlowAlertResult,
+): Promise<void> {
+	if (!shouldNotifyFlowResult(previousStatus, result.status)) return;
+	/** Only reachable with an `up` status when the policy above found a recovery. */
+	let isRecovery = result.status === "up";
+
+	await dispatchAlerts({
+		db,
+		mailer,
+		teamId: monitor.team_id,
+		monitorId: monitor.id,
+		monitorType: "flow",
+		monitorName: monitor.name,
+		eventType: isRecovery ? "up" : "down",
+		snapshot: {
+			type: "flow",
+			status: result.status,
+			testsTotal: result.testsTotal,
+			testsPassed: result.testsPassed,
+			testsFailed: result.testsFailed,
+			failedTest: result.failedTest,
+			failedAtLine: result.failedAtLine,
+			failureDetail: result.failureDetail,
+			durationMs: result.durationMs,
+		},
+		dashboardUrl: dashboardUrl(
+			routes.app.team.flowMonitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }

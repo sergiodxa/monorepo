@@ -1,10 +1,12 @@
 /**
- * Unit tests for `AggregateDailyStatsJob.perform()`, covering its four aggregation
- * sources (HTTP via Analytics Engine, DNS/TCP via D1 result tables, cron via
+ * Unit tests for `AggregateDailyStatsJob.perform()`, covering its aggregation sources
+ * (HTTP via Analytics Engine, DNS/TCP/flow via D1 result tables, cron via
  * `cron_job_pings`) and `MonitorDailyStats.upsertDay`'s replace-on-rerun idempotency.
  * `getHttpDailyAggregate` is mocked since Analytics Engine access has its own
- * service-level tests; DNS/TCP/cron tests patch `db.exec` directly because the shared
- * in-memory adapter can't answer raw SQL reads.
+ * service-level tests; the D1 and cron tests patch `db.exec` directly because the shared
+ * in-memory adapter can't answer raw SQL reads. That stub answers by table name and not by
+ * running the SQL, so the flow query's own filtering is asserted against the statement it
+ * sends.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -76,6 +78,8 @@ async function runJob(db: Database) {
  * job runs, since the in-memory adapter can't return rows for raw SQL reads.
  */
 function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[]>): void {
+	statements.length = 0;
+
 	/**
 	 * `db.exec` also dispatches the query builder's internal `findMany`/`create`/`delete`
 	 * calls, so only raw SQL-string calls are intercepted here; other calls fall through
@@ -85,11 +89,20 @@ function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[
 	(db as unknown as { exec: unknown }).exec = vi.fn(
 		async (statement: unknown, values?: unknown[]) => {
 			if (typeof statement !== "string") return original(statement, values);
+			statements.push({ sql: statement, values: values ?? [] });
 			let table = /from\s+(\w+)/i.exec(statement)?.[1];
 			let rows = (table && rowsByTable[table]) || [];
 			return { rows, affectedRows: rows.length, insertId: undefined };
 		},
 	);
+}
+
+/** Every raw SQL read the stub answered, so a query's own `WHERE` can be asserted. */
+let statements: Array<{ sql: string; values: unknown[] }> = [];
+
+/** The aggregation query the job ran against one result table. */
+function statementFor(table: string) {
+	return statements.find((statement) => statement.sql.includes(table));
 }
 
 beforeEach(() => {
@@ -199,6 +212,79 @@ describe("AggregateDailyStatsJob", () => {
 		expect(rows[0]!.successful_checks).toBe(1);
 		expect(rows[0]!.status).toBe("degraded");
 		expect(rows[0]!.avg_response_time_ms).toBeNull();
+	});
+
+	test("aggregates flow runs, taking the run's wall clock as the latency column", async () => {
+		let { db } = createTestDatabase();
+		stubRawAggregateExec(db, {
+			flow_monitor_results: [
+				{
+					monitorId: "flow-1",
+					totalChecks: 4,
+					successfulChecks: 3,
+					avgResponseTimeMs: 1840.5,
+					maxResponseTimeMs: 2200,
+				},
+			],
+		});
+
+		await runJob(db);
+
+		let rows = await db.findMany(monitorDailyStats, {
+			where: { monitor_id: "flow-1", monitor_type: "flow" },
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]!.total_checks).toBe(4);
+		expect(rows[0]!.successful_checks).toBe(3);
+		expect(rows[0]!.failed_checks).toBe(1);
+		expect(rows[0]!.avg_response_time_ms).toBe(1841);
+		expect(rows[0]!.max_response_time_ms).toBe(2200);
+		expect(rows[0]!.status).toBe("degraded");
+
+		let statement = statementFor("flow_monitor_results");
+		expect(statement?.sql).toContain("AVG(duration_ms)");
+		expect(statement?.sql).toContain("MAX(duration_ms)");
+	});
+
+	/**
+	 * The same split the detail page's pass rate draws: an `error` run is this app failing to
+	 * find out, so it belongs to neither half of the day and the two surfaces cannot disagree.
+	 */
+	test("leaves a flow's error runs out of the day, on both sides of the rate", async () => {
+		let { db } = createTestDatabase();
+		stubRawAggregateExec(db, { flow_monitor_results: [] });
+
+		await runJob(db);
+
+		let statement = statementFor("flow_monitor_results");
+		expect(statement?.sql).toContain("status <> ?");
+		expect(statement?.values).toContain("error");
+	});
+
+	/** Only flows have runs that never happened, so no other table's query filters any out. */
+	test("counts every DNS and TCP result, however the check turned out", async () => {
+		let { db } = createTestDatabase();
+		stubRawAggregateExec(db, { dns_monitor_results: [], tcp_monitor_results: [] });
+
+		await runJob(db);
+
+		expect(statementFor("dns_monitor_results")?.sql).not.toContain("status <> ?");
+		expect(statementFor("tcp_monitor_results")?.sql).not.toContain("status <> ?");
+	});
+
+	/**
+	 * A day of nothing but errors groups to no rows at all, and the gap that leaves in the bar
+	 * is the honest report: writing a zero-check row would classify the day as an outage.
+	 */
+	test("writes no row for a flow whose whole day was inconclusive", async () => {
+		let { db } = createTestDatabase();
+		stubRawAggregateExec(db, { flow_monitor_results: [] });
+
+		await runJob(db);
+
+		expect(await db.findMany(monitorDailyStats, { where: { monitor_type: "flow" } })).toHaveLength(
+			0,
+		);
 	});
 
 	test("aggregates cron pings using was_on_time, with no response-time columns", async () => {

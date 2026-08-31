@@ -31,6 +31,7 @@ import {
 	cronJobPings,
 	dnsMonitorResults,
 	dnsMonitors,
+	flowMonitors,
 	invites,
 	maintenanceWindows,
 	memberships,
@@ -636,6 +637,63 @@ describe("Team.deleteById", () => {
 		await Team.deleteById(db, team.id);
 
 		expect(await db.find(teams, team.id)).toBeNull();
+	});
+});
+
+describe("Team.countMonitorsByTeam", () => {
+	/** One flow monitor, enough for the count to see the team. */
+	async function seedFlowMonitor(db: Database, teamId: string) {
+		return await db.create(
+			flowMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: teamId,
+				name: "Sign in and load the dashboard",
+				source:
+					'test "a member can sign in" {\n\twhen {\n\t\tlet session = http.get "https://app.example.com/health"\n\t}\n}',
+				interval_seconds: 3_600,
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	test("counts a team whose only monitor is a flow monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await Team.createTeam(db, buildIdToken());
+		await seedFlowMonitor(db, team.id);
+
+		let counts = await Team.countMonitorsByTeam(db);
+
+		expect(counts.get(team.id)).toBe(1);
+	});
+
+	test("adds flow monitors to a team's other types rather than replacing them", async () => {
+		let { db } = createTestDatabase();
+		let subjectId = crypto.randomUUID();
+		let team = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
+
+		await Monitor.create(db, team.id, subjectId, {
+			name: "Homepage",
+			url: "https://example.com",
+		});
+		await seedFlowMonitor(db, team.id);
+		await seedFlowMonitor(db, team.id);
+
+		let counts = await Team.countMonitorsByTeam(db);
+
+		expect(counts.get(team.id)).toBe(3);
+	});
+
+	test("leaves a team with no monitors of any type out of the map", async () => {
+		let { db } = createTestDatabase();
+		let withFlow = await Team.createTeam(db, buildIdToken());
+		let without = await Team.createTeam(db, buildIdToken());
+		await seedFlowMonitor(db, withFlow.id);
+
+		let counts = await Team.countMonitorsByTeam(db);
+
+		expect(counts.get(withFlow.id)).toBe(1);
+		expect(counts.has(without.id)).toBe(false);
 	});
 });
 

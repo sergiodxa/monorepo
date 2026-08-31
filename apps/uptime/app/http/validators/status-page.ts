@@ -1,8 +1,8 @@
 /**
  * Form validation schemas for status-page create/update/delete actions. `slug` is
- * restricted to URL-safe characters (`docs/status-pages.md`); the four id-list
+ * restricted to URL-safe characters (`docs/status-pages.md`); the five id-list
  * fields read every checked checkbox sharing that `name` via `f.fields()`, which is
- * how the curated monitor/DNS/TCP/cron-job attachment lists are resubmitted.
+ * how the curated monitor/DNS/TCP/flow/cron-job attachment lists are resubmitted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,6 +35,7 @@ const statusPageFields = {
 	monitor_ids: f.fields(s.array(s.string())),
 	dns_monitor_ids: f.fields(s.array(s.string())),
 	tcp_monitor_ids: f.fields(s.array(s.string())),
+	flow_monitor_ids: f.fields(s.array(s.string())),
 	cron_job_ids: f.fields(s.array(s.string())),
 };
 

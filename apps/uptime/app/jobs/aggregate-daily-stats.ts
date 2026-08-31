@@ -2,8 +2,8 @@
  * Daily background job that rolls up the previous UTC day's checks into one
  * `monitor_daily_stats` row per monitor, the source for the uptime bars and
  * long-term reporting. HTTP aggregates come from Analytics Engine, since that's
- * the only store HTTP results land in; DNS, TCP, and cron-job aggregates come
- * from their own D1 result tables.
+ * the only store HTTP results land in; DNS, TCP, flow, and cron-job aggregates
+ * come from their own D1 result tables.
  *
  * Rows are written in bounded-concurrency batches, matching the monitor sweeps
  * (ADR-008); one monitor's failed write is logged and counted instead of
@@ -29,6 +29,23 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { getHttpDailyAggregate } from "~/app/services/analytics";
 import { apportionCost } from "~/app/services/cost";
 
+/** One D1 result table, and how a day of its rows becomes a `monitor_daily_stats` row. */
+interface D1Source {
+	monitorType: "dns" | "tcp" | "flow";
+	table: string;
+	monitorIdColumn: string;
+	/** The status a passing check is stored as; every other one counts against uptime. */
+	healthyStatus: string;
+	/** Where the check's duration lives, when the table spells it something else. */
+	responseTimeColumn?: string;
+	/**
+	 * The status of a check that never got to run. Those rows are dropped from the day
+	 * outright, so they neither pass nor fail, and a monitor whose whole day was
+	 * inconclusive gets no row rather than one reading as an outage.
+	 */
+	inconclusiveStatus?: string;
+}
+
 interface RawAggregateRow {
 	monitorId: string;
 	totalChecks: number;
@@ -47,29 +64,44 @@ export class AggregateDailyStatsJob extends Job {
 
 		/**
 		 * The roll-up's cost is split by monitors per team (ADR-007 §5): it writes one row
-		 * per monitor, and the four aggregate queries it writes them from cannot be
-		 * attributed any other way.
+		 * per monitor, and the aggregate queries it writes them from cannot be attributed
+		 * any other way.
 		 */
 		apportionCost(await Team.countMonitorsByTeam(db));
 
 		let written = 0;
 		written += await this.aggregateHttp(db, date);
-		written += await this.aggregateD1(
-			db,
-			date,
-			"dns",
-			"dns_monitor_results",
-			"dns_monitor_id",
-			"ok",
-		);
-		written += await this.aggregateD1(
-			db,
-			date,
-			"tcp",
-			"tcp_monitor_results",
-			"tcp_monitor_id",
-			"up",
-		);
+		written += await this.aggregateD1(db, date, {
+			monitorType: "dns",
+			table: "dns_monitor_results",
+			monitorIdColumn: "dns_monitor_id",
+			healthyStatus: "ok",
+		});
+		written += await this.aggregateD1(db, date, {
+			monitorType: "tcp",
+			table: "tcp_monitor_results",
+			monitorIdColumn: "tcp_monitor_id",
+			healthyStatus: "up",
+		});
+		written += await this.aggregateD1(db, date, {
+			monitorType: "flow",
+			table: "flow_monitor_results",
+			monitorIdColumn: "flow_monitor_id",
+			healthyStatus: "up",
+			/**
+			 * A flow's latency series is the run's wall clock, the same number its detail page
+			 * averages, so the digest and the page quote one figure (ADR-027).
+			 */
+			responseTimeColumn: "duration_ms",
+			/**
+			 * An `error` run is this app failing to find out, not the flow being broken, so it
+			 * counts in neither half of the day's rate — the split the detail page's pass rate
+			 * already draws (ADR-027 §8). A day of nothing but errors therefore writes no row
+			 * at all, leaving a gap in the bar rather than reporting a customer's flow down for
+			 * a reason that is ours.
+			 */
+			inconclusiveStatus: "error",
+		});
 		written += await this.aggregateCron(db, date);
 
 		this.logger.info("job.aggregate_daily_stats.completed", { date, written });
@@ -101,28 +133,29 @@ export class AggregateDailyStatsJob extends Job {
 		);
 	}
 
-	/** Aggregates a D1 result table whose rows carry a `status` and `response_time_ms`. */
-	private async aggregateD1(
-		db: Database,
-		date: string,
-		monitorType: "dns" | "tcp",
-		table: string,
-		monitorIdColumn: string,
-		healthyStatus: string,
-	): Promise<number> {
+	/** Aggregates a D1 result table whose rows carry a `status` and a duration. */
+	private async aggregateD1(db: Database, date: string, source: D1Source): Promise<number> {
 		let { start, end } = utcDayBounds(date);
+		let responseTimeColumn = source.responseTimeColumn ?? "response_time_ms";
+		let values: Array<string | number> = [source.healthyStatus, start, end];
+		let conclusiveOnly = "";
+
+		if (source.inconclusiveStatus !== undefined) {
+			conclusiveOnly = "AND status <> ?";
+			values.push(source.inconclusiveStatus);
+		}
 
 		let result = await db.exec(
 			`SELECT
-				${monitorIdColumn} AS monitorId,
+				${source.monitorIdColumn} AS monitorId,
 				COUNT(*) AS totalChecks,
 				SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS successfulChecks,
-				AVG(response_time_ms) AS avgResponseTimeMs,
-				MAX(response_time_ms) AS maxResponseTimeMs
-			 FROM ${table}
-			 WHERE checked_at >= ? AND checked_at < ?
-			 GROUP BY ${monitorIdColumn}`,
-			[healthyStatus, start, end],
+				AVG(${responseTimeColumn}) AS avgResponseTimeMs,
+				MAX(${responseTimeColumn}) AS maxResponseTimeMs
+			 FROM ${source.table}
+			 WHERE checked_at >= ? AND checked_at < ? ${conclusiveOnly}
+			 GROUP BY ${source.monitorIdColumn}`,
+			values,
 		);
 
 		let rows = (result.rows ?? []) as unknown as RawAggregateRow[];
@@ -131,7 +164,7 @@ export class AggregateDailyStatsJob extends Job {
 			db,
 			rows.map((row) => ({
 				monitor_id: row.monitorId,
-				monitor_type: monitorType,
+				monitor_type: source.monitorType,
 				date,
 				total_checks: row.totalChecks,
 				successful_checks: row.successfulChecks,

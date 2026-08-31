@@ -130,6 +130,22 @@ describe("TeamDailyDigestEmail", () => {
 			for (let name of ["Website", "API", "Backup", "Cache"]) expect(text).toContain(name);
 		});
 
+		/**
+		 * Flows are listed like every other kind, and sort by how they went rather than by kind,
+		 * so a broken flow is the first row a reader lands on.
+		 */
+		test("lists a flow monitor, sorted by its window like any other", async () => {
+			let email = await makeEmail({
+				monitors: [monitor("Website"), monitor("Checkout", "down", { type: "flow", uptime: "50" })],
+			});
+
+			let { text } = await render(email.body());
+
+			expect(text).toContain("Checkout");
+			expect(text).toContain("Down 50%");
+			expect(order(text, ["Website", "Checkout"])).toEqual(["Checkout", "Website"]);
+		});
+
 		test("puts the worst news first: down, degraded, unchecked, then up", async () => {
 			let email = await makeEmail();
 

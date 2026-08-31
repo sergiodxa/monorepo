@@ -40,6 +40,7 @@ export default createAction(routes.app.team.statusPages.index, {
 					ids.monitorIds.length +
 					ids.dnsMonitorIds.length +
 					ids.tcpMonitorIds.length +
+					ids.flowMonitorIds.length +
 					ids.cronJobIds.length
 				);
 			}),

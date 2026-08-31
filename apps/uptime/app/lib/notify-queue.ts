@@ -15,12 +15,12 @@
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
-import type { CronJobStatus } from "~/database/schema";
+import type { CronJobStatus, FlowStatus } from "~/database/schema";
 
 import { sendQueueBatch } from "~/app/lib/queue";
 
 /** Monitor kinds whose sweeps hand notification off to the queue. */
-export type NotifyMonitorType = "dns" | "tcp" | "cron" | "ssl";
+export type NotifyMonitorType = "dns" | "tcp" | "cron" | "flow" | "ssl";
 
 /**
  * One monitor's status transition, as it travels over the queue — a stable contract with
@@ -48,6 +48,13 @@ export type NotifyMessage =
 			monitorId: string;
 			previousStatus: CronJobStatus | null;
 			newStatus: CronJobStatus;
+	  }
+	| {
+			type: "notify";
+			monitorType: "flow";
+			monitorId: string;
+			previousStatus: FlowStatus | null;
+			newStatus: FlowStatus;
 	  }
 	| {
 			type: "notify";

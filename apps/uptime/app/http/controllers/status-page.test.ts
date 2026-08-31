@@ -35,8 +35,10 @@ import en from "~/app/locales/en";
 import {
 	dnsMonitorRecords,
 	dnsMonitors,
+	flowMonitors,
 	monitors,
 	statusPageDnsMonitors,
+	statusPageFlowMonitors,
 	statusPageMonitors,
 	statusPages,
 	teams,
@@ -156,6 +158,30 @@ async function createPublicPage(db: Database, teamId: string, slug: string) {
 			custom_domain: null,
 			is_public: true,
 			show_overall_status: true,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** Seeds a flow monitor whose source carries the credentials its requests sign in with. */
+async function createFlowMonitor(
+	db: Database,
+	teamId: string,
+	name: string,
+	lastStatus: "up" | "down" | "error",
+) {
+	return await db.create(
+		flowMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name,
+			source: 'post "/session" { body: { password: "hunter2-secret" } }',
+			interval_seconds: 3600,
+			next_due_at: null,
+			is_enabled: true,
+			last_checked_at: Date.now(),
+			last_status: lastStatus,
 		},
 		{ touch: true, returnRow: true },
 	);
@@ -438,6 +464,90 @@ describe("GET /status/:slug", () => {
 		expect(body).not.toContain("internal-zone.example");
 		expect(body).not.toContain("vpn.internal-zone.example");
 		expect(body).not.toContain("203.0.113.10");
+	});
+
+	/**
+	 * The name is the team's own words for the journey; the spec it was written from is
+	 * credentialed, and a status page is world-readable.
+	 */
+	test("renders an attached flow monitor by name, and leaks nothing of its source", async () => {
+		let { db, team } = await createFixture();
+		let flow = await createFlowMonitor(db, team.id, "Sign in and check out", "up");
+		let page = await createPublicPage(db, team.id, "acme-flow");
+
+		await db.create(statusPageFlowMonitors, {
+			id: crypto.randomUUID(),
+			status_page_id: page.id,
+			flow_monitor_id: flow.id,
+			display_name: null,
+			order: 0,
+		});
+
+		serveSummaries([]);
+
+		let response = await get(db, page.slug);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("Sign in and check out");
+		expect(body).toContain("Operational");
+		expect(body).not.toContain("hunter2-secret");
+		expect(body).not.toContain("/session");
+	});
+
+	/**
+	 * An `error` run means this app could not find out — an unparseable spec, a host the
+	 * team has not verified, a run past its caps. Publishing that as an outage would tell a
+	 * customer's own users their service is down for a reason that is ours, so the card
+	 * reads neutral and the banner still speaks only for what was actually measured.
+	 */
+	test("shows an errored flow as unknown and keeps it out of the overall status", async () => {
+		let { db, team } = await createFixture();
+		let flow = await createFlowMonitor(db, team.id, "Sign in and check out", "error");
+		let page = await createPublicPage(db, team.id, "acme-flow-error");
+
+		await db.create(statusPageFlowMonitors, {
+			id: crypto.randomUUID(),
+			status_page_id: page.id,
+			flow_monitor_id: flow.id,
+			display_name: null,
+			order: 0,
+		});
+
+		serveSummaries([]);
+
+		let body = await (await get(db, page.slug)).text();
+
+		expect(body).toContain("Sign in and check out");
+		expect(body).toContain(i18nextInstance.t("statusPage.status.unknown"));
+		/** The card wears the neutral chip and mark, never the ones an outage is published with. */
+		expect(body).toContain('data-color="neutral"');
+		expect(body).toContain("lucide-circle-minus");
+		expect(body).not.toContain("lucide-circle-x");
+		expect(body).toContain(i18nextInstance.t("statusPage.banner.operational"));
+	});
+
+	/** A team publishes the journey under its own label, exactly as for every other type. */
+	test("publishes a team's own label for a flow when they set one", async () => {
+		let { db, team } = await createFixture();
+		let flow = await createFlowMonitor(db, team.id, "flow-prod-checkout-v2", "down");
+		let page = await createPublicPage(db, team.id, "acme-flow-label");
+
+		await db.create(statusPageFlowMonitors, {
+			id: crypto.randomUUID(),
+			status_page_id: page.id,
+			flow_monitor_id: flow.id,
+			display_name: "Checkout",
+			order: 0,
+		});
+
+		serveSummaries([]);
+
+		let body = await (await get(db, page.slug)).text();
+
+		expect(body).toContain("Checkout");
+		expect(body).not.toContain("flow-prod-checkout-v2");
+		expect(body).toContain(i18nextInstance.t("statusPage.banner.down"));
 	});
 
 	/**

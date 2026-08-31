@@ -150,6 +150,11 @@ export default {
 					description:
 						"Integraciones directas con Slack y Discord con notificaciones enriquecidas, no solo webhooks básicos.",
 				},
+				eighth: {
+					title: "Monitoree flujos completos",
+					description:
+						"Ejecute varias solicitudes en orden y compruebe lo que devuelven: inicie sesión, lea el token y llame al endpoint que ese token autoriza. La pregunta que una sola comprobación no puede hacer.",
+				},
 			},
 		},
 
@@ -401,6 +406,11 @@ export default {
 					q: "¿Desde qué regiones puedo monitorear mis servicios?",
 					a: "Uptime admite monitoreo desde múltiples regiones: África, Asia-Pacífico, Europa Oriental y Occidental, Norteamérica Oriental y Occidental, Medio Oriente, Oceanía y Sudamérica.\n\nPuede elegir una región por monitor. La región se trata como una sugerencia, el ping real se originará desde un servidor en o cerca de esa región.",
 				},
+
+				twentieth: {
+					q: "¿Puedo monitorear un flujo de inicio de sesión o de compra?",
+					a: "Sí. Un monitor de flujo ejecuta varias solicitudes en orden con aserciones entre ellas, de modo que puede iniciar sesión, leer el token devuelto y llamar al endpoint que ese token autoriza. Un flujo se ejecuta a nivel HTTP y no en un navegador, y solo contra dominios que su equipo haya verificado.",
+				},
 			},
 		},
 
@@ -429,6 +439,7 @@ export default {
 					teams: "Equipos",
 					analytics: "Analíticas",
 					api: "Acceso API",
+					flowMonitors: "Monitores de flujo",
 				},
 				useCases: {
 					title: "Casos de uso",
@@ -439,6 +450,7 @@ export default {
 					cronJobs: "Monitoreo de Cron Jobs",
 					microservices: "Microservicios",
 					healthChecks: "Health checks",
+					loginFlows: "Monitoreo de flujos de inicio de sesión",
 				},
 				solutions: {
 					title: "Soluciones",
@@ -990,6 +1002,7 @@ export default {
 						statusPages: "Páginas de estado",
 						tcpMonitors: "Monitores TCP",
 						dnsMonitors: "Monitores DNS",
+						flowMonitors: "Monitores de flujo",
 						cronJobs: "Cron Jobs",
 						settings: "Configuración",
 						billing: "Facturación",
@@ -1320,6 +1333,10 @@ export default {
 				expiresAt: "Expira el",
 				records: "Registros",
 				findings: "Qué cambió",
+				tests: "Pruebas",
+				failedTest: "Prueba fallida",
+				failureDetail: "Qué falló",
+				duration: "Duración",
 			},
 
 			values: {
@@ -1341,6 +1358,8 @@ export default {
 				},
 
 				dnsMoreFindings: "…y {{count}} más",
+				flowTests: "{{passed}} de {{total}} superadas",
+				flowFailedTest: "{{title}} (línea {{line}})",
 			},
 
 			/** Explains what a DNS diff means, shown only where that meaning is needed. */
@@ -1369,6 +1388,7 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cron: "Cron job",
+				flow: "Flujo",
 			},
 
 			columns: {
@@ -1555,12 +1575,14 @@ export default {
 				dns: "Monitores DNS",
 				tcp: "Monitores TCP",
 				cron: "Tareas programadas",
+				flow: "Monitores de flujo",
 			},
 			allOfType: {
 				http: "Todos los monitores HTTP",
 				dns: "Todos los monitores DNS",
 				tcp: "Todos los monitores TCP",
 				cron: "Todas las tareas programadas",
+				flow: "Todos los monitores de flujo",
 			},
 		},
 	},
@@ -2076,6 +2098,15 @@ export default {
 						ok: "{{ok}} ok",
 						changed: "{{changed}} cambiados",
 						error: "{{error}} error",
+					},
+				},
+				flowMonitors: {
+					label: "Monitores de flujo",
+					create: "Nuevo monitor de flujo",
+					breakdown: {
+						up: "{{up}} superados",
+						down: "{{down}} fallidos",
+						error: "{{error}} no ejecutables",
 					},
 				},
 				tcpMonitors: {
@@ -2865,6 +2896,7 @@ export default {
 						dns: "Todos los monitores DNS",
 						tcp: "Todos los monitores TCP",
 						cron: "Todas las tareas programadas",
+						flow: "Todos los monitores de flujo",
 					},
 				},
 
@@ -4722,6 +4754,214 @@ export default {
 			},
 		},
 
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "Monitores de flujo" },
+				action: { edit: "Editar" },
+			},
+
+			info: {
+				status: "Estado",
+				interval: "Se ejecuta cada",
+				lastChecked: "Última verificación",
+				enabled: "Habilitado",
+			},
+
+			stats: {
+				passRate: { label: "Tasa de éxito" },
+				avgDuration: { label: "Duración media" },
+				totalRuns: { label: "Ejecuciones totales" },
+			},
+
+			failure: {
+				title: "Último fallo",
+				failedTest: "{{test}} falló en la línea {{line}}.",
+			},
+
+			source: { title: "Flujo" },
+
+			results: {
+				title: "Ejecuciones",
+				empty: "Aún no hay ejecuciones.",
+				label: "Ejecuciones del flujo",
+				columns: {
+					time: "Hora",
+					status: "Estado",
+					tests: "Pruebas",
+					requests: "Solicitudes",
+					duration: "Duración",
+				},
+			},
+		},
+
+		flowMonitors: {
+			header: {
+				title: "Monitores de flujo",
+				action: { create: "Crear" },
+			},
+
+			empty: {
+				title: "Aún no hay monitores de flujo",
+				description:
+					"Un monitor de flujo ejecuta varias solicitudes en orden y comprueba lo que devuelven: inicia sesión, lee el token y llama al endpoint que ese token autoriza. Responde la pregunta que una sola solicitud no puede hacer.",
+				cta: "Cree su primer monitor de flujo",
+			},
+
+			table: {
+				label: "Monitores de flujo",
+				columns: {
+					name: "Nombre",
+					interval: "Cada",
+					status: "Estado",
+					lastChecked: "Última verificación",
+					actions: "Acciones",
+				},
+				status: {
+					pending: "Aún sin verificar",
+					up: "Superado",
+					down: "Fallido",
+					error: "No se puede ejecutar",
+					disabled: "Deshabilitado",
+				},
+				actions: {
+					menu: "Menú de acciones",
+					view: "Ver",
+					edit: "Editar",
+					delete: "Eliminar",
+					confirmation: {
+						delete:
+							"¿Está seguro de que desea eliminar el monitor de flujo {{name}}? Esta acción no se puede deshacer.",
+					},
+				},
+			},
+
+			run: {
+				cta: "Ejecutar ahora",
+				toast: {
+					up: "{{name}} superado",
+					down: "{{name}} falló",
+					error: "{{name}} no se pudo ejecutar",
+					refused: "{{name}} no se ejecutó",
+					summary:
+						"{{passed}} de {{total}} pruebas superadas, {{requests}} solicitudes, {{duration}}ms.",
+					failedTest: "Fallo: {{test}} (línea {{line}}).",
+				},
+			},
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "Crear monitor de flujo",
+				breadcrumb: { flowMonitors: "Monitores de flujo" },
+			},
+
+			form: {
+				cta: "Crear monitor de flujo",
+				sections: {
+					basics: {
+						title: "Flujo",
+						description: "Qué hace este flujo y con qué frecuencia se ejecuta.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Nombre del monitor",
+						placeholder: "Iniciar sesión y cargar el panel",
+						description: "Un nombre descriptivo para este flujo.",
+					},
+					source: {
+						label: "Flujo",
+						placeholder: 'test "un miembro puede iniciar sesión" { when { … } then { … } }',
+						description:
+							"Las solicitudes y las aserciones entre ellas. Cada URL debe escribirse aquí para poder comprobarse contra sus dominios verificados.",
+						verifiedDomains: "Este flujo puede alcanzar: {{domains}} — y sus subdominios.",
+						noVerifiedDomains:
+							"Este equipo no tiene dominios verificados, así que todavía no puede ejecutarse ningún flujo. Verifique primero un dominio en la configuración del equipo.",
+					},
+					interval: {
+						label: "Ejecutar cada",
+						description:
+							"Con qué frecuencia se ejecuta este flujo. Cada ejecución factura una verificación por cada solicitud que realiza, así que un intervalo más corto cuesta más.",
+						options: {
+							"900": "15 minutos",
+							"1800": "30 minutos",
+							"3600": "1 hora",
+							"10800": "3 horas",
+							"21600": "6 horas",
+							"43200": "12 horas",
+							"86400": "1 día",
+						},
+					},
+					isEnabled: { label: "Habilitado" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "Editar monitor de flujo",
+				breadcrumb: { flowMonitors: "Monitores de flujo" },
+			},
+
+			lastRun: {
+				title: "Última ejecución",
+				description: "Qué concluyó este flujo la última vez que se ejecutó.",
+				summary:
+					"{{passed}} de {{total}} pruebas superadas, {{requests}} solicitudes, {{duration}}ms.",
+				failedTest: "Fallo: {{test}} (línea {{line}}).",
+			},
+
+			form: {
+				cta: "Guardar cambios",
+				cancel: "Cancelar",
+				sections: {
+					settings: {
+						title: "Flujo",
+						description: "Qué hace este flujo y con qué frecuencia se ejecuta.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Nombre del monitor",
+						placeholder: "Iniciar sesión y cargar el panel",
+						description: "Un nombre descriptivo para este flujo.",
+					},
+					source: {
+						label: "Flujo",
+						placeholder: 'test "un miembro puede iniciar sesión" { when { … } then { … } }',
+						description:
+							"Las solicitudes y las aserciones entre ellas. Cada URL debe escribirse aquí para poder comprobarse contra sus dominios verificados.",
+						verifiedDomains: "Este flujo puede alcanzar: {{domains}} — y sus subdominios.",
+						noVerifiedDomains:
+							"Este equipo no tiene dominios verificados, así que todavía no puede ejecutarse ningún flujo. Verifique primero un dominio en la configuración del equipo.",
+					},
+					interval: {
+						label: "Ejecutar cada",
+						description:
+							"Con qué frecuencia se ejecuta este flujo. Cada ejecución factura una verificación por cada solicitud que realiza, así que un intervalo más corto cuesta más.",
+						options: {
+							"900": "15 minutos",
+							"1800": "30 minutos",
+							"3600": "1 hora",
+							"10800": "3 horas",
+							"21600": "6 horas",
+							"43200": "12 horas",
+							"86400": "1 día",
+						},
+					},
+					isEnabled: { label: "Habilitado" },
+				},
+			},
+
+			danger: {
+				title: "Zona de peligro",
+				sectionDescription: "Acciones irreversibles para este monitor de flujo.",
+				warning:
+					"Al eliminar este monitor de flujo también se eliminan todos los resultados que ha registrado.",
+				description: "Esta acción no se puede deshacer.",
+				cta: "Eliminar monitor de flujo",
+			},
+		},
 		tcpMonitors: {
 			header: {
 				title: "Monitores TCP",
@@ -5051,6 +5291,9 @@ export default {
 							"tcp-monitors:read":
 								"Listar y leer los monitores TCP y los resultados de conexión que registraron.",
 							"tcp-monitors:write": "Crear, actualizar y eliminar monitores TCP.",
+							"flow-monitors:read":
+								"Listar y leer los monitores de flujo y los resultados de sus ejecuciones. El código del flujo nunca se devuelve, ya que contiene las credenciales con las que el flujo inicia sesión.",
+							"flow-monitors:write": "Crear, actualizar y eliminar monitores de flujo.",
 							"alerts:read":
 								"Listar y leer las alertas y los eventos que dispararon. Las URL de webhook y otros secretos de canal nunca se devuelven.",
 							"alerts:write":

@@ -10,9 +10,9 @@
  */
 
 import type { MonitorHealth } from "~/app/services/analytics";
-import type { CronJobStatus } from "~/database/schema";
+import type { CronJobStatus, FlowStatus } from "~/database/schema";
 
-/** A single service's derived state, shared by HTTP/DNS/TCP/cron-job items. */
+/** A single service's derived state, shared by HTTP/DNS/TCP/flow/cron-job items. */
 export type ServiceStatus = "operational" | "degraded" | "down" | "unknown";
 
 /** Maps an HTTP monitor's 24h health badge onto the shared status scale. */
@@ -35,6 +35,21 @@ export function deriveDnsStatus(lastStatus: string | null): ServiceStatus {
 export function deriveTcpStatus(lastStatus: string | null): ServiceStatus {
 	if (lastStatus === "up") return "operational";
 	if (lastStatus === "timeout") return "degraded";
+	if (lastStatus === "down") return "down";
+	return "unknown";
+}
+
+/**
+ * Maps a flow monitor's cached last-run status onto the shared status scale. An `error` run
+ * is this app failing to find out — an unparseable spec, a host outside the team's verified
+ * domains, a run past its caps — not the customer's flow being broken, so it reads as
+ * `"unknown"` and never as an outage: `computeOverallStatus` drops it, leaving the page
+ * saying nothing about a service rather than telling that service's own users it is down for
+ * a reason that is ours. The same split the daily roll-up draws when it writes no row for a
+ * day of nothing but errors (ADR-027 §8).
+ */
+export function deriveFlowStatus(lastStatus: FlowStatus | null): ServiceStatus {
+	if (lastStatus === "up") return "operational";
 	if (lastStatus === "down") return "down";
 	return "unknown";
 }

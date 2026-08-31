@@ -19,12 +19,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
+import FlowMonitor from "~/app/data/flow-monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 interface NotifyCall {
-	helper: "tcp" | "dns" | "cron" | "ssl";
+	helper: "tcp" | "dns" | "cron" | "flow" | "ssl";
 	monitorId: string;
 	monitorName: string;
 	previousStatus: unknown;
@@ -54,6 +55,7 @@ function recordCall(helper: NotifyCall["helper"]) {
 let notifyTcpResultMock = vi.fn(recordCall("tcp"));
 let notifyDnsResultMock = vi.fn(recordCall("dns"));
 let notifyCronJobResultMock = vi.fn(recordCall("cron"));
+let notifyFlowResultMock = vi.fn(recordCall("flow"));
 let notifySslResultMock = vi.fn(recordCall("ssl"));
 
 /**
@@ -70,6 +72,7 @@ vi.doMock("~/app/services/alerts", () => ({
 	notifyTcpResult: notifyTcpResultMock,
 	notifyDnsResult: notifyDnsResultMock,
 	notifyCronJobResult: notifyCronJobResultMock,
+	notifyFlowResult: notifyFlowResultMock,
 	notifySslResult: notifySslResultMock,
 }));
 
@@ -109,6 +112,8 @@ beforeEach(() => {
 	notifyDnsResultMock.mockImplementation(recordCall("dns"));
 	notifyCronJobResultMock.mockReset();
 	notifyCronJobResultMock.mockImplementation(recordCall("cron"));
+	notifyFlowResultMock.mockReset();
+	notifyFlowResultMock.mockImplementation(recordCall("flow"));
 	notifySslResultMock.mockReset();
 	notifySslResultMock.mockImplementation(recordCall("ssl"));
 	notifyCalls = [];
@@ -252,6 +257,59 @@ describe("NotifyJob", () => {
 				monitorName: "Nightly backup",
 				previousStatus: "late",
 				payload: "missed",
+			},
+		]);
+	});
+
+	/**
+	 * The message carries two statuses and no failure, so the assertion the email quotes
+	 * exists only if this job reloads the result row the sweep wrote.
+	 */
+	test("dispatches a flow transition with the failing assertion reloaded from the result row", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await FlowMonitor.create(db, "team-1", {
+			name: "Checkout",
+			source: 'test "checkout" { }',
+			is_enabled: true,
+		});
+
+		await FlowMonitor.recordCheckResult(db, monitor.id, {
+			status: "down",
+			testsTotal: 4,
+			testsPassed: 2,
+			testsFailed: 1,
+			requestsMade: 3,
+			failedTest: "checkout accepts the coupon",
+			failedAtLine: 27,
+			failureDetail: "expected status 200, got 500",
+			durationMs: 1840,
+			errorMessage: null,
+		});
+
+		await runJob(db, {
+			type: "notify",
+			monitorType: "flow",
+			monitorId: monitor.id,
+			previousStatus: "up",
+			newStatus: "down",
+		});
+
+		expect(notifyCalls).toEqual([
+			{
+				helper: "flow",
+				monitorId: monitor.id,
+				monitorName: "Checkout",
+				previousStatus: "up",
+				payload: {
+					status: "down",
+					testsTotal: 4,
+					testsPassed: 2,
+					testsFailed: 1,
+					failedTest: "checkout accepts the coupon",
+					failedAtLine: 27,
+					failureDetail: "expected status 200, got 500",
+					durationMs: 1840,
+				},
 			},
 		]);
 	});

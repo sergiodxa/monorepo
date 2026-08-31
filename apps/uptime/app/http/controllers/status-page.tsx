@@ -4,6 +4,7 @@
  * monitor's current status and 90-day uptime bar into one page-level status,
  * cached per {@link withCachePolicy}. A DNS monitor's card always reports
  * whole-domain coverage in words, the fact a viewer of the page needs from it.
+ * A flow's card carries its name and nothing else it was written from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,6 +53,7 @@ import {
 	computeOverallStatus,
 	deriveCronStatus,
 	deriveDnsStatus,
+	deriveFlowStatus,
 	deriveHttpStatus,
 	deriveTcpStatus,
 } from "~/app/services/status-page";
@@ -157,11 +159,16 @@ export default createAction(
 
 		let attachments = await StatusPage.listAttachments(db, page.id);
 
-		let [allMonitors, allDnsMonitors, allTcpMonitors, allCronJobs, httpSummaries] =
+		let [allMonitors, allDnsMonitors, allTcpMonitors, allFlowMonitors, allCronJobs, httpSummaries] =
 			await Promise.all([
 				Monitor.listByTeam(db, page.team_id),
 				DnsMonitor.listByTeam(db, page.team_id),
 				TcpMonitor.listByTeam(db, page.team_id),
+				/**
+				 * Projected to `id`/`name`/`last_status` in the query itself: a flow's spec source
+				 * holds the credentials it signs in with, and this page renders to the world.
+				 */
+				StatusPage.listPublicFlowMonitors(db, page.team_id),
 				CronJobMonitor.listByTeam(db, page.team_id),
 				getTeamHttpSummaries(page.team_id),
 			]);
@@ -174,9 +181,10 @@ export default createAction(
 		let monitorsById = new Map(allMonitors.map((monitor) => [monitor.id, monitor]));
 		let dnsMonitorsById = new Map(allDnsMonitors.map((monitor) => [monitor.id, monitor]));
 		let tcpMonitorsById = new Map(allTcpMonitors.map((monitor) => [monitor.id, monitor]));
+		let flowMonitorsById = new Map(allFlowMonitors.map((monitor) => [monitor.id, monitor]));
 		let cronJobsById = new Map(allCronJobs.map((monitor) => [monitor.id, monitor]));
 
-		let [httpServices, dnsServices, tcpServices] = await Promise.all([
+		let [httpServices, dnsServices, tcpServices, flowServices] = await Promise.all([
 			Promise.all(
 				attachments.monitors
 					.flatMap((row) => {
@@ -219,6 +227,20 @@ export default createAction(
 						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp"),
 					})),
 			),
+			Promise.all(
+				attachments.flowMonitors
+					.flatMap((row) => {
+						let monitor = flowMonitorsById.get(row.flow_monitor_id);
+						return monitor ? [{ displayName: row.display_name, monitor }] : [];
+					})
+					.map(async ({ displayName, monitor }) => ({
+						kind: "flow" as const,
+						id: monitor.id,
+						name: publicName(displayName, monitor.name),
+						status: deriveFlowStatus(monitor.last_status),
+						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "flow"),
+					})),
+			),
 		]);
 
 		let cronServices = attachments.cronJobs
@@ -239,10 +261,11 @@ export default createAction(
 			...httpServices.map((service) => service.status),
 			...dnsServices.map((service) => service.status),
 			...tcpServices.map((service) => service.status),
+			...flowServices.map((service) => service.status),
 			...cronServices.map((service) => service.status),
 		]);
 
-		let barServices = [...httpServices, ...dnsServices, ...tcpServices];
+		let barServices = [...httpServices, ...dnsServices, ...tcpServices, ...flowServices];
 		let isEmpty = barServices.length === 0 && cronServices.length === 0;
 		let BannerIcon = BANNER_ICON[overallStatus];
 

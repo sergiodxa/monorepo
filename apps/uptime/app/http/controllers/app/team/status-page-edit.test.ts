@@ -36,7 +36,13 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, statusPages, teams } from "~/database/schema";
+import {
+	flowMonitors,
+	memberships,
+	statusPageFlowMonitors,
+	statusPages,
+	teams,
+} from "~/database/schema";
 import routes from "~/routes/web";
 
 /** The bindings the import chain captures on load, so they live at module scope. */
@@ -118,6 +124,45 @@ async function createFixture() {
 	);
 
 	return { db, team, membership };
+}
+
+/** Seeds a flow monitor whose source is exactly what the form must not carry. */
+async function createFlowMonitor(db: Database, teamId: string, name = "Sign in and check out") {
+	return await db.create(
+		flowMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name,
+			source: 'post "/session" { body: { password: "hunter2-secret" } }',
+			interval_seconds: 3600,
+			next_due_at: null,
+			is_enabled: true,
+			last_checked_at: null,
+			last_status: null,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** Creates a status page for the team, the subject of every case below. */
+async function createStatusPage(db: Database, teamId: string) {
+	return await db.create(
+		statusPages,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name: "Acme Status",
+			slug: `acme-${crypto.randomUUID()}`,
+			title: "Acme Status",
+			description: null,
+			logo_url: null,
+			custom_domain: null,
+			is_public: true,
+			show_overall_status: true,
+		},
+		{ touch: true, returnRow: true },
+	);
 }
 
 /** Sends a GET request through a minimal router mapping the status page edit route. */
@@ -205,6 +250,42 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 
 		expect(body).not.toMatch(/name="is_public"[^>]*\schecked/);
 		expect(body).toMatch(/name="show_overall_status"[^>]*\schecked/);
+	});
+
+	/**
+	 * A flow is picked by name like every other service; the spec it was written from is
+	 * credentialed and belongs nowhere near a form that curates a world-readable page.
+	 */
+	test("offers the team's flow monitors as checkboxes, by name only", async () => {
+		let { db, team, membership } = await createFixture();
+		let flow = await createFlowMonitor(db, team.id);
+		let page = await createStatusPage(db, team.id);
+
+		let body = await (await get(db, team, membership, page.id)).text();
+
+		expect(body).toContain("Sign in and check out");
+		expect(body).toMatch(new RegExp(`name="flow_monitor_ids"[^>]*value="${flow.id}"`));
+		expect(body).not.toContain("hunter2-secret");
+	});
+
+	test("pre-ticks the flow monitors already attached to the page", async () => {
+		let { db, team, membership } = await createFixture();
+		let attached = await createFlowMonitor(db, team.id);
+		let detached = await createFlowMonitor(db, team.id, "Reset a password");
+		let page = await createStatusPage(db, team.id);
+
+		await db.create(statusPageFlowMonitors, {
+			id: crypto.randomUUID(),
+			status_page_id: page.id,
+			flow_monitor_id: attached.id,
+			display_name: null,
+			order: 0,
+		});
+
+		let body = await (await get(db, team, membership, page.id)).text();
+
+		expect(body).toMatch(new RegExp(`value="${attached.id}"[^>]*\\schecked`));
+		expect(body).not.toMatch(new RegExp(`value="${detached.id}"[^>]*\\schecked`));
 	});
 
 	test("responds 404 for a status page id that doesn't belong to the team", async () => {

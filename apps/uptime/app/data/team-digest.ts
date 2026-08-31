@@ -19,6 +19,7 @@ import type { MonitorStatus } from "~/database/schema";
 import {
 	cronJobMonitors,
 	dnsMonitors,
+	flowMonitors,
 	memberships,
 	monitorDailyStats,
 	monitors,
@@ -68,7 +69,7 @@ const STAMP_COLUMN = {
 } as const satisfies Record<DigestPeriod, string>;
 
 /**
- * Every monitor a digest reports on, of all four types, as one relation of
+ * Every monitor a digest reports on, of every type, as one relation of
  * `(id, type, name, team_id)`. Shared by both queries so "which monitors count" has
  * one definition. Only enabled monitors qualify, so a digest lists what a team runs.
  */
@@ -77,6 +78,7 @@ const ENABLED_MONITORS = `
 	UNION ALL SELECT id, 'dns'  AS type, name, team_id FROM ${getTableName(dnsMonitors)} WHERE is_enabled = 1
 	UNION ALL SELECT id, 'tcp'  AS type, name, team_id FROM ${getTableName(tcpMonitors)} WHERE is_enabled = 1
 	UNION ALL SELECT id, 'cron' AS type, name, team_id FROM ${getTableName(cronJobMonitors)} WHERE enabled_at IS NOT NULL
+	UNION ALL SELECT id, 'flow' AS type, name, team_id FROM ${getTableName(flowMonitors)} WHERE is_enabled = 1
 `;
 
 /** One row of the report query: a monitor, and one of its days or none at all. */
@@ -153,7 +155,7 @@ export default class TeamDigest {
 
 		for (let row of rows) {
 			/**
-			 * Keyed on both, because the four monitor tables generate their ids independently and
+			 * Keyed on both, because the monitor tables generate their ids independently and
 			 * nothing stops one of them from reusing another's — the stats table records the pair
 			 * for the same reason.
 			 */

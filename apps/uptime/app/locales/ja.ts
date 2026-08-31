@@ -150,6 +150,11 @@ export default {
 					description:
 						"基本的なwebhookだけでなく、リッチな通知を備えたSlackとDiscordの直接統合を提供します。",
 				},
+				eighth: {
+					title: "フロー全体を監視",
+					description:
+						"複数のリクエストを順番に実行し、返ってきた内容を検証します。ログインしてトークンを読み取り、そのトークンで認可されたエンドポイントを呼び出す——単一のチェックでは問えないことを確かめられます。",
+				},
 			},
 		},
 
@@ -391,6 +396,11 @@ export default {
 					q: "どのリージョンからサービスを監視できますか？",
 					a: "Uptimeは複数のリージョンからの監視に対応しています：アフリカ、アジア太平洋、東ヨーロッパ、西ヨーロッパ、東北アメリカ、西北アメリカ、中東、オセアニア、南アメリカ。\n\nモニターごとに1つのリージョンを選択できます。リージョンはヒントとして扱われ、実際のpingはそのリージョン内またはその近くのサーバーから発信されます。",
 				},
+
+				twentieth: {
+					q: "ログインや購入手続きのフローを監視できますか？",
+					a: "はい。フローモニターは複数のリクエストを順番に実行し、その間にアサーションを挟みます。ログインして返ってきたトークンを読み取り、そのトークンで認可されたエンドポイントを呼び出す、といったことができます。フローはブラウザではなくHTTPレベルで実行され、チームが検証済みのドメインに対してのみ実行されます。",
+				},
 			},
 		},
 
@@ -419,6 +429,7 @@ export default {
 					teams: "チーム",
 					analytics: "分析",
 					api: "APIアクセス",
+					flowMonitors: "フローモニター",
 				},
 				useCases: {
 					title: "ユースケース",
@@ -429,6 +440,7 @@ export default {
 					cronJobs: "Cronジョブ監視",
 					microservices: "マイクロサービス",
 					healthChecks: "ヘルスチェック",
+					loginFlows: "ログインフロー監視",
 				},
 				solutions: {
 					title: "ソリューション",
@@ -964,6 +976,7 @@ export default {
 						statusPages: "ステータスページ",
 						tcpMonitors: "TCPモニター",
 						dnsMonitors: "DNSモニター",
+						flowMonitors: "フローモニター",
 						cronJobs: "Cronジョブ",
 						settings: "設定",
 						billing: "請求",
@@ -1292,6 +1305,10 @@ export default {
 				expiresAt: "有効期限",
 				records: "レコード",
 				findings: "変更点",
+				tests: "テスト",
+				failedTest: "失敗したテスト",
+				failureDetail: "失敗の内容",
+				duration: "所要時間",
 			},
 
 			values: {
@@ -1312,6 +1329,8 @@ export default {
 				},
 
 				dnsMoreFindings: "…ほか {{count}} 件",
+				flowTests: "{{total}}件中{{passed}}件成功",
+				flowFailedTest: "{{title}}（{{line}}行目）",
 			},
 
 			/** Said only where it applies: what a DNS diff means, not what it found. */
@@ -1340,6 +1359,7 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cron: "Cronジョブ",
+				flow: "フロー",
 			},
 
 			columns: {
@@ -1515,12 +1535,14 @@ export default {
 				dns: "DNS モニター",
 				tcp: "TCP モニター",
 				cron: "Cron ジョブ",
+				flow: "フローモニター",
 			},
 			allOfType: {
 				http: "すべての HTTP モニター",
 				dns: "すべての DNS モニター",
 				tcp: "すべての TCP モニター",
 				cron: "すべての Cron ジョブ",
+				flow: "すべてのフローモニター",
 			},
 		},
 	},
@@ -2033,6 +2055,15 @@ export default {
 						ok: "{{ok}} 正常",
 						changed: "{{changed}} 変更",
 						error: "{{error}} エラー",
+					},
+				},
+				flowMonitors: {
+					label: "フローモニター",
+					create: "新しいフローモニター",
+					breakdown: {
+						up: "{{up}} 成功",
+						down: "{{down}} 失敗",
+						error: "{{error}} 実行不可",
 					},
 				},
 				tcpMonitors: {
@@ -2806,6 +2837,7 @@ export default {
 						dns: "すべての DNS モニター",
 						tcp: "すべての TCP モニター",
 						cron: "すべての Cron ジョブ",
+						flow: "すべてのフローモニター",
 					},
 				},
 
@@ -4632,6 +4664,214 @@ export default {
 			},
 		},
 
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "フローモニター" },
+				action: { edit: "編集" },
+			},
+
+			info: {
+				status: "ステータス",
+				interval: "実行間隔",
+				lastChecked: "最終チェック",
+				enabled: "有効",
+			},
+
+			stats: {
+				passRate: { label: "成功率" },
+				avgDuration: { label: "平均所要時間" },
+				totalRuns: { label: "総実行回数" },
+			},
+
+			failure: {
+				title: "最後の失敗",
+				failedTest: "{{test}}が{{line}}行目で失敗しました。",
+			},
+
+			source: { title: "フロー" },
+
+			results: {
+				title: "実行履歴",
+				empty: "まだ実行されていません。",
+				label: "フローの実行",
+				columns: {
+					time: "時刻",
+					status: "ステータス",
+					tests: "テスト",
+					requests: "リクエスト",
+					duration: "所要時間",
+				},
+			},
+		},
+
+		flowMonitors: {
+			header: {
+				title: "フローモニター",
+				action: { create: "作成" },
+			},
+
+			empty: {
+				title: "フローモニターがありません",
+				description:
+					"フローモニターは複数のリクエストを順番に実行し、返ってきた内容を検証します。ログインしてトークンを読み取り、そのトークンで認可されたエンドポイントを呼び出す——単一のリクエストでは答えられない問いに答えます。",
+				cta: "最初のフローモニターを作成",
+			},
+
+			table: {
+				label: "フローモニター",
+				columns: {
+					name: "名前",
+					interval: "間隔",
+					status: "ステータス",
+					lastChecked: "最終チェック",
+					actions: "アクション",
+				},
+				status: {
+					pending: "未チェック",
+					up: "成功",
+					down: "失敗",
+					error: "実行不可",
+					disabled: "無効",
+				},
+				actions: {
+					menu: "アクションメニュー",
+					view: "表示",
+					edit: "編集",
+					delete: "削除",
+					confirmation: {
+						delete: "フローモニター{{name}}を削除してもよろしいですか？この操作は取り消せません。",
+					},
+				},
+			},
+
+			run: {
+				cta: "今すぐ実行",
+				toast: {
+					up: "{{name}}が成功しました",
+					down: "{{name}}が失敗しました",
+					error: "{{name}}を実行できませんでした",
+					refused: "{{name}}は実行されませんでした",
+					summary:
+						"{{total}}件中{{passed}}件のテストが成功、{{requests}}リクエスト、{{duration}}ms。",
+					failedTest: "失敗：{{test}}（{{line}}行目）。",
+				},
+			},
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "フローモニターを作成",
+				breadcrumb: { flowMonitors: "フローモニター" },
+			},
+
+			form: {
+				cta: "フローモニターを作成",
+				sections: {
+					basics: {
+						title: "フロー",
+						description: "このフローが何をするか、どのくらいの頻度で実行するかを設定します。",
+					},
+				},
+				fields: {
+					name: {
+						label: "モニター名",
+						placeholder: "ログインしてダッシュボードを開く",
+						description: "このフローの説明的な名前。",
+					},
+					source: {
+						label: "フロー",
+						placeholder: 'test "メンバーがログインできる" { when { … } then { … } }',
+						description:
+							"リクエストと、その間に挟むアサーションです。検証済みドメインと照合できるよう、すべてのURLをここに記述する必要があります。",
+						verifiedDomains:
+							"このフローがアクセスできる範囲：{{domains}} — およびそのサブドメイン。",
+						noVerifiedDomains:
+							"このチームには検証済みドメインがないため、まだフローを実行できません。先にチーム設定でドメインを検証してください。",
+					},
+					interval: {
+						label: "実行間隔",
+						description:
+							"このフローを実行する頻度です。1回の実行につき、送信するリクエストごとに1チェック分が課金されるため、間隔を短くするほど費用が増えます。",
+						options: {
+							"900": "15分",
+							"1800": "30分",
+							"3600": "1時間",
+							"10800": "3時間",
+							"21600": "6時間",
+							"43200": "12時間",
+							"86400": "1日",
+						},
+					},
+					isEnabled: { label: "有効" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "フローモニターを編集",
+				breadcrumb: { flowMonitors: "フローモニター" },
+			},
+
+			lastRun: {
+				title: "前回の実行",
+				description: "このフローが前回実行されたときの結果です。",
+				summary:
+					"{{total}}件中{{passed}}件のテストが成功、{{requests}}リクエスト、{{duration}}ms。",
+				failedTest: "失敗：{{test}}（{{line}}行目）。",
+			},
+
+			form: {
+				cta: "変更を保存",
+				cancel: "キャンセル",
+				sections: {
+					settings: {
+						title: "フロー",
+						description: "このフローが何をするか、どのくらいの頻度で実行するかを設定します。",
+					},
+				},
+				fields: {
+					name: {
+						label: "モニター名",
+						placeholder: "ログインしてダッシュボードを開く",
+						description: "このフローの説明的な名前。",
+					},
+					source: {
+						label: "フロー",
+						placeholder: 'test "メンバーがログインできる" { when { … } then { … } }',
+						description:
+							"リクエストと、その間に挟むアサーションです。検証済みドメインと照合できるよう、すべてのURLをここに記述する必要があります。",
+						verifiedDomains:
+							"このフローがアクセスできる範囲：{{domains}} — およびそのサブドメイン。",
+						noVerifiedDomains:
+							"このチームには検証済みドメインがないため、まだフローを実行できません。先にチーム設定でドメインを検証してください。",
+					},
+					interval: {
+						label: "実行間隔",
+						description:
+							"このフローを実行する頻度です。1回の実行につき、送信するリクエストごとに1チェック分が課金されるため、間隔を短くするほど費用が増えます。",
+						options: {
+							"900": "15分",
+							"1800": "30分",
+							"3600": "1時間",
+							"10800": "3時間",
+							"21600": "6時間",
+							"43200": "12時間",
+							"86400": "1日",
+						},
+					},
+					isEnabled: { label: "有効" },
+				},
+			},
+
+			danger: {
+				title: "危険ゾーン",
+				sectionDescription: "このフローモニターに対する取り消せない操作です。",
+				warning: "このフローモニターを削除すると、記録されたすべての実行結果も削除されます。",
+				description: "この操作は取り消せません。",
+				cta: "フローモニターを削除",
+			},
+		},
 		tcpMonitors: {
 			header: {
 				title: "TCPモニター",
@@ -4957,6 +5197,9 @@ export default {
 							"dns-monitors:write": "DNSモニターを作成・更新・削除します。",
 							"tcp-monitors:read": "TCPモニターと記録された接続結果を一覧表示して読み取ります。",
 							"tcp-monitors:write": "TCPモニターを作成・更新・削除します。",
+							"flow-monitors:read":
+								"フローモニターと各実行の結果を一覧表示して読み取ります。フローのソースにはログインに使う認証情報が含まれるため、返されることはありません。",
+							"flow-monitors:write": "フローモニターを作成・更新・削除します。",
 							"alerts:read":
 								"アラートと発生したイベントを一覧表示して読み取ります。WebhookのURLなどチャネルの秘密情報が返されることはありません。",
 							"alerts:write":

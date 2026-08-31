@@ -34,7 +34,7 @@ const INTERVAL_VALUES = FLOW_INTERVALS_SECONDS.map(String) as [string, ...string
  * ceiling already bounds what a source can usefully say — present only so a pasted file
  * cannot become a row that renders nothing.
  */
-const MAX_SOURCE_LENGTH = 20_000;
+export const MAX_SOURCE_LENGTH = 20_000;
 
 /** Field shape shared by the create and update forms, minus `is_enabled`. */
 const flowMonitorFields = {

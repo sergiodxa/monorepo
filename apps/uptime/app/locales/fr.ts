@@ -151,6 +151,11 @@ export default {
 					description:
 						"Intégrations directes Slack et Discord avec des notifications enrichies, pas seulement des webhooks basiques.",
 				},
+				eighth: {
+					title: "Surveillez des flux entiers",
+					description:
+						"Exécutez plusieurs requêtes dans l'ordre et vérifiez ce qui revient : connectez-vous, lisez le jeton, appelez le point de terminaison qu'il autorise. La question qu'une vérification isolée ne peut pas poser.",
+				},
 			},
 		},
 
@@ -402,6 +407,11 @@ export default {
 					q: "Depuis quelles régions puis-je surveiller mes services ?",
 					a: "Uptime prend en charge la surveillance depuis plusieurs régions : Afrique, Asie-Pacifique, Europe de l'Est et de l'Ouest, Amérique du Nord de l'Est et de l'Ouest, Moyen-Orient, Océanie et Amérique du Sud.\n\nVous pouvez choisir une région par moniteur. La région est traitée comme une indication, le ping réel proviendra d'un serveur dans ou près de cette région.",
 				},
+
+				twentieth: {
+					q: "Puis-je surveiller un flux de connexion ou de paiement ?",
+					a: "Oui. Un moniteur de flux exécute plusieurs requêtes dans l'ordre, avec des assertions entre elles : il peut se connecter, relire le jeton obtenu et appeler le point de terminaison que ce jeton autorise. Un flux s'exécute au niveau HTTP et non dans un navigateur, et uniquement vers des domaines que votre équipe a vérifiés.",
+				},
 			},
 		},
 
@@ -430,6 +440,7 @@ export default {
 					teams: "Équipes",
 					analytics: "Analytique",
 					api: "Accès API",
+					flowMonitors: "Moniteurs de flux",
 				},
 				useCases: {
 					title: "Cas d'utilisation",
@@ -440,6 +451,7 @@ export default {
 					cronJobs: "Surveillance Cron Jobs",
 					microservices: "Microservices",
 					healthChecks: "Health checks",
+					loginFlows: "Surveillance des flux de connexion",
 				},
 				solutions: {
 					title: "Solutions",
@@ -1003,6 +1015,7 @@ export default {
 						statusPages: "Pages de statut",
 						tcpMonitors: "Moniteurs TCP",
 						dnsMonitors: "Moniteurs DNS",
+						flowMonitors: "Moniteurs de flux",
 						cronJobs: "Cron Jobs",
 						settings: "Paramètres",
 						billing: "Facturation",
@@ -1332,6 +1345,10 @@ export default {
 				expiresAt: "Expire le",
 				records: "Enregistrements",
 				findings: "Ce qui a changé",
+				tests: "Tests",
+				failedTest: "Test en échec",
+				failureDetail: "Ce qui a échoué",
+				duration: "Durée",
 			},
 
 			values: {
@@ -1352,6 +1369,8 @@ export default {
 				},
 
 				dnsMoreFindings: "… et {{count}} de plus",
+				flowTests: "{{passed}} sur {{total}} réussis",
+				flowFailedTest: "{{title}} (ligne {{line}})",
 			},
 
 			/** Explains what a DNS diff means, shown only where that meaning is needed. */
@@ -1380,6 +1399,7 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cron: "Cron job",
+				flow: "Flux",
 			},
 
 			columns: {
@@ -1567,12 +1587,14 @@ export default {
 				dns: "Moniteurs DNS",
 				tcp: "Moniteurs TCP",
 				cron: "Tâches planifiées",
+				flow: "Moniteurs de flux",
 			},
 			allOfType: {
 				http: "Tous les moniteurs HTTP",
 				dns: "Tous les moniteurs DNS",
 				tcp: "Tous les moniteurs TCP",
 				cron: "Toutes les tâches planifiées",
+				flow: "Tous les moniteurs de flux",
 			},
 		},
 	},
@@ -2097,6 +2119,15 @@ export default {
 						ok: "{{ok}} ok",
 						changed: "{{changed}} modifiés",
 						error: "{{error}} erreur",
+					},
+				},
+				flowMonitors: {
+					label: "Moniteurs de flux",
+					create: "Nouveau moniteur de flux",
+					breakdown: {
+						up: "{{up}} réussis",
+						down: "{{down}} en échec",
+						error: "{{error}} non exécutables",
 					},
 				},
 				tcpMonitors: {
@@ -2887,6 +2918,7 @@ export default {
 						dns: "Tous les moniteurs DNS",
 						tcp: "Tous les moniteurs TCP",
 						cron: "Toutes les tâches planifiées",
+						flow: "Tous les moniteurs de flux",
 					},
 				},
 
@@ -4747,6 +4779,212 @@ export default {
 			},
 		},
 
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "Moniteurs de flux" },
+				action: { edit: "Modifier" },
+			},
+
+			info: {
+				status: "Statut",
+				interval: "S'exécute toutes les",
+				lastChecked: "Dernière vérification",
+				enabled: "Activé",
+			},
+
+			stats: {
+				passRate: { label: "Taux de réussite" },
+				avgDuration: { label: "Durée moy." },
+				totalRuns: { label: "Total des exécutions" },
+			},
+
+			failure: {
+				title: "Dernier échec",
+				failedTest: "{{test}} a échoué à la ligne {{line}}.",
+			},
+
+			source: { title: "Flux" },
+
+			results: {
+				title: "Exécutions",
+				empty: "Aucune exécution pour l'instant.",
+				label: "Exécutions du flux",
+				columns: {
+					time: "Heure",
+					status: "Statut",
+					tests: "Tests",
+					requests: "Requêtes",
+					duration: "Durée",
+				},
+			},
+		},
+
+		flowMonitors: {
+			header: {
+				title: "Moniteurs de flux",
+				action: { create: "Créer" },
+			},
+
+			empty: {
+				title: "Pas encore de moniteurs de flux",
+				description:
+					"Un moniteur de flux exécute plusieurs requêtes dans l'ordre et vérifie ce qui revient : il se connecte, lit le jeton, puis appelle le point de terminaison que ce jeton autorise. Il répond à la question qu'une requête isolée ne peut pas poser.",
+				cta: "Créez votre premier moniteur de flux",
+			},
+
+			table: {
+				label: "Moniteurs de flux",
+				columns: {
+					name: "Nom",
+					interval: "Toutes les",
+					status: "Statut",
+					lastChecked: "Dernière vérification",
+					actions: "Actions",
+				},
+				status: {
+					pending: "Pas encore vérifié",
+					up: "Réussi",
+					down: "En échec",
+					error: "Non exécutable",
+					disabled: "Désactivé",
+				},
+				actions: {
+					menu: "Menu d'actions",
+					view: "Voir",
+					edit: "Modifier",
+					delete: "Supprimer",
+					confirmation: {
+						delete:
+							"Êtes-vous sûr de vouloir supprimer le moniteur de flux {{name}} ? Cette action est irréversible.",
+					},
+				},
+			},
+
+			run: {
+				cta: "Exécuter maintenant",
+				toast: {
+					up: "{{name}} réussi",
+					down: "{{name}} en échec",
+					error: "{{name}} n'a pas pu être exécuté",
+					refused: "{{name}} n'a pas été exécuté",
+					summary: "{{passed}} tests sur {{total}} réussis, {{requests}} requêtes, {{duration}}ms.",
+					failedTest: "Échec : {{test}} (ligne {{line}}).",
+				},
+			},
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "Créer un moniteur de flux",
+				breadcrumb: { flowMonitors: "Moniteurs de flux" },
+			},
+
+			form: {
+				cta: "Créer le moniteur de flux",
+				sections: {
+					basics: {
+						title: "Flux",
+						description: "Ce que fait ce flux, et à quelle fréquence il s'exécute.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Nom du moniteur",
+						placeholder: "Se connecter et charger le tableau de bord",
+						description: "Un nom descriptif pour ce flux.",
+					},
+					source: {
+						label: "Flux",
+						placeholder: 'test "un membre peut se connecter" { when { … } then { … } }',
+						description:
+							"Les requêtes et les assertions entre elles. Chaque URL doit être écrite ici afin de pouvoir être confrontée à vos domaines vérifiés.",
+						verifiedDomains: "Ce flux peut atteindre : {{domains}} — et leurs sous-domaines.",
+						noVerifiedDomains:
+							"Cette équipe n'a aucun domaine vérifié, aucun flux ne peut donc encore s'exécuter. Vérifiez d'abord un domaine dans les paramètres de l'équipe.",
+					},
+					interval: {
+						label: "Exécuter toutes les",
+						description:
+							"À quelle fréquence ce flux s'exécute. Chaque exécution facture une vérification par requête effectuée, un intervalle plus court coûte donc plus cher.",
+						options: {
+							"900": "15 minutes",
+							"1800": "30 minutes",
+							"3600": "1 heure",
+							"10800": "3 heures",
+							"21600": "6 heures",
+							"43200": "12 heures",
+							"86400": "1 jour",
+						},
+					},
+					isEnabled: { label: "Activé" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "Modifier le moniteur de flux",
+				breadcrumb: { flowMonitors: "Moniteurs de flux" },
+			},
+
+			lastRun: {
+				title: "Dernière exécution",
+				description: "Ce que ce flux a conclu lors de sa dernière exécution.",
+				summary: "{{passed}} tests sur {{total}} réussis, {{requests}} requêtes, {{duration}}ms.",
+				failedTest: "Échec : {{test}} (ligne {{line}}).",
+			},
+
+			form: {
+				cta: "Enregistrer les modifications",
+				cancel: "Annuler",
+				sections: {
+					settings: {
+						title: "Flux",
+						description: "Ce que fait ce flux, et à quelle fréquence il s'exécute.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Nom du moniteur",
+						placeholder: "Se connecter et charger le tableau de bord",
+						description: "Un nom descriptif pour ce flux.",
+					},
+					source: {
+						label: "Flux",
+						placeholder: 'test "un membre peut se connecter" { when { … } then { … } }',
+						description:
+							"Les requêtes et les assertions entre elles. Chaque URL doit être écrite ici afin de pouvoir être confrontée à vos domaines vérifiés.",
+						verifiedDomains: "Ce flux peut atteindre : {{domains}} — et leurs sous-domaines.",
+						noVerifiedDomains:
+							"Cette équipe n'a aucun domaine vérifié, aucun flux ne peut donc encore s'exécuter. Vérifiez d'abord un domaine dans les paramètres de l'équipe.",
+					},
+					interval: {
+						label: "Exécuter toutes les",
+						description:
+							"À quelle fréquence ce flux s'exécute. Chaque exécution facture une vérification par requête effectuée, un intervalle plus court coûte donc plus cher.",
+						options: {
+							"900": "15 minutes",
+							"1800": "30 minutes",
+							"3600": "1 heure",
+							"10800": "3 heures",
+							"21600": "6 heures",
+							"43200": "12 heures",
+							"86400": "1 jour",
+						},
+					},
+					isEnabled: { label: "Activé" },
+				},
+			},
+
+			danger: {
+				title: "Zone de danger",
+				sectionDescription: "Actions irréversibles pour ce moniteur de flux.",
+				warning:
+					"Supprimer ce moniteur de flux supprime également tous les résultats qu'il a enregistrés.",
+				description: "Cette action est irréversible.",
+				cta: "Supprimer le moniteur de flux",
+			},
+		},
 		tcpMonitors: {
 			header: {
 				title: "Moniteurs TCP",
@@ -5076,6 +5314,9 @@ export default {
 							"tcp-monitors:read":
 								"Lister et lire les moniteurs TCP et les résultats de connexion qu'ils ont enregistrés.",
 							"tcp-monitors:write": "Créer, modifier et supprimer des moniteurs TCP.",
+							"flow-monitors:read":
+								"Lister et lire les moniteurs de flux et les résultats de leurs exécutions. Le code du flux n'est jamais renvoyé, car il contient les identifiants avec lesquels le flux se connecte.",
+							"flow-monitors:write": "Créer, modifier et supprimer des moniteurs de flux.",
 							"alerts:read":
 								"Lister et lire les alertes et les événements qu'elles ont déclenchés. Les URL de webhook et autres secrets de canal ne sont jamais renvoyés.",
 							"alerts:write":

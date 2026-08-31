@@ -1,6 +1,6 @@
 /**
  * Data-access model for status pages: CRUD, slug uniqueness, and curating which
- * HTTP/DNS/TCP monitors and cron-job monitors a page shows and in what order. Curation
+ * HTTP/DNS/TCP/flow monitors and cron-job monitors a page shows and in what order. Curation
  * replaces the full attached set each time — the form posts the complete selection, so
  * a delete plus a bulk insert says everything a diff would.
  *
@@ -11,12 +11,15 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
+import { getTableName } from "remix/data-table";
 
-import type { InsertStatusPage } from "~/database/schema";
+import type { FlowStatus, InsertStatusPage } from "~/database/schema";
 
 import {
+	flowMonitors,
 	statusPageCronJobs,
 	statusPageDnsMonitors,
+	statusPageFlowMonitors,
 	statusPageMonitors,
 	statusPages,
 	statusPageTcpMonitors,
@@ -27,7 +30,19 @@ export interface StatusPageAttachedIds {
 	monitorIds: string[];
 	dnsMonitorIds: string[];
 	tcpMonitorIds: string[];
+	flowMonitorIds: string[];
 	cronJobIds: string[];
+}
+
+/**
+ * A flow monitor as a public status page is allowed to know it. The spec `source` holds the
+ * credentials the flow signs in with, so this path never selects the column at all rather
+ * than selecting it and trusting every later hop to drop it (ADR-027 §8).
+ */
+export interface PublicFlowMonitor {
+	id: string;
+	name: string;
+	last_status: FlowStatus | null;
 }
 
 export default class StatusPage {
@@ -74,6 +89,7 @@ export default class StatusPage {
 		await db.deleteMany(statusPageMonitors, { where: { status_page_id: statusPageId } });
 		await db.deleteMany(statusPageDnsMonitors, { where: { status_page_id: statusPageId } });
 		await db.deleteMany(statusPageTcpMonitors, { where: { status_page_id: statusPageId } });
+		await db.deleteMany(statusPageFlowMonitors, { where: { status_page_id: statusPageId } });
 		await db.deleteMany(statusPageCronJobs, { where: { status_page_id: statusPageId } });
 		return await db.delete(statusPages, statusPageId);
 	}
@@ -122,6 +138,21 @@ export default class StatusPage {
 		);
 	}
 
+	/** Replaces the full set of flow monitors attached to a page, in the given order. */
+	static async setFlowMonitors(db: Database, statusPageId: string, flowMonitorIds: string[]) {
+		await db.deleteMany(statusPageFlowMonitors, { where: { status_page_id: statusPageId } });
+		if (flowMonitorIds.length === 0) return;
+		await db.createMany(
+			statusPageFlowMonitors,
+			flowMonitorIds.map((flowMonitorId, order) => ({
+				id: generateUUID(),
+				status_page_id: statusPageId,
+				flow_monitor_id: flowMonitorId,
+				order,
+			})),
+		);
+	}
+
 	/** Replaces the full set of cron-job monitors attached to a page, in the given order. */
 	static async setCronJobs(db: Database, statusPageId: string, cronJobIds: string[]) {
 		await db.deleteMany(statusPageCronJobs, { where: { status_page_id: statusPageId } });
@@ -136,12 +167,13 @@ export default class StatusPage {
 		);
 	}
 
-	/** The ids of every monitor/DNS/TCP/cron-job currently attached to a page, for pre-filling an edit form. */
+	/** The ids of every monitor/DNS/TCP/flow/cron-job currently attached to a page, for pre-filling an edit form. */
 	static async getAttachedIds(db: Database, statusPageId: string): Promise<StatusPageAttachedIds> {
-		let [monitors, dnsMonitors, tcpMonitors, cronJobs] = await Promise.all([
+		let [monitors, dnsMonitors, tcpMonitors, flows, cronJobs] = await Promise.all([
 			db.findMany(statusPageMonitors, { where: { status_page_id: statusPageId } }),
 			db.findMany(statusPageDnsMonitors, { where: { status_page_id: statusPageId } }),
 			db.findMany(statusPageTcpMonitors, { where: { status_page_id: statusPageId } }),
+			db.findMany(statusPageFlowMonitors, { where: { status_page_id: statusPageId } }),
 			db.findMany(statusPageCronJobs, { where: { status_page_id: statusPageId } }),
 		]);
 
@@ -149,13 +181,14 @@ export default class StatusPage {
 			monitorIds: monitors.map((row) => row.monitor_id),
 			dnsMonitorIds: dnsMonitors.map((row) => row.dns_monitor_id),
 			tcpMonitorIds: tcpMonitors.map((row) => row.tcp_monitor_id),
+			flowMonitorIds: flows.map((row) => row.flow_monitor_id),
 			cronJobIds: cronJobs.map((row) => row.cron_job_monitor_id),
 		};
 	}
 
-	/** Ordered join rows for the public page: which monitors/DNS/TCP/cron-jobs to show, in curated order. */
+	/** Ordered join rows for the public page: which monitors/DNS/TCP/flow/cron-jobs to show, in curated order. */
 	static async listAttachments(db: Database, statusPageId: string) {
-		let [monitors, dnsMonitors, tcpMonitors, cronJobs] = await Promise.all([
+		let [monitors, dnsMonitors, tcpMonitors, flows, cronJobs] = await Promise.all([
 			db.findMany(statusPageMonitors, {
 				where: { status_page_id: statusPageId },
 				orderBy: ["order", "asc"],
@@ -168,12 +201,31 @@ export default class StatusPage {
 				where: { status_page_id: statusPageId },
 				orderBy: ["order", "asc"],
 			}),
+			db.findMany(statusPageFlowMonitors, {
+				where: { status_page_id: statusPageId },
+				orderBy: ["order", "asc"],
+			}),
 			db.findMany(statusPageCronJobs, {
 				where: { status_page_id: statusPageId },
 				orderBy: ["order", "asc"],
 			}),
 		]);
 
-		return { monitors, dnsMonitors, tcpMonitors, cronJobs };
+		return { monitors, dnsMonitors, tcpMonitors, flowMonitors: flows, cronJobs };
+	}
+
+	/**
+	 * A team's flow monitors as the public page may know them, keyed by id at the call site.
+	 * Spelled as an explicit projection rather than reusing `FlowMonitor.listByTeam` so the
+	 * credentialed `source` is never fetched on a path that renders to the world: a leak would
+	 * have to be written into this `SELECT`, not merely forgotten downstream.
+	 */
+	static async listPublicFlowMonitors(db: Database, teamId: string): Promise<PublicFlowMonitor[]> {
+		let result = await db.exec(
+			`SELECT id, name, last_status FROM ${getTableName(flowMonitors)} WHERE team_id = ?`,
+			[teamId],
+		);
+
+		return (result.rows ?? []) as unknown as PublicFlowMonitor[];
 	}
 }

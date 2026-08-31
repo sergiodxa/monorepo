@@ -18,10 +18,13 @@ import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
+import FlowMonitor from "~/app/data/flow-monitor";
 import {
 	dnsAlertResultFromRecords,
+	flowAlertResultFromResult,
 	notifyCronJobResult,
 	notifyDnsResult,
+	notifyFlowResult,
 	notifySslResult,
 	notifyTcpResult,
 } from "~/app/services/alerts";
@@ -30,6 +33,8 @@ import {
 	cronJobMonitors,
 	cronJobStatuses,
 	dnsMonitors,
+	flowMonitors,
+	flowStatuses,
 	monitors,
 	tcpMonitors,
 } from "~/database/schema";
@@ -46,7 +51,7 @@ const SSL_STATUSES = ["unknown", "valid", "expiring", "expired", "error"] as con
  */
 const NotifyJobSchema = s.object({
 	monitorId: s.string(),
-	monitorType: s.enum_(["dns", "tcp", "cron", "ssl"]),
+	monitorType: s.enum_(["dns", "tcp", "cron", "flow", "ssl"]),
 	previousStatus: s.nullable(s.string()),
 	newStatus: s.string(),
 });
@@ -172,6 +177,28 @@ export class NotifyJob extends Job {
 
 				let { previous, current } = parseStatuses(job, cronJobStatuses);
 				await notifyCronJobResult(db, mailer, monitor, previous, current);
+				return true;
+			}
+
+			case "flow": {
+				let monitor = await db.findOne(flowMonitors, { where: { id: job.monitorId } });
+				if (!monitor) return false;
+
+				let { previous, current } = parseStatuses(job, flowStatuses);
+
+				/**
+				 * The failing assertion is reloaded from the run's own history row rather than
+				 * carried in the message, so a redelivery quotes what the check actually recorded
+				 * instead of a copy that has been sitting on the queue.
+				 */
+				let [result] = await FlowMonitor.listResults(db, monitor.id, 1);
+				await notifyFlowResult(
+					db,
+					mailer,
+					monitor,
+					previous,
+					flowAlertResultFromResult(current, result),
+				);
 				return true;
 			}
 

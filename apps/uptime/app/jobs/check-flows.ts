@@ -15,12 +15,16 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
 import type { ClaimedFlowMonitor } from "~/app/data/flow-monitor";
+import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { BillablePing } from "~/app/services/ping-meter";
+import type { FlowStatus } from "~/database/schema";
 
 import FlowMonitor from "~/app/data/flow-monitor";
 import Team from "~/app/data/team";
 import TeamDomain from "~/app/data/team-domain";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { enqueueNotifications } from "~/app/lib/notify-queue";
+import { shouldNotifyFlowResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { runFlowCheck } from "~/app/services/flow-check";
@@ -32,6 +36,8 @@ interface CheckedMonitor {
 	resultId: string;
 	/** HTTP requests the run made, and therefore how many pings it bills. */
 	requestsMade: number;
+	/** The alert this run's outcome warrants, or `null` when it warrants none. */
+	notification: NotifyMessage | null;
 }
 
 export class CheckFlowsJob extends Job {
@@ -58,6 +64,7 @@ export class CheckFlowsJob extends Job {
 			TeamDomain.verifiedHostnamesByTeamIds(db, teamIds),
 		]);
 
+		let notifications: NotifyMessage[] = [];
 		let pings: BillablePing[] = [];
 		let successCount = 0;
 		let errorCount = 0;
@@ -77,6 +84,8 @@ export class CheckFlowsJob extends Job {
 			}
 
 			successCount++;
+			if (outcome.value.notification !== null) notifications.push(outcome.value.notification);
+
 			/** A run that sent nothing bills nothing, so there is no event to derive. */
 			if (outcome.value.requestsMade === 0) continue;
 
@@ -110,6 +119,7 @@ export class CheckFlowsJob extends Job {
 			}
 		}
 
+		await enqueueNotifications(notifications);
 		/** Every ping in one call, so a sweep of twenty flows costs one subrequest. */
 		await ingestPings(polar, pings);
 
@@ -117,20 +127,24 @@ export class CheckFlowsJob extends Job {
 			total: monitors.length,
 			successCount,
 			errorCount,
+			notified: notifications.length,
 			ingested: pings.length,
 		});
 	}
 
 	/**
-	 * Runs one monitor's spec and records its result. Throwing here marks the
-	 * monitor failed, so callers bill unconditionally — `runFlowCheck` never
-	 * throws, resolving bad specs or unverified hosts to an `error` result instead.
+	 * Runs one monitor's spec and records its result, reading `last_status` before the
+	 * write so a recovery is detectable. Throwing here marks the monitor failed, so
+	 * callers bill unconditionally — `runFlowCheck` never throws, resolving bad specs or
+	 * unverified hosts to an `error` result instead.
 	 */
 	private async check(
 		db: Database,
 		monitor: ClaimedFlowMonitor,
 		verifiedDomains: readonly string[],
 	): Promise<CheckedMonitor> {
+		/** The column is declared as a plain text enum, so its value set is asserted here. */
+		let previousStatus = monitor.last_status as FlowStatus | null;
 		let result = await runFlowCheck({ source: monitor.source, verifiedDomains });
 		let resultId = await FlowMonitor.recordCheckResult(db, monitor.id, result);
 
@@ -147,6 +161,24 @@ export class CheckFlowsJob extends Job {
 			responseTimeMs: result.durationMs ?? 0,
 		});
 
-		return { resultId, requestsMade: result.requestsMade };
+		if (!shouldNotifyFlowResult(previousStatus, result.status))
+			return { resultId, requestsMade: result.requestsMade, notification: null };
+
+		/**
+		 * Ids and statuses only, per the queue's contract: the consumer rebuilds the failing
+		 * assertion from the result row this check just wrote, so a message read later
+		 * quotes what was actually recorded.
+		 */
+		return {
+			resultId,
+			requestsMade: result.requestsMade,
+			notification: {
+				type: "notify",
+				monitorType: "flow",
+				monitorId: monitor.id,
+				previousStatus,
+				newStatus: result.status,
+			},
+		};
 	}
 }

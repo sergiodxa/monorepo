@@ -355,6 +355,97 @@ describe("AlertEmail", () => {
 		expect(instants(text)).toContain("Next expected Aug 1, 2026 at 9:50 AM UTC");
 	});
 
+	/**
+	 * Asserted through the keys the body asks for rather than the rendered words, since the
+	 * failure detail is the customer's own text and the labels around it are copy a
+	 * translator owns.
+	 */
+	test("quotes the assertion a flow failed on, with its line and the formatted detail", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "flow",
+			t: asked.t,
+			snapshot: {
+				type: "flow",
+				status: "down",
+				testsTotal: 4,
+				testsPassed: 2,
+				testsFailed: 1,
+				failedTest: "checkout accepts the coupon",
+				failedAtLine: 27,
+				failureDetail: "expected status 200, got 500",
+				durationMs: 1840,
+			},
+		});
+
+		let { text } = await render(email.body());
+
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.flowTests",
+			options: { passed: 2, total: 4 },
+		});
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.flowFailedTest",
+			options: { title: "checkout accepts the coupon", line: 27 },
+		});
+		expect(text).toContain("expected status 200, got 500");
+	});
+
+	test("names the failing test alone when the run could not place it on a line", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "flow",
+			t: asked.t,
+			snapshot: {
+				type: "flow",
+				status: "down",
+				testsTotal: 1,
+				testsPassed: 0,
+				testsFailed: 1,
+				failedTest: "checkout accepts the coupon",
+				failedAtLine: null,
+				failureDetail: null,
+				durationMs: null,
+			},
+		});
+
+		let { text } = await render(email.body());
+
+		let keys = asked.calls.map((call) => call.key);
+		expect(keys).not.toContain("emails.alert.values.flowFailedTest");
+		expect(text).toContain("checkout accepts the coupon");
+	});
+
+	test("reports a recovered flow without a failure to quote", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "flow",
+			eventType: "up",
+			t: asked.t,
+			snapshot: {
+				type: "flow",
+				status: "up",
+				testsTotal: 4,
+				testsPassed: 4,
+				testsFailed: 0,
+				failedTest: null,
+				failedAtLine: null,
+				failureDetail: null,
+				durationMs: 1200,
+			},
+		});
+
+		await render(email.body());
+
+		let keys = asked.calls.map((call) => call.key);
+		expect(keys).not.toContain("emails.alert.fields.failedTest");
+		expect(keys).not.toContain("emails.alert.fields.failureDetail");
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.milliseconds",
+			options: { value: 1200 },
+		});
+	});
+
 	test("reports a certificate's own detail", async () => {
 		let email = await makeEmail({
 			monitorType: "ssl",

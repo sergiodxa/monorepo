@@ -24,6 +24,8 @@ import type {
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
 	SelectDnsMonitorRecord,
+	SelectFlowMonitor,
+	SelectFlowMonitorResult,
 	SelectMonitor,
 	SelectTcpMonitor,
 } from "~/database/schema";
@@ -83,13 +85,16 @@ let {
 	dispatchAlerts,
 	dnsAlertResultFromDiff,
 	dnsAlertResultFromRecords,
+	flowAlertResultFromResult,
 	notifyCronJobResult,
 	notifyDnsResult,
+	notifyFlowResult,
 	notifyHttpResult,
 	notifySslResult,
 	notifyTcpResult,
 	shouldNotifyCronJobResult,
 	shouldNotifyDnsResult,
+	shouldNotifyFlowResult,
 	shouldNotifyTcpResult,
 } = await import("~/app/services/alerts");
 
@@ -1905,6 +1910,204 @@ describe("notifyCronJobResult", () => {
 	});
 });
 
+/** Minimal `SelectFlowMonitor` fixture; only the fields `notifyFlowResult` reads are set. */
+function makeFlowMonitor(overrides: Partial<SelectFlowMonitor> = {}): SelectFlowMonitor {
+	return {
+		id: "flow-monitor-1",
+		created_at: Date.now(),
+		updated_at: Date.now(),
+		team_id: "team-1",
+		name: "Checkout",
+		source: "",
+		interval_seconds: 3_600,
+		next_due_at: null,
+		is_enabled: true,
+		last_checked_at: null,
+		last_status: null,
+		...overrides,
+	};
+}
+
+/** One flow run's history row, defaulting to the failure the alert is expected to quote. */
+function makeFlowResult(overrides: Partial<SelectFlowMonitorResult> = {}): SelectFlowMonitorResult {
+	return {
+		id: "flow-result-1",
+		flow_monitor_id: "flow-monitor-1",
+		status: "down",
+		tests_total: 4,
+		tests_passed: 2,
+		tests_failed: 1,
+		requests_made: 3,
+		failed_test: "checkout accepts the coupon",
+		failed_at_line: 27,
+		failure_detail: "expected status 200, got 500",
+		duration_ms: 1840,
+		error_message: null,
+		checked_at: Date.now(),
+		...overrides,
+	};
+}
+
+describe("notifyFlowResult", () => {
+	test("does not dispatch on the first-ever 'up' result", async () => {
+		let { db } = createTestDatabase();
+		await notifyFlowResult(
+			db,
+			makeMailer(),
+			makeFlowMonitor(),
+			null,
+			flowAlertResultFromResult("up", makeFlowResult({ status: "up" })),
+		);
+
+		expect(listForMonitorMock).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * An `error` is this app failing to find out, not the customer's flow breaking, so it
+	 * reaches nobody — the whole reason the two statuses are kept apart (ADR-027 §1).
+	 */
+	test("never dispatches an 'error' result, whatever it follows", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		for (let previous of ["up", "down", "error", null] as const) {
+			await notifyFlowResult(
+				db,
+				makeMailer(),
+				makeFlowMonitor(),
+				previous,
+				flowAlertResultFromResult("error", makeFlowResult({ status: "error" })),
+			);
+		}
+
+		expect(listForMonitorMock).not.toHaveBeenCalled();
+	});
+
+	test("dispatches a 'down' event on a failed assertion", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyFlowResult(
+			db,
+			makeMailer(),
+			makeFlowMonitor(),
+			"up",
+			flowAlertResultFromResult("down", makeFlowResult()),
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.event_type).toBe("down");
+		expect(call.monitor_type).toBe("flow");
+	});
+
+	test("dispatches a recovery event coming back up from down", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyFlowResult(
+			db,
+			makeMailer(),
+			makeFlowMonitor(),
+			"down",
+			flowAlertResultFromResult("up", makeFlowResult({ status: "up" })),
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.event_type).toBe("up");
+	});
+
+	/** Nobody was told about the error, so nobody is told it ended. */
+	test("stays silent coming back up from an error", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyFlowResult(
+			db,
+			makeMailer(),
+			makeFlowMonitor(),
+			"error",
+			flowAlertResultFromResult("up", makeFlowResult({ status: "up" })),
+		);
+
+		expect(listForMonitorMock).not.toHaveBeenCalled();
+	});
+
+	test("records the failing assertion, its line, and the counters in the snapshot", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyFlowResult(
+			db,
+			makeMailer(),
+			makeFlowMonitor(),
+			"up",
+			flowAlertResultFromResult("down", makeFlowResult()),
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.snapshot).toEqual({
+			type: "flow",
+			status: "down",
+			testsTotal: 4,
+			testsPassed: 2,
+			testsFailed: 1,
+			failedTest: "checkout accepts the coupon",
+			failedAtLine: 27,
+			failureDetail: "expected status 200, got 500",
+			durationMs: 1840,
+		});
+	});
+
+	test("quotes the failing assertion in the delivered body", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({ config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } } }),
+		]);
+
+		await notifyFlowResult(
+			db,
+			makeMailer(),
+			makeFlowMonitor(),
+			"up",
+			flowAlertResultFromResult("down", makeFlowResult()),
+		);
+
+		let body = JSON.parse(onlyDelivery().body) as { message: string };
+		expect(body.message).toContain("Tests: 2 of 4 passed");
+		expect(body.message).toContain("Failed test: checkout accepts the coupon (line 27)");
+		expect(body.message).toContain("expected status 200, got 500");
+	});
+});
+
+describe("flowAlertResultFromResult", () => {
+	test("reads the run's counters and its first failure off the history row", () => {
+		expect(flowAlertResultFromResult("down", makeFlowResult())).toEqual({
+			status: "down",
+			testsTotal: 4,
+			testsPassed: 2,
+			testsFailed: 1,
+			failedTest: "checkout accepts the coupon",
+			failedAtLine: 27,
+			failureDetail: "expected status 200, got 500",
+			durationMs: 1840,
+		});
+	});
+
+	/** A redelivery outliving the history row still has a transition worth reporting. */
+	test("reports the transition alone when the history row is already gone", () => {
+		expect(flowAlertResultFromResult("down", undefined)).toEqual({
+			status: "down",
+			testsTotal: 0,
+			testsPassed: 0,
+			testsFailed: 0,
+			failedTest: null,
+			failedAtLine: null,
+			failureDetail: null,
+			durationMs: null,
+		});
+	});
+});
+
 describe("notifySslResult", () => {
 	test("does not dispatch when shouldAlertOnSslStatus says not to (e.g. a healthy, non-expiring cert)", async () => {
 		let { db } = createTestDatabase();
@@ -1994,6 +2197,28 @@ describe("shouldNotifyDnsResult", () => {
 		expect(shouldNotifyDnsResult("changed", "ok")).toBe(true);
 		expect(shouldNotifyDnsResult("ok", "ok")).toBe(false);
 		expect(shouldNotifyDnsResult(null, "ok")).toBe(false);
+	});
+});
+
+describe("shouldNotifyFlowResult", () => {
+	test("alerts on every failed assertion", () => {
+		expect(shouldNotifyFlowResult(null, "down")).toBe(true);
+		expect(shouldNotifyFlowResult("up", "down")).toBe(true);
+		expect(shouldNotifyFlowResult("down", "down")).toBe(true);
+		expect(shouldNotifyFlowResult("error", "down")).toBe(true);
+	});
+
+	test("never alerts on an error, which is this app failing to find out", () => {
+		expect(shouldNotifyFlowResult(null, "error")).toBe(false);
+		expect(shouldNotifyFlowResult("up", "error")).toBe(false);
+		expect(shouldNotifyFlowResult("down", "error")).toBe(false);
+	});
+
+	test("alerts on up only as a recovery from a down nobody was left waiting on", () => {
+		expect(shouldNotifyFlowResult("down", "up")).toBe(true);
+		expect(shouldNotifyFlowResult("error", "up")).toBe(false);
+		expect(shouldNotifyFlowResult("up", "up")).toBe(false);
+		expect(shouldNotifyFlowResult(null, "up")).toBe(false);
 	});
 });
 

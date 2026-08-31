@@ -12,6 +12,7 @@ import {
 	computeOverallStatus,
 	deriveCronStatus,
 	deriveDnsStatus,
+	deriveFlowStatus,
 	deriveHttpStatus,
 	deriveTcpStatus,
 } from "~/app/services/status-page";
@@ -40,6 +41,28 @@ describe("deriveTcpStatus", () => {
 		expect(deriveTcpStatus("timeout")).toBe("degraded");
 		expect(deriveTcpStatus("down")).toBe("down");
 		expect(deriveTcpStatus(null)).toBe("unknown");
+	});
+});
+
+describe("deriveFlowStatus", () => {
+	test("maps each last_status value onto the shared scale", () => {
+		expect(deriveFlowStatus("up")).toBe("operational");
+		expect(deriveFlowStatus("down")).toBe("down");
+		expect(deriveFlowStatus(null)).toBe("unknown");
+	});
+
+	/**
+	 * An `error` is this app failing to find out. Publishing it as an outage would tell a
+	 * customer's own users their service is down for a reason that belongs to us.
+	 */
+	test("reads an error run as unknown rather than as an outage", () => {
+		expect(deriveFlowStatus("error")).toBe("unknown");
+	});
+
+	test("keeps an error run out of the page's overall status entirely", () => {
+		expect(computeOverallStatus([deriveFlowStatus("error")])).toBe("operational");
+		expect(computeOverallStatus(["operational", deriveFlowStatus("error")])).toBe("operational");
+		expect(computeOverallStatus(["down", deriveFlowStatus("error")])).toBe("down");
 	});
 });
 

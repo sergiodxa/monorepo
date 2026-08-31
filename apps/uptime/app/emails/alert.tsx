@@ -354,6 +354,53 @@ export class AlertEmail implements Email {
 					},
 				];
 
+			case "flow": {
+				let rows: AlertField[] = [
+					{ label: t("emails.alert.fields.status"), value: snapshot.status },
+					{
+						label: t("emails.alert.fields.tests"),
+						value: t("emails.alert.values.flowTests", {
+							passed: snapshot.testsPassed,
+							total: snapshot.testsTotal,
+						}),
+					},
+				];
+
+				/**
+				 * The assertion that broke, quoted as the run reported it (ADR-027 §8) — the
+				 * incident itself, not a code to go and interpret. A recovery carries none.
+				 */
+				if (snapshot.failedTest !== null) {
+					rows.push({
+						label: t("emails.alert.fields.failedTest"),
+						value:
+							snapshot.failedAtLine === null
+								? snapshot.failedTest
+								: t("emails.alert.values.flowFailedTest", {
+										title: snapshot.failedTest,
+										line: snapshot.failedAtLine,
+									}),
+					});
+				}
+
+				if (snapshot.failureDetail !== null) {
+					rows.push({
+						label: t("emails.alert.fields.failureDetail"),
+						value: snapshot.failureDetail,
+					});
+				}
+
+				rows.push({
+					label: t("emails.alert.fields.duration"),
+					value:
+						snapshot.durationMs === null
+							? none
+							: t("emails.alert.values.milliseconds", { value: snapshot.durationMs }),
+				});
+
+				return rows;
+			}
+
 			case "ssl":
 				return [
 					{ label: t("emails.alert.fields.hostname"), value: snapshot.hostname },

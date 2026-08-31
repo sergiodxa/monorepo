@@ -438,6 +438,18 @@ export default route({
 				results: get("/api/v1/tcp-monitors/:tcpMonitorId/results"),
 			},
 
+			/**
+			 * On the generic `monitors:read`/`:write` scopes, since no flow-specific pair is
+			 * grantable — a key that may reconfigure a monitor may reconfigure this one too.
+			 */
+			flowMonitors: {
+				...resources("/api/v1/flow-monitors", {
+					param: "flowMonitorId",
+					exclude: ["new", "edit"],
+				}),
+				results: get("/api/v1/flow-monitors/:flowMonitorId/results"),
+			},
+
 			cronJobs: resources("/api/v1/cron-jobs", { param: "cronJobId", exclude: ["new", "edit"] }),
 
 			alerts: {
