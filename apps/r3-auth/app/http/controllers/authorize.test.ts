@@ -226,6 +226,24 @@ describe("GET /authorize", () => {
 		expect(body).toContain('name="password"');
 	});
 
+	test("marks the provider sign-in form as a document submission", async () => {
+		let response = await app.fetch(new Request(authorizeUrl(fixtures)));
+		let body = await response.text();
+
+		let form = body.match(
+			new RegExp(`<form[^>]*action="${routes.auth.provider.href({ provider: "github" })}"[^>]*>`),
+		);
+		expect(form?.[0]).toContain("rmx-document");
+	});
+
+	test("marks the credential sign-in form as a document submission", async () => {
+		let response = await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+		let body = await response.text();
+
+		let form = body.match(new RegExp(`<form[^>]*action="${routes.authorize.action.href()}"[^>]*>`));
+		expect(form?.[0]).toContain("rmx-document");
+	});
+
 	test("prompt=consent and prompt=select_account still perform SSO", async () => {
 		await signIn(app, fixtures);
 
