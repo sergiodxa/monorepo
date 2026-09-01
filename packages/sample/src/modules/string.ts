@@ -7,9 +7,10 @@
  */
 import type { Random } from "../random";
 
-const ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyz0123456789";
+/** Digits and every lowercase letter, the 36 characters base 36 spells. */
+const ALPHANUMERIC_RADIX = 36;
 
-const HEX = "0123456789abcdef";
+const HEX_RADIX = 16;
 
 /** Identifiers and character runs. */
 export interface StringModule {
@@ -25,11 +26,15 @@ export interface StringModule {
 	hex(length: number): string;
 }
 
-function run(random: Random, alphabet: string, length: number, name: string): string {
+/**
+ * Draw `length` digits of a base, which spells each character from the digit's
+ * own value: base 16 covers `0-9a-f` and base 36 covers `0-9a-z`.
+ */
+function run(random: Random, radix: number, length: number, name: string): string {
 	if (!Number.isSafeInteger(length) || length < 0) {
 		throw new RangeError(`${name}() needs a length of zero or more, received ${length}.`);
 	}
-	return Array.from({ length }, () => alphabet.charAt(random.int(0, alphabet.length - 1))).join("");
+	return Array.from({ length }, () => random.int(0, radix - 1).toString(radix)).join("");
 }
 
 /** Create the `string` module over one stream. */
@@ -49,10 +54,10 @@ export function createStringModule(random: Random): StringModule {
 			].join("-");
 		},
 		alphanumeric(length) {
-			return run(random, ALPHANUMERIC, length, "alphanumeric");
+			return run(random, ALPHANUMERIC_RADIX, length, "alphanumeric");
 		},
 		hex(length) {
-			return run(random, HEX, length, "hex");
+			return run(random, HEX_RADIX, length, "hex");
 		},
 	};
 }
