@@ -151,4 +151,14 @@ describe("systemSeed", () => {
 		expect(seed).toBeGreaterThanOrEqual(0);
 		expect(seed).toBeLessThanOrEqual(0xffffffff);
 	});
+
+	test("draws a fresh seed on each call", () => {
+		expect(new Set(Array.from({ length: 100 }, () => systemSeed())).size).toBe(100);
+	});
+
+	test("carries entropy in its high bits, not only its low ones", () => {
+		let leading = new Set(Array.from({ length: 200 }, () => systemSeed() >>> 24));
+
+		expect(leading.size).toBeGreaterThan(50);
+	});
 });

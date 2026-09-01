@@ -704,6 +704,7 @@
       "name": "@pkg/sample",
       "version": "0.0.1",
       "dependencies": {
+        "@pkg/crypto": "workspace:*",
         "@pkg/dates": "workspace:*",
         "@pkg/duration": "workspace:*",
       },

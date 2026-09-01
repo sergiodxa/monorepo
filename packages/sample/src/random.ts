@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { randomBytes } from "@pkg/crypto";
 
 /** A seed as a caller supplies it; text and numbers both name a stream. */
 export type Seed = number | string;
@@ -146,13 +147,13 @@ export function createRandom(seed: Seed): Random {
 }
 
 /**
- * Draw a seed from the platform's cryptographic source, for a process that
- * wants fresh values on every run. Log the returned number and that run stays
+ * Draw a seed from a cryptographically strong source, for a process that wants
+ * fresh values on every run. Log the returned number and that run stays
  * reproducible by passing it back.
  *
  * @returns A 32-bit seed.
  * @example createRandom(systemSeed())
  */
 export function systemSeed(): number {
-	return crypto.getRandomValues(new Uint32Array(1))[0] as number;
+	return randomBytes(4).reduce((seed, byte) => ((seed << 8) | byte) >>> 0, 0);
 }

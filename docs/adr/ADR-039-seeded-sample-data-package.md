@@ -80,10 +80,12 @@ that.
 
 ### 2. Three Layers, Separately Usable
 
-The only dependencies are workspace packages, and only for date arithmetic:
-`add`, `subtract`, and `elapsed` from `@pkg/dates` place an instant inside a
-window, and `toMs` from `@pkg/duration` spells the day the window is measured in.
-Nothing else in the package needs a dependency.
+The only dependencies are workspace packages, and each covers something already
+decided elsewhere in the repository: `add`, `subtract`, and `elapsed` from
+`@pkg/dates` place an instant inside a window, `toMs` from `@pkg/duration` spells
+the day that window is measured in, and `randomBytes` from `@pkg/crypto` draws
+the one value here that must be unpredictable — the system seed. Nothing else in
+the package needs a dependency.
 
 ```
 Random      seeded 32-bit PRNG: int, float, bool, pick, shuffle, derive
@@ -138,7 +140,7 @@ let sample = createSample({ seed: 42 });
 `seed` is required because a default seed is the one design mistake that cannot
 be corrected later: every caller that forgot to pass one becomes unreproducible.
 An application that genuinely wants a fresh stream per process asks for it
-(`seed: systemSeed()`, backed by `crypto.getRandomValues`) and can log the
+(`seed: systemSeed()`, four bytes from `@pkg/crypto`) and can log the
 number it got back from `sample.seed`.
 
 ### 3. The Module Surface

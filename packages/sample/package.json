@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/crypto": "workspace:*",
 		"@pkg/dates": "workspace:*",
 		"@pkg/duration": "workspace:*"
 	},
