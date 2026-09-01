@@ -18,6 +18,7 @@ import { createEnvPlugin } from "./plugins/env";
 import { createFsPlugin } from "./plugins/fs";
 import { createHttpPlugin } from "./plugins/http";
 import { createJwtPlugin } from "./plugins/jwt";
+import { createSamplePlugin } from "./plugins/sample";
 import { createUrlPlugin } from "./plugins/url";
 
 /**
@@ -35,6 +36,7 @@ export const BUILTIN_NAMESPACES = [
 	"url",
 	"jwt",
 	"env",
+	"sample",
 ] as const;
 
 /** A built-in namespace's name. */
@@ -50,6 +52,7 @@ const BUILTIN_FACTORIES: Record<BuiltinNamespace, () => Plugin> = {
 	url: createUrlPlugin,
 	jwt: createJwtPlugin,
 	env: createEnvPlugin,
+	sample: createSamplePlugin,
 };
 
 /**

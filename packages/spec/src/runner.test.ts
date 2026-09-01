@@ -19,6 +19,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import type { SuiteResult } from "./diagnostics";
 import type { Grants } from "./permissions";
 import type { Plugin } from "./plugin";
+import type { Value } from "./values";
 
 import { PermissionDeniedError, ToolError } from "./errors";
 import { runSuite } from "./runner";
@@ -537,4 +538,151 @@ test "beta three fails" {
 		expect(Number(summary?.[1]), report).toBeGreaterThan(0);
 		expect(Number(summary?.[2]), report).toBe(0);
 	}, 120_000);
+});
+
+describe("generated data", () => {
+	/**
+	 * A plugin that keeps every value a suite hands it, so a test can assert on
+	 * data the suite generated without pinning it in the `.spec` file.
+	 */
+	function makeRecorder(): { plugin: Plugin; seen: Value[] } {
+		let seen: Value[] = [];
+		return {
+			seen,
+			plugin: {
+				namespace: "probe",
+				describe: () => [
+					{
+						name: "record",
+						summary: "Keep a value for the test harness to read.",
+						kind: "action",
+						params: [
+							{ name: "value", kind: "value", required: true, summary: "The value to keep." },
+						],
+					},
+				],
+				async call(tool, args) {
+					let argument = args[0];
+					if (tool !== "record" || argument === undefined || argument.kind !== "value") {
+						return failure(new ToolError("probe.record takes one value."));
+					}
+					seen.push(argument.value);
+					return success(argument.value);
+				},
+			},
+		};
+	}
+
+	/** A suite of `count` tests, each recording an address it generated. */
+	function generatingSuite(count: number): Record<string, string> {
+		let tests = Array.from(
+			{ length: count },
+			(_, index) => `test "generates ${index}" {
+	when {
+		let person = sample.person
+	}
+	then {
+		record person.email
+	}
+}
+`,
+		);
+		return { "generate.spec": `use sample\nuse probe\n\n${tests.join("\n")}` };
+	}
+
+	async function collect(root: string, seed?: string, concurrency?: number): Promise<Value[]> {
+		let recorder = makeRecorder();
+		let result = await runSuite({
+			root,
+			grants: deniedGrants(),
+			plugins: [recorder.plugin],
+			seed,
+			concurrency,
+		});
+		if (isFailure(result)) throw new Error(`Expected the run to start: ${result.error.message}`);
+		expect(result.data.failed).toBe(0);
+		return recorder.seen;
+	}
+
+	test("gives a test the same data on every run", async () => {
+		let root = await makeSuiteDir(generatingSuite(1));
+
+		expect(await collect(root)).toEqual(await collect(root));
+	});
+
+	test("holds a suite's data still wherever the suite lives", async () => {
+		let here = await makeSuiteDir(generatingSuite(1));
+		let there = await makeSuiteDir(generatingSuite(1));
+
+		expect(await collect(here)).toEqual(await collect(there));
+	});
+
+	test("gives different seeds different data", async () => {
+		let root = await makeSuiteDir(generatingSuite(1));
+
+		expect(await collect(root, "one")).not.toEqual(await collect(root, "two"));
+	});
+
+	test("gives each test in a file its own data", async () => {
+		let root = await makeSuiteDir(generatingSuite(4));
+		let seen = await collect(root);
+
+		expect(new Set(seen).size).toBe(4);
+	});
+
+	test("holds a test's data still whatever the concurrency", async () => {
+		let root = await makeSuiteDir(generatingSuite(6));
+		let sequential = await collect(root, undefined, 1);
+		let concurrent = await collect(root, undefined, 6);
+
+		let order = (left: Value, right: Value) =>
+			JSON.stringify(left).localeCompare(JSON.stringify(right));
+
+		expect([...concurrent].sort(order)).toEqual([...sequential].sort(order));
+	});
+
+	test("keeps a test's data when the tests around it are removed", async () => {
+		let whole = await makeSuiteDir({
+			"generate.spec": `use sample
+use probe
+
+test "first" {
+	when {
+		let person = sample.person
+	}
+	then {
+		record person.email
+	}
+}
+
+test "second" {
+	when {
+		let person = sample.person
+	}
+	then {
+		record person.email
+	}
+}
+`,
+		});
+		let alone = await makeSuiteDir({
+			"generate.spec": `use sample
+use probe
+
+test "second" {
+	when {
+		let person = sample.person
+	}
+	then {
+		record person.email
+	}
+}
+`,
+		});
+
+		let both = await collect(whole);
+		let one = await collect(alone);
+
+		expect(one).toEqual([both[1]]);
+	});
 });
