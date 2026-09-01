@@ -44,7 +44,7 @@ export default createAction(
 			<Page title="Dashboard">
 				<p>
 					<a href="/">← Home</a> · Signed in as {account?.email ?? ""} ·{" "}
-					<form method="post" action="/auth/logout" style="display:inline">
+					<form method="post" action="/auth/logout" style="display:inline" rmx-document="">
 						<button mix={[s.button, s.buttonDanger]} type="submit">
 							Sign out
 						</button>
