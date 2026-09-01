@@ -211,7 +211,13 @@ The published key set as a resolver, ready to pass as `JWT.verify`'s second argu
 picks a key per token from the token's `kid`, so tokens signed by any key the issuer still
 publishes keep verifying across a rotation.
 
-**Throws:** `jwks_failed` when the set cannot be fetched, read, or holds no key.
+A `kid` the set in hand does not name costs one refetch of the set, past the cache and
+replacing it, so a key the issuer published after the set was read verifies on the spot
+rather than once the cached set expires. Callers meeting the rotation together share that
+one read, and a token naming a key the issuer publishes nowhere is refused after it.
+
+**Throws:** `jwks_failed` when the set cannot be fetched, read, or holds no key — at the
+ask, and at a refetch a resolution spends.
 
 #### `issuer.verifyIdToken(raw, options): Promise<IdToken>`
 

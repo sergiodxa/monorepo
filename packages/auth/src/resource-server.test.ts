@@ -627,6 +627,25 @@ describe("verifyAccessToken", () => {
 		);
 	});
 
+	test("reports a key set gone unreachable during a refetch as the outage it is", async () => {
+		let reads = 0;
+
+		server.use(
+			http.get(JWKS_URL, () => {
+				reads += 1;
+				if (reads === 1) return HttpResponse.json(JWK.toJSON(signing));
+				return new HttpResponse(null, { status: 500 });
+			}),
+		);
+
+		let api = resourceServer();
+		let credential = await sign({}, foreign);
+
+		await expect(api.verifyAccessToken(credential)).rejects.toSatisfy((error: unknown) =>
+			AuthError.is(error, "jwks_failed"),
+		);
+	});
+
 	test("reports an issuer that cannot publish its document as the outage it is", async () => {
 		server.use(http.get(DISCOVERY_URL, () => new HttpResponse(null, { status: 503 })));
 

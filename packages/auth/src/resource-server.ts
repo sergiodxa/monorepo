@@ -188,9 +188,9 @@ export class ResourceServer {
 	}
 
 	/**
-	 * Verifies a JWT access token against the key set the issuer publishes. Reading that
-	 * set precedes the verification, so an issuer outage surfaces as an `AuthError` and
-	 * `null` answers only a token that failed a check here.
+	 * Verifies a JWT access token against the key set the issuer publishes. An issuer
+	 * outage surfaces as an `AuthError`, whether it met the read of the set or a refetch
+	 * within the verification, and `null` answers only a token that failed a check here.
 	 *
 	 * @param credential - The compact-serialized token.
 	 * @returns The verified token, or `null` when a check on it fails.
@@ -201,7 +201,8 @@ export class ResourceServer {
 
 		try {
 			return await AccessToken.verify(credential, keys, { issuer, audience: this.#audience });
-		} catch {
+		} catch (error) {
+			if (AuthError.is(error, AuthErrorCode.JwksFailed)) throw error;
 			return null;
 		}
 	}

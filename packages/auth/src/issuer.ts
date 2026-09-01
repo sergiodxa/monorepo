@@ -22,9 +22,9 @@ import { IdToken } from "./id-token";
 const DISCOVERY_PATH = "/.well-known/openid-configuration";
 
 /**
- * How long a discovery document and a key set stay in the shared cache. It bounds
- * how soon a newly published signing key becomes verifiable, so a provider rotating
- * keys publishes them this far ahead of signing with them.
+ * How long a discovery document and a key set stay in the shared cache, which bounds
+ * how stale an endpoint move can read. A newly published signing key stands apart: a
+ * token naming one is what prompts the refetch that picks it up.
  */
 const DEFAULT_TTL: DurationInput = "1 hour";
 
@@ -39,6 +39,13 @@ const DEFAULT_CLOCK_TOLERANCE_SECONDS = 60;
 
 /** Matches the trailing slashes a URL identifier carries interchangeably. */
 const TRAILING_SLASHES = /\/+$/;
+
+/**
+ * The `code` jose gives a resolver refusing a token its key set has no key for. It is
+ * matched instead of the class, so a second copy of jose in the tree still reads as
+ * the same refusal.
+ */
+const NO_MATCHING_KEY = "ERR_JWKS_NO_MATCHING_KEY";
 
 /** A metadata member holding one absolute URL. */
 const URL_SCHEMA = s.string().pipe(url());
@@ -106,6 +113,26 @@ function comparableIssuer(identifier: string): string {
  */
 function sameIssuer(left: string, right: string): boolean {
 	return comparableIssuer(left) === comparableIssuer(right);
+}
+
+/**
+ * Reports whether a resolver refused a token because the set in hand names no such
+ * key, which is the refusal a newly published key can answer.
+ *
+ * @param error - What the resolver raised.
+ */
+function noMatchingKey(error: unknown): boolean {
+	return error instanceof Error && "code" in error && error.code === NO_MATCHING_KEY;
+}
+
+/**
+ * Where a key set is stored in the shared cache, so a read and a replacement of it
+ * name the same entry.
+ *
+ * @param url - Where the issuer serves its documents.
+ */
+function jwksCacheKey(url: URL): string {
+	return `${CACHE_PREFIX}:jwks:${url.href}`;
 }
 
 /**
@@ -182,6 +209,24 @@ export class Issuer {
 	#ttl: DurationInput;
 	#metadata: Promise<Issuer.Metadata> | null = null;
 	#keys: Promise<JWK.KeyResolver> | null = null;
+	#refreshing: Promise<JWK.KeyResolver> | null = null;
+
+	/**
+	 * Answers with the key a token names, refetching the set once when the set in hand
+	 * names no such key, so a rotation is picked up within the verification that met it
+	 * rather than within a cache TTL.
+	 */
+	#resolve: JWK.KeyResolver = async (header, input) => {
+		let held = await this.#current();
+		let matched = await wrap(() => held(header, input));
+
+		if (!isFailure(matched)) return matched.data;
+		if (!noMatchingKey(matched.error)) throw matched.error;
+
+		let refreshed = await this.#refresh(held);
+
+		return await refreshed(header, input);
+	};
 
 	/**
 	 * Points an instance at an issuer, with memos of its own, for a test or a one-off
@@ -238,21 +283,16 @@ export class Issuer {
 
 	/**
 	 * The keys the issuer publishes, ready to pass as `JWT.verify`'s second argument.
-	 * The resolver picks a key per token from its `kid`, so tokens signed by a key the
-	 * issuer still publishes keep verifying across a rotation.
+	 * The resolver picks a key per token from its `kid`, and a `kid` the set in hand
+	 * lacks costs one refetch of the set, so a rotation verifies at once.
 	 *
 	 * @returns A resolver over the published key set.
-	 * @throws `JwksFailed` when the set cannot be fetched, read, or holds no key.
+	 * @throws `JwksFailed` when the set cannot be fetched, read, or holds no key, at
+	 *   the ask and at every refetch a resolution spends.
 	 */
 	async keys(): Promise<JWK.KeyResolver> {
-		this.#keys ??= this.#importKeys();
-
-		try {
-			return await this.#keys;
-		} catch (cause) {
-			this.#keys = null;
-			throw cause;
-		}
+		await this.#current();
+		return this.#resolve;
 	}
 
 	/**
@@ -282,6 +322,12 @@ export class Issuer {
 		);
 
 		if (isFailure(verified)) {
+			/**
+			 * An unreadable key set reaches here when a refetch during the resolution met
+			 * it, and it says nothing about the token, so it stands as it is.
+			 */
+			if (AuthError.is(verified.error, AuthErrorCode.JwksFailed)) throw verified.error;
+
 			throw new AuthError("The ID token failed verification", {
 				code: AuthErrorCode.InvalidToken,
 				cause: verified.error,
@@ -415,14 +461,79 @@ export class Issuer {
 		return result.value;
 	}
 
+	/**
+	 * The set in hand, imported once per instance and asked for again after a failed
+	 * read, so an outage during one read leaves the next one free to succeed.
+	 */
+	async #current(): Promise<JWK.KeyResolver> {
+		this.#keys ??= this.#importKeys();
+
+		try {
+			return await this.#keys;
+		} catch (cause) {
+			this.#keys = null;
+			throw cause;
+		}
+	}
+
+	/**
+	 * The set a resolution reads on its second and last try. A set another caller
+	 * already replaced is answered with as it stands, and callers meeting the rotation
+	 * together share one read of the provider.
+	 *
+	 * @param stale - The set that named no key.
+	 * @throws `JwksFailed` when the set cannot be fetched or read.
+	 */
+	async #refresh(stale: JWK.KeyResolver): Promise<JWK.KeyResolver> {
+		let current = await this.#current();
+
+		if (current !== stale) return current;
+
+		this.#refreshing ??= this.#reload();
+
+		try {
+			return await this.#refreshing;
+		} finally {
+			this.#refreshing = null;
+		}
+	}
+
+	/**
+	 * Reads the key set past the cache and puts it in front of every later read: the
+	 * instance's own set, and the entry other isolates share.
+	 *
+	 * @throws `JwksFailed` when the set cannot be fetched or read.
+	 */
+	async #reload(): Promise<JWK.KeyResolver> {
+		let endpoint = await this.jwksUri();
+		let body = await this.#text(endpoint, AuthErrorCode.JwksFailed);
+		let resolver = await this.#readKeys(endpoint, body);
+
+		this.#keys = Promise.resolve(resolver);
+		await this.#store(jwksCacheKey(this.url), body);
+
+		return resolver;
+	}
+
 	/** Produces the key resolver for the memo, going through the shared cache. */
 	async #importKeys(): Promise<JWK.KeyResolver> {
 		let endpoint = await this.jwksUri();
 
-		let body = await this.#cached(`${CACHE_PREFIX}:jwks:${this.url.href}`, () =>
+		let body = await this.#cached(jwksCacheKey(this.url), () =>
 			this.#text(endpoint, AuthErrorCode.JwksFailed),
 		);
 
+		return await this.#readKeys(endpoint, body);
+	}
+
+	/**
+	 * Reads a published key set into a resolver over it.
+	 *
+	 * @param endpoint - Where the set was published, which a failure names.
+	 * @param body - The document as the provider served it.
+	 * @throws `JwksFailed` when the document is unreadable or holds no key.
+	 */
+	async #readKeys(endpoint: URL, body: string): Promise<JWK.KeyResolver> {
 		let result = s.parseSafe(JWKS_SCHEMA, this.#json(body, AuthErrorCode.JwksFailed));
 
 		if (!result.success) {
@@ -439,6 +550,22 @@ export class Issuer {
 		}
 
 		return await JWK.importLocal(result.value);
+	}
+
+	/**
+	 * Puts a freshly read document in the shared cache. The document is already in
+	 * hand, so a store that refused the write costs the next isolate a read of the
+	 * provider and nothing more.
+	 *
+	 * @param key - Where the document is stored.
+	 * @param body - The document as the provider served it.
+	 */
+	async #store(key: string, body: string): Promise<void> {
+		let cache = typeof this.#cache === "function" ? this.#cache() : this.#cache;
+
+		if (!cache) return;
+
+		await wrap(() => cache.write(key, body, { ttl: this.#ttl }));
 	}
 
 	/**

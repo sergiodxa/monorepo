@@ -540,6 +540,195 @@ describe("keys", () => {
 		);
 	});
 });
+describe("a rotation the read key set predates", () => {
+	test("verifies a token signed by a key published after the set was read", async () => {
+		let retiring = await keyPair();
+		let minted = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([retiring]));
+
+		let issuer = new Issuer(ISSUER);
+		let keys = await issuer.keys();
+
+		respond(JWKS_URL, JWK.toJSON([minted, retiring]));
+
+		let signed = await new JWT({ sub: "user-123", iss: ISSUER, exp: "1h" }).sign(
+			JWK.Algorithm.ES256,
+			[minted],
+		);
+
+		let verified = await JWT.verify(signed, keys, { ...VERIFY, issuer: ISSUER });
+
+		expect(verified.subject).toBe("user-123");
+		expect(count(JWKS_URL)).toBe(2);
+
+		let again = await JWT.verify(signed, keys, { ...VERIFY, issuer: ISSUER });
+
+		expect(again.subject).toBe("user-123");
+		expect(count(JWKS_URL)).toBe(2);
+	});
+
+	test("keeps verifying a token signed by the key the rotation retired", async () => {
+		let retiring = await keyPair();
+		let minted = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([retiring]));
+
+		let issuer = new Issuer(ISSUER);
+		let keys = await issuer.keys();
+
+		respond(JWKS_URL, JWK.toJSON([minted, retiring]));
+
+		let signed = await new JWT({ sub: "user-123", iss: ISSUER, exp: "1h" }).sign(
+			JWK.Algorithm.ES256,
+			[retiring],
+		);
+
+		await expect(JWT.verify(signed, keys, { ...VERIFY, issuer: ISSUER })).resolves.toBeDefined();
+		expect(count(JWKS_URL)).toBe(1);
+	});
+
+	test("refuses a token naming a key the provider publishes nowhere, after one refetch", async () => {
+		let published = await keyPair();
+		let foreign = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([published]));
+
+		let issuer = new Issuer(ISSUER);
+		let keys = await issuer.keys();
+
+		let signed = await new JWT({ sub: "user-123", iss: ISSUER, exp: "1h" }).sign(
+			JWK.Algorithm.ES256,
+			[foreign],
+		);
+
+		await expect(JWT.verify(signed, keys, { ...VERIFY, issuer: ISSUER })).rejects.toThrow();
+		expect(count(JWKS_URL)).toBe(2);
+	});
+
+	test("spends one refetch on the burst of verifications a rotation fails at once", async () => {
+		let retiring = await keyPair();
+		let minted = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([retiring]));
+
+		let issuer = new Issuer(ISSUER);
+		let keys = await issuer.keys();
+
+		respond(JWKS_URL, JWK.toJSON([minted, retiring]));
+
+		let signed = await Promise.all(
+			Array.from({ length: 5 }, (_, index) =>
+				new JWT({ sub: `user-${index}`, iss: ISSUER, exp: "1h" }).sign(JWK.Algorithm.ES256, [
+					minted,
+				]),
+			),
+		);
+
+		let verified = await Promise.all(
+			signed.map((token) => JWT.verify(token, keys, { ...VERIFY, issuer: ISSUER })),
+		);
+
+		expect(verified.map((token) => token.subject)).toEqual([
+			"user-0",
+			"user-1",
+			"user-2",
+			"user-3",
+			"user-4",
+		]);
+		expect(count(JWKS_URL)).toBe(2);
+	});
+
+	test("puts the refetched set in front of the store another isolate reads", async () => {
+		let retiring = await keyPair();
+		let minted = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([retiring]));
+
+		let cache = new MemoryCacheStore();
+		let warm = new Issuer(ISSUER, { cache });
+		let keys = await warm.keys();
+
+		respond(JWKS_URL, JWK.toJSON([minted, retiring]));
+
+		let signed = await new JWT({ sub: "user-123", iss: ISSUER, exp: "1h" }).sign(
+			JWK.Algorithm.ES256,
+			[minted],
+		);
+
+		await JWT.verify(signed, keys, { ...VERIFY, issuer: ISSUER });
+
+		server.resetHandlers();
+
+		let cold = new Issuer(ISSUER, { cache });
+		let verified = await JWT.verify(signed, await cold.keys(), { ...VERIFY, issuer: ISSUER });
+
+		expect(verified.subject).toBe("user-123");
+		expect(count(JWKS_URL)).toBe(2);
+	});
+
+	test("reports an unreachable key set during a refetch as a JWKS failure", async () => {
+		let published = await keyPair();
+		let foreign = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([published]));
+
+		let issuer = new Issuer(ISSUER);
+		let keys = await issuer.keys();
+
+		respond(JWKS_URL, { error: "boom" }, 500);
+
+		let signed = await new JWT({ sub: "user-123", iss: ISSUER, exp: "1h" }).sign(
+			JWK.Algorithm.ES256,
+			[foreign],
+		);
+
+		await expect(JWT.verify(signed, keys, { ...VERIFY, issuer: ISSUER })).rejects.toSatisfy(
+			(error: unknown) => AuthError.is(error, AuthErrorCode.JwksFailed),
+		);
+	});
+
+	test("holds an unreachable key set apart from a token that failed a check", async () => {
+		let published = await keyPair();
+		let foreign = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([published]));
+
+		let issuer = new Issuer(ISSUER);
+		await issuer.keys();
+
+		respond(JWKS_URL, { error: "boom" }, 500);
+
+		let signed = await new JWT({
+			sub: "user-123",
+			iss: ISSUER,
+			aud: AUDIENCE,
+			exp: "1h",
+		}).sign(JWK.Algorithm.ES256, [foreign]);
+
+		await expect(issuer.verifyIdToken(signed, { audience: AUDIENCE })).rejects.toSatisfy(
+			(error: unknown) => AuthError.is(error, AuthErrorCode.JwksFailed),
+		);
+	});
+
+	test("reads a token failing a claim check as an invalid token", async () => {
+		let published = await keyPair();
+		respond(DISCOVERY_URL, document());
+		respond(JWKS_URL, JWK.toJSON([published]));
+
+		let issuer = new Issuer(ISSUER);
+		let signed = await new JWT({
+			sub: "user-123",
+			iss: ISSUER,
+			aud: "another-client",
+			exp: "1h",
+		}).sign(JWK.Algorithm.ES256, [published]);
+
+		await expect(issuer.verifyIdToken(signed, { audience: AUDIENCE })).rejects.toSatisfy(
+			(error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken),
+		);
+	});
+});
 
 describe("caching", () => {
 	test("spends one fetch per document however many times it is read", async () => {
