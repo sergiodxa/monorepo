@@ -104,6 +104,14 @@ describe("GET /", () => {
 		expect(body).toContain("Start Monitoring");
 	});
 
+	test("marks the signed-out CTA form as a document submission", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		let cta = body.match(new RegExp(`<form[^>]*action="${routes.auth.action.href()}"[^>]*>`));
+		expect(cta?.[0]).toContain("rmx-document");
+	});
+
 	/**
 	 * Pinned in full because a regression in the canonical host or a dropped
 	 * `og:url` is invisible to any narrower assertion.

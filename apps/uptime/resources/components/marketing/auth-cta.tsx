@@ -88,7 +88,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 		}
 
 		return (
-			<form method="post" action={routes.auth.action.href()}>
+			<form method="post" action={routes.auth.action.href()} rmx-document="">
 				<Button type="submit" color={color} variant={variant} size={buttonSize}>
 					{startLabel}
 					{icon}

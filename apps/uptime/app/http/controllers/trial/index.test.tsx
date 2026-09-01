@@ -806,6 +806,17 @@ describe("POST /try for a signed-in viewer", () => {
 		expect(body).not.toContain(`action="${routes.trial.lead.href()}"`);
 	});
 
+	test("marks the billing offer as a document navigation", async () => {
+		let actor = await signIn("revoked");
+
+		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		let link = body.match(
+			new RegExp(`<a[^>]*href="${routes.app.team.checkout.href({ team: actor.team.slug })}"[^>]*>`),
+		);
+		expect(link?.[0]).toContain("rmx-document");
+	});
+
 	test("does not offer billing to a team that is already paying", async () => {
 		let actor = await signIn("active");
 

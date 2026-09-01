@@ -50,7 +50,7 @@ export default createController(routes.logout, {
 							]}
 						>
 							<h1 mix={[m(0)]}>{ctx.i18next.t("page.logout.title")}</h1>
-							<form method="post" action={routes.logout.action.href()}>
+							<form method="post" action={routes.logout.action.href()} rmx-document="">
 								<Button type="submit">{ctx.i18next.t("page.logout.cta")}</Button>
 							</form>
 						</div>

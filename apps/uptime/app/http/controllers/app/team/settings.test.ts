@@ -125,6 +125,18 @@ describe("settings page", () => {
 		expect(body).toContain(`value="Acme"`);
 	});
 
+	test("marks the owner's billing link as a document navigation", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+
+		let response = await renderSettings(db, team, ownerMembership);
+		let body = await response.text();
+
+		let link = body.match(
+			new RegExp(`<a[^>]*href="${routes.app.team.checkout.href({ team: team.slug })}"[^>]*>`),
+		);
+		expect(link?.[0]).toContain("rmx-document");
+	});
+
 	test("shows remove/change-role controls only for non-owner members", async () => {
 		let { db, team, ownerMembership } = await createFixture();
 

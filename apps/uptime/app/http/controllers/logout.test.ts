@@ -160,6 +160,17 @@ describe("GET /logout", () => {
 		expect(body).toContain(`action="${routes.logout.action.href()}"`);
 		expect(body).toContain(">Logout<");
 	});
+
+	test("marks the sign-out form as a document submission", async () => {
+		let { container, router } = createTestRouter(new Session());
+
+		let request = new Request(`https://uptime.test${routes.logout.index.href()}`);
+		let response = await container.scope(() => router.fetch(request));
+		let body = await response.text();
+
+		let form = body.match(new RegExp(`<form[^>]*action="${routes.logout.action.href()}"[^>]*>`));
+		expect(form?.[0]).toContain("rmx-document");
+	});
 });
 
 describe("POST /logout", () => {
