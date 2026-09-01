@@ -314,13 +314,30 @@ it were filtered out. The plugin itself stays stateless — it reads
 `context.random` and returns a value — and any future tool that needs randomness
 (a nonce, a PKCE verifier) draws from the same reproducible source for free.
 
+The file in that identity is the path **inside the suite**, not the absolute
+one. Implementation caught this: seeding from the absolute path made the same
+suite generate different data from a different checkout directory, which is the
+same failure as reading the clock, one level up. `runTests` takes the suite root
+and measures each file against it.
+
 #### The Run Seed
 
 `spec run --seed=<value>` sets the run seed; it defaults to a fixed constant, so
 a suite run twice gives identical data with no flag at all. `--seed=random`
-draws one and the reporter prints it in the summary, which is how a suite is
-shaken for hidden dependence on specific values while keeping any failure
-replayable by passing the printed seed back.
+draws one, which is how a suite is shaken for hidden dependence on specific
+values while keeping any failure it turns up replayable.
+
+The drawn seed is printed by the **CLI**, before the run, as the replay command
+itself:
+
+```
+seed 1007223771 (replay with --seed=1007223771)
+```
+
+The plan had put this in the reporter's summary. The CLI is where it belongs: it
+is the layer that drew the seed, the line can say what to _do_ with the number
+rather than just report it, and `SuiteResult` stays a description of what the
+tests did. A seed given explicitly prints nothing — the operator already has it.
 
 ### 7. Out Of Scope For v1
 
@@ -472,6 +489,20 @@ exists to avoid.
   fail loudly instead of silently reshuffling every suite's data.
 - The seed a `--seed=random` run prints is the whole reproduction recipe: same
   seed plus same version reproduces every test's values exactly.
+- **`sample.pick` has no literal to pick from.** The `.spec` grammar has no array
+  literal (`GRAMMAR.md`: an expression is a string, number, duration, boolean,
+  object, or reference), so a suite cannot write `sample.pick ["free", "pro"]`.
+  The tool works on a list another tool returned — query rows, a JSON response —
+  which is a real use, but the common one is unreachable. Whether that is fixed
+  by an array literal in the grammar or by leaving `pick` to structured data is
+  open; nothing in the dogfood suite needs it yet, so neither was built.
+- **An out-of-process plugin draws from a fixed stream.** The stdio transport
+  forwards the test's frozen instant, since a timestamp crosses a process
+  boundary exactly. The stream does not: sending a seed would restart it on the
+  serving side, so every call would return the same value, and carrying a live
+  stream position across the wire is a protocol design no plugin needs yet. The
+  served context opens on a constant seed instead, which is reproducible without
+  pretending to be the host's stream.
 
 ## Current Progress
 
@@ -480,5 +511,11 @@ exists to avoid.
   - [x] `data/en` and the `Dataset` type
   - [x] `createSample` and the nine modules
   - [x] README carrying the determinism contract and the reserved-domain rule
-- [ ] Phase 2: The Spec Capability
+- [x] Phase 2: The Spec Capability
+  - [x] `random` and `now` on `ToolContext`, threaded from `run.ts` through the
+        executor; every test fake updated
+  - [x] `plugins/sample.ts` with the six tools, registered in `builtins.ts`
+  - [x] `--seed=<value>` and `--seed=random` in the CLI, with the replay line
+  - [x] `spec/sample.spec` in the dogfood suite, and runner tests pinning
+        reproduction across runs, seeds, concurrency, and suite location
 - [ ] Phase 3: Adoption

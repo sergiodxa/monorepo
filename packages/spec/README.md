@@ -570,6 +570,65 @@ test "the authorization code is read from the redirect URL" {
 }
 ```
 
+### `sample` — generate a suite's input · no grant
+
+Names, addresses, identifiers, and numbers drawn per test, instead of literals
+typed into the suite. Pure computation over the test's own stream — no network,
+no filesystem, no grant — and every value reproduces: the same test draws the
+same data on every run, so a failure on generated input is replayable.
+
+- `sample.person` — a person: `first_name`, `last_name`, `full_name`, `email`,
+  `username`, all agreeing with each other.
+- `sample.email` — an address on a domain reserved for documentation, so a
+  generated address can never reach a real inbox.
+- `sample.uuid` — a version 4 UUID.
+- `sample.int <min> <max>` — an integer, both bounds included.
+- `sample.words <count>` — that many words of placeholder prose.
+- `sample.pick <list>` — one element of a list a tool returned.
+
+Every tool is an **action**, not an observation: a draw advances the stream, so
+`sample` may not head an `eventually` — polling until a random value matches is
+never what an author meant.
+
+```
+use sample
+
+test "signing up stores the address given" {
+	given {
+		let person = sample.person
+	}
+	when {
+		let response = http.post "http://localhost:3000/signup" form {
+			email: person.email
+			name: person.full_name
+		}
+	}
+	then {
+		expect response.status 201
+	}
+}
+```
+
+A test's data follows its **identity** — the run's seed, the test's file inside
+the suite, and its title — and nothing else. Two runs of a suite generate the
+same data, whatever the concurrency, whatever order the tests ran in, and
+wherever the suite is checked out. Adding or removing a neighboring test does
+not move it either.
+
+```sh
+spec run spec --seed=checkout      # a different suite-wide seed
+spec run spec --seed=random        # draw one, printed so it can be replayed
+```
+
+`--seed=random` prints the seed it drew before the run:
+
+```
+seed 1007223771 (replay with --seed=1007223771)
+```
+
+That is how a suite is shaken for hidden dependence on particular values while
+keeping any failure it turns up reproducible.
+
 ### `jwt` — read and verify tokens · `--allow-net` (verify only)
 
 Read and verify JSON Web Tokens, the heart of specifying an OIDC server.
