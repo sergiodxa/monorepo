@@ -8,7 +8,7 @@ written by the customer, executed server-side against a hosted browser.
 **Being built in two phases, and the first one is HTTP-only.** A flow whose steps are requests
 — sign in, read the token back, call the endpoint it authorises — needs no browser at all, and
 it is most of the value: it is already a question no single-request monitor can be asked. So
-phase one registers `http`, `url` and `jwt` and no browser capability, which also means it
+phase one registers `http`, `url`, `jwt` and `sample` and no browser capability, which also means it
 carries none of the browser's cost, none of its beta dependency, and a different billing
 answer ([§7b](#7b-an-http-only-flow-is-metered-in-pings-not-browser-seconds)).
 
@@ -580,8 +580,12 @@ is its plan.
 
 A spec cannot compute, so these are product limits, not bugs, and the docs page says so:
 
-- **No generated data.** A signup flow that needs a unique email each run cannot express
-  one. Flow monitors are for flows with a fixed fixture account.
+- **Generated data leaves traces.** `sample` gives a flow a fresh name, address or
+  identifier per run, which is what a sign-up flow drives; a flow that signs in reads its
+  credential from a fixed account in the source. Two consequences reach the docs page: the
+  flow really runs, so an account per check accumulates somewhere, and a spec asserts on
+  what a step proved rather than on a value it generated.
+
 - **No secrets, yet.** A login flow needs a password, and the language's answer —
   `--allow-env` — has no scoped form in a Worker. For v1 the credential is written in the
   spec text, and the spec text is encrypted at rest and never rendered in an email, a log,

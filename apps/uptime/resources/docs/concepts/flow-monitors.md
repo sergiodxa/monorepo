@@ -19,11 +19,11 @@ The source is written in an executable-spec language: `test` blocks that arrange
 These limits are stated first because a flow monitor is only as useful as your understanding of what it covers. None of them are oversights — they are the shape of the feature.
 
 - **There is no browser.** Nothing clicks, fills in a form field, runs JavaScript or renders a page. A flow drives HTTP requests. A check that depends on what a page looks like is not something a flow can answer.
-- **There is no generated data.** A flow cannot invent a unique email address, a random string or a timestamp, so a signup flow that needs a fresh account on every run cannot be expressed. Flows are written against a fixed account you keep for the purpose.
+- **A flow can bring new data on every run.** [`sample`](#sample) gives it a fresh name, address or identifier per check, which is what a sign-up flow needs. A flow that signs _in_ still needs a fixed account you keep for the purpose, since the credential has to exist before the run.
 - **There is no branching and no computation.** No conditionals, no loops, no arithmetic, no string building. A flow is a straight line of requests and assertions.
 - **Assertions are equality and truthiness only.** There is no substring match, no regular expression, no comparison and no numeric range.
 - **The only retry vocabulary is `eventually`, and it cannot retry a request.** See [Waiting for something to become true](#waiting-for-something-to-become-true).
-- **There is no file access, no shell and no database access.** The three tools below are the whole vocabulary.
+- **There is no file access, no shell and no database access.** The four tools below are the whole vocabulary.
 - **The fastest interval is 15 minutes.** A flow makes several requests and costs accordingly. If you need to know within a minute that something broke, put an HTTP monitor on the endpoint the flow depends on — that is what 1-minute resolution is for — and let the flow cover the sequence.
 
 ## Verified Domains
@@ -139,7 +139,7 @@ let code = url.query at.url "code"
 
 ## Tools
 
-Three namespaces are available. There is nothing else.
+Four namespaces are available. There is nothing else.
 
 ### http
 
@@ -187,6 +187,51 @@ let landed = url.host granted.json.redirect_to
 `jwt.verify <token> <jwks_url>` fetches the issuer's JWKS, selects the key by `kid`, verifies an ES256 signature and the token's expiry, and returns the verified payload. Claims read out of it are issuer-attested rather than merely well-formed.
 
 `jwt.verify` reaches the network, so **the JWKS host has to be covered by a verified domain too**.
+
+### sample
+
+Input a flow generates for itself, for the steps that have to send something new every time. Generating is free: only the requests your flow makes count against its limit.
+
+| Tool                     | Returns                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `sample.person`          | A person: `first_name`, `last_name`, `full_name`, `email`, `username`, all matching |
+| `sample.email`           | An address on a domain reserved for documentation                                   |
+| `sample.uuid`            | A UUID                                                                              |
+| `sample.int <min> <max>` | A whole number between the two, both included                                       |
+| `sample.words <count>`   | That many words of filler text                                                      |
+| `sample.pick <list>`     | One item of a list a step returned, such as `sample.pick catalog.json.plans`        |
+
+```
+use http
+use sample
+
+test "a visitor can sign up" {
+	given {
+		let person = sample.person
+	}
+	when {
+		let created = http.post "https://app.example.com/signup" form {
+			email: person.email
+			name: person.full_name
+		}
+	}
+	then {
+		expect created.status 201
+	}
+}
+```
+
+**The values change on every run**, which is what makes a sign-up flow possible: the same address posted every five minutes would pass once and fail on every check after it.
+
+Two things follow for how you write the flow.
+
+**Assert on what the step proved, not on the value you generated.** `expect created.status 201` holds for any address. `expect created.json.email "ana.moreau35@example.com"` pins a value your monitor invented for one run, and fails on the next.
+
+**Remember the flow really runs.** A sign-up flow creates a real account on every check, at whatever interval you set. Point it at something that tolerates that — a staging environment, a tenant you prune, or a sign-up that expires unconfirmed registrations by itself.
+
+Generated addresses are always on `example.com`, `example.org` or `example.net`, the domains reserved for documentation. Treat them as write-only: a sign-up whose last step is a confirmation link wants an endpoint that can confirm the account directly.
+
+A generated value is a step, like a request: it belongs in `given` or `when`.
 
 ## Assertions
 
@@ -281,6 +326,42 @@ test "signing in returns a token the account endpoint accepts" {
 
 Both hosts, `app.example.com` and `api.example.com`, are covered by a verified `example.com`.
 
+### Signing up as a new visitor every run
+
+The journey a fixed account cannot cover: registration itself. `sample.person` gives each run its own visitor, so the flow is not fighting the account the last run created.
+
+```
+test "a visitor can register and land signed in" {
+	given {
+		# One person, consistent across every field: the address matches the name,
+		# and both are new on every run.
+		let visitor = sample.person
+	}
+	when {
+		let created = http.post "https://app.example.com/api/registrations" form {
+			email: visitor.email
+			name: visitor.full_name
+			password: "a fixed password is fine; the address is what has to be new"
+		}
+		# The session the registration handed back is what proves the journey
+		# finished, rather than a row having been written somewhere.
+		let profile = http.get "https://app.example.com/api/me" bearer created.json.token
+	}
+	then {
+		expect created.status 201
+		expect created.json.token
+		expect profile.status 200
+		# Assert on what the step proved — that the profile belongs to whoever just
+		# registered — never on the generated address itself, which changes each run.
+		expect profile.json.name visitor.full_name
+	}
+}
+```
+
+Note what is asserted and what is not. `expect profile.json.name visitor.full_name` compares the response against the value the flow sent, which holds on every run. Writing `expect profile.json.email "ana.moreau35@example.com"` would pin a value the monitor invented for one run, and fail on the next.
+
+This flow leaves an account behind on every check. At the 15-minute floor that is 96 accounts a day, so point it at a staging environment, a tenant you prune, or a registration that expires unconfirmed sign-ups on its own.
+
 ### An OAuth exchange, with the token verified against the JWKS
 
 Reading a `code` out of a redirect address and spending it, then checking that the `id_token` it bought was really signed by your issuer. This test sits in the same source as the one above, so the `monitor_account` fixture is already in scope — definitions are shared across every test in the flow.
@@ -364,6 +445,8 @@ Three caps apply to each run:
 | HTTP requests | 20, counted across every test in the source |
 | Source length | 20,000 characters                           |
 
+Only HTTP requests count against the request cap. `url`, `jwt.decode` and `sample` calls are free — they reach nothing. (`jwt.verify` fetches the issuer's JWKS, so it does make a request.)
+
 Both runtime caps are checked before each request the flow makes, so a run that has spent its budget stops at the next request it tries to send, and reports why:
 
 > This flow ran out of time: a run may take at most 30000ms.
@@ -427,9 +510,11 @@ Use a dedicated account created for monitoring, with the least privilege that st
 
 Twenty requests is the cap, but a flow you can read in one screen is the one you will actually fix at 3am. Cover one journey per monitor — sign-in in one, checkout in another — so a failure names itself.
 
-### Use a fixed fixture account
+### Sign in as a fixed account, sign up as a generated one
 
-Flows cannot generate data, so they need an account that exists before the run and still exists after it. Prefer flows that read rather than write; where a flow must write, have it write something it can overwrite next time.
+A flow that signs _in_ needs an account that exists before the run and still exists after it — the credential has to be written in the source, so it cannot be invented. Prefer those flows to read rather than write; where one must write, have it write something it can overwrite next time.
+
+A flow that signs _up_ is the opposite: give it `sample.person` and let every run bring its own address. What needs thinking about there is not the data but the accounts it leaves behind — see [sample](#sample).
 
 ### Let HTTP monitors do the fast detection
 
