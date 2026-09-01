@@ -152,7 +152,8 @@ sample.internet.domain();
 sample.internet.url();
 sample.internet.password({ length: 16 });
 
-sample.location.city();
+sample.location.city(); // any city in the dataset
+sample.location.city({ country: "Japan" }); // a city in that country
 sample.location.country();
 sample.company.name();
 
@@ -195,7 +196,12 @@ Three deliberate differences from Faker:
 ### 4. Datasets Are Ours, And The Values Are Unroutable
 
 `data/en` is authored in this repository: roughly 100 first names, 100 last
-names, 80 cities, 40 countries, 60 company words, and a ~200-word lorem list.
+names, 40 countries with a handful of cities each, 60 company words, and a
+~200-word lorem list. Cities are stored **under** their country rather than in
+one flat list, which is what makes `city({ country })` a lookup instead of a
+filter, and what keeps a generated address internally consistent. A `country`
+naming something the dataset does not carry throws, naming it: returning a
+random city instead would put Tokyo in Chile and pass.
 They are written here rather than copied out of another project's data files, so
 provenance and licensing are not questions anyone has to answer later. Each
 dataset is its own module (`@pkg/sample/data/en`) so a bundle carries only the
@@ -211,8 +217,7 @@ Generated values are, by construction, incapable of reaching a real person:
 | Names | Common given and family names, never a specific public figure |
 
 `string.uuid()` draws from the seeded stream, so it is reproducible and
-therefore **not** cryptographically random. Its JSDoc says so, and points at
-`@pkg/uuid` for anything a real system depends on.
+therefore **not** cryptographically random; its JSDoc states that plainly.
 
 ### 5. The Determinism Contract
 
@@ -342,8 +347,6 @@ which wants a frozen-clock capability decided on its own terms.
   fake that builds a context is touched, even though only one plugin reads it.
 - **Not Faker's API.** Anyone carrying Faker habits will reach for
   `faker.datatype.number` and `person.jobTitle` and not find them.
-- **Reproducible UUIDs are a trap.** `string.uuid()` looks like a real
-  identifier; only its documentation says it must never guard anything.
 
 ### Neutral
 
