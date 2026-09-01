@@ -31,9 +31,12 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST keep `/oauth/token` accepting client credentials **in the form body** as well as in
   an HTTP Basic header. `remix/auth`'s OIDC provider defaults to body auth, so a regression
   here 400s every login. This has broken once already.
-- MUST keep the supported scopes `openid profile email` and the UserInfo claim set `sub`,
-  `email`, `email_verified`, `name`, `preferred_username`, `picture`, each gated by the
-  scope the access token was actually issued with.
+- MUST keep the supported scopes `openid profile email offline_access` and the UserInfo
+  claim set `sub`, `email`, `email_verified`, `name`, `preferred_username`, `picture`,
+  each gated by the scope the access token was actually issued with. `offline_access` is
+  what earns a refresh token from the authorization-code grant, so a login that omits it
+  is answered without one — this server's own sign-in asks for it so the account area can
+  keep renewing.
 - MUST keep RP-initiated logout working with `id_token_hint` and
   `post_logout_redirect_uri`, including back-channel logout tokens to every other client
   and front-channel URI collection.

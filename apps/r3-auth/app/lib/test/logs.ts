@@ -44,7 +44,8 @@ export async function withLogs<T>(work: () => Promise<T>): Promise<[T, FlushedLo
 
 /**
  * Every event a captured channel carried, whichever scope of the flushed entry it sat
- * under, so an assertion names the event and its level and stays free of that nesting.
+ * under, so an assertion names the event, its level and the fields it logged. A batched
+ * flush spreads a payload onto its entry, so the rest of that entry *is* the payload.
  *
  * @param calls - One channel of a {@link withLogs} capture.
  */
@@ -61,12 +62,10 @@ export function loggedEvents(calls: unknown[][]): LoggedEvent[] {
 
 		let record = node as Record<string, unknown>;
 
-		if (typeof record.event === "string" && typeof record.level === "string") {
-			found.push({
-				level: record.level,
-				event: record.event,
-				payload: record.payload as Record<string, unknown> | undefined,
-			});
+		let { event, level, ...payload } = record;
+
+		if (typeof event === "string" && typeof level === "string") {
+			found.push({ level, event, payload });
 		}
 
 		for (let value of Object.values(record)) walk(value);

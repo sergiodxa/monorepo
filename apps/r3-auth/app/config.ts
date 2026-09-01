@@ -49,9 +49,10 @@ export const AUTHZ_CODE_TTL = toMs("10 minutes");
 
 /**
  * Scopes this server understands. `openid` is required by OIDC and carries `sub`,
- * `email` adds the email claims, and `profile` adds name, username and picture.
+ * `email` adds the email claims, `profile` adds name, username and picture, and
+ * `offline_access` earns the refresh token that renews an access token past its hour.
  */
-export const SCOPES_SUPPORTED = ["openid", "email", "profile"] as const;
+export const SCOPES_SUPPORTED = ["openid", "email", "profile", "offline_access"] as const;
 
 /** One of the scopes this server accepts on an authorization request. */
 export type SupportedScope = (typeof SCOPES_SUPPORTED)[number];

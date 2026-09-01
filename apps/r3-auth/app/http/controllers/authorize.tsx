@@ -68,6 +68,13 @@ const SIGN_IN_ERROR_KEYS: Readonly<Record<string, string>> = {
 const SIGN_IN_ERROR_FALLBACK_KEY = "authorize.forms.error";
 
 /**
+ * The scope this server's own sign-in asks for. `offline_access` earns the refresh
+ * token the account area renews with, so a person stays signed in past the hour their
+ * first access token lasts.
+ */
+const SELF_LOGIN_SCOPE = "openid offline_access";
+
+/**
  * Translates a refused sign-in into the sentence shown above the form.
  *
  * @param code - The `error` value the engine reported.
@@ -187,6 +194,7 @@ async function selfRedirect(ctx: RequestContext, db: Database): Promise<Response
 	url.searchParams.set("client_id", client.id);
 	url.searchParams.set("redirect_uri", client.redirect_uri);
 	url.searchParams.set("state", state);
+	url.searchParams.set("scope", SELF_LOGIN_SCOPE);
 
 	ctx.logger.info("authz_self_redirect", { clientId: client.id });
 
@@ -233,6 +241,13 @@ export default createController(routes.authorize, {
 				return notFound({ message: "Invalid redirect URI" });
 			}
 
+			if (query.scope.ignored.length > 0) {
+				ctx.logger.info("authz_scope_ignored", {
+					clientId: client.id,
+					ignored: query.scope.ignored.join(" "),
+				});
+			}
+
 			let pkce = readPkce(query);
 			if (pkce === null) {
 				ctx.logger.info("authz_unsupported_code_challenge_method", { clientId: client.id });
@@ -260,7 +275,7 @@ export default createController(routes.authorize, {
 					redirectUri: query.redirect_uri,
 					state: query.state,
 					nonce: query.nonce,
-					scope: query.scope,
+					scope: query.scope.granted,
 					responseMode: query.response_mode,
 					pkce,
 				});
@@ -285,7 +300,7 @@ export default createController(routes.authorize, {
 				state: query.state,
 				redirectUri: query.redirect_uri,
 				nonce: query.nonce,
-				scope: query.scope,
+				scope: query.scope.granted,
 				responseMode: query.response_mode,
 				prompt: query.prompt,
 				codeChallenge: pkce?.challenge,

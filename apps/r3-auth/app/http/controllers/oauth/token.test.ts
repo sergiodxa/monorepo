@@ -1,7 +1,8 @@
 /**
- * Router-level tests of the token endpoint: refresh-token rotation, the client-credentials
- * grant, client authentication failures, a fault here told apart from a client's mistake, and
- * the no-store headers. Body credentials are a frozen contract: Basic alone 400s every login.
+ * Router-level tests of the token endpoint: refresh-token rotation, the `offline_access` gate
+ * on issuing one, the client-credentials grant, client authentication failures, a fault here
+ * told apart from a client's mistake, and the no-store headers. Body credentials are a frozen
+ * contract: Basic alone 400s every login.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -261,5 +262,64 @@ describe("a fault in this server", () => {
 		expect(loggedEvents(logs.info)).toContainEqual(
 			expect.objectContaining({ level: "info", event: "token_oauth2_error" }),
 		);
+	});
+});
+
+describe("the offline_access scope", () => {
+	/** Signs in against an authorization request for `scope` and returns the code it issued. */
+	async function codeFor(scope: string): Promise<string> {
+		await app.fetch(new Request(authorizeUrl(fixtures, { scope })));
+
+		let login = await submitSignIn(app);
+		let location = login.headers.get("location");
+		if (!location) throw new Error("Sign-in did not redirect back to the client");
+
+		let code = new URL(location).searchParams.get("code");
+		if (!code) throw new Error("Sign-in did not produce an authorization code");
+
+		return code;
+	}
+
+	/**
+	 * OIDC Core §11 makes `offline_access` the request for a grant that outlives the
+	 * person's presence, and a refresh token is the only thing that delivers it.
+	 */
+	test("a login that asked for offline_access is answered with a refresh token", async () => {
+		let code = await codeFor("openid email profile offline_access");
+		let response = await exchangeCode(app, fixtures, { code });
+
+		expect(response.status).toBe(200);
+
+		let tokens = (await response.json()) as Record<string, unknown>;
+		expect(typeof tokens.refresh_token).toBe("string");
+	});
+
+	/**
+	 * A login nobody asked to outlive stays as short as the access token it produced, so
+	 * a client that never requested offline access cannot renew behind the person's back.
+	 */
+	test("a login that never asked for offline_access is answered without a refresh token", async () => {
+		let code = await codeFor("openid email profile");
+		let response = await exchangeCode(app, fixtures, { code });
+
+		expect(response.status).toBe(200);
+
+		let tokens = (await response.json()) as Record<string, unknown>;
+		expect(tokens.refresh_token).toBeUndefined();
+	});
+
+	/**
+	 * RFC 6749 §3.3 owes a client the scope it was actually granted whenever that differs
+	 * from the one it asked for, which is how a request narrowed on the way through is
+	 * discoverable rather than silent.
+	 */
+	test("the token response names the scope it granted", async () => {
+		let code = await codeFor("openid email nonsense");
+		let response = await exchangeCode(app, fixtures, { code });
+
+		expect(response.status).toBe(200);
+
+		let tokens = (await response.json()) as Record<string, unknown>;
+		expect(tokens.scope).toBe("openid email");
 	});
 });

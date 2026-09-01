@@ -91,7 +91,7 @@ describe("GET /.well-known/openid-configuration", () => {
 			"client_credentials",
 		]);
 		expect(body.response_types_supported).toEqual(["code"]);
-		expect(body.scopes_supported).toEqual(["openid", "email", "profile"]);
+		expect(body.scopes_supported).toEqual(["openid", "email", "profile", "offline_access"]);
 		expect(body.code_challenge_methods_supported).toEqual(["S256", "plain"]);
 		expect(body.backchannel_logout_supported).toBe(true);
 		expect(body.frontchannel_logout_supported).toBe(true);

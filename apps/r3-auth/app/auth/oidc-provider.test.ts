@@ -146,9 +146,16 @@ afterEach(() => {
 
 describe("OAuth2Provider", () => {
 	describe("token() - authorization_code grant", () => {
+		/**
+		 * The refresh token a redeemed code carries **is** the session id, which is what
+		 * revocation and the account area's device list are built on. `offline_access` is
+		 * what asks for it, so the exchange proving the identity has to request it.
+		 */
 		test("exchanges valid authorization code for tokens", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo, createMockLogger());
+
+			testAuthzCode.scope = ["openid", "offline_access"];
 
 			let result = (await provider.token({
 				type: "authorization_code",

@@ -1153,6 +1153,11 @@ export class OIDC {
 		return this.repository.getSigningKey().then(JWK.toJSON);
 	}
 
+	/**
+	 * Redeems an authorization code. A refresh token rides along only for a request that
+	 * asked for `offline_access` (OIDC Core §11), and the response names the scope it
+	 * granted, so a client whose request was narrowed can see that (RFC 6749 §3.3).
+	 */
 	private async authorizationCodeGrant(args: {
 		code: string;
 		redirectUri: string;
@@ -1249,9 +1254,10 @@ export class OIDC {
 		return {
 			access_token: accessToken,
 			token_type: "Bearer" as const,
-			refresh_token: sessionId,
+			...(authz.scope.includes("offline_access") && { refresh_token: sessionId }),
 			expires_in: AccessToken.ttl,
 			id_token: idToken,
+			scope: authz.scope.join(" "),
 		};
 	}
 

@@ -28,6 +28,12 @@ export const EMAIL = "jane@example.com";
 /** The seeded subject's password. */
 export const PASSWORD = "a-good-password";
 
+/**
+ * The scope {@link signIn} asks for, standing in for a client that keeps a session:
+ * `offline_access` is where the refresh token its callers rely on comes from.
+ */
+const SIGN_IN_SCOPE = "openid offline_access";
+
 /** A registered client, a subject, and the credentials to act as either. */
 export interface Fixtures {
 	clientId: string;
@@ -149,7 +155,7 @@ export interface TokenSet {
  * @returns The tokens the flow produced.
  */
 export async function signIn(app: TestApp, fixtures: Fixtures): Promise<TokenSet> {
-	await app.fetch(new Request(authorizeUrl(fixtures)));
+	await app.fetch(new Request(authorizeUrl(fixtures, { scope: SIGN_IN_SCOPE })));
 
 	let login = await submitSignIn(app);
 	let location = login.headers.get("location");

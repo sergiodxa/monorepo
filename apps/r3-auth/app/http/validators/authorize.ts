@@ -32,9 +32,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const MINIMUM_PASSWORD_LENGTH = 8;
 
 /**
- * An authorization request as it arrives on the query string. Unsupported scope or
- * prompt values collapse to what this server offers (OIDC Core), and a bad
- * `code_challenge_method` surfaces to the client as its own `invalid_request`.
+ * An authorization request as it arrives on the query string. `scope` keeps what it
+ * dropped beside what it granted, so a narrowed request is reportable (RFC 6749 §3.3)
+ * rather than silent; a bad `code_challenge_method` reaches the client as its own error.
  */
 export const AuthorizeQuerySchema = s.object({
 	response_type: s.literal("code"),
@@ -42,12 +42,15 @@ export const AuthorizeQuerySchema = s.object({
 	redirect_uri: s.string().pipe(checks.url()),
 	state: s.string(),
 	scope: s.optional(s.string()).transform((value) => {
-		if (!value) return ["openid"] as SupportedScope[];
-		return value
-			.split(" ")
-			.filter((scope): scope is SupportedScope =>
-				(SCOPES_SUPPORTED as readonly string[]).includes(scope),
-			);
+		if (!value) return { granted: ["openid"] as SupportedScope[], ignored: [] as string[] };
+
+		let requested = value.split(" ").filter((scope) => scope.length > 0);
+		let supported: readonly string[] = SCOPES_SUPPORTED;
+
+		return {
+			granted: requested.filter((scope): scope is SupportedScope => supported.includes(scope)),
+			ignored: requested.filter((scope) => !supported.includes(scope)),
+		};
 	}),
 	nonce: s.optional(s.string()),
 	response_mode: s.defaulted(s.enum_(["query", "fragment", "form_post"] as const), "query"),
