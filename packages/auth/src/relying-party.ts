@@ -10,7 +10,11 @@
 import type { DurationString } from "@pkg/duration";
 import type { JWK, JWT } from "@pkg/jwt";
 import type { Adapter } from "@pkg/rate-limit";
-import type { AuthScheme, AuthSchemeAuthenticateResult } from "remix/middleware/auth";
+import type {
+	AuthScheme,
+	AuthSchemeAuthenticateResult,
+	AuthSchemeFailure,
+} from "remix/middleware/auth";
 
 import { Base64, Base64Url, randomToken, sha256, sha384, sha512 } from "@pkg/crypto";
 import { toSeconds } from "@pkg/duration";
@@ -654,33 +658,35 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 
 	/**
 	 * An `AuthScheme` for `remix/middleware/auth` that renews an access token past its
-	 * expiry before the app's `verify` runs, so `verify` always sees a live token set, and
-	 * passes a signed-out request to the schemes behind it in the ordered fallback.
+	 * expiry before the app's `verify` runs, signs out a session the provider refuses to
+	 * renew, and keeps one that was never renewable on the claims it was written with.
 	 *
 	 * @param options - The app's `verify`, and the name the scheme reports.
 	 * @returns The scheme to list in `auth({ schemes })`.
+	 * @throws {AuthError} When the issuer cannot serve its own documents, so an outage stays
+	 *   a fault the app answers rather than a person being signed out.
 	 * @example
 	 * rp.scheme({ verify: (auth) => users.getBySubject(auth.idToken.subject) });
 	 */
 	scheme<identity>(options: RelyingParty.SchemeOptions<identity>): AuthScheme<identity> {
 		let authScheme: AuthScheme<identity> = {
 			name: options.name ?? "oidc-session",
+
+			/**
+			 * Resolves the request's stored token set into the identity the app's `verify`
+			 * returns, renewing the set first where it has reached its end.
+			 *
+			 * @param context - The request being authenticated.
+			 * @returns The identity, the rejection, or nothing at all for a signed-out
+			 *   request, which leaves the schemes behind this one their turn.
+			 */
 			authenticate: async (context): Promise<AuthSchemeAuthenticateResult<identity>> => {
 				let auth = AuthSession.from(context);
 				if (!auth) return null;
 
 				if (auth.expired) {
-					try {
-						await auth.refresh(this);
-					} catch (error) {
-						if (!(error instanceof AuthError)) throw error;
-						auth.clear();
-						return {
-							status: "failure",
-							code: "invalid_credentials",
-							message: error.message,
-						};
-					}
+					let refusal = await this.#renew(auth);
+					if (refusal) return refusal;
 				}
 
 				let identity = await options.verify(auth);
@@ -697,6 +703,32 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		};
 
 		return authScheme;
+	}
+
+	/**
+	 * Renews a token set past its end, separating the two answers a refusal can carry: the
+	 * provider declining a refresh token ends the session, while a set that carried none to
+	 * present was never renewable, and stays signed in on claims verified when it was written.
+	 *
+	 * @param auth - The request's session, whose stored set has reached its end.
+	 * @returns The refusal to answer the request with, and `null` where the request goes on
+	 *   signed in — with a renewed set, or with the one it arrived carrying.
+	 * @throws When the renewal failed for a reason outside the protocol, so an environment
+	 *   fault reaches the app rather than being read as a session that is over.
+	 */
+	async #renew(auth: AuthSession): Promise<AuthSchemeFailure | null> {
+		let renewed = await wrap(() => auth.refresh(this));
+		if (!isFailure(renewed)) return null;
+		if (AuthError.is(renewed.error, AuthErrorCode.MissingRefreshToken)) return null;
+		if (!(renewed.error instanceof AuthError)) throw renewed.error;
+
+		auth.clear();
+
+		return {
+			status: "failure",
+			code: "invalid_credentials",
+			message: renewed.error.message,
+		};
 	}
 
 	/**

@@ -121,10 +121,35 @@ function signToken(claims: Record<string, unknown>): Promise<string> {
 	}).sign(JWK.Algorithm.ES256, keys);
 }
 
-/** The grant the provider answers a login's code with, refresh token included. */
+/**
+ * The grant the provider answers a login's code with. It grants the three scopes it
+ * publishes and no `offline_access`, so it hands out no refresh token, and the access
+ * token it signs is good for the hour discovery advertises.
+ */
 async function grantedTokens(): Promise<Response> {
 	return HttpResponse.json({
-		access_token: await signToken({ sub: "user-1", client_id: CLIENT_ID, scope: "openid" }),
+		access_token: await signToken({
+			sub: "user-1",
+			client_id: CLIENT_ID,
+			scope: "openid profile email",
+		}),
+		id_token: await signIdToken(),
+		token_type: "Bearer",
+		expires_in: ONE_HOUR,
+	});
+}
+
+/**
+ * The grant a provider that honors `offline_access` answers with, which pins the
+ * refresh-token path against the day this one starts granting the scope it is asked for.
+ */
+async function grantedTokensWithRefresh(): Promise<Response> {
+	return HttpResponse.json({
+		access_token: await signToken({
+			sub: "user-1",
+			client_id: CLIENT_ID,
+			scope: "openid profile email offline_access",
+		}),
 		id_token: await signIdToken(),
 		refresh_token: "refresh-1",
 		token_type: "Bearer",
@@ -323,7 +348,10 @@ describe("POST /auth", () => {
 		);
 		expect(location.searchParams.get("code_challenge_method")).toBe("S256");
 		expect(location.searchParams.get("state")).toBe(agent.transaction().state);
-		/** `offline_access` is what keeps a session alive past the access token's hour. */
+		/**
+		 * The login asks for `offline_access`, so a provider that grants it issues the
+		 * refresh token that renews an access token on the server.
+		 */
 		expect(location.searchParams.get("scope")?.split(" ")).toContain("offline_access");
 
 		let setCookieHeaders = response.headers.getSetCookie();
@@ -382,11 +410,27 @@ describe("GET /auth", () => {
 		expect(JWT.decode(tokens!.idToken).subject).toBe("user-1");
 	});
 
-	/** The refresh token is what keeps a session alive past the access token's hour. */
-	test("stores the refresh token the grant carried", async () => {
+	/**
+	 * The provider publishes `openid`, `email` and `profile` and grants nothing else, so
+	 * `offline_access` is filtered out of the request and no refresh token comes back. The
+	 * session that results is renewed by nothing, and lasts as long as its own cookie.
+	 */
+	test("stores no refresh token, since the provider grants no offline_access", async () => {
 		let { db } = createTestDatabase();
 		await seedExistingTeam(db);
 		let agent = createAgent(db);
+
+		await signInThrough(agent);
+
+		expect(agent.tokens()?.refreshToken).toBeNull();
+	});
+
+	/** A provider that does grant `offline_access` has its refresh token stored to spend. */
+	test("stores the refresh token a grant carrying one leaves", async () => {
+		let { db } = createTestDatabase();
+		await seedExistingTeam(db);
+		let agent = createAgent(db);
+		tokenResponse = grantedTokensWithRefresh;
 
 		await signInThrough(agent);
 

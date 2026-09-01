@@ -189,6 +189,29 @@ describe("expired", () => {
 	});
 });
 
+describe("renewable", () => {
+	test("reads true for a grant that carried a refresh token", () => {
+		let ctx = createContext();
+		AuthSession.write(ctx, tokens());
+
+		expect(AuthSession.from(ctx)?.renewable).toBe(true);
+	});
+
+	/**
+	 * The pair a holder branches on: the set is past its end, and nothing can bring it
+	 * back, which is a session to read claims from rather than one to sign out.
+	 */
+	test("reads false past its expiry for a grant that carried none", () => {
+		let ctx = createContext();
+		AuthSession.write(ctx, tokens({ refreshToken: null, expiresAt: epoch(-1) }));
+
+		let auth = AuthSession.from(ctx);
+
+		expect(auth?.expired).toBe(true);
+		expect(auth?.renewable).toBe(false);
+	});
+});
+
 describe("refresh", () => {
 	test("rewrites the session with the renewed tokens", async () => {
 		let ctx = createContext();

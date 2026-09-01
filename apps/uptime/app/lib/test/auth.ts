@@ -34,16 +34,14 @@ function token(claims: Record<string, unknown>): string {
 }
 
 /**
- * Signs the current request in as `viewer`, so the auth middleware after this
- * resolves it and `getViewer()` answers with the same fields.
+ * Writes the token set the provider issues today: both tokens lapse together and no
+ * refresh token comes with them, since the provider grants no `offline_access`.
  *
  * @param viewer - Who the request is signed in as.
  * @param scopes - Scopes the access token carries, for a route reading a delegation.
- * @example signIn({ id: "user_1", name: "Ada", email: "ada@example.com", avatar: "" });
+ * @param expiresAt - Seconds since the epoch both tokens lapse at.
  */
-export function signIn(viewer: Viewer, scopes: string[] = ["openid", "profile", "email"]): void {
-	let expiresAt = Math.floor(Date.now() / 1000) + ONE_HOUR;
-
+function write(viewer: Viewer, scopes: string[], expiresAt: number): void {
 	AuthSession.write(getContext(), {
 		idToken: token({
 			sub: viewer.id,
@@ -57,4 +55,32 @@ export function signIn(viewer: Viewer, scopes: string[] = ["openid", "profile", 
 		refreshToken: null,
 		expiresAt,
 	});
+}
+
+/**
+ * Signs the current request in as `viewer`, so the auth middleware after this
+ * resolves it and `getViewer()` answers with the same fields.
+ *
+ * @param viewer - Who the request is signed in as.
+ * @param scopes - Scopes the access token carries, for a route reading a delegation.
+ * @example signIn({ id: "user_1", name: "Ada", email: "ada@example.com", avatar: "" });
+ */
+export function signIn(viewer: Viewer, scopes: string[] = ["openid", "profile", "email"]): void {
+	write(viewer, scopes, Math.floor(Date.now() / 1000) + ONE_HOUR);
+}
+
+/**
+ * Signs the current request in with a token set whose hour has already run out, which is
+ * where every session lands an hour after a login the provider issued no refresh token
+ * for — the state a test covering what outlives the tokens has to start from.
+ *
+ * @param viewer - Who the request is signed in as.
+ * @param scopes - Scopes the access token carries, for a route reading a delegation.
+ * @example signInWithLapsedTokens({ id: "user_1", name: "Ada", email: "", avatar: "" });
+ */
+export function signInWithLapsedTokens(
+	viewer: Viewer,
+	scopes: string[] = ["openid", "profile", "email"],
+): void {
+	write(viewer, scopes, Math.floor(Date.now() / 1000) - ONE_HOUR);
 }

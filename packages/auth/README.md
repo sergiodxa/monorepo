@@ -124,7 +124,8 @@ let auth = AuthSession.from(ctx); // null when signed out
 
 auth.idToken.subject; // the identity anchor, never null
 auth.accessToken.has("reports:write");
-auth.expired; // the token set has reached its end and wants renewing
+auth.expired; // the token set has reached its end
+auth.renewable; // a refresh token is there to bring it back
 await auth.refresh(rp); // spends the refresh token, rewrites the session
 auth.clear(); // signs out, leaving every other session entry alone
 ```
@@ -377,7 +378,8 @@ values against `amr` and then `acr`.
 #### `rp.scheme(options): AuthScheme<identity>`
 
 A `remix/middleware/auth` scheme resolving identity from the session, renewing an expired
-access token first.
+access token first. A session the provider refuses to renew is signed out; one that carries
+no refresh token was never renewable and stays signed in on the claims it was written with.
 
 **Parameters:**
 
@@ -546,7 +548,10 @@ Stores a token set as the request's session, which is what makes the request sig
 - `auth.tokens`: `AuthSession.Tokens`, the strings the provider issued, for a step that
   sends a token on
 - `auth.expired`: Whether the token set has reached its end, from the access token's own
-  `exp`, then `expires_in`, then the ID token's `exp`, holding back a 30-second reserve
+  `exp`, then `expires_in`, then the ID token's `exp`, holding back a 30-second reserve. It
+  describes the tokens, not the person: an expired set still names who signed in
+- `auth.renewable`: Whether the set carries a refresh token, which is what `refresh` spends.
+  `expired && !renewable` is a set that is as live as it will get
 - `auth.refresh(client)`: Spends the refresh token and rewrites the session. **Throws**
   `missing_refresh_token` when the grant carried none
 - `auth.clear()`: Drops this package's session key, leaving every other entry alone
@@ -854,8 +859,8 @@ let router = createRouter({
 });
 ```
 
-`rp.scheme` reads the session, renews an access token that has reached its expiry, and
-hands the app's `verify` a live token set. `api.scheme` reads the `Authorization` header,
+`rp.scheme` reads the session, renews an access token that has reached its expiry where a
+refresh token is there to renew it with, and hands the app's `verify` the token set. `api.scheme` reads the `Authorization` header,
 verifies a JWT access token against the cached key set, and falls back to RFC 7662
 introspection for a credential carrying no claims. A route then reads the resolved state
 the way it reads any other scheme's: `getContext().get(Auth)`, then `.ok` and `.identity`.
@@ -1054,10 +1059,20 @@ Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv
     `jwks_failed`, `introspection_failed` — propagates out of `authenticate` instead. A
     provider outage answers as the fault it is rather than as a caller holding a bad
     credential.
-18. **A session whose refresh fails is cleared, and the request stops** - When
-    `rp.scheme` cannot renew an expired access token it drops the session and reports a
-    scheme failure, so the request gets a `401` rather than continuing as anonymous with
-    the old token still in the cookie.
+18. **A refused refresh ends the session; a session with no refresh token to spend
+    survives its tokens** - `rp.scheme` reads the two apart by the code on the
+    `AuthError`. The provider declining a refresh token says this login is over, so the
+    scheme drops the session and reports a scheme failure, and the request gets a `401`
+    rather than continuing as anonymous with the old token still in the cookie.
+    `missing_refresh_token` says instead that the grant was never renewable — no
+    `offline_access`, so no refresh token was ever issued — and ending a session over that
+    would sign a person out every time an access token lapsed. That session stays signed
+    in: `verify` runs on the ID token's claims, which were verified when the set was
+    written, and the signed session cookie's own lifetime is what governs how long the
+    person stays. What it does not promise is a live credential — `auth.expired` still
+    reads `true`, and `auth.accessToken` is past its end, so an outbound call needs a
+    freshly obtained token rather than the stored one. `auth.renewable` is how a route
+    tells the two states apart.
 19. **`revoke` with a `waitUntil` resolves before the call finishes** - The response is
     sent while the revocation completes in the background, so a refusal reaches the
     runtime's handler rather than the caller. Omit `waitUntil` where the outcome has to be

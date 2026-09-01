@@ -104,8 +104,9 @@ export class AuthSession {
 	}
 
 	/**
-	 * Whether the stored token set has reached its end, counting a 30-second reserve so
-	 * a token nearing that end is renewed before the request reaches for it.
+	 * Whether the stored token set has reached its end, counting a 30-second reserve so a
+	 * token nearing that end is renewed before the request reaches for it. It describes the
+	 * tokens rather than the person: a set past its end still names who signed in.
 	 *
 	 * @returns `true` for a set whose end has arrived, and for one that states no end
 	 *   at all, which is a set nothing vouches for.
@@ -115,15 +116,27 @@ export class AuthSession {
 	}
 
 	/**
+	 * Whether the stored set carries what `refresh` spends, which is what separates a
+	 * session that can be brought back to life from one that never could. A set that is
+	 * `expired` and not renewable is as live as it will get, and stays signed in.
+	 *
+	 * @example if (auth.expired && !auth.renewable) return readClaimsOnly(auth.idToken);
+	 */
+	get renewable(): boolean {
+		return this.#tokens.refreshToken !== null;
+	}
+
+	/**
 	 * Spends the refresh token on a new access token and rewrites the session, so the
 	 * rest of the request reads the renewed set. A response carrying only a new access
 	 * token leaves the stored ID and refresh tokens in place.
 	 *
 	 * @param client - The relying party that holds the credentials for the exchange.
 	 * @returns This session, now carrying the renewed tokens.
-	 * @throws {AuthError} `missing_refresh_token` when the grant carried none.
+	 * @throws {AuthError} `missing_refresh_token` when the grant carried none, which reports
+	 *   a set that was never renewable rather than a session the provider has ended.
 	 * @example
-	 * if (auth.expired) await auth.refresh(rp);
+	 * if (auth.expired && auth.renewable) await auth.refresh(rp);
 	 */
 	async refresh(client: AuthSession.Client): Promise<AuthSession> {
 		let refreshToken = this.#tokens.refreshToken;

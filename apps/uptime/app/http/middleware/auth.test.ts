@@ -18,7 +18,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import { auth, getViewer, isAuthenticated } from "~/app/http/middleware/auth";
-import { signIn } from "~/app/lib/test/auth";
+import { signIn, signInWithLapsedTokens } from "~/app/lib/test/auth";
 
 let viewer: Viewer = {
 	id: "user_1",
@@ -98,6 +98,30 @@ describe("auth middleware", () => {
 
 		let body = (await response.json()) as { viewer: Viewer };
 		expect(body.viewer).toEqual({ id: "user_2", name: "", email: "", avatar: "" });
+	});
+
+	/**
+	 * The provider grants no `offline_access`, so a login is issued no refresh token and
+	 * both of its tokens lapse in an hour. A session lasts as long as its own cookie, so
+	 * the hour that runs out is the tokens' and not the person's.
+	 */
+	test("keeps a viewer signed in past the hour its tokens lapsed at", async () => {
+		let { cookie, storage } = createSessionSetup();
+
+		let response = await run([
+			asyncContext(),
+			session(cookie, storage),
+			(_ctx, next) => {
+				signInWithLapsedTokens(viewer);
+				return next();
+			},
+			auth,
+			() => Response.json({ viewer: getViewer(), authenticated: isAuthenticated() }),
+		]);
+
+		let body = (await response.json()) as { viewer: Viewer; authenticated: boolean };
+		expect(body.authenticated).toBe(true);
+		expect(body.viewer).toEqual(viewer);
 	});
 
 	/**

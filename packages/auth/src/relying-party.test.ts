@@ -1800,12 +1800,17 @@ describe("scheme", () => {
 	 * session reads first.
 	 *
 	 * @param expiresAt - Seconds since the epoch the set lapses at.
+	 * @param refreshToken - The refresh token the grant carried, and `null` for a grant
+	 *   made without `offline_access`, which is a set nothing can renew.
 	 */
-	async function storedTokens(expiresAt: number): Promise<AuthSession.Tokens> {
+	async function storedTokens(
+		expiresAt: number,
+		refreshToken: string | null = "refresh-1",
+	): Promise<AuthSession.Tokens> {
 		return {
 			idToken: await signIdToken(),
 			accessToken: await signAccessToken({ exp: expiresAt }),
-			refreshToken: "refresh-1",
+			refreshToken,
 			expiresAt,
 		};
 	}
@@ -1912,6 +1917,30 @@ describe("scheme", () => {
 			identity: { scopes: ["openid", "monitors:write"] },
 			method: "oidc-session",
 		});
+	});
+
+	/**
+	 * A grant made without `offline_access` carries no refresh token, so its expiry was
+	 * never renewable. Ending the session over that would sign a person out every hour;
+	 * the claims verified when the set was written still name who is here.
+	 */
+	test("keeps a session with no refresh token signed in past its expiry", async () => {
+		let rp = createRelyingParty();
+		let scheme = rp.scheme({ verify: (session) => ({ id: session.idToken.subject }) });
+		let request = stubTokenEndpoint(() => HttpResponse.json({ error: "invalid_grant" }));
+
+		let resolved = await resolve(
+			scheme,
+			await storedTokens(Math.floor(Date.now() / 1000) - 1, null),
+		);
+
+		expect(resolved.auth).toEqual({
+			ok: true,
+			identity: { id: "user-1" },
+			method: "oidc-session",
+		});
+		expect(resolved.signedIn).toBe(true);
+		expect(request.body).toBeNull();
 	});
 
 	test("signs the request out when the renewal is refused", async () => {
