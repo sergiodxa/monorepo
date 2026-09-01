@@ -402,6 +402,15 @@ let profile = {
 };
 ```
 
+## Related Packages
+
+- [`@pkg/crypto`](/packages/crypto) - Cryptographically strong random bytes, which
+  `systemSeed()` draws from
+- [`@pkg/dates`](/packages/dates) - Instant arithmetic, which the `date` module
+  places its values with
+- [`@pkg/duration`](/packages/duration) - Durations written as text, which spell
+  the day a date window is measured in
+
 ## Tips
 
 1. **Assert the shape, not the text** - A dataset entry or a generator change
