@@ -700,6 +700,18 @@
         "vitest": "4.1.10",
       },
     },
+    "packages/sample": {
+      "name": "@pkg/sample",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/dates": "workspace:*",
+        "@pkg/duration": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+        "vitest": "4.1.10",
+      },
+    },
     "packages/seo": {
       "name": "@pkg/seo",
       "version": "0.0.1",
@@ -1428,6 +1440,8 @@
     "@pkg/result": ["@pkg/result@workspace:packages/result"],
 
     "@pkg/rss": ["@pkg/rss@workspace:packages/rss"],
+
+    "@pkg/sample": ["@pkg/sample@workspace:packages/sample"],
 
     "@pkg/seo": ["@pkg/seo@workspace:packages/seo"],
 

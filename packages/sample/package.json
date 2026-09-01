@@ -1,0 +1,22 @@
+{
+	"name": "@pkg/sample",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./data/en": "./src/data/en.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/dates": "workspace:*",
+		"@pkg/duration": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14",
+		"vitest": "4.1.10"
+	}
+}
