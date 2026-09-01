@@ -1,9 +1,9 @@
 /**
  * Runs a customer's executable spec and reports what it concluded (ADR-027).
  *
- * Decides three things itself: which capabilities exist (`http`, `url`, `jwt` only), which
- * hosts a verified domain covers, and how many requests and how much time a run gets before
- * it is cut off.
+ * Decides three things itself: which capabilities exist (`http`, `url`, `jwt` and `sample`
+ * only), which hosts a verified domain covers, and how many requests and how much time a run
+ * gets before it is cut off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,15 +20,18 @@ import type {
 	StatementNode,
 	TestResult,
 	ToolArg,
+	Seed,
 	ToolContext,
 	Value,
 } from "@pkg/spec/workers";
 
+import { randomToken } from "@pkg/crypto";
 import { failure, isFailure } from "@pkg/result";
 import {
 	createHttpPlugin,
 	createJwtPlugin,
 	createNoFilesystemWorkspace,
+	createSamplePlugin,
 	createUrlPlugin,
 	loadSources,
 	parseGrants,
@@ -75,6 +78,12 @@ export interface FlowCheckInput {
 	 * already stops this afternoon's check.
 	 */
 	verifiedDomains: readonly string[];
+	/**
+	 * What the run's generated data descends from. Drawn fresh per run by default, because a
+	 * flow that signs somebody up needs a different address every check rather than the same
+	 * one colliding with itself; pass a fixed value to reproduce a run's data.
+	 */
+	seed?: Seed;
 	/** Overrides the {@link FLOW_RUN_TIMEOUT_MS} deadline. For tests. */
 	timeoutMs?: number;
 	/** Overrides the {@link FLOW_RUN_MAX_REQUESTS} ceiling. For tests. */
@@ -105,9 +114,15 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	let startedAt = Date.now();
 	let outcome = await runTests({
 		suite: loaded.data,
-		plugins: [budget.wrap(createHttpPlugin()), createUrlPlugin(), createJwtPlugin()],
+		plugins: [
+			budget.wrap(createHttpPlugin()),
+			createUrlPlugin(),
+			createJwtPlugin(),
+			createSamplePlugin(),
+		],
 		grants: grants.data.grants,
 		createWorkspace: createNoFilesystemWorkspace,
+		seed: input.seed ?? randomToken(),
 	});
 	let durationMs = Date.now() - startedAt;
 

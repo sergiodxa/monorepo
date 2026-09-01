@@ -46,6 +46,38 @@ function signInFlow(): string {
 	].join("\n");
 }
 
+/** A sign-up flow whose address is generated per run rather than typed in. */
+function signUpFlow(): string {
+	return [
+		"use http",
+		"use sample",
+		'test "a visitor can sign up" {',
+		"\tgiven {",
+		"\t\tlet person = sample.person",
+		"\t}",
+		"\twhen {",
+		`\t\tlet created = http.post "${ORIGIN}/signup" { email: person.email, name: person.full_name }`,
+		"\t}",
+		"\tthen {",
+		"\t\texpect created.status 201",
+		"\t}",
+		"}",
+	].join("\n");
+}
+
+/** Answers every sign-up and keeps the address each one carried. */
+function captureSignUps(): string[] {
+	let seen: string[] = [];
+	server.use(
+		http.post(`${ORIGIN}/signup`, async ({ request }) => {
+			let body = (await request.json()) as { email?: string };
+			seen.push(body.email ?? "");
+			return HttpResponse.json({ id: seen.length }, { status: 201 });
+		}),
+	);
+	return seen;
+}
+
 describe("runFlowCheck", () => {
 	test("a flow whose every assertion holds is up, and reports what it spent", async () => {
 		server.use(
@@ -249,6 +281,44 @@ describe("runFlowCheck", () => {
 		expect(result.testsPassed).toBe(1);
 		expect(result.testsFailed).toBe(1);
 		expect(result.failedTest).toBe("the broken endpoint answers");
+	});
+});
+
+describe("generated data", () => {
+	test("a flow signs up with an address it generated", async () => {
+		let seen = captureSignUps();
+
+		let result = await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN] });
+
+		expect(result.status).toBe("up");
+		expect(seen).toHaveLength(1);
+		expect(seen[0]).toMatch(/@example\.(com|org|net)$/);
+	});
+
+	test("generating costs nothing against the request cap", async () => {
+		captureSignUps();
+
+		let result = await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN] });
+
+		expect(result.requestsMade).toBe(1);
+	});
+
+	test("each run generates its own data, so a check does not collide with itself", async () => {
+		let seen = captureSignUps();
+
+		await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN] });
+		await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN] });
+
+		expect(seen[0]).not.toBe(seen[1]);
+	});
+
+	test("a seed reproduces a run's data exactly", async () => {
+		let seen = captureSignUps();
+
+		await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN], seed: "fixed" });
+		await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN], seed: "fixed" });
+
+		expect(seen[0]).toBe(seen[1]);
 	});
 });
 
