@@ -56,7 +56,7 @@ reproducible enough to live inside a test runner.
    namespace; the language gains no syntax
    ([spec ADR-002](./spec/ADR-002-specification-language-design.md)).
 5. **Runs on Workers.** Applications consume this from a Worker, so: no Node
-   built-ins, no filesystem, zero runtime dependencies, and locale data small
+   built-ins, no filesystem, no third-party dependencies, and locale data small
    enough that importing it is not a bundle decision.
 
 ## Decision
@@ -79,6 +79,11 @@ name, so `fixture.email` could never be written even if the package were named
 that.
 
 ### 2. Three Layers, Separately Usable
+
+The only dependencies are workspace packages, and only for date arithmetic:
+`add`, `subtract`, and `elapsed` from `@pkg/dates` place an instant inside a
+window, and `toMs` from `@pkg/duration` spells the day the window is measured in.
+Nothing else in the package needs a dependency.
 
 ```
 Random      seeded 32-bit PRNG: int, float, bool, pick, shuffle, derive
@@ -144,6 +149,7 @@ Faker-shaped: modules on an instance, options as an object argument.
 sample.person.firstName(); // "Marta"
 sample.person.lastName();
 sample.person.fullName();
+sample.person.phone(); // in the 555-01xx range reserved for fiction
 sample.person.record(); // { firstName, lastName, fullName, email, username }
 
 sample.internet.email({ firstName: "Marta", lastName: "Ibáñez" });
@@ -195,9 +201,12 @@ Three deliberate differences from Faker:
 
 ### 4. Datasets Are Ours, And The Values Are Unroutable
 
-`data/en` is authored in this repository: roughly 100 first names, 100 last
-names, 40 countries with a handful of cities each, 60 company words, and a
-~200-word lorem list. Cities are stored **under** their country rather than in
+`data/en` is authored in this repository: 100 first names, 100 last names, 40
+countries holding 5 cities each, 60 company words, and a 204-word lorem list.
+Its scope is bounded on purpose — Western and East Asian names, and countries
+across the Americas, Europe, East Asia, and Oceania. A dataset that reaches for
+the whole world with a handful of entries per region represents none of them
+well; a caller who needs another region supplies a dataset that covers it. Cities are stored **under** their country rather than in
 one flat list, which is what makes `city({ country })` a lookup instead of a
 filter, and what keeps a generated address internally consistent. A `country`
 naming something the dataset does not carry throws, naming it: returning a
@@ -331,8 +340,8 @@ which wants a frozen-clock capability decided on its own terms.
   dataset instead of four private arrays.
 - **Nothing reaches a real inbox.** Reserved domains and 555 numbers are
   structural, not a review item.
-- **Small on Workers.** Zero dependencies and a per-locale data module, against
-  Faker's multi-megabyte install and bundled locale set.
+- **Small on Workers.** No third-party dependencies and a per-locale data
+  module, against Faker's multi-megabyte install and bundled locale set.
 - **The seam generalizes.** `ToolContext.random` gives every present and future
   plugin a reproducible entropy source.
 
@@ -453,9 +462,21 @@ exists to avoid.
 
 - The package is `private: true` like the rest of `packages/*`, and ships
   TypeScript sources with no build step.
+- `data/en` is one module rather than one per list, since a dataset is consumed
+  whole; a second locale is a second module.
 - `sfc32` and `cyrb128` are public-domain snippets small enough to be written
   and tested here rather than depended upon; both are covered by unit tests
   pinning a known sequence, which is what makes an accidental change to either
   fail loudly instead of silently reshuffling every suite's data.
 - The seed a `--seed=random` run prints is the whole reproduction recipe: same
   seed plus same version reproduces every test's values exactly.
+
+## Current Progress
+
+- [x] Phase 1: The Package Core
+  - [x] `createRandom`, `derive`, `systemSeed`, and their tests
+  - [x] `data/en` and the `Dataset` type
+  - [x] `createSample` and the nine modules
+  - [x] README carrying the determinism contract and the reserved-domain rule
+- [ ] Phase 2: The Spec Capability
+- [ ] Phase 3: Adoption
