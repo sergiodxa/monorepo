@@ -197,3 +197,86 @@ command broken {
 		expect(output()).toContain("load-error");
 	});
 });
+
+describe("--seed", () => {
+	/** A suite whose only test fails, printing the address it generated. */
+	async function probeSuite(): Promise<string> {
+		return makeSuiteDir({
+			"probe.spec": `use sample
+
+test "reports the address it drew" {
+	when {
+		let person = sample.person
+	}
+	then {
+		expect person.email "not-the-drawn-address"
+	}
+}
+`,
+		});
+	}
+
+	/** The generated value, read out of the failure the probe suite reports. */
+	function drawnValue(output: string): string {
+		let observed = /observed "([^"]+)"/.exec(output);
+		if (observed?.[1] === undefined) throw new Error(`no observed value in:\n${output}`);
+		return observed[1];
+	}
+
+	test("repeats a run's data when no seed is given", async () => {
+		let root = await probeSuite();
+		let first = makeSink();
+		let second = makeSink();
+
+		await main(["run", root], first.sink);
+		await main(["run", root], second.sink);
+
+		expect(drawnValue(first.output())).toBe(drawnValue(second.output()));
+	});
+
+	test("changes the data when the seed changes", async () => {
+		let root = await probeSuite();
+		let one = makeSink();
+		let two = makeSink();
+
+		await main(["run", root, "--seed=one"], one.sink);
+		await main(["run", root, "--seed=two"], two.sink);
+
+		expect(drawnValue(one.output())).not.toBe(drawnValue(two.output()));
+	});
+
+	test("prints a drawn seed, and replaying it reproduces the run", async () => {
+		let root = await probeSuite();
+		let drawn = makeSink();
+
+		await main(["run", root, "--seed=random"], drawn.sink);
+
+		let printed = /seed (\d+) \(replay with --seed=(\d+)\)/.exec(drawn.output());
+		expect(printed).not.toBeNull();
+		expect(printed?.[1]).toBe(printed?.[2]);
+
+		let replay = makeSink();
+		await main(["run", root, `--seed=${printed?.[1]}`], replay.sink);
+
+		expect(drawnValue(replay.output())).toBe(drawnValue(drawn.output()));
+	});
+
+	test("a seed with no value is a usage error", async () => {
+		let root = await probeSuite();
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root, "--seed"], sink);
+
+		expect(code).toBe(2);
+		expect(output()).toContain("--seed expects a value");
+	});
+
+	test("does not print a seed line when the seed was given", async () => {
+		let root = await probeSuite();
+		let { sink, output } = makeSink();
+
+		await main(["run", root, "--seed=fixed"], sink);
+
+		expect(output()).not.toContain("replay with");
+	});
+});

@@ -12,8 +12,10 @@
 import { readFile } from "node:fs/promises";
 
 import type { Result } from "@pkg/result";
+import type { Seed } from "@pkg/sample";
 
 import { failure, isFailure, success } from "@pkg/result";
+import { systemSeed } from "@pkg/sample";
 
 import type { Sink } from "./diagnostics";
 import type { PermissionKind } from "./permissions";
@@ -36,6 +38,7 @@ import {
 	pluginGrantFromConfig,
 } from "./project-config";
 import { reportFatal, reportSuite } from "./reporter";
+import { DEFAULT_SEED } from "./run";
 import { runSuite } from "./runner";
 
 /**
@@ -54,6 +57,10 @@ Usage:
 
 Scheduling:
   --concurrency=N (alias --jobs=N)   Run up to N tests at once (default 1, sequential)
+
+Generated data:
+  --seed=VALUE                       Seed the data sample generates (default: fixed)
+  --seed=random                      Draw a seed and print it, to replay with --seed=<it>
 
 Permissions (denied unless granted):
   --allow-run[=name,...]      Execute processes (scoped to executable names)
@@ -98,7 +105,14 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let { concurrency, remaining: afterConcurrency } = concurrencyParsed.data;
 
-	let pluginParsed = parsePluginGrant(afterConcurrency);
+	let seedParsed = parseSeed(afterConcurrency);
+	if (isFailure(seedParsed)) {
+		reportFatal(seedParsed.error, sink);
+		return 2;
+	}
+	let { seed, drawn, remaining: afterSeed } = seedParsed.data;
+
+	let pluginParsed = parsePluginGrant(afterSeed);
 	if (isFailure(pluginParsed)) {
 		reportFatal(pluginParsed.error, sink);
 		return 2;
@@ -167,7 +181,9 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		externalPlugins = connected.data;
 	}
 
-	let run = await runSuite({ root, grants, plugins: externalPlugins, concurrency });
+	if (drawn) sink.write(`seed ${seed} (replay with --seed=${seed})\n\n`);
+
+	let run = await runSuite({ root, grants, plugins: externalPlugins, concurrency, seed });
 	if (isFailure(run)) {
 		await disposeAll(externalPlugins);
 		reportFatal(run.error, sink);
@@ -273,6 +289,46 @@ function parseConcurrency(
 		concurrency = value;
 	}
 	return success({ concurrency, remaining });
+}
+
+/**
+ * Peel `--seed=VALUE` out of an argument list. `--seed=random` draws one, which
+ * the caller prints so a run that turned up a bad value can be replayed;
+ * anything else is taken as written, since text and numbers both name a stream.
+ * Omitting the flag keeps the runner's fixed default, so a bare run repeats.
+ *
+ * @param argv - Arguments after the earlier flags were peeled off.
+ * @returns The seed, whether it was drawn, and the remaining arguments.
+ */
+function parseSeed(
+	argv: string[],
+): Result<{ seed: Seed; drawn: boolean; remaining: string[] }, SpecError> {
+	let remaining: string[] = [];
+	let seed: Seed = DEFAULT_SEED;
+	let drawn = false;
+	for (let argument of argv) {
+		if (argument !== "--seed" && !argument.startsWith("--seed=")) {
+			remaining.push(argument);
+			continue;
+		}
+		let value = argument === "--seed" ? "" : argument.slice("--seed=".length);
+		if (value === "") {
+			return failure(
+				new SpecError(
+					"usage-error",
+					"--seed expects a value, e.g. --seed=checkout or --seed=random to draw one.",
+				),
+			);
+		}
+		if (value === "random") {
+			seed = systemSeed();
+			drawn = true;
+			continue;
+		}
+		seed = /^\d+$/.test(value) ? Number(value) : value;
+		drawn = false;
+	}
+	return success({ seed, drawn, remaining });
 }
 
 /**
