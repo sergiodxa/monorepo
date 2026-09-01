@@ -15,6 +15,7 @@ import { createServer } from "node:http";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success, unwrap } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
@@ -172,7 +173,12 @@ function stubWorkspace(): Workspace {
 
 /** Build a tool context from a permission set (defaults to allow-all). */
 function buildContext(permissions: PermissionSet = allowAll()): ToolContext {
-	return { workspace: stubWorkspace(), permissions };
+	return {
+		workspace: stubWorkspace(),
+		permissions,
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 }
 
 /** Read a result value as an object, failing the test when it is not one. */

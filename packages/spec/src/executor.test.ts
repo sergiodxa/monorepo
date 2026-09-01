@@ -10,6 +10,7 @@
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, isSuccess, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { describe, expect, test } from "vitest";
 
 import type {
@@ -287,6 +288,8 @@ function makeContext(overrides: Partial<ExecutionContext> = {}): ExecutionContex
 		registry: makeRegistry(),
 		workspace: makeWorkspace(),
 		permissions: makePermissions(),
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
 		uses: [],
 		usesFor: () => [],
 		grants: makeGrants(),

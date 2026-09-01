@@ -14,6 +14,7 @@ import { isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, isSuccess, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { PermissionSet } from "../permissions";
@@ -31,7 +32,12 @@ let context: ToolContext;
 
 beforeEach(async () => {
 	root = await realpath(await mkdtemp(join(tmpdir(), "spec-fs-plugin-")));
-	context = { workspace: createWorkspaceStub(root), permissions: createPermissionsStub() };
+	context = {
+		workspace: createWorkspaceStub(root),
+		permissions: createPermissionsStub(),
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 });
 
 afterEach(async () => {

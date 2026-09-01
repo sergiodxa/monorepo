@@ -7,6 +7,7 @@
  */
 
 import { isFailure, isSuccess, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "../plugin";
@@ -17,6 +18,8 @@ import { createDemoPlugin } from "./demo";
 /** A minimal context: the demo plugin's tools run the same regardless of workspace or grants. */
 function stubContext(): ToolContext {
 	return {
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
 		workspace: {
 			root: "/tmp/spec-demo-test-workspace",
 			resolve(target) {

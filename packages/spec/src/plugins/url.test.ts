@@ -11,6 +11,7 @@
 import type { Result } from "@pkg/result";
 
 import { isFailure, success, unwrap } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
@@ -53,7 +54,12 @@ function stubWorkspace(): Workspace {
 
 /** Build a tool context; the url plugin ignores everything but its arguments. */
 function buildContext(): ToolContext {
-	return { workspace: stubWorkspace(), permissions: grantNothing() };
+	return {
+		workspace: stubWorkspace(),
+		permissions: grantNothing(),
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 }
 
 /** Unwrap a failed result into its error, failing the test on success. */

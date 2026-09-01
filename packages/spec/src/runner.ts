@@ -11,6 +11,7 @@
  */
 
 import type { Result } from "@pkg/result";
+import type { Seed } from "@pkg/sample";
 
 import { isFailure } from "@pkg/result";
 
@@ -44,6 +45,11 @@ export interface RunOptions {
 	 * strictly sequentially in source order; see `RunTestsOptions.concurrency`.
 	 */
 	concurrency?: number;
+	/**
+	 * The run's seed, which every test's generated data descends from; omit for
+	 * the fixed default that makes two runs produce identical data.
+	 */
+	seed?: Seed;
 }
 
 /**
@@ -64,5 +70,7 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		grants: options.grants,
 		createWorkspace,
 		concurrency: options.concurrency,
+		seed: options.seed,
+		root: options.root,
 	});
 }

@@ -14,6 +14,7 @@ import { createServer } from "node:http";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
@@ -177,7 +178,12 @@ function buildContext(
 	permissions: PermissionSet = allowAll(),
 	root = "/tmp/spec-browser-unit",
 ): ToolContext {
-	return { workspace: stubWorkspace(root), permissions };
+	return {
+		workspace: stubWorkspace(root),
+		permissions,
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 }
 
 /** Unwrap a failed result into its error, failing the test on success. */
@@ -579,6 +585,8 @@ async function runSpec(
 		registry: createRegistry(plugins, suite),
 		workspace: stubWorkspace(root),
 		permissions: allowAll(),
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
 		uses,
 		usesFor: () => uses,
 		grants,

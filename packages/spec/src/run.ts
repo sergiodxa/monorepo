@@ -13,9 +13,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { relative, sep } from "node:path";
+
 import type { Result } from "@pkg/result";
+import type { Random, Seed } from "@pkg/sample";
 
 import { isFailure, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 
 import type { DefinitionNode, TestNode } from "./ast";
 import type { SuiteResult, TestResult } from "./diagnostics";
@@ -58,6 +62,38 @@ export interface RunTestsOptions {
 	 * @default 1
 	 */
 	concurrency?: number;
+	/**
+	 * The run's seed, which every test's generated data descends from. A fixed
+	 * default makes two runs of a suite produce identical data; pass a drawn
+	 * seed to shake a suite for hidden dependence on particular values.
+	 *
+	 * @default "spec"
+	 */
+	seed?: Seed;
+	/**
+	 * The suite directory, which a test's seed measures its file against so the
+	 * data a suite generates does not follow the suite's absolute location on
+	 * disk. Omit when the sources came from strings rather than a directory.
+	 */
+	root?: string;
+}
+
+/** The run seed used when a caller names none, so a bare run repeats exactly. */
+export const DEFAULT_SEED = "spec";
+
+/**
+ * The stream one test draws from: the run's seed and the test's identity, and
+ * nothing about when or in what order it ran. Two tests that share a file and
+ * a title share a stream, which is the same data for what is already the same
+ * name.
+ *
+ * A test is identified by its file's path inside the suite, never the absolute
+ * one, so a suite generates the same data wherever it is checked out and
+ * however the runner was pointed at it.
+ */
+function streamFor(seed: Seed, file: string, title: string, root?: string): Random {
+	let within = root === undefined ? file : relative(root, file);
+	return createRandom(`${seed} ${within.split(sep).join("/")}#${title}`);
 }
 
 /**
@@ -132,6 +168,13 @@ export async function runTests(options: RunTestsOptions): Promise<Result<SuiteRe
 				registry,
 				workspace: workspace.data,
 				permissions,
+				random: streamFor(
+					options.seed ?? DEFAULT_SEED,
+					unit.filePath,
+					unit.test.title,
+					options.root,
+				),
+				now: new Date(),
 				uses: unit.imported,
 				usesFor: (definition) => usesByDefinition.get(definition) ?? unit.imported,
 				fileFor: (definition) => fileByDefinition.get(definition),

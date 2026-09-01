@@ -13,6 +13,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { isFailure, isSuccess, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "./plugin";
@@ -77,6 +78,8 @@ const EXITING_PLUGIN_SCRIPT = `process.exit(0);`;
 /** A minimal context whose workspace root the transport should forward. */
 function stubContext(root: string): ToolContext {
 	return {
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
 		workspace: {
 			root,
 			resolve(target) {

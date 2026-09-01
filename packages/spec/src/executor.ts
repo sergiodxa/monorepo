@@ -10,6 +10,7 @@
  */
 
 import type { Result } from "@pkg/result";
+import type { Random } from "@pkg/sample";
 
 import { failure, isFailure, success } from "@pkg/result";
 
@@ -56,6 +57,10 @@ export interface ExecutionContext {
 	workspace: Workspace;
 	/** The caller's grant set, handed to every tool call for scoped checks. */
 	permissions: PermissionSet;
+	/** The test's seeded stream, handed to every tool call that generates data. */
+	random: Random;
+	/** The instant the test started, frozen for the whole test. */
+	now: Date;
 	/** Namespaces imported by the test's file, in `use` order. */
 	uses: readonly string[];
 	/**
@@ -330,6 +335,8 @@ async function invokeTool(
 	let result = await tool.plugin.call(tool.descriptor.name, toolArgs, {
 		workspace: environment.workspace,
 		permissions: environment.permissions,
+		random: environment.random,
+		now: environment.now,
 	});
 	if (isFailure(result)) return failure(anchor(result.error, span, environment.file));
 	return result;

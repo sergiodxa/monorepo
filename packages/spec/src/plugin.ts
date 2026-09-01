@@ -9,6 +9,7 @@
  */
 
 import type { Result } from "@pkg/result";
+import type { Random } from "@pkg/sample";
 
 import type { SpecError } from "./errors";
 import type { PermissionKind, PermissionSet } from "./permissions";
@@ -55,6 +56,17 @@ export interface ToolContext {
 	workspace: Workspace;
 	/** The caller's grant set, for scoped checks (which host? which binary?). */
 	permissions: PermissionSet;
+	/**
+	 * The test's own seeded stream, created from the run's seed and the test's
+	 * identity. A plugin draws every random value from here, which is what makes
+	 * generated data reproduce regardless of how tests interleave.
+	 */
+	random: Random;
+	/**
+	 * The instant the test started, frozen for its whole run so a tool that
+	 * reports or generates a time answers consistently within one test.
+	 */
+	now: Date;
 }
 
 /**

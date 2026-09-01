@@ -18,6 +18,7 @@ import path from "node:path";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, isSuccess, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 
 import type { DiagnosticCode } from "./errors";
 import type { PermissionSet } from "./permissions";
@@ -53,6 +54,9 @@ interface PluginProcess {
 	kill(): void;
 }
 
+/** The seed a served plugin's stream opens on. */
+const WIRE_SEED = "spec-plugin";
+
 /** The body of a host→plugin request, before an id is assigned. */
 interface WireRequestBody {
 	method: "describe" | "call";
@@ -62,6 +66,8 @@ interface WireRequestBody {
 	args?: ToolArg[];
 	/** The absolute workspace root, for `call` requests. */
 	workspaceRoot?: string;
+	/** The test's frozen instant as an ISO timestamp, for `call` requests. */
+	now?: string;
 }
 
 /** A parsed host→plugin request as the serving side sees it. */
@@ -76,6 +82,8 @@ interface WireRequest {
 	args?: ToolArg[];
 	/** The workspace root, when present. */
 	workspaceRoot?: string;
+	/** The test's frozen instant, when present. */
+	now?: string;
 }
 
 /** A plugin→host reply: a result or a coded error, never both. */
@@ -149,6 +157,7 @@ export async function connectStdioPlugin(
 				tool,
 				args,
 				workspaceRoot: context.workspace.root,
+				now: context.now.toISOString(),
 			});
 			if (isFailure(reply)) return reply;
 			return success(reply.data as Value);
@@ -183,7 +192,7 @@ export async function servePlugin(plugin: Plugin): Promise<undefined> {
 			let outcome = await plugin.call(
 				request.tool ?? "",
 				request.args ?? [],
-				createWireContext(request.workspaceRoot ?? ""),
+				createWireContext(request.workspaceRoot ?? "", request.now),
 			);
 			if (isSuccess(outcome)) {
 				writeReply({ id: request.id, result: outcome.data });
@@ -337,8 +346,13 @@ function openConnection(child: PluginProcess): Connection {
  * Build the `ToolContext` the serving side hands its local plugin: relative
  * paths resolve inside the forwarded workspace root and traversal out is
  * refused, while permission checks stay permissive behind the host's gate.
+ *
+ * The instant crosses the wire, so a plugin here reads the same time the test
+ * started. The stream does not: it opens on a fixed seed, giving a served
+ * plugin values that repeat run to run. Carrying the host's stream position
+ * across a process boundary waits for a plugin that generates data.
  */
-function createWireContext(workspaceRoot: string): ToolContext {
+function createWireContext(workspaceRoot: string, now?: string): ToolContext {
 	let workspace: Workspace = {
 		root: workspaceRoot,
 		resolve(target) {
@@ -375,7 +389,12 @@ function createWireContext(workspaceRoot: string): ToolContext {
 			return [];
 		},
 	};
-	return { workspace, permissions };
+	return {
+		workspace,
+		permissions,
+		random: createRandom(WIRE_SEED),
+		now: now === undefined ? new Date() : new Date(now),
+	};
 }
 
 /** Write one reply line to stdout, the serving side's half of the wire. */
@@ -451,6 +470,7 @@ function parseWireRequest(line: string): WireRequest | null {
 		tool?: unknown;
 		args?: unknown;
 		workspaceRoot?: unknown;
+		now?: unknown;
 	};
 	if (typeof record.id !== "number" || typeof record.method !== "string") return null;
 	return {
@@ -459,6 +479,7 @@ function parseWireRequest(line: string): WireRequest | null {
 		tool: typeof record.tool === "string" ? record.tool : undefined,
 		args: Array.isArray(record.args) ? (record.args as ToolArg[]) : undefined,
 		workspaceRoot: typeof record.workspaceRoot === "string" ? record.workspaceRoot : undefined,
+		now: typeof record.now === "string" ? record.now : undefined,
 	};
 }
 

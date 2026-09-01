@@ -15,6 +15,7 @@
 import type { Result } from "@pkg/result";
 
 import { isFailure, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 
 import type { SpecError } from "../errors";
 import type { PermissionSet } from "../permissions";
@@ -69,7 +70,12 @@ function asObject(data: Value): ValueObject {
 async function observe(dbPath: string): Promise<Record<string, unknown>> {
 	process.env.DATABASE_URL = `sqlite://${dbPath}`;
 	let plugin = createDbPlugin();
-	let context: ToolContext = { workspace: stubWorkspace(), permissions: allowAll() };
+	let context: ToolContext = {
+		workspace: stubWorkspace(),
+		permissions: allowAll(),
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 
 	let created = asObject(
 		expectSuccess(

@@ -14,6 +14,7 @@ import { join, resolve as resolvePath } from "node:path";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, isSuccess, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { PermissionSet } from "../permissions";
@@ -159,7 +160,12 @@ interface StubGrants {
 }
 
 function makeContext(grants: StubGrants = { run: "all" }): ToolContext {
-	return { workspace: createWorkspaceStub(root), permissions: createPermissionsStub(grants) };
+	return {
+		workspace: createWorkspaceStub(root),
+		permissions: createPermissionsStub(grants),
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 }
 
 /** A workspace stub over a real temp directory; cli only reads its root. */

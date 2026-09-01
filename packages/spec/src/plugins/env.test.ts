@@ -11,6 +11,7 @@
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
+import { createRandom } from "@pkg/sample";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
@@ -58,7 +59,12 @@ function grantEnv(...granted: string[]): PermissionSet {
 }
 
 function buildContext(permissions: PermissionSet): ToolContext {
-	return { workspace: stubWorkspace(), permissions };
+	return {
+		workspace: stubWorkspace(),
+		permissions,
+		random: createRandom("test"),
+		now: new Date("2026-01-01T00:00:00.000Z"),
+	};
 }
 
 /** Unwrap a failed result into its error, failing the test on success. */
