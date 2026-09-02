@@ -31,7 +31,6 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20260901.1",
 		"@pkg/kv-cache": "workspace:*",
 		"msw": "^2.15.0",
 		"vitest": "4.1.10"

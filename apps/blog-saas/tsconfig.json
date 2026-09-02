@@ -14,7 +14,7 @@
 		"jsxImportSource": "remix/ui",
 		"noEmit": true,
 		// `vite/client` augments `ImportMeta` with `glob`, used by `bootstrap/browser.ts`.
-		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "bun", "vite/client"],
+		"types": ["@total-typescript/ts-reset", "bun", "vite/client"],
 		// `@pkg/blog-engine` is consumed as source and pulls in `remix/middleware/auth`
 		// (beta), whose `dist` is TypeScript source importing siblings with `.ts`
 		// extensions; allow it (safe under `noEmit`).

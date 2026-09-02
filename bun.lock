@@ -102,7 +102,6 @@
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
-        "@cloudflare/workers-types": "^5.20260901.1",
         "@pkg/cloudflare-mocks": "workspace:*",
         "msw": "^2.15.0",
         "vite": "^8.2.2",
@@ -270,7 +269,6 @@
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
         "@pkg/kv-cache": "workspace:*",
         "msw": "^2.15.0",
         "vitest": "4.1.10",
@@ -607,7 +605,6 @@
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
         "vitest": "4.1.10",
       },
     },
@@ -803,7 +800,6 @@
         "@standard-schema/spec": "^1.1.0",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
         "remix": "3.0.0-rc.1",
         "vitest": "4.1.10",
       },
@@ -816,7 +812,6 @@
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
         "vitest": "4.1.10",
       },
     },
