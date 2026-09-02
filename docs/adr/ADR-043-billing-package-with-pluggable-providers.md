@@ -185,12 +185,12 @@ This is already how all five apps work — one notes in a comment that billing s
 
 The package follows `@pkg/mail` (ADR-018) and `@pkg/i18n`, which is the shape Remix v3 uses for this kind of concern: a core package holding the classes and models, a middleware module that publishes the thing on the request context, and one module per backend.
 
-| Layer                  | Precedent                      | Here                      |
-| ---------------------- | ------------------------------ | ------------------------- |
-| Classes, models, types | `@pkg/mail`, `remix/session`   | `@pkg/billing`            |
-| Request-context wiring | `@pkg/mail/middleware`         | `@pkg/billing/middleware` |
-| Backends               | `remix/session-storage/redis`  | `@pkg/billing/polar`      |
-| Test backend           | `@pkg/mail`'s memory transport | `@pkg/billing/memory`     |
+| Layer                  | Precedent                      | Here                            |
+| ---------------------- | ------------------------------ | ------------------------------- |
+| Classes, models, types | `@pkg/mail`, `remix/session`   | `@pkg/billing`                  |
+| Request-context wiring | `@pkg/mail/middleware`         | `@pkg/billing/middleware`       |
+| Backends               | `remix/session-storage/redis`  | `@pkg/billing/providers/polar`  |
+| Test backend           | `@pkg/mail`'s memory transport | `@pkg/billing/providers/memory` |
 
 The division of labour is the one `remix/auth` states for itself: **the route owns redirects, flashes, and the app's own records; the package owns the platform protocol.**
 
@@ -198,12 +198,12 @@ The division of labour is the one `remix/auth` states for itself: **the route ow
 
 ```ts
 // app/lib/billing.ts
-import { PolarBilling } from "@pkg/billing/polar";
+import { PolarBilling } from "@pkg/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 export const polar = new PolarBilling({
-	accessToken: env.POLAR_ACCESS_TOKEN,
-	webhookSecret: env.POLAR_WEBHOOK_SECRET,
+	accessToken: () => env.POLAR_ACCESS_TOKEN.get(),
+	webhookSecret: () => env.POLAR_WEBHOOK_SECRET.get(),
 	products: { pro: "prod_abc", essentials: "prod_def" },
 });
 ```
@@ -219,7 +219,7 @@ That applies to signing secrets as much as to API tokens, because the constraint
 #### The middleware publishes it on the context, and types it
 
 ```ts
-// packages/billing/src/middleware.ts
+// packages/billing/src/middleware/index.ts
 declare module "remix/router" {
 	interface RequestContext {
 		/** Billing for the current request, configured by the billing middleware. */
@@ -699,7 +699,7 @@ What we take on is endpoint drift, pagination details, and error-shape mapping. 
 ### 21. The Memory Provider Is A Real Provider
 
 ```ts
-import { MemoryBilling } from "@pkg/billing/memory";
+import { MemoryBilling } from "@pkg/billing/providers/memory";
 
 let billing = new MemoryBilling({ catalog: { pro: { amount: 4900, currency: "usd" } } });
 
@@ -952,7 +952,7 @@ If the real requirement is being able to stop being the merchant of record witho
 
 - Polar's webhook secret is an arbitrary string that its senders base64-encode before signing, so the HMAC key is the secret's UTF-8 bytes. The Polar provider must keep that conversion; a Standard Webhooks verifier given the raw secret rejects every authentic delivery.
 - Usage costs stay decimal strings, not numbers. Per-unit infrastructure costs fall below `1e-6`, where JavaScript switches to exponential notation and the provider's parser rejects the value.
-- Only `apps/r3-auth` reads its token from Secrets Store, which is why `accessToken` accepts a resolver. A rejected resolution must not be memoized, or one blip leaves a long-lived instance permanently unable to bill.
+- Every credential option is a `Secret`, so an API token and a signing secret are configured the same way: the value, or a function resolving it. `apps/r3-auth` keeps its token in Secrets Store, which is what the resolver form exists for, and a signing secret can live there just as well. A rejected resolution must not be memoized, or one blip leaves a long-lived instance permanently unable to bill; an unreadable signing secret makes a delivery unproven rather than throwing.
 - Keep vendor concepts out of the core namespace. Pay defines an unnamespaced `Pay::Payment` that is hardcoded to Stripe payment intents and setup intents, because SCA exists in only one provider's model — once the shared namespace means one vendor's concept, the abstraction has already lost. The same applies to columns: Pay's shared schema carries `stripe_account` and `application_fee_percent`.
 - An abstraction that cannot survive one provider's major version bump will not survive two providers. Cashier has no upgrade path from Paddle Classic to Paddle Billing; those users stay on a forked 1.x permanently. Treat a platform's next API version as a new provider, not a change to this contract.
 - There is no public account of anyone completing a provider-to-provider migration using Pay or Cashier, despite both being widely deployed for years. That absence is the honest state of the evidence for the migration story, and a reason to keep the promise in §1 narrow.
