@@ -68,7 +68,7 @@ export let polar = new PolarBilling({
 });
 ```
 
-The function is called on the first use that needs the credential and the answer is remembered, so reading it costs one await for the life of the instance however many calls follow. A read that fails is not remembered, so a store that was briefly unavailable is asked again and the instance can still bill later. A signing secret is read inside `webhooks.verify()`, which is already async; `webhooks.reference()` is the synchronous method and never touches it.
+The function is called on the first use that needs the credential and the answer is remembered, so reading it costs one await for the life of the instance however many calls follow. A read that fails is not remembered, so a store that was briefly unavailable is asked again and the instance can still bill later.
 
 While a signing secret is unset, empty, or unreadable, verification answers `false` rather than throwing, so an endpoint keeps returning a status the platform accepts instead of the `500` it disables an endpoint over.
 
