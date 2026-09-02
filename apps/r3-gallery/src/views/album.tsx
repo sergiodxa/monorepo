@@ -33,7 +33,7 @@ import { bs, is, mbe, p, width } from "@pkg/u/size";
 import { translateY } from "@pkg/u/transform";
 import { Button, LinkButton, Text } from "@pkg/ui";
 import { RouterProvider } from "@pkg/ui-router";
-import { Frame, addEventListeners, on } from "remix/ui";
+import { Frame, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
 
@@ -95,28 +95,33 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 		void router.navigate(routes.album.href({ id: albumId }));
 	}
 
-	addEventListeners(document, handle.signal, {
-		keydown(event) {
-			let selectedPhoto = handle.props.selectedPhoto;
-			if (!selectedPhoto) return;
+	/** `queueTask` never runs in the server renderer, so `document` is always there below. */
+	handle.queueTask(() => {
+		document.addEventListener(
+			"keydown",
+			(event) => {
+				let selectedPhoto = handle.props.selectedPhoto;
+				if (!selectedPhoto) return;
 
-			let photos = handle.props.photos;
-			let index = photos.findIndex((photo) => photo.id === selectedPhoto.id);
+				let photos = handle.props.photos;
+				let index = photos.findIndex((photo) => photo.id === selectedPhoto.id);
 
-			if (event.key === "ArrowLeft") {
-				let previous = photos[index - 1];
-				if (index > 0 && previous) {
-					event.preventDefault();
-					showPhoto(previous);
+				if (event.key === "ArrowLeft") {
+					let previous = photos[index - 1];
+					if (index > 0 && previous) {
+						event.preventDefault();
+						showPhoto(previous);
+					}
+				} else if (event.key === "ArrowRight") {
+					let next = photos[index + 1];
+					if (index !== -1 && index < photos.length - 1 && next) {
+						event.preventDefault();
+						showPhoto(next);
+					}
 				}
-			} else if (event.key === "ArrowRight") {
-				let next = photos[index + 1];
-				if (index !== -1 && index < photos.length - 1 && next) {
-					event.preventDefault();
-					showPhoto(next);
-				}
-			}
-		},
+			},
+			{ signal: handle.signal },
+		);
 	});
 
 	return () => {

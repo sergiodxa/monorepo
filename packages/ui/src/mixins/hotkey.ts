@@ -10,7 +10,7 @@
 
 import type { MixinFactory } from "remix/ui";
 
-import { addEventListeners, createMixin } from "remix/ui";
+import { createMixin } from "remix/ui";
 
 import { trackHostNode } from "./track-host-node";
 
@@ -147,8 +147,9 @@ export const hotkey: MixinFactory<HTMLElement, [combo: string]> = createMixin<
 	let getHostNode = trackHostNode(handle);
 	let parsed: ParsedCombo | undefined;
 
-	addEventListeners(document, handle.signal, {
-		keydown(event) {
+	document.addEventListener(
+		"keydown",
+		(event) => {
 			let hostNode = getHostNode();
 			if (hostNode === undefined || parsed === undefined) return;
 			if (event.repeat || !matchesCombo(event, parsed)) return;
@@ -156,7 +157,8 @@ export const hotkey: MixinFactory<HTMLElement, [combo: string]> = createMixin<
 			event.preventDefault();
 			setOpen(hostNode, !isOpen(hostNode));
 		},
-	});
+		{ signal: handle.signal },
+	);
 
 	return (combo) => {
 		parsed = parseCombo(combo);

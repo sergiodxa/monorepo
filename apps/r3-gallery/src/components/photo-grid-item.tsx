@@ -20,7 +20,7 @@ import { when } from "@pkg/u/state";
 import { fontSize, leading, lineClamp, textDecoration } from "@pkg/u/typography";
 import { AspectRatio, Badge, Button, Card, Form } from "@pkg/ui";
 import { RouterProvider } from "@pkg/ui-router";
-import { addEventListeners, on } from "remix/ui";
+import { on } from "remix/ui";
 
 import type { Photo } from "../data/types";
 import type { LikeToggleResult } from "../middleware/likes";
@@ -46,11 +46,13 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 	let router = handle.context.get(RouterProvider);
 	let fetcher = router.getFetcher<LikeToggleResult>(`photo-like:${handle.props.photo.id}`);
 
-	addEventListeners(fetcher, handle.signal, {
-		change() {
+	fetcher.addEventListener(
+		"change",
+		() => {
 			void handle.update();
 		},
-	});
+		{ signal: handle.signal },
+	);
 
 	function openPhoto(event: MouseEvent) {
 		event.preventDefault();
