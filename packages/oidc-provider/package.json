@@ -26,7 +26,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
 		"@pkg/cloudflare-mocks": "workspace:*",
-		"@types/bcryptjs": "^3.0.0",
 		"vitest": "4.1.10"
 	}
 }
