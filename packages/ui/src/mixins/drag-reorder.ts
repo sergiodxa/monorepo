@@ -17,7 +17,7 @@ import type { DragSession } from "../behaviors/drag-session";
  * {@link dragReorder} to resolve the row under the pointer and shared by
  * other mixins on the same rows for their own row lookups.
  */
-export const DRAG_REORDER_ROW_ATTRIBUTE = "data-key";
+export const DRAG_REORDER_ROW_ATTRIBUTE = "data-rmx-key";
 
 /**
  * Attribute a row's drag handle element carries; a drag session only
@@ -128,7 +128,7 @@ function resolveDropPosition(row: HTMLElement, clientY: number): DragSession.Pos
  * let session = new DragSession();
  * <ul mix={[dragReorder(session)]} on={{ "ui:reorder": (event) => moveRow(event.sourceKey, event.targetKey, event.position) }}>
  *   {rows.map((row) => (
- *     <li key={row.id} data-key={row.id}>
+ *     <li key={row.id} data-rmx-key={row.id}>
  *       <button data-drag-handle aria-label={row.dragHandleLabel}>::</button>
  *       {row.label}
  *     </li>

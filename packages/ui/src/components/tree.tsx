@@ -85,7 +85,7 @@ export namespace Tree {
 	export interface ItemProps extends TagProps<"details"> {
 		/**
 		 * Stable identifier for this node, mirrored onto the rendered element's
-		 * own `id` and a `data-key` attribute so a paired selection, navigation, or
+		 * own `id` and a `data-rmx-key` attribute so a paired selection, navigation, or
 		 * reorder behavior can correlate the node with its own tracked state.
 		 */
 		id: string;
@@ -224,7 +224,7 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 			<details
 				{...rest}
 				id={id}
-				data-key={id}
+				data-rmx-key={id}
 				mix={[
 					attrs({ role: DEFAULT_ITEM_ROLE }),
 					interpolateSize(),

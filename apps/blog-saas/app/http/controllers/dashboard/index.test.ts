@@ -70,6 +70,6 @@ describe("GET /dashboard", () => {
 		let form = body.match(
 			new RegExp(`<form[^>]*action="${routes.auth.logout.action.href()}"[^>]*>`),
 		);
-		expect(form?.[0]).toContain("rmx-document");
+		expect(form?.[0]).toContain("data-rmx-document");
 	});
 });

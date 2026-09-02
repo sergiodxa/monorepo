@@ -111,13 +111,13 @@ describe("GET /dashboard/tenants/:tenantId/billing", () => {
 		let body = await renderBilling({ id: "sub-1", status: "active", polar_customer_id: "cus-1" });
 
 		let form = body.match(new RegExp(`<form[^>]*action="${action}\\?action=portal"[^>]*>`));
-		expect(form?.[0]).toContain("rmx-document");
+		expect(form?.[0]).toContain("data-rmx-document");
 	});
 
 	test("marks the checkout form as a document submission", async () => {
 		let body = await renderBilling(null);
 
 		let form = body.match(new RegExp(`<form[^>]*action="${action}\\?action=checkout"[^>]*>`));
-		expect(form?.[0]).toContain("rmx-document");
+		expect(form?.[0]).toContain("data-rmx-document");
 	});
 });

@@ -179,7 +179,7 @@ export default createController(routes.dashboard.tenants.billing, {
 								Access your billing portal to update payment methods, view invoices, or manage your
 								subscription.
 							</p>
-							<form method="post" action={portalAction} rmx-document="">
+							<form method="post" action={portalAction} data-rmx-document="">
 								<button mix={[s.button, s.buttonDark]} type="submit">
 									Open Billing Portal
 								</button>
@@ -191,7 +191,7 @@ export default createController(routes.dashboard.tenants.billing, {
 							<p mix={[s.sectionBlueText]}>
 								Subscribe to Auth SaaS to unlock all features and continue using the service.
 							</p>
-							<form method="post" action={checkoutAction} rmx-document="">
+							<form method="post" action={checkoutAction} data-rmx-document="">
 								<button mix={[s.button]} type="submit">
 									Subscribe Now
 								</button>

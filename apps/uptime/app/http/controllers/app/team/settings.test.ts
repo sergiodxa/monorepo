@@ -134,7 +134,7 @@ describe("settings page", () => {
 		let link = body.match(
 			new RegExp(`<a[^>]*href="${routes.app.team.checkout.href({ team: team.slug })}"[^>]*>`),
 		);
-		expect(link?.[0]).toContain("rmx-document");
+		expect(link?.[0]).toContain("data-rmx-document");
 	});
 
 	test("shows remove/change-role controls only for non-owner members", async () => {

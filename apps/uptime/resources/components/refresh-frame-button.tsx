@@ -2,7 +2,7 @@
  * Client island: a link that reloads the `Frame` it is rendered inside,
  * spinning its icon while the reload is in flight.
  *
- * It renders as a real anchor with the `link` mixin's `rmx-target`/`rmx-src`
+ * It renders as a real anchor with the `link` mixin's `data-rmx-target`/`data-rmx-src`
  * attributes, so a pre-hydration click still refreshes via the runtime's nav
  * listener, or falls back to {@link RefreshFrameButtonProps.href} as a page
  * load. Once hydrated, `on("click")` takes over, reloading the frame directly

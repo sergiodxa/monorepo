@@ -169,7 +169,7 @@ describe("GET /logout", () => {
 		let body = await response.text();
 
 		let form = body.match(new RegExp(`<form[^>]*action="${routes.logout.action.href()}"[^>]*>`));
-		expect(form?.[0]).toContain("rmx-document");
+		expect(form?.[0]).toContain("data-rmx-document");
 	});
 });
 

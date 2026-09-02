@@ -54,7 +54,7 @@ export default createController(routes.dashboard.billing, {
 						A base monthly fee includes a generous page-view allowance pooled across all your blogs;
 						overage is metered.
 					</p>
-					<form method="post" action="/dashboard/billing" rmx-document="">
+					<form method="post" action="/dashboard/billing" data-rmx-document="">
 						{account?.polar_customer_id ? (
 							<button mix={[s.button]} type="submit" name="intent" value="portal">
 								Manage billing

@@ -136,7 +136,7 @@ describe("GET /mcp", () => {
 		let html = await body(PAGE);
 
 		expect(html.startsWith("<!DOCTYPE html>")).toBe(true);
-		expect(html).toContain('<title data-key="title">MCP server</title>');
+		expect(html).toContain('<title data-rmx-key="title">MCP server</title>');
 	});
 });
 

@@ -814,7 +814,7 @@ describe("POST /try for a signed-in viewer", () => {
 		let link = body.match(
 			new RegExp(`<a[^>]*href="${routes.app.team.checkout.href({ team: actor.team.slug })}"[^>]*>`),
 		);
-		expect(link?.[0]).toContain("rmx-document");
+		expect(link?.[0]).toContain("data-rmx-document");
 	});
 
 	test("does not offer billing to a team that is already paying", async () => {

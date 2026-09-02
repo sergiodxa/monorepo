@@ -35,7 +35,7 @@ export const login = createController(routes.auth.login, {
 			return ctx.render(
 				<Page title="Sign in">
 					<h1>Sign in</h1>
-					<form method="post" action={routes.auth.login.action.href()} rmx-document="">
+					<form method="post" action={routes.auth.login.action.href()} data-rmx-document="">
 						<button mix={[s.button]} type="submit">
 							Continue with SSO
 						</button>
@@ -99,7 +99,7 @@ export const logout = createController(routes.auth.logout, {
 			return ctx.render(
 				<Page title="Sign out">
 					<h1>Sign out</h1>
-					<form method="post" action={routes.auth.logout.action.href()} rmx-document="">
+					<form method="post" action={routes.auth.logout.action.href()} data-rmx-document="">
 						<button mix={[s.button]} type="submit">
 							Sign out
 						</button>

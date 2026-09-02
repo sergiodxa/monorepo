@@ -971,7 +971,7 @@ export default createAction(routes.app.team.settings, {
 									>
 										<LinkButton
 											href={routes.app.team.checkout.href({ team: team.slug })}
-											rmx-document=""
+											data-rmx-document=""
 										>
 											<span>{ctx.i18next.t("page.settings.billing.card.cta")}</span>
 											<ExternalLinkIcon size={16} strokeWidth={1.5} />

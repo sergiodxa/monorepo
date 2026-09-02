@@ -73,34 +73,40 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		return (
 			<html lang={locale} class="system" mix={[colorScheme("light dark")]}>
 				<head>
-					<meta charSet="utf-8" data-key="charset" />
-					<meta name="viewport" content="width=device-width, initial-scale=1" data-key="viewport" />
+					<meta charSet="utf-8" data-rmx-key="charset" />
+					<meta
+						name="viewport"
+						content="width=device-width, initial-scale=1"
+						data-rmx-key="viewport"
+					/>
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: light)"
 						content="oklch(0.98 0.004 250)"
-						data-key="theme-color-light"
+						data-rmx-key="theme-color-light"
 					/>
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: dark)"
 						content="oklch(0.16 0.006 250)"
-						data-key="theme-color-dark"
+						data-rmx-key="theme-color-dark"
 					/>
-					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
-					<link rel="stylesheet" href={colorStyles} data-key="style-palette" />
-					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
-					<link rel="stylesheet" href={prismStyles} data-key="style-code" />
-					<title data-key="title">{title}</title>
-					{description && <meta name="description" content={description} data-key="description" />}
-					{canonical && <link rel="canonical" href={canonical} data-key="canonical" />}
+					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
+					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-palette" />
+					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
+					<link rel="stylesheet" href={prismStyles} data-rmx-key="style-code" />
+					<title data-rmx-key="title">{title}</title>
+					{description && (
+						<meta name="description" content={description} data-rmx-key="description" />
+					)}
+					{canonical && <link rel="canonical" href={canonical} data-rmx-key="canonical" />}
 					{meta.map((tag) => {
 						let identity = tag.property ?? tag.name ?? tag.content;
 
 						return (
 							<meta
 								key={identity}
-								data-key={`meta:${identity}`}
+								data-rmx-key={`meta:${identity}`}
 								property={tag.property}
 								name={tag.name}
 								content={tag.content}

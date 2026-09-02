@@ -233,7 +233,7 @@ describe("GET /authorize", () => {
 		let form = body.match(
 			new RegExp(`<form[^>]*action="${routes.auth.provider.href({ provider: "github" })}"[^>]*>`),
 		);
-		expect(form?.[0]).toContain("rmx-document");
+		expect(form?.[0]).toContain("data-rmx-document");
 	});
 
 	test("marks the credential sign-in form as a document submission", async () => {
@@ -241,7 +241,7 @@ describe("GET /authorize", () => {
 		let body = await response.text();
 
 		let form = body.match(new RegExp(`<form[^>]*action="${routes.authorize.action.href()}"[^>]*>`));
-		expect(form?.[0]).toContain("rmx-document");
+		expect(form?.[0]).toContain("data-rmx-document");
 	});
 
 	test("prompt=consent and prompt=select_account still perform SSO", async () => {

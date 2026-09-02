@@ -118,7 +118,7 @@ export namespace GridList {
 	export interface ItemProps extends TagProps<"div"> {
 		/**
 		 * Stable identifier for this row, mirrored onto both the rendered
-		 * element's own `id` and a `data-key` attribute, so the row is already
+		 * element's own `id` and a `data-rmx-key` attribute, so the row is already
 		 * correlation-ready for a paired behavior once one is attached.
 		 */
 		id: string;
@@ -222,7 +222,7 @@ export function GridList(handle: Handle<GridList.Props>) {
 
 /**
  * Renders a single row: a `<div>` carrying `role="row"`, its `id` mirrored
- * onto a `data-key` attribute so a paired selection, keyboard-navigation, or
+ * onto a `data-rmx-key` attribute so a paired selection, keyboard-navigation, or
  * reorder behavior can correlate the row with its own state.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
@@ -242,7 +242,7 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 			<div
 				{...rest}
 				id={id}
-				data-key={id}
+				data-rmx-key={id}
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_ITEM_ROLE, tabIndex: DEFAULT_ITEM_TAB_INDEX }),

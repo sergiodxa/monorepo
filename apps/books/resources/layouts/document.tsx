@@ -68,27 +68,31 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		return (
 			<html lang="en" class="system" mix={[colorScheme("light dark")]}>
 				<head>
-					<meta charSet="utf-8" data-key="charset" />
-					<meta name="viewport" content="width=device-width, initial-scale=1" data-key="viewport" />
+					<meta charSet="utf-8" data-rmx-key="charset" />
+					<meta
+						name="viewport"
+						content="width=device-width, initial-scale=1"
+						data-rmx-key="viewport"
+					/>
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: light)"
 						content="#ffffff"
-						data-key="theme-color-light"
+						data-rmx-key="theme-color-light"
 					/>
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: dark)"
 						content="#000000"
-						data-key="theme-color-dark"
+						data-rmx-key="theme-color-dark"
 					/>
-					<link rel="shortcut icon" href="/favicon.ico" data-key="favicon" />
-					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
-					<link rel="stylesheet" href={colorStyles} data-key="style-palette" />
-					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
-					<link rel="stylesheet" href={parityDealsStyles} data-key="style-parity-deals" />
-					<link rel="stylesheet" href={proseStyles} data-key="style-prose" />
-					<link rel="stylesheet" href={prismStyles} data-key="style-prism" />
+					<link rel="shortcut icon" href="/favicon.ico" data-rmx-key="favicon" />
+					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
+					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-palette" />
+					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
+					<link rel="stylesheet" href={parityDealsStyles} data-rmx-key="style-parity-deals" />
+					<link rel="stylesheet" href={proseStyles} data-rmx-key="style-prose" />
+					<link rel="stylesheet" href={prismStyles} data-rmx-key="style-prism" />
 					<Seo
 						title={title}
 						description={description}

@@ -109,7 +109,7 @@ describe("GET /", () => {
 		let body = await response.text();
 
 		let cta = body.match(new RegExp(`<form[^>]*action="${routes.auth.action.href()}"[^>]*>`));
-		expect(cta?.[0]).toContain("rmx-document");
+		expect(cta?.[0]).toContain("data-rmx-document");
 	});
 
 	/**

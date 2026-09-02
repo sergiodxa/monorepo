@@ -62,7 +62,7 @@ const BASE_URL = "https://uptime.test";
  */
 function declarationsFor(html: string, classAttribute: string): string {
 	let rules = new Map<string, string>();
-	for (let match of html.matchAll(/<style data-rmx="([^"]+)">.*?\{\s*\.\1\s*\{([^}]*)\}/gs)) {
+	for (let match of html.matchAll(/<style data-rmx-style="([^"]+)">.*?\{\s*\.\1\s*\{([^}]*)\}/gs)) {
 		rules.set(match[1] ?? "", (rules.get(match[1] ?? "") ?? "") + (match[2] ?? ""));
 	}
 

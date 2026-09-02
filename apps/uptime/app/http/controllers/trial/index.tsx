@@ -684,7 +684,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 															href={monitorOffer.subscribeHref}
 															color="neutral"
 															variant="outline"
-															rmx-document=""
+															data-rmx-document=""
 															mix={[is("full"), justify("center")]}
 														>
 															{t("page.trial.monitor.subscribe")}

@@ -223,7 +223,7 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 								<Form
 									method="post"
 									action={routes.authorize.action.href()}
-									rmx-document=""
+									data-rmx-document=""
 									mix={[flex(), flexCol(), gap(6)]}
 								>
 									<TextField
@@ -278,7 +278,7 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 							<Form
 								method="post"
 								action={routes.auth.provider.href({ provider: "github" })}
-								rmx-document=""
+								data-rmx-document=""
 							>
 								<Button
 									type="submit"

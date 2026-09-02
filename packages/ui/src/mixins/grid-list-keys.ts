@@ -19,7 +19,7 @@ import { DISABLED_SELECTOR } from "../utils/disabled-selector";
  * `gridListKeys()` correlates a row with the key `SelectionModel` tracks its
  * selection under, and writes `aria-selected` back as the model changes.
  */
-export const GRIDLIST_ROW_KEY_ATTRIBUTE = "data-key";
+export const GRIDLIST_ROW_KEY_ATTRIBUTE = "data-rmx-key";
 
 /** Selector matching a GridList row, by the same attribute contract {@link GRIDLIST_ROW_KEY_ATTRIBUTE} documents. */
 const ROW_SELECTOR = `[${GRIDLIST_ROW_KEY_ATTRIBUTE}]`;
@@ -170,7 +170,7 @@ function syncSelection(host: HTMLElement, model: SelectionModel): void {
  * let model = new SelectionModel({ keys: rows.map((row) => row.id) });
  * <div role="grid" mix={[gridListKeys(model)]}>
  *   {rows.map((row) => (
- *     <div key={row.id} role="row" data-key={row.id} tabIndex={-1}>
+ *     <div key={row.id} role="row" data-rmx-key={row.id} tabIndex={-1}>
  *       {row.label}
  *       <button role="gridcell" tabIndex={-1}>Remove</button>
  *     </div>

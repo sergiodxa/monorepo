@@ -204,9 +204,11 @@ describe("app/team/dashboard-panel", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		let refreshLink = body.match(/<a[^>]*rmx-src="[^"]*\/panel\/http\?refresh=[^"]*"[^>]*>/)?.[0];
+		let refreshLink = body.match(
+			/<a[^>]*data-rmx-src="[^"]*\/panel\/http\?refresh=[^"]*"[^>]*>/,
+		)?.[0];
 		expect(refreshLink).toBeDefined();
-		expect(refreshLink).toContain('rmx-target="dashboard-panel"');
+		expect(refreshLink).toContain('data-rmx-target="dashboard-panel"');
 		expect(refreshLink).toContain(
 			`href="${routes.app.team.dashboard.index.href({ team: team.slug })}?tab=http"`,
 		);
