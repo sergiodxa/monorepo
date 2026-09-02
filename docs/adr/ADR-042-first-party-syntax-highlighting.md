@@ -42,41 +42,65 @@ Prism's core is 19.8 KB minified on its own; the fifteen grammars `@pkg/markdown
 registers bring the import to 57.7 KB minified, 19.1 KB gzipped. That rides in the SSR
 bundle of `blog`, `books` and `uptime`, and in `r3-auth` through mail.
 
-### The two consumers want different things, and neither wants what Prism returns
+### Two Markdoc pipelines, and neither shares its fence handling
 
-`@pkg/markdown` wants markup, and gets it. `@pkg/mail` wants tokens, and has to undo the
-shape Prism hands back: `tokenize` returns a tree, so `markdown.tsx` carries `tokenText`
-to flatten a token's content to whatever depth the grammar nested it, and `bucket` to
-collapse dozens of token types into the six an email needs. The tree is built and then
-discarded on every render.
+Every surface that highlights reaches Prism through one of two packages, and both of them
+drive Markdoc:
+
+| Surface                        | Package              | Fence handling                  |
+| ------------------------------ | -------------------- | ------------------------------- |
+| blog posts, blog MCP pages     | `@pkg/markdown`      | `fence` node, at transform time |
+| books sample chapter           | `@pkg/markdown`      | `fence` node, at transform time |
+| uptime docs                    | `@pkg/markdown`      | `fence` node, at transform time |
+| blog-engine tenant post fields | `@pkg/markdown`      | `fence` node, at transform time |
+| uptime mail, r3-auth mail      | `@pkg/mail/markdown` | `pre` tag, at render time       |
+
+`@pkg/markdown` registers a `fence` node in its Markdoc config, normalizes the language,
+highlights, and emits a `Fence` tag. `@pkg/mail` calls
+`Markdoc.transform(Markdoc.parse(source))` with no config at all, so a fence arrives as a
+default `pre` tag carrying `data-language`, and `CodeBlock` highlights the text it reads
+back out of the tree while rendering. Mail keeps that pipeline deliberately — importing
+`@pkg/markdown` would pull the dependency its own subpath exists to contain — and pays
+for it with a second alias table of its own.
+
+The two also want different output, and neither wants the shape Prism returns.
+`@pkg/markdown` wants markup and gets it. `@pkg/mail` wants tokens, and has to undo a
+tree to get them: `tokenText` flattens a token's content to whatever depth the grammar
+nested it, and `bucket` collapses dozens of token types into the six an email needs. The
+tree is built and discarded on every render.
+
+Nothing caches or serializes either tree. Both pipelines parse, transform and render
+inside a single request, and no app hydrates a component with the result, so the tag's
+payload is an in-process value and nothing more.
 
 ### Grammar registration is a global mutation with an implicit order
 
 A grammar registers itself by side effect when its file is imported, and grammars extend
-each other through the same global object. Both packages list those imports
-alphabetically, which puts `prism-tsx.js` ahead of `prism-typescript.js`.
-`prism-tsx.js` opens with `Prism.util.clone(Prism.languages.typescript)`, receives
-`undefined`, and registers `tsx` as a copy of `jsx` with a tag-pattern fix. Nothing
-throws and nothing warns.
+each other through the same global object. Both packages listed those imports
+alphabetically, which put `prism-tsx.js` ahead of `prism-typescript.js`.
+`prism-tsx.js` opens with `Prism.util.clone(Prism.languages.typescript)`, so it received
+`undefined` and registered `tsx` as a copy of `jsx` with a tag-pattern fix. Nothing threw
+and nothing warned.
 
 `tsx` is the second most common fence language in this repository's own markdown, 1,884
-of 7,282 fences. Highlighting `interface U { id: string }` through the current import
-order leaves `string` unpainted; through `typescript`, or through `tsx` with the two
-imports swapped, it is a `builtin`. The formatter is not the cause and will not fix it —
-`vp fmt` leaves side-effect imports where they are — but nothing keeps the order correct
-either.
+of 7,282 fences, and every one of them highlighted without the TypeScript half of the
+grammar: `interface U { id: string }` left `string` unpainted where `typescript` marks it
+a `builtin`. Both packages now import TypeScript first, and a test asserts the painted
+output, which is the whole of what keeps the order correct — the ordering is load-bearing,
+undeclared, and invisible in the source until it breaks.
 
 The same object makes the defect non-local: `Prism.languages` is process-global, so what
 one package highlights depends on which grammars every other package in the same Worker
 registered, and in which order. `uptime` imports both packages and gets the union;
 `r3-auth` imports only mail and gets ten grammars.
 
-### The HTML string is the contract, and the path that skips Prism skips escaping
+### The HTML string is the contract, and two branches escape it
 
-Prism registers `plain`, `plaintext`, `text` and `txt` as empty grammars, so those fences
-still go through `Prism.highlight` and come out escaped. A language with no grammar at
-all does not: `fence.transform` passes the fence source through untouched, and `Fence`
-hands it to `innerHTML`. Parsing
+`fence.transform` produces markup, and `Fence` draws it with `innerHTML`, so every branch
+that assembles that string owes the same escaping. Prism registers `plain`, `plaintext`,
+`text` and `txt` as empty grammars, so those fences take the highlight path and Prism
+escapes them; a language with no grammar at all takes a second path, and that one escaped
+nothing. Parsing
 
 ````markdown
 ```hcl
@@ -84,12 +108,14 @@ hands it to `innerHTML`. Parsing
 ```
 ````
 
-and rendering it through `MarkdownView` produces a live `<img>` element inside the
-`<code>`. `hcl`, `toml`, `capnp`, `go`, `dockerfile`, `mermaid` and nine other names
-account for 113 fences in this repository, and `@pkg/blog-engine` renders
-tenant-authored fields through this component. Escaping in the working path belongs to
-Prism, escaping in the fallback path belongs to nobody, and the seam is invisible because
-both branches produce a `string`.
+and rendering it through `MarkdownView` produced a live `<img>` element inside the
+`<code>` — reachable content, since `@pkg/blog-engine` renders tenant-authored fields
+through that component, and 113 fences in this repository name a language with no
+grammar: `hcl`, `toml`, `capnp`, `go`, `dockerfile`, `mermaid` and nine others.
+
+The node now escapes that branch itself, so the two agree. What the fix cannot do is
+remove the obligation: the contract is a string of markup, the escaping is spread across
+Prism and the node, and the seam is invisible because both branches return the same type.
 
 ### One set of class names, five stylesheets
 
@@ -110,6 +136,11 @@ load one. No app does.
 
 Highlighting moves to `@pkg/highlight`, a new package with no runtime dependencies.
 `prismjs` and `@types/prismjs` are removed from `@pkg/markdown` and `@pkg/mail`.
+
+Two entry points, because the callers divide that way. `@pkg/highlight` knows nothing
+about markdown: it takes source and a language name and returns tokens.
+`@pkg/highlight/markdoc` is the Markdoc node both pipelines register, and it depends on
+Markdoc where the core does not.
 
 ### Tokens are the primitive
 
@@ -153,11 +184,14 @@ and what a `<span>` per token needs. `Token.Type` is closed, so mail's palette i
 record the compiler checks for exhaustiveness rather than a lookup with an `undefined`
 arm.
 
-`highlight` renders the same list to `<span class="token …">` markup and escapes every
-value, `plain` included, so `@pkg/markdown` keeps a string in the Markdoc tag — the
-payload that gets cached — and the fence node stops choosing between two escaping
-regimes. An unknown language yields one `plain` token covering the whole input, which is
-the same escaped-passthrough the `plain` grammar produces today.
+`highlight` renders the same list to `<span class="token …">` markup, escaping every
+value, `plain` included. It is the form for anything that needs markup instead of a
+component tree; after the migration nothing in this repository does, and it costs the few
+lines it takes to walk the list the renderers already walk.
+
+An unknown language yields one `plain` token covering the whole input, so a fence in a
+language with no grammar is a token the renderer escapes like any other, rather than a
+branch that has to remember to.
 
 `normalizeLanguage` moves the alias table out of both packages: 24 entries in
 `@pkg/markdown`, 7 in `@pkg/mail`, one table here, `txt` included since only `text` is
@@ -191,6 +225,35 @@ The set is the seventeen languages the two packages resolve today — `plain`, `
 `python`, `ruby`, `sql`, `tsx`, `typescript`, `yaml` — with `hcl`, `toml`, `go` and
 `dockerfile` to follow, since the census says those are the fences rendering unpainted.
 
+### The Markdoc node ships with it
+
+Both pipelines highlight fences, so the fence node belongs to the highlighter rather than
+to each caller:
+
+```typescript
+import type { Schema } from "@markdoc/markdoc";
+
+/** Registers as `nodes.fence`, emitting a tag the caller's renderer draws. */
+export const fence: Schema;
+```
+
+It does what `@pkg/markdown`'s node does today — normalize the language, tokenize, emit a
+tag — and carries `tokens: Token[]` on that tag instead of a string of markup, with
+`language`, `path` and `title` alongside. `@pkg/markdown` composes it into its config and
+deletes `src/server/fence.ts`. `@pkg/mail` adds a config to the
+`Markdoc.transform(Markdoc.parse(source))` it already calls, and `CodeBlock` reads tokens
+off the tag rather than tokenizing the text it recovered from a `pre`.
+
+Tokens on the tag, not markup, because that is the payload both renderers want: mail
+needs a `<span>` per token with an inline style, and `@pkg/markdown/client`'s `Fence` can
+emit real elements and drop `innerHTML`. Nothing caches or serializes the tree, so the
+list costs one request's memory. This supersedes the escaping fix in the fence node: with
+tokens there is no HTML string for a branch to forget to escape.
+
+Highlighting at transform time also puts mail's fences where the other pipeline's already
+are, so the language alias resolves once per document rather than once per code block
+rendered.
+
 ### One stylesheet
 
 `@pkg/highlight/styles.css` paints the twenty types through `--highlight-*` custom
@@ -208,8 +271,9 @@ and `@pkg/mail` maps the same twenty types to inline colors.
    range, not bytes: a flat model emits fewer spans than a nested one, and the recorded
    `tsx` output is the degraded grammar, which the replacement deliberately does not
    reproduce.
-3. Move `@pkg/markdown`'s fence node and `@pkg/mail`'s `CodeBlock` over, delete the alias
-   tables, `tokenText` and `bucket`.
+3. Move the fence node into `@pkg/highlight/markdoc`, register it from `@pkg/markdown`
+   and from `@pkg/mail`, and render tokens in `Fence` and `CodeBlock`. The alias tables,
+   `tokenText`, `bucket`, `escapeMarkup` and the `pre`/`data-language` branch go with it.
 4. Consolidate the stylesheets and update the root README's dependency table.
 
 ## Consequences
@@ -218,9 +282,12 @@ and `@pkg/mail` maps the same twenty types to inline colors.
 
 - 57.1 KB minified, 20.8 KB gzipped leaves the SSR bundle of every Worker that renders
   markdown, and 42.5 KB minified leaves the one that sends markdown mail.
-- The fallback path escapes, so a fence in a language with no grammar renders as text
-  instead of as markup. The surface that renders tenant-authored posts loses the injection
-  it has today.
+- No fence reaches `innerHTML`, because no fence carries markup: the renderers receive
+  tokens and emit elements. The escaping the node does today, and the injection it does
+  today for a language with no grammar, both stop being possible rather than being
+  handled.
+- One fence node serves both pipelines, so mail stops recovering code out of a `pre` tag
+  at render time and stops carrying a second alias table to do it.
 - `tsx` highlights as TypeScript, and cannot silently stop: grammars compose through
   imported values, so the dependency is checked rather than assumed.
 - What a package highlights no longer depends on what else the Worker imported.
@@ -243,22 +310,34 @@ and `@pkg/mail` maps the same twenty types to inline colors.
 
 - The `token` class names stay, so the apps' own stylesheets keep working through the
   migration and the consolidation can land after it.
-- `@pkg/markdown` keeps handing the client an HTML string. Tokens in the Markdoc tag
-  would let `Fence` emit real elements and drop `innerHTML`, at the cost of a larger
-  cached payload; that trade is open and does not need settling here.
+- `@pkg/mail` gains a Markdoc config where it had none, and `@pkg/highlight/markdoc`
+  becomes a dependency of both packages. Markdoc was already a dependency of both.
+- `@pkg/markdown` keeps owning frontmatter, validation and the renderer. Only the fence
+  leaves it.
 
 ## Alternatives Considered
 
-**Keep `prismjs` and swap the two imports.** One line, and it fixes the `tsx`
-degradation. It should land regardless of this ADR, because it is a live rendering
-defect and the replacement is not a week's work. It leaves the size, the global registry,
-the two alias tables, the unescaped fallback and a dependency whose last release was
-eighteen months ago.
+**Ship the core only, and let each package keep its own fence node.** The smaller
+package, and it leaves in place the thing that produced two alias tables and two escaping
+regimes: two hand-rolled integrations of the same library against the same markdown
+parser. Mail would go on highlighting at render time out of a `pre` tag.
 
-**Escape the fallback and stop there.** Also one line, and also worth landing now. It
-closes the injection without touching anything else, which is exactly its limit: the seam
-that produced it — an HTML string assembled by two branches with different escaping
-owners — stays.
+**Put the node in `@pkg/markdown` and have `@pkg/mail` depend on that.** One package
+fewer. It also inverts the reason `@pkg/mail/markdown` is a subpath at all: mail would
+pull frontmatter validation, Standard Schema and the Remix renderer into an email
+bundle to reach a fence node. Highlighting is the shared part; the markdown pipeline
+around it is not.
+
+**Make the tag's payload configurable, markup or tokens.** A knob on a decision that has
+one answer per caller and the same answer for both. Tokens render to markup in a few
+lines; markup does not render to tokens at all.
+
+**Swap the two imports, escape the fallback, and stop there.** Both are one line, both
+were worth landing without waiting for this ADR, and both have landed. They fix the two
+defects and nothing that produced them: the grammar registry stays global and
+order-dependent, the escaping obligation stays split across Prism and the node, the two
+alias tables stay, the size stays, and the dependency's last release stays eighteen
+months old.
 
 **Shiki.** Correct where Prism is coarse, because it runs the same TextMate grammars an
 editor does. It also carries a regex engine and per-language grammar JSON; the published
