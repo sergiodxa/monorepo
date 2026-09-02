@@ -76,6 +76,17 @@ describe("CodeBlock", () => {
 		expect(html).toContain('class="mail-tok-string"');
 	});
 
+	/**
+	 * `prism-tsx.js` clones `Prism.languages.typescript` when it loads, so an import
+	 * order that puts it first leaves `tsx` as a copy of `jsx`, where `type` is no
+	 * keyword and nothing paints it.
+	 */
+	test("paints tsx with the TypeScript half of the grammar", async () => {
+		let { html } = await render(<CodeBlock language="tsx" code="type Id = string;" />);
+
+		expect(html).toContain('class="mail-tok-keyword"');
+	});
+
 	test("renders an unknown language unpainted rather than failing", async () => {
 		let { html, text } = await render(<CodeBlock language="brainfuck" code="++[.]" />);
 

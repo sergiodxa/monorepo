@@ -1,8 +1,8 @@
 /**
  * The Markdoc node for fenced code blocks: it normalizes the language written
  * on the fence to a Prism grammar identifier, highlights the body when a
- * grammar answers to that name, and emits a `Fence` tag for the client
- * renderer to draw.
+ * grammar answers to that name and escapes it when none does, and emits a
+ * `Fence` tag for the client renderer to draw.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +25,9 @@ import "prismjs/components/prism-markdown.js";
 import "prismjs/components/prism-python.js";
 import "prismjs/components/prism-ruby.js";
 import "prismjs/components/prism-sql.js";
-import "prismjs/components/prism-tsx.js";
+/** `prism-tsx.js` clones `Prism.languages.typescript` at load, so TypeScript comes first. */
 import "prismjs/components/prism-typescript.js";
+import "prismjs/components/prism-tsx.js";
 import "prismjs/components/prism-yaml.js";
 
 /**
@@ -92,7 +93,8 @@ export const fence = {
 	},
 
 	/**
-	 * Normalizes fence attributes and applies Prism highlighting when available.
+	 * Normalizes fence attributes and applies Prism highlighting when available,
+	 * escaping the body itself for the languages Prism registers no grammar for.
 	 */
 	transform(node) {
 		let parsed = s.parse(AttributesSchema, {
@@ -101,10 +103,10 @@ export const fence = {
 		});
 
 		let language = normalizeLanguage(parsed.language);
-		let content = parsed.content;
-
 		let grammar = Prism.languages[language];
-		if (grammar) content = Prism.highlight(content, grammar, language);
+		let content = grammar
+			? Prism.highlight(parsed.content, grammar, language)
+			: escapeMarkup(parsed.content);
 
 		return new Tag("Fence", {
 			content,
@@ -131,4 +133,16 @@ export function normalizeLanguage(language: string): fence.SupportedLanguage {
 		return LANGUAGE_ALIASES[lang as keyof typeof LANGUAGE_ALIASES];
 	}
 	return lang as fence.SupportedLanguage;
+}
+
+/**
+ * Escapes a fence body the way Prism escapes the text runs it highlights, so a
+ * language with no grammar reaches the client renderer's `innerHTML` as source
+ * to read rather than as markup to run.
+ *
+ * @param content - Raw fence body
+ * @returns The body with `&` and `<` replaced by their entities
+ */
+function escapeMarkup(content: string): string {
+	return content.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
 }

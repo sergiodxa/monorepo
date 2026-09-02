@@ -23,8 +23,9 @@ import "prismjs/components/prism-json.js";
 import "prismjs/components/prism-jsx.js";
 import "prismjs/components/prism-markdown.js";
 import "prismjs/components/prism-sql.js";
-import "prismjs/components/prism-tsx.js";
+/** `prism-tsx.js` clones `Prism.languages.typescript` at load, so TypeScript comes first. */
 import "prismjs/components/prism-typescript.js";
+import "prismjs/components/prism-tsx.js";
 import "prismjs/components/prism-yaml.js";
 
 /** Fence languages named by an alias Prism does not register under. */
