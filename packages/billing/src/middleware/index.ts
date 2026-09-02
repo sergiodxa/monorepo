@@ -67,8 +67,9 @@ export interface BillingMiddlewareOptions {
 /** Options that configure one entitlement guard. */
 export interface RequireEntitlementOptions {
 	/**
-	 * Builds the response for a request that lacks the feature, which is where a
-	 * redirect to a pricing or upgrade page belongs. Omitting it answers `403`.
+	 * Builds the response for a request that lacks the feature, receiving the
+	 * request context so it can render an upgrade prompt in place as readily as
+	 * it can redirect to a pricing page. Omitting it answers `403`.
 	 */
 	onDenied?: (context: RequestContext, feature: string) => Response | Promise<Response>;
 }

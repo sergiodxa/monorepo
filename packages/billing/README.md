@@ -1124,7 +1124,8 @@ import routes from "~/routes/web";
 export default createAction(routes.app.flows, {
 	middleware: [
 		requireEntitlement("flow_monitors", {
-			onDenied: () => redirect(routes.pricing.href(), { status: redirect.Status.SeeOther }),
+			onDenied: (context, feature) =>
+				context.render(<UpgradePrompt feature={feature} team={context.team} />),
 		}),
 	],
 
@@ -1134,7 +1135,13 @@ export default createAction(routes.app.flows, {
 });
 ```
 
-`onDenied` is where an upgrade page belongs; without it a denied request answers `403`. The guard publishes the snapshot it decided on as `context.entitlements`, so the handler behind it reads the same projection rather than loading it twice.
+`onDenied` receives the request context, so a denied request can answer with an upgrade prompt rendered at the URL the visitor asked for, keeping them where they were. It can equally redirect:
+
+```typescript
+onDenied: () => redirect(routes.pricing.href(), { status: redirect.Status.SeeOther });
+```
+
+Without `onDenied` a denied request answers `403`. The guard publishes the snapshot it decided on as `context.entitlements`, so the handler behind it reads the same projection rather than loading it twice.
 
 ## Pattern: Testing a billing flow
 

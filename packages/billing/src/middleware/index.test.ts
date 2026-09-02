@@ -145,6 +145,23 @@ describe("requireEntitlement", () => {
 		expect(denied).toEqual(["flow_monitors"]);
 	});
 
+	test("hands onDenied the context, so it can answer in place", async () => {
+		let ctx = context();
+
+		await billing({ provider: new MemoryBilling(), entitlements: () => FREE })(ctx, ok);
+
+		let response = await requireEntitlement("flow_monitors", {
+			onDenied: (denied, feature) =>
+				new Response(`upgrade for ${feature} on ${denied.url.pathname}`, {
+					status: 402,
+					headers: { "Content-Type": "text/html" },
+				}),
+		})(ctx, ok);
+
+		expect(response.status).toBe(402);
+		expect(await response.text()).toBe("upgrade for flow_monitors on /app/flows");
+	});
+
 	test("awaits an asynchronous projection read", async () => {
 		let ctx = context();
 
