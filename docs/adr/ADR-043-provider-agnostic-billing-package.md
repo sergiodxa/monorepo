@@ -157,9 +157,17 @@ Stated first, because the prior art shows the promise is where these designs fai
 
 It promises: app code holds no vendor type and no vendor id; one failure convention with an explicit unknown outcome; page-at-a-time listing; a test double that is contract-checked; usage ingestion with no app semantics baked in; and a conformance suite that defines what an adapter is.
 
-It does not promise that changing providers is cheap. Under merchant of record, subscriptions and saved payment methods do not move, so every customer re-checks out; Polar to Stripe is a change of who legally sells the product, not a config change. What the package buys is that the code obstacle is bounded and testable while the commercial one is not.
+It does not promise that changing providers is cheap. Polar to Stripe is a change of who legally sells the product, not a config change, and what the package buys is that the code obstacle is bounded and testable while the commercial one is not.
 
-Stated precisely, because the imprecise version is what makes these designs disappoint: provider independence means **new customers can be signed up on a different provider**, not that existing subscribers migrate silently. Zuora, which has solved this problem commercially for longer than anyone, states the constraint plainly — a gateway token from one provider cannot be reused at another, so a system must expect to hold several provider identities for one customer. Only network tokens are portable, and a merchant of record does not hand those over.
+The specifics matter, because the folk version of this is wrong in both directions. Polar documents an offboarding path, and under it **customers and their saved payment methods do move** — easiest into our own Stripe account, since Polar settles through Stripe, and otherwise to any PCI Level 1 provider through Stripe's PAN export. Customers do not re-enter cards; the visible change is whose name appears on their statement.
+
+What does not move is everything this package models: products, prices, discounts, and benefits are recreated by hand, and **active subscriptions are recreated one by one**, each with its first charge aligned to the customer's next Polar renewal or they get billed twice for the same period. During offboarding new checkouts are disabled while existing subscriptions keep renewing until individually cancelled, payouts are held for 120 days after the final transaction, and the whole thing is support-assisted — a few business days into our own Stripe account, several weeks into anyone else's.
+
+Two constraints are permanent rather than procedural. A merchant of record is the merchant, so we cannot hold a token requestor id for our own sales, which forecloses network-token portability and vault-level account updater. And a provider's customer id and token are not reusable at another provider, so a system must expect to hold several provider identities for one customer.
+
+So the honest promise is: **new customers can be signed up on a different provider immediately, and existing subscribers are a re-creation project measured in weeks — not a rewrite, and not a config change.**
+
+Finally, it targets **running two providers at once**, not a one-shot swap, and the two are different designs. The realistic reason to need a second provider is not that Polar's API disappoints — it is availability: an account suspension, an acquisition that stalls development, or a provider going under. Several of the migration accounts in the survey were triggered by exactly that. A swap tolerates a leaky adapter because it happens once; concurrency does not, which is why the customer link in §18 is a row per connection rather than a column.
 
 It also does not promise a uniform verb for every operation. Where the providers genuinely differ in shape, the difference is expressed in the contract rather than hidden, which is the lesson of Pay's no-op `subscribe`.
 
@@ -376,6 +384,18 @@ This is the design's most direct debt to the prior art. Polar, Paddle, Paddle Cl
 
 The divergence is in timing, not naming, so a uniform synchronous creation method is a lie on one provider. Modelling every subscription as webhook-eventual is true on both, and it is what the apps already do — `apps/uptime` keeps a D1 projection written by its webhook precisely because of this.
 
+### 10a. Plan Changes Are Expressed As Intent
+
+A subscription update takes what the caller wants to happen to the money, not the provider's enum:
+
+```ts
+await billing.subscriptions.change({ subscription, product: "pro", billing: "charge_now" });
+```
+
+`"charge_now" | "defer_to_next_invoice" | "at_next_cycle"` covers what both providers can express. The enums themselves do not map: Polar has four proration behaviours and Stripe three, and Stripe's "no proration at all" has no Polar equivalent, so a pass-through field would be a different feature depending on who is configured.
+
+Two provider behaviours the adapter must not hide, because they change what the caller has to handle: Polar silently promotes a deferred proration to an immediate charge when the billing interval changes, and for the charging behaviours the subscription is only updated if the payment succeeds — a declined card leaves the plan unchanged and returns a failure rather than scheduling anything. A caller that assumes a change always lands will show the wrong plan.
+
 ### 11. Entitlement Is The Primary Read Path
 
 ```ts
@@ -386,6 +406,14 @@ if (!state.features.has("flow_monitors")) return upgradePrompt();
 `entitlements.of()` returns one snapshot: active products, feature flags, meter balances, and subscription status. It is a required group, not an optional capability, and it is the read path app code should prefer over inspecting a `Subscription`.
 
 This is the seam with the best evidence in the survey. It is the only layer at which anyone runs across five billing systems, it is what makes a future adapter tractable, and every provider can answer "what does this customer have right now" while none of them agree on event shapes. It also composes with the projection apps already keep: the snapshot is what a webhook invalidates, so events become cache-invalidation hints rather than the source of truth.
+
+It is also the cheapest group to implement, because Polar already ships it: a customer-state endpoint returning active subscriptions, granted benefits, and meter balances, plus a `customer.state_changed` event that fires when any of it moves. The adapter maps one call, and Stripe's side composes from subscriptions plus entitlements.
+
+### 11a. What The Contract Deliberately Omits
+
+Disputes, chargebacks, payouts, and tax reporting are outside this package, and not because they are unimportant. Under merchant of record they belong to the provider: Polar emits no dispute event and no payment-method event at all, because it is the party that fights the chargeback and holds the card. A `disputes` capability group would therefore have no Polar implementation and no Polar data to model, and a dispute reaches us as a line item on a payout statement rather than as something to handle.
+
+The rule generalizes: where merchant of record removes a whole subsystem, that subsystem stays out of the contract rather than becoming a capability nobody implements. This is also why the seller of record is a property of the deployment worth stating plainly in each app's configuration rather than hiding behind the adapter — it changes who the customer's counterparty is, not just which API gets called.
 
 ### 12. Lists Return Pages
 
@@ -566,7 +594,7 @@ Where an app keeps a projection of provider state, it should keep the raw payloa
 - **Five apps and three schemas to migrate** - mechanical but wide, and every webhook handler must be re-verified against real deliveries.
 - **Order normalization is the weakest seam** - a paid order is one object in Polar and an invoice plus a payment intent in Stripe; that mapping will need revision when a second adapter is written.
 - **Escape-hatch usage will not be rare** - the review's estimate is a fifth to a third of real billing code stays provider-specific, so `native` will appear in app code and each use is a place a migration must revisit.
-- **Switching providers is still mostly not a code problem** - merchant-of-record status, tax remittance, existing subscriptions, and saved payment methods do not port, and card-data migration is a compliance process requiring the losing provider's cooperation.
+- **Switching providers is still mostly not a code problem** - merchant-of-record status, tax remittance, the product catalogue, and every active subscription are re-created rather than ported, card-data migration is a compliance process requiring the losing provider's cooperation, and payouts are held for 120 days afterwards.
 - **A bug can now live in our mapping** - previously a wrong field was the vendor's.
 - **Adoption brings work the apps do not do today** - persisting raw deliveries, deduplicating by reference, re-reading objects instead of trusting payloads, and a reconciliation job per app. All of it is missing now, so adopting the package surfaces a gap rather than creating one, but it is real work in Phase 4 rather than a free consequence of the refactor.
 
@@ -658,21 +686,29 @@ Abstract only "what does this customer have right now" plus usage grants, and le
 
 The broader search found no mature standalone library in any language that abstracts subscription billing across providers. Every survivor is either inside an e-commerce framework, restricted to charges, or a billing engine that owns the model.
 
-### 6. Normalize Everything, No Optional Capabilities
+### 6. Buy MoR Optionality From Stripe Instead
+
+If the real requirement is being able to stop being the merchant of record without changing code, Stripe sells both sides now: Stripe direct and Stripe Managed Payments, its own merchant-of-record product built out of the Lemon Squeezy acquisition. Same vault, same object graph, so it is the only merchant-of-record transition on the market that genuinely is a configuration change.
+
+**Rejected because**: it is roughly double Polar's rate, and Stripe documents Managed Payments as a poor fit for sophisticated subscription, metered, or hybrid billing, with subscriptions created through Checkout rather than the API. Metered and hybrid billing is precisely what two of these apps do. Worth revisiting only if merchant-of-record optionality ever outranks the billing model.
+
+### 7. Normalize Everything, No Optional Capabilities
 
 **Rejected because**: it moves a compile-time fact to runtime, which is exactly what PayKit's runtime schema forces — 17 providers each shipping stubs that throw, one of them in 41 places. A page rendering license keys should not typecheck against a backend that has none.
 
-### 7. A Capability Registry Or `capabilities: Set<string>`
+### 8. A Capability Registry Or A Capabilities Set
 
 **Rejected because**: it can disagree with the implementation. Optional properties cannot, and Pay is the demonstration of what unenforced declarations become — a normalized status list with exactly one reference in the whole repository, its own definition.
 
-### 8. Wait Until A Second Provider Is Actually Needed
+### 9. Wait Until A Second Provider Is Actually Needed
 
 **Rejected because**: the cost is paid at migration time either way, and highest exactly when there is schedule pressure. Several fixes here are worth landing with no provider change in sight: one failure convention with an unknown outcome, page-at-a-time lists, package-owned test doubles, webhook idempotency, no app semantics in shared code, and the meter-quantities gap.
 
 ## References
 
-- [Polar API reference](https://docs.polar.sh/api-reference)
+- [Polar API reference](https://docs.polar.sh/api-reference) and [Polar's offboarding guide](https://polar.sh/docs/migrate-away)
+- [Polar Master Services Terms](https://polar.sh/legal/master-services-terms), for who the seller of record is
+- [Stripe Managed Payments](https://docs.stripe.com/managed-payments)
 - [Stripe API reference](https://docs.stripe.com/api)
 - [Stripe payment-method data migrations](https://docs.stripe.com/get-started/data-migrations/overview)
 - [Standard Webhooks](https://www.standardwebhooks.com)
@@ -715,6 +751,9 @@ The broader search found no mature standalone library in any language that abstr
 - Keep vendor concepts out of the core namespace. Pay defines an unnamespaced `Pay::Payment` that is hardcoded to Stripe payment intents and setup intents, because SCA exists in only one provider's model — once the shared namespace means one vendor's concept, the abstraction has already lost. The same applies to columns: Pay's shared schema carries `stripe_account` and `application_fee_percent`.
 - An abstraction that cannot survive one provider's major version bump will not survive two providers. Cashier has no upgrade path from Paddle Classic to Paddle Billing; those users stay on a forked 1.x permanently. Treat a provider's next API version as a new adapter, not a change to this contract.
 - There is no public account of anyone completing a provider-to-provider migration using Pay or Cashier, despite both being widely deployed for years. That absence is the honest state of the evidence for the migration story, and a reason to keep the promise in §1 narrow.
+- Polar's `external_id` is unique per organization and **immutable once set**, so the value written at customer creation is permanent. Use the app's own stable subject id, never an email or a slug that can change, and never a value that encodes which product bought what.
+- Polar's API is date-versioned, and Polar itself is a Stripe-settled reseller, so an adapter pins a version and treats a Polar release note as it would a vendor SDK bump.
+- One stable object, several provider attempts, is the shape that makes retries expressible without lying to the caller: a retried payment grows a second attempt rather than becoming a new payment. Worth keeping in mind if payment attempts ever get modelled here.
 - When refunds arrive in Phase 5, model partial refunds as an append-only transaction log with derived balances rather than a mutable `amountRefunded` scalar. django-payments keeps the scalar and consequently can only detect an over-refund after the fact, logging an error because raising one "would just cause inconsistencies"; django-oscar keeps `amountAllocated`/`amountDebited`/`amountRefunded` as separate running totals over a transaction log, which makes the same check a precondition.
 - Fraud or manual-review state is a separate axis from payment status, not another status value. django-payments models the two independently, and a Stripe-shaped model usually collapses them.
 - Do not let a method's arity or argument shape depend on a capability flag. Solidus has one `void` called with three arguments or two depending on whether the payment method supports payment profiles; that is the shape a typed contract exists to rule out.
