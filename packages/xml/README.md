@@ -1,12 +1,12 @@
 # @pkg/xml
 
-XML parser and serializer for workerd-style DOM APIs.
+XML parser and serializer for RSS-style feeds.
 
 ## Overview
 
 `@pkg/xml` parses XML into an `XML` document instance and serializes that instance back into XML text. It is designed for the subset of XML commonly used by RSS and similar feeds: one root element, attributes, nested elements, text nodes, CDATA content, namespace-prefixed names, and XML declarations.
 
-The implementation uses `DOMParser` and `XMLSerializer` when they are available in the runtime, which matches workerd. Bun tests use `@xmldom/xmldom` as a compatible fallback so the same package can be verified locally.
+The parser resolves the five entities XML predefines (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`) and numeric character references such as `&#8217;`. A named entity from HTML, such as `&nbsp;`, is reported as a parse error, since a DTD is what declares it.
 
 ## Usage
 
@@ -106,13 +106,13 @@ import { XML } from "@pkg/xml";
 let result = XML.parse('<rss version="2.0" />');
 ```
 
-#### `XML.stringify(input: XML.Input): Result<string, XMLStringifyError>`
+#### `XML.stringify(input: XML | XML.Element): Result<string, XMLStringifyError>`
 
 Serializes an `XML` instance or a root `XML.Element` into XML text.
 
 **Parameters:**
 
-- `input`: The XML tree to serialize.
+- `input`: The XML instance, or the root element, to serialize.
 
 **Returns:**
 
@@ -328,3 +328,4 @@ let result = XML.stringify({
 1. Declare `xmlns:*` attributes on the same element tree where prefixed names are used, otherwise serialization fails.
 2. Treat strings in `children` as text nodes; nested markup must be represented as child elements, not embedded raw XML.
 3. The parser ignores indentation-only text nodes, which keeps RSS-style XML trees easier to traverse.
+4. Element and attribute names are checked against the XML `Name` production before they are written, so serialization produces output that parses back into the tree it was given.

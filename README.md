@@ -175,7 +175,6 @@ repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#package
 | `@standard-schema/spec`           | `markdown`, `validate`, `webhooks`                                                                                         | The `StandardSchemaV1` interface, as types only.                      |
 | `i18next`                         | `i18n`                                                                                                                     | Translation lookup and interpolation.                                 |
 | `html-parse-stringify`            | `i18n`                                                                                                                     | Parses the tag AST inside a translation string.                       |
-| `@xmldom/xmldom`                  | `xml`                                                                                                                      | A DOM parser and serializer, which Workers do not provide.            |
 | `lucide-static`                   | `lucide-remix`                                                                                                             | Icon source data for the icon codegen script.                         |
 | `cron-parser`                     | `cron`                                                                                                                     | Test-only oracle the package's own schedule maths is checked against. |
 

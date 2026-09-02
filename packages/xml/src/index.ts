@@ -100,7 +100,7 @@ export class XML {
 	}
 
 	/**
-	 * Parses XML into an `XML` instance using DOMParser-compatible APIs.
+	 * Parses XML into an `XML` instance.
 	 *
 	 * @param source - Raw XML text to parse
 	 * @returns A Result containing an `XML` instance or a parse error

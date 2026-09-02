@@ -1,6 +1,7 @@
 /**
- * Serializes plain XML document data into a string, resolving namespace
- * prefixes and rejecting elements or attributes with no matching declaration.
+ * Serializes plain XML document data into text, emitting the markup directly so
+ * the package runs anywhere JavaScript does, workerd included. Namespace prefixes
+ * are checked against the declarations in scope, names against `Name`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,16 +10,17 @@
 import type { Result } from "@pkg/result";
 
 import { failure, success } from "@pkg/result";
-import {
-	DOMParser as PolyfillDOMParser,
-	XMLSerializer as PolyfillXMLSerializer,
-} from "@xmldom/xmldom";
 
 import type { XML } from "../index";
 
-let XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
-let XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
-let XML_MIME_TYPE: DOMParserSupportedType = "application/xml";
+import { escapeAttribute, escapeText } from "./escape-xml";
+import { isValidName } from "./xml-names";
+
+/**
+ * `xml` and `xmlns` are bound by the specification itself, so every document may
+ * use them directly.
+ */
+const BUILT_IN_PREFIXES = ["xml", "xmlns"];
 
 /**
  * Serializes plain XML document data into a string.
@@ -27,196 +29,123 @@ let XML_MIME_TYPE: DOMParserSupportedType = "application/xml";
  * @returns A Result containing the XML string or an error
  */
 export function stringifyDocument(input: XML.Document): Result<string, Error> {
-	let documentResult = createXMLDocument(input.root.name);
-	if (documentResult.status === "failure") return documentResult;
+	if (!isValidName(input.root.name)) {
+		return failure(new Error(`Invalid root element name "${input.root.name}".`));
+	}
 
-	let document = documentResult.data;
-	let rootResult = buildElement(document, input.root, createNamespaceScope());
-	if (rootResult.status === "failure") return rootResult;
+	let root = stringifyElement(input.root, new Set(BUILT_IN_PREFIXES));
+	if (root.status === "failure") return root;
 
-	let currentRoot = document.documentElement;
-	let nextRoot = rootResult.data;
+	let declaration = stringifyDeclaration(input.declaration);
+	if (!declaration) return root;
 
-	if (!currentRoot) return failure(new Error("Expected a root element to serialize."));
-
-	document.replaceChild(nextRoot, currentRoot);
-
-	let serializer = createXMLSerializer();
-	let xml = serializer.serializeToString(document);
-	let serializedDeclaration = serializeDeclaration(input.declaration);
-
-	if (!serializedDeclaration) return success(xml);
-	return success(`${serializedDeclaration}\n${xml}`);
+	return success(`${declaration}\n${root.data}`);
 }
 
 /**
- * Chooses workerd's XMLSerializer when available and falls back to xmldom in Bun.
+ * Writes one element and everything under it, threading the namespace prefixes
+ * declared so far down the tree so a child can use a prefix an ancestor declared.
  */
-function createXMLSerializer(): XMLSerializer {
-	if (typeof XMLSerializer !== "undefined") return new XMLSerializer();
-	return new PolyfillXMLSerializer() as unknown as XMLSerializer;
-}
-
-/**
- * Creates a fresh XML document so XMLSerializer can emit a valid root element.
- */
-function createXMLDocument(rootName: string): Result<Document, Error> {
-	let parser = createDOMParser();
-	let seed = parser.parseFromString(`<${rootName}/>`, XML_MIME_TYPE);
-	let parserError = getParserError(seed);
-
-	if (parserError) return failure(new Error(`Invalid root element name "${rootName}".`));
-
-	let implementation = seed.implementation;
-	if (!implementation) return failure(new Error("Expected DOMImplementation to create XML."));
-
-	let document = implementation.createDocument(null, rootName);
-	return success(document);
-}
-
-/**
- * Chooses workerd's DOMParser when available and falls back to xmldom in Bun.
- */
-function createDOMParser(): DOMParser {
-	if (typeof DOMParser !== "undefined") return new DOMParser();
-	return new PolyfillDOMParser() as unknown as DOMParser;
-}
-
-/**
- * Detects parser errors emitted while validating a synthetic root element.
- */
-function getParserError(document: Document): Element | null {
-	let root = document.documentElement;
-	if (root?.tagName === "parsererror") return root;
-
-	let parserError = document.getElementsByTagName("parsererror").item(0);
-	if (parserError) return parserError;
-
-	return null;
-}
-
-/**
- * Builds one DOM element while keeping XML namespace declarations in scope.
- */
-function buildElement(
-	document: Document,
+function stringifyElement(
 	element: XML.Element,
-	inheritedNamespaces: Map<string, string>,
-): Result<Element, Error> {
+	inheritedPrefixes: Set<string>,
+): Result<string, Error> {
 	let attributes = element.attributes ?? {};
 	let children = element.children ?? [];
-	let namespaces = extendNamespaces(attributes, inheritedNamespaces);
-	let namespaceURI = resolveElementNamespace(element.name, namespaces);
-	let domElement: Element;
+	let prefixes = extendPrefixes(attributes, inheritedPrefixes);
 
-	if (namespaceURI) {
-		domElement = document.createElementNS(namespaceURI, element.name);
-	} else if (element.name.includes(":")) {
-		let prefix = element.name.split(":")[0] ?? element.name;
+	let elementPrefix = prefixOf(element.name);
+	if (elementPrefix && !prefixes.has(elementPrefix)) {
 		return failure(
 			new Error(
-				`Missing namespace declaration for prefix "${prefix}" on element "${element.name}".`,
+				`Missing namespace declaration for prefix "${elementPrefix}" on element "${element.name}".`,
 			),
 		);
-	} else {
-		domElement = document.createElement(element.name);
 	}
 
-	for (let [name, value] of Object.entries(attributes)) {
-		if (name === "xmlns") {
-			domElement.setAttributeNS(XMLNS_NAMESPACE, "xmlns", value);
-			continue;
-		}
+	let serializedAttributes = stringifyAttributes(attributes, prefixes);
+	if (serializedAttributes.status === "failure") return serializedAttributes;
 
-		if (name.startsWith("xmlns:")) {
-			domElement.setAttributeNS(XMLNS_NAMESPACE, name, value);
-			continue;
-		}
+	let open = `<${element.name}${serializedAttributes.data}`;
+	if (children.length === 0) return success(`${open}/>`);
 
-		if (name.includes(":")) {
-			let attributeNamespace = resolveAttributeNamespace(name, namespaces);
-			if (!attributeNamespace) {
-				let prefix = name.split(":")[0] ?? name;
-				return failure(
-					new Error(`Missing namespace declaration for prefix "${prefix}" on attribute "${name}".`),
-				);
-			}
-
-			domElement.setAttributeNS(attributeNamespace, name, value);
-			continue;
-		}
-
-		domElement.setAttribute(name, value);
-	}
-
+	let content = "";
 	for (let child of children) {
 		if (typeof child === "string") {
-			domElement.appendChild(document.createTextNode(child));
+			content += escapeText(child);
 			continue;
 		}
 
-		let childResult = buildElement(document, child, namespaces);
-		if (childResult.status === "failure") return childResult;
+		if (!isValidName(child.name)) {
+			return failure(new Error(`Invalid element name "${child.name}".`));
+		}
 
-		domElement.appendChild(childResult.data);
+		let serializedChild = stringifyElement(child, prefixes);
+		if (serializedChild.status === "failure") return serializedChild;
+
+		content += serializedChild.data;
 	}
 
-	return success(domElement);
+	return success(`${open}>${content}</${element.name}>`);
 }
 
 /**
- * Seeds serialization with the standard XML namespace prefixes.
+ * Writes the attribute list in declaration order, which keeps a serialized feed
+ * byte-for-byte stable between runs.
  */
-function createNamespaceScope(): Map<string, string> {
-	return new Map([
-		["xml", XML_NAMESPACE],
-		["xmlns", XMLNS_NAMESPACE],
-	]);
-}
-
-/**
- * Tracks namespace declarations as elements introduce new `xmlns` attributes.
- */
-function extendNamespaces(
+function stringifyAttributes(
 	attributes: Record<string, string>,
-	inheritedNamespaces: Map<string, string>,
-): Map<string, string> {
-	let namespaces = new Map(inheritedNamespaces);
+	prefixes: Set<string>,
+): Result<string, Error> {
+	let serialized = "";
 
 	for (let [name, value] of Object.entries(attributes)) {
-		if (name === "xmlns") namespaces.set("", value);
-		if (name.startsWith("xmlns:")) namespaces.set(name.slice(6), value);
+		if (!isValidName(name)) return failure(new Error(`Invalid attribute name "${name}".`));
+
+		let prefix = prefixOf(name);
+		if (prefix && !prefixes.has(prefix)) {
+			return failure(
+				new Error(`Missing namespace declaration for prefix "${prefix}" on attribute "${name}".`),
+			);
+		}
+
+		serialized += ` ${name}="${escapeAttribute(value)}"`;
 	}
 
-	return namespaces;
+	return success(serialized);
 }
 
 /**
- * Resolves the namespace URI for an element name from the current namespace scope.
+ * Collects the prefixes an element declares, so they cover the element itself
+ * and everything nested inside it.
  */
-function resolveElementNamespace(name: string, namespaces: Map<string, string>): string | null {
-	let separator = name.indexOf(":");
-	if (separator === -1) return namespaces.get("") ?? null;
+function extendPrefixes(
+	attributes: Record<string, string>,
+	inheritedPrefixes: Set<string>,
+): Set<string> {
+	let prefixes = new Set(inheritedPrefixes);
 
-	let prefix = name.slice(0, separator);
-	return namespaces.get(prefix) ?? null;
+	for (let name of Object.keys(attributes)) {
+		if (name.startsWith("xmlns:")) prefixes.add(name.slice("xmlns:".length));
+	}
+
+	return prefixes;
 }
 
 /**
- * Resolves the namespace URI for a prefixed attribute name.
+ * Reads the namespace prefix off a qualified name. An unprefixed name belongs to
+ * the default namespace, which every element already has in scope.
  */
-function resolveAttributeNamespace(name: string, namespaces: Map<string, string>): string | null {
+function prefixOf(name: string): string | undefined {
 	let separator = name.indexOf(":");
-	if (separator === -1) return null;
-
-	let prefix = name.slice(0, separator);
-	return namespaces.get(prefix) ?? null;
+	if (separator === -1) return undefined;
+	return name.slice(0, separator);
 }
 
 /**
  * Converts the declaration object into a stable XML declaration string.
  */
-function serializeDeclaration(declaration?: XML.Declaration): string | undefined {
+function stringifyDeclaration(declaration?: XML.Declaration): string | undefined {
 	if (!declaration) return undefined;
 
 	let attributes = [`version="${declaration.version ?? "1.0"}"`];
