@@ -15,7 +15,7 @@
 	},
 	"devDependencies": {
 		"@pkg/response": "workspace:*",
-		"@types/bun": "^1.3.14",
+		"@types/bun": "^1.4.0",
 		"vitest": "4.1.10"
 	}
 }

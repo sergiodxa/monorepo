@@ -14,7 +14,7 @@
 		"@pkg/duration": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20260815.1",
+		"@cloudflare/workers-types": "^5.20260901.1",
 		"vitest": "4.1.10"
 	}
 }

@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@cloudflare/workers-types": "^5.20260815.1",
+		"@cloudflare/workers-types": "^5.20260901.1",
 		"@pkg/logger": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/strings": "workspace:*",
@@ -19,7 +19,7 @@
 		"@pkg/validate": "workspace:*"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.3.11",
+		"@types/bun": "^1.4.0",
 		"msw": "^2.15.0",
 		"remix": "3.0.0-rc.1",
 		"vitest": "4.1.10"

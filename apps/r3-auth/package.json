@@ -37,15 +37,15 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.52.1",
+		"@cloudflare/vite-plugin": "^1.54.2",
 		"@pkg/auth": "workspace:*",
 		"@pkg/cloudflare-mocks": "workspace:*",
 		"@total-typescript/ts-reset": "^0.6.1",
-		"@types/node": "^26.2.0",
+		"@types/node": "^26.4.0",
 		"msw": "^2.15.0",
 		"typescript": "^6.0.3",
-		"vite": "^8.2.1",
+		"vite": "^8.2.2",
 		"vitest": "4.1.10",
-		"wrangler": "^4.123.0"
+		"wrangler": "^4.127.1"
 	}
 }
