@@ -7,11 +7,11 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./conformance": "./src/testing/conformance.ts",
-		"./memory": "./src/providers/memory/index.ts",
-		"./mercado-pago": "./src/providers/mercado-pago/index.ts",
 		"./middleware": "./src/middleware/index.ts",
-		"./polar": "./src/providers/polar/index.ts",
-		"./stripe": "./src/providers/stripe/index.ts"
+		"./providers/memory": "./src/providers/memory/index.ts",
+		"./providers/mercado-pago": "./src/providers/mercado-pago/index.ts",
+		"./providers/polar": "./src/providers/polar/index.ts",
+		"./providers/stripe": "./src/providers/stripe/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

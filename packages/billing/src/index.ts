@@ -79,5 +79,5 @@ export type {
 
 export { BillingError } from "./core/errors";
 export { OPTIONAL_CAPABILITIES, supports } from "./core/supports";
-export { minorUnitDigits } from "./core/types";
+export { DEFAULT_PAGE_SIZE, minorUnitDigits } from "./core/types";
 export { BillingWebhook, MemoryWebhookStore } from "./webhooks";

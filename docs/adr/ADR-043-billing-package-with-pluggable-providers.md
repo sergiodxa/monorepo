@@ -247,7 +247,10 @@ The convention that falls out is the same one mail already uses: **the middlewar
 ```ts
 import { requireEntitlement } from "@pkg/billing/middleware";
 
-router.get("/app/:team/flows", requireEntitlement("flow_monitors"), handler);
+export default createAction(routes.app.team.flows, {
+	middleware: [requireEntitlement("flow_monitors")],
+	handler,
+});
 ```
 
 `remix/middleware/auth` ships `requireAuth` for this reason: the check that gates a route belongs in middleware, not repeated at the top of every handler. The guard reads the app's own projection, never the platform mid-request.
@@ -699,7 +702,7 @@ import { MemoryBilling } from "@pkg/billing/memory";
 let billing = new MemoryBilling({ catalog: { pro: { amount: 4900, currency: "usd" } } });
 
 await billing.customers.create({ email: "jane@example.com", externalId: "u_1" });
-let delivery = billing.webhooks.emit({ type: "order.paid", order });
+let delivery = await billing.webhooks.emit({ type: "order.paid", order });
 ```
 
 It is a full implementation that passes the same conformance suite, not a mock — Pay's `FakeProcessor` is the model, and the reason it stayed honest for six providers is that it is contract-checked by construction and doubles as the template for writing a new provider.
@@ -710,7 +713,7 @@ Pay also earns a second use from it that is worth having: a fake processor is ho
 
 ### 22. Conformance Specs, Local And Remote
 
-The package ships one executable spec suite (`packages/billing/spec/`) that every provider must pass, parameterized by provider, with the required groups in one suite and each optional capability in its own file. ActiveStorage's shared service tests are the precedent: assert only the genuinely universal core, and leave anything backend-specific to its own file rather than conditionally skipping inside the shared suite.
+The package ships one conformance suite (`@pkg/billing/conformance`, a Vitest suite parameterized by provider) that every provider must pass, with the required groups in one function and each optional capability in its own. ActiveStorage's shared service tests are the precedent: assert only the genuinely universal core, and leave anything backend-specific to its own file rather than conditionally skipping inside the shared suite.
 
 That precedent was cited in the first draft and then violated in the first implementation, which is the finding worth recording. Three assertions in the required core were written on usage ingestion — the convenient way to produce billable state in a fixture — so a platform with no metering could not pass the required core at all, and Mercado Pago failed a suite that was meant to describe what every provider is. A fourth assertion, on paging, drove its pages through the same ingestion, so it was unreachable for a provider whose paging was perfectly correct: a spec asserting nothing while appearing green.
 

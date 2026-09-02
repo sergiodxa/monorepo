@@ -94,6 +94,7 @@ Run from the repository root:
 | [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                    |
 | [arrays](packages/arrays)                                       | Array utility functions                                                        |
 | [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers            |
+| [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint         |
 | [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                      |
 | [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the response             |
 | [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                   |
