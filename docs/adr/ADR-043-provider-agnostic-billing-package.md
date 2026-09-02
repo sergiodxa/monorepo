@@ -4,13 +4,15 @@
 
 **Proposed** - 2026-09-02
 
-Revised the same day after a prior-art review of Pay (Rails), Cashier (Laravel), PayKit, and roughly fifteen other multi-provider billing and payment abstractions. The review narrowed what this package promises, added an escape hatch it did not have, and reordered the implementation plan. [Prior Art](#prior-art) records what changed and why.
+Revised the same day, twice. First after a prior-art review of Pay (Rails), Cashier (Laravel), PayKit, and roughly fifteen other multi-provider billing abstractions, which added an escape hatch this design did not have and corrected its data model. Then again after the goal itself was restated: the package exists so billing is implemented the same way in every app, not so a provider could be swapped cheaply. That second pass removed API surface rather than adding it. [Prior Art](#prior-art) records the evidence.
 
 ## Background
 
 Billing in the monorepo is Polar, spelled out. `@pkg/polar` wraps `@polar-sh/sdk` behind one 948-line `PolarClient` class with 26 public methods, and it re-exports the vendor's own `Customer`, `Subscription`, `Product`, `Discount`, `Order`, `Checkout`, and `CustomerSession` models as the types five apps program against. Those apps also store the vendor's identifiers as column names (`polar_customer_id`, `polar_subscription_id`, `polar_product_id`), name their webhook routes after the vendor, and name their secrets after it.
 
-Polar is the right merchant of record for the products sold today, and nothing here proposes leaving it. What it proposes is that the vendor stop being a load-bearing type in five applications. The prior-art review changed the shape of that claim: the goal is no longer "switching providers becomes a one-line change", because no project surveyed has achieved that for subscriptions and several abandoned the attempt. The goal is that app code stops naming a vendor, that billing has one failure convention, and that a provider change becomes a bounded project with a known cost instead of an unbounded rewrite.
+Polar is the right merchant of record for the products sold today, and nothing here proposes leaving it. The problem is not the vendor, it is that there is no shared shape: five apps bill, and each reached for whichever `PolarClient` method fit at the time. One constructs a client per webhook delivery, one injects it, two resolve it from the container, and each wraps it in a differently-shaped local service. Three failure conventions are in play, two apps hand-rolled a test double, and one of those casts through `unknown`. Reading billing in one app teaches you very little about the next.
+
+So the goal is a single implementation shape for billing, the same in every app, whichever platform an app is on. Provider-neutrality is how that gets enforced rather than what it is for: the moment app code holds a vendor type, the shape drifts toward that vendor's model, which is exactly what happened.
 
 ## Context
 
@@ -151,25 +153,29 @@ Create `@pkg/billing`: vendor-neutral billing models plus an adapter contract, w
 
 The name is the domain, not the vendor, and matches `@pkg/mail` (ADR-018) and `@pkg/rate-limit` (ADR-019). `@pkg/commerce` was rejected as promising carts and catalogs; `@pkg/payments` as excluding subscriptions and entitlements, which are most of what the apps read.
 
-### 1. What This Package Promises
+### 1. What This Package Is For
 
 Stated first, because the prior art shows the promise is where these designs fail.
 
-It promises: app code holds no vendor type and no vendor id; one failure convention with an explicit unknown outcome; page-at-a-time listing; a test double that is contract-checked; usage ingestion with no app semantics baked in; and a conformance suite that defines what an adapter is.
+**It is not for making a provider swap cheap.** That is either impossible or hard enough that designing around it distorts everything else — five independent projects concluded as much, and two removed the attempt after shipping it. Polar to Stripe is a change of who legally sells the product; the catalogue and every active subscription are re-created by hand, and Polar holds payouts for 120 days afterwards.
 
-It does not promise that changing providers is cheap. Polar to Stripe is a change of who legally sells the product, not a config change, and what the package buys is that the code obstacle is bounded and testable while the commercial one is not.
+**It is for one legible implementation of billing, repeated.** A reviewer reads how checkout works in one app and recognizes it in the next. A new app gets billing by following the same three steps. And if an app ever runs on a different platform, its billing code still reads like everyone else's, because the platform sits behind an adapter instead of in the call sites.
 
-The specifics matter, because the folk version of this is wrong in both directions. Polar documents an offboarding path, and under it **customers and their saved payment methods do move** — easiest into our own Stripe account, since Polar settles through Stripe, and otherwise to any PCI Level 1 provider through Stripe's PAN export. Customers do not re-enter cards; the visible change is whose name appears on their statement.
+Concretely it promises: app code holds no vendor type and no vendor id; one failure convention; page-at-a-time listing; a contract-checked test double instead of two hand-rolled ones; usage ingestion with no app semantics baked in; and a conformance suite that says what an adapter is.
 
-What does not move is everything this package models: products, prices, discounts, and benefits are recreated by hand, and **active subscriptions are recreated one by one**, each with its first charge aligned to the customer's next Polar renewal or they get billed twice for the same period. During offboarding new checkouts are disabled while existing subscriptions keep renewing until individually cancelled, payouts are held for 120 days after the final transaction, and the whole thing is support-assisted — a few business days into our own Stripe account, several weeks into anyone else's.
+It does not promise a uniform verb for every operation. Where platforms genuinely differ in shape, the difference is expressed in the contract rather than hidden — the lesson of Pay's `subscribe`, which is an empty method body on three of its six providers so that one signature could look uniform.
 
-Two constraints are permanent rather than procedural. A merchant of record is the merchant, so we cannot hold a token requestor id for our own sales, which forecloses network-token portability and vault-level account updater. And a provider's customer id and token are not reusable at another provider, so a system must expect to hold several provider identities for one customer.
+### 1a. The Shape: Methods, Webhooks, Hosted Links
 
-So the honest promise is: **new customers can be signed up on a different provider immediately, and existing subscribers are a re-creation project measured in weeks — not a rewrite, and not a config change.**
+Three rules, chosen because they are the intersection every billing platform supports, so the same shape stays available whatever an app runs on:
 
-Finally, it targets **running two providers at once**, not a one-shot swap, and the two are different designs. The realistic reason to need a second provider is not that Polar's API disappoints — it is availability: an account suspension, an acquisition that stalls development, or a provider going under. Several of the migration accounts in the survey were triggered by exactly that. A swap tolerates a leaky adapter because it happens once; concurrency does not, which is why the customer link in §18 is a row per connection rather than a column.
+1. **Methods** for what we ask the platform to do — create a customer, open a checkout, ingest usage, read something back.
+2. **Normalized webhook events** for how we learn what happened. Apps sync their own state from them and read their own tables.
+3. **Hosted links** for anything touching money or a card. Every purchase is a redirect to a checkout link; every billing-management action is a redirect to a portal link.
 
-It also does not promise a uniform verb for every operation. Where the providers genuinely differ in shape, the difference is expressed in the contract rather than hidden, which is the lesson of Pay's no-op `subscribe`.
+What that excludes is the point. No card data, no payment-method objects, no embedded checkout, no setup intents, no SCA or 3-D Secure handling, no invoice rendering, no dunning. Those are precisely the areas the prior art says do not abstract: Omnipay's on-site-versus-redirect split that 3-D Secure made incoherent, ActiveMerchant extracting off-site payments into a separate gem after concluding redirect flows do not fit a request/response contract, and Cashier's payment-method and incomplete-payment subsystems that exist only on its Stripe side. Being hosted-only removes them from scope instead of solving them.
+
+This is already how all five apps work — one notes in a comment that billing stays entirely provider-hosted — so the rule makes an existing practice explicit rather than adding a constraint.
 
 ### 2. The Adapter Is The Client
 
@@ -207,33 +213,29 @@ export interface Billing {
 	readonly usage: UsageApi;
 	readonly webhooks: WebhookApi;
 
-	readonly refunds?: RefundApi;
 	readonly meters?: MeterApi;
-	readonly licenseKeys?: LicenseKeyApi;
-	readonly files?: FileApi;
-	readonly customFields?: CustomFieldApi;
-	readonly metrics?: MetricsApi;
-	readonly endpoints?: WebhookEndpointApi;
 
 	/** The configured vendor SDK or HTTP client, for what the contract does not model. */
 	readonly native: unknown;
 }
 ```
 
+The required groups are the ones every billing platform has an answer for. Only one optional group ships: `meters`, because a feature is already waiting on it. Refunds, license keys, downloadable files, custom fields, metrics, and webhook-endpoint management are all things Polar can do and nothing here needs, so they are not in the contract. A group is added when an app reaches for one — a group added on spec is surface nobody exercises, which is how a shared package stops being the thing you can read to understand billing.
+
 ### 3. Capabilities Are Optional Properties
 
 ```ts
 import { supports } from "@pkg/billing";
 
-if (!supports(billing, "licenseKeys")) return notFound();
-let key = await billing.licenseKeys.validate({ key, productId });
+if (!supports(billing, "meters")) return notFound();
+let usage = await billing.meters.quantities({ meter: "pings", customer });
 ```
 
 `supports()` narrows through `Required<Pick<Billing, K>>`, so the optional property is non-optional inside the branch. The optional property is both the declaration and the implementation, which is why it cannot disagree with itself the way Omnipay's `supportsRefund()` and Rails' twenty `supports_*?` predicates can. Medusa added account holders and saved payment methods across three minor versions without breaking a single existing provider on exactly this mechanism.
 
 A capability gap is never a silent no-op and never a missing method. It is an absent property, checked by the compiler.
 
-Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
+It also means a page that renders meter usage does not typecheck against a platform with no meters. Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
 
 ### 4. Models Are Ours, And The Mapping Is Enforced
 
@@ -384,28 +386,28 @@ This is the design's most direct debt to the prior art. Polar, Paddle, Paddle Cl
 
 The divergence is in timing, not naming, so a uniform synchronous creation method is a lie on one provider. Modelling every subscription as webhook-eventual is true on both, and it is what the apps already do — `apps/uptime` keeps a D1 projection written by its webhook precisely because of this.
 
-### 10a. Plan Changes Are Expressed As Intent
+### 10a. Plan Changes Happen In The Hosted Portal
 
-A subscription update takes what the caller wants to happen to the money, not the provider's enum:
+There is no `subscriptions.change()`. Upgrades, downgrades, cancellations, and payment-method updates are a redirect to the portal link, which is what the apps already do.
 
-```ts
-await billing.subscriptions.change({ subscription, product: "pro", billing: "charge_now" });
-```
+That is a deliberate omission, not a gap. Proration is where a shared plan-change method would have to lie: Polar has four proration behaviours and Stripe three, Stripe's "no proration at all" has no Polar equivalent, and Polar silently promotes a deferred proration to an immediate charge when the billing interval changes. Modelling it means picking a lowest common denominator or passing through a field that means different things per platform. Letting each platform's own portal own it costs nothing today.
 
-`"charge_now" | "defer_to_next_invoice" | "at_next_cycle"` covers what both providers can express. The enums themselves do not map: Polar has four proration behaviours and Stripe three, and Stripe's "no proration at all" has no Polar equivalent, so a pass-through field would be a different feature depending on who is configured.
+If an app ever needs a programmatic plan change, the method takes the caller's intent — charge now, defer to the next invoice, or apply at the next cycle — and the adapter maps it. It gets written when something needs it.
 
-Two provider behaviours the adapter must not hide, because they change what the caller has to handle: Polar silently promotes a deferred proration to an immediate charge when the billing interval changes, and for the charging behaviours the subscription is only updated if the payment succeeds — a declined card leaves the plan unchanged and returns a failure rather than scheduling anything. A caller that assumes a change always lands will show the wrong plan.
+### 11. Apps Read Their Own Tables; The Package Supplies Events And A Snapshot
 
-### 11. Entitlement Is The Primary Read Path
+The read path on a request is the app's own projection, never a call to the platform. Webhooks tell an app when to sync, and one snapshot call is what the sync reads:
 
 ```ts
 let state = await billing.entitlements.of({ externalId: userId });
-if (!state.features.has("flow_monitors")) return upgradePrompt();
+// write it to our own tables; requests read those
 ```
 
-`entitlements.of()` returns one snapshot: active products, feature flags, meter balances, and subscription status. It is a required group, not an optional capability, and it is the read path app code should prefer over inspecting a `Subscription`.
+`entitlements.of()` returns one object: active products, feature flags, meter balances, and subscription status. It is a required group because it is the sync primitive — one call answering "what does this customer have right now", which every platform can serve and none expresses the same way.
 
-This is the seam with the best evidence in the survey. It is the only layer at which anyone runs across five billing systems, it is what makes a future adapter tractable, and every provider can answer "what does this customer have right now" while none of them agree on event shapes. It also composes with the projection apps already keep: the snapshot is what a webhook invalidates, so events become cache-invalidation hints rather than the source of truth.
+Keeping the platform off the request path is not a performance nicety. One app already projects subscription state into D1 because asking Polar per request meant an outage stopped monitoring, and the survey is unanimous that a webhook is a hint that something changed rather than the new state: payloads arrive out of order, get replayed, and can carry an older API version's shape. So an app that receives an event re-reads the snapshot and writes what it says, rather than applying the payload as a diff.
+
+A periodic repair calling the same snapshot is part of adopting the package, because missed deliveries are normal.
 
 It is also the cheapest group to implement, because Polar already ships it: a customer-state endpoint returning active subscriptions, granted benefits, and meter balances, plus a `customer.state_changed` event that fires when any of it moves. The adapter maps one call, and Stripe's side composes from subscriptions plus entitlements.
 
