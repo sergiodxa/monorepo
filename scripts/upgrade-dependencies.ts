@@ -4,7 +4,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { $ } from "bun";
@@ -72,11 +72,31 @@ async function getWorkspaceDirs(rootDir: string, workspaceFilters: Array<string>
 
 		for (let entry of entries) {
 			if (!entry.isDirectory()) continue;
-			workspaces.push(join(directory, entry.name));
+
+			let workspace = join(directory, entry.name);
+			if (!(await hasManifest(workspace))) continue;
+
+			workspaces.push(workspace);
 		}
 	}
 
 	return workspaces.sort();
+}
+
+/**
+ * Reports whether a directory is a workspace.
+ *
+ * `bun outdated` resolves upward when a directory holds no manifest of its own, so a
+ * folder like a bare design doc would otherwise report the root's outdated packages
+ * and take `bun add` with it.
+ */
+async function hasManifest(directory: string) {
+	try {
+		await stat(join(directory, "package.json"));
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**
