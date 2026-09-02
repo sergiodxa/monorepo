@@ -11,7 +11,7 @@ Typed relational query toolkit for JavaScript runtimes.
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
 - **Safe Scoped Writes**: `update`/`delete` with `orderBy`/`limit` run safely in a transaction
 - **First-Class Migrations**: Plain SQL `up.sql`/`down.sql` files with a journaling runner and dry-run planning
-- **Database Lifecycle Commands**: Wipe, migrate, inspect, seed, and reset through `remix db`
+- **Database Lifecycle Commands**: Wipe, migrate, rollback, inspect, seed, and reset through `remix db`
 - **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
 `data-table` gives you two complementary APIs:
@@ -37,33 +37,33 @@ npm i mysql2
 Define tables once, then create a database for your SQL dialect.
 
 ```ts
-import { column as c, hasMany, query, table } from "remix/data-table";
-import { createPostgresDatabase } from "remix/data-table/postgres";
+import { column as c, hasMany, query, table } from 'remix/data-table'
+import { createPostgresDatabase } from 'remix/data-table/postgres'
 
 let users = table({
-	name: "users",
-	columns: {
-		id: c.uuid(),
-		email: c.varchar(255),
-		role: c.enum(["customer", "admin"]),
-		created_at: c.integer(),
-	},
-});
+  name: 'users',
+  columns: {
+    id: c.uuid(),
+    email: c.varchar(255),
+    role: c.enum(['customer', 'admin']),
+    created_at: c.integer(),
+  },
+})
 
 let orders = table({
-	name: "orders",
-	columns: {
-		id: c.uuid(),
-		user_id: c.uuid(),
-		status: c.enum(["pending", "processing", "shipped", "delivered"]),
-		total: c.decimal(10, 2),
-		created_at: c.integer(),
-	},
-});
+  name: 'orders',
+  columns: {
+    id: c.uuid(),
+    user_id: c.uuid(),
+    status: c.enum(['pending', 'processing', 'shipped', 'delivered']),
+    total: c.decimal(10, 2),
+    created_at: c.integer(),
+  },
+})
 
-let userOrders = hasMany(users, orders);
+let userOrders = hasMany(users, orders)
 
-let db = createPostgresDatabase({ connectionString: process.env.DATABASE_URL });
+let db = createPostgresDatabase({ connectionString: process.env.DATABASE_URL })
 ```
 
 ## Query Objects
@@ -75,34 +75,34 @@ Use `query(table)` when you want to build a standalone reusable query object. Ex
 `query(table)` is the primary query-builder API. It gives you an unbound `Query` value that can be composed, stored, reused, and executed against any compatible database instance.
 
 ```ts
-import { eq, ilike, query } from "remix/data-table";
+import { eq, ilike, query } from 'remix/data-table'
 
 let pendingOrdersForExampleUsers = query(orders)
-	.join(users, eq(orders.user_id, users.id))
-	.where({ status: "pending" })
-	.where(ilike(users.email, "%@example.com"))
-	.select({
-		orderId: orders.id,
-		customerEmail: users.email,
-		total: orders.total,
-		placedAt: orders.created_at,
-	})
-	.orderBy(orders.created_at, "desc")
-	.limit(20);
+  .join(users, eq(orders.user_id, users.id))
+  .where({ status: 'pending' })
+  .where(ilike(users.email, '%@example.com'))
+  .select({
+    orderId: orders.id,
+    customerEmail: users.email,
+    total: orders.total,
+    placedAt: orders.created_at,
+  })
+  .orderBy(orders.created_at, 'desc')
+  .limit(20)
 
-let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers);
+let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers)
 ```
 
 Unbound queries stay lazy until you pass them to `db.exec(...)`:
 
 ```ts
 let shippedCustomerQuery = query(users)
-	.where({ role: "customer" })
-	.with({
-		recentOrders: userOrders.where({ status: "shipped" }).orderBy("created_at", "desc").limit(3),
-	});
+  .where({ role: 'customer' })
+  .with({
+    recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
+  })
 
-let customers = await db.exec(shippedCustomerQuery);
+let customers = await db.exec(shippedCustomerQuery)
 
 // customers[0].recentOrders is fully typed
 ```
@@ -111,16 +111,16 @@ The same standalone query builder also handles terminal read and write operation
 
 ```ts
 let nextPendingOrder = await db.exec(
-	query(orders).where({ status: "pending" }).orderBy("created_at", "asc").first(),
-);
+  query(orders).where({ status: 'pending' }).orderBy('created_at', 'asc').first(),
+)
 
 await db.exec(
-	query(orders)
-		.where({ status: "pending" })
-		.orderBy("created_at", "asc")
-		.limit(100)
-		.update({ status: "processing" }),
-);
+  query(orders)
+    .where({ status: 'pending' })
+    .orderBy('created_at', 'asc')
+    .limit(100)
+    .update({ status: 'processing' }),
+)
 ```
 
 ### Bound Query Shorthand
@@ -129,11 +129,11 @@ If you already have a `db` instance in hand and do not need a standalone query v
 
 ```ts
 let recentPendingOrders = await db
-	.query(orders)
-	.where({ status: "pending" })
-	.orderBy("created_at", "desc")
-	.limit(20)
-	.all();
+  .query(orders)
+  .where({ status: 'pending' })
+  .orderBy('created_at', 'desc')
+  .limit(20)
+  .all()
 ```
 
 ## CRUD Helpers
@@ -143,24 +143,24 @@ let recentPendingOrders = await db
 ### Read operations
 
 ```ts
-import { or } from "remix/data-table";
+import { or } from 'remix/data-table'
 
-let user = await db.find(users, "u_001");
+let user = await db.find(users, 'u_001')
 
 let firstPending = await db.findOne(orders, {
-	where: { status: "pending" },
-	orderBy: ["created_at", "asc"],
-});
+  where: { status: 'pending' },
+  orderBy: ['created_at', 'asc'],
+})
 
 let page = await db.findMany(orders, {
-	where: or({ status: "pending" }, { status: "processing" }),
-	orderBy: [
-		["status", "asc"],
-		["created_at", "desc"],
-	],
-	limit: 50,
-	offset: 0,
-});
+  where: or({ status: 'pending' }, { status: 'processing' }),
+  orderBy: [
+    ['status', 'asc'],
+    ['created_at', 'desc'],
+  ],
+  limit: 50,
+  offset: 0,
+})
 ```
 
 `where` accepts the same single-table object/predicate inputs as `query().where(...)`, and `orderBy` uses tuple form:
@@ -173,39 +173,39 @@ let page = await db.findMany(orders, {
 ```ts
 // Default: metadata (affectedRows/insertId)
 let createResult = await db.create(users, {
-	id: "u_002",
-	email: "sam@example.com",
-	role: "customer",
-	created_at: Date.now(),
-});
+  id: 'u_002',
+  email: 'sam@example.com',
+  role: 'customer',
+  created_at: Date.now(),
+})
 
 // Return a typed row (with optional relations)
 let createdUser = await db.create(
-	users,
-	{
-		id: "u_003",
-		email: "pat@example.com",
-		role: "customer",
-		created_at: Date.now(),
-	},
-	{
-		returnRow: true,
-		with: { recentOrders: userOrders.orderBy("created_at", "desc").limit(1) },
-	},
-);
+  users,
+  {
+    id: 'u_003',
+    email: 'pat@example.com',
+    role: 'customer',
+    created_at: Date.now(),
+  },
+  {
+    returnRow: true,
+    with: { recentOrders: userOrders.orderBy('created_at', 'desc').limit(1) },
+  },
+)
 
 // Bulk insert metadata
 let createManyResult = await db.createMany(orders, [
-	{ id: "o_101", user_id: "u_002", status: "pending", total: 24.99, created_at: Date.now() },
-	{ id: "o_102", user_id: "u_003", status: "pending", total: 48.5, created_at: Date.now() },
-]);
+  { id: 'o_101', user_id: 'u_002', status: 'pending', total: 24.99, created_at: Date.now() },
+  { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
+])
 
 // Return inserted rows (requires database RETURNING support)
 let insertedRows = await db.createMany(
-	orders,
-	[{ id: "o_103", user_id: "u_003", status: "pending", total: 12, created_at: Date.now() }],
-	{ returnRows: true },
-);
+  orders,
+  [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
+  { returnRows: true },
+)
 ```
 
 `createMany`/`insertMany` throw when every row in the batch is empty (no explicit values).
@@ -213,25 +213,25 @@ let insertedRows = await db.createMany(
 ### Update and delete helpers
 
 ```ts
-let updatedUser = await db.update(users, "u_003", { role: "admin" });
+let updatedUser = await db.update(users, 'u_003', { role: 'admin' })
 
 let updateManyResult = await db.updateMany(
-	orders,
-	{ status: "processing" },
-	{
-		where: { status: "pending" },
-		orderBy: ["created_at", "asc"],
-		limit: 25,
-	},
-);
+  orders,
+  { status: 'processing' },
+  {
+    where: { status: 'pending' },
+    orderBy: ['created_at', 'asc'],
+    limit: 25,
+  },
+)
 
-let deletedUser = await db.delete(users, "u_002");
+let deletedUser = await db.delete(users, 'u_002')
 
 let deleteManyResult = await db.deleteMany(orders, {
-	where: { status: "delivered" },
-	orderBy: [["created_at", "asc"]],
-	limit: 200,
-});
+  where: { status: 'delivered' },
+  orderBy: [['created_at', 'asc']],
+  limit: 200,
+})
 ```
 
 `db.update(...)` throws when the target row cannot be found.
@@ -251,55 +251,55 @@ Return behavior:
 Validation is optional and table-scoped. Define `validate(context)` to validate/coerce write payloads, and add lifecycle callbacks when you need custom read/write/delete behavior.
 
 ```ts
-import { column as c, fail, table } from "remix/data-table";
+import { column as c, fail, table } from 'remix/data-table'
 
 let payments = table({
-	name: "payments",
-	columns: {
-		id: c.uuid(),
-		amount: c.decimal(10, 2),
-	},
-	beforeWrite({ value }) {
-		return {
-			value: {
-				...value,
-				amount: typeof value.amount === "string" ? value.amount.trim() : value.amount,
-			},
-		};
-	},
-	validate({ operation, value }) {
-		if (operation === "create" && typeof value.amount === "string") {
-			let amount = Number(value.amount);
+  name: 'payments',
+  columns: {
+    id: c.uuid(),
+    amount: c.decimal(10, 2),
+  },
+  beforeWrite({ value }) {
+    return {
+      value: {
+        ...value,
+        amount: typeof value.amount === 'string' ? value.amount.trim() : value.amount,
+      },
+    }
+  },
+  validate({ operation, value }) {
+    if (operation === 'create' && typeof value.amount === 'string') {
+      let amount = Number(value.amount)
 
-			if (!Number.isFinite(amount)) {
-				return fail("Expected a numeric amount", ["amount"]);
-			}
+      if (!Number.isFinite(amount)) {
+        return fail('Expected a numeric amount', ['amount'])
+      }
 
-			return { value: { ...value, amount } };
-		}
+      return { value: { ...value, amount } }
+    }
 
-		return { value };
-	},
-	beforeDelete({ where }) {
-		if (where.length === 0) {
-			return fail("Refusing unscoped delete");
-		}
-	},
-	afterRead({ value }) {
-		if (!("amount" in value)) {
-			return { value };
-		}
+    return { value }
+  },
+  beforeDelete({ where }) {
+    if (where.length === 0) {
+      return fail('Refusing unscoped delete')
+    }
+  },
+  afterRead({ value }) {
+    if (!('amount' in value)) {
+      return { value }
+    }
 
-		return {
-			value: {
-				...value,
-				// Example read-time shaping
-				amount:
-					typeof value.amount === "number" ? Math.round(value.amount * 100) / 100 : value.amount,
-			},
-		};
-	},
-});
+    return {
+      value: {
+        ...value,
+        // Example read-time shaping
+        amount:
+          typeof value.amount === 'number' ? Math.round(value.amount * 100) / 100 : value.amount,
+      },
+    }
+  },
+})
 ```
 
 Use `fail(...)` in hooks when you want to return issues without manually building `{ issues: [...] }`.
@@ -324,20 +324,20 @@ Validation and lifecycle semantics:
 
 ```ts
 await db.transaction(async (tx) => {
-	let user = await tx.create(
-		users,
-		{ id: "u_010", email: "new@example.com", role: "customer", created_at: Date.now() },
-		{ returnRow: true },
-	);
+  let user = await tx.create(
+    users,
+    { id: 'u_010', email: 'new@example.com', role: 'customer', created_at: Date.now() },
+    { returnRow: true },
+  )
 
-	await tx.create(orders, {
-		id: "o_500",
-		user_id: user.id,
-		status: "pending",
-		total: 79,
-		created_at: Date.now(),
-	});
-});
+  await tx.create(orders, {
+    id: 'o_500',
+    user_id: user.id,
+    status: 'pending',
+    total: 79,
+    created_at: Date.now(),
+  })
+})
 ```
 
 ## Migrations
@@ -394,12 +394,12 @@ The runner sends each migration to the database as a single multi-statement scri
 - `mysql2`: requires `multipleStatements: true` on the connection/pool.
 
 ```ts
-import { createMysqlDatabase } from "remix/data-table/mysql";
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
 let db = createMysqlDatabase({
-	uri: process.env.DATABASE_URL,
-	multipleStatements: true,
-});
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
+})
 ```
 
 ### Database Command Configuration
@@ -409,18 +409,18 @@ environment variable at command runtime, and paths are resolved relative to `rem
 
 ```jsonc
 {
-	"$schema": "https://remix.run/schemas/remix.json",
-	"db": {
-		"adapter": {
-			"type": "postgres",
-			"connectionString": { "env": "DATABASE_URL" },
-		},
-		"migrations": {
-			"directory": "./db/migrations",
-			"journalTable": "app_migrations",
-		},
-		"seed": "./db/seed.sql",
-	},
+  "$schema": "./node_modules/remix/schema/remix.json",
+  "db": {
+    "adapter": {
+      "type": "postgres",
+      "connectionString": { "env": "DATABASE_URL" },
+    },
+    "migrations": {
+      "directory": "./db/migrations",
+      "journalTable": "app_migrations",
+    },
+    "seed": "./db/seed.sql",
+  },
 }
 ```
 
@@ -433,12 +433,16 @@ Run lifecycle commands through the Remix CLI:
 remix db status
 remix db migrate
 remix db migrate --to 20260301113000_add_user_status
+remix db rollback
+remix db rollback --step 2
+remix db rollback --to 20260301113000_add_user_status
+remix db rollback --dry-run
 remix db seed
-remix db reset
-remix db wipe
+remix db reset --force
+remix db wipe --force
 ```
 
-`--to` accepts a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`).
+`rollback` reverts the most recently applied migration by default. Bound it with either `--step <count>` or `--to <migration>`, which reverts through the target migration inclusively. Migration targets accept a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`). Use `--dry-run` to report what would be reverted without changing the database.
 
 `remix db status` reports applied migrations whose files are no longer present as `missing`. If the journal table does not exist, it reports every migration as pending without creating the table. Forward migration runs stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks skip those orphaned journal entries so migrations that are still present can be reverted.
 
@@ -449,29 +453,38 @@ remix db wipe
 Load migrations and pass the resolved collection directly to the database:
 
 ```ts
-import { loadMigrations } from "remix/data-table/migrations/node";
+import { loadMigrations } from 'remix/data-table/migrations/node'
 
-let migrations = await loadMigrations("./db/migrations");
-await db.migrate(migrations);
+let migrations = await loadMigrations('./db/migrations')
+await db.migrate(migrations)
 ```
 
 `Database.migrate()` supports forward and backward directions, a target or step bound, dry runs,
 and a custom journal table:
 
 ```ts
-await db.migrate(migrations);
-await db.migrate(migrations, { to: "20260301113000_add_user_status" });
-await db.migrate(migrations, { step: 1 });
-await db.migrate(migrations, { direction: "down" });
-await db.migrate(migrations, { direction: "down", to: "20260301113000" });
-await db.migrate(migrations, { direction: "down", step: 1 });
-await db.migrate(migrations, { journalTable: "app_migrations" });
+await db.migrate(migrations)
+await db.migrate(migrations, { to: '20260301113000_add_user_status' })
+await db.migrate(migrations, { step: 1 })
+await db.migrate(migrations, { direction: 'down' })
+await db.migrate(migrations, { direction: 'down', to: '20260301113000' })
+await db.migrate(migrations, { direction: 'down', step: 1 })
+await db.migrate(migrations, { journalTable: 'app_migrations' })
 
-let plan = await db.migrate(migrations, { dryRun: true });
-for (let script of plan.sql) console.log(script);
+let plan = await db.migrate(migrations, { dryRun: true })
+for (let script of plan.sql) console.log(script)
 ```
 
 `to` and `step` are mutually exclusive. Omit `journalTable` to use `data_table_migrations`.
+
+Hosts that embed the database CLI can invoke the same rollback behavior through `runRemixDb()`:
+
+```ts
+import { runRemixDb } from 'remix/data-table/cli'
+
+await runRemixDb({ command: 'rollback', db, migrations })
+await runRemixDb({ command: 'rollback', db, migrations, step: 2, dryRun: true })
+```
 
 Database drivers with migration locking run the complete migration and journal lifecycle through the
 connection that owns the lock. This keeps advisory locks correctly paired when the driver uses a
@@ -481,21 +494,21 @@ Read status separately, or rebuild a database with migrations and an optional se
 function that receives the database; `loadSeed()` builds one from a SQL file:
 
 ```ts
-import { loadSeed } from "remix/data-table/migrations/node";
+import { loadSeed } from 'remix/data-table/migrations/node'
 
-let seed = await loadSeed("./db/seed.sql");
+let seed = await loadSeed('./db/seed.sql')
 
-let status = await db.migrationStatus(migrations, { journalTable: "app_migrations" });
-await db.reset({ migrations });
-await db.reset({ migrations, seed });
-await db.reset({ migrations, seed, journalTable: "app_migrations" });
+let status = await db.migrationStatus(migrations, { journalTable: 'app_migrations' })
+await db.reset({ migrations })
+await db.reset({ migrations, seed })
+await db.reset({ migrations, seed, journalTable: 'app_migrations' })
 ```
 
 When a lifecycle command is the last thing a process does, close database-owned connections so
 the process can exit:
 
 ```ts
-await db.close();
+await db.close()
 ```
 
 ### Transaction Modes
@@ -520,42 +533,42 @@ You can also set `transaction` directly on a `MigrationDescriptor` when register
 For non-filesystem runtimes, register migrations directly:
 
 ```ts
-import { createMigrationRegistry } from "remix/data-table/migrations";
+import { createMigrationRegistry } from 'remix/data-table/migrations'
 
-let registry = createMigrationRegistry();
+let registry = createMigrationRegistry()
 registry.register({
-	id: "20260228090000",
-	name: "create_users",
-	up: "create table users (id serial primary key, email text not null);",
-	down: "drop table users;",
-});
+  id: '20260228090000',
+  name: 'create_users',
+  up: 'create table users (id serial primary key, email text not null);',
+  down: 'drop table users;',
+})
 
-await db.migrate(registry);
+await db.migrate(registry)
 ```
 
 ## Raw SQL Escape Hatch
 
 ```ts
-import { rawSql, sql } from "remix/data-table";
+import { rawSql, sql } from 'remix/data-table'
 
-await db.exec(sql`select * from users where id = ${"u_001"}`);
-await db.exec(rawSql("update users set role = ? where id = ?", ["admin", "u_001"]));
+await db.exec(sql`select * from users where id = ${'u_001'}`)
+await db.exec(rawSql('update users set role = ? where id = ?', ['admin', 'u_001']))
 ```
 
 Use `sql` when you need raw SQL plus safe value interpolation:
 
 ```ts
-import { sql } from "remix/data-table";
+import { sql } from 'remix/data-table'
 
-let email = input.email;
-let minCreatedAt = input.minCreatedAt;
+let email = input.email
+let minCreatedAt = input.minCreatedAt
 
 let result = await db.exec(sql`
   select id, email
   from users
   where email = ${email}
     and created_at >= ${minCreatedAt}
-`);
+`)
 ```
 
 `sql` keeps values parameterized for the database dialect, so you can avoid manual string concatenation.
@@ -568,86 +581,86 @@ complete skeleton assumes the underlying client exposes the operations needed by
 
 ```ts
 import {
-	Database,
-	type DatabaseDriver,
-	type DataManipulationRequest,
-	type DataManipulationResult,
-	type DatabaseOptions,
-	type TableRef,
-	type TransactionOptions,
-	type TransactionToken,
-} from "remix/data-table";
-import type { AcmeClient } from "acme-database";
+  Database,
+  type DatabaseDriver,
+  type DataManipulationRequest,
+  type DataManipulationResult,
+  type DatabaseOptions,
+  type TableRef,
+  type TransactionOptions,
+  type TransactionToken,
+} from 'remix/data-table'
+import type { AcmeClient } from 'acme-database'
 
-class AcmeDriver implements DatabaseDriver<"acme"> {
-	readonly dialect = "acme";
-	readonly capabilities = {
-		returning: true,
-		savepoints: true,
-		upsert: true,
-		transactionalDdl: true,
-		migrationLock: false,
-	} as const;
+class AcmeDriver implements DatabaseDriver<'acme'> {
+  readonly dialect = 'acme'
+  readonly capabilities = {
+    returning: true,
+    savepoints: true,
+    upsert: true,
+    transactionalDdl: true,
+    migrationLock: false,
+  } as const
 
-	#client: AcmeClient;
+  #client: AcmeClient
 
-	constructor(client: AcmeClient) {
-		this.#client = client;
-	}
+  constructor(client: AcmeClient) {
+    this.#client = client
+  }
 
-	execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
-		return this.#client.execute(request);
-	}
+  execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+    return this.#client.execute(request)
+  }
 
-	executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
-		return this.#client.executeScript(sql, transaction);
-	}
+  executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    return this.#client.executeScript(sql, transaction)
+  }
 
-	beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
-		return this.#client.beginTransaction(options);
-	}
+  beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+    return this.#client.beginTransaction(options)
+  }
 
-	commitTransaction(transaction: TransactionToken): Promise<void> {
-		return this.#client.commitTransaction(transaction);
-	}
+  commitTransaction(transaction: TransactionToken): Promise<void> {
+    return this.#client.commitTransaction(transaction)
+  }
 
-	rollbackTransaction(transaction: TransactionToken): Promise<void> {
-		return this.#client.rollbackTransaction(transaction);
-	}
+  rollbackTransaction(transaction: TransactionToken): Promise<void> {
+    return this.#client.rollbackTransaction(transaction)
+  }
 
-	hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
-		return this.#client.hasTable(table, transaction);
-	}
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+    return this.#client.hasTable(table, transaction)
+  }
 
-	hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
-		return this.#client.hasColumn(table, column, transaction);
-	}
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean> {
+    return this.#client.hasColumn(table, column, transaction)
+  }
 
-	createSavepoint(transaction: TransactionToken, name: string): Promise<void> {
-		return this.#client.createSavepoint(transaction, name);
-	}
+  createSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.createSavepoint(transaction, name)
+  }
 
-	rollbackToSavepoint(transaction: TransactionToken, name: string): Promise<void> {
-		return this.#client.rollbackToSavepoint(transaction, name);
-	}
+  rollbackToSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.rollbackToSavepoint(transaction, name)
+  }
 
-	releaseSavepoint(transaction: TransactionToken, name: string): Promise<void> {
-		return this.#client.releaseSavepoint(transaction, name);
-	}
+  releaseSavepoint(transaction: TransactionToken, name: string): Promise<void> {
+    return this.#client.releaseSavepoint(transaction, name)
+  }
 
-	wipe(): Promise<void> {
-		return this.#client.wipe();
-	}
+  wipe(): Promise<void> {
+    return this.#client.wipe()
+  }
 
-	close(): void | Promise<void> {
-		return this.#client.close();
-	}
+  close(): void | Promise<void> {
+    return this.#client.close()
+  }
 }
 
-export class AcmeDatabase extends Database<"acme"> {
-	constructor(client: AcmeClient, options?: DatabaseOptions) {
-		super(new AcmeDriver(client), options);
-	}
+export class AcmeDatabase extends Database<'acme'> {
+  constructor(client: AcmeClient, options?: DatabaseOptions) {
+    super(new AcmeDriver(client), options)
+  }
 }
 ```
 

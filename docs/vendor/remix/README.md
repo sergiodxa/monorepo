@@ -26,6 +26,7 @@ remix completion bash >> ~/.bashrc
 remix doctor
 remix doctor --fix
 remix db migrate
+remix db rollback
 remix db status
 remix routes
 remix routes --table
@@ -38,19 +39,20 @@ remix --no-color doctor
 ## Programmatic CLI
 
 ```ts
-import { runRemix } from "remix/cli";
+import { runRemix } from 'remix/cli'
 
-await runRemix(["new", "my-remix-app"]);
-await runRemix(["completion", "bash"]);
-await runRemix(["doctor"]);
-await runRemix(["doctor", "--fix"]);
-await runRemix(["db", "migrate"]);
-await runRemix(["db", "status"]);
-await runRemix(["routes"]);
-await runRemix(["routes", "--table"]);
-await runRemix(["routes", "--table", "--no-headers"]);
-await runRemix(["test"]);
-await runRemix(["version"]);
+await runRemix(['new', 'my-remix-app'])
+await runRemix(['completion', 'bash'])
+await runRemix(['doctor'])
+await runRemix(['doctor', '--fix'])
+await runRemix(['db', 'migrate'])
+await runRemix(['db', 'rollback'])
+await runRemix(['db', 'status'])
+await runRemix(['routes'])
+await runRemix(['routes', '--table'])
+await runRemix(['routes', '--table', '--no-headers'])
+await runRemix(['test'])
+await runRemix(['version'])
 ```
 
 ## License

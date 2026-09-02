@@ -24,12 +24,12 @@ npm i remix mysql2
 ## Usage
 
 ```ts
-import { createMysqlDatabase } from "remix/data-table/mysql";
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
 let db = createMysqlDatabase({
-	uri: process.env.DATABASE_URL,
-	multipleStatements: true,
-});
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
+})
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `mysql2/promise`.
@@ -51,12 +51,12 @@ Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
 `remix/data-table/migrations` sends each migration as a single multi-statement SQL script. mysql2 only accepts multi-statement scripts when the connection is created with `multipleStatements: true`:
 
 ```ts
-import { createMysqlDatabase } from "remix/data-table/mysql";
+import { createMysqlDatabase } from 'remix/data-table/mysql'
 
 let db = createMysqlDatabase({
-	uri: process.env.DATABASE_URL,
-	multipleStatements: true,
-});
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
+})
 ```
 
 Config-backed databases support `db.wipe()` and `db.reset()`. Call `await db.close()` during application shutdown to close the internally created pool. You may pass an existing `mysql2` pool or connection when your application owns the driver lifecycle; `db.close()` leaves supplied clients alone, and destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name in the connection config (`database`, or the path of a connection URI) and throws when none is present.
@@ -70,16 +70,16 @@ MySQL does not natively support SQL `RETURNING`. Using `returning` on write oper
 Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch databases when returned rows are required.
 
 ```ts
-import { DataTableQueryError } from "remix/data-table";
+import { DataTableQueryError } from 'remix/data-table'
 
 try {
-	await db
-		.query(Accounts)
-		.insert({ email: "a@example.com", status: "active" }, { returning: ["id"] });
+  await db
+    .query(Accounts)
+    .insert({ email: 'a@example.com', status: 'active' }, { returning: ['id'] })
 } catch (error) {
-	if (error instanceof DataTableQueryError) {
-		// insert() returning is not supported by MySQL
-	}
+  if (error instanceof DataTableQueryError) {
+    // insert() returning is not supported by MySQL
+  }
 }
 ```
 

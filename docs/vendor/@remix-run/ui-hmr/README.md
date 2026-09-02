@@ -28,25 +28,24 @@ node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
 Use `uiHmr()` from `remix/ui-hmr/assets` with `remix/assets` for browser modules:
 
 ```ts
-import { createAssetServer } from "remix/assets";
-import { uiHmr } from "remix/ui-hmr/assets";
+import { createAssetServer } from 'remix/assets'
+import { uiHmr } from 'remix/ui-hmr/assets'
 
-let isDevelopment = process.env.NODE_ENV === "development";
+let isDevelopment = process.env.NODE_ENV === 'development'
 
 let assetServer = createAssetServer({
-	basePath: "/assets",
-	fileMap: { "/app/*path": "app/*path" },
-	allowFiles: ["app/routes.ts", "app/**/public/**"],
-	allowPackages: ["remix"],
-	denyFiles: ["app/**/*.test.*"],
-	hmr: isDevelopment
-		? async () => (await import("remix/node-hmr/runtime")).createBrowserHmrChannel()
-		: undefined,
-	scripts: {
-		loaders: isDevelopment ? [uiHmr()] : undefined,
-	},
-	watch: isDevelopment,
-});
+  basePath: '/assets',
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
+  allowPackages: ['remix'],
+  denyFiles: ['app/**/*.test.*'],
+  hmr: isDevelopment
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    : undefined,
+  scripts: {
+    loaders: isDevelopment ? [uiHmr()] : undefined,
+  },
+  watch: isDevelopment,
+})
 ```
 
 ## Direct Transforms
@@ -54,27 +53,27 @@ let assetServer = createAssetServer({
 Use the direct transform APIs when you are writing your own loader, Node module hooks, or build integration.
 
 ```ts
-import { transformComponentsForBrowser } from "remix/ui-hmr";
+import { transformComponentsForBrowser } from 'remix/ui-hmr'
 
 let result = transformComponentsForBrowser(source, {
-	importSource: "remix",
-	moduleUrl: "/assets/app/routes.tsx",
-});
+  importSource: 'remix',
+  moduleUrl: '/assets/app/routes.tsx',
+})
 
 if (result.transformed) {
-	console.log(result.componentNames);
+  console.log(result.componentNames)
 }
 ```
 
 `transformComponentsForBrowser(source, options)` rewrites browser component modules and emits `import.meta.hot.accept()` code for browser updates. The direct transform uses `importSource` to derive imports for the UI refresh runtime and browser HMR runtime.
 
 ```ts
-import { transformComponentsForServer } from "remix/ui-hmr";
+import { transformComponentsForServer } from 'remix/ui-hmr'
 
 let result = transformComponentsForServer(source, {
-	importSource: "remix",
-	moduleUrl: "file:///app/routes.tsx",
-});
+  importSource: 'remix',
+  moduleUrl: 'file:///app/routes.tsx',
+})
 ```
 
 `transformComponentsForServer(source, options)` rewrites server component modules and registers updated component implementations for the current module URL. The direct transform uses `importSource` to derive imports for the server HMR runtime.
@@ -83,11 +82,11 @@ Both transforms return:
 
 ```ts
 type ComponentsHmrTransformResult = {
-	code: string;
-	componentNames: string[];
-	map: string | null;
-	transformed: boolean;
-};
+  code: string
+  componentNames: string[]
+  map: string | null
+  transformed: boolean
+}
 ```
 
 Pass `sourceMap: true` to generate a source map.
@@ -96,14 +95,14 @@ Use `importSource` to define where injected imports come from, typically either 
 
 ```ts
 transformComponentsForBrowser(source, {
-	importSource: "remix",
-	moduleUrl: "/assets/app/routes.tsx",
-});
+  importSource: 'remix',
+  moduleUrl: '/assets/app/routes.tsx',
+})
 
 transformComponentsForServer(source, {
-	importSource: "remix",
-	moduleUrl: "file:///app/routes.tsx",
-});
+  importSource: 'remix',
+  moduleUrl: 'file:///app/routes.tsx',
+})
 ```
 
 `importSource: 'remix'` generates imports from `remix/ui` and `remix/ui-hmr`. `importSource: '@remix-run'` generates imports from `@remix-run/ui` and `@remix-run/ui-hmr`. Custom import sources follow the same nested import layout.

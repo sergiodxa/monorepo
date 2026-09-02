@@ -7,7 +7,7 @@ A minimal component system built on JavaScript and DOM primitives. Write compone
 - **JSX Runtime** - Convenient JSX syntax
 - **Component State** - State managed with plain JavaScript variables
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
-- **Real DOM Events** - Events are real DOM events using the `on()` mixin and `addEventListeners()`
+- **Real DOM Events** - Use the `on()` mixin and native `EventTarget` APIs
 - **Inline CSS** - `css(...)` mixin with pseudo-selectors and nested rules
 - **Server Rendering** - Stream full pages or fragments with `renderToStream`
 - **Hydration** - Mark interactive components with `clientEntry` and hydrate them on the client with `run`
@@ -23,42 +23,34 @@ npm i remix
 
 ### Server
 
-Render a full page to a streaming response:
+Install the standard render middleware and render a full page from an action:
 
 ```tsx
-import { renderToStream } from "remix/ui/server";
-import { Frame } from "remix/ui";
-import { Counter } from "./assets/counter.tsx";
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
+import { Frame } from 'remix/ui'
+import { Counter } from './assets/counter.tsx'
 
 function App() {
-	return () => (
-		<html>
-			<head>
-				<title>My App</title>
-				<script async type="module" src="/assets/entry.js" />
-			</head>
-			<body>
-				<h1>Hello</h1>
-				<Counter initialCount={0} label="Clicks" />
-				<Frame src="/sidebar" fallback={<div>Loading...</div>} />
-			</body>
-		</html>
-	);
+  return () => (
+    <html>
+      <head>
+        <title>My App</title>
+        <script async type="module" src="/assets/entry.js" />
+      </head>
+      <body>
+        <h1>Hello</h1>
+        <Counter initialCount={0} label="Clicks" />
+        <Frame src="/sidebar" fallback={<div>Loading...</div>} />
+      </body>
+    </html>
+  )
 }
 
-let stream = renderToStream(<App />, {
-	resolveFrame(src, target, context) {
-		let headers = new Headers({ Accept: "text/html", "X-Remix-Frame": "true" });
-		if (target) headers.set("X-Remix-Target", target);
-		return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
-			res.text(),
-		);
-	},
-});
+let router = createRouter({ middleware: [render()] })
 
-return new Response(stream, {
-	headers: { "Content-Type": "text/html" },
-});
+router.get('/', (context) => context.render(<App />))
+router.get('/sidebar', (context) => context.render(<nav>Sidebar</nav>))
 ```
 
 ### Client Entry
@@ -66,32 +58,32 @@ return new Response(stream, {
 Mark components that need client-side interactivity with `clientEntry`. They render on the server and hydrate on the client:
 
 ```tsx
-import { clientEntry, on, type Handle } from "remix/ui";
+import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
-	"/assets/counter.js#Counter",
-	function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
-		let count = handle.props.initialCount ?? 0;
+  '/assets/counter.js#Counter',
+  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+    let count = handle.props.initialCount ?? 0
 
-		return () => (
-			<div>
-				<span>
-					{handle.props.label}: {count}
-				</span>
-				<button
-					mix={[
-						on("click", () => {
-							count++;
-							handle.update();
-						}),
-					]}
-				>
-					+
-				</button>
-			</div>
-		);
-	},
-);
+    return () => (
+      <div>
+        <span>
+          {handle.props.label}: {count}
+        </span>
+        <button
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          +
+        </button>
+      </div>
+    )
+  },
+)
 ```
 
 The first argument is the module URL and export name the client will use to load this component. The component renders on the server like any other component, and the client hydrates it in place, preserving the server-rendered HTML.
@@ -101,41 +93,23 @@ The first argument is the module URL and export name the client will use to load
 Boot the client with `run`. It finds all client entries in the page, loads their modules, and hydrates them:
 
 ```tsx
-import type { ResolveFrameOptions } from "remix/ui";
-import { run } from "remix/ui";
+import { run } from 'remix/ui'
 
 let app = run({
-	async loadModule(moduleUrl, exportName) {
-		let mod = await import(moduleUrl);
-		return mod[exportName];
-	},
-	async resolveFrame(src, options) {
-		let headers = new Headers({ Accept: "text/html" });
-		if (options?.target) headers.set("X-Remix-Target", options.target);
-		let res = await fetch(src, {
-			headers,
-			method: options?.method,
-			body: getRequestBody(options),
-			signal: options?.signal,
-		});
-		return res.body ?? (await res.text());
-	},
-});
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+})
 
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-	let formData = options?.formData;
-	if (!formData) return;
-	if (options.encType !== "application/x-www-form-urlencoded") return formData;
-
-	let body = new URLSearchParams();
-	for (let [name, value] of formData) {
-		body.append(name, typeof value === "string" ? value : value.name);
-	}
-	return body;
-}
-
-await app.ready();
+await app.ready()
 ```
+
+`run()` hydrates client entries and makes the current document the top-level frame. Eligible
+same-origin links and forms then soft-navigate by fetching HTML and updating that frame in place,
+even when the page does not render an explicit `<Frame>`. Provide `resolveFrame` only when the app
+needs custom request headers, body encoding, or response policy. See
+[Link navigation](./frames.md#link-navigation) for document-navigation effects and opt-outs.
 
 ### Frames
 
@@ -149,17 +123,17 @@ Client entries inside a frame can trigger a reload:
 
 ```tsx
 function RefreshButton(handle: Handle) {
-	return () => (
-		<button
-			mix={[
-				on("click", () => {
-					handle.frame.reload();
-				}),
-			]}
-		>
-			Refresh
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        on('click', () => {
+          handle.frame.reload()
+        }),
+      ]}
+    >
+      Refresh
+    </button>
+  )
 }
 ```
 
@@ -174,18 +148,18 @@ You can also name frames and reload adjacent ones:
 
 ```tsx
 function CartRow(handle: Handle) {
-	return () => (
-		<button
-			mix={[
-				on("click", async () => {
-					await handle.frames.get("cart-summary")?.reload();
-					await handle.frame.reload();
-				}),
-			]}
-		>
-			Save
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        on('click', async () => {
+          await handle.frames.get('cart-summary')?.reload()
+          await handle.frame.reload()
+        }),
+      ]}
+    >
+      Save
+    </button>
+  )
 }
 ```
 
@@ -197,25 +171,25 @@ All components receive a handle and return a render function. The component func
 
 ```tsx
 function Counter(handle: Handle<{ initialCount?: number; label?: string }>) {
-	// Component function: runs once
-	let count = handle.props.initialCount ?? 0;
+  // Component function: runs once
+  let count = handle.props.initialCount ?? 0
 
-	// Return render function: runs on every update
-	return () => (
-		<div>
-			{handle.props.label || "Count"}: {count}
-			<button
-				mix={[
-					on("click", () => {
-						count++;
-						handle.update();
-					}),
-				]}
-			>
-				Increment
-			</button>
-		</div>
-	);
+  // Return render function: runs on every update
+  return () => (
+    <div>
+      {handle.props.label || 'Count'}: {count}
+      <button
+        mix={[
+          on('click', () => {
+            count++
+            handle.update()
+          }),
+        ]}
+      >
+        Increment
+      </button>
+    </div>
+  )
 }
 ```
 
@@ -229,16 +203,16 @@ Props are available on `handle.props` in both the component function and the ren
 `handle.props` is a stable object. Its identity stays the same across updates while its property values are updated before each render.
 
 ```tsx
-let el = <Counter initialCount={5} label="Total" />;
+let el = <Counter initialCount={5} label="Total" />
 
 function Counter(handle: Handle<{ initialCount: number; label?: string }>) {
-	let count = handle.props.initialCount;
+  let count = handle.props.initialCount
 
-	return () => (
-		<div>
-			{handle.props.label}: {count}
-		</div>
-	);
+  return () => (
+    <div>
+      {handle.props.label}: {count}
+    </div>
+  )
 }
 ```
 
@@ -248,46 +222,52 @@ Events use the `on()` mixin. Listeners receive an `AbortSignal` that's aborted w
 
 ```tsx
 function SearchInput(handle: Handle) {
-	let query = "";
+  let query = ''
 
-	return () => (
-		<input
-			type="text"
-			value={query}
-			mix={[
-				on("input", (event, signal) => {
-					query = event.currentTarget.value;
-					handle.update();
+  return () => (
+    <input
+      type="text"
+      value={query}
+      mix={[
+        on('input', (event, signal) => {
+          query = event.currentTarget.value
+          handle.update()
 
-					// Pass the signal to abort the fetch on re-entry or node removal
-					// This avoids race conditions in the UI and manages cleanup
-					fetch(`/search?q=${query}`, { signal })
-						.then((res) => res.json())
-						.then((results) => {
-							if (signal.aborted) return;
-							// Update results
-						});
-				}),
-			]}
-		/>
-	);
+          // Pass the signal to abort the fetch on re-entry or node removal
+          // This avoids race conditions in the UI and manages cleanup
+          fetch(`/search?q=${query}`, { signal })
+            .then((res) => res.json())
+            .then((results) => {
+              if (signal.aborted) return
+              // Update results
+            })
+        }),
+      ]}
+    />
+  )
 }
 ```
 
-You can also listen to global event targets like `document` or `window` using `addEventListeners()` with automatic cleanup on component removal:
+A resize event applies to the whole viewport, so register it on `window` after the first client render. Pass `handle.signal` so the listener is removed when the component disconnects:
 
 ```tsx
-function KeyboardTracker(handle: Handle) {
-	let keys: string[] = [];
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-	addEventListeners(document, handle.signal, {
-		keydown: (event) => {
-			keys.push(event.key);
-			handle.update();
-		},
-	});
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
+  })
 
-	return () => <div>Keys: {keys.join(", ")}</div>;
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
 
@@ -297,24 +277,24 @@ Use the `css(...)` mixin for inline styles with pseudo-selectors and nested rule
 
 ```tsx
 function Button(handle: Handle) {
-	return () => (
-		<button
-			mix={[
-				css({
-					color: "white",
-					backgroundColor: "blue",
-					"&:hover": {
-						backgroundColor: "darkblue",
-					},
-					"&:active": {
-						transform: "scale(0.98)",
-					},
-				}),
-			]}
-		>
-			Click me
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
+    >
+      Click me
+    </button>
+  )
 }
 ```
 
@@ -322,65 +302,65 @@ The syntax mirrors modern CSS nesting, but in object form. Use `&` to reference 
 
 ```css
 .button {
-	color: white;
-	background-color: blue;
+  color: white;
+  background-color: blue;
 
-	&:hover {
-		background-color: darkblue;
-	}
+  &:hover {
+    background-color: darkblue;
+  }
 
-	&::before {
-		content: "";
-		position: absolute;
-	}
+  &::before {
+    content: '';
+    position: absolute;
+  }
 
-	&[aria-selected="true"] {
-		border: 2px solid yellow;
-	}
+  &[aria-selected='true'] {
+    border: 2px solid yellow;
+  }
 
-	.icon {
-		width: 16px;
-		height: 16px;
-	}
+  .icon {
+    width: 16px;
+    height: 16px;
+  }
 
-	@media (max-width: 768px) {
-		padding: 8px;
-	}
+  @media (max-width: 768px) {
+    padding: 8px;
+  }
 }
 ```
 
 ```tsx
 function Button(handle: Handle) {
-	return () => (
-		<button
-			mix={[
-				css({
-					color: "white",
-					backgroundColor: "blue",
-					"&:hover": {
-						backgroundColor: "darkblue",
-					},
-					"&::before": {
-						content: '""',
-						position: "absolute",
-					},
-					'&[aria-selected="true"]': {
-						border: "2px solid yellow",
-					},
-					".icon": {
-						width: "16px",
-						height: "16px",
-					},
-					"@media (max-width: 768px)": {
-						padding: "8px",
-					},
-				}),
-			]}
-		>
-			<span class="icon">★</span>
-			Click me
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+          },
+          '&[aria-selected="true"]': {
+            border: '2px solid yellow',
+          },
+          '.icon': {
+            width: '16px',
+            height: '16px',
+          },
+          '@media (max-width: 768px)': {
+            padding: '8px',
+          },
+        }),
+      ]}
+    >
+      <span class="icon">★</span>
+      Click me
+    </button>
+  )
 }
 ```
 
@@ -390,27 +370,27 @@ Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered.
 
 ```tsx
 function Form(handle: Handle) {
-	let inputRef: HTMLInputElement;
+  let inputRef: HTMLInputElement
 
-	return () => (
-		<form>
-			<input
-				type="text"
-				// get the input node
-				mix={[ref((node) => (inputRef = node))]}
-			/>
-			<button
-				mix={[
-					on("click", () => {
-						// Select it from other parts of the form
-						inputRef.select();
-					}),
-				]}
-			>
-				Focus Input
-			</button>
-		</form>
-	);
+  return () => (
+    <form>
+      <input
+        type="text"
+        // get the input node
+        mix={[ref((node) => (inputRef = node))]}
+      />
+      <button
+        mix={[
+          on('click', () => {
+            // Select it from other parts of the form
+            inputRef.select()
+          }),
+        ]}
+      >
+        Focus Input
+      </button>
+    </form>
+  )
 }
 ```
 
@@ -418,26 +398,26 @@ The `ref` callback receives an `AbortSignal` as its second parameter, which is a
 
 ```tsx
 function Component(handle: Handle) {
-	return () => (
-		<div
-			mix={[
-				ref((node, signal) => {
-					// Set up something that needs cleanup
-					let observer = new ResizeObserver(() => {
-						// handle resize
-					});
-					observer.observe(node);
+  return () => (
+    <div
+      mix={[
+        ref((node, signal) => {
+          // Set up something that needs cleanup
+          let observer = new ResizeObserver(() => {
+            // handle resize
+          })
+          observer.observe(node)
 
-					// Clean up when element is removed
-					signal.addEventListener("abort", () => {
-						observer.disconnect();
-					});
-				}),
-			]}
-		>
-			Content
-		</div>
-	);
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
+    >
+      Content
+    </div>
+  )
 }
 ```
 
@@ -447,7 +427,6 @@ Components receive a `Handle` as their first argument with the following API:
 
 - **`handle.update()`** - Schedule an update and await completion to get an `AbortSignal`.
 - **`handle.queueTask(task)`** - Schedule a task to run after the next update. Useful for DOM operations that need to happen after rendering (e.g., moving focus, scrolling, measuring elements, etc.).
-- **`addEventListeners(target, handle.signal, listeners)`** - Listen to an event target with automatic cleanup when the component disconnects.
 - **`handle.signal`** - An `AbortSignal` that's aborted when the component is disconnected. Useful for cleanup.
 - **`handle.id`** - Stable identifier per component instance.
 - **`handle.context`** - Context API for ancestor/descendant communication.
@@ -460,20 +439,20 @@ Schedule an update and optionally await completion to coordinate post-update wor
 
 ```tsx
 function Counter(handle: Handle) {
-	let count = 0;
+  let count = 0
 
-	return () => (
-		<button
-			mix={[
-				on("click", () => {
-					count++;
-					handle.update();
-				}),
-			]}
-		>
-			Count: {count}
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        on('click', () => {
+          count++
+          handle.update()
+        }),
+      ]}
+    >
+      Count: {count}
+    </button>
+  )
 }
 ```
 
@@ -481,42 +460,42 @@ You can await the update before doing DOM work:
 
 ```tsx
 function Player(handle: Handle) {
-	let isPlaying = false;
-	let playButton: HTMLButtonElement;
-	let stopButton: HTMLButtonElement;
+  let isPlaying = false
+  let playButton: HTMLButtonElement
+  let stopButton: HTMLButtonElement
 
-	return () => (
-		<div>
-			<button
-				disabled={isPlaying}
-				mix={[
-					ref((node) => (playButton = node)),
-					on("click", async () => {
-						isPlaying = true;
-						await handle.update();
-						// Focus the enabled button after update completes
-						stopButton.focus();
-					}),
-				]}
-			>
-				Play
-			</button>
-			<button
-				disabled={!isPlaying}
-				mix={[
-					ref((node) => (stopButton = node)),
-					on("click", async () => {
-						isPlaying = false;
-						await handle.update();
-						// Focus the enabled button after update completes
-						playButton.focus();
-					}),
-				]}
-			>
-				Stop
-			</button>
-		</div>
-	);
+  return () => (
+    <div>
+      <button
+        disabled={isPlaying}
+        mix={[
+          ref((node) => (playButton = node)),
+          on('click', async () => {
+            isPlaying = true
+            await handle.update()
+            // Focus the enabled button after update completes
+            stopButton.focus()
+          }),
+        ]}
+      >
+        Play
+      </button>
+      <button
+        disabled={!isPlaying}
+        mix={[
+          ref((node) => (stopButton = node)),
+          on('click', async () => {
+            isPlaying = false
+            await handle.update()
+            // Focus the enabled button after update completes
+            playButton.focus()
+          }),
+        ]}
+      >
+        Stop
+      </button>
+    </div>
+  )
 }
 ```
 
@@ -526,70 +505,74 @@ Schedule a task to run after the next update. Useful for DOM operations that nee
 
 ```tsx
 function Form(handle: Handle) {
-	let showDetails = false;
-	let detailsSection: HTMLElement;
+  let showDetails = false
+  let detailsSection: HTMLElement
 
-	return () => (
-		<form>
-			<label>
-				<input
-					type="checkbox"
-					checked={showDetails}
-					mix={[
-						on("change", (event) => {
-							showDetails = event.currentTarget.checked;
-							handle.update();
-							if (showDetails) {
-								// Scroll to the expanded section after it renders
-								handle.queueTask(() => {
-									detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-								});
-							}
-						}),
-					]}
-				/>
-				Show additional details
-			</label>
-			{showDetails && (
-				<section
-					mix={[
-						css({
-							marginTop: "2rem",
-							padding: "1rem",
-							border: "1px solid #ccc",
-						}),
-						ref((node) => (detailsSection = node)),
-					]}
-				>
-					<h2>Additional Details</h2>
-					<p>This section appears when the checkbox is checked.</p>
-				</section>
-			)}
-		</form>
-	);
+  return () => (
+    <form>
+      <label>
+        <input
+          type="checkbox"
+          checked={showDetails}
+          mix={[
+            on('change', (event) => {
+              showDetails = event.currentTarget.checked
+              handle.update()
+              if (showDetails) {
+                // Scroll to the expanded section after it renders
+                handle.queueTask(() => {
+                  detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                })
+              }
+            }),
+          ]}
+        />
+        Show additional details
+      </label>
+      {showDetails && (
+        <section
+          mix={[
+            css({
+              marginTop: '2rem',
+              padding: '1rem',
+              border: '1px solid #ccc',
+            }),
+            ref((node) => (detailsSection = node)),
+          ]}
+        >
+          <h2>Additional Details</h2>
+          <p>This section appears when the checkbox is checked.</p>
+        </section>
+      )}
+    </form>
+  )
 }
 ```
 
-### `addEventListeners(target, handle.signal, listeners)`
+### Native Event Listeners
 
-Listen to an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) with automatic cleanup when the component disconnects. Ideal for listening to events on global event targets like `document` and `window`.
+Use native [EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener) for targets such as `window` and `document`. Schedule browser-only setup with `handle.queueTask()`, and pass `handle.signal` so the listener is removed when the component disconnects.
 
 ```tsx
-function KeyboardTracker(handle: Handle) {
-	let keys: string[] = [];
+function ViewportWidth(handle: Handle) {
+  let width: number | undefined
 
-	addEventListeners(document, handle.signal, {
-		keydown: (event) => {
-			keys.push(event.key);
-			handle.update();
-		},
-	});
+  handle.queueTask(() => {
+    width = window.innerWidth
+    window.addEventListener(
+      'resize',
+      () => {
+        width = window.innerWidth
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+    handle.update()
+  })
 
-	return () => <div>Keys: {keys.join(", ")}</div>;
+  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
 }
 ```
-
-The listeners are automatically removed when the component is disconnected, so you don't need to manually clean up.
 
 ### `handle.signal`
 
@@ -597,15 +580,15 @@ An `AbortSignal` that's aborted when the component is disconnected. Useful for c
 
 ```tsx
 function Clock(handle: Handle) {
-	let interval = setInterval(() => {
-		// clear the interval when the component is disconnected
-		if (handle.signal.aborted) {
-			clearInterval(interval);
-			return;
-		}
-		handle.update();
-	}, 1000);
-	return () => <span>{new Date().toString()}</span>;
+  let interval = setInterval(() => {
+    // clear the interval when the component is disconnected
+    if (handle.signal.aborted) {
+      clearInterval(interval)
+      return
+    }
+    handle.update()
+  }, 1000)
+  return () => <span>{new Date().toString()}</span>
 }
 ```
 
@@ -615,12 +598,12 @@ Stable identifier per component instance. Useful for HTML APIs like `htmlFor`, `
 
 ```tsx
 function LabeledInput(handle: Handle) {
-	return () => (
-		<div>
-			<label htmlFor={handle.id}>Name</label>
-			<input id={handle.id} type="text" />
-		</div>
-	);
+  return () => (
+    <div>
+      <label htmlFor={handle.id}>Name</label>
+      <input id={handle.id} type="text" />
+    </div>
+  )
 }
 ```
 
@@ -630,75 +613,75 @@ Context API for ancestor/descendant communication. All components are potential 
 
 ```tsx
 function App(handle: Handle<Record<string, never>, { theme: string }>) {
-	handle.context.set({ theme: "dark" });
+  handle.context.set({ theme: 'dark' })
 
-	return () => (
-		<div>
-			<Header />
-			<Content />
-		</div>
-	);
+  return () => (
+    <div>
+      <Header />
+      <Content />
+    </div>
+  )
 }
 
 function Header(handle: Handle) {
-	// Consume context from App
-	let { theme } = handle.context.get(App);
-	return () => (
-		<header mix={[css({ backgroundColor: theme === "dark" ? "#000" : "#fff" })]}>Header</header>
-	);
+  // Consume context from App
+  let { theme } = handle.context.get(App)
+  return () => (
+    <header mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>Header</header>
+  )
 }
 ```
 
 Setting context values does not automatically trigger updates. If a provider needs to render its own context values, call `handle.update()` after setting them. However, since providers often don't render context values themselves, calling `update()` can cause expensive updates of the entire subtree. Instead, make your context an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) and have consumers subscribe to changes.
 
 ```tsx
-import { TypedEventTarget } from "remix/ui";
+import { TypedEventTarget } from 'remix/ui'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
-	#value: "light" | "dark" = "light";
+  #value: 'light' | 'dark' = 'light'
 
-	get value() {
-		return this.#value;
-	}
+  get value() {
+    return this.#value
+  }
 
-	setValue(value: string) {
-		this.#value = value;
-		this.dispatchEvent(new Event("change"));
-	}
+  setValue(value: string) {
+    this.#value = value
+    this.dispatchEvent(new Event('change'))
+  }
 }
 
 function App(handle: Handle<Record<string, never>, Theme>) {
-	let theme = new Theme();
-	handle.context.set(theme);
+  let theme = new Theme()
+  handle.context.set(theme)
 
-	return () => (
-		<div>
-			<button
-				mix={[
-					on("click", () => {
-						// no updates in the parent component
-						theme.setValue(theme.value === "light" ? "dark" : "light");
-					}),
-				]}
-			>
-				Toggle Theme
-			</button>
-			<ThemedContent />
-		</div>
-	);
+  return () => (
+    <div>
+      <button
+        mix={[
+          on('click', () => {
+            // no updates in the parent component
+            theme.setValue(theme.value === 'light' ? 'dark' : 'light')
+          }),
+        ]}
+      >
+        Toggle Theme
+      </button>
+      <ThemedContent />
+    </div>
+  )
 }
 
 function ThemedContent(handle: Handle) {
-	let theme = handle.context.get(App);
+  let theme = handle.context.get(App)
 
-	// Subscribe to theme changes and update when it changes
-	addEventListeners(theme, handle.signal, { change: () => handle.update() });
+  // Subscribe to theme changes and update when it changes
+  theme.addEventListener('change', () => handle.update(), { signal: handle.signal })
 
-	return () => (
-		<div mix={[css({ backgroundColor: theme.value === "dark" ? "#000" : "#fff" })]}>
-			Current theme: {theme.value}
-		</div>
-	);
+  return () => (
+    <div mix={[css({ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' })]}>
+      Current theme: {theme.value}
+    </div>
+  )
 }
 ```
 
@@ -708,13 +691,13 @@ Use `Fragment` to group elements without adding extra DOM nodes:
 
 ```tsx
 function List(handle: Handle) {
-	return () => (
-		<>
-			<li>Item 1</li>
-			<li>Item 2</li>
-			<li>Item 3</li>
-		</>
-	);
+  return () => (
+    <>
+      <li>Item 1</li>
+      <li>Item 2</li>
+      <li>Item 3</li>
+    </>
+  )
 }
 ```
 

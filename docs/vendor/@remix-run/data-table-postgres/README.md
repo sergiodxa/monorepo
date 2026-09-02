@@ -24,11 +24,11 @@ npm i remix pg
 ## Usage
 
 ```ts
-import { createPostgresDatabase } from "remix/data-table/postgres";
+import { createPostgresDatabase } from 'remix/data-table/postgres'
 
 let db = createPostgresDatabase({
-	connectionString: process.env.DATABASE_URL,
-});
+  connectionString: process.env.DATABASE_URL,
+})
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
@@ -54,10 +54,10 @@ Migration runs reserve one connection for the PostgreSQL advisory lock, migratio
 Transaction options are passed through to PostgreSQL as hints.
 
 ```ts
-await db.transaction(async (txDb) => txDb.exec("select 1"), {
-	isolationLevel: "serializable",
-	readOnly: false,
-});
+await db.transaction(async (txDb) => txDb.exec('select 1'), {
+  isolationLevel: 'serializable',
+  readOnly: false,
+})
 ```
 
 ## Running integration tests locally

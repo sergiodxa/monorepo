@@ -18,12 +18,12 @@ npm i remix
 ## Usage
 
 ```ts
-import { createTerminal } from "remix/terminal";
+import { createTerminal } from 'remix/terminal'
 
-let terminal = createTerminal();
+let terminal = createTerminal()
 
-terminal.writeLine(`${terminal.styles.green("ready")} listening on port 3000`);
-terminal.errorLine(terminal.styles.red("failed to start"));
+terminal.writeLine(`${terminal.styles.green('ready')} listening on port 3000`)
+terminal.errorLine(terminal.styles.red('failed to start'))
 ```
 
 ### ANSI Styles
@@ -31,18 +31,18 @@ terminal.errorLine(terminal.styles.red("failed to start"));
 Use `createStyles` when you only need formatting helpers.
 
 ```ts
-import { createStyles } from "remix/terminal";
+import { createStyles } from 'remix/terminal'
 
-let styles = createStyles({ colors: true });
+let styles = createStyles({ colors: true })
 
-console.log(styles.bold(styles.cyan("Ready")));
-console.log(styles.format("warning", "dim", "yellow", "bgBlackBright"));
+console.log(styles.bold(styles.cyan('Ready')))
+console.log(styles.format('warning', 'dim', 'yellow', 'bgBlackBright'))
 ```
 
 Style helpers preserve outer styles when nested formatted strings close an inner style.
 
 ```ts
-console.log(styles.red(`Error: ${styles.bold("fatal")} retrying`));
+console.log(styles.red(`Error: ${styles.bold('fatal')} retrying`))
 ```
 
 Supported modifiers include `bold`, `dim`, `italic`, `underline`, `overline`, `inverse`, and `strikethrough`. Supported colors include the base foreground/background ANSI colors, bright variants, and `gray`/`grey` aliases.
@@ -54,11 +54,11 @@ By default, color detection disables styles in CI, when `NO_COLOR` is present, f
 Use `ansi` for raw terminal escape sequences.
 
 ```ts
-import { ansi } from "remix/terminal";
+import { ansi } from 'remix/terminal'
 
-process.stdout.write(ansi.clearLine);
-process.stdout.write(ansi.cursorTo(0));
-process.stdout.write("Updated status");
+process.stdout.write(ansi.clearLine)
+process.stdout.write(ansi.cursorTo(0))
+process.stdout.write('Updated status')
 ```
 
 ### Testing Output
@@ -66,20 +66,20 @@ process.stdout.write("Updated status");
 Inject streams to test terminal output without writing to the real console.
 
 ```ts
-import { createTerminal } from "remix/terminal";
+import { createTerminal } from 'remix/terminal'
 
-let output = "";
+let output = ''
 
 let terminal = createTerminal({
-	colors: false,
-	stdout: {
-		write(chunk) {
-			output += chunk;
-		},
-	},
-});
+  colors: false,
+  stdout: {
+    write(chunk) {
+      output += chunk
+    },
+  },
+})
 
-terminal.writeLine(terminal.styles.green("ok"));
+terminal.writeLine(terminal.styles.green('ok'))
 ```
 
 ## Related Packages

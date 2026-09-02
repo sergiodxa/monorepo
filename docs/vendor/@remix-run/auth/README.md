@@ -5,7 +5,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 ## Features
 
 - Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, `refreshExternalAuth()`, and `completeAuth()`
-- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, X, and Atmosphere
+- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
 - Shared session completion for credentials and external auth flows
@@ -34,113 +34,113 @@ The route owns redirects, flashes, and other app-specific behavior. `remix/auth`
 Use `createCredentialsAuthProvider()` when your own server can verify submitted credentials directly, such as email/password logins.
 
 ```ts
-import { auth, Auth, createSessionAuthScheme, requireAuth } from "remix/middleware/auth";
-import { completeAuth, createCredentialsAuthProvider, verifyCredentials } from "remix/auth";
-import { createCookie } from "remix/cookie";
-import { createRouter } from "remix/router";
-import { formData } from "remix/middleware/form-data";
-import { form, route } from "remix/routes";
-import type { GoodAuth } from "remix/middleware/auth";
-import { redirect } from "remix/response/redirect";
-import { Session } from "remix/session";
-import { session } from "remix/middleware/session";
-import { createCookieSessionStorage } from "remix/session-storage/cookie";
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
+import { completeAuth, createCredentialsAuthProvider, verifyCredentials } from 'remix/auth'
+import { createCookie } from 'remix/cookie'
+import { createRouter } from 'remix/router'
+import { formData } from 'remix/middleware/form-data'
+import { form, route } from 'remix/routes'
+import type { GoodAuth } from 'remix/middleware/auth'
+import { redirect } from 'remix/response/redirect'
+import { Session } from 'remix/session'
+import { session } from 'remix/middleware/session'
+import { createCookieSessionStorage } from 'remix/session-storage/cookie'
 
-let sessionCookie = createCookie("__session", {
-	secrets: [env.SESSION_SECRET],
-	httpOnly: true,
-	secure: true,
-	sameSite: "lax",
-	path: "/",
-});
+let sessionCookie = createCookie('__session', {
+  secrets: [env.SESSION_SECRET],
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',
+  path: '/',
+})
 
-let sessionStorage = createCookieSessionStorage();
+let sessionStorage = createCookieSessionStorage()
 
 let routes = route({
-	auth: {
-		session: {
-			login: form("/login"),
-			logout: { method: "POST", pattern: "/logout" },
-		},
-	},
-	app: {
-		dashboard: "/dashboard",
-	},
-});
+  auth: {
+    session: {
+      login: form('/login'),
+      logout: { method: 'POST', pattern: '/logout' },
+    },
+  },
+  app: {
+    dashboard: '/dashboard',
+  },
+})
 
 let passwordProvider = createCredentialsAuthProvider({
-	parse(context) {
-		let formData = context.get(FormData);
-		if (formData == null) {
-			throw new Error("Expected formData() middleware before verifyCredentials()");
-		}
+  parse(context) {
+    let formData = context.get(FormData)
+    if (formData == null) {
+      throw new Error('Expected formData() middleware before verifyCredentials()')
+    }
 
-		return {
-			email: String(formData.get("email") ?? ""),
-			password: String(formData.get("password") ?? ""),
-		};
-	},
-	async verify({ email, password }) {
-		return users.verifyPassword(email, password);
-	},
-});
+    return {
+      email: String(formData.get('email') ?? ''),
+      password: String(formData.get('password') ?? ''),
+    }
+  },
+  async verify({ email, password }) {
+    return users.verifyPassword(email, password)
+  },
+})
 
 let router = createRouter({
-	middleware: [
-		session(sessionCookie, sessionStorage),
-		formData(),
-		auth({
-			schemes: [
-				createSessionAuthScheme({
-					read(session) {
-						return session.get("auth") as { userId: string } | null;
-					},
-					verify(value) {
-						return users.getById(value.userId);
-					},
-					invalidate(session) {
-						session.unset("auth");
-					},
-				}),
-			],
-		}),
-	],
-});
+  middleware: [
+    session(sessionCookie, sessionStorage),
+    formData(),
+    auth({
+      schemes: [
+        createSessionAuthScheme({
+          read(session) {
+            return session.get('auth') as { userId: string } | null
+          },
+          verify(value) {
+            return users.getById(value.userId)
+          },
+          invalidate(session) {
+            session.unset('auth')
+          },
+        }),
+      ],
+    }),
+  ],
+})
 
-router.get(routes.auth.session.login.index, () => new Response("Login page"));
+router.get(routes.auth.session.login.index, () => new Response('Login page'))
 
 router.post(routes.auth.session.login.action, async (context) => {
-	let user = await verifyCredentials(passwordProvider, context);
+  let user = await verifyCredentials(passwordProvider, context)
 
-	if (user == null) {
-		return redirect(routes.auth.session.login.index.href());
-	}
+  if (user == null) {
+    return redirect(routes.auth.session.login.index.href())
+  }
 
-	let session = completeAuth(context);
-	session.set("auth", { userId: user.id });
+  let session = completeAuth(context)
+  session.set('auth', { userId: user.id })
 
-	return redirect(routes.app.dashboard.href());
-});
+  return redirect(routes.app.dashboard.href())
+})
 
 router.post(routes.auth.session.logout, ({ get }) => {
-	let session = get(Session);
-	session.unset("auth");
-	session.regenerateId(true);
-	return redirect(routes.auth.session.login.index.href());
-});
+  let session = get(Session)
+  session.unset('auth')
+  session.regenerateId(true)
+  return redirect(routes.auth.session.login.index.href())
+})
 
 router.get(routes.app.dashboard, {
-	middleware: [requireAuth()],
-	handler(context) {
-		let auth = context.get(Auth) as GoodAuth<{ id: string; email: string }>;
+  middleware: [requireAuth()],
+  handler(context) {
+    let auth = context.get(Auth) as GoodAuth<{ id: string; email: string }>
 
-		return Response.json({
-			id: auth.identity.id,
-			email: auth.identity.email,
-			method: auth.method,
-		});
-	},
-});
+    return Response.json({
+      id: auth.identity.id,
+      email: auth.identity.email,
+      method: auth.method,
+    })
+  },
+})
 ```
 
 ## External Auth
@@ -148,135 +148,135 @@ router.get(routes.app.dashboard, {
 Starting from the same `session()`, `auth()`, and `createSessionAuthScheme()` setup as the credentials example above, you can add a Google login flow like this. The provider is created once at module scope, and the routes compose `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()` directly.
 
 ```ts
-import { auth, Auth, createSessionAuthScheme, requireAuth } from "remix/middleware/auth";
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
 import {
-	completeAuth,
-	createGoogleAuthProvider,
-	finishExternalAuth,
-	refreshExternalAuth,
-	startExternalAuth,
-} from "remix/auth";
-import { createCookie } from "remix/cookie";
-import { createRouter } from "remix/router";
-import { route } from "remix/routes";
-import type { GoodAuth } from "remix/middleware/auth";
-import { redirect } from "remix/response/redirect";
-import { session } from "remix/middleware/session";
-import { createCookieSessionStorage } from "remix/session-storage/cookie";
+  completeAuth,
+  createGoogleAuthProvider,
+  finishExternalAuth,
+  refreshExternalAuth,
+  startExternalAuth,
+} from 'remix/auth'
+import { createCookie } from 'remix/cookie'
+import { createRouter } from 'remix/router'
+import { route } from 'remix/routes'
+import type { GoodAuth } from 'remix/middleware/auth'
+import { redirect } from 'remix/response/redirect'
+import { session } from 'remix/middleware/session'
+import { createCookieSessionStorage } from 'remix/session-storage/cookie'
 
-let sessionCookie = createCookie("__session", {
-	secrets: [env.SESSION_SECRET],
-	httpOnly: true,
-	secure: true,
-	sameSite: "lax",
-	path: "/",
-});
+let sessionCookie = createCookie('__session', {
+  secrets: [env.SESSION_SECRET],
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',
+  path: '/',
+})
 
-let sessionStorage = createCookieSessionStorage();
+let sessionStorage = createCookieSessionStorage()
 
 let routes = route({
-	auth: {
-		session: {
-			login: "/login",
-		},
-		google: {
-			login: "/login/google",
-			callback: "/auth/google/callback",
-		},
-	},
-	app: {
-		dashboard: "/dashboard",
-	},
-});
+  auth: {
+    session: {
+      login: '/login',
+    },
+    google: {
+      login: '/login/google',
+      callback: '/auth/google/callback',
+    },
+  },
+  app: {
+    dashboard: '/dashboard',
+  },
+})
 
 let googleProvider = createGoogleAuthProvider({
-	clientId: env.GOOGLE_CLIENT_ID,
-	clientSecret: env.GOOGLE_CLIENT_SECRET,
-	redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
-	authorizationParams: {
-		access_type: "offline",
-		prompt: "consent",
-	},
-});
+  clientId: env.GOOGLE_CLIENT_ID,
+  clientSecret: env.GOOGLE_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
+  authorizationParams: {
+    access_type: 'offline',
+    prompt: 'consent',
+  },
+})
 
 let router = createRouter({
-	middleware: [
-		session(sessionCookie, sessionStorage),
-		auth({
-			schemes: [
-				createSessionAuthScheme({
-					read(session) {
-						return session.get("auth") as { userId: string } | null;
-					},
-					verify(value) {
-						return users.getById(value.userId);
-					},
-					invalidate(session) {
-						session.unset("auth");
-					},
-				}),
-			],
-		}),
-	],
-});
+  middleware: [
+    session(sessionCookie, sessionStorage),
+    auth({
+      schemes: [
+        createSessionAuthScheme({
+          read(session) {
+            return session.get('auth') as { userId: string } | null
+          },
+          verify(value) {
+            return users.getById(value.userId)
+          },
+          invalidate(session) {
+            session.unset('auth')
+          },
+        }),
+      ],
+    }),
+  ],
+})
 
 router.get(routes.auth.session.login, () => {
-	return new Response(`<a href="${routes.auth.google.login.href()}">Login with Google</a>`, {
-		headers: {
-			"Content-Type": "text/html; charset=utf-8",
-		},
-	});
-});
+  return new Response(`<a href="${routes.auth.google.login.href()}">Login with Google</a>`, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  })
+})
 
 router.get(routes.auth.google.login, (context) =>
-	startExternalAuth(googleProvider, context, {
-		returnTo: context.url.searchParams.get("returnTo"),
-	}),
-);
+  startExternalAuth(googleProvider, context, {
+    returnTo: context.url.searchParams.get('returnTo'),
+  }),
+)
 
 router.get(routes.auth.google.callback, async (context) => {
-	let { result, returnTo } = await finishExternalAuth(googleProvider, context);
+  let { result, returnTo } = await finishExternalAuth(googleProvider, context)
 
-	let user = await users.upsertFromGoogle(result.profile);
-	await persistProviderTokens(user.id, result.tokens);
+  let user = await users.upsertFromGoogle(result.profile)
+  await persistProviderTokens(user.id, result.tokens)
 
-	let session = completeAuth(context);
-	session.set("auth", { userId: user.id });
+  let session = completeAuth(context)
+  session.set('auth', { userId: user.id })
 
-	return redirect(returnTo ?? routes.app.dashboard.href());
-});
+  return redirect(returnTo ?? routes.app.dashboard.href())
+})
 
 async function getGoogleAccessToken(userId: string) {
-	let tokens = await readStoredProviderTokens(userId);
-	if (tokens == null) {
-		return null;
-	}
+  let tokens = await readStoredProviderTokens(userId)
+  if (tokens == null) {
+    return null
+  }
 
-	if (tokens.expiresAt != null && tokens.expiresAt.getTime() <= Date.now()) {
-		tokens = (await refreshExternalAuth(googleProvider, tokens)).tokens;
-		await persistProviderTokens(userId, tokens);
-	}
+  if (tokens.expiresAt != null && tokens.expiresAt.getTime() <= Date.now()) {
+    tokens = (await refreshExternalAuth(googleProvider, tokens)).tokens
+    await persistProviderTokens(userId, tokens)
+  }
 
-	return tokens.accessToken;
+  return tokens.accessToken
 }
 
 router.get(routes.app.dashboard, {
-	middleware: [requireAuth()],
-	handler(context) {
-		let auth = context.get(Auth) as GoodAuth<{ id: string; email: string | null }>;
+  middleware: [requireAuth()],
+  handler(context) {
+    let auth = context.get(Auth) as GoodAuth<{ id: string; email: string | null }>
 
-		return Response.json({
-			id: auth.identity.id,
-			email: auth.identity.email,
-			method: auth.method,
-		});
-	},
-});
+    return Response.json({
+      id: auth.identity.id,
+      email: auth.identity.email,
+      method: auth.method,
+    })
+  },
+})
 ```
 
 A typical external auth flow looks like this:
 
-1. Create the provider once at module scope. For Atmosphere, call `provider.prepare(handleOrDid)` only when starting the login flow.
+1. Create the provider once at module scope.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
 4. Persist any provider tokens you want to reuse later.
@@ -286,70 +286,63 @@ A typical external auth flow looks like this:
 
 ## Built-in External Auth Providers
 
-When one of the built-in providers matches your auth provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, X, and Atmosphere use built-in custom OAuth flows.
+When one of the built-in providers matches your auth provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, and X use built-in custom OAuth flows.
 
 ```ts
 import {
-	createAuth0AuthProvider,
-	createAtmosphereAuthProvider,
-	createFacebookAuthProvider,
-	createGitHubAuthProvider,
-	createGoogleAuthProvider,
-	createMicrosoftAuthProvider,
-	createOktaAuthProvider,
-	createXAuthProvider,
-} from "remix/auth";
+  createAuth0AuthProvider,
+  createFacebookAuthProvider,
+  createGitHubAuthProvider,
+  createGoogleAuthProvider,
+  createMicrosoftAuthProvider,
+  createOktaAuthProvider,
+  createXAuthProvider,
+} from 'remix/auth'
 
 let auth0Provider = createAuth0AuthProvider({
-	domain: env.AUTH0_DOMAIN,
-	clientId: env.AUTH0_CLIENT_ID,
-	clientSecret: env.AUTH0_CLIENT_SECRET,
-	redirectUri: new URL("/auth/auth0/callback", env.APP_ORIGIN),
-});
-
-let atmosphereProvider = createAtmosphereAuthProvider({
-	clientId: new URL("/oauth/client-metadata.json", env.APP_ORIGIN),
-	redirectUri: new URL("/auth/atmosphere/callback", env.APP_ORIGIN),
-	sessionSecret: env.SESSION_SECRET,
-});
+  domain: env.AUTH0_DOMAIN,
+  clientId: env.AUTH0_CLIENT_ID,
+  clientSecret: env.AUTH0_CLIENT_SECRET,
+  redirectUri: new URL('/auth/auth0/callback', env.APP_ORIGIN),
+})
 
 let facebookProvider = createFacebookAuthProvider({
-	clientId: env.FACEBOOK_CLIENT_ID,
-	clientSecret: env.FACEBOOK_CLIENT_SECRET,
-	redirectUri: new URL("/auth/facebook/callback", env.APP_ORIGIN),
-});
+  clientId: env.FACEBOOK_CLIENT_ID,
+  clientSecret: env.FACEBOOK_CLIENT_SECRET,
+  redirectUri: new URL('/auth/facebook/callback', env.APP_ORIGIN),
+})
 
 let githubProvider = createGitHubAuthProvider({
-	clientId: env.GITHUB_CLIENT_ID,
-	clientSecret: env.GITHUB_CLIENT_SECRET,
-	redirectUri: new URL("/auth/github/callback", env.APP_ORIGIN),
-});
+  clientId: env.GITHUB_CLIENT_ID,
+  clientSecret: env.GITHUB_CLIENT_SECRET,
+  redirectUri: new URL('/auth/github/callback', env.APP_ORIGIN),
+})
 
 let googleProvider = createGoogleAuthProvider({
-	clientId: env.GOOGLE_CLIENT_ID,
-	clientSecret: env.GOOGLE_CLIENT_SECRET,
-	redirectUri: new URL("/auth/google/callback", env.APP_ORIGIN),
-});
+  clientId: env.GOOGLE_CLIENT_ID,
+  clientSecret: env.GOOGLE_CLIENT_SECRET,
+  redirectUri: new URL('/auth/google/callback', env.APP_ORIGIN),
+})
 
 let microsoftProvider = createMicrosoftAuthProvider({
-	tenant: "organizations",
-	clientId: env.MICROSOFT_CLIENT_ID,
-	clientSecret: env.MICROSOFT_CLIENT_SECRET,
-	redirectUri: new URL("/auth/microsoft/callback", env.APP_ORIGIN),
-});
+  tenant: 'organizations',
+  clientId: env.MICROSOFT_CLIENT_ID,
+  clientSecret: env.MICROSOFT_CLIENT_SECRET,
+  redirectUri: new URL('/auth/microsoft/callback', env.APP_ORIGIN),
+})
 
 let oktaProvider = createOktaAuthProvider({
-	issuer: env.OKTA_ISSUER,
-	clientId: env.OKTA_CLIENT_ID,
-	clientSecret: env.OKTA_CLIENT_SECRET,
-	redirectUri: new URL("/auth/okta/callback", env.APP_ORIGIN),
-});
+  issuer: env.OKTA_ISSUER,
+  clientId: env.OKTA_CLIENT_ID,
+  clientSecret: env.OKTA_CLIENT_SECRET,
+  redirectUri: new URL('/auth/okta/callback', env.APP_ORIGIN),
+})
 
 let xProvider = createXAuthProvider({
-	clientId: env.X_CLIENT_ID,
-	clientSecret: env.X_CLIENT_SECRET,
-	redirectUri: new URL("/auth/x/callback", env.APP_ORIGIN),
-});
+  clientId: env.X_CLIENT_ID,
+  clientSecret: env.X_CLIENT_SECRET,
+  redirectUri: new URL('/auth/x/callback', env.APP_ORIGIN),
+})
 ```
 
 Notes:
@@ -361,11 +354,7 @@ Notes:
 - `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
 - `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
-- `createAtmosphereAuthProvider()` returns a module-scope provider with `prepare(handleOrDid)` for request-time atproto account discovery before `startExternalAuth()`
-- Atmosphere callback routes pass the module-scope provider directly to `finishExternalAuth()`; the original handle or DID is stored in the sealed OAuth transaction state
-- `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight account, authorization server, nonce, and DPoP key state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
-- `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, authorization server refresh details, and `dpop` JWK state for follow-up DPoP-signed requests
-- `refreshExternalAuth()` supports built-in OIDC providers, X, and Atmosphere when the stored token bundle includes a refresh token
+- `refreshExternalAuth()` supports built-in OIDC providers and X when the stored token bundle includes a refresh token
 - Providers only return refresh tokens when configured to request offline access, such as `authorizationParams: { access_type: 'offline' }` for Google or adding `offline.access` to X scopes
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
@@ -383,47 +372,94 @@ Use `createOIDCAuthProvider()` directly for custom external auth providers. This
 
 ```ts
 import {
-	completeAuth,
-	createOIDCAuthProvider,
-	finishExternalAuth,
-	startExternalAuth,
-} from "remix/auth";
-import { redirect } from "remix/response/redirect";
+  completeAuth,
+  createOIDCAuthProvider,
+  finishExternalAuth,
+  startExternalAuth,
+} from 'remix/auth'
+import { redirect } from 'remix/response/redirect'
 
 let companyProvider = createOIDCAuthProvider({
-	name: "company",
-	issuer: "https://sso.acme.com",
-	clientId: "acme-web",
-	clientSecret: "acme-web-secret",
-	redirectUri: new URL("/auth/company/callback", "https://app.acme.com"),
-	authorizationParams: {
-		prompt: "login",
-	},
-	mapProfile({ claims }) {
-		return {
-			id: claims.sub,
-			email: claims.email ?? null,
-			name: claims.name ?? claims.preferred_username ?? "Unknown user",
-		};
-	},
-});
+  name: 'company',
+  issuer: 'https://sso.acme.com',
+  clientId: 'acme-web',
+  clientSecret: 'acme-web-secret',
+  redirectUri: new URL('/auth/company/callback', 'https://app.acme.com'),
+  authorizationParams: {
+    prompt: 'login',
+  },
+  mapProfile({ claims }) {
+    return {
+      id: claims.sub,
+      email: claims.email ?? null,
+      name: claims.name ?? claims.preferred_username ?? 'Unknown user',
+    }
+  },
+})
 
-router.get("/login/company", (context) =>
-	startExternalAuth(companyProvider, context, {
-		returnTo: context.url.searchParams.get("returnTo"),
-	}),
-);
+router.get('/login/company', (context) =>
+  startExternalAuth(companyProvider, context, {
+    returnTo: context.url.searchParams.get('returnTo'),
+  }),
+)
 
-router.get("/auth/company/callback", async (context) => {
-	let { result, returnTo } = await finishExternalAuth(companyProvider, context);
+router.get('/auth/company/callback', async (context) => {
+  let { result, returnTo } = await finishExternalAuth(companyProvider, context)
 
-	let user = await users.upsertFromCompanySSO(result.profile);
-	let session = completeAuth(context);
-	session.set("auth", { userId: user.id });
+  let user = await users.upsertFromCompanySSO(result.profile)
+  let session = completeAuth(context)
+  session.set('auth', { userId: user.id })
 
-	return redirect(returnTo ?? "/dashboard");
-});
+  return redirect(returnTo ?? '/dashboard')
+})
 ```
+
+Provider packages for other OAuth protocols can use `createOAuthProvider()` to implement the authorization, callback, and optional refresh hooks consumed by `startExternalAuth()`, `finishExternalAuth()`, and `refreshExternalAuth()`.
+
+```ts
+import { createOAuthProvider } from 'remix/auth'
+import type { OAuthTokens } from 'remix/auth'
+
+interface AcmeProfile {
+  id: string
+  email: string
+}
+
+interface AcmeTokens extends OAuthTokens {
+  resourceServer: string
+}
+
+export function createAcmeAuthProvider(options: AcmeAuthProviderOptions) {
+  return createOAuthProvider<AcmeProfile, 'acme', AcmeTokens>('acme', {
+    async createAuthorizationURL(transaction) {
+      let metadata = await discoverAuthorizationServer(options)
+
+      transaction.providerState = await encryptProviderState(metadata)
+      return createAuthorizationRequest(metadata, transaction)
+    },
+    async handleCallback(context, transaction) {
+      let metadata = await decryptProviderState(transaction.providerState)
+      let tokens = await exchangeAuthorizationCode(metadata, context, transaction)
+      let profile = await loadProfile(tokens)
+
+      return {
+        provider: 'acme',
+        account: {
+          provider: 'acme',
+          providerAccountId: profile.id,
+        },
+        profile,
+        tokens,
+      }
+    },
+    async refreshTokens(tokens) {
+      return refreshAcmeTokens(tokens)
+    },
+  })
+}
+```
+
+The runtime may write a serialized value to `transaction.providerState` during `createAuthorizationURL()`. Remix persists that value with the OAuth transaction and returns it to `handleCallback()`. Treat it as provider-owned opaque data, and encrypt sensitive values because session storage is not guaranteed to be confidential. Extending `OAuthTokens` preserves provider-specific fields through callback and refresh results without requiring those fields to become part of Remix's built-in token model.
 
 ## Related Packages
 

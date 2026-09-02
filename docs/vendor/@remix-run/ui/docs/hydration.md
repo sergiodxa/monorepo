@@ -9,32 +9,32 @@ Only the components you mark are hydrated. The rest of the page stays as static 
 Use `clientEntry` to mark a component for hydration. The first argument is the module URL and export name the client will use to load the component:
 
 ```tsx
-import { clientEntry, on, type Handle } from "remix/ui";
+import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
-	"/assets/counter.js#Counter",
-	function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
-		let count = handle.props.initialCount ?? 0;
+  '/assets/counter.js#Counter',
+  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+    let count = handle.props.initialCount ?? 0
 
-		return () => (
-			<div>
-				<span>
-					{handle.props.label}: {count}
-				</span>
-				<button
-					mix={[
-						on("click", () => {
-							count++;
-							handle.update();
-						}),
-					]}
-				>
-					+
-				</button>
-			</div>
-		);
-	},
-);
+    return () => (
+      <div>
+        <span>
+          {handle.props.label}: {count}
+        </span>
+        <button
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          +
+        </button>
+      </div>
+    )
+  },
+)
 ```
 
 The format is `moduleUrl#ExportName`. If you omit the export name, the function's name is used as a fallback.
@@ -46,44 +46,30 @@ On the server, `clientEntry` components render like any other component. The ser
 Use `run` to start the client. It scans the document for client entry markers, loads the corresponding modules, and hydrates each one:
 
 ```tsx
-import type { ResolveFrameOptions } from "remix/ui";
-import { run } from "remix/ui";
+import { run } from 'remix/ui'
 
 let app = run({
-	async loadModule(moduleUrl, exportName) {
-		let mod = await import(moduleUrl);
-		return mod[exportName];
-	},
-	async resolveFrame(src, options) {
-		let res = await fetch(src, {
-			headers: { Accept: "text/html", "X-Remix-Frame": "true" },
-			method: options?.method,
-			body: getRequestBody(options),
-			signal: options?.signal,
-		});
-		return res.body ?? (await res.text());
-	},
-});
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+})
 
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
-	let formData = options?.formData;
-	if (!formData) return;
-	if (options.encType !== "application/x-www-form-urlencoded") return formData;
-
-	let body = new URLSearchParams();
-	for (let [name, value] of formData) {
-		body.append(name, typeof value === "string" ? value : value.name);
-	}
-	return body;
-}
-
-await app.ready();
+await app.ready()
 ```
+
+`run()` also creates `app.frames.top` for the current document and starts listening for Navigation
+API events. Eligible same-origin links and forms then use soft navigation: Remix fetches their HTML
+through the frame resolver and updates the existing document instead of loading a new one. This
+happens even when the page only uses `clientEntry()` and does not render an explicit `<Frame>`.
+
+See [Link navigation](./frames.md#link-navigation) for the document-level effects of soft navigation
+and how to opt out for one navigation or the whole app.
 
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
-- **`resolveFrame(src, options)`** (optional) - Called when a `<Frame>` needs to load or reload content and when a link or form performs a frame navigation. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`. GET form values are already encoded in `src`. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`) and leaves document navigation to the browser. See [Frames](./frames.md#form-navigation) for request encoding, targeting, and opt-outs.
+- **`resolveFrame(src, options)`** (optional) - Overrides the default `fetch()` resolver when a `<Frame>` needs to load or reload content and when a link or form performs a frame navigation. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`. GET form values are already encoded in `src`. See [Frames](./frames.md#form-navigation) for request encoding, targeting, and opt-outs.
 
 ### `app` properties
 
@@ -96,9 +82,9 @@ await app.ready();
 `app` is also an `EventTarget`. You can listen for errors from any hydrated component:
 
 ```tsx
-app.addEventListener("error", (event) => {
-	console.error("Component error:", event.error);
-});
+app.addEventListener('error', (event) => {
+  console.error('Component error:', event.error)
+})
 ```
 
 ## What gets serialized
@@ -124,7 +110,7 @@ This means:
 - The page is fully rendered and interactive as soon as modules load. No blank flash.
 - Only marked components ship JavaScript. Static content stays static.
 - Client entries can appear anywhere in the tree, including inside frames.
-- Client entries inside `rmx-preserve-dom` hydrate during initial boot, but future frame reloads will not patch new server-rendered children or props through that preserved host. See [Preserving client-owned DOM](./frames.md#preserving-client-owned-dom).
+- Client entries inside `data-rmx-preserve-dom` hydrate during initial boot, but future frame reloads will not patch new server-rendered children or props through that preserved host. See [Preserving client-owned DOM](./frames.md#preserving-client-owned-dom).
 
 ## See Also
 
