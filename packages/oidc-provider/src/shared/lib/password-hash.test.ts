@@ -1,10 +1,10 @@
 /**
  * Tests for the two-format hashing helper.
  *
- * These pin the migration contract: a hash written by the superseded bcrypt
- * scheme must keep verifying, a correct plaintext checked against one must come
- * back with a replacement hash, and that replacement must verify on its own with
- * nothing left to upgrade.
+ * These pin the upgrade contract: a hash recorded under an earlier cost must keep
+ * verifying, a correct plaintext checked against one must come back with a
+ * replacement hash, and that replacement must verify on its own with nothing left
+ * to upgrade.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,12 +12,11 @@
 
 import { password } from "@pkg/crypto";
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
-import bcrypt from "bcryptjs";
 import { describe, expect, test } from "vitest";
 
-import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash";
+import { underpoweredHash } from "../test/hashes";
 
-const LEGACY_BCRYPT_COST = 10;
+import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash";
 
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
@@ -60,8 +59,8 @@ describe("verifySecret", () => {
 		expect(checked.data.rehashed).toBeNull();
 	});
 
-	test("accepts a secret stored in the superseded bcrypt format", async () => {
-		let stored = await bcrypt.hash("s3cret", LEGACY_BCRYPT_COST);
+	test("accepts a secret stored under an earlier cost", async () => {
+		let stored = await underpoweredHash("s3cret");
 
 		let checked = await verifySecret(stored, "s3cret");
 
@@ -70,8 +69,8 @@ describe("verifySecret", () => {
 		expect(checked.data.matches).toBe(true);
 	});
 
-	test("rejects a wrong secret stored in the superseded bcrypt format", async () => {
-		let stored = await bcrypt.hash("s3cret", LEGACY_BCRYPT_COST);
+	test("rejects a wrong secret stored under an earlier cost", async () => {
+		let stored = await underpoweredHash("s3cret");
 
 		let checked = await verifySecret(stored, "wrong");
 
@@ -81,8 +80,8 @@ describe("verifySecret", () => {
 		expect(checked.data.rehashed).toBeNull();
 	});
 
-	test("upgrades a bcrypt hash into one that verifies on its own", async () => {
-		let stored = await bcrypt.hash("s3cret", LEGACY_BCRYPT_COST);
+	test("upgrades an underpowered hash into one that verifies on its own", async () => {
+		let stored = await underpoweredHash("s3cret");
 
 		let checked = await verifySecret(stored, "s3cret");
 		expect(isSuccess(checked)).toBe(true);
@@ -100,7 +99,7 @@ describe("verifySecret", () => {
 		expect(recheck.data.rehashed).toBeNull();
 	});
 
-	test("rejects a stored value in neither format", async () => {
+	test("rejects a stored value it cannot read as a hash", async () => {
 		let checked = await verifySecret("not-a-hash", "s3cret");
 
 		expect(isSuccess(checked)).toBe(true);
@@ -117,11 +116,11 @@ describe("verifySecret", () => {
 });
 
 describe("needsRehash", () => {
-	test("is the signal that routes a bcrypt hash to the upgrade path", async () => {
-		let legacy = await bcrypt.hash("s3cret", LEGACY_BCRYPT_COST);
+	test("is the signal that routes an underpowered hash to the upgrade path", async () => {
+		let underpowered = await underpoweredHash("s3cret");
 		let current = unwrap(await hashSecret("s3cret"));
 
-		expect(password.needsRehash(legacy)).toBe(true);
+		expect(password.needsRehash(underpowered)).toBe(true);
 		expect(password.needsRehash(current)).toBe(false);
 	});
 });

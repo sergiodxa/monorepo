@@ -20,7 +20,6 @@
 		"@pkg/types": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@simplewebauthn/server": "^13.3.3",
-		"bcryptjs": "^3.0.3",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {

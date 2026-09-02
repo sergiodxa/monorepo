@@ -219,16 +219,19 @@ Subject passwords and client secrets are stored as PBKDF2-HMAC-SHA256 hashes in 
 self-describing `$pbkdf2-sha256$i=...$<salt>$<key>` format, so the cost parameters
 travel with each value and can be raised without a schema change.
 
-Hashes written by the provider's earlier bcrypt scheme still verify. There is no way
-to convert one without the plaintext, so a correct password or secret is re-hashed at
-the moment it is presented and written back in the same request that accepted it —
+Raising the cost leaves every stored hash behind it, and there is no way to re-derive
+one without the plaintext. So a correct password or secret is re-hashed at the moment
+it is presented and written back in the same request that accepted it —
 `Credential.verify` and `Secret.verify` do this themselves, so no caller can forget.
 Nothing else changes: the rehash replaces only the stored hash, leaving `updated_at`
 to mean "when the password last changed".
 
-That makes the migration driven by logins, not by deploys. Old hashes disappear as
-their owners authenticate, and the compatibility path has to stay until none remain —
-a query for hashes that do not begin with `$pbkdf2-sha256$` says when that is.
+That makes the upgrade driven by logins, not by deploys. Hashes below the current cost
+disappear as their owners authenticate, and a query on the recorded `i=` parameter says
+how many are left.
+
+A stored value too damaged to read as a hash counts as a mismatch rather than an error,
+so a corrupt row denies access instead of reaching the caller as a failure to classify.
 
 ## Related Packages
 

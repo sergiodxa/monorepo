@@ -1,9 +1,9 @@
 /**
  * Tests for the client-secret model.
  *
- * Alongside the lifecycle cases these cover the stored-hash migration: a secret
- * written in the superseded bcrypt format must still authenticate its client, and
- * doing so must leave the row holding a hash in the current format.
+ * Alongside the lifecycle cases these cover the stored-hash upgrade: a secret
+ * recorded under an earlier cost must still authenticate its client, and doing so
+ * must leave the row holding a hash at the current cost.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,18 +12,15 @@
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import bcrypt from "bcryptjs";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createClient } from "../../shared/test/fixtures";
+import { underpoweredHash } from "../../shared/test/hashes";
 
 import Secret from "./secret";
-
-/** Cost factor every stored bcrypt hash was written with. */
-const LEGACY_BCRYPT_COST = 10;
 
 /** Prefix identifying the format written for new hashes. */
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
@@ -45,17 +42,17 @@ describe("Secret", () => {
 	});
 
 	/**
-	 * Inserts a secret hashed the way every row written before the migration was,
-	 * bypassing the model so the stored value is genuinely in the old format.
+	 * Inserts a secret hashed under an earlier cost, bypassing the model so the
+	 * stored value genuinely trails current policy.
 	 * @param clientId - Client the secret belongs to.
-	 * @param plainSecret - Secret to hash with the superseded scheme.
+	 * @param plainSecret - Secret to hash below the current cost.
 	 */
 	async function createLegacySecret(clientId: string, plainSecret: string) {
 		await db.create(Secret.table, {
 			id: crypto.randomUUID(),
 			client_id: clientId,
-			secret_hash: await bcrypt.hash(plainSecret, LEGACY_BCRYPT_COST),
-			name: "Legacy Secret",
+			secret_hash: await underpoweredHash(plainSecret),
+			name: "Underpowered Secret",
 			last_used_at: null,
 			expires_at: null,
 			created_at: new Date().toISOString(),

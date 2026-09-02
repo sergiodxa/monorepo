@@ -1,9 +1,9 @@
 /**
  * Tests for the subject password-credential model.
  *
- * Alongside the lifecycle cases these cover the stored-hash migration: a password
- * written in the superseded bcrypt format must still authenticate its subject, and
- * doing so must leave the row holding a hash in the current format.
+ * Alongside the lifecycle cases these cover the stored-hash upgrade: a password
+ * recorded under an earlier cost must still authenticate its subject, and doing so
+ * must leave the row holding a hash at the current cost.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,16 +12,14 @@
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import bcrypt from "bcryptjs";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createSubject } from "../../shared/test/fixtures";
+import { underpoweredHash } from "../../shared/test/hashes";
 
 import Credential from "./credential";
-
-const LEGACY_BCRYPT_COST = 10;
 
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
@@ -42,17 +40,17 @@ describe("Credential", () => {
 	});
 
 	/**
-	 * Inserts a credential hashed the way every row written before the migration
-	 * was, bypassing the model so the stored value is genuinely in the old format.
+	 * Inserts a credential hashed under an earlier cost, bypassing the model so the
+	 * stored value genuinely trails current policy.
 	 * @param subjectId - Subject the credential belongs to.
-	 * @param password - Password to hash with the superseded scheme.
+	 * @param password - Password to hash below the current cost.
 	 */
 	async function createLegacyCredential(subjectId: string, password: string) {
 		let now = new Date().toISOString();
 		await db.create(Credential.table, {
 			id: crypto.randomUUID(),
 			subject_id: subjectId,
-			password_hash: await bcrypt.hash(password, LEGACY_BCRYPT_COST),
+			password_hash: await underpoweredHash(password),
 			verified_at: null,
 			created_at: now,
 			updated_at: now,

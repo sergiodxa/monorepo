@@ -2,9 +2,9 @@
  * Hashing and verification for the two credentials this provider stores at rest:
  * subject passwords and OAuth client secrets.
  *
- * New hashes are PBKDF2-HMAC-SHA256. Hashes written by the previous bcrypt scheme
- * still verify, and a correct plaintext checked against one comes back with a
- * replacement hash, so stored values leave the old format as they are used.
+ * Hashes are PBKDF2-HMAC-SHA256. A correct plaintext checked against a hash whose
+ * parameters trail current policy comes back with a replacement, so stored values
+ * reach the current cost as they are used.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,6 @@ import type { Result } from "@pkg/result";
 
 import { MalformedHashError, password, UnsupportedAlgorithmError } from "@pkg/crypto";
 import { isFailure, success } from "@pkg/result";
-import bcrypt from "bcryptjs";
 
 /**
  * Outcome of checking a plaintext against a stored hash; `rehashed` is set
@@ -30,40 +29,22 @@ export interface VerifiedSecret {
 }
 
 /**
- * Recognizes a failure caused by a stored value in the superseded bcrypt
- * format, which has too few fields to parse as the current scheme; matching
- * this failure routes verification to the legacy comparison.
+ * Recognizes a failure caused by a stored value that cannot be read as a hash
+ * at all, which verification reports as a mismatch so a corrupt row denies
+ * access instead of surfacing an error the caller would have to classify.
  *
- * @param error Failure returned by the current-scheme verifier.
- * @returns Whether the stored value should be retried against bcrypt.
+ * @param error Failure returned by the verifier.
+ * @returns Whether the stored value should count as a mismatch.
  */
-function isForeignFormat(error: CryptoError): boolean {
+function isUnreadable(error: CryptoError): boolean {
 	return error instanceof MalformedHashError || error instanceof UnsupportedAlgorithmError;
-}
-
-/**
- * Compares a plaintext against a bcrypt hash written before the migration.
- *
- * A stored value that is neither format reaches this point too, so a rejected
- * comparison is reported as a plain mismatch and the check fails closed.
- *
- * @param stored Hash read from the database.
- * @param plaintext Presented secret.
- * @returns Whether the plaintext matches.
- */
-async function compareLegacy(stored: string, plaintext: string): Promise<boolean> {
-	try {
-		return await bcrypt.compare(plaintext, stored);
-	} catch {
-		return false;
-	}
 }
 
 /**
  * Derives a replacement hash for a plaintext already known to be correct.
  *
- * When re-hashing fails, the match still stands and the stored value stays
- * in its old format, ready to be upgraded on a later check.
+ * When re-hashing fails, the match still stands and the stored value keeps its
+ * current parameters, ready to be upgraded on a later check.
  *
  * @param plaintext Secret that just verified.
  * @returns A match, carrying the replacement hash when one could be derived.
@@ -90,11 +71,10 @@ export function hashSecret(plaintext: string): Promise<Result<string, CryptoErro
 }
 
 /**
- * Checks a plaintext against a stored hash in either supported format,
- * falling back to bcrypt for anything written before the migration; a
- * wrong secret always resolves to `matches: false`, distinct from a failure.
+ * Checks a plaintext against a stored hash; a wrong secret, and a stored value
+ * too damaged to read, both resolve to `matches: false` rather than a failure.
  *
- * @param stored Hash read from the database, in either format.
+ * @param stored Hash read from the database.
  * @param plaintext Presented secret.
  * @returns The match, plus a replacement hash the caller must persist when set.
  * @example
@@ -108,11 +88,8 @@ export async function verifySecret(
 	let checked = await password.verify(stored, plaintext);
 
 	if (isFailure(checked)) {
-		if (!isForeignFormat(checked.error)) return checked;
-		if (!(await compareLegacy(stored, plaintext))) {
-			return success({ matches: false, rehashed: null });
-		}
-		return await upgrade(plaintext);
+		if (!isUnreadable(checked.error)) return checked;
+		return success({ matches: false, rehashed: null });
 	}
 
 	if (!checked.data) return success({ matches: false, rehashed: null });
