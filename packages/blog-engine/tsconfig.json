@@ -4,7 +4,7 @@
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
-		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "@types/bun"],
+		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "bun"],
 		// `remix/middleware/auth` (beta) ships its `dist` as TypeScript source that
 		// imports sibling modules with explicit `.ts` extensions; allow it (safe under
 		// the inherited `noEmit`). Consumers compiling these sources need it too.

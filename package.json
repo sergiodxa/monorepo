@@ -27,7 +27,7 @@
 		"@pkg/spec": "workspace:*",
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@total-typescript/tsconfig": "^1.0.4",
-		"@types/bun": "^1.3.14",
+		"@types/bun": "^1.4.0",
 		"typescript": "^6.0.3",
 		"vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
 		"vite-plus": "0.2.9",

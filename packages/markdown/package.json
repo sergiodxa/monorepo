@@ -23,7 +23,6 @@
 		"yaml": "^2.9.0"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.4.0",
 		"@types/prismjs": "^1.26.6",
 		"vitest": "4.1.10"
 	}

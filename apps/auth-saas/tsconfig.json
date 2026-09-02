@@ -18,7 +18,7 @@
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
 		"noEmit": true,
-		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
+		"types": ["@total-typescript/ts-reset", "vite/client", "bun"],
 		// The render middleware pulls in `remix/middleware/render` (beta), whose `dist`
 		// is TypeScript source importing siblings with `.ts` extensions; allow it (safe
 		// under `noEmit`). Mirrors the sibling `blog-saas` app.

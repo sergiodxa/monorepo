@@ -14,7 +14,6 @@
 		"@pkg/location": "workspace:*"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.4.0",
 		"vitest": "4.1.10"
 	}
 }

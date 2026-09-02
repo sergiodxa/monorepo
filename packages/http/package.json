@@ -26,7 +26,6 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.4.0",
 		"vitest": "4.1.10"
 	}
 }

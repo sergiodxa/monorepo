@@ -16,7 +16,6 @@
 		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.4.0",
 		"remix": "3.0.0-rc.1",
 		"vitest": "4.1.10"
 	}

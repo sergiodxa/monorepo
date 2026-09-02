@@ -15,7 +15,6 @@
 		"jose": "^6.2.10"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.4.0",
 		"msw": "^2.15.0",
 		"vitest": "4.1.10"
 	}

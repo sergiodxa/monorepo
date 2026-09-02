@@ -33,7 +33,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
 		"@pkg/kv-cache": "workspace:*",
-		"@types/bun": "^1.4.0",
 		"msw": "^2.15.0",
 		"vitest": "4.1.10"
 	}

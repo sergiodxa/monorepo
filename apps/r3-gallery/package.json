@@ -20,9 +20,6 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@total-typescript/ts-reset": "^0.6.1",
-		"@types/bun": "^1.4.0",
-		"typescript": "^6.0.3",
 		"vite": "^8.2.2",
 		"wrangler": "^4.127.1"
 	}
