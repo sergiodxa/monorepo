@@ -32,8 +32,6 @@
 		"@pkg/service-container": "workspace:*",
 		"@pkg/types": "workspace:*",
 		"@pkg/validate": "workspace:*",
-		"@polar-sh/sdk": "^0.48.1",
-		"@simplewebauthn/server": "^13.3.3",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
