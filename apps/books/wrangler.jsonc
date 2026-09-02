@@ -2,7 +2,7 @@
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
 	"name": "books",
 	"main": "./bootstrap/worker.ts",
-	"compatibility_date": "2026-04-10",
+	"compatibility_date": "2026-09-02",
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
 	"dev": { "port": 3003 },
