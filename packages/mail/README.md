@@ -22,7 +22,7 @@ Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and
 | `@pkg/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
 | `@pkg/mail/middleware` | The router middleware that publishes `context.email`                                |
 
-Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@pkg/mail/cloudflare` never resolves a platform type. `@pkg/mail/markdown` is split off for the same reason and a different cost: Markdoc and Prism are the only heavy dependencies here, and most mail is not markdown.
+Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@pkg/mail/cloudflare` never resolves a platform type. `@pkg/mail/markdown` is split off for the same reason and a different cost: Markdoc and the highlighter are the only heavy dependencies here, and most mail is not markdown.
 
 The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their destination, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
 
@@ -426,9 +426,9 @@ interface SentMessage {
 
 ### `@pkg/mail/markdown`
 
-Markdown as an email body, and the highlighted code block it renders fences with. Behind its own entry point because it carries the only heavy dependencies in the package — Markdoc and Prism — and most mail is not markdown.
+Markdown as an email body, and the highlighted code block it renders fences with. Behind its own entry point because it carries the only heavy dependencies in the package — Markdoc and the highlighter — and most mail is not markdown.
 
-Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: Markdoc renders to HTML, Prism highlights to HTML, and `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The tree is walked here instead, and every node comes out as a component from the kit with its styles already inline.
+Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: Markdoc renders to HTML and `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The tree is walked here instead, and every node comes out as a component from the kit with its styles already inline. Fences are highlighted during the transform by [`@pkg/highlight`](/packages/highlight)'s Markdoc node, which hands this renderer tokens rather than markup for the same reason.
 
 #### `Markdown`
 
@@ -450,9 +450,9 @@ The mapping is deliberately lossy, because markdown can express things an inbox 
 
 A fenced block of code, highlighted, inside a single-cell table — a `<pre>` with a background is painted to the width of the text by Outlook rather than the width of the column. Long lines wrap rather than scroll, because an inbox has no horizontal scrollbar to offer.
 
-**Props:** `code`, `language?`
+**Props:** `code`, `language?`, `tokens?`
 
-Prism's token types collapse to six buckets — comment, keyword, string, number, function, punctuation — which is enough for code to read as code in a notification, and few enough that the dark half stays six rules. An unknown language renders unpainted rather than failing.
+The twenty token types collapse to six colours — comment, keyword, string, number, function, punctuation — which is enough for code to read as code in a notification, and few enough that the dark half stays six rules. The map is keyed by the type union, so a type added upstream is a compile error rather than an unpainted run. Rendered through `Markdown`, the fence node has already tokenized and the `tokens` prop carries its work; given `code` alone, the block tokenizes itself. An unknown language renders unpainted rather than failing.
 
 ### `@pkg/mail/memory`
 

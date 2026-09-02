@@ -104,6 +104,7 @@ Run from the repository root:
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                           |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                    |
 | [get-client-ip](packages/get-client-ip)                         | Extract client IP from requests                                                |
+| [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a Markdoc fence node                       |
 | [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                      |
 | [http](packages/http)                                           | HTTP helper utilities                                                          |
 | [i18n](packages/i18n)                                           | Internationalization utilities                                                 |
@@ -168,9 +169,7 @@ repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#package
 | `jose`                            | `jwt`                                                                                                                      | Signs and verifies JWTs and JWKS.                                     |
 | `@simplewebauthn/server`          | `oidc-provider`                                                                                                            | Passkey registration and authentication.                              |
 | `@polar-sh/sdk`                   | `polar`                                                                                                                    | Client for the Polar billing API.                                     |
-| `@markdoc/markdoc`                | `mail`, `markdown`                                                                                                         | Parses Markdown into a renderable tree.                               |
-| `prismjs`                         | `mail`, `markdown`                                                                                                         | Highlights code blocks.                                               |
-| `@types/prismjs`                  | `mail`, `markdown`                                                                                                         | `prismjs` ships no types of its own.                                  |
+| `@markdoc/markdoc`                | `highlight`, `mail`, `markdown`                                                                                            | Parses Markdown into a renderable tree.                               |
 | `yaml`                            | `markdown`                                                                                                                 | Parses document frontmatter.                                          |
 | `@standard-schema/spec`           | `markdown`, `validate`, `webhooks`                                                                                         | The `StandardSchemaV1` interface, as types only.                      |
 | `i18next`                         | `i18n`                                                                                                                     | Translation lookup and interpolation.                                 |

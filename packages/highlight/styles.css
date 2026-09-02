@@ -1,0 +1,131 @@
+/*
+ * The selector layer for highlighted code: one rule per token type, each
+ * reading a custom property so a consumer restyles by declaring properties
+ * rather than by restating selectors.
+ *
+ * Colors only. Layout — the padding, radius and overflow of the block a fence
+ * renders into — belongs to the page around it, as does any weight or face a
+ * theme wants to spend on a role. Both are set alongside this file, not in it.
+ *
+ * The defaults below make the stylesheet usable on its own, and follow the
+ * light and dark GitHub palettes. A consumer with a palette of its own declares
+ * the same properties after loading this file and overrides whichever roles it
+ * has an opinion about; the rest keep working.
+ */
+:root {
+	--highlight-text: #24292f;
+	--highlight-comment: #6a737d;
+	--highlight-keyword: #d73a49;
+	--highlight-string: #032f62;
+	--highlight-number: #005cc5;
+	--highlight-boolean: var(--highlight-number);
+	--highlight-constant: var(--highlight-number);
+	--highlight-property: var(--highlight-number);
+	--highlight-tag: var(--highlight-number);
+	--highlight-function: #6f42c1;
+	--highlight-class-name: var(--highlight-function);
+	--highlight-builtin: var(--highlight-string);
+	--highlight-attr-name: var(--highlight-string);
+	--highlight-attr-value: var(--highlight-string);
+	--highlight-regex: #e36209;
+	--highlight-variable: var(--highlight-regex);
+	--highlight-operator: var(--highlight-keyword);
+	--highlight-punctuation: var(--highlight-text);
+	--highlight-inserted: #22863a;
+	--highlight-deleted: #b31d28;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--highlight-text: #e6edf3;
+		--highlight-comment: #8b949e;
+		--highlight-keyword: #ff7b72;
+		--highlight-string: #a5d6ff;
+		--highlight-number: #79c0ff;
+		--highlight-function: #d2a8ff;
+		--highlight-regex: #ffa657;
+		--highlight-inserted: #7ee787;
+		--highlight-deleted: #ffa198;
+	}
+}
+
+code[class*="language-"],
+pre[class*="language-"] {
+	color: var(--highlight-text);
+}
+
+.token.comment {
+	color: var(--highlight-comment);
+}
+
+.token.keyword {
+	color: var(--highlight-keyword);
+}
+
+.token.builtin {
+	color: var(--highlight-builtin);
+}
+
+.token.class-name {
+	color: var(--highlight-class-name);
+}
+
+.token.function {
+	color: var(--highlight-function);
+}
+
+.token.property {
+	color: var(--highlight-property);
+}
+
+.token.tag {
+	color: var(--highlight-tag);
+}
+
+.token.attr-name {
+	color: var(--highlight-attr-name);
+}
+
+.token.attr-value {
+	color: var(--highlight-attr-value);
+}
+
+.token.string {
+	color: var(--highlight-string);
+}
+
+.token.number {
+	color: var(--highlight-number);
+}
+
+.token.boolean {
+	color: var(--highlight-boolean);
+}
+
+.token.constant {
+	color: var(--highlight-constant);
+}
+
+.token.regex {
+	color: var(--highlight-regex);
+}
+
+.token.variable {
+	color: var(--highlight-variable);
+}
+
+.token.operator {
+	color: var(--highlight-operator);
+}
+
+.token.punctuation {
+	color: var(--highlight-punctuation);
+}
+
+.token.inserted {
+	color: var(--highlight-inserted);
+}
+
+.token.deleted {
+	color: var(--highlight-deleted);
+}

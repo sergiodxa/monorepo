@@ -10,12 +10,10 @@ import type { Result } from "@pkg/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import * as Markdoc from "@markdoc/markdoc";
+import { fence } from "@pkg/highlight/markdoc";
 import { failure, isFailure, success } from "@pkg/result";
 import YAML from "yaml";
 
-import { fence } from "./fence";
-
-export { fence, normalizeLanguage } from "./fence";
 export { toPlainText } from "./plain-text";
 export type { PlainTextOptions } from "./plain-text";
 

@@ -77,9 +77,8 @@ describe("CodeBlock", () => {
 	});
 
 	/**
-	 * `prism-tsx.js` clones `Prism.languages.typescript` when it loads, so an import
-	 * order that puts it first leaves `tsx` as a copy of `jsx`, where `type` is no
-	 * keyword and nothing paints it.
+	 * A TSX fence highlights with the TypeScript half of the grammar, which the
+	 * grammar states as an import rather than leaving to a load order.
 	 */
 	test("paints tsx with the TypeScript half of the grammar", async () => {
 		let { html } = await render(<CodeBlock language="tsx" code="type Id = string;" />);

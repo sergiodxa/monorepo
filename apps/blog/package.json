@@ -16,6 +16,7 @@
 		"@pkg/auth": "workspace:*",
 		"@pkg/crypto": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
+		"@pkg/highlight": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/jwt": "workspace:*",
 		"@pkg/kv-cache": "workspace:*",

@@ -10,12 +10,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import highlightStyles from "@pkg/highlight/styles.css?url";
 import { colorScheme } from "@pkg/u/color";
 import resetStyles from "@pkg/ui/reset.css?url";
 import themeStyles from "@pkg/ui/theme.css?url";
 
 import colorStyles from "~/resources/css/colors.css?url";
-import prismStyles from "~/resources/css/prism.css?url";
+import codeStyles from "~/resources/css/highlight.css?url";
 
 namespace DocumentLayout {
 	/**
@@ -94,7 +95,8 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
 					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-palette" />
 					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
-					<link rel="stylesheet" href={prismStyles} data-rmx-key="style-code" />
+					<link rel="stylesheet" href={highlightStyles} data-rmx-key="style-highlight" />
+					<link rel="stylesheet" href={codeStyles} data-rmx-key="style-code" />
 					<title data-rmx-key="title">{title}</title>
 					{description && (
 						<meta name="description" content={description} data-rmx-key="description" />

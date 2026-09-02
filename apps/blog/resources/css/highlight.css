@@ -1,5 +1,5 @@
 /*
- * Syntax-highlighting theme for Prism-rendered code blocks.
+ * Syntax-highlighting theme for this app's code blocks.
  *
  * Every color here — chrome and syntax alike — resolves to the app's own two
  * house scales: silver (`neutral`, hue 250) and emerald (`brand`, hue 162). A
@@ -12,7 +12,7 @@
  *
  * - Family splits scaffolding from meaning. Silver takes the parts of a listing
  *   that are punctuation in the typographic sense — braces, operators,
- *   comments, namespaces, and plain text. Emerald takes everything carrying
+ *   comments, and plain text. Emerald takes everything carrying
  *   program meaning — literals, strings, keywords, functions, class names. A
  *   reader skimming for what the code says is scanning for the green.
  * - Lightness tier splits roles inside a family. The schemes are mirror images:
@@ -61,6 +61,12 @@
  * Sizes read the shared scale variables (spacing, radius) rather than one-off
  * lengths, so a code block's padding and corners match every other surface.
  */
+/*
+ * The tiers above are this app's; the selectors that spend them ship with
+ * `@pkg/highlight`, which paints each token type from a `--highlight-*`
+ * property. The block at the end of this file maps one onto the other, so a
+ * role and the tier it takes are stated once and in one place.
+ */
 :root {
 	/* Chrome. Reads the semantic `--ui-{tone}-*` tokens rather than raw palette
 	steps, which is what lets it follow the color scheme: the theme layer already
@@ -74,16 +80,13 @@
 	--ui-highlight-surface: var(--ui-neutral-bg-tint-hover);
 	--ui-highlight-surface-inline: var(--ui-neutral-bg-tint-pressed);
 	--ui-highlight-border: var(--ui-neutral-border);
-	--ui-highlight-line: var(--ui-neutral-bg-tint-pressed);
-	--ui-highlight-line-accent: var(--ui-brand-fg);
 
-	/* Silver: scaffolding. Comment, punctuation and namespace share the quietest
-	tier on purpose — they are the three things a reader skips — and the comment
-	face below is what tells them apart. Operators sit one tier up because they
-	carry meaning that punctuation does not. */
+	/* Silver: scaffolding. Comment and punctuation share the quietest tier on
+	purpose — they are the two things a reader skips — and the comment face below
+	is what tells them apart. Operators sit one tier up because they carry meaning
+	that punctuation does not. */
 	--ui-highlight-comment: var(--ui-neutral-fg);
 	--ui-highlight-punctuation: var(--ui-neutral-fg);
-	--ui-highlight-namespace: var(--ui-neutral-fg);
 	--ui-highlight-operator: var(--ui-color-neutral-700);
 
 	/* Emerald: meaning, quietest tier to strongest. Three tiers for five roles, so
@@ -177,10 +180,6 @@ pre[class*="language-"] {
 	background: var(--ui-highlight-surface-inline);
 }
 
-pre[data-line] {
-	position: relative;
-}
-
 pre[class*="language-"] > code[class*="language-"] {
 	position: relative;
 	z-index: 1;
@@ -190,159 +189,54 @@ pre[class*="language-"] > code[class*="language-"] {
 	box-sizing: border-box;
 }
 
-.line-highlight {
-	position: absolute;
-	left: 0;
-	right: 0;
-	padding: inherit 0;
-	margin-block-start: calc(var(--ui-spacing, 0.25rem) * 4);
-	background: var(--ui-highlight-line);
-	box-shadow: inset 4px 0 0 var(--ui-highlight-line-accent);
-	z-index: 0;
-	pointer-events: none;
-	line-height: inherit;
-	white-space: pre;
+/*
+ * Each token type, and the tier it spends. `@pkg/highlight/styles.css` holds the
+ * selectors that read these.
+ */
+:root {
+	--highlight-text: var(--ui-highlight-text);
+
+	--highlight-comment: var(--ui-highlight-comment);
+	--highlight-punctuation: var(--ui-highlight-punctuation);
+	--highlight-operator: var(--ui-highlight-operator);
+
+	--highlight-property: var(--ui-highlight-literal);
+	--highlight-tag: var(--ui-highlight-jsx-tag);
+	--highlight-boolean: var(--ui-highlight-literal);
+	--highlight-number: var(--ui-highlight-literal);
+	--highlight-constant: var(--ui-highlight-literal);
+	--highlight-attr-name: var(--ui-highlight-jsx-attr-name);
+
+	--highlight-string: var(--ui-highlight-string);
+	--highlight-builtin: var(--ui-highlight-string);
+	--highlight-attr-value: var(--ui-highlight-jsx-attr-value);
+	--highlight-regex: var(--ui-highlight-variable);
+	--highlight-variable: var(--ui-highlight-variable);
+
+	--highlight-keyword: var(--ui-highlight-keyword);
+	--highlight-function: var(--ui-highlight-function);
+	--highlight-class-name: var(--ui-highlight-class);
+
+	--highlight-inserted: var(--ui-highlight-inserted);
+	--highlight-deleted: var(--ui-highlight-deleted);
 }
 
-.namespace {
-	opacity: 0.7;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-	color: var(--ui-highlight-comment);
+/*
+ * Weight and face, the two axes hue cannot carry here: the comment is the one
+ * hand-written thing in the block, and bold is what separates the two roles
+ * sharing each emerald tier.
+ */
+.token.comment {
 	font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive;
 	font-weight: 500;
 	font-size: 1.05em;
 	letter-spacing: 0.01em;
 }
 
-.token.punctuation {
-	color: var(--ui-highlight-punctuation);
-}
-
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol {
-	color: var(--ui-highlight-literal);
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin {
-	color: var(--ui-highlight-string);
-}
-
-/* Split out of the literal and string groups they belong to in Prism's own
-theme, because inside a diff they are the two tokens a reader distinguishes by
-color alone. */
-.token.inserted {
-	color: var(--ui-highlight-inserted);
-}
-
-.token.deleted {
-	color: var(--ui-highlight-deleted);
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
-	color: var(--ui-highlight-operator);
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-	color: var(--ui-highlight-keyword);
-	font-weight: 600;
-}
-
-.token.function {
-	color: var(--ui-highlight-function);
-	font-weight: 600;
-}
-
-.token.regex,
-.token.important,
-.token.variable {
-	color: var(--ui-highlight-variable);
-}
-
+.token.keyword,
+.token.function,
 .token.class-name,
-.token.maybe-class-name,
-.token.parameter {
-	color: var(--ui-highlight-class);
+.token.tag,
+.token.attr-name {
 	font-weight: 600;
-}
-
-.token.namespace {
-	color: var(--ui-highlight-namespace);
-}
-
-.language-jsx .token.tag,
-.language-tsx .token.tag,
-.language-javascript .token.tag,
-.language-typescript .token.tag {
-	color: var(--ui-highlight-jsx-tag);
-	font-weight: 600;
-}
-
-.language-jsx .token.tag .token.punctuation,
-.language-tsx .token.tag .token.punctuation {
-	color: var(--ui-highlight-operator);
-}
-
-.language-jsx .token.tag .token.class-name,
-.language-tsx .token.tag .token.class-name,
-.language-jsx .token.tag .token.script-punctuation,
-.language-tsx .token.tag .token.script-punctuation {
-	color: var(--ui-highlight-jsx-tag);
-	font-weight: 700;
-}
-
-.language-jsx .token.attr-name,
-.language-tsx .token.attr-name,
-.language-javascript .token.attr-name,
-.language-typescript .token.attr-name {
-	color: var(--ui-highlight-jsx-attr-name);
-	font-weight: 600;
-}
-
-.language-jsx .token.attr-value,
-.language-tsx .token.attr-value,
-.language-javascript .token.attr-value,
-.language-typescript .token.attr-value {
-	color: var(--ui-highlight-jsx-attr-value);
-}
-
-.language-jsx .token.plain-text,
-.language-tsx .token.plain-text {
-	color: var(--ui-highlight-text);
-}
-
-.language-jsx .token.script,
-.language-tsx .token.script {
-	color: var(--ui-highlight-text);
-}
-
-.token.important,
-.token.bold {
-	font-weight: 700;
-}
-
-.token.italic {
-	font-style: italic;
-}
-
-.token.entity {
-	cursor: help;
 }

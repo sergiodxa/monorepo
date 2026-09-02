@@ -26,6 +26,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+/*
+ * The selectors that spend these tiers ship with `@pkg/highlight`, which paints each
+ * token type from a `--highlight-*` property; the block at the end maps one onto the
+ * other, so a role and its tier are stated once.
+ */
 :root {
 	--book-code-text: var(--ui-color-neutral-950);
 	--book-code-quiet: var(--ui-color-neutral-500);
@@ -74,72 +79,45 @@ pre[class*="language-"] > code[class*="language-"] {
 	font-size: inherit;
 }
 
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-	color: var(--book-code-quiet);
+/* Each token type, and the tier it takes. */
+:root {
+	--highlight-text: var(--book-code-text);
+
+	--highlight-comment: var(--book-code-quiet);
+	--highlight-punctuation: var(--book-code-punctuation);
+	--highlight-operator: var(--book-code-punctuation);
+
+	--highlight-property: var(--book-code-literal);
+	--highlight-tag: var(--book-code-literal);
+	--highlight-boolean: var(--book-code-literal);
+	--highlight-number: var(--book-code-literal);
+	--highlight-constant: var(--book-code-literal);
+	--highlight-string: var(--book-code-literal);
+	--highlight-attr-name: var(--book-code-literal);
+	--highlight-attr-value: var(--book-code-literal);
+	--highlight-regex: var(--book-code-literal);
+	--highlight-variable: var(--book-code-literal);
+	--highlight-builtin: var(--book-code-literal);
+
+	--highlight-function: var(--book-code-name);
+	--highlight-class-name: var(--book-code-name);
+
+	--highlight-keyword: var(--book-code-text);
+
+	--highlight-inserted: var(--book-code-inserted);
+	--highlight-deleted: var(--book-code-deleted);
+}
+
+/* Weight and face carry what a single grey scale cannot. */
+.token.comment {
 	font-style: italic;
-}
-
-.token.punctuation,
-.token.operator,
-.token.entity,
-.token.namespace {
-	color: var(--book-code-punctuation);
-}
-
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.string,
-.token.char,
-.token.attr-name,
-.token.attr-value,
-.token.selector,
-.token.regex,
-.token.variable,
-.token.url,
-.token.builtin {
-	color: var(--book-code-literal);
 }
 
 .token.function,
-.token.class-name,
-.token.maybe-class-name,
-.token.parameter {
-	color: var(--book-code-name);
+.token.class-name {
 	font-weight: 600;
 }
 
-.token.keyword,
-.token.atrule,
-.token.important {
-	color: var(--book-code-text);
+.token.keyword {
 	font-weight: 700;
-}
-
-/* The two tokens a reader distinguishes by color alone, which is why they are split out of
-the literal group Prism's own theme keeps them in. */
-.token.inserted {
-	color: var(--book-code-inserted);
-}
-
-.token.deleted {
-	color: var(--book-code-deleted);
-}
-
-.token.bold {
-	font-weight: 700;
-}
-
-.token.italic {
-	font-style: italic;
-}
-
-.token.entity {
-	cursor: help;
 }

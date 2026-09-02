@@ -11,8 +11,8 @@ import { isFailure } from "@pkg/result";
 import * as s from "remix/data-schema";
 
 /**
- * Shared markdown parser (prism-highlighted fences, per the repo rule). Post bodies
- * carry no frontmatter, so a permissive schema is used.
+ * Shared markdown parser, with highlighted fences. Post bodies carry no frontmatter,
+ * so a permissive schema is used.
  */
 const parser = new Markdown({ frontmatter: s.object({}) });
 

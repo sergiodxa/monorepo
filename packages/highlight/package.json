@@ -1,0 +1,19 @@
+{
+	"name": "@pkg/highlight",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./markdoc": "./src/markdoc.ts",
+		"./styles.css": "./styles.css"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@markdoc/markdoc": "^0.5.9",
+		"remix": "3.0.0-rc.1"
+	}
+}

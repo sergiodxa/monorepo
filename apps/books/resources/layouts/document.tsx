@@ -11,6 +11,7 @@
 import type { SchemaOrg } from "@pkg/seo";
 import type { Handle, RemixNode } from "remix/ui";
 
+import highlightStyles from "@pkg/highlight/styles.css?url";
 import { Seo } from "@pkg/seo";
 import { bg, colorScheme, fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
@@ -23,8 +24,8 @@ import themeStyles from "@pkg/ui/theme.css?url";
 
 import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
 import colorStyles from "~/resources/css/colors.css?url";
+import codeStyles from "~/resources/css/highlight.css?url";
 import parityDealsStyles from "~/resources/css/parity-deals.css?url";
-import prismStyles from "~/resources/css/prism.css?url";
 import proseStyles from "~/resources/css/prose.css?url";
 
 /**
@@ -92,7 +93,8 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
 					<link rel="stylesheet" href={parityDealsStyles} data-rmx-key="style-parity-deals" />
 					<link rel="stylesheet" href={proseStyles} data-rmx-key="style-prose" />
-					<link rel="stylesheet" href={prismStyles} data-rmx-key="style-prism" />
+					<link rel="stylesheet" href={highlightStyles} data-rmx-key="style-highlight" />
+					<link rel="stylesheet" href={codeStyles} data-rmx-key="style-code" />
 					<Seo
 						title={title}
 						description={description}

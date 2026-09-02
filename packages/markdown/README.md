@@ -4,15 +4,15 @@ Markdown parsing, frontmatter validation, and rendering, from source text to Rem
 
 ## Overview
 
-`@pkg/markdown` parses markdown with [Markdoc](https://markdoc.dev), validates frontmatter with [Standard Schema](https://standardschema.dev), and highlights fenced code with [Prism.js](https://prismjs.com). Parsing returns a Markdoc render tree rather than markup, so the same parsed document can be rendered by different UI runtimes, cached, or handed to a client renderer untouched.
+`@pkg/markdown` parses markdown with [Markdoc](https://markdoc.dev), validates frontmatter with [Standard Schema](https://standardschema.dev), and highlights fenced code with [`@pkg/highlight`](/packages/highlight), whose Markdoc node it registers. Parsing returns a Markdoc render tree rather than markup, so the same parsed document can be rendered by different UI runtimes, cached, or handed to a client renderer untouched.
 
 The package has three entry points, split by what they need to run:
 
 - `@pkg/markdown` — markdown transformations that are neither parsing nor rendering, currently plain-text extraction. It carries no runtime beyond the parser, so an excerpt or a search index can use it without pulling in a highlighter or a renderer.
-- `@pkg/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, fence normalization, and Prism highlighting.
+- `@pkg/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, and the highlighter's fence node.
 - `@pkg/markdown/client` — the renderer, which turns a Markdoc tree into `remix/ui` nodes instead of React DOM elements, including the code-fence UI.
 
-Keeping the split at the entry-point level means highlighting and grammar imports stay out of client bundles, and the renderer stays out of loaders and services. Two stylesheets ship alongside them, `@pkg/markdown/styles/light.css` and `@pkg/markdown/styles/dark.css`, holding the Prism token colors the rendered fences expect.
+Keeping the split at the entry-point level means the grammars stay out of client bundles and the renderer stays out of loaders and services. The token colors the rendered fences expect live with the tokens, in `@pkg/highlight/styles.css`.
 
 ## Usage
 
@@ -86,10 +86,13 @@ A [linked](https://example.com) paragraph with \`code\`.
 ### Load a code theme
 
 ```tsx
-import prismDark from "@pkg/markdown/styles/dark.css?url";
+import highlightStyles from "@pkg/highlight/styles.css?url";
 
-export let links = () => [{ rel: "stylesheet", href: prismDark }];
+export let links = () => [{ rel: "stylesheet", href: highlightStyles }];
 ```
+
+Declare the `--highlight-*` properties afterwards to spend your own palette on
+the token types; [`@pkg/highlight`](/packages/highlight) lists them.
 
 ## API
 
@@ -223,13 +226,12 @@ validate, or when the schema validates asynchronously.
 - `name`: `"MarkdownParseError"`
 - `issues`: `ReadonlyArray<StandardSchemaV1.Issue>` — the validator's issues, empty for non-validation failures
 
-#### `fence`
+#### Fenced code
 
-Markdoc node definition for fenced code blocks. It reads the fence's `language`,
-`path`, and `title` attributes, normalizes the language, highlights the body with
-Prism when a grammar exists for it, and emits a `Fence` tag the client renderer
-knows how to draw. `Markdown` installs it by default, so it only needs importing
-when composing a custom Markdoc `nodes` map.
+Fences are highlighted by [`@pkg/highlight`](/packages/highlight)'s Markdoc node,
+which `Markdown` registers by default. It reads the fence's `language`, `path` and
+`title`, resolves the language through the highlighter's aliases, tokenizes the
+body, and emits a `Fence` tag the client renderer draws.
 
 **Example:**
 
@@ -238,29 +240,6 @@ when composing a custom Markdoc `nodes` map.
 export default function Root() {}
 ```
 ````
-
-#### `normalizeLanguage(language: string): fence.SupportedLanguage`
-
-Maps a fence language alias to the Prism grammar identifier used for
-highlighting — `ts` and `tsx` to `typescript`/`tsx`, `sh` and `shell` to `bash`,
-`md` and `mdx` to `markdown`, `jsonc` to `json`, `env` and `text` to `plain`, and
-so on. Unknown values pass through unchanged.
-
-**Parameters:**
-
-- `language`: Raw language string written on the fence
-
-**Returns:**
-
-- The normalized Prism identifier
-
-**Example:**
-
-```typescript
-import { normalizeLanguage } from "@pkg/markdown/server";
-
-let language = normalizeLanguage("sh"); // "bash"
-```
 
 #### Types
 
@@ -329,13 +308,14 @@ return () => <article>{renderToRemix(content)}</article>;
 #### `Fence`
 
 The code-fence component the default renderer uses for `Fence` tags. It draws a
-scrollable `<pre>` with the Prism token classes the stylesheets target, plus an
+scrollable `<pre>`, emitting one span per token with the classes the stylesheet
+targets, plus an
 optional header showing the fence's `title` and `path`.
 
 **Props:**
 
-- `content`: `string` — already-highlighted HTML from the server `fence` node
-- `language`: `string` — normalized Prism identifier, used for the `language-*` class
+- `tokens`: `Token[]` — the runs the fence node highlighted, rendered one span each
+- `language`: `string` — resolved language name, used for the `language-*` class
 - `path?`: `string` — file path shown in the header
 - `title?`: `string` — label shown in the header
 
@@ -455,12 +435,12 @@ let minutes = Math.ceil(wordCount(text) / 200);
 
 ## Tips
 
-1. **Import `/server` only from server code** - The server entry point pulls in Prism and its grammars; keeping it out of components keeps that weight out of client bundles.
+1. **Import `/server` only from server code** - The server entry point pulls in the grammars; keeping it out of components keeps that weight out of client bundles.
 2. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests instead of building one per parse.
-3. **Always load a Prism stylesheet** - Without `@pkg/markdown/styles/light.css` or `@pkg/markdown/styles/dark.css`, highlighted fences render as undifferentiated text.
+3. **Always load the highlighter's stylesheet** - Without `@pkg/highlight/styles.css`, highlighted fences render as undifferentiated text.
 4. **Keep frontmatter schemas synchronous** - An async validator returns a `MarkdownParseError` rather than awaiting; the parse path is deliberately sync.
 5. **Prefer `Markdown.frontmatter` for index pages** - It skips the Markdoc transform and the highlighting that comes with it.
-6. **Write fences with known aliases** - `tsx`, `sh`, `jsonc`, and friends normalize to a Prism grammar; an unrecognized language falls through unhighlighted.
+6. **Write fences with known aliases** - `tsx`, `sh`, `jsonc`, and friends resolve to a grammar; an unrecognized language renders as plain text.
 7. **Use `toPlainText` for excerpts and search indexes** - It reads the parsed tree, so it cannot be fooled by markup a regular expression would miss.
 8. **Turn on `fences` only for a search index** - Code reads as noise in an excerpt but is worth indexing.
 9. **Reach for `renderToRemix` over `MarkdownView` when composing** - Use it when the rendered nodes go inside surrounding markup you control; use the component when the document stands alone.

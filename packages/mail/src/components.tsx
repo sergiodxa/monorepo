@@ -64,6 +64,8 @@ const DARK_RULES = [
 	".mail-tok-number{color:#79c0ff !important;}",
 	".mail-tok-function{color:#d2a8ff !important;}",
 	".mail-tok-punctuation{color:#c9d1d9 !important;}",
+	".mail-tok-inserted{color:#7ee787 !important;}",
+	".mail-tok-deleted{color:#ffa198 !important;}",
 ].join("");
 
 /**

@@ -7,22 +7,17 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./server": "./src/server/index.ts",
-		"./client": "./src/client/index.tsx",
-		"./styles/light.css": "./styles/prism-light.css",
-		"./styles/dark.css": "./styles/prism-dark.css"
+		"./client": "./src/client/index.tsx"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@markdoc/markdoc": "^0.5.9",
+		"@pkg/highlight": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
-		"prismjs": "^1.30.0",
 		"remix": "3.0.0-rc.1",
 		"yaml": "^2.9.0"
-	},
-	"devDependencies": {
-		"@types/prismjs": "^1.26.6"
 	}
 }

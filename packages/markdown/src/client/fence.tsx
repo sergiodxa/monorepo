@@ -1,6 +1,6 @@
 /**
- * Renders Markdoc code fences as highlighted `<pre>` blocks with an optional
- * header showing the file path and title.
+ * Renders a highlighted code fence as a `<pre>` block with an optional header
+ * showing the file path and title.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,6 +8,7 @@
 
 /* @jsxImportSource remix/ui */
 
+import type { Token } from "@pkg/highlight";
 import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
@@ -20,7 +21,7 @@ export namespace Fence {
 	 * Describes the highlighted code block and optional header metadata.
 	 */
 	export interface Props {
-		content: string;
+		tokens: Token[];
 		language: string;
 		path?: string;
 		title?: string;
@@ -31,7 +32,7 @@ export namespace Fence {
  * Creates a Remix renderer for highlighted code fences.
  */
 export function Fence({ props }: Handle<Fence.Props>) {
-	let { content, language, path, title } = props;
+	let { tokens, language, path, title } = props;
 	let hasHeader = Boolean(path || title);
 
 	return () => (
@@ -78,7 +79,7 @@ export function Fence({ props }: Handle<Fence.Props>) {
 								<span
 									mix={[
 										css({
-											color: "var(--color-highlight-comment)",
+											color: "var(--highlight-comment)",
 											fontFamily:
 												'"Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive',
 											fontWeight: 500,
@@ -93,7 +94,17 @@ export function Fence({ props }: Handle<Fence.Props>) {
 					</header>
 				)}
 
-				<code className={`language-${language}`} innerHTML={content} />
+				<code className={`language-${language}`}>
+					{tokens.map((token, index) =>
+						token.type === "plain" ? (
+							token.value
+						) : (
+							<span key={index} className={`token ${token.type}`}>
+								{token.value}
+							</span>
+						),
+					)}
+				</code>
 			</pre>
 		</div>
 	);

@@ -1,99 +1,61 @@
 /**
  * Markdown as an email body, and the highlighted code block it renders fences with.
  *
- * A separate entry point keeps Markdoc and Prism out of mail bundles that carry no
- * markdown, since escaping their HTML output would leave markup as text in the inbox.
+ * A separate entry point keeps Markdoc and the highlighter out of mail bundles that
+ * carry no markdown.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
+import type { Token } from "@pkg/highlight";
 import type { Handle, RemixNode } from "remix/ui";
 
 import Markdoc from "@markdoc/markdoc";
-import Prism from "prismjs";
+import { tokenize } from "@pkg/highlight";
+import { fence } from "@pkg/highlight/markdoc";
 
 import { CODE_COLOR, CodeInline, Heading, Hr, Img, Link, MONO_FAMILY, Text } from "./components";
 
-import "prismjs/components/prism-bash.js";
-import "prismjs/components/prism-css.js";
-import "prismjs/components/prism-diff.js";
-import "prismjs/components/prism-json.js";
-import "prismjs/components/prism-jsx.js";
-import "prismjs/components/prism-markdown.js";
-import "prismjs/components/prism-sql.js";
-/** `prism-tsx.js` clones `Prism.languages.typescript` at load, so TypeScript comes first. */
-import "prismjs/components/prism-typescript.js";
-import "prismjs/components/prism-tsx.js";
-import "prismjs/components/prism-yaml.js";
-
-/** Fence languages named by an alias Prism does not register under. */
-const ALIASES: Record<string, string> = {
-	js: "javascript",
-	jsonc: "json",
-	md: "markdown",
-	sh: "bash",
-	shell: "bash",
-	ts: "typescript",
-	yml: "yaml",
-};
-
 /**
- * The colour of each kind of token, and the class that recolours it in dark mode.
+ * The colour of each token type, and the class that recolours it in dark mode.
  *
- * Prism's dozens of token types collapse to six buckets, enough for code to read as
- * code without inflating the dark-mode stylesheet past six rules.
+ * Six colours for twenty types, because an inbox reads at a glance and every
+ * colour spent here is another rule the dark-mode stylesheet has to carry.
  */
-const TOKENS: Record<string, { color: string; class: string }> = {
+const TOKENS: Record<Token.Type, { color: string; class: string } | undefined> = {
 	comment: { color: "#6a737d", class: "mail-tok-comment" },
 	keyword: { color: "#d73a49", class: "mail-tok-keyword" },
-	string: { color: "#032f62", class: "mail-tok-string" },
-	number: { color: "#005cc5", class: "mail-tok-number" },
-	function: { color: "#6f42c1", class: "mail-tok-function" },
+	operator: { color: "#24292e", class: "mail-tok-punctuation" },
 	punctuation: { color: "#24292e", class: "mail-tok-punctuation" },
+	string: { color: "#032f62", class: "mail-tok-string" },
+	regex: { color: "#032f62", class: "mail-tok-string" },
+	"attr-value": { color: "#032f62", class: "mail-tok-string" },
+	builtin: { color: "#032f62", class: "mail-tok-string" },
+	number: { color: "#005cc5", class: "mail-tok-number" },
+	boolean: { color: "#005cc5", class: "mail-tok-number" },
+	constant: { color: "#005cc5", class: "mail-tok-number" },
+	property: { color: "#005cc5", class: "mail-tok-number" },
+	function: { color: "#6f42c1", class: "mail-tok-function" },
+	"class-name": { color: "#6f42c1", class: "mail-tok-function" },
+	tag: { color: "#6f42c1", class: "mail-tok-function" },
+	"attr-name": { color: "#6f42c1", class: "mail-tok-function" },
+	variable: { color: "#6f42c1", class: "mail-tok-function" },
+	inserted: { color: "#22863a", class: "mail-tok-inserted" },
+	deleted: { color: "#b31d28", class: "mail-tok-deleted" },
+	plain: undefined,
 };
 
-/** Which bucket a Prism token type falls in, or none for the ones left unpainted. */
-function bucket(type: string): (typeof TOKENS)[string] | undefined {
-	if (type === "comment" || type === "prolog" || type === "doctype" || type === "cdata") {
-		return TOKENS.comment;
-	}
-	if (type === "keyword" || type === "atrule" || type === "important" || type === "selector") {
-		return TOKENS.keyword;
-	}
-	if (type === "string" || type === "char" || type === "attr-value" || type === "regex") {
-		return TOKENS.string;
-	}
-	if (type === "number" || type === "boolean" || type === "constant" || type === "symbol") {
-		return TOKENS.number;
-	}
-	if (type === "function" || type === "class-name" || type === "tag" || type === "attr-name") {
-		return TOKENS.function;
-	}
-	if (type === "punctuation" || type === "operator") return TOKENS.punctuation;
-	return undefined;
-}
-
-/** Flattens a Prism token's content, which nests to whatever depth the grammar needed. */
-function tokenText(content: string | Prism.Token | (string | Prism.Token)[]): string {
-	if (typeof content === "string") return content;
-	if (Array.isArray(content)) return content.map(tokenText).join("");
-	return tokenText(content.content);
-}
-
-/** One highlighted run, as a coloured span or as bare text when nothing paints it. */
-function highlight(tokens: (string | Prism.Token)[]): RemixNode {
+/** One highlighted run, as a coloured span or as bare text where nothing paints it. */
+function highlight(tokens: Token[]): RemixNode {
 	return tokens.map((token, index) => {
-		if (typeof token === "string") return token;
-
-		let text = tokenText(token.content);
-		let painted = bucket(token.type);
-		if (!painted) return text;
+		let painted = TOKENS[token.type];
+		if (!painted) return token.value;
 
 		return (
 			<span key={index} class={painted.class} style={`color:${painted.color};`}>
-				{text}
+				{token.value}
 			</span>
 		);
 	});
@@ -105,6 +67,8 @@ export namespace CodeBlock {
 		code: string;
 		/** Language to highlight as; an unknown one still renders, left unpainted. */
 		language?: string;
+		/** Already-highlighted runs, as the fence node produces them. */
+		tokens?: Token[];
 	}
 }
 
@@ -118,10 +82,8 @@ export namespace CodeBlock {
  */
 export function CodeBlock(handle: Handle<CodeBlock.Props>) {
 	return () => {
-		let { code, language } = handle.props;
-		let name = language ? (ALIASES[language] ?? language) : undefined;
-		let grammar = name ? Prism.languages[name] : undefined;
-		let content = grammar ? highlight(Prism.tokenize(code, grammar)) : code;
+		let { code, language, tokens } = handle.props;
+		let content = highlight(tokens ?? tokenize(code, language ?? "plain"));
 
 		return (
 			<table
@@ -238,8 +200,17 @@ function convert(node: RenderableTreeNode, key: number): RemixNode {
 		case "code":
 			return <CodeInline key={key}>{children}</CodeInline>;
 
-		case "pre":
-			return <CodeBlock key={key} code={textOf(node)} language={attr(node, "data-language")} />;
+		case "Fence": {
+			let tokens = node.attributes?.tokens;
+			return (
+				<CodeBlock
+					key={key}
+					code={textOf(node)}
+					language={attr(node, "language")}
+					tokens={Array.isArray(tokens) ? (tokens as Token[]) : undefined}
+				/>
+			);
+		}
 
 		case "hr":
 			return <Hr key={key} />;
@@ -309,7 +280,7 @@ export namespace Markdown {
  */
 export function Markdown(handle: Handle<Markdown.Props>) {
 	return () => {
-		let tree = Markdoc.transform(Markdoc.parse(handle.props.children));
+		let tree = Markdoc.transform(Markdoc.parse(handle.props.children), { nodes: { fence } });
 		return <>{convert(tree, 0)}</>;
 	};
 }

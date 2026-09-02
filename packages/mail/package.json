@@ -16,11 +16,8 @@
 	},
 	"dependencies": {
 		"@markdoc/markdoc": "^0.5.9",
+		"@pkg/highlight": "workspace:*",
 		"@pkg/result": "workspace:*",
-		"prismjs": "^1.30.0",
 		"remix": "3.0.0-rc.1"
-	},
-	"devDependencies": {
-		"@types/prismjs": "^1.26.6"
 	}
 }

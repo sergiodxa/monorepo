@@ -8,6 +8,7 @@
 
 /* @jsxImportSource remix/ui */
 
+import type { Token } from "@pkg/highlight";
 import type { RemixNode } from "remix/ui";
 
 import { createElement, css } from "remix/ui";
@@ -134,7 +135,7 @@ function renderChild(
 	if (tagName === "Fence") {
 		return (
 			<Fence
-				content={textAttribute(attrs.content, "")}
+				tokens={Array.isArray(attrs.tokens) ? (attrs.tokens as Token[]) : []}
 				language={textAttribute(attrs.language, "plain")}
 				path={typeof attrs.path === "string" ? attrs.path : undefined}
 				title={typeof attrs.title === "string" ? attrs.title : undefined}

@@ -1,7 +1,7 @@
 /**
  * Controller for `/assets/:file`, serving the engine's small set of self-hosted
- * static assets (currently just the Prism CSS) with immutable caching, so hosts need
- * no build-pipeline cooperation.
+ * static assets (currently just the highlighting stylesheet) with immutable caching,
+ * so hosts need no build-pipeline cooperation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,10 +11,10 @@ import { notFound } from "@pkg/http/response/html";
 import { createAction } from "remix/router";
 
 import routes from "../../routes";
-import { PRISM_CSS } from "../prism-css";
+import { HIGHLIGHT_CSS } from "../highlight-css";
 
 const ASSETS: Record<string, string> = {
-	"prism.css": PRISM_CSS,
+	"highlight.css": HIGHLIGHT_CSS,
 };
 
 /** Serves `/assets/:file` with immutable caching. */

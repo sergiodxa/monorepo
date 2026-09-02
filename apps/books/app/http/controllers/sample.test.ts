@@ -77,7 +77,7 @@ describe("POST /sample", () => {
 
 		expect(body).toContain('class="language-javascript');
 		expect(body).toContain('class="language-typescript');
-		expect(body).toContain('class="language-txt');
+		expect(body).toContain('class="language-plain');
 		expect(body.match(/<pre class="language-/g)).toHaveLength(6);
 	});
 

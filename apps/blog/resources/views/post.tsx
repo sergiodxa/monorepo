@@ -3,7 +3,7 @@
  * link, and the Markdown body, followed by a sponsor call-to-action and, for
  * tutorials, an embedded related-posts frame. Prose rhythm comes from the design
  * system's `Typeset` layer, with the code-block theme layered on top from
- * `prism.css`.
+ * `highlight.css`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

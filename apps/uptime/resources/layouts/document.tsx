@@ -11,6 +11,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import highlightStyles from "@pkg/highlight/styles.css?url";
 import { Seo } from "@pkg/seo";
 import { bg, fg } from "@pkg/u/color";
 import { m } from "@pkg/u/size";
@@ -108,6 +109,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="stylesheet" href={resetStyles} />
 					<link rel="stylesheet" href={colorStyles} />
 					<link rel="stylesheet" href={themeStyles} />
+					<link rel="stylesheet" href={highlightStyles} />
 					<style>{fontFaceCss}</style>
 				</head>
 				<body mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), font("mono")]}>

@@ -21,7 +21,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST assemble the `<html>`/`<head>`/`<body>` shell only in `resources/layouts/document.tsx`; page shells (`blog.tsx`, `cms.tsx`) compose it and contribute their own chrome. The stylesheet order (reset, app palette, theme, then page stylesheets), the `<title>`/meta tags, and the client entry script live there and nowhere else, so a change lands once.
 - MUST NOT load the `bootstrap/browser.ts` client entry from the document shell without re-testing navigation on Safari. Loading it buys SPA-style navigation, and on Safari it also made navigating out of a post flash unstyled: the runtime keeps every generated atomic rule in one constructed `adoptedStyleSheets` entry and releases the rules the incoming page doesn't use (57 of 145 leaving a post), which Safari repaints during. Keying the head children, serving every stylesheet on every page, and wrapping the swap in a view transition all failed to fix it. If it is re-enabled, `<script type="module" async>` plus a matching `modulepreload` is the right shape — `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
 - SHOULD keep the build and document setup conventional: the `vite.config.ts` shape, the `resources/layouts/document.tsx` role, and the `CLIENT_ENTRY_SRC` constant are the shared vocabulary every Remix v3 app in this repo uses, so a change here should be expressible the same way anywhere else.
-- MUST keep code-block syntax colors in `resources/css/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales.
+- MUST keep code-block syntax colors in `resources/css/highlight.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales. The file declares the `--highlight-*` properties that `@pkg/highlight/styles.css` paints each token type from; the selectors themselves belong to the package.
 - MUST ensure changes pass `bunx tsc -p apps/blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 - MUST receive `ctx` as a handler argument in `app/http/controllers/**/*` (actions, handlers, and inline middleware callbacks) and use that value directly.
@@ -42,7 +42,7 @@ This document defines app-specific rules for `apps/blog`.
 
 - MAY add new semantic UI tokens if needed for accessibility or interaction states.
 - MAY add small helper utilities for repeated publish/preview logic.
-- MAY extend `prism.css` token tuning when readability regresses for specific languages (TS/JSX/shell).
+- MAY extend `highlight.css` token tuning when readability regresses for specific languages (TS/JSX/shell).
 
 - MUST NOT reintroduce support for non-public post types in `app/http/controllers/post.tsx` without explicit product direction.
 - MUST NOT mark items with `published_at === null` as preview.
@@ -101,7 +101,7 @@ This document defines app-specific rules for `apps/blog`.
   - `resources/layouts/cms.tsx`
 - Styling system
   - `resources/css/colors.css`
-  - `resources/css/prism.css`
+  - `resources/css/highlight.css`
   - `packages/u/README.md` (utility mixin catalog and the scale contract)
   - `packages/ui/README.md` (component catalog)
   - `packages/ui/src/theme.css` (the semantic `--ui-*` layer this app's palette feeds)

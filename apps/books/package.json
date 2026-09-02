@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/highlight": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",

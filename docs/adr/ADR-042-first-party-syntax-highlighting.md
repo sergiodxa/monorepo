@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-02
+**Implemented** - 2026-09-02
 
 ## Background
 
@@ -280,8 +280,12 @@ and `@pkg/mail` maps the same twenty types to inline colors.
 
 ### Positive
 
-- 57.1 KB minified, 20.8 KB gzipped leaves the SSR bundle of every Worker that renders
-  markdown, and 42.5 KB minified leaves the one that sends markdown mail.
+- The Workers get smaller, measured the same way as before. `@pkg/markdown/server`
+  goes from 317.2 KB minified and 103.2 KB gzipped to 277.2 KB and 87.4 KB;
+  `@pkg/mail/markdown` from 197.6 KB and 67.3 KB to 176.6 KB and 57.2 KB. The saving
+  is less than Prism's whole share because the replacement has a size of its own: the
+  scanner and all seventeen grammars are 18.5 KB minified, 5.5 KB gzipped, against
+  Prism's core and fifteen grammars at 57.7 KB and 19.1 KB.
 - No fence reaches `innerHTML`, because no fence carries markup: the renderers receive
   tokens and emit elements. The escaping the node does today, and the injection it does
   today for a language with no grammar, both stop being possible rather than being
