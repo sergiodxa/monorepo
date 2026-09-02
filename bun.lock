@@ -253,6 +253,18 @@
         "@pkg/kv-cache": "workspace:*",
       },
     },
+    "packages/billing": {
+      "name": "@pkg/billing",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/api-client": "workspace:*",
+        "@pkg/crypto": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/validate": "workspace:*",
+        "@pkg/webhooks": "workspace:*",
+        "remix": "3.0.0-rc.1",
+      },
+    },
     "packages/blog-engine": {
       "name": "@pkg/blog-engine",
       "version": "0.0.0",
@@ -1169,6 +1181,8 @@
     "@pkg/arrays": ["@pkg/arrays@workspace:packages/arrays"],
 
     "@pkg/auth": ["@pkg/auth@workspace:packages/auth"],
+
+    "@pkg/billing": ["@pkg/billing@workspace:packages/billing"],
 
     "@pkg/blog-engine": ["@pkg/blog-engine@workspace:packages/blog-engine"],
 

@@ -2,9 +2,11 @@
 
 ## Status
 
-**Proposed** - 2026-09-02
+**Accepted** - 2026-09-02
 
-Revised the same day, twice. First after a prior-art review of Pay (Rails), Cashier (Laravel), PayKit, and roughly fifteen other multi-provider billing abstractions, which added an escape hatch this design did not have and corrected its data model. Then again after the goal itself was restated: the package exists so billing is implemented the same way in every app, not so a provider could be swapped cheaply. That second pass removed API surface rather than adding it. [Prior Art](#prior-art) records the evidence.
+Revised three times, all on the same day. First after a prior-art review of Pay (Rails), Cashier (Laravel), PayKit, and roughly fifteen other multi-provider billing abstractions, which added an escape hatch this design did not have and corrected its data model. Then again after the goal itself was restated: the package exists so billing is implemented the same way in every app, not so a provider could be swapped cheaply. That second pass removed API surface rather than adding it. [Prior Art](#prior-art) records the evidence.
+
+The third pass is this one, written after the package was built. Four providers exist: a memory one, Polar across every group, a deliberately narrow Stripe, and Mercado Pago. Writing three real providers against the contract found bugs in the contract, and this revision is what they changed: `reference()` now reads request headers and answers with a delivery id distinct from the object id, `event()` is async, `portal` and `discounts` and `usage` joined `meters` as optional groups, `subscriptions.cancel` became a contract method, `providerData` became an allow-list, `currencyUnit` was deleted, and the error vocabulary gained `invalid_response` and `retryAfter` while losing `unavailable`. The design in [Decision](#decision) is the one that exists.
 
 ## Background
 
@@ -59,22 +61,24 @@ Secrets are `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, and `POLAR_PRODUCT_ID`
 
 ### What "Switchable" Has To Mean
 
-| Concept            | Polar                          | Stripe                                    |
-| ------------------ | ------------------------------ | ----------------------------------------- |
-| Customer           | `customers`                    | `customers`                               |
-| Product / price    | `products`, prices embedded    | `products` plus separate `prices`         |
-| Checkout session   | `checkouts`                    | `checkout.sessions`                       |
-| Portal session     | `customerSessions`             | `billingPortal.sessions`                  |
-| Subscription       | `subscriptions`                | `subscriptions`                           |
-| Paid order         | `orders`                       | `invoices` plus `paymentIntents`          |
-| Discount           | `discounts`                    | `coupons` plus `promotionCodes`           |
-| Usage event        | `events.ingest`                | `billing.meterEvents`                     |
-| Meter reading      | `meters.quantities`            | meter event summaries                     |
-| Refund             | `refunds`                      | `refunds`                                 |
-| License key        | `licenseKeys`                  | none                                      |
-| File benefit       | `files`, downloadable benefits | none                                      |
-| Webhook proof      | Standard Webhooks headers      | `Stripe-Signature` with `t=`/`v1=` parts  |
-| Tax and remittance | merchant of record             | we remain the seller, Stripe Tax computes |
+| Concept            | Polar                          | Stripe                                    | Mercado Pago                                      |
+| ------------------ | ------------------------------ | ----------------------------------------- | ------------------------------------------------- |
+| Customer           | `customers`                    | `customers`                               | `customers`, searchable by email only             |
+| Product / price    | `products`, prices embedded    | `products` plus separate `prices`         | `preapproval_plan` for recurring, nothing else    |
+| Checkout session   | `checkouts`                    | `checkout.sessions`                       | `preferences` with inline items, or `preapproval` |
+| Portal session     | `customerSessions`             | `billingPortal.sessions`                  | none                                              |
+| Subscription       | `subscriptions`                | `subscriptions`                           | `preapproval`                                     |
+| Paid order         | `orders`                       | `invoices` plus `paymentIntents`          | `payments`                                        |
+| Discount           | `discounts`                    | `coupons` plus `promotionCodes`           | none                                              |
+| Usage event        | `events.ingest`                | `billing.meterEvents`                     | none                                              |
+| Meter reading      | `meters.quantities`            | meter event summaries                     | none                                              |
+| Refund             | `refunds`                      | `refunds`                                 | `payments/{id}/refunds`                           |
+| License key        | `licenseKeys`                  | none                                      | none                                              |
+| File benefit       | `files`, downloadable benefits | none                                      | none                                              |
+| Webhook proof      | Standard Webhooks headers      | `Stripe-Signature` with `t=`/`v1=` parts  | `x-signature` with `ts`/`v1` parts                |
+| Tax and remittance | merchant of record             | we remain the seller, Stripe Tax computes | we remain the seller, no tax service at all       |
+
+The third column is not hypothetical any more: all three providers are written, and the rows reading "none" are what turned four capability groups optional in §4.
 
 ### Prior Art
 
@@ -149,7 +153,7 @@ Most tellingly, the two better-auth plugins that agree on nothing else both conv
 
 ## Decision
 
-Create `@pkg/billing`: vendor-neutral billing models plus a provider contract, with Polar as the first provider and an in-memory provider that is a real implementation. `@pkg/polar` is deprecated on adoption and deleted once its last consumer moves.
+Create `@pkg/billing`: vendor-neutral billing models plus a provider contract, with Polar as the first provider and an in-memory provider that is a real implementation. A narrow Stripe provider and a Mercado Pago provider exist alongside them to keep the contract honest, adopted by no app. `@pkg/polar` is deprecated on adoption and deleted once its last consumer moves.
 
 The name is the domain, not the vendor, and matches `@pkg/mail` (ADR-018) and `@pkg/rate-limit` (ADR-019). `@pkg/commerce` was rejected as promising carts and catalogs; `@pkg/payments` as excluding subscriptions and entitlements, which are most of what the apps read.
 
@@ -167,11 +171,11 @@ It does not promise a uniform verb for every operation. Where platforms genuinel
 
 ### 2. The Shape: Methods, Webhooks, Hosted Links
 
-Three rules, chosen because they are the intersection every billing platform supports, so the same shape stays available whatever an app runs on:
+Three rules. Methods and events are the intersection every billing platform supports; hosted links are how everything touching a card stays out of our code, on whichever pages the platform hosts. The same shape stays available whatever an app runs on:
 
-1. **Methods** for what we ask the platform to do — create a customer, open a checkout, ingest usage, read something back.
+1. **Methods** for what we ask the platform to do — create a customer, open a checkout, cancel a subscription, read something back.
 2. **Normalized webhook events** for how we learn what happened. Apps sync their own state from them and read their own tables.
-3. **Hosted links** for anything touching money or a card. Every purchase is a redirect to a checkout link; every billing-management action is a redirect to a portal link.
+3. **Hosted links** for anything touching money or a card. Every purchase is a redirect to a checkout link, and every billing-management action that touches a card is a redirect to a portal link on the platforms that have one.
 
 What that excludes is the point. No card data, no payment-method objects, no embedded checkout, no setup intents, no SCA or 3-D Secure handling, no invoice rendering, no dunning. Those are precisely the areas the prior art says do not abstract: Omnipay's on-site-versus-redirect split that 3-D Secure made incoherent, ActiveMerchant extracting off-site payments into a separate gem after concluding redirect flows do not fit a request/response contract, and Cashier's payment-method and incomplete-payment subsystems that exist only on its Stripe side. Being hosted-only removes them from scope instead of solving them.
 
@@ -261,14 +265,14 @@ export interface Billing {
 	readonly customers: CustomerApi;
 	readonly catalog: CatalogApi;
 	readonly checkouts: CheckoutApi;
-	readonly portal: PortalApi;
 	readonly subscriptions: SubscriptionApi;
 	readonly entitlements: EntitlementApi;
 	readonly orders: OrderApi;
-	readonly discounts: DiscountApi;
-	readonly usage: UsageApi;
 	readonly webhooks: WebhookApi;
 
+	readonly portal?: PortalApi;
+	readonly discounts?: DiscountApi;
+	readonly usage?: UsageApi;
 	readonly meters?: MeterApi;
 
 	/** The configured HTTP client, for what the contract does not model. */
@@ -299,7 +303,9 @@ Checkout and portal hand back a **URL, not a `Response`**, which is what makes t
 
 Grouping the resources keeps them discoverable without a flat client of 26 methods; PayKit's flat 21-method interface is the counter-example, where adding one method breaks all 17 of its providers.
 
-Only one optional group ships: `meters`, because a feature is already waiting on it. Refunds, license keys, downloadable files, custom fields, metrics, and webhook-endpoint management are all things Polar can do and nothing here needs, so they are absent. A group is added when an app reaches for one — a group added on spec is surface nobody exercises, which is how a shared package stops being the thing you read to understand billing.
+Seven groups are required, because all three platforms have them: `customers`, `catalog`, `checkouts`, `subscriptions`, `entitlements`, `orders`, and `webhooks`. Four are optional. `meters` was optional from the first draft because a feature was already waiting on it; `portal`, `discounts`, and `usage` became optional when Mercado Pago was written, since it has no payer-facing hosted portal, no merchant coupon API, and no metering endpoint of any kind. Three whole groups absent from one platform is what the optional-property seam in §5 is for, and the first draft's guess at which groups were universal was wrong on three of the ten it declared required.
+
+Refunds, license keys, downloadable files, custom fields, metrics, and webhook-endpoint management are all things Polar can do and nothing here needs, so they are absent entirely. A group is added when an app reaches for one — a group added on spec is surface nobody exercises, which is how a shared package stops being the thing you read to understand billing.
 
 ### 5. Capabilities Are Optional Properties
 
@@ -312,7 +318,9 @@ let usage = await billing.meters.quantities({ meter: "pings", customer });
 
 `supports()` narrows through `Required<Pick<Billing, K>>`, so the optional property is non-optional inside the branch. The optional property is both the declaration and the implementation, which is why it cannot disagree with itself the way Omnipay's `supportsRefund()` and Rails' twenty `supports_*?` predicates can. Medusa added account holders and saved payment methods across three minor versions without breaking a single existing provider on exactly this mechanism.
 
-It also means a page rendering meter usage does not typecheck against a platform with no meters. Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
+Mercado Pago is what proves the mechanism carries its weight. It declares `customers`, `catalog`, `checkouts`, `subscriptions`, `entitlements`, `orders`, and `webhooks`, and omits `portal`, `discounts`, `usage`, and `meters` — four absent properties instead of four throwing stubs, and a page rendering meter usage does not typecheck against it.
+
+Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
 
 A capability gap is never a silent no-op and never a missing method. It is an absent property, checked by the compiler.
 
@@ -349,15 +357,16 @@ Derived state is computed from our own fields rather than delegated to a vendor 
 
 `providerData` is the escape hatch, and it is deliberate rather than apologetic. Nine independent projects arrived at the same invention, and the ADR is not going to be the tenth to discover it late.
 
-Three rules, taken from the prior art's mistakes:
+Four rules, three taken from the prior art's mistakes and one from our own:
 
 - The package never reads it. It is stored, returned, and otherwise untouched.
 - It never holds anything sensitive. Medusa's `data` is publicly reachable from its storefront, and that footgun is worth avoiding by policy rather than by review.
+- **It is an allow-list, not a passthrough.** Every mapper assembles `providerData` from named fields and redacts anything that authorizes acting. Writing three providers showed the rule above does not enforce itself: the obvious implementation is spreading the response body, and that alone leaks a Stripe customer's `address`, `phone`, and `shipping`, and a Polar checkout's `client_secret`, into a bag the previous rule says is safe to log and hand to a view. The raw payload still has a home — `raw` on an event (§17) and the projection column in §23 — but those are places an app opts into, not a field on every model.
 - `native` on the provider is the other half: the configured vendor client for operations the contract does not model. Reaching for it is expected, not a failure — the review's estimate is that a fifth to a third of real billing code stays provider-specific, and Cashier, Pay, and PayKit all ship this door.
 
 An escape-hatch call site is not portable, and that is visible in the code rather than discovered during a migration.
 
-### 8. Money Is Minor Units, And The Provider Declares Its Convention
+### 8. Money Is Minor Units, Converted Inside The Provider
 
 ```ts
 export interface Money {
@@ -369,16 +378,11 @@ export interface Money {
 
 PayKit is the cautionary case: a unified `amount: number` whose unit silently depends on the provider, no conversion anywhere, and a `amountToCentsMultiplier` knob in its framework adapter admitting the field was never unified.
 
-So the provider declares what its platform speaks, rather than the package assuming:
+So every amount crossing the contract is minor units, and a provider whose platform speaks something else converts on both edges. Mercado Pago is that platform — its amounts are major units, so its mapper divides on the way out and multiplies on the way in — which is the concern that earned this section, now with a real case behind it.
 
-```ts
-interface Billing {
-	/** Whether this provider's API speaks minor units or major units. */
-	readonly currencyUnit: "minor" | "major";
-}
-```
+The first draft also had the provider declare its convention as a `currencyUnit: "minor" | "major"` field. That field is deleted. Nothing ever read it, because conversion is the provider's own business and the declaration told a caller something it must never act on; a declared-but-unread constant is the exact failure §6 warns about with Pay's dead `STATUSES`. The conformance suite carries the guarantee instead: it round-trips an amount in a zero-decimal currency, so a provider that assumes cents fails a spec rather than a production charge.
 
-Minor units are not universally two decimals. JPY and CLP have none; BHD and KWD have three. Precision is derived from the currency table rather than assumed, and the conformance suite bills in a zero-decimal currency so a provider that assumes cents fails there instead of in production.
+Minor units are not universally two decimals. JPY and CLP have none; BHD and KWD have three. Precision is derived from the currency table rather than assumed.
 
 Usage costs stay a decimal string, because per-unit infrastructure costs fall below `1e-6`, where JavaScript switches to exponential notation and Polar's parser rejects the value:
 
@@ -400,11 +404,12 @@ export type BillingErrorCode =
 	| "forbidden"
 	| "conflict"
 	| "rate_limited"
-	| "unavailable"
 	/** The platform cannot do this at all. */
 	| "unsupported"
 	/** This provider has not implemented it yet. */
 	| "not_implemented"
+	/** The platform answered 2xx in a shape we cannot map. */
+	| "invalid_response"
 	/** A timeout or 5xx: the operation may or may not have taken effect. */
 	| "unknown";
 
@@ -415,6 +420,8 @@ export class BillingError extends Error {
 	readonly providerCode: string | null;
 	/** Never `true` for `unknown`. */
 	readonly retryable: boolean;
+	/** Seconds to wait, from the platform's `Retry-After`, when it sent one. */
+	readonly retryAfter: number | null;
 }
 ```
 
@@ -441,15 +448,27 @@ An `unknown` that cannot be resolved is only a nicer label for a lost write, so 
 
 Providers are consequently required to implement a read-back for anything they mutate, and that read-back is the only path the reconciliation job uses.
 
+The vocabulary changed while the providers were written, in three ways worth recording.
+
+`invalid_response` is new, because a response we cannot parse is not an unknown outcome. A failed read did not maybe-take-effect, so answering `unknown` would send a caller into reconciliation over what is really a mapping bug of ours. A provider whose schema rejects a 2xx body answers `invalid_response` and the caller knows the platform is fine and we are not.
+
+`unavailable` is deleted, because no provider ever emitted it. Every 5xx and every timeout is `unknown` by the rule above, so a code meaning "the platform is down and definitely did nothing" cannot be honestly derived from the wire — it was a declared-but-unreachable value, the same failure `currencyUnit` was deleted for in §8.
+
+`retryAfter` is new, because `retryable` alone is not actionable. A `429` carries `Retry-After` on all three platforms, and a job branching on `retryable` otherwise invents a backoff while the platform is telling it the answer.
+
 ### 10. Customers Are Referenced By Either Id, As A Union
 
 ```ts
 export type CustomerRef = { id: string } | { externalId: string };
 ```
 
-The current package takes two optional fields and throws when both are missing. As a union, "one of the two" is a type error. The `externalId` arm is also what makes a migration tractable at all: Pay's deepest reported bug is that it treats the provider's customer as the canonical identifier, so a customer who edits their email in a hosted checkout gets a second provider-side record and their subscription silently stops syncing.
+The current package takes two optional fields and throws when both are missing. As a union, "one of the two" is a type error. The `externalId` arm answers a real failure: Pay's deepest reported bug is that it treats the provider's customer as the canonical identifier, so a customer who edits their email in a hosted checkout gets a second provider-side record and their subscription silently stops syncing.
 
-### 11. The Catalog Stays In The Platform, Addressed By Our Slugs
+That arm is weaker than the first draft claimed, and the providers are what showed it. Only Polar stores an `external_id` of ours with a uniqueness constraint behind it. Stripe has no such field, so the arm is implemented over `metadata` plus a search index that is eventually consistent and enforces no uniqueness, which makes a `conflict` there a search-then-write race rather than an atomic guarantee. Mercado Pago stores no identifier of ours at all and can only search customers by email, so its provider answers `unsupported` for the `externalId` arm outright — and Mercado Pago is precisely the kind of platform where an edited email creates the second record Pay suffers from.
+
+So `externalId` is a convenience where the platform supports it, not the resolution mechanism. What an app resolves from is its own `billing_customers` row (§23), which holds the provider's id per connection and does not depend on the platform indexing anything of ours.
+
+### 11. The Catalog Is Addressed By Our Slugs, And Lives In The Platform Where There Is One
 
 ```ts
 let checkout = await billing.checkouts.create({ product: "pro", customer: { externalId: userId } });
@@ -459,17 +478,27 @@ Providers are configured with a slug-to-product map, and no platform product id 
 
 This resolves the difference that split better-auth's two plugins — a Stripe plan is defined in your code, a Polar product is defined in Polar — by choosing the side that both providers can honour. Every entitlement product surveyed independently addresses features and meters by developer-defined slugs.
 
+The slug half holds everywhere. The "lives in the platform" half does not, and the first draft stated it too strongly. Recurring plans are a platform resource on all three — Polar products, Stripe prices, Mercado Pago preapproval plans — but Mercado Pago has no product, price, or catalog resource for one-off items whatsoever: its checkout takes inline items whose ids are free text keying into nothing stored. So `catalog.get()` there is answered from the provider's own configuration, in zero requests, and the group stays required because the answer is still true and still addressed by our slug.
+
+The consequence is worth stating plainly, since it lands on whoever operates such a platform: a one-off price change is a deployment rather than a dashboard edit. Where the platform has a catalog, prices stay editable without shipping code; where it does not, the configured map is the catalog.
+
 ### 12. Subscriptions Are Created By Checkout, Never Directly
 
 `SubscriptionApi` has no `create`. A subscription comes into existence when a checkout completes, and the app learns about it from a webhook.
 
 This is the design's most direct debt to the prior art. Polar, Paddle, Paddle Classic, and Lemon Squeezy cannot create a subscription by API; Stripe can. Pay preserved a uniform `subscribe()` by making it an empty method on three of six providers. Cashier let the two packages diverge instead: its Stripe `newSubscription()` returns a persisted subscription synchronously, while its Paddle `subscribe()` returns a checkout object and the subscription materializes later from a webhook — same parallel naming, different kind of return value, reversed argument order.
 
-The divergence is in timing, not naming, so a uniform synchronous creation method is a lie on one provider. Modelling every subscription as webhook-eventual is true on both, and it is what the apps already do — `apps/uptime` keeps a D1 projection written by its webhook precisely because of this.
+The divergence is in timing, not naming, so a uniform synchronous creation method is a lie on one provider. Modelling every subscription as webhook-eventual is true on all three: Mercado Pago's by-API path needs card data, which §2 puts out of scope, so its subscriptions also start as a redirect and land as a notification. It is also what the apps already do — `apps/uptime` keeps a D1 projection written by its webhook precisely because of this.
 
-### 13. Plan Changes Happen In The Hosted Portal
+### 13. Plan Changes Happen In The Hosted Portal, Cancellation Is A Method
 
-There is no `subscriptions.change()`. Upgrades, downgrades, cancellations, and payment-method updates are a redirect to the portal link, which is what the apps already do.
+```ts
+await billing.subscriptions.cancel({ id: subscriptionId }, { atPeriodEnd: true });
+```
+
+There is no `subscriptions.change()`. Upgrades, downgrades, and payment-method updates are a redirect to the portal link, which is what the apps already do. Cancellation is the exception, and it became one when `portal` turned optional (§4): "cancel in the portal" is no answer on a platform that has no portal, and Mercado Pago is exactly that platform. Cancellation is also the one lifecycle write all three platforms genuinely support, so it earns a contract method rather than a hosted link.
+
+`atPeriodEnd` is where they differ, and the difference is expressed rather than hidden, per §5's rule that a distinction finer than a group is an `unsupported` failure from a real method. Polar and Stripe can both schedule a cancellation for the end of the period; Mercado Pago only cancels immediately, so its provider answers `unsupported` to `atPeriodEnd: true` instead of silently cancelling now and losing the customer the rest of a paid period.
 
 That is a deliberate omission, not a gap. Proration is where a shared plan-change method would have to lie: Polar has four proration behaviours and Stripe three, Stripe's "no proration at all" has no Polar equivalent, and Polar silently promotes a deferred proration to an immediate charge when the billing interval changes. Modelling it means picking a lowest common denominator or passing through a field that means different things per platform. Letting each platform's own portal own it costs nothing today.
 
@@ -490,13 +519,25 @@ Keeping the platform off the request path is not a performance nicety. One app a
 
 A periodic repair calling the same snapshot is part of adopting the package, because missed deliveries are normal.
 
-It is also the cheapest group to implement, because Polar already ships it: a customer-state endpoint returning active subscriptions, granted benefits, and meter balances, plus a `customer.state_changed` event that fires when any of it moves. The provider maps one call, and Stripe's side composes from subscriptions plus entitlements.
+This is the seam the prior-art survey predicted would travel, and it is the one part of the contract that is now demonstrated rather than argued. `EntitlementState` came out of all three platforms with no distortion, despite each of them producing it differently:
+
+| Platform     | How the snapshot is produced                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------- |
+| Polar        | One customer-state endpoint returning active subscriptions, granted benefits, and meter balances        |
+| Stripe       | Active entitlements, whose feature `lookup_key` is already our feature slug, plus the subscription read |
+| Mercado Pago | Composed from three reads, since no endpoint answers "what does this customer have"                     |
+
+Stripe's `lookup_key` matching our slug exactly is the detail worth keeping: the field the contract needed was already the field the platform had, which is the check §11's slug addressing was designed to pass. The only fact that comes out thinner is meter balances, which are empty on a platform with no metering — an absent fact rather than a distorted one, and visible as an absent `meters` group.
+
+It is also the cheapest group to implement where the platform ships it: Polar's endpoint comes with a `customer.state_changed` event that fires when any of it moves, so the provider maps one call and the sync has one trigger.
 
 ### 15. What The Contract Deliberately Omits
 
 Disputes, chargebacks, payouts, and tax reporting are outside this package, and not because they are unimportant. Under merchant of record they belong to the provider: Polar emits no dispute event and no payment-method event at all, because it is the party that fights the chargeback and holds the card. A `disputes` capability group would therefore have no Polar implementation and no Polar data to model, and a dispute reaches us as a line item on a payout statement rather than as something to handle.
 
 The rule generalizes: where merchant of record removes a whole subsystem, that subsystem stays out of the contract rather than becoming a capability nobody implements. This is also why the seller of record is a property of the deployment worth stating plainly in each app's configuration rather than hiding behind the provider — it changes who the customer's counterparty is, not just which API gets called.
+
+Mercado Pago makes that concrete rather than hypothetical. It is a payment service provider, not a merchant of record, so an app billing through it is itself the seller of record and owns tax registration, invoicing obligations, and remittance in every jurisdiction it sells into. The contract is the same on both, which is the point — but the omissions in this section are only free under merchant of record. On a PSP, disputes and payouts and tax still exist; they are the app's problem, handled outside this package, and choosing that provider is choosing that work.
 
 ### 16. Lists Return Pages
 
@@ -515,7 +556,11 @@ for await (let order of paginate((cursor) => billing.orders.list({ product: "pro
 
 Draining every page stays available through `paginate()`, as the caller's explicit choice. PayKit shipped no list methods at all — no `list`, no cursor, no `has_more` anywhere — which pushes every enumeration through its escape hatch.
 
-### 17. Webhooks Are A Class Over Four Provider Questions
+Keeping `cursor` an opaque string a caller only passes back is the decision the implementation vindicated hardest. Within Stripe alone the value behind it is three different things: an object id for `starting_after` collections, an opaque token for search, and a slug for feature lookups. On Mercado Pago it encodes an offset, because its collections page by `offset` and `limit`. Four cursor semantics across three platforms, one type, and no caller that has to know which one it holds.
+
+One property does not survive, and callers need to know it: **a page can hold fewer items than `limit` without being the last page.** Where a filter cannot be expressed in the platform's query — a Mercado Pago collection filtered on a field its search does not index — the provider filters what it fetched, so a short page is normal. Stopping on `items.length < limit` is wrong; the only end-of-list signal is `cursor === null`, which is what `paginate()` uses.
+
+### 17. Webhooks Are A Class Over Three Provider Questions
 
 The app should write handlers, not plumbing, so the package ships the endpoint as a class:
 
@@ -537,22 +582,31 @@ export default new BillingWebhook(polar, {
 
 A class for the same reason the provider is one: it is constructed at module scope, it can be subclassed by an app that needs to override one step, and it is a type a test can construct directly and drive with a fabricated delivery.
 
-The instance owns everything that is identical in all five apps and is currently written five times: verify the signature, fail closed with `401`, deduplicate by reference id, persist the delivery, dispatch to the handler, and acknowledge anything unhandled with `200` rather than dropping it. That last part matters — PayKit discards unregistered events with no warning, and Hyperswitch makes "not supported" a first-class outcome instead.
+The instance owns everything that is identical in all five apps and is currently written five times: verify the signature, fail closed with `401`, deduplicate by delivery id, persist the delivery, dispatch to the handler, and acknowledge anything unhandled with `200` rather than dropping it. That last part matters — PayKit discards unregistered events with no warning, and Hyperswitch makes "not supported" a first-class outcome instead.
 
-Underneath, the provider answers four narrow questions, which is how the generic half can exist at all:
+Underneath, the provider answers three narrow questions, which is how the generic half can exist at all:
 
 ```ts
 export interface WebhookApi {
 	/** Is this delivery authentic? Provider-owned: the schemes differ. */
 	verify(request: Request, rawBody: string): Promise<boolean>;
-	/** Which object is this about, for deduplication and routing. */
-	reference(rawBody: string): { id: string; type: string } | null;
+	/** The delivery to deduplicate on, and the object it is about. */
+	reference(
+		request: Request,
+		rawBody: string,
+	): { deliveryId: string; object: { id: string; type: string } } | null;
 	/** The normalized event, or `unrecognized`. Always carries the raw payload. */
-	event(rawBody: string): Result<BillingEvent, BillingError>;
+	event(rawBody: string): Promise<Result<BillingEvent, BillingError>>;
 }
 ```
 
 Hyperswitch and Medusa independently split webhook handling exactly this way. With `reference()` separate, deduplication and idempotency are generic package code rather than something every app forgets — and the monorepo has no webhook idempotency anywhere today.
+
+Both of the other two questions changed shape once real providers answered them, and both were correctness bugs rather than ergonomics:
+
+**`reference()` takes the request, and separates the delivery from the object.** It originally saw only the body and returned one id, which forced deduplication onto the object's id — so two legitimately distinct `subscription.updated` deliveries about the same subscription looked like a replay, and the second was silently dropped. The per-delivery identifier is not in the body at all on Polar: it arrives in the `webhook-id` header, which a body-only signature cannot reach. Now dedup keys on `deliveryId` and routing uses `object`. Hyperswitch's `ObjectReferenceId` models exactly this distinction, and the first draft collapsed the two after reading it.
+
+**`event()` is async.** It was synchronous, and Mercado Pago cannot satisfy that: its notification body carries an id and a topic and no resource state whatsoever, so the event's subject has to be fetched before it can be mapped. A synchronous `event()` there could only ever answer `unrecognized`, which makes the entire normalized vocabulary unreachable on that platform — the failure mode this ADR spends §6 warning about. The second rule below ("an event is a hint, not the new state") already required a read-back, so the synchronous signature contradicted the ADR's own advice; the platform that cannot cheat is what surfaced it.
 
 ```ts
 export type BillingEvent = { id: string; raw: unknown } & (
@@ -575,7 +629,17 @@ export type BillingEvent = { id: string; raw: unknown } & (
 
 `raw` is on every event, not only the unrecognized one. PayKit's most-commented issue is a user listing eighteen Stripe events its twelve canonical types did not cover, and the resolution was to always emit the raw event alongside the mapped ones. Carrying `raw` everywhere means an incomplete canonical model is never a dead end, and a normalized handler and a platform-specific one can coexist.
 
-Verification stays provider-owned because the schemes differ: Polar sends Standard Webhooks headers, and the Polar provider keeps the base64 step Polar's senders apply to a text secret — handing that secret straight to a Standard Webhooks verifier keys on the wrong bytes and rejects every authentic delivery. A Stripe provider implements `Stripe-Signature` instead. Both use `@pkg/webhooks` (ADR-026) for HMAC primitives; neither delegates the decision to it.
+Verification stays provider-owned because the schemes differ, and which package a provider reaches for follows from whether its platform speaks a standard:
+
+| Platform     | Scheme                                                                                 | Verified with                             |
+| ------------ | -------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Polar        | Standard Webhooks headers, over a text secret                                          | `@pkg/webhooks` (ADR-026)                 |
+| Stripe       | `Stripe-Signature` with `t=`/`v1=` parts                                               | `@pkg/crypto`'s `hmac`, `timingSafeEqual` |
+| Mercado Pago | `x-signature` with `ts`/`v1` parts, over a manifest built from query and header values | `@pkg/crypto`'s `hmac`, `timingSafeEqual` |
+
+`@pkg/webhooks` exports whole-scheme `sign` and `verify` for Standard Webhooks and nothing smaller, so a platform that _is_ Standard Webhooks goes through it and a platform with its own scheme assembles the signing string itself and calls `@pkg/crypto` directly. `@pkg/webhooks` is built on `@pkg/crypto` too, so this is the layering the repo already has rather than a new one. Either way the provider owns the scheme and no package decides for it.
+
+The Polar provider keeps the base64 step Polar's senders apply to a text secret — handing that secret straight to a Standard Webhooks verifier keys on the wrong bytes and rejects every authentic delivery.
 
 Signature failure is fail-closed; an unmodelled shape is fail-open as `unrecognized`.
 
@@ -587,7 +651,7 @@ Three rules come with it, each earned by a mistake in the prior art:
 
 ### 18. Event Payloads Are Persisted Before They Are Trusted
 
-The route factory stores the raw delivery, keyed by the `reference()` id, before dispatching it, with `valid` and `processed` recorded on that row. It gives idempotency a durable key, makes a replay cheap to detect, and leaves an audit trail when a handler was wrong. This is dj-stripe's `WebhookEventTrigger` pattern, and it is the piece the monorepo is missing entirely today.
+The route factory stores the raw delivery, keyed by the `deliveryId` from `reference()`, before dispatching it, with `valid` and `processed` recorded on that row and the object's id stored beside the key rather than as it. It gives idempotency a durable key, makes a replay cheap to detect without mistaking a second real change for one, and leaves an audit trail when a handler was wrong. This is dj-stripe's `WebhookEventTrigger` pattern, and it is the piece the monorepo is missing entirely today.
 
 ### 19. Usage Ingestion Is Generic
 
@@ -609,6 +673,8 @@ await billing.usage.ingest([
 
 `reportMAU` and `ingestPageViews` do not come along: each was one app's meter name and metadata shape living in a shared package. Chunking at the platform's per-request limit stays inside the provider.
 
+`usage` is an optional group (§4), because Mercado Pago has no ingestion endpoint to map. That is a genuine product constraint made visible: an app that bills on usage cannot run on a platform with no metering, and `supports(billing, "usage")` says so at compile time instead of the meter quietly reading zero.
+
 Metered billing is also the reason no existing library can be adopted here. Two apps bill on usage, and PayKit — the only standalone TypeScript contender — has no meter, usage-record, or tiered-pricing concept anywhere in its packages or docs.
 
 ### 20. No Vendor SDK: Providers Talk To The API Over `@pkg/api-client`
@@ -619,7 +685,7 @@ The SDK is not paying for itself here. It builds roughly 700 zod schemas when it
 
 Dropping it removes work rather than adding it: the memoized lazy-import machinery in the current package exists solely to keep those schemas out of the startup path, and it disappears along with the dependency. `APIClient` goes to the global `fetch`, so provider tests intercept with MSW like any other outbound call instead of mocking a vendor module.
 
-There is also a live correctness argument, found while mapping the API for this work. The installed SDK is `0.48.1`, which predates Polar's date-versioned API, and it is already behind in ways that matter: Polar sends 41 webhook event types and the SDK's enum knows 35, and it **throws** on the six it does not — which, from a webhook endpoint, is a path to Polar disabling the endpoint for returning errors. `SubscriptionUpdate` has nine body variants against the SDK's six. The `unrecognized` arm in §17 is what makes a new event type a no-op instead of an outage, and it only works if nothing between the wire and that arm throws first.
+Bundle size is not the strongest argument, though. There is a live correctness one, found while mapping the API and confirmed while implementing the provider over the raw endpoints. The installed SDK is `0.48.1`, which predates Polar's date-versioned API, and it is already behind in ways that matter: Polar sends 41 webhook event types and the SDK's enum knows 35, and it **throws** on the six it does not — which, from a webhook endpoint, is a path to Polar disabling the endpoint for returning errors. `SubscriptionUpdate` has nine body variants against the SDK's six. The `unrecognized` arm in §17 is what makes a new event type a no-op instead of an outage, and it only works if nothing between the wire and that arm throws first.
 
 The prior art agrees. Omnipay states it as policy — it prefers working with the HTTP API directly over depending on official gateway packages — Cashier Paddle ships no SDK dependency at all, and PayKit's twelve SDK-less providers use its own HTTP client.
 
@@ -645,6 +711,10 @@ Pay also earns a second use from it that is worth having: a fake processor is ho
 ### 22. Conformance Specs, Local And Remote
 
 The package ships one executable spec suite (`packages/billing/spec/`) that every provider must pass, parameterized by provider, with the required groups in one suite and each optional capability in its own file. ActiveStorage's shared service tests are the precedent: assert only the genuinely universal core, and leave anything backend-specific to its own file rather than conditionally skipping inside the shared suite.
+
+That precedent was cited in the first draft and then violated in the first implementation, which is the finding worth recording. Three assertions in the required core were written on usage ingestion — the convenient way to produce billable state in a fixture — so a platform with no metering could not pass the required core at all, and Mercado Pago failed a suite that was meant to describe what every provider is. A fourth assertion, on paging, drove its pages through the same ingestion, so it was unreachable for a provider whose paging was perfectly correct: a spec asserting nothing while appearing green.
+
+The lesson generalizes past this suite. **The shared suite may assert only what every backend genuinely has, including in its fixtures.** A capability used to arrange a test is as much a requirement as one used to assert, and anything else belongs in that capability's own file — exactly what ActiveStorage's split says, and exactly what conditional skipping inside a shared suite lets you avoid noticing.
 
 Capability declarations are asserted in both directions: for each optional group, the suite checks that `supports()` and a real call agree — a declared group must actually work, and an undeclared one must actually be absent. Omnipay's shared `GatewayTestCase` does exactly this, and it is what stops a provider from declaring a capability it stubs. The compiler covers the call site; only a spec covers the provider.
 
@@ -678,7 +748,7 @@ This is Lago's shape, arrived at after supporting six providers, and the partial
 
 `connection` rather than `provider` is deliberate: it names a configured credential set, not a vendor. Five apps could sell through five different Polar organizations, and Chargebee — which routes across 63 gateways — rejects a request that names a gateway where a gateway account is required, because real merchants run several accounts per provider. A provider is therefore constructed with a connection code, and that code is what gets stored.
 
-Every customer is created with `externalId` set to the app's own identifier, so customers can be re-resolved on a new backend without a mapping table. Column renames happen per app as it adopts the package.
+Every customer is created with `externalId` set to the app's own identifier where the platform stores one, which makes re-resolution on a new backend possible without a mapping table. It is not the mechanism apps rely on, because §10's arm is unsupported on at least one platform: the row above is what an app resolves from, and `externalId` is what makes the row recoverable if it is ever lost. Column renames happen per app as it adopts the package.
 
 Where an app keeps a projection of provider state, it should keep the raw payload beside the normalized columns. Pay added that column at version 10 and describes it as making future changes easier; the apps here already project without it.
 
@@ -691,8 +761,9 @@ Where an app keeps a projection of provider state, it should keep the raw payloa
 - **The unknown outcome is expressible** - a timeout on a billing call can no longer be mistaken for a refusal, which is the failure mode that double-charges.
 - **Capability gaps are compile-time** - an absent property, never a throwing stub or a silent no-op.
 - **The escape hatch is designed, not discovered** - `providerData` and `native` mean an unmodelled provider feature is reachable, and visibly non-portable at the call site.
-- **Webhook idempotency becomes possible** - `reference()` gives the package a generic dedup key, which nothing in the monorepo has today.
-- **Entitlement reads survive a provider change** - the one seam the surveyed multi-provider products actually run on.
+- **Webhook idempotency becomes possible** - `reference()` gives the package a per-delivery dedup key, which nothing in the monorepo has today.
+- **The entitlement seam is demonstrated, not argued** - `EntitlementState` composed out of all three platforms with no distortion, including Stripe's feature `lookup_key` turning out to be our feature slug already. It was the prior art's prediction; it is now a result.
+- **Three providers found bugs a second one would have missed** - a body-only `reference()`, a synchronous `event()`, a `providerData` passthrough that leaked, a required group three platforms do not all have, and a conformance suite that could not be passed without metering. All of them were cheap to fix before any app depended on the contract.
 - **The gap that blocked a feature closes** - meter quantities are in the contract, so `apps/uptime` can build its team-usage view.
 - **Test doubles come from the package** - contract-checked by construction; no subclassing, no casting through `unknown`, no mocking a vendor module.
 - **One failure convention** - `Result` everywhere, with a normalized code, `providerCode` preserved, and a `retryable` flag jobs can branch on.
@@ -703,14 +774,17 @@ Where an app keeps a projection of provider state, it should keep the raw payloa
 ### Negative
 
 - **A second layer of models to maintain** - every field worth exposing must be mapped, and a mapping can lose nuance or be wrong in ways the vendor's own types could not be.
-- **The wide surface is against the evidence** - every project that achieved real provider independence shrank the portable surface to roughly six operations. Two providers instead of a hundred is the reason to expect a different outcome, and it is an expectation, not a proof.
+- **The wide surface is against the evidence** - every project that achieved real provider independence shrank the portable surface to roughly six operations. Three providers instead of a hundred is the reason to expect a different outcome, and the wide surface now survives three implementations, which is better evidence than the first draft had and still not proof: none of the three is carrying an app's billing yet, and the narrow Stripe provider deliberately implements less than Polar does.
 - **Five apps and three schemas to migrate** - mechanical but wide, and every webhook handler must be re-verified against real deliveries.
-- **Order normalization is the weakest seam** - a paid order is one object in Polar and an invoice plus a payment intent in Stripe; that mapping will need revision when a second billing provider is written.
+- **Order normalization is still the weakest seam** - a paid order is one object in Polar, an invoice plus a payment intent in Stripe, and a payment in Mercado Pago. Three providers map it, and the mapping is the one that took the most judgement rather than the most code.
 - **Escape-hatch usage will not be rare** - the review's estimate is a fifth to a third of real billing code stays provider-specific, so `native` will appear in app code and each use is a place a migration must revisit.
 - **Switching providers is still mostly not a code problem** - merchant-of-record status, tax remittance, the product catalogue, and every active subscription are re-created rather than ported, card-data migration is a compliance process requiring the losing provider's cooperation, and payouts are held for 120 days afterwards.
 - **A bug can now live in our mapping** - previously a wrong field was the vendor's.
+- **On a platform with no catalog, a price change is a deployment** - Mercado Pago has no product or price resource for one-off items, so the configured slug map is the catalog and editing it ships code (§11).
+- **Optional groups move a product constraint into the type system** - correct, but it means a platform choice can make an app's feature un-buildable rather than merely slower: no `usage` is no usage billing, and no `portal` is no self-service plan change.
+- **A PSP provider brings back what merchant of record removed** - Mercado Pago leaves the app as seller of record, so tax registration, remittance, and disputes are the app's work, handled outside this package (§15).
 - **Dropping the SDK means owning the wire** - endpoint paths, pagination, and error shapes become ours, and the undocumented edge cases a vendor SDK absorbs over time are found by the remote conformance suite rather than inherited.
-- **Adoption brings work the apps do not do today** - persisting raw deliveries, deduplicating by reference, re-reading objects instead of trusting payloads, and a reconciliation job per app. All of it is missing now, so adopting the package surfaces a gap rather than creating one, but it is real work in Phase 4 rather than a free consequence of the refactor.
+- **Adoption brings work the apps do not do today** - persisting raw deliveries, deduplicating by delivery id, re-reading objects instead of trusting payloads, and a reconciliation job per app. All of it is missing now, so adopting the package surfaces a gap rather than creating one, but it is real work in Phase 4 rather than a free consequence of the refactor.
 
 ### Neutral
 
@@ -718,7 +792,8 @@ Where an app keeps a projection of provider state, it should keep the raw payloa
 - **`@pkg/polar` is deprecated, not rewritten in place** - it keeps working until its last consumer moves.
 - **No new service-container token** - apps construct the provider in an app module and pass it where needed; the five existing `PolarClient` registrations point at the provider until each app is touched.
 - **Webhook route paths and secret names keep their current names** - renaming routes would mean re-registering endpoints with the provider, and `POLAR_*` accurately names the Polar provider's inputs.
-- **Subscription creation is asynchronous for everyone** - which matches what the apps already do, and is the only shape true on both providers.
+- **Subscription creation is asynchronous for everyone** - which matches what the apps already do, and is the only shape true on all three providers.
+- **Two of the three providers are evidence, not deployments** - no app bills through Stripe or Mercado Pago, neither is on a path to, and Polar stays the only provider any app is expected to use.
 
 ## Implementation Plan
 
@@ -748,6 +823,8 @@ Phase order changed after the prior-art review: the second provider moved from l
 **Estimated Effort:** 1 day
 
 Write the narrowest useful `StripeBilling` — customers, checkout, subscription read, entitlement snapshot, one webhook — in test mode, adopted by no app, and run the conformance suite against it. Until a second provider passes, the claim that this is a shape rather than a Polar transcription is untested, and every finding in the review says that is where these designs break. A contract revised at this point is cheap; revised in Phase 4 it is not.
+
+This phase went further than planned, and it earned its cost. A third provider, Mercado Pago, was written alongside the narrow Stripe one, chosen because it is a payment service provider rather than a merchant of record and because it is missing whole capability groups — the two ways a platform can be unlike Polar that a Stripe provider cannot exercise, since Stripe has a superset of Polar's surface. Every contract bug recorded in this revision came from the second and third providers, and most came from the third. The corrections landed before Phase 4, which is exactly the trade this phase was ordered to buy.
 
 ### Phase 4: App Adoption
 
@@ -780,7 +857,7 @@ Delete the package and its workspace dependencies once nothing imports it.
 
 Ship `@pkg/polar` and later `@pkg/stripe` as independent packages with no shared contract, each expressing its provider's real model. This is Cashier's answer, chosen deliberately by maintainers who had the resources to unify and declined.
 
-**Rejected because**: the cost Cashier accepted is duplication across packages that drift, and the benefit it bought — each package expressing its provider honestly — is mostly available here anyway through capability groups and the escape hatch. The decisive difference is that Cashier serves thousands of applications with wildly different billing models, so a lowest common denominator would have been useless to most of them; this package serves five apps with two billing models. Worth revisiting if the second provider in Phase 3 cannot be written without distorting the contract.
+**Rejected because**: the cost Cashier accepted is duplication across packages that drift, and the benefit it bought — each package expressing its provider honestly — is mostly available here anyway through capability groups and the escape hatch. The decisive difference is that Cashier serves thousands of applications with wildly different billing models, so a lowest common denominator would have been useless to most of them; this package serves five apps with two billing models. The condition set for revisiting it — a second provider that cannot be written without distorting the contract — has now been tested twice and not met: Stripe and Mercado Pago both fit, at the cost of four groups turning optional and the contract corrections recorded above.
 
 ### 3. Own The Model, Use The Provider Only To Charge
 
@@ -825,6 +902,7 @@ If the real requirement is being able to stop being the merchant of record witho
 - [Stripe Managed Payments](https://docs.stripe.com/managed-payments)
 - [Stripe API reference](https://docs.stripe.com/api)
 - [Stripe payment-method data migrations](https://docs.stripe.com/get-started/data-migrations/overview)
+- [Mercado Pago API reference](https://www.mercadopago.com/developers/en/reference) and [its webhook signature validation](https://www.mercadopago.com/developers/en/docs/your-integrations/notifications/webhooks)
 - [Standard Webhooks](https://www.standardwebhooks.com)
 - [Pay (Rails)](https://github.com/pay-rails/pay) and [its multi-processor caveat](https://github.com/pay-rails/pay/blob/main/README.md)
 - [Laravel Cashier (Stripe)](https://laravel.com/docs/13.x/billing), [Cashier (Paddle)](https://laravel.com/docs/13.x/cashier-paddle), and [the rejected driver-abstraction request](https://github.com/laravel/cashier-stripe/issues/1591)
@@ -850,9 +928,17 @@ If the real requirement is being able to stop being the merchant of record witho
 
 ## Current Progress
 
-- [ ] Phase 1: Models, contract, and specs
-- [ ] Phase 2: Polar provider, parity surface
-- [ ] Phase 3: Prove the seam
+- [x] Phase 1: Models, contract, and specs
+  - [x] Models, `Billing`, resource groups, `BillingError`, `supports()`, `paginate()`
+  - [x] Conformance spec suite for the required groups
+  - [x] `MemoryBilling` passing it
+- [x] Phase 2: Polar provider, parity surface
+  - [x] Every group the 26 methods covered, over `@pkg/api-client`
+  - [x] `@polar-sh/sdk` gone from the provider
+- [x] Phase 3: Prove the seam
+  - [x] `StripeBilling`, deliberately narrow, adopted by no app
+  - [x] `MercadoPagoBilling`, a PSP rather than a merchant of record, missing four capability groups
+  - [x] Contract bugs the second and third providers found, fixed and recorded in this ADR
 - [ ] Phase 4: App adoption
 - [ ] Phase 5: Capability build-out
 - [ ] Phase 6: Remove `@pkg/polar`
@@ -876,3 +962,6 @@ If the real requirement is being able to stop being the merchant of record witho
 - Recurly is the one product that credibly promises a silent gateway switch, and the reason is that it holds the card data itself as a PCI-DSS Level 1 merchant service provider. That option is not available under merchant of record, which is why the promise in §1 is narrower than theirs.
 - Metronome is often cited as evidence for provider-independent billing, and it is a useful design reference, but Stripe acquired it, so treat its independence story as historical rather than as a live existence proof.
 - Products, prices, and discounts are read-only in the required contract. Creating them is a dashboard task, and a write path nobody uses is a write path nobody tests.
+- Mercado Pago's `/v1/payments` is frozen: it still works, but new capabilities land on its successor order-creation endpoint instead, so treat a payment read as a legacy surface and expect the successor to be the migration whoever adopts this provider inherits.
+- Mercado Pago's separate sandbox checkout URL is deprecated. Test flows go through the live checkout URL with test credentials and test payer accounts, so a provider must not branch its checkout URL on an environment flag.
+- Mercado Pago amounts are major units and its customer search matches on email only. The first is handled by conversion inside the provider (§8); the second is why its `externalId` reference arm is `unsupported` (§10).
