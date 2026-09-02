@@ -16,6 +16,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { Billing } from "../../core/contract";
 import type { BillingError } from "../../core/errors";
+import type { Secret } from "../../core/secret";
 
 import { supports } from "../../core/supports";
 
@@ -292,6 +293,57 @@ describe("StripeBilling requests", () => {
 
 		expect(authorization).toBe("Bearer sk_test_123");
 		expect(version).toBe("2025-03-31.basil");
+	});
+
+	test("carries a key read once however many calls are made", async () => {
+		let authorizations: Array<string | null> = [];
+
+		server.use(
+			http.get(`${ORIGIN}/customers/cus_1`, ({ request }) => {
+				authorizations.push(request.headers.get("authorization"));
+				return HttpResponse.json(CUSTOMER);
+			}),
+		);
+
+		let reads = 0;
+		let billing = create({
+			secretKey: () => {
+				reads += 1;
+
+				return "sk_test_123";
+			},
+		});
+
+		await billing.customers.find({ id: "cus_1" });
+		await billing.customers.find({ id: "cus_1" });
+
+		expect(reads).toBe(1);
+		expect(authorizations).toEqual(["Bearer sk_test_123", "Bearer sk_test_123"]);
+	});
+
+	test("reports an unresolvable key as unauthenticated and asks again after it fails", async () => {
+		server.use(http.get(`${ORIGIN}/customers/cus_1`, () => HttpResponse.json(CUSTOMER)));
+
+		let attempts = 0;
+		let billing = create({
+			secretKey: async () => {
+				attempts += 1;
+				if (attempts === 1) throw new Error("secret store unavailable");
+
+				return await Promise.resolve("sk_test_123");
+			},
+		});
+
+		let refused = await billing.customers.find({ id: "cus_1" });
+
+		expect(isFailure(refused)).toBe(true);
+		if (!isFailure(refused)) return;
+
+		expect(refused.error.code).toBe("unauthenticated");
+
+		expect(isSuccess(await billing.customers.find({ id: "cus_1" }))).toBe(true);
+		expect(isSuccess(await billing.customers.find({ id: "cus_1" }))).toBe(true);
+		expect(attempts).toBe(2);
 	});
 });
 
@@ -778,6 +830,78 @@ describe("StripeBilling webhooks", () => {
 		expect(
 			await create({ webhookSecret: undefined }).webhooks.verify(delivery(body, header), body),
 		).toBe(false);
+	});
+
+	test("proves a delivery against a secret read once however many arrive", async () => {
+		let body = JSON.stringify({
+			id: "evt_1",
+			type: "customer.created",
+			data: { object: CUSTOMER },
+		});
+		let timestamp = Math.floor(Date.now() / MS_PER_SECOND);
+		let header = await signDelivery(body, timestamp);
+
+		let reads = 0;
+		let billing = create({
+			webhookSecret: () => {
+				reads += 1;
+
+				return WEBHOOK_SECRET;
+			},
+		});
+
+		expect(await billing.webhooks.verify(delivery(body, header), body)).toBe(true);
+		expect(await billing.webhooks.verify(delivery(body, header), body)).toBe(true);
+		expect(reads).toBe(1);
+	});
+
+	test("reads the signing secret again after a failed read", async () => {
+		let body = JSON.stringify({
+			id: "evt_1",
+			type: "customer.created",
+			data: { object: CUSTOMER },
+		});
+		let timestamp = Math.floor(Date.now() / MS_PER_SECOND);
+		let header = await signDelivery(body, timestamp);
+
+		let attempts = 0;
+		let billing = create({
+			webhookSecret: async () => {
+				attempts += 1;
+				if (attempts === 1) throw new Error("secret store unavailable");
+
+				return await Promise.resolve(WEBHOOK_SECRET);
+			},
+		});
+
+		expect(await billing.webhooks.verify(delivery(body, header), body)).toBe(false);
+		expect(await billing.webhooks.verify(delivery(body, header), body)).toBe(true);
+		expect(attempts).toBe(2);
+	});
+
+	test("fails a delivery closed while the signing secret is unusable", async () => {
+		let body = JSON.stringify({
+			id: "evt_1",
+			type: "customer.created",
+			data: { object: CUSTOMER },
+		});
+		let timestamp = Math.floor(Date.now() / MS_PER_SECOND);
+		let header = await signDelivery(body, timestamp);
+
+		let unusable: Secret[] = [
+			"",
+			() => "",
+			() => {
+				throw new Error("secret store unavailable");
+			},
+			async () => await Promise.reject(new Error("secret store unavailable")),
+		];
+
+		for (let webhookSecret of unusable) {
+			expect(await create({ webhookSecret }).webhooks.verify(delivery(body, header), body)).toBe(
+				false,
+			);
+		}
 	});
 
 	test("names a delivery for deduplication and the object it changed, and reports an unreadable one", async () => {

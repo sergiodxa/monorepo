@@ -41,6 +41,7 @@ import type {
 	WebhookReference,
 } from "../../core/contract";
 import type { BillingErrorCode } from "../../core/errors";
+import type { Secret } from "../../core/secret";
 import type {
 	BillingEvent,
 	BillingEventPayload,
@@ -51,6 +52,7 @@ import type {
 } from "../../core/types";
 
 import { BillingError } from "../../core/errors";
+import { secretReader, verificationSecret } from "../../core/secret";
 
 import type { PolarErrorOptions } from "./errors";
 import type { PolarMapping } from "./map";
@@ -179,10 +181,15 @@ export interface PolarBillingOptions {
 	 * is resolved once and remembered, so a token read from a secret store costs
 	 * one await for the life of the instance.
 	 */
-	accessToken: string | (() => string | Promise<string>);
+	accessToken: Secret;
 
-	/** Signing secret for this endpoint's deliveries, exactly as Polar issued it. */
-	webhookSecret: string;
+	/**
+	 * Signing secret for this endpoint's deliveries, exactly as Polar issued it,
+	 * or a function resolving it. The function form is resolved once and
+	 * remembered, so a secret read from a store costs one await for the life of
+	 * the instance.
+	 */
+	webhookSecret: Secret;
 
 	/** Polar product id for each of our own slugs, which is how a call site names a product. */
 	products: Record<string, string>;
@@ -310,13 +317,9 @@ export class PolarBilling extends APIClient implements Billing {
 	/** This client, whose verb methods reach any endpoint the contract omits. */
 	readonly native: unknown = this;
 
-	#accessToken: string | (() => string | Promise<string>);
+	#accessToken: () => Promise<string>;
 
-	#resolvedToken: string | undefined;
-
-	#pendingToken: Promise<string> | undefined;
-
-	#signingSecret: string;
+	#webhookSecret: () => Promise<string>;
 
 	#mapping: PolarMapping;
 
@@ -334,8 +337,8 @@ export class PolarBilling extends APIClient implements Billing {
 		super(new URL(options.sandbox === true ? SANDBOX_ORIGIN : PRODUCTION_ORIGIN));
 
 		this.connection = options.connection ?? DEFAULT_CONNECTION;
-		this.#accessToken = options.accessToken;
-		this.#signingSecret = toSigningSecret(options.webhookSecret);
+		this.#accessToken = secretReader(options.accessToken);
+		this.#webhookSecret = secretReader(options.webhookSecret);
 
 		this.#productIds = new Map(Object.entries(options.products));
 		this.#meterIds = new Map(Object.entries(options.meters ?? {}));
@@ -368,35 +371,11 @@ export class PolarBilling extends APIClient implements Billing {
 	 * @returns The request to send.
 	 */
 	protected override async before(request: Request): Promise<Request> {
-		request.headers.set("Authorization", `Bearer ${await this.#token()}`);
+		request.headers.set("Authorization", `Bearer ${await this.#accessToken()}`);
 		request.headers.set("Accept", "application/json");
 		request.headers.set(VERSION_HEADER, API_VERSION);
 
 		return request;
-	}
-
-	/**
-	 * Resolves the access token once. A rejected resolution is not remembered, so
-	 * a secret store that was briefly unavailable is asked again on the next call.
-	 */
-	async #token(): Promise<string> {
-		if (this.#resolvedToken !== undefined) return this.#resolvedToken;
-
-		this.#pendingToken ??= this.#resolveToken().catch((error: unknown) => {
-			this.#pendingToken = undefined;
-			throw error;
-		});
-
-		return await this.#pendingToken;
-	}
-
-	async #resolveToken(): Promise<string> {
-		let token =
-			typeof this.#accessToken === "function" ? await this.#accessToken() : this.#accessToken;
-
-		this.#resolvedToken = token;
-
-		return token;
 	}
 
 	/**
@@ -410,7 +389,7 @@ export class PolarBilling extends APIClient implements Billing {
 		options?: PolarErrorOptions,
 	): Promise<Result<unknown, BillingError>> {
 		try {
-			await this.#token();
+			await this.#accessToken();
 		} catch (error) {
 			return failure(
 				new BillingError("the Polar access token could not be resolved", {
@@ -1012,8 +991,10 @@ export class PolarBilling extends APIClient implements Billing {
 	#buildWebhookApi(): WebhookApi {
 		return {
 			verify: async (request: Request, rawBody: string) => {
+				let secret = await verificationSecret(this.#webhookSecret);
+
 				let verified = await Webhooks.verify(toVerifiableRequest(request, rawBody), {
-					secret: this.#signingSecret,
+					secret: toSigningSecret(secret),
 					tolerance: WEBHOOK_TOLERANCE,
 				});
 

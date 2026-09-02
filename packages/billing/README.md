@@ -47,6 +47,31 @@ export let polar = new PolarBilling({
 
 Products, meters, and features are configured as our own slugs mapped to the platform's ids, which is what keeps a vendor identifier out of every call site: a checkout is opened for `"pro"`, and a subscription read reports `productSlug: "pro"`.
 
+### Configuring a credential
+
+Every credential option — an access token, an API key, a signing secret — is a `Secret`, which is the value itself or a function resolving it:
+
+```typescript
+export type Secret = string | (() => string | Promise<string>);
+```
+
+The function form is what lets a credential live in a store that is only readable with an `await`, since the constructor runs at module scope where nothing can be awaited:
+
+```typescript
+import { PolarBilling } from "@pkg/billing/providers/polar";
+import { env } from "cloudflare:workers";
+
+export let polar = new PolarBilling({
+	accessToken: () => env.POLAR_ACCESS_TOKEN.get(),
+	webhookSecret: () => env.POLAR_WEBHOOK_SECRET.get(),
+	products: { pro: "019..." },
+});
+```
+
+The function is called on the first use that needs the credential and the answer is remembered, so reading it costs one await for the life of the instance however many calls follow. A read that fails is not remembered, so a store that was briefly unavailable is asked again and the instance can still bill later. A signing secret is read inside `webhooks.verify()`, which is already async; `webhooks.reference()` is the synchronous method and never touches it.
+
+While a signing secret is unset, empty, or unreadable, verification answers `false` rather than throwing, so an endpoint keeps returning a status the platform accepts instead of the `500` it disables an endpoint over.
+
 ### Registering the middleware
 
 The middleware is a default export, so the importing app names it. The convention is to name the middleware for the capability and the instance for the backend, which reads as the sentence it is:
@@ -552,6 +577,14 @@ type BillingEvent = { id: string; raw: unknown } & BillingEventPayload;
 
 Every model carries the provider's own payload for that object as `providerData`. Nothing in this package interprets it. Where an app keeps a projection of provider state, keeping this beside the normalized columns is what makes a later mapping change re-derivable.
 
+#### `Secret`
+
+```typescript
+type Secret = string | (() => string | Promise<string>);
+```
+
+The type of every credential option on every provider: the value, or a function resolving it on first use. The function is called once and its answer remembered for the life of the instance, and a failed read is not remembered. See [Configuring a credential](#configuring-a-credential).
+
 ### `@pkg/billing/middleware`
 
 #### `billing(options: BillingMiddlewareOptions): Middleware` (default export)
@@ -628,8 +661,8 @@ A configured Polar organization, answering every group in the contract — `port
 
 **Parameters:**
 
-- `options.accessToken`: Organization access token, or a function resolving one; the function form is resolved once and remembered
-- `options.webhookSecret`: Signing secret for this endpoint's deliveries, exactly as Polar issued it
+- `options.accessToken`: `Secret` — organization access token, or a function resolving one
+- `options.webhookSecret`: `Secret` — signing secret for this endpoint's deliveries, exactly as Polar issued it
 - `options.products`: Polar product id per our own slug, which is how a call site names a product
 - `options.meters?`: Polar meter id per our own meter slug
 - `options.features?`: Polar benefit id per our own feature slug
@@ -648,9 +681,9 @@ Stripe over its REST API, pinned to a Stripe API version. It answers `customers`
 
 **Parameters:**
 
-- `options.secretKey`: Secret API key every request is authenticated with
+- `options.secretKey`: `Secret` — secret API key every request is authenticated with
 - `options.catalog`: `Record<string, { product, price }>` keyed by our own slugs
-- `options.webhookSecret?`: Endpoint signing secret; verification fails closed without it
+- `options.webhookSecret?`: `Secret` — endpoint signing secret; verification fails closed without it
 - `options.meters?`: Stripe meter ids per our own meter slugs, for resolving a metered price back to a slug
 - `options.portalConfiguration?`: Portal configuration a session is opened against
 - `options.connection?`: Defaults to `"stripe"`
@@ -669,9 +702,9 @@ One configured Mercado Pago account. It answers `customers`, `catalog`, `checkou
 
 **Parameters:**
 
-- `options.accessToken`: The account's access token, or a function resolving it; a rejection is not memoized, so one failed read leaves the instance able to bill later
+- `options.accessToken`: `Secret` — the account's access token, or a function resolving it
 - `options.products?`: What each of our slugs sells, as a one-time or a recurring entry
-- `options.webhookSecret?`: The application's webhook signing secret; deliveries fail closed while it is unset
+- `options.webhookSecret?`: `Secret` — the application's webhook signing secret; deliveries fail closed while it is unset
 - `options.notificationURL?`: Where the platform posts deliveries for the checkouts this instance opens
 - `options.backURLs?`: `{ success?, failure?, pending? }`, where a hosted page returns a buyer when a call names no destination
 - `options.connection?`: Defaults to `"mercado-pago"`
@@ -1183,6 +1216,8 @@ describe.skip("AcmeBilling against a sandbox account", () => {
 });
 ```
 
+Type every credential option as `Secret` and read it through `secretReader` from `src/core/secret.ts`, so a new provider is configurable from a secret store the way the others are, and read a signing secret with `verificationSecret` so an unreadable one leaves a delivery unproven instead of failing the endpoint.
+
 `MemoryBilling` is the template to read while writing one: it implements every group, and it is the provider the suite runs against in CI, which is what keeps the suite itself honest.
 
 ## Related Packages
@@ -1201,16 +1236,17 @@ describe.skip("AcmeBilling against a sandbox account", () => {
 2. **Read `not_found` as an answer** — a `find*` reports a missing record as a failure rather than `null`, which is what stops a missing customer from becoming a null dereference three lines later.
 3. **Never retry an `unknown`** — the operation may already have taken effect, so recovery is a reconciliation read against the platform, and `retryable` is never `true` for it.
 4. **Construct the provider once, at module scope** — the constructor touches no network, and one instance is what lets a route and a job bill against the same configuration.
-5. **Ask `supports()` before reaching an optional group** — `portal`, `discounts`, `usage` and `meters` may be absent, and the guard is what makes the code typecheck as well as run.
-6. **Store the connection beside every provider id** — one vendor can hold several accounts, and `connection` is what says which credential set issued the id you are looking at.
-7. **Ask `minorUnitDigits()` before formatting money** — dividing by 100 unconditionally is wrong for JPY and CLP, which have no minor units, and for BHD and KWD, which have three.
-8. **Keep a usage cost a string** — `Cost.amount` is a decimal string because per-unit costs fall below `1e-6`, where a number formats as exponential notation and a platform rejects it.
-9. **Follow the cursor, not the item count** — a page shorter than `limit` is not necessarily the last, so only `cursor === null` ends a list.
-10. **Re-read state in a webhook handler** — the payload says something changed, and `entitlements.of()` says what is true now; applying a payload as a diff is how out-of-order deliveries corrupt a projection.
-11. **Run a reconciliation job** — deliveries get missed, so a periodic sweep re-reading the snapshot is part of adopting this package rather than an optimization.
-12. **Give a store to the webhook endpoint** — without one, every delivery dispatches, replays included, so the handlers themselves have to be idempotent.
-13. **Send an `externalId` with every usage event** — it is the idempotency key, so a resent batch is counted once and a failed ingest can be retried safely.
-14. **Use `MemoryBilling` rather than mocking an SDK** — it is a full implementation that passes the same conformance suite, so it fails when the contract changes instead of quietly drifting.
-15. **The Stripe provider is not adopted by anything** — it exists to prove the contract fits a second platform, and its `orders` group answers `not_implemented` on purpose, so treat it as a starting point rather than a supported backend.
-16. **No conformance suite has run against a real sandbox yet** — every remote suite is written and skipped pending credentials, so a provider's mapping of live payloads is unverified until that run happens.
-17. **Mercado Pago leaves the app as the seller of record** — it is a payment processor rather than a merchant of record, so tax registration, invoicing obligations, remittance, and disputes belong to the app and are handled outside this package.
+5. **Hand a credential in as a function when it lives in a secret store** — the constructor cannot await, so the function form is what defers that read to the first call and keeps it to one await for the life of the instance.
+6. **Ask `supports()` before reaching an optional group** — `portal`, `discounts`, `usage` and `meters` may be absent, and the guard is what makes the code typecheck as well as run.
+7. **Store the connection beside every provider id** — one vendor can hold several accounts, and `connection` is what says which credential set issued the id you are looking at.
+8. **Ask `minorUnitDigits()` before formatting money** — dividing by 100 unconditionally is wrong for JPY and CLP, which have no minor units, and for BHD and KWD, which have three.
+9. **Keep a usage cost a string** — `Cost.amount` is a decimal string because per-unit costs fall below `1e-6`, where a number formats as exponential notation and a platform rejects it.
+10. **Follow the cursor, not the item count** — a page shorter than `limit` is not necessarily the last, so only `cursor === null` ends a list.
+11. **Re-read state in a webhook handler** — the payload says something changed, and `entitlements.of()` says what is true now; applying a payload as a diff is how out-of-order deliveries corrupt a projection.
+12. **Run a reconciliation job** — deliveries get missed, so a periodic sweep re-reading the snapshot is part of adopting this package rather than an optimization.
+13. **Give a store to the webhook endpoint** — without one, every delivery dispatches, replays included, so the handlers themselves have to be idempotent.
+14. **Send an `externalId` with every usage event** — it is the idempotency key, so a resent batch is counted once and a failed ingest can be retried safely.
+15. **Use `MemoryBilling` rather than mocking an SDK** — it is a full implementation that passes the same conformance suite, so it fails when the contract changes instead of quietly drifting.
+16. **The Stripe provider is not adopted by anything** — it exists to prove the contract fits a second platform, and its `orders` group answers `not_implemented` on purpose, so treat it as a starting point rather than a supported backend.
+17. **No conformance suite has run against a real sandbox yet** — every remote suite is written and skipped pending credentials, so a provider's mapping of live payloads is unverified until that run happens.
+18. **Mercado Pago leaves the app as the seller of record** — it is a payment processor rather than a merchant of record, so tax registration, invoicing obligations, remittance, and disputes belong to the app and are handled outside this package.

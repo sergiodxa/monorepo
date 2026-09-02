@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 
 import type { Billing } from "../../core/contract";
 import type { BillingError } from "../../core/errors";
+import type { Secret } from "../../core/secret";
 
 import type { MercadoPagoProduct } from "./catalog";
 
@@ -297,6 +298,31 @@ describe("MercadoPagoBilling", () => {
 		for (let request of requests) {
 			expect(request.headers.get("authorization")).toBe(`Bearer ${TOKEN}`);
 		}
+	});
+
+	test("reports an unresolvable token as unauthenticated and asks again after it fails", async () => {
+		let attempts = 0;
+		let provider = billing({
+			accessToken: async () => {
+				attempts += 1;
+				if (attempts === 1) throw new Error("secret store unavailable");
+
+				return await Promise.resolve(TOKEN);
+			},
+		});
+
+		server.use(http.get(`${API}/v1/payments/:id`, () => HttpResponse.json(PAYMENT)));
+
+		let refused = await provider.orders.find("9876543210");
+
+		expect(isFailure(refused)).toBe(true);
+		if (!isFailure(refused)) return;
+
+		expect(refused.error.code).toBe("unauthenticated");
+
+		expect(isSuccess(await provider.orders.find("9876543210"))).toBe(true);
+		expect(isSuccess(await provider.orders.find("9876543210"))).toBe(true);
+		expect(attempts).toBe(2);
 	});
 
 	test("prices a hosted checkout in the currency's own units", async () => {
@@ -581,6 +607,75 @@ describe("MercadoPagoBilling", () => {
 		});
 
 		expect(await billing().webhooks.verify(signed.request, signed.rawBody)).toBe(false);
+	});
+
+	test("proves a delivery against a secret read once however many arrive", async () => {
+		let signed = await delivery({
+			dataId: "9876543210",
+			requestId: "req-1",
+			timestamp: "1704908010",
+			body: { id: 100, type: "payment", action: "payment.updated", data: { id: "9876543210" } },
+		});
+
+		let reads = 0;
+		let provider = billing({
+			webhookSecret: () => {
+				reads += 1;
+
+				return SECRET;
+			},
+		});
+
+		expect(await provider.webhooks.verify(signed.request, signed.rawBody)).toBe(true);
+		expect(await provider.webhooks.verify(signed.request, signed.rawBody)).toBe(true);
+		expect(reads).toBe(1);
+	});
+
+	test("reads the signing secret again after a failed read", async () => {
+		let signed = await delivery({
+			dataId: "9876543210",
+			requestId: "req-1",
+			timestamp: "1704908010",
+			body: { id: 100, type: "payment", action: "payment.updated", data: { id: "9876543210" } },
+		});
+
+		let attempts = 0;
+		let provider = billing({
+			webhookSecret: async () => {
+				attempts += 1;
+				if (attempts === 1) throw new Error("secret store unavailable");
+
+				return await Promise.resolve(SECRET);
+			},
+		});
+
+		expect(await provider.webhooks.verify(signed.request, signed.rawBody)).toBe(false);
+		expect(await provider.webhooks.verify(signed.request, signed.rawBody)).toBe(true);
+		expect(attempts).toBe(2);
+	});
+
+	test("fails a delivery closed while the signing secret is unusable", async () => {
+		let signed = await delivery({
+			dataId: "9876543210",
+			requestId: "req-1",
+			timestamp: "1704908010",
+			body: { id: 100, type: "payment", action: "payment.updated", data: { id: "9876543210" } },
+		});
+
+		let unusable: Secret[] = [
+			"",
+			() => "",
+			() => {
+				throw new Error("secret store unavailable");
+			},
+			async () => await Promise.reject(new Error("secret store unavailable")),
+		];
+
+		for (let webhookSecret of unusable) {
+			expect(await billing({ webhookSecret }).webhooks.verify(signed.request, signed.rawBody)).toBe(
+				false,
+			);
+		}
 	});
 
 	test("fails a delivery closed while no signing secret is configured", async () => {

@@ -16,6 +16,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BillingErrorCode } from "../../core/errors";
+import type { Secret } from "../../core/secret";
 
 import { BillingError } from "../../core/errors";
 
@@ -43,10 +44,10 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 /** Builds a provider configured the way an app configures one. */
-function polar(options: { accessToken?: string | (() => string | Promise<string>) } = {}) {
+function polar(options: { accessToken?: Secret; webhookSecret?: Secret } = {}) {
 	return new PolarBilling({
 		accessToken: options.accessToken ?? ACCESS_TOKEN,
-		webhookSecret: WEBHOOK_SECRET,
+		webhookSecret: options.webhookSecret ?? WEBHOOK_SECRET,
 		products: { pro: PRODUCT_ID },
 		meters: { pings: METER_ID },
 		features: { flow_monitors: BENEFIT_ID },
@@ -611,6 +612,60 @@ describe("PolarBilling", () => {
 		let request = new Request("https://app.example.com/webhooks/billing", { method: "POST", body });
 
 		expect(await polar().webhooks.verify(request, body)).toBe(false);
+	});
+
+	test("verifies against a secret read once however many deliveries arrive", async () => {
+		let signed = await delivery({ type: "order.paid", data: { id: "019order" } });
+
+		let reads = 0;
+		let billing = polar({
+			webhookSecret: () => {
+				reads += 1;
+
+				return WEBHOOK_SECRET;
+			},
+		});
+
+		expect(await billing.webhooks.verify(signed.request, signed.body)).toBe(true);
+		expect(await billing.webhooks.verify(signed.request, signed.body)).toBe(true);
+		expect(reads).toBe(1);
+	});
+
+	test("reads the signing secret again after a failed read", async () => {
+		let signed = await delivery({ type: "order.paid", data: { id: "019order" } });
+
+		let attempts = 0;
+		let billing = polar({
+			webhookSecret: async () => {
+				attempts += 1;
+				if (attempts === 1) throw new Error("secret store unavailable");
+
+				return await Promise.resolve(WEBHOOK_SECRET);
+			},
+		});
+
+		expect(await billing.webhooks.verify(signed.request, signed.body)).toBe(false);
+		expect(await billing.webhooks.verify(signed.request, signed.body)).toBe(true);
+		expect(attempts).toBe(2);
+	});
+
+	test("fails a delivery closed while the signing secret is unusable", async () => {
+		let signed = await delivery({ type: "order.paid", data: { id: "019order" } });
+
+		let unusable: Secret[] = [
+			"",
+			() => "",
+			() => {
+				throw new Error("secret store unavailable");
+			},
+			async () => await Promise.reject(new Error("secret store unavailable")),
+		];
+
+		for (let webhookSecret of unusable) {
+			expect(await polar({ webhookSecret }).webhooks.verify(signed.request, signed.body)).toBe(
+				false,
+			);
+		}
 	});
 
 	test("names the delivery by its own header and the resource it is about", () => {

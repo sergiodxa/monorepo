@@ -35,6 +35,7 @@ export type {
 	WebhookReference,
 } from "./core/contract";
 export type { BillingErrorCode, BillingErrorOptions } from "./core/errors";
+export type { Secret } from "./core/secret";
 export type { OptionalCapability } from "./core/supports";
 export type {
 	BillingEvent,

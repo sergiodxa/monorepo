@@ -212,7 +212,9 @@ A class rather than a `create*` factory, because the class is both the value and
 
 Module scope is deliberate: options are validated at boot rather than on the first call that tries to bill. It stays safe because constructing a provider does no work — no network, no heavy module graph — so nothing runs in Worker global scope that could fail an upload.
 
-`accessToken` also accepts a function returning the token, which is what keeps `apps/r3-auth` working: its token lives in Secrets Store and is only readable with an `await`, which a module-scope constructor cannot do. The function is called once, on the first call that reaches the API, and a rejection is not memoized, so one blip does not leave a long-lived provider permanently unable to bill.
+Every credential option takes a `Secret` — the value itself, or a function resolving it — which is what keeps `apps/r3-auth` working: its token lives in Secrets Store and is only readable with an `await`, which a module-scope constructor cannot do. The function is called once, on the first call that needs it, concurrent callers share one read, and a rejection is not memoized, so one blip does not leave a long-lived provider permanently unable to bill.
+
+That applies to signing secrets as much as to API tokens, because the constraint is where a secret lives rather than which secret it is. A signing secret is only read inside `verify()`, which is already async, and an unreadable one is reported as unproven rather than thrown — a webhook endpoint that answers 5xx is how a platform ends up disabling it.
 
 #### The middleware publishes it on the context, and types it
 

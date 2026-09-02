@@ -34,6 +34,7 @@ import type {
 	WebhookReference,
 } from "../../core/contract";
 import type { BillingErrorCode } from "../../core/errors";
+import type { Secret } from "../../core/secret";
 import type {
 	BillingEvent,
 	BillingEventPayload,
@@ -48,6 +49,7 @@ import type {
 } from "../../core/types";
 
 import { BillingError } from "../../core/errors";
+import { secretReader, verificationSecret } from "../../core/secret";
 import { DEFAULT_PAGE_SIZE } from "../../core/types";
 
 import type { FormFields, FormValue, SlugResolver } from "./map";
@@ -157,8 +159,12 @@ export interface StripeCatalogEntry {
 
 /** How a {@link StripeBilling} instance is configured. */
 export interface StripeBillingOptions {
-	/** Secret API key every request is authenticated with. */
-	secretKey: string;
+	/**
+	 * Secret API key every request is authenticated with, or a function
+	 * resolving it. The function form is resolved once and remembered, so a key
+	 * read from a secret store costs one await for the life of the instance.
+	 */
+	secretKey: Secret;
 
 	/** @default "stripe" */
 	connection?: string;
@@ -169,8 +175,12 @@ export interface StripeBillingOptions {
 	/** Stripe meter ids, keyed by our own meter slugs. */
 	meters?: Record<string, string>;
 
-	/** Endpoint signing secret; verification fails closed without it. */
-	webhookSecret?: string;
+	/**
+	 * Endpoint signing secret, or a function resolving it; verification fails
+	 * closed without it. The function form is resolved once and remembered, so a
+	 * secret read from a store costs one await for the life of the instance.
+	 */
+	webhookSecret?: Secret;
 
 	/** Portal configuration a session is opened against. */
 	portalConfiguration?: string;
@@ -264,9 +274,9 @@ export class StripeBilling extends APIClient implements Billing {
 	/** The configured HTTP client, for the endpoints the contract does not model. */
 	readonly native: unknown;
 
-	#secretKey: string;
+	#secretKey: () => Promise<string>;
 
-	#webhookSecret: string;
+	#webhookSecret: () => Promise<string>;
 
 	#externalIdKey: string;
 
@@ -292,8 +302,8 @@ export class StripeBilling extends APIClient implements Billing {
 		super(options.baseURL ?? DEFAULT_BASE_URL);
 
 		this.connection = options.connection ?? DEFAULT_CONNECTION;
-		this.#secretKey = options.secretKey;
-		this.#webhookSecret = options.webhookSecret ?? "";
+		this.#secretKey = secretReader(options.secretKey);
+		this.#webhookSecret = secretReader(options.webhookSecret ?? "");
 		this.#externalIdKey = options.externalIdKey ?? DEFAULT_EXTERNAL_ID_KEY;
 		this.#portalConfiguration = options.portalConfiguration;
 		this.#catalog = new Map(Object.entries(options.catalog));
@@ -332,7 +342,7 @@ export class StripeBilling extends APIClient implements Billing {
 	 * @param request - Request about to be sent.
 	 */
 	protected override async before(request: Request): Promise<Request> {
-		request.headers.set("authorization", `Bearer ${this.#secretKey}`);
+		request.headers.set("authorization", `Bearer ${await this.#secretKey()}`);
 		request.headers.set("stripe-version", STRIPE_VERSION);
 		request.headers.set("accept", "application/json");
 		return request;
@@ -358,6 +368,14 @@ export class StripeBilling extends APIClient implements Billing {
 	}
 
 	async #send<Output>(options: SendOptions<Output>): Promise<Result<Output, BillingError>> {
+		try {
+			await this.#secretKey();
+		} catch (error) {
+			return this.#fail("unauthenticated", "the Stripe secret key could not be resolved", {
+				cause: error,
+			});
+		}
+
 		let query = options.query === undefined ? "" : `?${formEncode(options.query).toString()}`;
 		let headers = new Headers();
 		let init: RequestInit = { method: options.method };
@@ -992,7 +1010,7 @@ export class StripeBilling extends APIClient implements Billing {
 				verifyStripeSignature({
 					header: request.headers.get(SIGNATURE_HEADER),
 					rawBody,
-					secret: this.#webhookSecret,
+					secret: await verificationSecret(this.#webhookSecret),
 				}),
 
 			/** Names the delivery, for deduplication, and the object it changed, for routing. */

@@ -33,6 +33,7 @@ import type {
 	WebhookReference,
 } from "../../core/contract";
 import type { BillingErrorCode } from "../../core/errors";
+import type { Secret } from "../../core/secret";
 import type {
 	BillingEvent,
 	Checkout,
@@ -47,6 +48,7 @@ import type {
 } from "../../core/types";
 
 import { BillingError } from "../../core/errors";
+import { secretReader, verificationSecret } from "../../core/secret";
 import { DEFAULT_PAGE_SIZE } from "../../core/types";
 
 import type { MercadoPagoProduct } from "./catalog";
@@ -132,7 +134,7 @@ export interface MercadoPagoBillingOptions {
 	 * called once, on the first call that reaches the API, and a rejection is not
 	 * memoized, so one failed read leaves the instance able to bill later.
 	 */
-	accessToken: string | (() => string | Promise<string>);
+	accessToken: Secret;
 
 	/**
 	 * The credential set this instance bills against, stored beside every
@@ -148,10 +150,13 @@ export interface MercadoPagoBillingOptions {
 	products?: Readonly<Record<string, MercadoPagoProduct>>;
 
 	/**
-	 * The application's webhook signing secret, from the platform's dashboard.
-	 * Deliveries fail closed while it is unset.
+	 * The application's webhook signing secret, from the platform's dashboard,
+	 * or a function resolving it. A function is called once, on the first
+	 * delivery verified, and a rejection is not memoized, so one failed read
+	 * leaves the endpoint able to verify later. Deliveries fail closed while the
+	 * secret is unset.
 	 */
-	webhookSecret?: string;
+	webhookSecret?: Secret;
 
 	/** Where the platform posts deliveries for the checkouts this instance opens. */
 	notificationURL?: string;
@@ -206,17 +211,15 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 	/** This client, for the endpoints the contract does not model. */
 	readonly native: unknown;
 
-	readonly #accessToken: string | (() => string | Promise<string>);
+	readonly #accessToken: () => Promise<string>;
 
 	readonly #catalog: MercadoPagoCatalog;
 
-	readonly #webhookSecret: string | null;
+	readonly #webhookSecret: () => Promise<string>;
 
 	readonly #notificationURL: string | null;
 
 	readonly #backURLs: MercadoPagoBackURLs;
-
-	#token: string | null = null;
 
 	/**
 	 * Creates the provider. Nothing here reaches the network, so an instance can
@@ -228,9 +231,9 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 		super(new URL(BASE_URL));
 
 		this.connection = options.connection ?? DEFAULT_CONNECTION;
-		this.#accessToken = options.accessToken;
+		this.#accessToken = secretReader(options.accessToken);
 		this.#catalog = new MercadoPagoCatalog(options.products ?? {});
-		this.#webhookSecret = options.webhookSecret ?? null;
+		this.#webhookSecret = secretReader(options.webhookSecret ?? "");
 		this.#notificationURL = options.notificationURL ?? null;
 		this.#backURLs = options.backURLs ?? {};
 
@@ -252,7 +255,7 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 	 * @returns The request to send.
 	 */
 	protected override async before(request: Request): Promise<Request> {
-		if (this.#token !== null) request.headers.set("Authorization", `Bearer ${this.#token}`);
+		request.headers.set("Authorization", `Bearer ${await this.#accessToken()}`);
 		request.headers.set("Accept", "application/json");
 
 		return request;
@@ -270,17 +273,13 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 		return this.#fail("unsupported", `Mercado Pago has no ${what}`);
 	}
 
+	/**
+	 * Reads the credential before a call is sent, so an unreadable one is
+	 * reported as a failed operation rather than as an unauthenticated request.
+	 */
 	async #authorize(): Promise<Result<string, BillingError>> {
-		if (this.#token !== null) return success(this.#token);
-
-		if (typeof this.#accessToken === "string") {
-			this.#token = this.#accessToken;
-			return success(this.#token);
-		}
-
 		try {
-			this.#token = await this.#accessToken();
-			return success(this.#token);
+			return success(await this.#accessToken());
 		} catch {
 			return this.#fail("unauthenticated", "the access token could not be resolved");
 		}
@@ -1090,7 +1089,8 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 	#buildWebhookApi(): WebhookApi {
 		return {
 			verify: async (request: Request, rawBody: string) => {
-				if (this.#webhookSecret === null) return false;
+				let secret = await verificationSecret(this.#webhookSecret);
+				if (secret.length === 0) return false;
 
 				let signature = parseSignature(request.headers.get(SIGNATURE_HEADER));
 				if (signature === null) return false;
@@ -1108,7 +1108,7 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 					timestamp: signature.timestamp,
 				});
 
-				return await verifyManifest(this.#webhookSecret, manifest, signature.digest);
+				return await verifyManifest(secret, manifest, signature.digest);
 			},
 
 			/**
