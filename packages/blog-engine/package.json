@@ -28,8 +28,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
 		"@pkg/cloudflare-mocks": "workspace:*",
-		"@pkg/jwt": "workspace:*",
-		"msw": "^2.15.0",
-		"vitest": "4.1.10"
+		"@pkg/jwt": "workspace:*"
 	}
 }

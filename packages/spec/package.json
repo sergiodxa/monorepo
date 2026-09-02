@@ -19,9 +19,5 @@
 		"@pkg/duration": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/sample": "workspace:*"
-	},
-	"devDependencies": {
-		"msw": "^2.15.0",
-		"vitest": "4.1.10"
 	}
 }

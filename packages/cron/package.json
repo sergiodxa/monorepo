@@ -15,7 +15,6 @@
 		"@pkg/result": "workspace:*"
 	},
 	"devDependencies": {
-		"cron-parser": "^5.10.0",
-		"vitest": "4.1.10"
+		"cron-parser": "^5.10.0"
 	}
 }

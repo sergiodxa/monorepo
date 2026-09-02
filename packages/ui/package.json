@@ -22,8 +22,5 @@
 		"@pkg/lucide-remix": "workspace:*",
 		"@pkg/u": "workspace:*",
 		"remix": "3.0.0-rc.1"
-	},
-	"devDependencies": {
-		"vitest": "4.1.10"
 	}
 }

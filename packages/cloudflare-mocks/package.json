@@ -19,7 +19,6 @@
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/data-table-sqlstorage": "workspace:*",
 		"@types/node": "^26.4.0",
-		"remix": "3.0.0-rc.1",
-		"vitest": "4.1.10"
+		"remix": "3.0.0-rc.1"
 	}
 }

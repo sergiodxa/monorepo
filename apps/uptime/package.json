@@ -46,9 +46,7 @@
 		"@cloudflare/vite-plugin": "^1.54.2",
 		"@pkg/cloudflare-mocks": "workspace:*",
 		"@pkg/jwt": "workspace:*",
-		"msw": "^2.15.0",
 		"vite": "^8.2.2",
-		"vitest": "4.1.10",
 		"wrangler": "^4.127.1"
 	}
 }

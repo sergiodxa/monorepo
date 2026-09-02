@@ -9,9 +9,5 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {},
-	"devDependencies": {
-		"vitest": "4.1.10"
 	}
 }

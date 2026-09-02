@@ -12,9 +12,5 @@
 	},
 	"dependencies": {
 		"remix": "3.0.0-rc.1"
-	},
-	"devDependencies": {
-		"msw": "^2.15.0",
-		"vitest": "4.1.10"
 	}
 }

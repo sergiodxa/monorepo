@@ -13,7 +13,6 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@types/node": "^26.4.0",
-		"vitest": "4.1.10"
+		"@types/node": "^26.4.0"
 	}
 }

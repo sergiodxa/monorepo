@@ -14,8 +14,5 @@
 		"@pkg/result": "workspace:*",
 		"@pkg/webhooks": "workspace:*",
 		"@polar-sh/sdk": "^0.48.1"
-	},
-	"devDependencies": {
-		"vitest": "4.1.10"
 	}
 }

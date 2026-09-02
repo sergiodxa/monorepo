@@ -10,10 +10,8 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
-	"dependencies": {},
 	"devDependencies": {
 		"@types/node": "^26.4.0",
-		"remix": "3.0.0-rc.1",
-		"vitest": "4.1.10"
+		"remix": "3.0.0-rc.1"
 	}
 }

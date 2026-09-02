@@ -12,8 +12,5 @@
 	},
 	"dependencies": {
 		"@pkg/result": "workspace:*"
-	},
-	"devDependencies": {
-		"vitest": "4.1.10"
 	}
 }

@@ -15,8 +15,5 @@
 		"@pkg/crypto": "workspace:*",
 		"@pkg/dates": "workspace:*",
 		"@pkg/duration": "workspace:*"
-	},
-	"devDependencies": {
-		"vitest": "4.1.10"
 	}
 }

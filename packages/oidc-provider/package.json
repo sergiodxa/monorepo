@@ -25,7 +25,6 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
-		"@pkg/cloudflare-mocks": "workspace:*",
-		"vitest": "4.1.10"
+		"@pkg/cloudflare-mocks": "workspace:*"
 	}
 }

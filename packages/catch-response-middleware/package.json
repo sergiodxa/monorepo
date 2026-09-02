@@ -14,7 +14,6 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@pkg/response": "workspace:*",
-		"vitest": "4.1.10"
+		"@pkg/response": "workspace:*"
 	}
 }
