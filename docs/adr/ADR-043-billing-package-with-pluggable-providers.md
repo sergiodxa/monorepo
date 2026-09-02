@@ -1,4 +1,4 @@
-# ADR-043: Provider-Agnostic Billing Package
+# ADR-043: Billing Package With Pluggable Providers
 
 ## Status
 
@@ -149,7 +149,7 @@ Most tellingly, the two better-auth plugins that agree on nothing else both conv
 
 ## Decision
 
-Create `@pkg/billing`: vendor-neutral billing models plus an adapter contract, with Polar as the first adapter and an in-memory adapter that is a real implementation. `@pkg/polar` is deprecated on adoption and deleted once its last consumer moves.
+Create `@pkg/billing`: vendor-neutral billing models plus a provider contract, with Polar as the first provider and an in-memory provider that is a real implementation. `@pkg/polar` is deprecated on adoption and deleted once its last consumer moves.
 
 The name is the domain, not the vendor, and matches `@pkg/mail` (ADR-018) and `@pkg/rate-limit` (ADR-019). `@pkg/commerce` was rejected as promising carts and catalogs; `@pkg/payments` as excluding subscriptions and entitlements, which are most of what the apps read.
 
@@ -159,13 +159,13 @@ Stated first, because the prior art shows the promise is where these designs fai
 
 **It is not for making a provider swap cheap.** That is either impossible or hard enough that designing around it distorts everything else — five independent projects concluded as much, and two removed the attempt after shipping it. Polar to Stripe is a change of who legally sells the product; the catalogue and every active subscription are re-created by hand, and Polar holds payouts for 120 days afterwards.
 
-**It is for one legible implementation of billing, repeated.** A reviewer reads how checkout works in one app and recognizes it in the next. A new app gets billing by following the same three steps. And if an app ever runs on a different platform, its billing code still reads like everyone else's, because the platform sits behind an adapter instead of in the call sites.
+**It is for one legible implementation of billing, repeated.** A reviewer reads how checkout works in one app and recognizes it in the next. A new app gets billing by following the same three steps. And if an app ever runs on a different platform, its billing code still reads like everyone else's, because the platform sits behind a provider instead of in the call sites.
 
-Concretely it promises: app code holds no vendor type and no vendor id; one failure convention; page-at-a-time listing; a contract-checked test double instead of two hand-rolled ones; usage ingestion with no app semantics baked in; and a conformance suite that says what an adapter is.
+Concretely it promises: app code holds no vendor type and no vendor id; one failure convention; page-at-a-time listing; a contract-checked test double instead of two hand-rolled ones; usage ingestion with no app semantics baked in; and a conformance suite that says what a provider is.
 
 It does not promise a uniform verb for every operation. Where platforms genuinely differ in shape, the difference is expressed in the contract rather than hidden — the lesson of Pay's `subscribe`, which is an empty method body on three of its six providers so that one signature could look uniform.
 
-### 1a. The Shape: Methods, Webhooks, Hosted Links
+### 2. The Shape: Methods, Webhooks, Hosted Links
 
 Three rules, chosen because they are the intersection every billing platform supports, so the same shape stays available whatever an app runs on:
 
@@ -177,41 +177,84 @@ What that excludes is the point. No card data, no payment-method objects, no emb
 
 This is already how all five apps work — one notes in a comment that billing stays entirely provider-hosted — so the rule makes an existing practice explicit rather than adding a constraint.
 
-### 2. The Adapter Is The Client
+### 3. Shaped As Remix Would Ship It
 
-No wrapper class in front of the adapter. `Billing` is the interface apps program against, and each adapter implements it directly:
+The package is written as if it were `remix/billing`, because that is the idiom every other piece of these apps already follows. Remix v3 splits this kind of concern three ways, and `session` is the template: a core package of primitives and types, a middleware package that puts it on the request context, and one small package per backend.
+
+| Layer                     | Remix precedent                          | Here                      |
+| ------------------------- | ---------------------------------------- | ------------------------- |
+| Primitives, models, types | `remix/session`, `remix/auth`            | `@pkg/billing`            |
+| Request-context wiring    | `remix/middleware/session`               | `@pkg/billing/middleware` |
+| Backends                  | `remix/session-storage/redis`            | `@pkg/billing/polar`      |
+| Test backend              | `remix/session-storage/cookie` (in-core) | `@pkg/billing/memory`     |
+
+The division of labour is stated the way `remix/auth` states its own: **the route owns redirects, flashes, and the app's own records; the package owns the provider protocol.**
+
+#### Providers are `create*` factories, configured at module scope
 
 ```ts
-import type { Billing } from "@pkg/billing";
+// app/billing.ts
+import { createPolarBilling } from "@pkg/billing/polar";
+import { env } from "cloudflare:workers";
 
-import { PolarAdapter } from "@pkg/billing/polar";
-
-let billing: Billing = new PolarAdapter({
-	accessToken: () => env.POLAR_ACCESS_TOKEN.get(),
+export const billing = createPolarBilling({
+	accessToken: env.POLAR_ACCESS_TOKEN,
 	webhookSecret: env.POLAR_WEBHOOK_SECRET,
-	catalog: { pro: "prod_abc", essentials: "prod_def" },
+	products: { pro: "prod_abc", essentials: "prod_def" },
 });
 ```
 
-`accessToken` accepts a string or a function resolving one, preserving the Secrets Store case in `apps/r3-auth` where the token is only readable with an `await`.
+A lowercase `create*` factory matches `createRedisSessionStorage`, `createS3FileStorage`, and `createCredentialsAuthProvider`, and it replaces the `new PolarClient(...)` shape that made the vendor a constructor in five apps. Module scope is deliberate and is a stated Remix feature for auth providers: options are validated at boot rather than on the first call that tries to bill. It stays safe here because a provider does no work when constructed — no SDK import, no network — so nothing heavy runs in Worker global scope.
 
-Resources are grouped rather than flattened onto one class. PayKit's flat 21-method interface is the counter-example: adding a method breaks all 17 providers plus a runtime method-name list, and a 948-line file is what the current package already produced.
+`accessToken` also accepts a function returning the token, which is what keeps `apps/r3-auth` working: its token lives in Secrets Store and is only readable with an `await`, which a module-scope factory cannot do. The function is called once, on the first call that reaches the API, and a rejection is not memoized so one blip does not leave a long-lived provider permanently unable to bill.
+
+#### The provider reaches routes through middleware and context
+
+```ts
+import { billing as billingMiddleware } from "@pkg/billing/middleware";
+
+let router = createRouter({ middleware: [billingMiddleware(billing)] });
+```
+
+Handlers then read `context.billing`, or `context.get(Billing)` for the typed token, exactly as `context.session` and `context.get(Session)` work today. This is also the answer to how a provider gets injected: no new service-container token, matching the direction the rest of the repo has taken.
+
+### 4. Flows Are Primitives; Queries Hang Off The Context
+
+`remix/auth` is five free functions that take `(provider, context)` and hand back a `Response` or a result, and hosted billing has the same shape — a redirect out, a return, a callback. So the flows are primitives:
+
+```ts
+import {
+	finishCheckout,
+	ingestUsage,
+	startCheckout,
+	startPortal,
+	syncCustomer,
+} from "@pkg/billing";
+
+// a controller
+return startCheckout(billing, context, { product: "pro", returnTo: href("/app/:team", { team }) });
+return startPortal(billing, context);
+```
+
+`startCheckout` returns the provider's redirect response, the way `startExternalAuth` does. `finishCheckout(billing, context)` validates the return and gives back `{ result, returnTo }`. `syncCustomer` reads the snapshot from §14, `ingestUsage` reports meters, and `parseBillingEvent` does the webhook protocol work in §17.
+
+Queries are the flat part, and they hang off the provider in context, grouped by resource:
+
+```ts
+let product = await context.billing.catalog.find("pro");
+let orders = await context.billing.orders.list({ customer, limit: 25 });
+```
 
 ```ts
 export interface Billing {
-	/** Which backend issued the ids this instance returns; stored beside them. */
 	readonly provider: ProviderId;
 
 	readonly customers: CustomerApi;
 	readonly catalog: CatalogApi;
-	readonly checkouts: CheckoutApi;
-	readonly portal: PortalApi;
 	readonly subscriptions: SubscriptionApi;
 	readonly entitlements: EntitlementApi;
 	readonly orders: OrderApi;
 	readonly discounts: DiscountApi;
-	readonly usage: UsageApi;
-	readonly webhooks: WebhookApi;
 
 	readonly meters?: MeterApi;
 
@@ -220,9 +263,22 @@ export interface Billing {
 }
 ```
 
-The required groups are the ones every billing platform has an answer for. Only one optional group ships: `meters`, because a feature is already waiting on it. Refunds, license keys, downloadable files, custom fields, metrics, and webhook-endpoint management are all things Polar can do and nothing here needs, so they are not in the contract. A group is added when an app reaches for one — a group added on spec is surface nobody exercises, which is how a shared package stops being the thing you can read to understand billing.
+Grouping the queries keeps them discoverable without a flat client of 26 methods; PayKit's flat 21-method interface is the counter-example, where adding one method breaks all 17 of its providers.
 
-### 3. Capabilities Are Optional Properties
+Only one optional group ships: `meters`, because a feature is already waiting on it. Refunds, license keys, downloadable files, custom fields, metrics, and webhook-endpoint management are all things Polar can do and nothing here needs, so they are absent. A group is added when an app reaches for one — a group added on spec is surface nobody exercises, which is how a shared package stops being the thing you read to understand billing.
+
+#### Route guards, like `requireAuth`
+
+```ts
+import { requireEntitlement } from "@pkg/billing/middleware";
+
+let router = createRouter({ middleware: [billingMiddleware(billing)] });
+router.get("/app/:team/flows", requireEntitlement("flow_monitors"), handler);
+```
+
+`remix/middleware/auth` ships `requireAuth` for exactly this reason: the check that gates a route belongs in middleware, not repeated at the top of every handler. The guard reads the app's own projection through the entitlement snapshot's cached form, never by calling the provider mid-request.
+
+### 5. Capabilities Are Optional Properties
 
 ```ts
 import { supports } from "@pkg/billing";
@@ -233,11 +289,11 @@ let usage = await billing.meters.quantities({ meter: "pings", customer });
 
 `supports()` narrows through `Required<Pick<Billing, K>>`, so the optional property is non-optional inside the branch. The optional property is both the declaration and the implementation, which is why it cannot disagree with itself the way Omnipay's `supportsRefund()` and Rails' twenty `supports_*?` predicates can. Medusa added account holders and saved payment methods across three minor versions without breaking a single existing provider on exactly this mechanism.
 
+It also means a page rendering meter usage does not typecheck against a platform with no meters. Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
+
 A capability gap is never a silent no-op and never a missing method. It is an absent property, checked by the compiler.
 
-It also means a page that renders meter usage does not typecheck against a platform with no meters. Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
-
-### 4. Models Are Ours, And The Mapping Is Enforced
+### 6. Models Are Ours, And The Mapping Is Enforced
 
 Every model is defined in the package; no vendor type is re-exported.
 
@@ -258,15 +314,15 @@ export type SubscriptionStatus =
 	"trialing" | "active" | "past_due" | "canceled" | "revoked" | "incomplete";
 ```
 
-Normalized vocabularies are parsed at the adapter boundary with `remix/data-schema`, not declared and hoped for. A provider status the adapter cannot map is a mapping failure the conformance suite catches, because Pay's dead `STATUSES` constant is what happens otherwise: the vocabulary exists, nothing enforces it, and a predicate and a scope end up disagreeing about the same row.
+Normalized vocabularies are parsed at the provider boundary with `remix/data-schema`, not declared and hoped for. A platform status the provider cannot map is a mapping failure the conformance suite catches, because Pay's dead `STATUSES` constant is what happens otherwise: the vocabulary exists, nothing enforces it, and a predicate and a scope end up disagreeing about the same row.
 
 The provider's own status is kept beside ours rather than replaced by it. Three of these systems landed on the same rule independently — Kill Bill keeps a plugin status enum deliberately distinct from its core one, Lago keeps a raw provider status beside a normalized one, and Metronome keeps the provider's status in a separate sub-object with a published event-to-enum table. Collapsing the two is the classic bug in this class of design: the moment they merge, an unmapped provider state has nowhere to live.
 
-An adapter's mapping is declared as data, not written as a function — three sets naming which provider statuses mean processing, succeeded, and failed. It is the cheapest normalization mechanism found in the survey, and it makes a new provider status a visible omission rather than a silent fall-through.
+A provider's mapping is declared as data, not written as a function — three sets naming which platform statuses mean processing, succeeded, and failed. It is the cheapest normalization mechanism found in the survey, and it makes a new platform status a visible omission rather than a silent fall-through.
 
 Derived state is computed from our own fields rather than delegated to a vendor enum. Cashier's `canceled()` reading local `ends_at` is portable; its `active()` branching on `StripeSubscription::STATUS_*` is not.
 
-### 5. Every Model Carries Its Provider Payload
+### 7. Every Model Carries Its Provider Payload
 
 `providerData` is the escape hatch, and it is deliberate rather than apologetic. Nine independent projects arrived at the same invention, and the ADR is not going to be the tenth to discover it late.
 
@@ -274,11 +330,11 @@ Three rules, taken from the prior art's mistakes:
 
 - The package never reads it. It is stored, returned, and otherwise untouched.
 - It never holds anything sensitive. Medusa's `data` is publicly reachable from its storefront, and that footgun is worth avoiding by policy rather than by review.
-- `native` on the adapter is the other half: the configured vendor client for operations the contract does not model. Reaching for it is expected, not a failure — the review's estimate is that a fifth to a third of real billing code stays provider-specific, and Cashier, Pay, and PayKit all ship this door.
+- `native` on the provider is the other half: the configured vendor client for operations the contract does not model. Reaching for it is expected, not a failure — the review's estimate is that a fifth to a third of real billing code stays provider-specific, and Cashier, Pay, and PayKit all ship this door.
 
 An escape-hatch call site is not portable, and that is visible in the code rather than discovered during a migration.
 
-### 6. Money Is Minor Units, And The Adapter Declares Its Convention
+### 8. Money Is Minor Units, And The Provider Declares Its Convention
 
 ```ts
 export interface Money {
@@ -290,7 +346,7 @@ export interface Money {
 
 PayKit is the cautionary case: a unified `amount: number` whose unit silently depends on the provider, no conversion anywhere, and a `amountToCentsMultiplier` knob in its framework adapter admitting the field was never unified.
 
-So the adapter declares what its provider speaks, rather than the package assuming:
+So the provider declares what its platform speaks, rather than the package assuming:
 
 ```ts
 interface Billing {
@@ -299,7 +355,7 @@ interface Billing {
 }
 ```
 
-Minor units are not universally two decimals. JPY and CLP have none; BHD and KWD have three. Precision is derived from the currency table rather than assumed, and the conformance suite bills in a zero-decimal currency so an adapter that assumes cents fails there instead of in production.
+Minor units are not universally two decimals. JPY and CLP have none; BHD and KWD have three. Precision is derived from the currency table rather than assumed, and the conformance suite bills in a zero-decimal currency so a provider that assumes cents fails there instead of in production.
 
 Usage costs stay a decimal string, because per-unit infrastructure costs fall below `1e-6`, where JavaScript switches to exponential notation and Polar's parser rejects the value:
 
@@ -311,20 +367,25 @@ export interface Cost {
 }
 ```
 
-### 7. Every Method Returns A Result, Including "We Do Not Know"
+### 9. Failures Throw A Typed Error; Missing Things Are `null`
+
+This is the one place where shaping the package as Remix would ship it overrides the repo's own habit, so the reasoning is worth spelling out.
+
+Remix v3 has no `Result` type anywhere. `remix/data-table` returns a row or `null` from `find`, and throws from `update` when the target is missing; `remix/auth` returns the authenticated result or `null`. A `remix/billing` that handed back `Result` everywhere would be the only package in the framework doing so, and every call site would read differently from the `data-table` call beside it.
+
+So:
 
 ```ts
 export type BillingErrorCode =
-	| "not_found"
 	| "invalid_request"
 	| "unauthenticated"
 	| "forbidden"
 	| "conflict"
 	| "rate_limited"
 	| "unavailable"
-	/** The provider's API cannot do this at all. */
+	/** The platform cannot do this at all. */
 	| "unsupported"
-	/** This adapter has not implemented it yet. */
+	/** This provider has not implemented it yet. */
 	| "not_implemented"
 	/** A timeout or 5xx: the operation may or may not have taken effect. */
 	| "unknown";
@@ -332,35 +393,28 @@ export type BillingErrorCode =
 export class BillingError extends Error {
 	readonly code: BillingErrorCode;
 	readonly provider: ProviderId;
-	/** The provider's own code, for logs and support tickets. */
+	/** The platform's own code, for logs and support tickets. */
 	readonly providerCode: string | null;
 	/** Never `true` for `unknown`. */
 	readonly retryable: boolean;
 }
 ```
 
-The `unknown` arm is the correctness-critical addition. Kill Bill separates `ERROR` (the gateway rejected it) from `UNDEFINED` (a timeout or 500, where nobody knows whether money moved), and Hyperswitch handles 4xx and 5xx through separate methods for the same reason. Every code in the first draft asserted a definite outcome, and a billing package that cannot say "unknown" eventually double-charges or wrongly denies access. `retryable` is never true for it: recovery is reconciliation, not a retry.
+- `find*` returns the thing or `null`. There is no `not_found` code, because a missing customer is an answer rather than a failure.
+- Everything else throws `BillingError`.
+- The one exception is the webhook boundary, which returns a discriminated value rather than throwing (§17), because it parses untrusted input and a handler must be able to answer `401` without a `try`/`catch`. `remix/auth` draws the same line: `finishExternalAuth` validates a callback rather than trusting it.
 
-Splitting `unsupported` from `not_implemented` follows PayKit's one clearly good error decision — the caller learns whether to change the design or wait for a release.
+This replaces three conventions with one — today most methods throw `PolarError`, two return `boolean`, and one returns a `Result` — and it keeps `providerCode` on the way out, because the postmortem literature is unanimous that raw platform context is what a 2 AM incident needs.
 
-```ts
-let result = await billing.customers.create({ email, externalId: userId });
-if (isFailure(result)) {
-	logger.error("billing.customer_create_failed", {
-		code: result.error.code,
-		providerCode: result.error.providerCode,
-	});
-	return serverError();
-}
-```
+The `unknown` code is the correctness-critical part. Kill Bill separates "the gateway rejected it" from "a timeout or 500, where nobody knows whether it took effect", and Hyperswitch handles 4xx and 5xx through separate paths for the same reason. Under hosted checkout we never move money ourselves, so the risk is not a double charge — it is a duplicate customer or a double-counted usage event. That is still worth a distinct code, because recovery is reconciliation rather than a retry, and `retryable` is never `true` for it.
 
-One convention replaces the current three, and `providerCode` survives into the log because the postmortem literature is unanimous that raw provider context is what a 2 AM incident actually needs.
+An `unknown` that cannot be resolved is only a nicer label for a lost write, so two obligations come with it. Every mutating call carries an idempotency key derived from our own row id, and every call writes our own correlation id into the platform's metadata. That is what makes recovery possible: Kill Bill's reconciler resolves an undefined transaction by searching the provider for its own correlation id — one match adopts the provider's answer, no match marks the attempt cancelled, and more than one is escalated to a human rather than guessed. Lago does the same with an idempotency key of `payment-<id>` and its own ids in Stripe metadata.
 
-An `unknown` that cannot be resolved is only a nicer label for a lost write, so two obligations come with it. Every mutating call carries an idempotency key derived from our own row id, and every call writes our own correlation id into the provider's metadata. That is what makes recovery possible: Kill Bill's reconciler resolves an undefined transaction by searching the provider for its own correlation id — one match adopts the provider's answer, no match marks the attempt cancelled, and more than one match is deliberately escalated to a human rather than guessed. Lago does the same thing with an idempotency key of `payment-<id>` and its own ids in Stripe metadata.
+Providers are consequently required to implement a read-back for anything they mutate, and that read-back is the only path the reconciliation job uses.
 
-Adapters are consequently required to implement a read-back for anything they mutate, and that read-back is the only path the reconciliation job uses.
+**The cost, stated plainly:** `@pkg/mail` (ADR-018) returns a `Result`, so billing and mail will not read alike. That is the price of matching the framework instead of the neighbouring package, and it is the one decision here to flip if repo-wide `Result` consistency is judged more valuable than Remix-native ergonomics.
 
-### 8. Customers Are Referenced By Either Id, As A Union
+### 10. Customers Are Referenced By Either Id, As A Union
 
 ```ts
 export type CustomerRef = { id: string } | { externalId: string };
@@ -368,17 +422,17 @@ export type CustomerRef = { id: string } | { externalId: string };
 
 The current package takes two optional fields and throws when both are missing. As a union, "one of the two" is a type error. The `externalId` arm is also what makes a migration tractable at all: Pay's deepest reported bug is that it treats the provider's customer as the canonical identifier, so a customer who edits their email in a hosted checkout gets a second provider-side record and their subscription silently stops syncing.
 
-### 9. The Catalog Stays In The Provider, Addressed By Our Slugs
+### 11. The Catalog Stays In The Platform, Addressed By Our Slugs
 
 ```ts
 let checkout = await billing.checkouts.create({ product: "pro", customer: { externalId: userId } });
 ```
 
-Adapters are configured with a slug-to-product map, and no provider product id appears at a call site. Products and prices are read-only in the contract: creating them is a dashboard task, and a write path nobody uses is a write path nobody tests.
+Providers are configured with a slug-to-product map, and no platform product id appears at a call site. Products and prices are read-only in the contract: creating them is a dashboard task, and a write path nobody uses is a write path nobody tests.
 
 This resolves the difference that split better-auth's two plugins — a Stripe plan is defined in your code, a Polar product is defined in Polar — by choosing the side that both providers can honour. Every entitlement product surveyed independently addresses features and meters by developer-defined slugs.
 
-### 10. Subscriptions Are Created By Checkout, Never Directly
+### 12. Subscriptions Are Created By Checkout, Never Directly
 
 `SubscriptionApi` has no `create`. A subscription comes into existence when a checkout completes, and the app learns about it from a webhook.
 
@@ -386,15 +440,15 @@ This is the design's most direct debt to the prior art. Polar, Paddle, Paddle Cl
 
 The divergence is in timing, not naming, so a uniform synchronous creation method is a lie on one provider. Modelling every subscription as webhook-eventual is true on both, and it is what the apps already do — `apps/uptime` keeps a D1 projection written by its webhook precisely because of this.
 
-### 10a. Plan Changes Happen In The Hosted Portal
+### 13. Plan Changes Happen In The Hosted Portal
 
 There is no `subscriptions.change()`. Upgrades, downgrades, cancellations, and payment-method updates are a redirect to the portal link, which is what the apps already do.
 
 That is a deliberate omission, not a gap. Proration is where a shared plan-change method would have to lie: Polar has four proration behaviours and Stripe three, Stripe's "no proration at all" has no Polar equivalent, and Polar silently promotes a deferred proration to an immediate charge when the billing interval changes. Modelling it means picking a lowest common denominator or passing through a field that means different things per platform. Letting each platform's own portal own it costs nothing today.
 
-If an app ever needs a programmatic plan change, the method takes the caller's intent — charge now, defer to the next invoice, or apply at the next cycle — and the adapter maps it. It gets written when something needs it.
+If an app ever needs a programmatic plan change, the method takes the caller's intent — charge now, defer to the next invoice, or apply at the next cycle — and the provider maps it. It gets written when something needs it.
 
-### 11. Apps Read Their Own Tables; The Package Supplies Events And A Snapshot
+### 14. Apps Read Their Own Tables; The Package Supplies Events And A Snapshot
 
 The read path on a request is the app's own projection, never a call to the platform. Webhooks tell an app when to sync, and one snapshot call is what the sync reads:
 
@@ -409,15 +463,15 @@ Keeping the platform off the request path is not a performance nicety. One app a
 
 A periodic repair calling the same snapshot is part of adopting the package, because missed deliveries are normal.
 
-It is also the cheapest group to implement, because Polar already ships it: a customer-state endpoint returning active subscriptions, granted benefits, and meter balances, plus a `customer.state_changed` event that fires when any of it moves. The adapter maps one call, and Stripe's side composes from subscriptions plus entitlements.
+It is also the cheapest group to implement, because Polar already ships it: a customer-state endpoint returning active subscriptions, granted benefits, and meter balances, plus a `customer.state_changed` event that fires when any of it moves. The provider maps one call, and Stripe's side composes from subscriptions plus entitlements.
 
-### 11a. What The Contract Deliberately Omits
+### 15. What The Contract Deliberately Omits
 
 Disputes, chargebacks, payouts, and tax reporting are outside this package, and not because they are unimportant. Under merchant of record they belong to the provider: Polar emits no dispute event and no payment-method event at all, because it is the party that fights the chargeback and holds the card. A `disputes` capability group would therefore have no Polar implementation and no Polar data to model, and a dispute reaches us as a line item on a payout statement rather than as something to handle.
 
-The rule generalizes: where merchant of record removes a whole subsystem, that subsystem stays out of the contract rather than becoming a capability nobody implements. This is also why the seller of record is a property of the deployment worth stating plainly in each app's configuration rather than hiding behind the adapter — it changes who the customer's counterparty is, not just which API gets called.
+The rule generalizes: where merchant of record removes a whole subsystem, that subsystem stays out of the contract rather than becoming a capability nobody implements. This is also why the seller of record is a property of the deployment worth stating plainly in each app's configuration rather than hiding behind the provider — it changes who the customer's counterparty is, not just which API gets called.
 
-### 12. Lists Return Pages
+### 16. Lists Return Pages
 
 ```ts
 export interface Page<T> {
@@ -434,24 +488,46 @@ for await (let order of paginate((cursor) => billing.orders.list({ product: "pro
 
 Draining every page stays available through `paginate()`, as the caller's explicit choice. PayKit shipped no list methods at all — no `list`, no cursor, no `has_more` anywhere — which pushes every enumeration through its escape hatch.
 
-### 13. Webhooks: Four Questions, One Event Union
+### 17. Webhooks: A Route Factory Over Four Provider Questions
 
-The provider-specific part is decomposed, so the generic part can be written once:
+The app should write handlers, not plumbing. Remix already has the shape for this in `createAction` and `createController`, so the package ships a route factory:
+
+```ts
+import { createBillingWebhook } from "@pkg/billing/middleware";
+
+export default createBillingWebhook(billing, {
+	async "order.paid"(event, context) {
+		await grantAccess(event.order);
+	},
+	async "subscription.activated"(event, context) {
+		await syncTeam(event.subscription);
+	},
+});
+```
+
+The factory owns everything that is the same in all five apps and is currently written five times: verify the signature, fail closed with `401`, deduplicate by reference id, persist the delivery, dispatch to the handler, and acknowledge anything unhandled with `200` rather than dropping it silently. That last part matters — PayKit discards unregistered events with no warning, and Hyperswitch makes "not supported" a first-class outcome instead.
+
+Underneath, the provider answers four narrow questions, which is how the generic half can exist at all:
 
 ```ts
 export interface WebhookApi {
-	/** Is this delivery authentic? Owned by the adapter: the schemes differ. */
-	verify(request: Request, rawBody: string): Promise<Result<void, BillingError>>;
+	/** Is this delivery authentic? Provider-owned: the schemes differ. */
+	verify(request: Request, rawBody: string): Promise<boolean>;
 	/** Which object is this about, for deduplication and routing. */
-	reference(rawBody: string): Result<{ id: string; type: string }, BillingError>;
+	reference(rawBody: string): { id: string; type: string } | null;
 	/** The normalized event, or `unrecognized`. Always carries the raw payload. */
-	event(rawBody: string): Result<BillingEvent, BillingError>;
-	/** verify + reference + event, for handlers that want one call. */
-	parse(request: Request, rawBody: string): Promise<Result<BillingEvent, BillingError>>;
+	event(rawBody: string): BillingEvent | null;
 }
 ```
 
-Hyperswitch and Medusa independently split webhook handling this way, and the reason is concrete: with `reference()` separate, deduplication and idempotency are generic package code instead of something every app forgets. The monorepo currently has no webhook idempotency anywhere.
+Hyperswitch and Medusa independently split webhook handling exactly this way. With `reference()` separate, deduplication and idempotency are generic package code rather than something every app forgets — and the monorepo has no webhook idempotency anywhere today.
+
+For a route that needs the event without the factory, the primitive is a discriminated value rather than a throw, because it parses untrusted input:
+
+```ts
+let result = await parseBillingEvent(billing, request);
+if (!result.ok) return new Response(null, { status: 401 });
+```
 
 ```ts
 export type BillingEvent = { id: string; raw: unknown } & (
@@ -466,29 +542,29 @@ export type BillingEvent = { id: string; raw: unknown } & (
 			subscription: Subscription;
 	  }
 	| { type: "order.paid"; order: Order }
-	| { type: "order.refunded"; order: Order; refund: Refund }
+	| { type: "order.refunded"; order: Order }
 	/** Authentic, but not modelled here. Carried through so it can be handled or logged. */
 	| { type: "unrecognized"; providerType: string }
 );
 ```
 
-`raw` is on every event, not only the unrecognized one. PayKit's most-commented issue is a user listing eighteen Stripe events its twelve canonical types did not cover, and its resolution was to always emit the raw event alongside the mapped ones under a `provider.event` namespace. Carrying `raw` everywhere means an incomplete canonical model is never a dead end, and a normalized handler and a provider-specific one can coexist.
+`raw` is on every event, not only the unrecognized one. PayKit's most-commented issue is a user listing eighteen Stripe events its twelve canonical types did not cover, and the resolution was to always emit the raw event alongside the mapped ones. Carrying `raw` everywhere means an incomplete canonical model is never a dead end, and a normalized handler and a platform-specific one can coexist.
 
-Verification stays adapter-owned because the schemes differ: Polar sends Standard Webhooks headers, and the Polar adapter keeps the base64 step Polar's senders apply to a text secret — handing that secret straight to a Standard Webhooks verifier keys on the wrong bytes and rejects every authentic delivery. A Stripe adapter implements `Stripe-Signature` instead. Both use `@pkg/webhooks` (ADR-026) for HMAC primitives; neither delegates the decision to it.
+Verification stays provider-owned because the schemes differ: Polar sends Standard Webhooks headers, and the Polar provider keeps the base64 step Polar's senders apply to a text secret — handing that secret straight to a Standard Webhooks verifier keys on the wrong bytes and rejects every authentic delivery. A Stripe provider implements `Stripe-Signature` instead. Both use `@pkg/webhooks` (ADR-026) for HMAC primitives; neither delegates the decision to it.
 
 Signature failure is fail-closed; an unmodelled shape is fail-open as `unrecognized`.
 
 Three rules come with it, each earned by a mistake in the prior art:
 
-- **A checkout return is not a webhook.** `CheckoutApi` handles the customer coming back from a hosted page; `WebhookApi` handles the provider calling us. They stay separate methods with separate call sites, because Omnipay had to deprecate its way out of merging them and django-payments still serves a browser redirect and a machine response from one function.
-- **An event is a hint, not the new state.** A handler acting on anything consequential re-reads the object through the adapter rather than trusting the payload, because deliveries arrive out of order, get replayed, and can carry an older API version's shape.
-- **Reconciliation is not optional.** Webhooks get missed, so a periodic repair that re-reads provider state is part of adopting this package, not a later addition. `apps/uptime` already does this for subscriptions.
+- **A checkout return is not a webhook.** `finishCheckout` handles the customer coming back from a hosted page; the webhook route handles the platform calling us. They stay separate primitives with separate call sites, because Omnipay had to deprecate its way out of merging them and django-payments still serves a browser redirect and a machine response from one function.
+- **An event is a hint, not the new state.** A handler re-reads the customer snapshot rather than applying the payload as a diff, because deliveries arrive out of order, get replayed, and can carry an older API version's shape.
+- **Reconciliation is not optional.** Webhooks get missed, so a periodic repair that re-reads platform state is part of adopting this package. `apps/uptime` already does this for subscriptions.
 
-### 13a. Event Payloads Are Persisted Before They Are Trusted
+### 18. Event Payloads Are Persisted Before They Are Trusted
 
-Apps store the raw delivery, keyed by the `reference()` id, before acting on it, with `valid` and `processed` recorded on that row. It gives idempotency a durable key, makes a replay cheap to detect, and leaves an audit trail when a handler was wrong. This is dj-stripe's `WebhookEventTrigger` pattern, and it is the piece the monorepo is missing entirely today.
+The route factory stores the raw delivery, keyed by the `reference()` id, before dispatching it, with `valid` and `processed` recorded on that row. It gives idempotency a durable key, makes a replay cheap to detect, and leaves an audit trail when a handler was wrong. This is dj-stripe's `WebhookEventTrigger` pattern, and it is the piece the monorepo is missing entirely today.
 
-### 14. Usage Ingestion Is Generic
+### 19. Usage Ingestion Is Generic
 
 ```ts
 export interface UsageEvent {
@@ -506,44 +582,44 @@ await billing.usage.ingest([
 ]);
 ```
 
-`reportMAU` and `ingestPageViews` do not come along: each was one app's meter name and metadata shape living in a shared package. Chunking at the provider's per-request limit stays inside the adapter.
+`reportMAU` and `ingestPageViews` do not come along: each was one app's meter name and metadata shape living in a shared package. Chunking at the platform's per-request limit stays inside the provider.
 
 Metered billing is also the reason no existing library can be adopted here. Two apps bill on usage, and PayKit — the only standalone TypeScript contender — has no meter, usage-record, or tiered-pricing concept anywhere in its packages or docs.
 
-### 15. Adapters Load Their Vendor Code Lazily
+### 20. Providers Load Their Vendor Code Lazily
 
-Constructing an adapter does no work and imports no SDK. `@polar-sh/sdk` builds roughly 700 zod schemas at load, costing over a megabyte of Worker bundle and tens of milliseconds of startup CPU in every isolate, including the many that never bill anything. The Polar adapter keeps the memoized first-call `import()` the current client uses, with a rejected load discarded so a transient secret-store failure clears on the next call.
+Constructing a provider does no work and imports no SDK. `@polar-sh/sdk` builds roughly 700 zod schemas at load, costing over a megabyte of Worker bundle and tens of milliseconds of startup CPU in every isolate, including the many that never bill anything. The Polar provider keeps the memoized first-call `import()` the current client uses, with a rejected load discarded so a transient secret-store failure clears on the next call.
 
-A Stripe adapter should be written over `fetch` for the same reason. Pay's soft-dependency pattern is worth copying: the package depends on no vendor SDK, each adapter declares its own optional peer dependency, and a version mismatch fails loudly at construction rather than mysteriously at the first charge.
+A Stripe provider should be written over `fetch` for the same reason. Pay's soft-dependency pattern is worth copying: the package depends on no vendor SDK, each provider declares its own optional peer dependency, and a version mismatch fails loudly at construction rather than mysteriously at the first charge.
 
-### 16. The Memory Adapter Is A Real Adapter
+### 21. The Memory Provider Is A Real Provider
 
 ```ts
-import { MemoryAdapter } from "@pkg/billing/memory";
+import { createMemoryBilling } from "@pkg/billing/memory";
 
-let billing = new MemoryAdapter({ catalog: { pro: { amount: 4900, currency: "usd" } } });
+let billing = createMemoryBilling({ catalog: { pro: { amount: 4900, currency: "usd" } } });
 
 await billing.customers.create({ email: "jane@example.com", externalId: "u_1" });
 let delivery = billing.webhooks.emit({ type: "order.paid", order });
 ```
 
-It is a full implementation that passes the same conformance suite, not a mock — Pay's `FakeProcessor` is the model, and the reason it stayed honest for six providers is that it is contract-checked by construction and doubles as the template for writing a new adapter.
+It is a full implementation that passes the same conformance suite, not a mock — Pay's `FakeProcessor` is the model, and the reason it stayed honest for six providers is that it is contract-checked by construction and doubles as the template for writing a new provider.
 
 Pay also earns a second use from it that is worth having: a fake processor is how you give a teammate or a tester a comped account. If that is ever wanted here, Pay's two guards come with it — construction must be explicitly opted into so a form parameter cannot promote a user, and comped accounts must be excludable from revenue queries.
 
 `FakePolarClient` in `apps/books` and the `as unknown as PolarClient` cast in `apps/r3-auth` both delete.
 
-### 17. Conformance Specs, Local And Remote
+### 22. Conformance Specs, Local And Remote
 
-The package ships one executable spec suite (`packages/billing/spec/`) that every adapter must pass, parameterized by adapter, with the required groups in one suite and each optional capability in its own file. ActiveStorage's shared service tests are the precedent: assert only the genuinely universal core, and leave anything backend-specific to its own file rather than conditionally skipping inside the shared suite.
+The package ships one executable spec suite (`packages/billing/spec/`) that every provider must pass, parameterized by provider, with the required groups in one suite and each optional capability in its own file. ActiveStorage's shared service tests are the precedent: assert only the genuinely universal core, and leave anything backend-specific to its own file rather than conditionally skipping inside the shared suite.
 
-Capability declarations are asserted in both directions: for each optional group, the suite checks that `supports()` and a real call agree — a declared group must actually work, and an undeclared one must actually be absent. Omnipay's shared `GatewayTestCase` does exactly this, and it is what stops an adapter from declaring a capability it stubs. The compiler covers the call site; only a spec covers the adapter.
+Capability declarations are asserted in both directions: for each optional group, the suite checks that `supports()` and a real call agree — a declared group must actually work, and an undeclared one must actually be absent. Omnipay's shared `GatewayTestCase` does exactly this, and it is what stops a provider from declaring a capability it stubs. The compiler covers the call site; only a spec covers the provider.
 
-The suite runs twice. Locally against the memory adapter in CI, and remotely against a Polar sandbox organization. The remote run is the load-bearing one — a remote suite against real sandboxes is what let ActiveMerchant catch contract drift across 100+ gateways, and no amount of in-memory green proves an adapter maps a real payload correctly.
+The suite runs twice. Locally against the memory provider in CI, and remotely against a Polar sandbox organization. The remote run is the load-bearing one — a remote suite against real sandboxes is what let ActiveMerchant catch contract drift across 100+ gateways, and no amount of in-memory green proves a provider maps a real payload correctly.
 
-Per the spec-first rule, these specs are written before each adapter method.
+Per the spec-first rule, these specs are written before each provider method.
 
-### 18. Stored Ids Say Which Provider Issued Them
+### 23. Stored Ids Say Which Platform Issued Them
 
 | Before                  | After                                    |
 | ----------------------- | ---------------------------------------- |
@@ -567,7 +643,7 @@ billing_customers
 
 This is Lago's shape, arrived at after supporting six providers, and the partial unique index on `is_default` is what keeps "which provider bills this customer" unambiguous while several identities coexist.
 
-`connection` rather than `provider` is deliberate: it names a configured credential set, not a vendor. Five apps could sell through five different Polar organizations, and Chargebee — which routes across 63 gateways — rejects a request that names a gateway where a gateway account is required, because real merchants run several accounts per provider. An adapter is therefore constructed with a connection code, and that code is what gets stored.
+`connection` rather than `provider` is deliberate: it names a configured credential set, not a vendor. Five apps could sell through five different Polar organizations, and Chargebee — which routes across 63 gateways — rejects a request that names a gateway where a gateway account is required, because real merchants run several accounts per provider. A provider is therefore constructed with a connection code, and that code is what gets stored.
 
 Every customer is created with `externalId` set to the app's own identifier, so customers can be re-resolved on a new backend without a mapping table. Column renames happen per app as it adopts the package.
 
@@ -587,14 +663,14 @@ Where an app keeps a projection of provider state, it should keep the raw payloa
 - **The gap that blocked a feature closes** - meter quantities are in the contract, so `apps/uptime` can build its team-usage view.
 - **Test doubles come from the package** - contract-checked by construction; no subclassing, no casting through `unknown`, no mocking a vendor module.
 - **One failure convention** - `Result` everywhere, with a normalized code, `providerCode` preserved, and a `retryable` flag jobs can branch on.
-- **Portability is testable** - a conformance suite, run against a real sandbox, states what an adapter is.
+- **Portability is testable** - a conformance suite, run against a real sandbox, states what a provider is.
 
 ### Negative
 
 - **A second layer of models to maintain** - every field worth exposing must be mapped, and a mapping can lose nuance or be wrong in ways the vendor's own types could not be.
 - **The wide surface is against the evidence** - every project that achieved real provider independence shrank the portable surface to roughly six operations. Two providers instead of a hundred is the reason to expect a different outcome, and it is an expectation, not a proof.
 - **Five apps and three schemas to migrate** - mechanical but wide, and every webhook handler must be re-verified against real deliveries.
-- **Order normalization is the weakest seam** - a paid order is one object in Polar and an invoice plus a payment intent in Stripe; that mapping will need revision when a second adapter is written.
+- **Order normalization is the weakest seam** - a paid order is one object in Polar and an invoice plus a payment intent in Stripe; that mapping will need revision when a second billing provider is written.
 - **Escape-hatch usage will not be rare** - the review's estimate is a fifth to a third of real billing code stays provider-specific, so `native` will appear in app code and each use is a place a migration must revisit.
 - **Switching providers is still mostly not a code problem** - merchant-of-record status, tax remittance, the product catalogue, and every active subscription are re-created rather than ported, card-data migration is a compliance process requiring the losing provider's cooperation, and payouts are held for 120 days afterwards.
 - **A bug can now live in our mapping** - previously a wrong field was the vendor's.
@@ -604,13 +680,13 @@ Where an app keeps a projection of provider state, it should keep the raw payloa
 
 - **Polar stays the provider** - this changes where the dependency sits, not who processes payments.
 - **`@pkg/polar` is deprecated, not rewritten in place** - it keeps working until its last consumer moves.
-- **No new service-container token** - apps construct the adapter in an app module and pass it where needed; the five existing `PolarClient` registrations point at the adapter until each app is touched.
-- **Webhook route paths and secret names keep their current names** - renaming routes would mean re-registering endpoints with the provider, and `POLAR_*` accurately names the Polar adapter's inputs.
+- **No new service-container token** - apps construct the provider in an app module and pass it where needed; the five existing `PolarClient` registrations point at the provider until each app is touched.
+- **Webhook route paths and secret names keep their current names** - renaming routes would mean re-registering endpoints with the provider, and `POLAR_*` accurately names the Polar provider's inputs.
 - **Subscription creation is asynchronous for everyone** - which matches what the apps already do, and is the only shape true on both providers.
 
 ## Implementation Plan
 
-Phase order changed after the prior-art review: the second adapter moved from last and optional to third and mandatory, because it is the only evidence the contract is provider-agnostic.
+Phase order changed after the prior-art review: the second provider moved from last and optional to third and mandatory, because it is the only evidence the contract is provider-agnostic.
 
 ### Phase 1: Models, Contract, And Specs
 
@@ -619,30 +695,30 @@ Phase order changed after the prior-art review: the second adapter moved from la
 
 1. Create `packages/billing` with models, `Billing`, the resource-group interfaces, `BillingError`, `supports()`, and `paginate()`.
 2. Write the conformance spec suite for the required groups, including a zero-decimal-currency case.
-3. Implement `MemoryAdapter` until the suite is green.
+3. Implement the memory provider until the suite is green.
 
-### Phase 2: Polar Adapter, Parity Surface
+### Phase 2: Polar Provider, Parity Surface
 
 **Priority:** High
 **Estimated Effort:** 1-2 days
 
 1. Implement every group the current 26 methods cover, keeping lazy SDK loading and the text-secret webhook encoding.
 2. Run the conformance suite against a Polar sandbox organization.
-3. Port `@pkg/polar`'s existing tests onto the adapter.
+3. Port `@pkg/polar`'s existing tests onto the provider.
 
 ### Phase 3: Prove The Seam
 
 **Priority:** High
 **Estimated Effort:** 1 day
 
-Write the narrowest useful `StripeAdapter` — customers, checkout, subscription read, entitlement snapshot, one webhook — in test mode, adopted by no app, and run the conformance suite against it. Until a second adapter passes, this ADR's central claim is untested, and every finding in the review says that is where these designs break. A contract revised at this point is cheap; revised in Phase 4 it is not.
+Write the narrowest useful `createStripeBilling` — customers, checkout, subscription read, entitlement snapshot, one webhook — in test mode, adopted by no app, and run the conformance suite against it. Until a second provider passes, the claim that this is a shape rather than a Polar transcription is untested, and every finding in the review says that is where these designs break. A contract revised at this point is cheap; revised in Phase 4 it is not.
 
 ### Phase 4: App Adoption
 
 **Priority:** High
 **Estimated Effort:** 1 day per app
 
-Per app: construct the adapter, replace call sites, delete the local test double, rename the stored columns, and re-verify a real webhook delivery. Simplest billing first: `apps/r3-auth`, `apps/auth-saas`, `apps/blog-saas`, `apps/uptime`, `apps/books`.
+Per app: point the app at the provider, replace call sites, delete the local test double, rename the stored columns, and re-verify a real webhook delivery. Simplest billing first: `apps/r3-auth`, `apps/auth-saas`, `apps/blog-saas`, `apps/uptime`, `apps/books`.
 
 ### Phase 5: Capability Build-Out
 
@@ -668,7 +744,7 @@ Delete the package and its workspace dependencies once nothing imports it.
 
 Ship `@pkg/polar` and later `@pkg/stripe` as independent packages with no shared contract, each expressing its provider's real model. This is Cashier's answer, chosen deliberately by maintainers who had the resources to unify and declined.
 
-**Rejected because**: the cost Cashier accepted is duplication across packages that drift, and the benefit it bought — each package expressing its provider honestly — is mostly available here anyway through capability groups and the escape hatch. The decisive difference is that Cashier serves thousands of applications with wildly different billing models, so a lowest common denominator would have been useless to most of them; this package serves five apps with two billing models. Worth revisiting if the second adapter in Phase 3 cannot be written without distorting the contract.
+**Rejected because**: the cost Cashier accepted is duplication across packages that drift, and the benefit it bought — each package expressing its provider honestly — is mostly available here anyway through capability groups and the escape hatch. The decisive difference is that Cashier serves thousands of applications with wildly different billing models, so a lowest common denominator would have been useless to most of them; this package serves five apps with two billing models. Worth revisiting if the second provider in Phase 3 cannot be written without distorting the contract.
 
 ### 3. Own The Model, Use The Provider Only To Charge
 
@@ -680,7 +756,7 @@ Hold customers, plans, subscriptions, usage, and invoices in our own tables, and
 
 Abstract only "what does this customer have right now" plus usage grants, and let every checkout, portal, and webhook call be provider-specific. This is Stigg, and it is why Stigg runs across five billing systems.
 
-**Rejected as the whole answer, adopted as part of it**: entitlements are now a required group and the preferred read path (§11). But the apps also create checkouts, open portals, list orders, and ingest usage, and leaving those un-abstracted would leave the vendor's types in the app code, which is the problem being solved. The entitlement seam is the part that survives a provider change; it is not the part that removes `@polar-sh/sdk` from five apps.
+**Rejected as the whole answer, adopted as part of it**: entitlements are now a required group and the preferred read path (§14). But the apps also create checkouts, open portals, list orders, and ingest usage, and leaving those un-abstracted would leave the vendor's types in the app code, which is the problem being solved. The entitlement seam is the part that survives a provider change; it is not the part that removes `@polar-sh/sdk` from five apps.
 
 ### 5. Adopt PayKit Or Another Existing Library
 
@@ -731,7 +807,7 @@ If the real requirement is being able to stop being the merchant of record witho
 - [Hyperswitch connector guide](https://github.com/juspay/hyperswitch/blob/main/add_connector.md)
 - [ActiveStorage shared service tests](https://github.com/rails/rails/blob/main/activestorage/test/service/shared_service_tests.rb)
 - [ADR-018: Mail Package With Pluggable Transports](./ADR-018-mail-package-with-pluggable-transports.md)
-- [ADR-019: Adapter-Based Rate Limiting Package](./ADR-019-adapter-based-rate-limiting-package.md)
+- [ADR-019: Adapter-Based Rate Limiting Package](./ADR-019-provider-based-rate-limiting-package.md)
 - [ADR-026: Standard Webhooks Parsing Package](./ADR-026-standard-webhooks-parsing-package.md)
 - [ADR-029: Pagination Package](./ADR-029-pagination-package.md)
 - [ADR-033: Wide Events As The Logging Contract](./ADR-033-wide-events-as-the-logging-contract.md)
@@ -739,7 +815,7 @@ If the real requirement is being able to stop being the merchant of record witho
 ## Current Progress
 
 - [ ] Phase 1: Models, contract, and specs
-- [ ] Phase 2: Polar adapter, parity surface
+- [ ] Phase 2: Polar provider, parity surface
 - [ ] Phase 3: Prove the seam
 - [ ] Phase 4: App adoption
 - [ ] Phase 5: Capability build-out
@@ -747,14 +823,14 @@ If the real requirement is being able to stop being the merchant of record witho
 
 ## Notes
 
-- Polar's webhook secret is an arbitrary string that its senders base64-encode before signing, so the HMAC key is the secret's UTF-8 bytes. The Polar adapter must keep that conversion; a Standard Webhooks verifier given the raw secret rejects every authentic delivery.
+- Polar's webhook secret is an arbitrary string that its senders base64-encode before signing, so the HMAC key is the secret's UTF-8 bytes. The Polar provider must keep that conversion; a Standard Webhooks verifier given the raw secret rejects every authentic delivery.
 - Usage costs stay decimal strings, not numbers. Per-unit infrastructure costs fall below `1e-6`, where JavaScript switches to exponential notation and the provider's parser rejects the value.
 - Only `apps/r3-auth` reads its token from Secrets Store, which is why `accessToken` accepts a resolver. A rejected resolution must not be memoized, or one blip leaves a long-lived instance permanently unable to bill.
 - Keep vendor concepts out of the core namespace. Pay defines an unnamespaced `Pay::Payment` that is hardcoded to Stripe payment intents and setup intents, because SCA exists in only one provider's model — once the shared namespace means one vendor's concept, the abstraction has already lost. The same applies to columns: Pay's shared schema carries `stripe_account` and `application_fee_percent`.
-- An abstraction that cannot survive one provider's major version bump will not survive two providers. Cashier has no upgrade path from Paddle Classic to Paddle Billing; those users stay on a forked 1.x permanently. Treat a provider's next API version as a new adapter, not a change to this contract.
+- An abstraction that cannot survive one provider's major version bump will not survive two providers. Cashier has no upgrade path from Paddle Classic to Paddle Billing; those users stay on a forked 1.x permanently. Treat a platform's next API version as a new provider, not a change to this contract.
 - There is no public account of anyone completing a provider-to-provider migration using Pay or Cashier, despite both being widely deployed for years. That absence is the honest state of the evidence for the migration story, and a reason to keep the promise in §1 narrow.
 - Polar's `external_id` is unique per organization and **immutable once set**, so the value written at customer creation is permanent. Use the app's own stable subject id, never an email or a slug that can change, and never a value that encodes which product bought what.
-- Polar's API is date-versioned, and Polar itself is a Stripe-settled reseller, so an adapter pins a version and treats a Polar release note as it would a vendor SDK bump.
+- Polar's API is date-versioned, and Polar itself is a Stripe-settled reseller, so a provider pins a version and treats a Polar release note as it would a vendor SDK bump.
 - One stable object, several provider attempts, is the shape that makes retries expressible without lying to the caller: a retried payment grows a second attempt rather than becoming a new payment. Worth keeping in mind if payment attempts ever get modelled here.
 - When refunds arrive in Phase 5, model partial refunds as an append-only transaction log with derived balances rather than a mutable `amountRefunded` scalar. django-payments keeps the scalar and consequently can only detect an over-refund after the fact, logging an error because raising one "would just cause inconsistencies"; django-oscar keeps `amountAllocated`/`amountDebited`/`amountRefunded` as separate running totals over a transaction log, which makes the same check a precondition.
 - Fraud or manual-review state is a separate axis from payment status, not another status value. django-payments models the two independently, and a Stripe-shaped model usually collapses them.
