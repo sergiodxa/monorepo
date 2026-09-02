@@ -135,7 +135,7 @@ The two libraries that kept redirect flows in scope also disagree instructively.
 
 #### The third option, and why it is unavailable
 
-Lago, Kill Bill, Orb, and Metronome achieve real provider independence a different way: they own the customer, plan, subscription, usage, and invoice model themselves, and ask the payment provider only to hold a customer record, store a payment method, charge an amount, refund it, and report the outcome. That surface is about six operations, which is why those systems support dozens of gateways while nobody supports dozens of subscription providers.
+Lago, Kill Bill, Chargebee, Zuora, and Recurly achieve real provider independence a different way: they own the customer, plan, subscription, usage, and invoice model themselves, and ask the payment provider only to hold a customer record, store a payment method, charge an amount, refund it, read the result back, and report outcomes asynchronously. That surface is five or six operations plus a status-mapping table, which is why Chargebee lists 63 gateways and Kill Bill claims "virtually no restrictions" while nobody supports more than one subscription provider. The causality runs one way: they support many providers _because_ they own the model.
 
 That option is foreclosed here. Under merchant of record, Polar must own the invoice, because the invoice is the tax document naming the seller. Owning the invoice model means becoming the seller, which is the entire benefit being bought. So this package normalizes provider-owned models rather than replacing them, and accepts the narrower promise that comes with it.
 
@@ -158,6 +158,8 @@ Stated first, because the prior art shows the promise is where these designs fai
 It promises: app code holds no vendor type and no vendor id; one failure convention with an explicit unknown outcome; page-at-a-time listing; a test double that is contract-checked; usage ingestion with no app semantics baked in; and a conformance suite that defines what an adapter is.
 
 It does not promise that changing providers is cheap. Under merchant of record, subscriptions and saved payment methods do not move, so every customer re-checks out; Polar to Stripe is a change of who legally sells the product, not a config change. What the package buys is that the code obstacle is bounded and testable while the commercial one is not.
+
+Stated precisely, because the imprecise version is what makes these designs disappoint: provider independence means **new customers can be signed up on a different provider**, not that existing subscribers migrate silently. Zuora, which has solved this problem commercially for longer than anyone, states the constraint plainly — a gateway token from one provider cannot be reused at another, so a system must expect to hold several provider identities for one customer. Only network tokens are portable, and a merchant of record does not hand those over.
 
 It also does not promise a uniform verb for every operation. Where the providers genuinely differ in shape, the difference is expressed in the contract rather than hidden, which is the lesson of Pay's no-op `subscribe`.
 
@@ -223,6 +225,8 @@ let key = await billing.licenseKeys.validate({ key, productId });
 
 A capability gap is never a silent no-op and never a missing method. It is an absent property, checked by the compiler.
 
+Granularity matters, and the survey is a warning here. Coarse capability groups work — that is Medusa's mechanism, and it survived three minor versions of additions. Fine-grained per-operation matrices rot: ActiveMerchant's hand-maintained feature matrix covers about fifty gateways against two hundred and fifty implementations and was last edited years ago, and none of the commercial engines that support dozens of providers ships a machine-readable capability matrix at all. So capabilities stay at the group level, and a difference finer than a group is expressed as an `unsupported` failure from a real method rather than as another flag.
+
 ### 4. Models Are Ours, And The Mapping Is Enforced
 
 Every model is defined in the package; no vendor type is re-exported.
@@ -245,6 +249,10 @@ export type SubscriptionStatus =
 ```
 
 Normalized vocabularies are parsed at the adapter boundary with `remix/data-schema`, not declared and hoped for. A provider status the adapter cannot map is a mapping failure the conformance suite catches, because Pay's dead `STATUSES` constant is what happens otherwise: the vocabulary exists, nothing enforces it, and a predicate and a scope end up disagreeing about the same row.
+
+The provider's own status is kept beside ours rather than replaced by it. Three of these systems landed on the same rule independently — Kill Bill keeps a plugin status enum deliberately distinct from its core one, Lago keeps a raw provider status beside a normalized one, and Metronome keeps the provider's status in a separate sub-object with a published event-to-enum table. Collapsing the two is the classic bug in this class of design: the moment they merge, an unmapped provider state has nowhere to live.
+
+An adapter's mapping is declared as data, not written as a function — three sets naming which provider statuses mean processing, succeeded, and failed. It is the cheapest normalization mechanism found in the survey, and it makes a new provider status a visible omission rather than a silent fall-through.
 
 Derived state is computed from our own fields rather than delegated to a vendor enum. Cashier's `canceled()` reading local `ends_at` is portable; its `active()` branching on `StripeSubscription::STATUS_*` is not.
 
@@ -337,6 +345,10 @@ if (isFailure(result)) {
 ```
 
 One convention replaces the current three, and `providerCode` survives into the log because the postmortem literature is unanimous that raw provider context is what a 2 AM incident actually needs.
+
+An `unknown` that cannot be resolved is only a nicer label for a lost write, so two obligations come with it. Every mutating call carries an idempotency key derived from our own row id, and every call writes our own correlation id into the provider's metadata. That is what makes recovery possible: Kill Bill's reconciler resolves an undefined transaction by searching the provider for its own correlation id — one match adopts the provider's answer, no match marks the attempt cancelled, and more than one match is deliberately escalated to a human rather than guessed. Lago does the same thing with an idempotency key of `payment-<id>` and its own ids in Stripe metadata.
+
+Adapters are consequently required to implement a read-back for anything they mutate, and that read-back is the only path the reconciliation job uses.
 
 ### 8. Customers Are Referenced By Either Id, As A Union
 
@@ -503,13 +515,29 @@ Per the spec-first rule, these specs are written before each adapter method.
 
 ### 18. Stored Ids Say Which Provider Issued Them
 
-| Before                  | After                                         |
-| ----------------------- | --------------------------------------------- |
-| `polar_customer_id`     | `billing_provider` plus `billing_customer_id` |
-| `polar_subscription_id` | `billing_subscription_id`                     |
-| `polar_product_id`      | `billing_product_slug`                        |
+| Before                  | After                                    |
+| ----------------------- | ---------------------------------------- |
+| `polar_customer_id`     | a `billing_customers` row per connection |
+| `polar_subscription_id` | `billing_subscription_id`                |
+| `polar_product_id`      | `billing_product_slug`                   |
 
-Neither Pay nor Cashier stores the provider name, and in Cashier's case that is the root of the migration impossibility — the provider is implicit in `stripe_id` and `stripe_status`. A `billing_provider` column costs nothing and is what makes running two providers side by side, or migrating between them, conceivable at all.
+Neither Pay nor Cashier stores the provider name, and in Cashier's case that is the root of the migration impossibility — the provider is implicit in `stripe_id` and `stripe_status`.
+
+A single `billing_customer_id` column is not enough, though, and this is the one place the first draft of this ADR was simply wrong. Because a provider's customer id and payment token cannot be reused at another provider, one of our customers legitimately has several provider identities, and a dual-run needs all of them at once. So the customer link is a row, not a column:
+
+```
+billing_customers
+  subject_id        -- our own identifier, the join key
+  connection        -- which configured connection issued the ids below
+  provider_customer_id
+  is_default        -- the connection to bill against now
+  UNIQUE (subject_id, connection)
+  UNIQUE (subject_id) WHERE is_default
+```
+
+This is Lago's shape, arrived at after supporting six providers, and the partial unique index on `is_default` is what keeps "which provider bills this customer" unambiguous while several identities coexist.
+
+`connection` rather than `provider` is deliberate: it names a configured credential set, not a vendor. Five apps could sell through five different Polar organizations, and Chargebee — which routes across 63 gateways — rejects a request that names a gateway where a gateway account is required, because real merchants run several accounts per provider. An adapter is therefore constructed with a connection code, and that code is what gets stored.
 
 Every customer is created with `externalId` set to the app's own identifier, so customers can be re-resolved on a new backend without a mapping table. Column renames happen per app as it adopts the package.
 
@@ -614,7 +642,7 @@ Ship `@pkg/polar` and later `@pkg/stripe` as independent packages with no shared
 
 ### 3. Own The Model, Use The Provider Only To Charge
 
-Hold customers, plans, subscriptions, usage, and invoices in our own tables, and use the provider only to charge a stored payment method. This is Lago, Kill Bill, Orb, and Metronome, and it is what most prior art converged on.
+Hold customers, plans, subscriptions, usage, and invoices in our own tables, and use the provider only to charge a stored payment method. This is Lago, Kill Bill, Chargebee, Zuora, and Recurly, and it is what most prior art converged on.
 
 **Rejected because**: it is incompatible with merchant of record. The invoice is the tax document naming the seller, so owning the invoice model means becoming the seller and giving up the entire reason Polar is the provider. It also means owning proration, dunning, tax, credit notes, and reconciliation, which is the hardest correctness domain available.
 
@@ -658,7 +686,10 @@ The broader search found no mature standalone library in any language that abstr
 - [django-oscar payment models](https://github.com/django-oscar/django-oscar/blob/master/src/oscar/apps/payment/abstract_models.py)
 - [Medusa `AbstractPaymentProvider`](https://docs.medusajs.com/resources/references/payment/provider)
 - [Kill Bill payment plugins](https://killbill.github.io/killbill-docs/latest/payment_plugin.html)
-- [Lago Stripe integration](https://docs.getlago.com/integrations/payments/stripe-integration)
+- [Lago payment providers](https://github.com/getlago/lago-api) and [its Stripe integration](https://docs.getlago.com/integrations/payments/stripe-integration)
+- [Zuora on multiple gateways and network tokens](https://docs.zuora.com/en/zuora-payments/process-payments/network-tokenization/multiple-gateways-and-network-tokens)
+- [Chargebee Smart Routing and gateway accounts](https://www.chargebee.com/docs/payments/2.0/payment-gateways-and-configuration/gateway_settings)
+- [Recurly on switching payment gateways](https://docs.recurly.com/recurly-subscriptions/docs/payment-gateways-1)
 - [Hyperswitch connector guide](https://github.com/juspay/hyperswitch/blob/main/add_connector.md)
 - [ActiveStorage shared service tests](https://github.com/rails/rails/blob/main/activestorage/test/service/shared_service_tests.rb)
 - [ADR-018: Mail Package With Pluggable Transports](./ADR-018-mail-package-with-pluggable-transports.md)
@@ -687,4 +718,6 @@ The broader search found no mature standalone library in any language that abstr
 - When refunds arrive in Phase 5, model partial refunds as an append-only transaction log with derived balances rather than a mutable `amountRefunded` scalar. django-payments keeps the scalar and consequently can only detect an over-refund after the fact, logging an error because raising one "would just cause inconsistencies"; django-oscar keeps `amountAllocated`/`amountDebited`/`amountRefunded` as separate running totals over a transaction log, which makes the same check a precondition.
 - Fraud or manual-review state is a separate axis from payment status, not another status value. django-payments models the two independently, and a Stripe-shaped model usually collapses them.
 - Do not let a method's arity or argument shape depend on a capability flag. Solidus has one `void` called with three arguments or two depending on whether the payment method supports payment profiles; that is the shape a typed contract exists to rule out.
+- Recurly is the one product that credibly promises a silent gateway switch, and the reason is that it holds the card data itself as a PCI-DSS Level 1 merchant service provider. That option is not available under merchant of record, which is why the promise in §1 is narrower than theirs.
+- Metronome is often cited as evidence for provider-independent billing, and it is a useful design reference, but Stripe acquired it, so treat its independence story as historical rather than as a live existence proof.
 - Products, prices, and discounts are read-only in the required contract. Creating them is a dashboard task, and a write path nobody uses is a write path nobody tests.
