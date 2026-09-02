@@ -138,3 +138,43 @@ Run from the repository root:
 | [webhooks](packages/webhooks)                           | Standard Webhooks signing, verification and replay guards     |
 | [workers-cache](packages/workers-cache)                 | Cloudflare cache tags, purging and cache-status reads         |
 | [xml](packages/xml)                                     | XML generation utilities                                      |
+
+## Third-Party Dependencies
+
+Every external dependency in the repo, and the workspace that declares it. Shared
+tooling is declared once at the root and resolves from there, so no app or package
+repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#packages).
+
+| Dependency                        | Where                                                                                                                      | Why                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `remix`                           | Every app, and most packages                                                                                               | The framework: router, UI, middleware and data layer.                 |
+| `vite`                            | Root, and every app except `pkmn`                                                                                          | Builds and serves the apps; the root entry is an alias, see below.    |
+| `vite-plus`                       | Root                                                                                                                       | The `vp` toolchain: formatting, linting, type checking and tests.     |
+| `vitest`                          | Root                                                                                                                       | Test runner for every workspace.                                      |
+| `typescript`                      | Root                                                                                                                       | The type checker behind every `tsc --noEmit`.                         |
+| `msw`                             | Root                                                                                                                       | Mocks outbound HTTP in tests.                                         |
+| `wrangler`                        | Every app except `pkmn`                                                                                                    | Deploys Workers and applies D1 migrations.                            |
+| `@cloudflare/vite-plugin`         | Every app except `pkmn` and `r3-gallery`                                                                                   | Runs the Worker inside Vite dev and build.                            |
+| `@cloudflare/vitest-pool-workers` | Root                                                                                                                       | Runs tests inside workerd against real bindings.                      |
+| `@cloudflare/workers-types`       | `blog-engine`, `cloudflare-mocks`, `data-table-d1`, `data-table-sqlstorage`, `jobs`, `kv-cache`, `logger`, `oidc-provider` | Workerd runtime types; apps generate theirs with `wrangler types`.    |
+| `@total-typescript/tsconfig`      | Root                                                                                                                       | The base tsconfig every workspace extends.                            |
+| `@total-typescript/ts-reset`      | Root                                                                                                                       | Tightens the built-in library types.                                  |
+| `@types/bun`                      | Root                                                                                                                       | Bun globals, and it supplies `@types/node` in turn.                   |
+| `@types/node`                     | `pkmn`, `cloudflare-mocks`, `lucide-remix`, `service-container`, `uuid`                                                    | Declared where a tsconfig names `node` in its `types`.                |
+| `jose`                            | `jwt`                                                                                                                      | Signs and verifies JWTs and JWKS.                                     |
+| `@simplewebauthn/server`          | `oidc-provider`                                                                                                            | Passkey registration and authentication.                              |
+| `@polar-sh/sdk`                   | `polar`                                                                                                                    | Client for the Polar billing API.                                     |
+| `@markdoc/markdoc`                | `mail`, `markdown`                                                                                                         | Parses Markdown into a renderable tree.                               |
+| `prismjs`                         | `mail`, `markdown`                                                                                                         | Highlights code blocks.                                               |
+| `@types/prismjs`                  | `mail`, `markdown`                                                                                                         | `prismjs` ships no types of its own.                                  |
+| `yaml`                            | `markdown`                                                                                                                 | Parses document frontmatter.                                          |
+| `@standard-schema/spec`           | `markdown`, `validate`, `webhooks`                                                                                         | The `StandardSchemaV1` interface, as types only.                      |
+| `i18next`                         | `i18n`                                                                                                                     | Translation lookup and interpolation.                                 |
+| `html-parse-stringify`            | `i18n`                                                                                                                     | Parses the tag AST inside a translation string.                       |
+| `@xmldom/xmldom`                  | `xml`                                                                                                                      | A DOM parser and serializer, which Workers do not provide.            |
+| `lucide-static`                   | `lucide-remix`                                                                                                             | Icon source data for the icon codegen script.                         |
+| `cron-parser`                     | `cron`                                                                                                                     | Test-only oracle the package's own schedule maths is checked against. |
+
+The root `vite` is an alias to `@voidzero-dev/vite-plus-core`, the engine `vp` runs on.
+It ships no executable, so each app declares real Vite for its own `vite dev` and
+`vite build`.
