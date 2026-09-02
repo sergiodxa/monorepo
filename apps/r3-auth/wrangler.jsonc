@@ -6,7 +6,7 @@
 	// domain between two.
 	"name": "auth",
 	"main": "./bootstrap/worker.ts",
-	"compatibility_date": "2026-04-10",
+	"compatibility_date": "2026-09-02",
 	// Node built-ins must resolve: the billing and JWT dependencies reach for them, and
 	// dropping the flag is a change to verify on its own rather than a side effect.
 	"compatibility_flags": ["nodejs_compat"],
