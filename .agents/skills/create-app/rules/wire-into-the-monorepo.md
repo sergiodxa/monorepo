@@ -78,7 +78,7 @@ vp test run --project team-ops
 "dependencies": {
 	"@pkg/result": "workspace:*",
 	"@pkg/logger": "workspace:*",
-	"remix": "3.0.0-beta.6"
+	"remix": "3.0.0-rc.1"
 }
 ```
 

@@ -16,7 +16,7 @@
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/result": "workspace:*",
-		"remix": "3.0.0-beta.6"
+		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260815.1",

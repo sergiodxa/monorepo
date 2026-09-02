@@ -55,7 +55,7 @@ Add `compilerOptions` only to override something specific:
 ```json
 "dependencies": {
 	"@pkg/result": "workspace:*",
-	"remix": "3.0.0-beta.6"
+	"remix": "3.0.0-rc.1"
 }
 ```
 
