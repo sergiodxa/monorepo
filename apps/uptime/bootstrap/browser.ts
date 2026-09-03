@@ -13,15 +13,19 @@ import { createTranslator } from "@pkg/i18n";
 import { setIntl } from "@pkg/i18n/ui";
 import { run } from "remix/ui";
 
-const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"];
-const DEFAULT_LANGUAGE = "en";
+const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"] as const;
+
+/** A language the client ships translations for, so every loader lookup below is defined. */
+type Language = (typeof SUPPORTED_LANGUAGES)[number];
+
+const DEFAULT_LANGUAGE: Language = "en";
 
 /**
  * Dynamic imports keyed by language, one per {@link SUPPORTED_LANGUAGES}
  * entry, so the client bundle ships only the locale(s) a page actually
  * renders in instead of every language's translation bundle.
  */
-const localeLoaders: Record<string, () => Promise<{ default: Record<string, unknown> }>> = {
+const localeLoaders: Record<Language, () => Promise<{ default: Record<string, unknown> }>> = {
 	en: () => import("~/app/locales/en"),
 	es: () => import("~/app/locales/es"),
 	de: () => import("~/app/locales/de"),
@@ -30,8 +34,13 @@ const localeLoaders: Record<string, () => Promise<{ default: Record<string, unkn
 	it: () => import("~/app/locales/it"),
 };
 
+/** Narrows the document's `lang` to a language with a loader, falling back otherwise. */
+function isSupportedLanguage(language: string): language is Language {
+	return (SUPPORTED_LANGUAGES as readonly string[]).includes(language);
+}
+
 let requestedLanguage = document.documentElement.lang;
-let locale = SUPPORTED_LANGUAGES.includes(requestedLanguage) ? requestedLanguage : DEFAULT_LANGUAGE;
+let locale = isSupportedLanguage(requestedLanguage) ? requestedLanguage : DEFAULT_LANGUAGE;
 
 let localesToLoad = new Set([locale, DEFAULT_LANGUAGE]);
 
