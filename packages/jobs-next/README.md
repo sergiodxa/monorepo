@@ -50,9 +50,9 @@ import { createJobHandler } from "@pkg/jobs-next";
 
 import jobs from "~/app/jobs";
 
-export default createJobHandler(jobs.checkHttp, async ({ input, logger, database }) => {
-	let monitor = await database.find(input.monitorId);
-	logger.info("check.started", { monitorId: monitor.id });
+export default createJobHandler(jobs.checkHttp, async (ctx) => {
+	let monitor = await ctx.database.find(ctx.input.monitorId);
+	ctx.logger.info("check.started", { monitorId: monitor.id });
 });
 ```
 
@@ -155,10 +155,10 @@ nothing can stop a promise — so what it does is abort `ctx.signal`, cancelling
 that agreed to be cancelled, and stop the batch being held open by one stuck job.
 
 ```typescript
-export default createJobHandler(jobs.checkFlows, async ({ signal, database }) => {
-	for (let flow of await flowsDue(database)) {
-		if (signal.aborted) throw new JobTimeout();
-		await runFlow(flow, { signal });
+export default createJobHandler(jobs.checkFlows, async (ctx) => {
+	for (let flow of await flowsDue(ctx.database)) {
+		if (ctx.signal.aborted) throw new JobTimeout();
+		await runFlow(flow, { signal: ctx.signal });
 	}
 });
 ```
