@@ -1,14 +1,15 @@
 /**
  * Drives the real application router — the same middleware chain, container
- * scope, and controllers the worker builds — end to end. The container swaps
- * in fakes for the external clients because MSW's interceptors leave the
- * router's form-data middleware reading an empty body, failing every POST
- * before validation; request-shape coverage lives in each client's own tests.
+ * scope, and controllers the worker builds — end to end. A test supplies the
+ * platform every route bills against and swaps the newsletter client through
+ * the container, because MSW's interceptors leave the router's form-data
+ * middleware reading an empty body, failing every POST before validation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Billing } from "@pkg/billing";
 import type { ServiceKey } from "@pkg/service-container";
 
 import { getServiceContainer } from "@pkg/service-container";
@@ -26,20 +27,23 @@ export type ServiceOverride = [ServiceKey<unknown>, unknown];
 export interface FetchAppOptions extends RequestInit {
 	/** Services to register in the request's scope, replacing the real clients. */
 	services?: ServiceOverride[];
+	/** The platform the request bills against, replacing the configured one. */
+	billing?: Billing;
 }
 
 /**
  * Fetches a URL through the real router inside a container scope.
  *
  * @param path - A path or absolute URL to request.
- * @param options - Request init, plus `services` to override in this request's scope. A
- * non-GET request gets `origin` set to {@link ORIGIN} by default, since cross-origin
- * protection is part of the chain under test.
+ * @param options - Request init, plus `billing` to bill this request against and
+ * `services` to override in this request's scope. A non-GET request gets `origin`
+ * set to {@link ORIGIN} by default, since cross-origin protection is part of the
+ * chain under test.
  * @returns The router's response.
- * @example await fetchApp("/api/subscribe", { method: "POST", body, services: [[Buttondown, fake]] })
+ * @example await fetchApp("/release", { billing: new MemoryBilling({ catalog }) })
  */
 export async function fetchApp(path: string, options: FetchAppOptions = {}): Promise<Response> {
-	let { services = [], ...init } = options;
+	let { services = [], billing, ...init } = options;
 	let headers = new Headers(init.headers);
 
 	if (init.method && init.method !== "GET" && !headers.has("origin")) {
@@ -54,6 +58,6 @@ export async function fetchApp(path: string, options: FetchAppOptions = {}): Pro
 
 	return await container.scope(async () => {
 		for (let [key, value] of services) getServiceContainer().instance(key, value);
-		return await application().fetch(request);
+		return await application(billing).fetch(request);
 	});
 }

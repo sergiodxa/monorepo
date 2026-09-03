@@ -1,9 +1,9 @@
 /**
  * Wires up the app-wide dependency-injection container (ADR-008) and registers the
  * services every request, job and queue message resolves from: the D1-backed
- * `Database`, the Polar billing client, the five rate limiters, the mail transport and
- * the background mailer built on it. Request-lifetime values — session, current
- * subject, request logger — belong to middleware and request context.
+ * `Database`, the five rate limiters, the mail transport and the background mailer
+ * built on it. Request-lifetime values — session, current subject, request logger —
+ * belong to middleware and request context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,6 @@
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { Mailer } from "@pkg/mail";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
@@ -40,31 +39,6 @@ container.singleton(
 	Database,
 	() => new Database(createD1DatabaseAdapter(env.DB), { now: () => Date.now() }),
 );
-
-/**
- * The billing client holds {@link readPolarAccessToken}: the token is a Secrets Store
- * binding, read asynchronously, while a container factory is synchronous. Deferring the
- * read to the first call that bills keeps the await inside a request, where it is allowed.
- */
-container.singleton(PolarClient, () => new PolarClient({ accessToken: readPolarAccessToken }));
-
-/**
- * Reads the Polar access token from the Secrets Store binding, falling back to the plain
- * `POLAR_ACCESS_TOKEN_LOCAL` variable so local development works against the store's empty
- * local simulation. Production configures the binding alone, so a failure there is real.
- *
- * @returns The Polar API access token.
- * @throws {Error} When the binding cannot be read and no local value is configured.
- */
-export async function readPolarAccessToken(): Promise<string> {
-	try {
-		return await env.POLAR_ACCESS_TOKEN.get();
-	} catch (error) {
-		let local = env.POLAR_ACCESS_TOKEN_LOCAL;
-		if (local) return local;
-		throw error;
-	}
-}
 
 /**
  * How mail leaves this worker, registered once so both mailers agree on it: the

@@ -1,6 +1,6 @@
 /**
  * Tests for `GET /api/checkout/:type` — the published, shareable link that turns a
- * pricing-page click into a Polar checkout. Covers both packages, the `?email=`
+ * pricing-page click into a hosted checkout. Covers both packages, the `?email=`
  * pass-through, the discount application, and the refusal to bill for an unrecognized
  * package name.
  *
@@ -8,106 +8,119 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PolarClient } from "@pkg/polar";
+import type { Checkout } from "@pkg/billing";
+import type { MemoryBilling } from "@pkg/billing/providers/memory";
+
+import { isFailure, unwrap } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";
-import { FakePolarClient, makeDiscount } from "~/app/lib/test/polar";
+import { COMPLETE_CENTS, ESSENTIALS_CENTS, memoryBilling } from "~/app/lib/test/billing";
 import { fetchApp } from "~/app/lib/test/router";
 
-/** The hosted checkout URL the fake answers with, which is where the visitor must land. */
-const CHECKOUT_URL = "https://polar.test/checkout/abc";
+/** What a launch campaign takes off the Complete package, in cents. */
+const CAMPAIGN_CENTS = 3000;
 
-function start(polar: FakePolarClient, path: string) {
-	return fetchApp(path, { services: [[PolarClient, polar]] });
-}
+/** The id the platform issues its first checkout under, which is the only one a test opens. */
+const FIRST_CHECKOUT = "chk_1";
 
 /** A launch campaign that qualifies, so the Complete checkout has a discount to apply. */
 function activeCampaign() {
-	return makeDiscount({ id: Discounts.FIRST_WEEK, products: [Product.Complete] });
+	return { id: Discounts.FIRST_WEEK, amount: CAMPAIGN_CENTS, products: [Product.Complete] };
+}
+
+function start(billing: MemoryBilling, path: string) {
+	return fetchApp(path, { billing });
+}
+
+/**
+ * Reads back the session the redirect points at, so a test asserts on what the
+ * platform recorded rather than on the arguments a call was made with.
+ *
+ * @param billing - The platform the checkout was opened on.
+ * @param response - The redirect the controller answered with.
+ * @returns The session as the platform holds it.
+ */
+async function openedCheckout(billing: MemoryBilling, response: Response): Promise<Checkout> {
+	let location = response.headers.get("location") ?? "";
+	return await unwrap(billing.checkouts.find(location.split("/").at(-1) ?? ""));
 }
 
 describe("GET /api/checkout/:type", () => {
-	test("redirects to a full-price Essentials checkout with discount codes allowed", async () => {
-		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL });
+	test("redirects to a full-price Essentials checkout", async () => {
+		let billing = memoryBilling();
 
-		let response = await start(polar, "/api/checkout/essentials");
+		let response = await start(billing, "/api/checkout/essentials");
+		let checkout = await openedCheckout(billing, response);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(CHECKOUT_URL);
-		expect(polar.checkouts).toEqual([
-			{
-				productId: Product.Essentials,
-				customerEmail: undefined,
-				allowDiscountCodes: true,
-			},
-		]);
+		expect(response.headers.get("location")).toBe(checkout.url);
+		expect(checkout.productSlug).toBe(Product.Essentials);
+		expect(checkout.discountId).toBeNull();
+		expect(checkout.amount).toEqual({ amount: ESSENTIALS_CENTS, currency: "usd" });
 	});
 
 	test("passes ?email= through to the Essentials checkout", async () => {
-		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL });
+		let billing = memoryBilling();
 
-		await start(polar, "/api/checkout/essentials?email=reader%40example.com");
+		let response = await start(billing, "/api/checkout/essentials?email=reader%40example.com");
+		let checkout = await openedCheckout(billing, response);
 
-		expect(polar.checkouts[0]?.customerEmail).toBe("reader@example.com");
+		expect(checkout.providerData.email).toBe("reader@example.com");
 	});
 
-	test("redirects to a Complete checkout with the applicable discount and no codes", async () => {
-		let polar = new FakePolarClient({
-			checkoutUrl: CHECKOUT_URL,
-			discounts: [activeCampaign()],
-		});
+	test("redirects to a Complete checkout carrying the applicable discount", async () => {
+		let billing = memoryBilling({ discounts: [activeCampaign()] });
 
-		let response = await start(polar, "/api/checkout/complete?email=reader%40example.com");
+		let response = await start(billing, "/api/checkout/complete?email=reader%40example.com");
+		let checkout = await openedCheckout(billing, response);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(CHECKOUT_URL);
-		expect(polar.checkouts).toEqual([
-			{
-				productId: Product.Complete,
-				customerEmail: "reader@example.com",
-				discountId: Discounts.FIRST_WEEK,
-				allowDiscountCodes: false,
-			},
-		]);
+		expect(response.headers.get("location")).toBe(checkout.url);
+		expect(checkout.productSlug).toBe(Product.Complete);
+		expect(checkout.discountId).toBe(Discounts.FIRST_WEEK);
+		expect(checkout.amount).toEqual({
+			amount: COMPLETE_CENTS - CAMPAIGN_CENTS,
+			currency: "usd",
+		});
 	});
 
 	test("still checks out at full price when no campaign applies", async () => {
-		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL, discounts: [] });
+		let billing = memoryBilling();
 
-		let response = await start(polar, "/api/checkout/complete");
-
-		expect(response.status).toBe(303);
-		expect(polar.checkouts[0]?.discountId).toBeUndefined();
-	});
-
-	test("404s an unrecognized package name without creating a checkout", async () => {
-		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL, discounts: [activeCampaign()] });
-
-		let response = await start(polar, "/api/checkout/everything");
-
-		expect(response.status).toBe(404);
-		expect(polar.checkouts).toEqual([]);
-	});
-
-	test("creates no checkout for a HEAD probe of an unrecognized package name", async () => {
-		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL, discounts: [activeCampaign()] });
-
-		let response = await fetchApp("/api/checkout/everything", {
-			method: "HEAD",
-			services: [[PolarClient, polar]],
-		});
-
-		expect(response.status).toBe(404);
-		expect(polar.checkouts).toEqual([]);
-	});
-
-	test("drops a malformed ?email= rather than forwarding it to the provider", async () => {
-		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL });
-
-		let response = await start(polar, "/api/checkout/essentials?email=not-an-email");
+		let response = await start(billing, "/api/checkout/complete");
+		let checkout = await openedCheckout(billing, response);
 
 		expect(response.status).toBe(303);
-		expect(polar.checkouts[0]?.customerEmail).toBeUndefined();
+		expect(checkout.discountId).toBeNull();
+		expect(checkout.amount).toEqual({ amount: COMPLETE_CENTS, currency: "usd" });
+	});
+
+	test("404s an unrecognized package name without opening a checkout", async () => {
+		let billing = memoryBilling({ discounts: [activeCampaign()] });
+
+		let response = await start(billing, "/api/checkout/everything");
+
+		expect(response.status).toBe(404);
+		expect(isFailure(await billing.checkouts.find(FIRST_CHECKOUT))).toBe(true);
+	});
+
+	test("opens no checkout for a HEAD probe of an unrecognized package name", async () => {
+		let billing = memoryBilling({ discounts: [activeCampaign()] });
+
+		let response = await fetchApp("/api/checkout/everything", { method: "HEAD", billing });
+
+		expect(response.status).toBe(404);
+		expect(isFailure(await billing.checkouts.find(FIRST_CHECKOUT))).toBe(true);
+	});
+
+	test("drops a malformed ?email= rather than forwarding it to the platform", async () => {
+		let billing = memoryBilling();
+
+		let response = await start(billing, "/api/checkout/essentials?email=not-an-email");
+		let checkout = await openedCheckout(billing, response);
+
+		expect(response.status).toBe(303);
+		expect(checkout.providerData.email).toBeNull();
 	});
 });

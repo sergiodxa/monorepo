@@ -1,22 +1,21 @@
 /**
- * Daily background job that turns yesterday's recorded infrastructure cost into one
- * Polar event per team, carrying a `_cost` for Polar's Cost Insights (ADR-007 §6).
- * Runs once a day: per-check ingestion would be 179,000+ Polar calls a month per
- * account, far past that resolution. The event's `externalId` (`{team}:{day}`) makes
- * a retried delivery or a re-run of the same day free of duplicate events.
+ * Daily background job that turns yesterday's recorded infrastructure cost into one usage
+ * event per team, carrying the cost the platform's own margin reporting reads (ADR-007 §6).
+ * Runs once a day: per-check ingestion would be 179,000+ calls a month per account, far past
+ * that resolution. The event's `externalId` (`{team}:{day}`) makes a retried delivery or a
+ * re-run of the same day free of duplicate events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UsageEvent } from "@pkg/billing";
 import type { CurrentJobContext } from "@pkg/jobs";
-import type { IngestEvent } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
+import { supports } from "@pkg/billing";
 import { createJobHandler } from "@pkg/jobs";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
 import { underscore } from "@pkg/strings";
 import { inList } from "remix/data-table";
 
@@ -26,6 +25,7 @@ import type { DailyTeamCost } from "~/app/services/cost";
 import { getYesterdayDateUtc, utcDayBounds } from "~/app/data/monitor-daily-stats";
 import Subscription from "~/app/data/subscription";
 import jobs from "~/app/jobs";
+import { polar } from "~/app/lib/billing";
 import {
 	BYTES_PER_GB,
 	COST_RESOURCES,
@@ -46,13 +46,13 @@ import {
 } from "~/app/services/cost";
 import { teams } from "~/database/schema";
 
-/** The Polar event name cost rides on — a name reserved for cost, apart from revenue events. */
+/** The event name cost rides on — a name reserved for cost, apart from revenue events. */
 const EVENT_NAME = "infra.cost.daily";
 
 /**
  * Decimal places on the reported amount. Nine places of a cent is $1e-11 of resolution,
- * which is far below anything that matters, and keeps a three-figure daily cost clear of
- * Polar's 17-significant-digit ceiling.
+ * which is far below anything that matters, and keeps a three-figure daily cost clear of the
+ * platform's 17-significant-digit ceiling.
  */
 const AMOUNT_DECIMALS = 9;
 
@@ -69,7 +69,6 @@ interface TeamDay {
 }
 
 export default createJobHandler(jobs.reportCosts, async (ctx) => {
-	let polar = getServiceContainer().get(PolarClient);
 	let day = getYesterdayDateUtc();
 
 	await recordStorage(ctx);
@@ -90,7 +89,7 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 
 	let owners = await resolveOwners(ctx.database, [...byTeam.keys()]);
 	let timestamp = new Date(utcDayBounds(day).end - 1);
-	let events: IngestEvent[] = [];
+	let events: UsageEvent[] = [];
 	let reportedCents = 0;
 	let skippedCents = 0;
 
@@ -110,7 +109,7 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 		reportedCents += teamDay.cents;
 		events.push({
 			name: EVENT_NAME,
-			externalCustomerId: ownerId,
+			customer: { externalId: ownerId },
 			/** Keyed on team and day and nothing time-dependent, which is what makes a retry free. */
 			externalId: `infra_cost:${teamId}:${day}`,
 			/** Explicit, so a run that is late by two days still books cost to the day it happened. */
@@ -120,9 +119,23 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 		});
 	}
 
-	if (events.length > 0 && !(await polar.ingestEventsSafe(events))) {
-		ctx.logger.error("job.report_costs.ingest_failed", { day, events: events.length });
-		return ctx.retry();
+	if (events.length > 0) {
+		if (!supports(polar, "usage")) {
+			ctx.logger.error("job.report_costs.usage_unsupported", { day });
+			return;
+		}
+
+		let ingested = await polar.usage.ingest(events);
+
+		if (isFailure(ingested)) {
+			ctx.logger.error("job.report_costs.ingest_failed", {
+				day,
+				events: events.length,
+				code: ingested.error.code,
+				providerCode: ingested.error.providerCode,
+			});
+			return ctx.retry({ cause: ingested.error });
+		}
 	}
 
 	/**
@@ -182,7 +195,7 @@ async function recordStorage(ctx: CurrentJobContext): Promise<void> {
 /**
  * Maps each team to the owner its cost reports against, using the subscription
  * projection as the source of truth — a row exists for every owner billing has
- * touched, and one event naming a customer Polar cannot resolve rejects the batch.
+ * touched, and one event naming a customer the platform cannot resolve rejects the batch.
  */
 async function resolveOwners(db: Database, teamIds: string[]): Promise<Map<string, string>> {
 	if (teamIds.length === 0) return new Map();
@@ -225,7 +238,7 @@ function summariseByTeam(rows: DailyTeamCost[]): Map<string, TeamDay> {
 }
 
 /**
- * The event metadata for one team's day — the drivers behind the amount, so Polar's
+ * The event metadata for one team's day — the drivers behind the amount, so the platform's
  * own dashboard can answer *why* a customer cost what they cost. Quantity keys derive
  * from the rate card's resource names, so a new resource is covered automatically.
  *

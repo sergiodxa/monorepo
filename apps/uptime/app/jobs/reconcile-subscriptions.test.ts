@@ -1,68 +1,118 @@
 /**
- * Unit tests for the `reconcileSubscriptions` job: it repairs drift in both directions
- * (a subscription Polar lists as active that the projection missed, and a projection row
- * Polar no longer lists), leaves an agreeing projection untouched, and logs every repair
- * at error level so a broken webhook delivery stays visible. `PolarClient` is a container
- * singleton, so a double is registered here instead of a request being intercepted.
+ * Unit tests for the `reconcileSubscriptions` job: it repairs drift in both directions (a
+ * subscription the platform lists that the projection missed, and a projection row the
+ * platform no longer lists), leaves an agreeing projection untouched, logs every repair at
+ * error level so a broken delivery stays visible, and drops delivery rows past their
+ * retention window.
+ *
+ * The job imports the configured platform directly, since it runs with no request behind it,
+ * so that module is replaced with a real in-memory platform here rather than a client being
+ * intercepted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Subscription as PolarSubscription } from "@pkg/polar";
+import type { Billing, CustomerRef, EntitlementState } from "@pkg/billing";
+import type { Result } from "@pkg/result";
 
 import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
-import { ServiceContainer } from "@pkg/service-container";
+import { success, unwrap } from "@pkg/result";
+import { getTableName } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
 import jobs from "~/app/jobs";
 import { Database } from "~/app/jobs/middleware/database";
-import reconcileSubscriptions from "~/app/jobs/reconcile-subscriptions";
+import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { polarSubscription } from "~/app/lib/test/polar";
-import { monitors, teams } from "~/database/schema";
+import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 
-type Db = ReturnType<typeof createTestDatabase>["db"];
+/** Days after which a handled delivery is dropped, as the job is configured. */
+const RETENTION_DAYS = 30;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * The platform under test, created once: the job captures whatever the mock factory returned,
+ * so replacing it per test would leave the job on the old one. Each test sells to a fresh
+ * subject instead.
+ */
+let billing = createTestBilling();
+
+/**
+ * Lets one test answer the snapshot read itself, for the one state a real platform can hold
+ * and the in-memory one cannot: a customer carrying none of our own ids.
+ */
+let snapshot: ((customer: CustomerRef) => Promise<Result<EntitlementState, never>>) | null = null;
+
+let provider: Billing = {
+	...billing,
+	entitlements: {
+		of: async (customer) =>
+			snapshot === null ? await billing.entitlements.of(customer) : await snapshot(customer),
+	},
+};
+
+vi.doMock("~/app/lib/billing", () => ({
+	polar: provider,
+	MONITORING_PRODUCT,
+	PING_METER,
+}));
 
 vi.spyOn(console, "info").mockImplementation(() => {});
 
+let { default: reconcileSubscriptions } = await import("~/app/jobs/reconcile-subscriptions");
+
+type Db = ReturnType<typeof createTestDatabase>["db"];
+
 let db: Db;
 
+/** A subject nothing else in this file has sold to, so the platform's state cannot bleed. */
+let ownerId: string;
+
 beforeEach(() => {
+	snapshot = null;
+	ownerId = `owner-${crypto.randomUUID()}`;
 	({ db } = createTestDatabase());
 });
 
-/** A `PolarClient` answering only the two reads reconciliation performs. */
-function fakePolar(live: PolarSubscription[], byId: Record<string, PolarSubscription> = {}) {
-	let fake = {
-		listActiveSubscriptionsByProduct: async () => live,
-		getSubscription: async (id: string) => {
-			let found = byId[id];
-			if (!found) throw new Error(`unexpected getSubscription(${id})`);
-			return found;
-		},
-	};
-
-	return fake as unknown as PolarClient;
-}
-
-async function run(polar: PolarClient) {
+async function run() {
 	let logger = new BatchedLogger("test");
-	let container = new ServiceContainer();
-	container.singleton(PolarClient, () => polar);
-
 	let ctx = createJobContext(jobs.reconcileSubscriptions, { id: "message-1", attempts: 1, logger });
 	ctx.set(Database, db, { property: "database" });
 
-	await container.scope(() => reconcileSubscriptions(ctx));
+	await reconcileSubscriptions(ctx);
 
 	return logger;
 }
 
-async function createTeamWithMonitor(ownerId: string, nextDueAt: number | null) {
+/** Sells the monitoring product to `ownerId` and answers the subscription that created. */
+async function subscribe() {
+	let customer = await unwrap(
+		billing.customers.create({ email: `${ownerId}@example.com`, externalId: ownerId }),
+	);
+
+	let opened = await unwrap(
+		billing.checkouts.create({ product: MONITORING_PRODUCT, customer: { id: customer.id } }),
+	);
+	let finished = await unwrap(billing.checkouts.finish(opened.id));
+
+	return await unwrap(billing.subscriptions.find(finished.subscriptionId ?? ""));
+}
+
+/** Writes the projection from what the platform currently says, so the two start in step. */
+async function projectCurrentState() {
+	await Subscription.sync(
+		db,
+		ownerId,
+		await unwrap(billing.entitlements.of({ externalId: ownerId })),
+	);
+}
+
+async function createTeamWithMonitor(nextDueAt: number | null) {
 	let team = await db.create(
 		teams,
 		{
@@ -91,54 +141,74 @@ async function createTeamWithMonitor(ownerId: string, nextDueAt: number | null) 
 	);
 }
 
-describe("reconcileSubscriptions", () => {
-	test("repairs nothing when the projection already agrees with Polar", async () => {
-		await Subscription.upsert(db, "owner-1", polarSubscription());
+/** Records one delivery at an arbitrary age, which retention is the whole point of. */
+async function recordDelivery(id: string, ageDays: number, processed: boolean) {
+	let at = Date.now() - ageDays * MS_PER_DAY;
 
-		let logger = await run(fakePolar([polarSubscription()]));
+	await db.exec(
+		`INSERT INTO ${getTableName(billingWebhookDeliveries)}
+		        (id, created_at, updated_at, type, payload, valid, processed)
+		 VALUES (?, ?, ?, ?, ?, 1, ?)`,
+		[id, at, at, "subscription", "{}", processed ? 1 : 0],
+	);
+}
+
+function repairedEvent(logger: BatchedLogger) {
+	return logger.events.find((entry) => entry.event === "job.reconcile_subscriptions.repaired");
+}
+
+describe("reconcileSubscriptions", () => {
+	test("repairs nothing when the projection already agrees with the platform", async () => {
+		await subscribe();
+		await projectCurrentState();
+
+		let logger = await run();
 
 		expect(logger.events.filter((entry) => entry.event.endsWith(".repaired"))).toHaveLength(0);
+
 		let completed = logger.events.find(
 			(entry) => entry.event === "job.reconcile_subscriptions.completed",
 		);
 		expect(completed?.repaired).toBe(0);
-		expect(completed?.live).toBe(1);
 		expect(completed?.stored).toBe(1);
 	});
 
-	test("records a subscription whose webhook never arrived, and schedules its monitors", async () => {
-		let monitor = await createTeamWithMonitor("owner-1", null);
+	test("records a subscription whose delivery never arrived, and schedules its monitors", async () => {
+		let monitor = await createTeamWithMonitor(null);
+		await subscribe();
 
-		let logger = await run(fakePolar([polarSubscription()]));
+		let logger = await run();
 
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("active");
+		expect(await Subscription.stateFor(db, ownerId)).toBe("active");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
 
-		let repaired = logger.events.find(
-			(entry) => entry.event === "job.reconcile_subscriptions.repaired",
-		);
-		expect(repaired?.entitled).toBe(true);
-		expect(repaired?.level).toBe("error");
+		expect(repairedEvent(logger)?.entitled).toBe(true);
+		expect(repairedEvent(logger)?.level).toBe("error");
 	});
 
-	test("re-reads Polar for a row it no longer lists, and unschedules those monitors", async () => {
-		let monitor = await createTeamWithMonitor("owner-1", Date.now());
-		await Subscription.upsert(db, "owner-1", polarSubscription());
+	test("unschedules the monitors of a row the platform no longer lists", async () => {
+		let monitor = await createTeamWithMonitor(Date.now());
+		let subscription = await subscribe();
+		await projectCurrentState();
 
-		let ended = polarSubscription({ status: "canceled", modifiedAt: "2026-07-20T00:00:00.000Z" });
-		let logger = await run(fakePolar([], { sub_1: ended }));
+		await unwrap(billing.subscriptions.cancel(subscription.id));
 
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("inactive");
+		let logger = await run();
+
+		expect(await Subscription.stateFor(db, ownerId)).toBe("inactive");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
-
-		let repaired = logger.events.find(
-			(entry) => entry.event === "job.reconcile_subscriptions.repaired",
-		);
-		expect(repaired?.entitled).toBe(false);
+		expect(repairedEvent(logger)?.entitled).toBe(false);
 	});
 
-	test("reports a Polar customer that was never linked to a signed-in subject", async () => {
-		let logger = await run(fakePolar([polarSubscription({ externalId: null })]));
+	test("reports a platform customer that was never linked to a signed-in subject", async () => {
+		await subscribe();
+
+		snapshot = async (customer) => {
+			let state = await unwrap(billing.entitlements.of(customer));
+			return success({ ...state, externalId: null });
+		};
+
+		let logger = await run();
 
 		expect(await Subscription.listAll(db)).toHaveLength(0);
 		expect(
@@ -146,5 +216,21 @@ describe("reconcileSubscriptions", () => {
 				(entry) => entry.event === "job.reconcile_subscriptions.unlinked_customer",
 			),
 		).toBeDefined();
+	});
+
+	test("drops handled deliveries past the retention window and keeps the rest", async () => {
+		await recordDelivery("old-handled", RETENTION_DAYS + 10, true);
+		await recordDelivery("recent-handled", 1, true);
+		await recordDelivery("old-unhandled", RETENTION_DAYS + 10, false);
+
+		let logger = await run();
+
+		let kept = (await db.findMany(billingWebhookDeliveries)).map((row) => row.id).sort();
+		expect(kept).toEqual(["old-unhandled", "recent-handled"]);
+
+		let completed = logger.events.find(
+			(entry) => entry.event === "job.reconcile_subscriptions.completed",
+		);
+		expect(completed?.pruned).toBe(1);
 	});
 });

@@ -10,14 +10,13 @@
  */
 
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
-import type { IngestEvent } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import billing from "@pkg/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -28,14 +27,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import {
-	memberships,
-	subscriptions,
-	tcpMonitorResults,
-	tcpMonitors,
-	teams,
-} from "~/database/schema";
+import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -72,41 +66,32 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 /**
- * The billing client the container hands the action, with the one call `ingestPings` makes
- * spied on. The client is real — only the request is intercepted — so the events asserted
+ * The platform the action bills against, replaced per test so one check's meter events
+ * cannot be read back by the next. It is a real implementation, so the events asserted
  * below are the ones the action actually built.
  */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+let testBilling = createTestBilling();
 
 beforeEach(() => {
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	testBilling = createTestBilling();
 	pingResults.reset();
 	deferred = [];
 });
 
-/** Every event the action handed Polar, once the work it deferred has settled. */
-async function ingestedEvents(): Promise<IngestEvent[]> {
+/**
+ * Every event the action billed, once the work it deferred has settled, as the fields that
+ * describe *what* was billed: the id and the timestamp on a record are the platform's own.
+ */
+async function ingestedEvents() {
 	await Promise.all(deferred.splice(0));
-	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
-}
 
-/** Records an owner as having lapsed, which is what the entitlement gate refuses on. */
-async function createLapsedSubscription(db: Database, ownerId: string) {
-	await db.create(
-		subscriptions,
-		{
-			id: crypto.randomUUID(),
-			external_customer_id: ownerId,
-			polar_subscription_id: crypto.randomUUID(),
-			polar_product_id: "product-1",
-			status: "canceled",
-			current_period_end: null,
-			revoked_at: Date.now(),
-			polar_modified_at: Date.now(),
-		},
-		{ touch: true, returnRow: true },
+	return (await billedEvents(testBilling)).map(
+		({ name, customerExternalId, externalId, metadata }) => ({
+			name,
+			customerExternalId,
+			externalId,
+			metadata,
+		}),
 	);
 }
 
@@ -157,11 +142,11 @@ async function send(
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			billing({ provider: () => testBilling }),
 			formData() as Middleware,
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		],
@@ -434,7 +419,7 @@ describe("checkTcpMonitor billing", () => {
 		expect(await ingestedEvents()).toEqual([
 			{
 				name: "ping",
-				externalCustomerId: team.owner_id,
+				customerExternalId: team.owner_id,
 				externalId: `ping:${stored?.id}`,
 				metadata: { teamId: team.id, type: "tcp", monitorId: monitor.id },
 			},
@@ -444,7 +429,7 @@ describe("checkTcpMonitor billing", () => {
 	test("bills nothing when the owner has no active subscription, and runs no check", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await createMonitor(db, team.id);
-		await createLapsedSubscription(db, team.owner_id);
+		await createRevokedSubscription(db, team.owner_id);
 
 		let response = await send(
 			db,
@@ -549,7 +534,7 @@ describe("checkTcpMonitor analytics", () => {
 	test("writes no data point when the owner has no active subscription", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await createMonitor(db, team.id);
-		await createLapsedSubscription(db, team.owner_id);
+		await createRevokedSubscription(db, team.owner_id);
 
 		await send(
 			db,

@@ -7,14 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { MemoryBilling } from "@pkg/billing/providers/memory";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { BillingError } from "@pkg/billing";
+import billing from "@pkg/billing/middleware";
 import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { JWK, JWT } from "@pkg/jwt";
 import logger from "@pkg/logger/middleware";
-import { PolarClient } from "@pkg/polar";
+import { failure, unwrap } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -26,10 +29,12 @@ import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
+import Customer from "~/app/data/customer";
 import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie, returnTo } from "~/app/http/cookies";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -183,16 +188,6 @@ beforeEach(() => {
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** A `PolarClient` stand-in whose `getExternalCustomer` short-circuits `Customer.findOrCreate`. */
-function createFakePolar() {
-	return {
-		getExternalCustomer: vi.fn(async () => ({ id: "cus_1", externalId: "user-1" })),
-		findCustomerByEmail: vi.fn(async () => null),
-		createCustomer: vi.fn(async () => ({ id: "cus_1", externalId: null })),
-		updateCustomer: vi.fn(async () => ({ id: "cus_1", externalId: "user-1" })),
-	};
-}
-
 /** Renders straight through `renderToString`, the whole document these pages produce. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
@@ -211,16 +206,21 @@ function seedSession(session: Session): Middleware {
 	};
 }
 
-/** Builds a minimal router mapping the whole `/auth` controller with a fresh service container. */
+/**
+ * Builds a minimal router mapping the whole `/auth` controller with a fresh service container
+ * and its own billing platform, so what a sign-in provisioned can be read back from it.
+ */
 function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], session: Session) {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, createFakePolar() as unknown as PolarClient);
+
+	let platform = createTestBilling();
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
 			logger as Middleware,
+			billing({ provider: platform }),
 			seedSession(session),
 			auth as Middleware,
 			i18n as Middleware,
@@ -229,12 +229,14 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 	});
 	router.map(routes.auth, authController);
 
-	return { container, router };
+	return { container, platform, router };
 }
 
 /** One browser: a session that carries across both legs of a login. */
 interface Agent {
 	session: Session;
+	/** The billing platform this login bills against, for reading back what it provisioned. */
+	platform: MemoryBilling;
 	/** Runs POST /auth, optionally presenting a `returnTo` cookie. */
 	start(returnToCookie?: string): Promise<Response>;
 	/** The login transaction the authorization redirect left on the server. */
@@ -253,10 +255,11 @@ interface Agent {
  */
 function createAgent(db: ReturnType<typeof createTestDatabase>["db"]): Agent {
 	let session = new Session();
-	let { container, router } = createTestRouter(db, session);
+	let { container, platform, router } = createTestRouter(db, session);
 
 	return {
 		session,
+		platform,
 
 		async start(returnToCookie) {
 			let headers = new Headers();
@@ -452,6 +455,42 @@ describe("GET /auth", () => {
 
 		expect(replayed.status).toBe(400);
 		expect(await replayed.text()).toContain("Sign-in failed");
+	});
+
+	/**
+	 * The customer is provisioned under this app's own subject id, which is the identifier
+	 * every later charge and webhook for that person is keyed on.
+	 */
+	test("provisions the platform customer the subject bills as", async () => {
+		let { db } = createTestDatabase();
+		let agent = createAgent(db);
+
+		expect((await signInThrough(agent)).status).toBe(303);
+
+		let customer = await unwrap(agent.platform.customers.find({ externalId: "user-1" }));
+		expect(customer.email).toBe("ada@example.com");
+		expect(customer.name).toBe("Ada Lovelace");
+	});
+
+	/** Billing is not on the critical path: a platform that cannot answer still signs them in. */
+	test("signs the subject in even when no customer can be provisioned", async () => {
+		let { db } = createTestDatabase();
+		let agent = createAgent(db);
+		vi.spyOn(Customer, "provision").mockResolvedValue(
+			failure(
+				new BillingError("the platform is unreachable", {
+					code: "unknown",
+					connection: "memory",
+				}),
+			),
+		);
+
+		let response = await signInThrough(agent);
+
+		expect(response.status).toBe(303);
+		expect(JWT.decode(agent.tokens()!.idToken).subject).toBe("user-1");
+
+		vi.spyOn(Customer, "provision").mockRestore();
 	});
 
 	test("creates a personal team when the subject has none and no domain matches", async () => {

@@ -42,6 +42,8 @@ vi.doMock("cloudflare:workers", () => ({
 		SLUG_CACHE: slugCache,
 		BLOG: createDurableObjectNamespace(() => async () => tenantResponse()),
 		ASSETS: createFetcher(() => new Response("Not found", { status: 404 })),
+		POLAR_ACCESS_TOKEN: "polar-token",
+		POLAR_PRODUCT_ID: "product-1",
 	}),
 	DurableObject: class {},
 }));

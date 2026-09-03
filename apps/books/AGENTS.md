@@ -21,8 +21,10 @@ breaks something you cannot see from here:
   redirects to Polar. Those two names are the whole accepted set: anything else 404s
   before any billing call, so a crawler or a `HEAD` probe cannot leave a real checkout
   object behind at the provider.
-- **The Polar product and discount ids** in `app/data/product.ts` identify live products
-  and campaigns. The webhook branches on the product ids.
+- **The Polar product ids** in `app/lib/billing.ts` and **the discount ids** in
+  `app/data/product.ts` identify live products and campaigns. Everything else names a
+  package by its own slug — `essentials` and `complete` — which is what the webhook
+  branches on and what a catalog read is addressed by.
 - **`/`, `/release`, `/sample`, `/upgrade`, and `/og.jpg`** are published in newsletters
   and social posts already in the wild.
 - **Buttondown subscriber metadata** — `purchase: "complete"` and
@@ -39,11 +41,14 @@ breaks something you cannot see from here:
   middleware, and that is deliberate.
 - **The webhook only tags customers who are already subscribers.** A purchase from a
   non-subscriber is logged and otherwise ignored.
-- **`order.paid` is the only event handled**, and it needs both `product` and
-  `customer.email`. Polar retries on a non-2xx, so keep failures genuinely retryable and
-  success genuinely 200.
-- **Polar prices are in cents.** They are divided by 100 and formatted with
-  `Intl.NumberFormat`; drop either and prices render as `$4900`.
+- **`order.paid` is the only event handled.** Every other delivery is acknowledged with
+  a 200, which is what keeps Polar delivering. An unproven signature answers 401, and a
+  handler failure the platform can usefully retry answers 503; a paid order for a package
+  this funnel does not sell is logged and acknowledged.
+- **Prices arrive in cents.** They are divided by 100 and formatted with
+  `Intl.NumberFormat`; drop either and prices render as `$4900`. A price the platform
+  cannot answer for makes `/release` answer 503, since a page quoting `$0` sells the
+  book for nothing.
 
 ## Conventions
 
@@ -60,9 +65,12 @@ breaks something you cannot see from here:
 - **Validation** is `remix/data-schema` through `@pkg/validate`. Never Zod.
 - **Errors** are `@pkg/result`: services return a `Result`, and controllers decide what a
   visitor sees. Never surface an upstream provider's error text to a visitor.
-- **External clients** come from the service container (`app/lib/container.ts`), resolved
-  per request. They call the global `fetch` directly — never add an injectable `fetch`
-  parameter.
+- **Billing** is `@pkg/billing`: the Polar connection is built once in `app/lib/billing.ts`
+  and published as `ctx.billing` by the middleware, and every call answers a `Result`
+  rather than throwing. Address a package by its slug, never by a product id.
+- **The newsletter client** comes from the service container (`app/lib/container.ts`),
+  resolved per request. It calls the global `fetch` directly — never add an injectable
+  `fetch` parameter.
 - **Logging** is `@pkg/logger`. Keep the existing event names (`user_subscribed`,
   `order_paid`, `checkout_started`, `discount_applied`, …): dashboards read them. Never
   log the Buttondown API key or the webhook secret.
@@ -91,10 +99,11 @@ Run tests from the repo root with `bun run test`, which runs them under Vitest. 
 --project books` scopes a run to this app.
 
 - **Router-level tests** go through `fetchApp()` in `app/lib/test/router.ts`, which
-  builds the real router inside a container scope. External clients are replaced through
-  the container, not at the network layer: with MSW's interceptors installed, the form-data
-  middleware sees an empty body and every POST fails validation before reaching the code
-  under test.
+  builds the real router inside a container scope. Pass `billing` to bill the request
+  against the in-memory platform from `app/lib/test/billing.ts`, and override the
+  newsletter client through the container rather than at the network layer: with MSW's
+  interceptors installed, the form-data middleware sees an empty body and every POST
+  fails validation before reaching the code under test.
 - **Client tests** (`app/services/buttondown.test.ts`) do use MSW, which is where the
   request shape — URL, method, auth header, body — belongs.
 - Cloudflare `env` in tests comes from the repo-wide preload; a test needing specific

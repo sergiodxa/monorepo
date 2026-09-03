@@ -1,41 +1,42 @@
 /**
- * Daily scheduled job that reports each tenant's Monthly Active Users (MAU) to Polar
- * for usage-based billing. Queries Analytics Engine for per-tenant MAU, joins it to
- * Polar customer IDs from D1, and pushes the counts to Polar's meters API.
+ * Daily scheduled job that reports each tenant's Monthly Active Users (MAU) to the
+ * billing platform for usage-based billing. Queries Analytics Engine for per-tenant
+ * MAU, keeps the tenants that are billing customers, and ingests one event each.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UsageEvent } from "@pkg/billing";
+
 import { Logger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
+import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
 
+import { CONNECTION, failureFields, MAU_METER, polar } from "~/app/lib/billing";
 import AnalyticsService from "~/app/services/analytics";
 
-interface SubscriptionRow {
+/** A tenant that is a customer of the connection this deployment bills through. */
+interface CustomerRow {
 	tenant_id: string;
-	/** Present only for tenants with an active Polar subscription. */
-	polar_customer_id: string | null;
 }
 
 /**
- * Runs daily at 1:00 AM UTC via cron trigger. A tenant with an active Polar
- * subscription gets its MAU reported; a per-tenant report failure is logged
- * and counted, letting the run continue for the remaining tenants.
+ * Runs daily at 1:00 AM UTC via cron trigger. Every tenant that is a billing
+ * customer contributes one event to a single ingest call, keyed by tenant and
+ * day so a re-run of the same day is counted once rather than twice.
  *
  * @param controller - Cloudflare scheduled controller with cron metadata
  * @returns A promise that resolves when the reporting run completes.
- * @throws Propagates any error from the MAU query or D1 lookup; per-tenant
- * Polar report failures are caught and logged instead.
+ * @throws When the MAU query, the customer lookup, or the ingest call fails.
  * @example
  * // Wired from the worker's scheduled handler:
  * if (controller.cron === "0 1 * * *") await reportMAU(controller);
  */
 export async function reportMAU(controller: ScheduledController): Promise<void> {
 	let logger = new Logger();
-	let polar = new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN });
 	let month = AnalyticsService.getCurrentMonth();
+	let day = new Date().toISOString().slice(0, 10);
 
 	logger.info("MAU reporting job started", {
 		month,
@@ -56,51 +57,52 @@ export async function reportMAU(controller: ScheduledController): Promise<void> 
 		});
 
 		let tenantIds = mauResults.map((r) => r.tenant_id);
-		let placeholders = tenantIds.map(() => "?").join(", ");
+		let placeholders = tenantIds.map((_, index) => `?${index + 2}`).join(", ");
 
-		let subscriptions = await env.PLATFORM_DB.prepare(
-			`SELECT tenant_id, polar_customer_id FROM subscriptions WHERE tenant_id IN (${placeholders})`,
+		let customers = await env.PLATFORM_DB.prepare(
+			`SELECT tenant_id FROM billing_customers
+			 WHERE connection = ?1 AND is_default = 1 AND tenant_id IN (${placeholders})`,
 		)
-			.bind(...tenantIds)
-			.all<SubscriptionRow>();
+			.bind(CONNECTION, ...tenantIds)
+			.all<CustomerRow>();
 
-		let customerMap = new Map<string, string>();
-		for (let sub of subscriptions.results) {
-			if (sub.polar_customer_id) {
-				customerMap.set(sub.tenant_id, sub.polar_customer_id);
-			}
-		}
+		let billable = new Set(customers.results.map((row) => row.tenant_id));
 
-		let reported = 0;
+		let events: UsageEvent[] = [];
 		let skipped = 0;
-		let failed = 0;
 
 		for (let { tenant_id, mau } of mauResults) {
-			let polarCustomerId = customerMap.get(tenant_id);
-
-			if (!polarCustomerId) {
+			if (!billable.has(tenant_id)) {
 				skipped++;
 				continue;
 			}
 
-			try {
-				await polar.reportMAU(polarCustomerId, mau, tenant_id, month);
-				reported++;
-			} catch (error) {
-				failed++;
-				logger.error("Failed to report MAU to Polar", {
-					tenant_id,
-					polar_customer_id: polarCustomerId,
-					error: error instanceof Error ? error.message : String(error),
-				});
-			}
+			events.push({
+				name: MAU_METER,
+				customer: { externalId: tenant_id },
+				externalId: `${MAU_METER}_${tenant_id}_${day}`,
+				metadata: { month, count: mau },
+			});
+		}
+
+		if (events.length === 0) {
+			logger.info("MAU reporting completed", { month, reported: 0, skipped, accepted: 0 });
+			return;
+		}
+
+		let ingested = await polar.usage.ingest(events);
+
+		if (isFailure(ingested)) {
+			logger.error("Failed to report MAU", { month, ...failureFields(ingested.error) });
+
+			throw ingested.error;
 		}
 
 		logger.info("MAU reporting completed", {
 			month,
-			reported,
+			reported: events.length,
 			skipped,
-			failed,
+			accepted: ingested.data.accepted,
 		});
 	} catch (error) {
 		logger.error("MAU reporting job failed", {

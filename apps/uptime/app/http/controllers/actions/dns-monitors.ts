@@ -14,7 +14,6 @@
 import { redirect } from "@pkg/http/response";
 import { notFound, unprocessableEntity } from "@pkg/http/response/html";
 import { logger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -290,7 +289,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	 * with the scheduled sweep's. Deferred, since the visitor already has the result to show.
 	 */
 	waitUntil(
-		ingestPings(getServiceContainer().get(PolarClient), [
+		ingestPings(ctx.billing, [
 			{
 				externalId: `ping:${check.resultId}`,
 				ownerId: ctx.team.owner_id,

@@ -210,7 +210,7 @@ export default createAction(routes.api.v1.ping, {
 		let id = generateUUID();
 		let result = await run(input);
 
-		recordAdhocPing({
+		recordAdhocPing(ctx.billing, {
 			id,
 			team: ctx.apiTeam,
 			status: result.status,

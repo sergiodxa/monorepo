@@ -37,10 +37,14 @@ a relative path is only for a sibling inside the same directory.
   Object — a thin wrapper over `@pkg/blog-engine`).
 - `routes/web.ts` — dashboard + marketing routes.
 - `app/http/controllers/` — marketing, health, auth (OIDC vs the sso tenant),
-  `dashboard/*`, and the Polar webhook.
-- `app/models/` — control-plane rows: Account, Blog, Hostname, Subscription, UsageDaily.
+  `dashboard/*`, and the billing webhook endpoint.
+- `app/lib/billing.ts` — the configured billing platform, built once and reached from
+  routes as `context.billing` and from jobs by importing it.
+- `app/models/` — control-plane rows: Account, BillingCustomer, Blog, Hostname,
+  Subscription, UsageDaily, WebhookDelivery.
 - `app/services/` — BlogProvisioner (lifecycle + DO RPC + KV), HostnameService
-  (CF for SaaS), PolarService (billing), analytics (AE SQL rollups).
+  (CF for SaaS), entitlements (the billing projection), webhook-deliveries (the
+  delivery store), analytics (AE SQL rollups).
 - `app/jobs/` — the job map (`index.ts`), the dispatcher both worker handlers delegate
   to, the middleware every job runs inside, and one handler per job: report-usage,
   purge-deleted-blogs, poll-hostnames.

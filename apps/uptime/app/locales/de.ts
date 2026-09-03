@@ -2517,6 +2517,8 @@ export default {
 				title: "Abrechnung",
 			},
 			ownerOnly: "Nur der Teambesitzer kann die Abrechnung für dieses Team einsehen und verwalten.",
+			unavailable:
+				"Die Abrechnung ist vorübergehend nicht verfügbar. Bitte versuche es in ein paar Minuten erneut.",
 		},
 
 		members: {

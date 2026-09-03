@@ -9,18 +9,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PolarClient as PolarClientType } from "@pkg/polar";
 import type { Middleware, RequestContext, RequestHandler, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import billing from "@pkg/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
 } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
@@ -38,6 +37,7 @@ import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
@@ -95,13 +95,6 @@ let { i18n: i18nextInstance } = await createTranslator({
 
 let sessionCookie = createCookie("uptime-test-session", { secrets: ["test-secret"] });
 let sessionStorage = createMemorySessionStorage();
-
-/** Billing is the one dependency held as a double, wired in only to satisfy the container. */
-let polar = {
-	async ingestEventsSafe() {
-		return true;
-	},
-} as unknown as PolarClientType;
 
 /**
  * Fetches a frame's HTML through the router the document is rendered by —
@@ -208,6 +201,7 @@ async function createHarness() {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			billing({ provider: createTestBilling() }),
 			session(sessionCookie, sessionStorage),
 			formData(),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -228,7 +222,6 @@ async function createHarness() {
 
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar);
 
 	let jar = new Map<string, string>();
 	let cookie = "";

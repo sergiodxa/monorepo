@@ -11,14 +11,13 @@
  */
 
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
-import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
+import billing from "@pkg/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
 } from "@pkg/cloudflare-mocks";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
@@ -38,8 +37,8 @@ import type { SelectTeam } from "~/database/schema";
 import { auth } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import { signIn } from "~/app/lib/test/auth";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -83,15 +82,12 @@ vi.spyOn(console, "info").mockImplementation(() => {});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
-/** Event batches the action handed the billing client, one entry per call. */
-let ingested: IngestEvent[][] = [];
-
-let polar = {
-	async ingestEventsSafe(events: IngestEvent[]) {
-		ingested.push(events);
-		return true;
-	},
-} as unknown as PolarClientType;
+/**
+ * The platform the action bills against, replaced per test so one submission's meter events
+ * cannot be read back by the next. The middleware resolves it per request, so the router
+ * built below reads whatever this currently holds.
+ */
+let testBilling = createTestBilling();
 
 let viewer: Viewer = {
 	id: "viewer-1",
@@ -153,6 +149,7 @@ function createTestRouter(db: Db) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			billing({ provider: () => testBilling }),
 			session(sessionCookie, sessionStorage),
 			(_ctx, next) => {
 				signIn(viewer);
@@ -175,7 +172,6 @@ function createTestRouter(db: Db) {
 
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.instance(PolarClient, polar);
 
 	return { router, container };
 }
@@ -224,7 +220,7 @@ beforeEach(() => {
 	);
 	geoFetch.reset();
 	pingResults.reset();
-	ingested.length = 0;
+	testBilling = createTestBilling();
 	deferred.length = 0;
 });
 
@@ -307,7 +303,7 @@ describe("POST /actions/:team/run-ping", () => {
 		});
 		/** The check ran, so the team performed a ping: a failed check is billable work. */
 		expect(pingResults.dataPoints).toHaveLength(1);
-		expect(ingested.flat()).toHaveLength(1);
+		expect(await billedEvents(testBilling)).toHaveLength(1);
 	});
 
 	test("flashes no code and no timing for a target that never answered", async () => {
@@ -330,7 +326,7 @@ describe("POST /actions/:team/run-ping", () => {
 			responseStatus: null,
 			responseTimeMs: null,
 		});
-		expect(ingested.flat()).toHaveLength(1);
+		expect(await billedEvents(testBilling)).toHaveLength(1);
 	});
 });
 
@@ -367,7 +363,7 @@ describe("POST /actions/:team/run-ping refusals", () => {
 
 			expect(doFetchMock).not.toHaveBeenCalled();
 			expect(pingResults.dataPoints).toHaveLength(0);
-			expect(ingested).toHaveLength(0);
+			expect(await billedEvents(testBilling)).toHaveLength(0);
 		});
 	}
 
@@ -388,7 +384,7 @@ describe("POST /actions/:team/run-ping refusals", () => {
 		/** Refused before any billable work: no probe, no data point, no meter event. */
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
-		expect(ingested).toHaveLength(0);
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 	});
 
 	test("runs the check for an owner with no subscription rows at all", async () => {

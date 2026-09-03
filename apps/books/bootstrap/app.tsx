@@ -9,9 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Billing } from "@pkg/billing";
 import type { Middleware, RequestContext } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import billing from "@pkg/billing/middleware";
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
@@ -31,6 +33,7 @@ import * as sample from "~/app/http/controllers/sample";
 import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
+import { polar } from "~/app/lib/billing";
 import routes from "~/routes/web";
 
 /**
@@ -38,9 +41,11 @@ import routes from "~/routes/web";
  * so a `HEAD` probe reads like its `GET` to later steps, and each route is
  * mapped individually since `router.map` throws on a nested route group.
  *
+ * @param provider - The platform every route bills against, published as
+ * `context.billing`; a test supplies an in-memory one.
  * @returns The configured router the worker forwards requests to.
  */
-export default function application() {
+export default function application(provider: Billing = polar) {
 	let globalMiddleware: Middleware[] = [
 		headRequests(),
 		asyncContext(),
@@ -48,12 +53,13 @@ export default function application() {
 		formData() as Middleware,
 
 		/**
-		 * The Polar webhook is a cross-origin POST authenticated by its
+		 * The billing webhook is a cross-origin POST authenticated by its
 		 * Standard-Webhooks signature, so it bypasses cross-origin protection: a
 		 * `cop()` rejection here would silently drop every paid-order event.
 		 */
 		cop({ insecureBypassPatterns: ["/webhooks/polar"] }),
 
+		billing({ provider }),
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 

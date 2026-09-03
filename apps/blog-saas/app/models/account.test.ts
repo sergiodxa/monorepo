@@ -1,7 +1,7 @@
 /**
  * Unit tests for the `Account` control-plane model: the find-or-create upsert from an
- * IdP profile (insert vs. update, display-name preservation), Polar customer-id
- * mutation, and the subject/id lookups, against an in-memory SQLite database.
+ * IdP profile (insert vs. update, display-name preservation) and the subject/id
+ * lookups, against an in-memory SQLite database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,7 +33,6 @@ describe("Account.findOrCreateFromProfile", () => {
 		expect(account.oidc_subject).toBe("auth0|123");
 		expect(account.email).toBe("jane@example.com");
 		expect(account.display_name).toBe("Jane");
-		expect(account.polar_customer_id).toBeNull();
 	});
 
 	test("defaults a missing display name to null on create", async () => {
@@ -114,30 +113,5 @@ describe("Account lookups", () => {
 
 	test("findBySubject returns null for an unknown subject", async () => {
 		expect(await Account.findBySubject(harness.db, "nobody")).toBeNull();
-	});
-});
-
-describe("Account.setPolarCustomerId", () => {
-	test("sets the Polar customer id", async () => {
-		let account = await Account.findOrCreateFromProfile(harness.db, {
-			subject: "auth0|123",
-			email: "jane@example.com",
-		});
-
-		await Account.setPolarCustomerId(harness.db, account.id, "cus_1");
-
-		expect((await Account.findById(harness.db, account.id))?.polar_customer_id).toBe("cus_1");
-	});
-
-	test("clears the Polar customer id when passed null", async () => {
-		let account = await Account.findOrCreateFromProfile(harness.db, {
-			subject: "auth0|123",
-			email: "jane@example.com",
-		});
-		await Account.setPolarCustomerId(harness.db, account.id, "cus_1");
-
-		await Account.setPolarCustomerId(harness.db, account.id, null);
-
-		expect((await Account.findById(harness.db, account.id))?.polar_customer_id).toBeNull();
 	});
 });

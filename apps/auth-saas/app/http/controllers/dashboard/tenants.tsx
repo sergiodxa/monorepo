@@ -16,6 +16,7 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
+import { failureFields } from "~/app/lib/billing";
 import Hostname from "~/app/models/hostname";
 import Subscription from "~/app/models/subscription";
 import Tenant from "~/app/models/tenant";
@@ -318,8 +319,19 @@ export default {
 				if (internal) {
 					log.info("Skipping subscription for internal tenant", { tenantId: tenant.id });
 				} else {
-					await Subscription.create(db, tenant.id, platformSession.email, result.data.name);
-					log.info("Subscription created", { tenantId: tenant.id });
+					let subscription = await Subscription.create(
+						db,
+						tenant.id,
+						platformSession.email,
+						result.data.name,
+					);
+
+					if (isFailure(subscription)) {
+						log.error("Failed to create subscription", {
+							tenantId: tenant.id,
+							...failureFields(subscription.error),
+						});
+					} else log.info("Subscription created", { tenantId: tenant.id });
 				}
 			} catch (error) {
 				log.error("Failed to create subscription", {

@@ -141,7 +141,7 @@ export const runPing = createAction(routes.actions.runPing, {
 		let outcome = await check.probe();
 		let status = check.classify(outcome, true);
 
-		recordAdhocPing({
+		recordAdhocPing(ctx.billing, {
 			id,
 			team: ctx.team,
 			status,

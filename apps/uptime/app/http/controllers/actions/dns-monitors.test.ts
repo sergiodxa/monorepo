@@ -11,12 +11,11 @@
  */
 
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
-import type { IngestEvent } from "@pkg/polar";
 
+import billing from "@pkg/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -31,13 +30,13 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import i18n from "~/app/http/middleware/i18n";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	dnsMonitorRecords,
 	dnsMonitorResults,
 	dnsMonitors,
 	memberships,
-	subscriptions,
 	teams,
 } from "~/database/schema";
 import routes from "~/routes/web";
@@ -111,25 +110,34 @@ function stubResolver(bodies: Record<string, DohBody> = {}) {
 }
 
 /**
- * The billing client the container hands the action, with the one call `ingestPings` makes
- * spied on. The client is real — only the request is intercepted — so the events asserted
+ * The platform the action bills against, replaced per test so one check's meter events
+ * cannot be read back by the next. It is a real implementation, so the events asserted
  * below are the ones the action actually built.
  */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+let testBilling = createTestBilling();
 
 beforeEach(() => {
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	testBilling = createTestBilling();
 	pingResults.reset();
 	deferred = [];
 	queries = 0;
 });
 
-/** Every event the action handed Polar, once the work it deferred has settled. */
-async function ingestedEvents(): Promise<IngestEvent[]> {
+/**
+ * Every event the action billed, once the work it deferred has settled, as the fields that
+ * describe *what* was billed: the id and the timestamp on a record are the platform's own.
+ */
+async function ingestedEvents() {
 	await Promise.all(deferred.splice(0));
-	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+
+	return (await billedEvents(testBilling)).map(
+		({ name, customerExternalId, externalId, metadata }) => ({
+			name,
+			customerExternalId,
+			externalId,
+			metadata,
+		}),
+	);
 }
 
 /** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
@@ -153,11 +161,11 @@ async function postDnsMonitorAction(
 ) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.singleton(PolarClient, () => polar);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			billing({ provider: () => testBilling }),
 			formData(),
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		],
@@ -256,27 +264,6 @@ async function createRecordRow(
 			first_seen_at: Date.now(),
 			last_seen_at: Date.now(),
 			last_checked_at: null,
-		},
-		{ touch: true, returnRow: true },
-	);
-}
-
-/** Records an owner as having lapsed, which is what the entitlement gate refuses on. */
-async function createLapsedSubscription(
-	db: ReturnType<typeof createTestDatabase>["db"],
-	ownerId: string,
-) {
-	await db.create(
-		subscriptions,
-		{
-			id: crypto.randomUUID(),
-			external_customer_id: ownerId,
-			polar_subscription_id: crypto.randomUUID(),
-			polar_product_id: "product-1",
-			status: "canceled",
-			current_period_end: null,
-			revoked_at: Date.now(),
-			polar_modified_at: Date.now(),
 		},
 		{ touch: true, returnRow: true },
 	);
@@ -760,7 +747,7 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 		expect(await ingestedEvents()).toEqual([
 			{
 				name: "ping",
-				externalCustomerId: team.owner_id,
+				customerExternalId: team.owner_id,
 				externalId: `ping:${stored?.id}`,
 				metadata: { teamId: team.id, type: "dns", monitorId: monitor.id },
 			},
@@ -773,7 +760,7 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await createMonitorRow(db, team.id);
-		await createLapsedSubscription(db, team.owner_id);
+		await createRevokedSubscription(db, team.owner_id);
 
 		let response = await postDnsMonitorAction(
 			checkDnsMonitor,
@@ -893,7 +880,7 @@ describe("POST /actions/:team/check-dns-monitor analytics", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await createMonitorRow(db, team.id);
-		await createLapsedSubscription(db, team.owner_id);
+		await createRevokedSubscription(db, team.owner_id);
 
 		await postDnsMonitorAction(
 			checkDnsMonitor,

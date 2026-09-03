@@ -21,6 +21,7 @@
       "name": "@apps/auth-saas",
       "dependencies": {
         "@pkg/auth": "workspace:*",
+        "@pkg/billing": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/data-table-sqlstorage": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
@@ -30,7 +31,6 @@
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/oidc-provider": "workspace:*",
-        "@pkg/polar": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
@@ -81,6 +81,7 @@
       "name": "@apps/blog-saas",
       "dependencies": {
         "@pkg/auth": "workspace:*",
+        "@pkg/billing": "workspace:*",
         "@pkg/blog-engine": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/data-table-sqlstorage": "workspace:*",
@@ -88,7 +89,6 @@
         "@pkg/http": "workspace:*",
         "@pkg/jobs": "workspace:*",
         "@pkg/logger": "workspace:*",
-        "@pkg/polar": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
         "@pkg/types": "workspace:*",
@@ -105,13 +105,13 @@
     "apps/books": {
       "name": "@apps/books",
       "dependencies": {
+        "@pkg/billing": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
         "@pkg/highlight": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
-        "@pkg/polar": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/seo": "workspace:*",
@@ -140,6 +140,7 @@
     "apps/r3-auth": {
       "name": "@apps/r3-auth",
       "dependencies": {
+        "@pkg/billing": "workspace:*",
         "@pkg/crypto": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/dates": "workspace:*",
@@ -151,7 +152,6 @@
         "@pkg/jwt": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/mail": "workspace:*",
-        "@pkg/polar": "workspace:*",
         "@pkg/rate-limit": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/server-timing": "workspace:*",
@@ -190,6 +190,7 @@
       "name": "@apps/uptime",
       "dependencies": {
         "@pkg/auth": "workspace:*",
+        "@pkg/billing": "workspace:*",
         "@pkg/cron": "workspace:*",
         "@pkg/crypto": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
@@ -204,7 +205,6 @@
         "@pkg/lucide-remix": "workspace:*",
         "@pkg/mail": "workspace:*",
         "@pkg/markdown": "workspace:*",
-        "@pkg/polar": "workspace:*",
         "@pkg/rate-limit": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/seo": "workspace:*",

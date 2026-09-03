@@ -8,13 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UsageEvent } from "@pkg/billing";
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
-import type { IngestEvent } from "@pkg/polar";
 
+import { BillingError } from "@pkg/billing";
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
-import { PolarClient } from "@pkg/polar";
-import { ServiceContainer } from "@pkg/service-container";
+import { failure } from "@pkg/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import { createTestBilling } from "~/app/lib/test/billing";
 
 import type { AdhocPing } from "./adhoc-ping";
 
@@ -41,23 +43,21 @@ vi.doMock("cloudflare:workers", () => ({
 let { ADHOC_MONITOR_ID, recordAdhocPing } = await import("./adhoc-ping");
 
 /**
- * The billing client the container hands the service, with the one call `ingestPings`
- * makes spied on. The client is real — only the request is intercepted — so the events
- * asserted below are the ones the service actually built.
+ * The platform the service bills against, with the one call `ingestPings` makes spied on.
+ * The platform is real — only the observation is added — so the events asserted below are
+ * the ones the service actually built.
  */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+let billing = createTestBilling();
+let realIngest = billing.usage.ingest.bind(billing.usage);
+let ingestMock = vi.spyOn(billing.usage, "ingest");
 
 /** `ingestPings` logs its own failures; the assertions read the calls instead. */
 vi.spyOn(console, "error").mockImplementation(() => {});
 
-let container = new ServiceContainer();
-container.singleton(PolarClient, () => polar);
-
 beforeEach(() => {
 	pingResults.reset();
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	ingestMock.mockClear();
+	ingestMock.mockImplementation(realIngest);
 	deferred = [];
 });
 
@@ -72,14 +72,14 @@ function adhocPing(overrides: Partial<AdhocPing> = {}): AdhocPing {
 	};
 }
 
-/** Records `ping` inside a container scope, which is where the billing client lives. */
+/** Records `ping` against the platform the service is handed in production. */
 function record(ping: AdhocPing = adhocPing()): void {
-	container.scope(() => recordAdhocPing(ping));
+	recordAdhocPing(billing, ping);
 }
 
-/** Every event the service handed Polar, flattened across the calls it made. */
-function ingestedEvents(): IngestEvent[] {
-	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+/** Every event the service handed the platform, flattened across the calls it made. */
+function ingestedEvents(): UsageEvent[] {
+	return ingestMock.mock.calls.flatMap(([events]) => [...events]);
 }
 
 describe("recordAdhocPing analytics", () => {
@@ -113,11 +113,11 @@ describe("recordAdhocPing billing", () => {
 		record(adhocPing({ id: "ping-42" }));
 		await Promise.all(deferred.splice(0));
 
-		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
+		expect(ingestMock).toHaveBeenCalledTimes(1);
 		expect(ingestedEvents()).toEqual([
 			{
 				name: "ping",
-				externalCustomerId: "owner-1",
+				customer: { externalId: "owner-1" },
 				externalId: "ping:ping-42",
 				metadata: { teamId: "team-1", type: "adhoc" },
 			},
@@ -137,12 +137,14 @@ describe("recordAdhocPing billing", () => {
 	test("hands the ingest to waitUntil instead of making the caller wait for it", async () => {
 		let release = () => {};
 		let settled = false;
-		ingestEventsSafeMock.mockImplementation(async () => {
+		ingestMock.mockImplementation(async () => {
 			await new Promise<void>((resolve) => {
 				release = resolve;
 			});
 			settled = true;
-			return true;
+			return failure(
+				new BillingError("nothing to report", { code: "invalid_request", connection: "memory" }),
+			);
 		});
 
 		record();
@@ -157,19 +159,21 @@ describe("recordAdhocPing billing", () => {
 	});
 
 	test("doesn't throw when the ingest is rejected", async () => {
-		ingestEventsSafeMock.mockImplementation(async () => {
-			throw new Error("polar unavailable");
+		ingestMock.mockImplementation(async () => {
+			throw new Error("platform unavailable");
 		});
 
 		/** The check the caller already paid for stays successful even when billing itself fails. */
 		expect(() => record()).not.toThrow();
 		expect(pingResults.dataPoints).toHaveLength(1);
 
-		await expect(Promise.all(deferred.splice(0))).rejects.toThrow("polar unavailable");
+		await expect(Promise.all(deferred.splice(0))).rejects.toThrow("platform unavailable");
 	});
 
 	test("doesn't throw when the ingest is refused", async () => {
-		ingestEventsSafeMock.mockImplementation(async () => false);
+		ingestMock.mockImplementation(async () =>
+			failure(new BillingError("refused", { code: "invalid_request", connection: "memory" })),
+		);
 
 		expect(() => record()).not.toThrow();
 

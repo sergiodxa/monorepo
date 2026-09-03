@@ -1,7 +1,7 @@
 /**
  * Authentication controller for `/auth`: the POST starts the OIDC authorization-code flow
  * and the GET completes the callback, provisioning everything a first sign-in needs — the
- * Polar customer, a team, any trial monitors that address is owed — before it redirects.
+ * billing customer, a team, any trial monitors that address is owed — before it redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,6 @@ import type { RemixNode } from "remix/ui";
 import { AuthError, AuthErrorCode } from "@pkg/auth/auth-error";
 import { redirect } from "@pkg/http/response";
 import { Location } from "@pkg/location";
-import { PolarClient } from "@pkg/polar";
 import { isFailure, wrap } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
@@ -143,7 +142,7 @@ export default createController(routes.auth, {
 		},
 
 		/** GET /auth — completes the OIDC callback and establishes the session. */
-		index: inject([Database, PolarClient] as const, async (db, polar) => {
+		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let finished = await wrap(() => relyingParty(ctx.url).callback(ctx));
 
@@ -168,7 +167,21 @@ export default createController(routes.auth, {
 			let grant = finished.data;
 			let idToken = grant.idToken;
 
-			await Customer.findOrCreate(polar, idToken);
+			let customer = await Customer.provision(ctx.billing, idToken);
+
+			/**
+			 * A sign-in completes whether or not billing answered: the customer is provisioned
+			 * again on the next one, and the daily repair sweep reaches an owner who paid in the
+			 * meantime, so a platform outage costs a login nothing.
+			 */
+			if (isFailure(customer)) {
+				ctx.logger.error("auth.customer_provision_failed", {
+					code: customer.error.code,
+					providerCode: customer.error.providerCode,
+					connection: customer.error.connection,
+					subject: idToken.subject,
+				});
+			}
 
 			let team = await resolveTeam(db, idToken);
 

@@ -1,39 +1,48 @@
 /**
- * Tests `POST /webhooks/polar`: signature rejection, the upsert that records
- * subscription state, the scheduling it applies to the owner's monitors, and
- * everything it deliberately ignores (other event types, other products, an
- * unlinked customer, an out-of-order redelivery).
+ * Tests `POST /webhooks/polar`: the signature check, the snapshot it writes into the
+ * projection, the scheduling it applies to the owner's monitors, the delivery it records
+ * before trusting anything, and everything it deliberately acknowledges without acting on
+ * (an event type it has no handler for, a subscription to another product, a redelivery).
  *
- * `PolarClient.parseWebhook` is faked in the service container rather than
- * signing a real Standard Webhooks request: verification itself is covered
- * in `@pkg/polar`, and a real signature would also have to satisfy the SDK's
- * full payload schema, which says nothing about this controller.
+ * Deliveries come from a real in-memory platform, which signs them the way the endpoint
+ * verifies them, so the signature check and the snapshot read are both the real ones and a
+ * test arranges state by selling a subscription rather than by writing columns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PolarWebhookEvent } from "@pkg/polar";
-
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { PolarClient } from "@pkg/polar";
-import { failure, success } from "@pkg/result";
+import logger from "@pkg/logger/middleware";
+import { unwrap } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { describe, expect, test, vi } from "vitest";
-
-import type { PolarSubscriptionOptions } from "~/app/lib/test/polar";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
+import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { polarSubscription } from "~/app/lib/test/polar";
-import { monitors, teams } from "~/database/schema";
+import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-vi.doMock("cloudflare:workers", () => ({
-	env: createEnv<Env>({ POLAR_WEBHOOK_SECRET: "whsec_test" }),
+/** Another thing the organization sells, so a delivery about it can be shown to be ignored. */
+const OTHER_PRODUCT = "ebook";
+
+/**
+ * The platform the endpoint is built against, created once: the endpoint captures it at its
+ * own module scope, so replacing it per test would leave the endpoint on the old one. Each
+ * test sells to a fresh customer instead.
+ */
+let billing = createTestBilling();
+
+billing.seed({ [OTHER_PRODUCT]: { amount: 1900, currency: "usd", interval: "year" } });
+
+vi.doMock("~/app/lib/billing", () => ({
+	polar: billing,
+	MONITORING_PRODUCT,
+	PING_METER,
 }));
 
 vi.spyOn(console, "info").mockImplementation(() => {});
@@ -43,42 +52,55 @@ let { default: polarWebhook } = await import("~/app/http/controllers/webhooks/po
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
+let db: Db;
+
+/** A subject nothing else in this file has sold to, so the platform's state cannot bleed. */
+let ownerId: string;
+
+beforeEach(() => {
+	ownerId = `owner-${crypto.randomUUID()}`;
+	({ db } = createTestDatabase());
+});
+
 /**
- * A verified webhook event, as `parseWebhook` would hand one back. The subscription itself
- * comes from the shared fixture; the cast is what stands in for the payload schema the real
- * verifier would have applied to the envelope.
+ * Sells `product` to a fresh customer and hands back what the platform now holds, which is
+ * the state every delivery below is about.
  */
-function event(type: string, options: PolarSubscriptionOptions = {}): PolarWebhookEvent {
-	let payload = { type, data: polarSubscription(options) };
-	return payload as unknown as PolarWebhookEvent;
+async function subscribe(externalId: string, product = MONITORING_PRODUCT) {
+	let customer = await unwrap(
+		billing.customers.create({ email: `${externalId}@example.com`, externalId }),
+	);
+
+	let opened = await unwrap(billing.checkouts.create({ product, customer: { id: customer.id } }));
+	let finished = await unwrap(billing.checkouts.finish(opened.id));
+	let subscription = await unwrap(billing.subscriptions.find(finished.subscriptionId ?? ""));
+
+	return { customer, subscription };
 }
 
-/** A `PolarClient` whose `parseWebhook` is forced to one outcome. */
-function fakePolar(outcome: Awaited<ReturnType<PolarClient["parseWebhook"]>>): PolarClient {
-	let fake = { parseWebhook: async () => outcome };
-	return fake as unknown as PolarClient;
-}
-
-async function dispatch(db: Db, polar: PolarClient, body = "{}") {
-	let router = createRouter({ middleware: [asyncContext()] });
+/**
+ * Posts one delivery at this app's own webhook path, keeping the headers and the exact bytes
+ * the platform signed — the URL is the only thing the endpoint does not read.
+ */
+async function dispatch(delivery: { body: string; headers: Headers }) {
+	let router = createRouter({ middleware: [asyncContext(), logger] });
 	router.map(routes.webhooks.polar, polarWebhook);
 
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.singleton(PolarClient, () => polar);
 
 	return await container.scope(() =>
 		router.fetch(
 			new Request(`https://uptime.test${routes.webhooks.polar.href()}`, {
 				method: "POST",
-				headers: { "content-type": "application/json" },
-				body,
+				headers: delivery.headers,
+				body: delivery.body,
 			}),
 		),
 	);
 }
 
-async function createTeamWithMonitor(db: Db, ownerId: string, nextDueAt: number | null) {
+async function createTeamWithMonitor(ownerId: string, nextDueAt: number | null) {
 	let team = await db.create(
 		teams,
 		{
@@ -110,95 +132,129 @@ async function createTeamWithMonitor(db: Db, ownerId: string, nextDueAt: number 
 }
 
 describe("POST /webhooks/polar", () => {
-	test("rejects an unverified payload without touching the projection", async () => {
-		let { db } = createTestDatabase();
-		let polar = fakePolar(failure(new Error("Invalid Polar webhook signature")));
+	test("rejects an unsigned payload without touching the projection", async () => {
+		let { subscription } = await subscribe(ownerId);
+		let delivery = await unwrap(
+			billing.webhooks.emit({ type: "subscription.activated", subscription }),
+		);
 
-		let response = await dispatch(db, polar);
+		let response = await dispatch({ body: delivery.body, headers: new Headers() });
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(401);
 		expect(await Subscription.listAll(db)).toHaveLength(0);
+	});
+
+	test("records the delivery with its verdict even when the signature fails", async () => {
+		let { subscription } = await subscribe(ownerId);
+		let delivery = await unwrap(
+			billing.webhooks.emit({ type: "subscription.activated", subscription }),
+		);
+
+		await dispatch({ body: delivery.body, headers: new Headers() });
+
+		let [row] = await db.findMany(billingWebhookDeliveries);
+		expect(row?.valid).toBe(0);
+		expect(row?.processed).toBe(0);
+		expect(row?.payload).toBe(delivery.body);
 	});
 
 	test("records an active subscription and schedules the owner's monitors", async () => {
-		let { db } = createTestDatabase();
-		let { monitor } = await createTeamWithMonitor(db, "owner-1", null);
-		let polar = fakePolar(success(event("subscription.active")));
-
-		let response = await dispatch(db, polar);
-
-		expect(response.status).toBe(200);
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("active");
-		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
-	});
-
-	test("unschedules the owner's monitors when the subscription is revoked", async () => {
-		let { db } = createTestDatabase();
-		let { monitor } = await createTeamWithMonitor(db, "owner-1", Date.now());
-		let polar = fakePolar(
-			success(
-				event("subscription.revoked", { status: "canceled", endedAt: "2026-07-20T00:00:00.000Z" }),
-			),
+		let { monitor } = await createTeamWithMonitor(ownerId, null);
+		let { subscription } = await subscribe(ownerId);
+		let delivery = await unwrap(
+			billing.webhooks.emit({ type: "subscription.activated", subscription }),
 		);
 
-		let response = await dispatch(db, polar);
+		let response = await dispatch(delivery);
 
 		expect(response.status).toBe(200);
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("inactive");
-		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
+		expect(await Subscription.stateFor(db, ownerId)).toBe("active");
+		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
+
+		let [row] = await db.findMany(billingWebhookDeliveries);
+		expect(row?.valid).toBe(1);
+		expect(row?.processed).toBe(1);
 	});
 
-	test("ignores an event that carries no subscription", async () => {
-		let { db } = createTestDatabase();
-		let polar = fakePolar(success(event("order.paid")));
-
-		let response = await dispatch(db, polar);
-
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ ignored: true });
-		expect(await Subscription.listAll(db)).toHaveLength(0);
-	});
-
-	test("ignores a subscription to another product", async () => {
-		let { db } = createTestDatabase();
-		let polar = fakePolar(success(event("subscription.active", { productId: "prod_other" })));
-
-		let response = await dispatch(db, polar);
-
-		expect(await response.json()).toEqual({ ignored: true });
-		expect(await Subscription.listAll(db)).toHaveLength(0);
-	});
-
-	test("ignores a Polar customer that was never linked to a signed-in subject", async () => {
-		let { db } = createTestDatabase();
-		let polar = fakePolar(success(event("subscription.active", { externalId: null })));
-
-		let response = await dispatch(db, polar);
-
-		expect(await response.json()).toEqual({ ignored: true });
-		expect(await Subscription.listAll(db)).toHaveLength(0);
-	});
-
-	test("ignores an out-of-order redelivery instead of rescheduling from a stale status", async () => {
-		let { db } = createTestDatabase();
-		let { monitor } = await createTeamWithMonitor(db, "owner-1", null);
+	test("unschedules the owner's monitors once the subscription is gone", async () => {
+		let { monitor } = await createTeamWithMonitor(ownerId, Date.now());
+		let { subscription } = await subscribe(ownerId);
 
 		await dispatch(
-			db,
-			fakePolar(
-				success(
-					event("subscription.revoked", {
-						status: "canceled",
-						modifiedAt: "2026-07-16T00:00:00.000Z",
-					}),
-				),
+			await unwrap(billing.webhooks.emit({ type: "subscription.activated", subscription })),
+		);
+		await unwrap(billing.subscriptions.cancel(subscription.id));
+
+		let response = await dispatch(
+			await unwrap(billing.webhooks.emit({ type: "subscription.revoked", subscription })),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await Subscription.stateFor(db, ownerId)).toBe("inactive");
+		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
+	});
+
+	test("acknowledges an event type it has no handler for", async () => {
+		let response = await dispatch(
+			await unwrap(
+				billing.webhooks.emit({ type: "unrecognized", providerType: "benefit.granted" }),
 			),
 		);
 
-		let response = await dispatch(db, fakePolar(success(event("subscription.active"))));
+		expect(response.status).toBe(200);
+		expect(await Subscription.listAll(db)).toHaveLength(0);
+	});
 
-		expect(await response.json()).toEqual({ ignored: true });
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("inactive");
-		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
+	test("records nothing for a subscription to another product", async () => {
+		let { subscription } = await subscribe(ownerId, OTHER_PRODUCT);
+
+		let response = await dispatch(
+			await unwrap(billing.webhooks.emit({ type: "subscription.activated", subscription })),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await Subscription.listAll(db)).toHaveLength(0);
+	});
+
+	test("acknowledges a redelivery without running the handler again", async () => {
+		let { monitor } = await createTeamWithMonitor(ownerId, null);
+		let { subscription } = await subscribe(ownerId);
+		let delivery = await unwrap(
+			billing.webhooks.emit({ type: "subscription.activated", subscription }),
+		);
+
+		await dispatch(delivery);
+
+		/**
+		 * The subscription ends between the two deliveries. A redelivery that re-read the
+		 * snapshot would unschedule the monitor, so the monitor still being scheduled is what
+		 * proves the second delivery was skipped rather than replayed.
+		 */
+		await unwrap(billing.subscriptions.cancel(subscription.id));
+
+		let response = await dispatch(delivery);
+
+		expect(response.status).toBe(200);
+		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
+		expect(await db.findMany(billingWebhookDeliveries)).toHaveLength(1);
+	});
+
+	test("acknowledges a delivery about a customer the platform no longer holds", async () => {
+		let { subscription } = await subscribe(ownerId);
+		let delivery = await unwrap(
+			billing.webhooks.emit({
+				type: "subscription.activated",
+				subscription: { ...subscription, customerId: "cus_missing" },
+			}),
+		);
+
+		let response = await dispatch(delivery);
+
+		expect(response.status).toBe(200);
+		expect(await Subscription.listAll(db)).toHaveLength(0);
+
+		/** Left unprocessed on purpose, so the trail shows a delivery this app never acted on. */
+		let [row] = await db.findMany(billingWebhookDeliveries);
+		expect(row?.processed).toBe(0);
 	});
 });

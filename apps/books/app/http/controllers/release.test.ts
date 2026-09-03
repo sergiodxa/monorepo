@@ -1,49 +1,36 @@
 /**
  * Tests for `GET /release` — the sales page. The three things that cost money if they break
- * are the point: prices derived from Polar's cents, the parity-pricing script's polarity, and
- * the page still rendering when the campaign lookup fails.
+ * are the point: prices derived from the platform's cents, the parity-pricing script's
+ * polarity, and the page still rendering when the campaign lookup fails.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PolarClient } from "@pkg/polar";
+import type { Billing } from "@pkg/billing";
+import type { MemoryDiscountSeed } from "@pkg/billing/providers/memory";
+
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";
-import { FakePolarClient, makeDiscount, makeProduct } from "~/app/lib/test/polar";
+import { memoryBilling, withUnreadableDiscounts } from "~/app/lib/test/billing";
 import { fetchApp } from "~/app/lib/test/router";
 
-/** The two live prices, in cents, as Polar reports them. */
-const COMPLETE_CENTS = 9900;
-const ESSENTIALS_CENTS = 4900;
-
-/** Both products priced, so every test starts from a page that can quote a price. */
-function products() {
-	return {
-		[Product.Complete]: makeProduct(COMPLETE_CENTS),
-		[Product.Essentials]: makeProduct(ESSENTIALS_CENTS),
-	};
-}
+/** What every campaign under test takes off the Complete package, in cents. */
+const CAMPAIGN_CENTS = 3000;
 
 /** A campaign scoped to Complete, running now, taking $30 off. */
-function campaign(id: Discounts) {
-	return makeDiscount({
-		id,
-		amount: 3000,
-		startsAt: new Date("2000-01-01"),
-		endsAt: null,
-		products: [Product.Complete],
-	});
+function campaign(id: Discounts): MemoryDiscountSeed {
+	return { id, amount: CAMPAIGN_CENTS, products: [Product.Complete] };
 }
 
-function load(polar: FakePolarClient) {
-	return fetchApp("/release", { services: [[PolarClient, polar]] });
+function load(billing: Billing) {
+	return fetchApp("/release", { billing });
 }
 
 describe("GET /release", () => {
-	test("renders both prices as dollars, not as the cents Polar reports", async () => {
-		let response = await load(new FakePolarClient({ products: products() }));
+	test("renders both prices as dollars, not as the cents the platform reports", async () => {
+		let response = await load(memoryBilling());
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -54,12 +41,9 @@ describe("GET /release", () => {
 	});
 
 	test("strikes the list price through and shows the campaign price for the discounted package", async () => {
-		let polar = new FakePolarClient({
-			products: products(),
-			discounts: [campaign(Discounts.FIRST_WEEK)],
-		});
+		let billing = memoryBilling({ discounts: [campaign(Discounts.FIRST_WEEK)] });
 
-		let body = await load(polar).then((response) => response.text());
+		let body = await load(billing).then((response) => response.text());
 
 		expect(body).toContain("<s>$99</s>");
 		expect(body).toContain("$69");
@@ -67,9 +51,7 @@ describe("GET /release", () => {
 	});
 
 	test("renders every section anchor the page's own links point at", async () => {
-		let body = await load(new FakePolarClient({ products: products() })).then((response) =>
-			response.text(),
-		);
+		let body = await load(memoryBilling()).then((response) => response.text());
 
 		for (let id of ["hero", "description", "sample", "pricing", "author", "faq"]) {
 			expect(body).toContain(`id="${id}"`);
@@ -77,9 +59,7 @@ describe("GET /release", () => {
 	});
 
 	test("links both checkouts, the upgrade page, and the sample form", async () => {
-		let body = await load(new FakePolarClient({ products: products() })).then((response) =>
-			response.text(),
-		);
+		let body = await load(memoryBilling()).then((response) => response.text());
 
 		expect(body).toContain('href="/api/checkout/complete"');
 		expect(body).toContain('href="/api/checkout/essentials"');
@@ -88,34 +68,23 @@ describe("GET /release", () => {
 	});
 
 	test("loads the parity-pricing script when no early-access campaign is running", async () => {
-		let polar = new FakePolarClient({
-			products: products(),
-			discounts: [campaign(Discounts.SECOND_WEEK)],
-		});
+		let billing = memoryBilling({ discounts: [campaign(Discounts.SECOND_WEEK)] });
 
-		let body = await load(polar).then((response) => response.text());
+		let body = await load(billing).then((response) => response.text());
 
 		expect(body).toContain("cdn.paritydeals.com");
 	});
 
 	test("withholds the parity-pricing script while the early-access campaign is running", async () => {
-		let polar = new FakePolarClient({
-			products: products(),
-			discounts: [campaign(Discounts.EARLY)],
-		});
+		let billing = memoryBilling({ discounts: [campaign(Discounts.EARLY)] });
 
-		let body = await load(polar).then((response) => response.text());
+		let body = await load(billing).then((response) => response.text());
 
 		expect(body).not.toContain("cdn.paritydeals.com");
 	});
 
 	test("still renders when the campaign lookup fails", async () => {
-		let polar = new FakePolarClient({
-			products: products(),
-			discountsThrow: new Error("Polar is down"),
-		});
-
-		let response = await load(polar);
+		let response = await load(withUnreadableDiscounts(memoryBilling()));
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -124,10 +93,14 @@ describe("GET /release", () => {
 		expect(body).not.toContain("<s>$99</s>");
 	});
 
+	test("answers 503 rather than quoting a price it could not read", async () => {
+		let response = await load(memoryBilling({ catalog: {} }));
+
+		expect(response.status).toBe(503);
+	});
+
 	test("describes the book once, with an offer per package", async () => {
-		let body = await load(new FakePolarClient({ products: products() })).then((response) =>
-			response.text(),
-		);
+		let body = await load(memoryBilling()).then((response) => response.text());
 
 		expect(body).toContain('"@type":"Book"');
 		expect(body).toContain('"price":"99"');
@@ -136,9 +109,7 @@ describe("GET /release", () => {
 	});
 
 	test("loads no first-party JavaScript", async () => {
-		let body = await load(new FakePolarClient({ products: products() })).then((response) =>
-			response.text(),
-		);
+		let body = await load(memoryBilling()).then((response) => response.text());
 
 		expect(body).not.toContain("clientEntry");
 	});

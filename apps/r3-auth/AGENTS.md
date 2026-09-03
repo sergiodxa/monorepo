@@ -69,10 +69,14 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   validator module under `app/http/validators/`. Zod MUST NOT be added back.
 - MUST persist through `remix/data-table` (`@pkg/data-table-d1` in production) from
   `app/data/`; no ORM, no raw SQL in controllers. DB-facing field names stay `snake_case`.
-- MUST resolve services (`Database`, `PolarClient`, `RateLimiters`) through
-  `@pkg/service-container` with `inject([...])`, and MUST keep request-lifetime values
-  (session, current subject, request logger, locale) in middleware and request context
-  instead.
+- MUST resolve services (`Database`, `RateLimiters`) through `@pkg/service-container`
+  with `inject([...])`, and MUST keep request-lifetime values (session, current subject,
+  request logger, locale) in middleware and request context instead.
+- MUST bill through `@pkg/billing`: the provider is constructed once in `app/lib/billing.ts`,
+  a route reaches it as `ctx.billing`, and anything outside a request imports the instance.
+  Every call answers a `@pkg/result` `Result`, so a caller branches on `isFailure` and logs
+  the error's `code` and `providerCode`. A product is named by our own slug, never by a
+  platform id at the call site.
 - MUST keep Cloudflare-specific code in `bootstrap/worker.ts` and the router wiring in
   `bootstrap/app.tsx`; MUST import `env` from `cloudflare:workers`.
 - MUST prefer what Remix v3 ships (`remix/middleware/session`, `remix/middleware/cop`,

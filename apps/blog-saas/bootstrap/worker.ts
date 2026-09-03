@@ -7,7 +7,6 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Logger } from "@pkg/logger/request";
 import { env } from "cloudflare:workers";
 
 import { dispatcher } from "~/app/jobs/dispatcher";
@@ -166,14 +165,7 @@ export default {
 			);
 			if (asset.ok) return asset;
 
-			let logger = new Logger(request);
-			try {
-				let response = await container.scope(() => createDashboardRouter().fetch(request));
-				logger.response = response;
-				return response;
-			} finally {
-				logger.flush();
-			}
+			return container.scope(() => createDashboardRouter().fetch(request));
 		}
 
 		if (hostname.endsWith(`.${env.PLATFORM_DOMAIN}`)) {

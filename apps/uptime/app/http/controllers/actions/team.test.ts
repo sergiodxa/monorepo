@@ -1,18 +1,24 @@
 /**
  * Tests for team settings/membership actions: update/delete a team (delete is
- * owner-only in the handler itself, and cancels the owner's Polar subscriptions
- * before cascading the delete), and remove/promote-or-demote a member (both reject
+ * owner-only in the handler itself, and ends the owner's subscriptions before
+ * cascading the delete), and remove/promote-or-demote a member (both reject
  * targeting the team owner, and change-role 404s for a membership that doesn't
  * exist).
+ *
+ * The platform is a real in-memory one, so a deletion's effect on billing is read
+ * back from it rather than asserted against recorded calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PolarClient } from "@pkg/polar";
+import type { MemoryBilling } from "@pkg/billing/providers/memory";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import billing from "@pkg/billing/middleware";
+import logger from "@pkg/logger/middleware";
+import { unwrap } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -22,9 +28,15 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { MONITORING_PRODUCT } from "~/app/lib/billing";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
+
+/** The delete action's own logging is noise here; the assertions read the response. */
+vi.spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
 
 /**
  * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
@@ -65,14 +77,24 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** A fake `PolarClient` with mocked `listActiveSubscriptions`/`revokeSubscription`, registered on the container so assertions can inspect the calls made during the test. */
-function createFakePolar() {
-	return {
-		listActiveSubscriptions: vi.fn(async () => [
-			{ id: "sub_1", productId: "94161883-14eb-42e2-bb26-b4647199cda1", status: "active" },
-		]),
-		revokeSubscription: vi.fn(async () => ({})),
-	};
+/**
+ * Sells the monitoring subscription to `externalId`, so a deletion has something real to
+ * end and a refused deletion has something to still be holding afterwards.
+ */
+async function subscribe(platform: MemoryBilling, externalId: string): Promise<void> {
+	let customer = await unwrap(
+		platform.customers.create({ email: `${externalId}@example.com`, externalId }),
+	);
+	let opened = await unwrap(
+		platform.checkouts.create({ product: MONITORING_PRODUCT, customer: { id: customer.id } }),
+	);
+	await unwrap(platform.checkouts.finish(opened.id));
+}
+
+/** Every status the platform now holds for `externalId`, which is what a cancellation moves. */
+async function statusesFor(platform: MemoryBilling, externalId: string): Promise<string[]> {
+	let listed = await unwrap(platform.subscriptions.list({ customer: { externalId } }));
+	return listed.items.map((subscription) => subscription.status);
 }
 
 /** Sends a form request through a minimal router mapping a single action route. */
@@ -80,19 +102,18 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
-	polar: ReturnType<typeof createFakePolar>,
+	platform: MemoryBilling,
 	route: Route,
 	handler: RequestHandler<any>,
 	method: string,
 	params: Record<string, string>,
 ): Promise<Response> {
-	let { PolarClient } = await import("@pkg/polar");
-
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar as unknown as PolarClient);
 
-	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+	let router = createRouter({
+		middleware: [asyncContext(), logger, billing({ provider: platform }), formData() as Middleware],
+	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
@@ -107,13 +128,13 @@ async function send(
 describe("updateTeam", () => {
 	test("updates the team's name/logo and redirects to team settings", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.team.update,
 			updateTeam as RequestHandler<any>,
 			"POST",
@@ -132,13 +153,13 @@ describe("updateTeam", () => {
 
 	test("redirects back without mutating when the name is blank", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.team.update,
 			updateTeam as RequestHandler<any>,
 			"POST",
@@ -156,15 +177,16 @@ describe("updateTeam", () => {
 });
 
 describe("deleteTeam", () => {
-	test("rejects deletion from a non-owner admin without touching Polar or the team", async () => {
+	test("rejects deletion from a non-owner admin without touching billing or the team", async () => {
 		let { db, team, memberMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
+		await subscribe(platform, team.owner_id);
 
 		let response = await send(
 			db,
 			team,
 			memberMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.team.delete,
 			deleteTeam as RequestHandler<any>,
 			"DELETE",
@@ -173,19 +195,19 @@ describe("deleteTeam", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Only the team owner");
-		expect(polar.listActiveSubscriptions).not.toHaveBeenCalled();
+		expect(await statusesFor(platform, team.owner_id)).toEqual(["active"]);
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 	});
 
 	test("rejects an incorrect confirmation without deleting the team", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.team.delete,
 			deleteTeam as RequestHandler<any>,
 			"DELETE",
@@ -197,15 +219,16 @@ describe("deleteTeam", () => {
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 	});
 
-	test("cancels the owner's active Polar subscriptions and deletes the team", async () => {
+	test("cancels the owner's active subscriptions and deletes the team", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
+		await subscribe(platform, team.owner_id);
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.team.delete,
 			deleteTeam as RequestHandler<any>,
 			"DELETE",
@@ -215,12 +238,7 @@ describe("deleteTeam", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.home.href());
 
-		expect(polar.listActiveSubscriptions).toHaveBeenCalledWith(
-			"owner-1",
-			"94161883-14eb-42e2-bb26-b4647199cda1",
-		);
-		expect(polar.revokeSubscription).toHaveBeenCalledTimes(1);
-		expect(polar.revokeSubscription).toHaveBeenCalledWith("sub_1");
+		expect(await statusesFor(platform, team.owner_id)).toEqual(["canceled"]);
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
 		let remainingMemberships = await db.findMany(memberships, { where: { team_id: team.id } });
@@ -231,13 +249,13 @@ describe("deleteTeam", () => {
 describe("removeMember", () => {
 	test("removes the member and redirects to team settings", async () => {
 		let { db, team, ownerMembership, memberMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.member.remove,
 			removeMember as RequestHandler<any>,
 			"DELETE",
@@ -254,13 +272,13 @@ describe("removeMember", () => {
 
 	test("rejects removing the team owner without deleting their membership", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.member.remove,
 			removeMember as RequestHandler<any>,
 			"DELETE",
@@ -275,13 +293,13 @@ describe("removeMember", () => {
 
 	test("redirects back without removing anyone when the form is missing fields", async () => {
 		let { db, team, ownerMembership, memberMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.member.remove,
 			removeMember as RequestHandler<any>,
 			"DELETE",
@@ -296,13 +314,13 @@ describe("removeMember", () => {
 describe("changeRole", () => {
 	test("changes the member's role and redirects to team settings", async () => {
 		let { db, team, ownerMembership, memberMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.member.changeRole,
 			changeRole as RequestHandler<any>,
 			"POST",
@@ -320,13 +338,13 @@ describe("changeRole", () => {
 
 	test("rejects changing the team owner's role without mutating it", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.member.changeRole,
 			changeRole as RequestHandler<any>,
 			"POST",
@@ -342,13 +360,13 @@ describe("changeRole", () => {
 
 	test("responds 404 when the target subject has no membership on the team", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let polar = createFakePolar();
+		let platform = createTestBilling();
 
 		let response = await send(
 			db,
 			team,
 			ownerMembership,
-			polar,
+			platform,
 			routes.teamAdminActions.member.changeRole,
 			changeRole as RequestHandler<any>,
 			"POST",

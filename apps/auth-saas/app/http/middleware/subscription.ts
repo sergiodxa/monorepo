@@ -39,7 +39,6 @@ declare module "remix/router" {
 			isPastDue: boolean;
 			/** Whether access is blocked (canceled, unpaid, or incomplete) */
 			isBlocked: boolean;
-			polarCustomerId: string | null;
 		};
 	}
 }
@@ -72,7 +71,6 @@ export default middleware(async (context, next) => {
 			isActive: true,
 			isPastDue: false,
 			isBlocked: false,
-			polarCustomerId: null,
 		};
 		return next();
 	}
@@ -96,7 +94,6 @@ export default middleware(async (context, next) => {
 		isActive,
 		isPastDue,
 		isBlocked,
-		polarCustomerId: subscription.polar_customer_id,
 	};
 
 	if (isBlocked) {

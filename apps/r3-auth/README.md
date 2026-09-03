@@ -123,7 +123,7 @@ written inside the shared card in `app/emails/layout.tsx`.
 | Service | Purpose                                                                 |
 | ------- | ----------------------------------------------------------------------- |
 | GitHub  | Social sign-in (OAuth app; `read:user user:email`)                      |
-| Polar   | A subject is mirrored as a Polar customer when it is first created      |
+| Polar   | A subject is mirrored as a billing customer when it is first created    |
 | Uptime  | The session-sweep job pings its cron monitor with `UPTIME_CRON_API_KEY` |
 
 ## Routes
@@ -287,14 +287,15 @@ API key, host or `From` to configure per environment.
 `bunx wrangler secret put <NAME>` in production.
 
 The Polar access token is not. It is the `POLAR_ACCESS_TOKEN` Secrets Store binding
-declared in `wrangler.jsonc`, read as `await env.POLAR_ACCESS_TOKEN.get()`, and there is
+declared in `wrangler.jsonc`, read as `await env.POLAR_ACCESS_TOKEN.get()` by
+`app/lib/billing.ts`, and there is
 nothing to set with `wrangler secret put` — rotating it is a Secrets Store operation and
 takes effect without redeploying.
 
 A store binding has no value outside Cloudflare's network, and the local simulation of it
 is an empty store, so `get()` throws during `bun dev`. Set `POLAR_ACCESS_TOKEN_LOCAL` in
-`.dev.vars` and the container falls back to it; production has no such variable, so a
+`.dev.vars` and the token reader falls back to it; production has no such variable, so a
 failed read there stays a failure. The fallback only matters for the one path that bills —
 provisioning a subject that has never signed in before — so leaving it unset is fine until
-you exercise a first-time sign-in locally. Tests never need it: they register their own
-client in the container.
+you exercise a first-time sign-in locally. Tests never need it: they bill against an
+in-memory platform.

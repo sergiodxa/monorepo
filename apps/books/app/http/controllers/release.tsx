@@ -1,20 +1,19 @@
 /**
  * Release controller — the sales page. Reads both packages' live prices and
- * the applicable launch discount from Polar in parallel, formats them as
- * currency, and decides whether the purchasing-power-parity banner loads.
- * This is the page that converts: a failed campaign lookup degrades to list
- * prices and keeps the page live.
+ * the applicable launch discount in parallel, formats them as currency, and
+ * decides whether the purchasing-power-parity banner loads. This is the page
+ * that converts: a failed campaign lookup degrades to list prices and keeps the
+ * page live.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Discount } from "@pkg/polar";
+import type { BillingError, Product as CatalogProduct } from "@pkg/billing";
+import type { Logger } from "@pkg/logger/request";
 
-import { PolarClient } from "@pkg/polar";
-import { isSuccess } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import * as s from "remix/data-schema";
+import { ServiceUnavailable } from "@pkg/http/status-code";
+import { isFailure, isSuccess } from "@pkg/result";
 import { createAction } from "remix/router";
 
 import type { PriceView, ReleaseView as ReleaseViewTypes } from "~/resources/views/release";
@@ -36,7 +35,7 @@ const DESCRIPTION =
 const PAGE_COUNT = 47;
 
 /**
- * Prices come from Polar as whole cents, and are shown without cents: the two packages are
+ * Prices arrive as whole cents and are shown without cents: the two packages are
  * priced in round dollars, so a fraction on the page would only ever be noise.
  */
 const PRICE_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -46,87 +45,69 @@ const PRICE_FORMATTER = new Intl.NumberFormat("en-US", {
 	maximumFractionDigits: 0,
 });
 
-/**
- * The shape of a Polar product this page reads. Because this page takes
- * money, a price list that changed shape is caught here before it can render
- * a wrong number; an empty list is valid and reads as zero.
- */
-const ProductPricesSchema = s.object({
-	prices: s.array(s.object({ priceAmount: s.number() })),
-});
-
-/**
- * The shape of the discount this page reads. The amount is required, since
- * there is nothing to subtract without it; the end date is optional and
- * nullable, since a campaign with no closing date is a normal campaign.
- */
-const DiscountSchema = s.object({
-	amount: s.number(),
-	endsAt: s.optional(s.nullable(s.instanceof_(Date))),
-});
-
 function formatCents(cents: number): string {
 	return PRICE_FORMATTER.format(cents / 100);
 }
 
 /**
  * Derives what the page shows for one package: its list price, and the discounted price
- * when a launch campaign applies to it.
+ * when a launch campaign takes an amount off it.
  *
- * @param cents - The package's list price, in cents, as Polar reports it.
- * @param discount - The applicable discount, when one applies to this package.
+ * @param cents - The package's list price, in cents.
+ * @param off - Cents the applicable campaign takes off, or 0 when none applies.
  * @returns The formatted price, and the formatted discounted price when there is one.
  */
-function toPriceView(cents: number, discount?: { amount: number }): PriceView {
-	if (!discount) return { price: formatCents(cents) };
-	return {
-		price: formatCents(cents),
-		discounted: formatCents(cents - discount.amount),
-	};
+function toPriceView(cents: number, off = 0): PriceView {
+	if (off <= 0) return { price: formatCents(cents) };
+	return { price: formatCents(cents), discounted: formatCents(cents - off) };
 }
 
 /**
- * Reads a product's list price in cents.
+ * Answers a request whose prices could not be read. It is the one thing this
+ * page cannot degrade around: rendering a price as `$0` would sell the book for
+ * nothing, so the page is withheld until the platform answers again.
  *
- * @param product - The product as Polar returned it.
+ * @param log - The request logger, so the outage lands in the request's trace.
+ * @param error - Why the catalog could not be read.
+ * @returns A 503 the visitor can retry.
+ */
+function priceUnavailable(log: Logger, error: BillingError): Response {
+	log.error("release_prices_unavailable", {
+		code: error.code,
+		providerCode: error.providerCode,
+	});
+
+	return new Response(null, ServiceUnavailable);
+}
+
+/**
+ * Reads a package's list price in cents.
+ *
+ * @param product - The product as the catalog reports it.
  * @returns The first price's amount in cents, or 0 when the product has no price.
  */
-function readPriceCents(product: unknown): number {
-	let parsed = s.parse(ProductPricesSchema, product);
-	return parsed.prices[0]?.priceAmount ?? 0;
-}
-
-/**
- * Reads the amount and end date off an applicable discount. Parsing stays
- * lenient here: an unrecognized shape falls back to the list price and the
- * page keeps selling, while price parsing stays strict to avoid a wrong price.
- *
- * @param discount - The applicable discount, or `undefined` when none applies.
- * @returns The validated amount and end date, or `undefined` when there is none to show.
- */
-function readDiscount(discount: Discount | undefined) {
-	if (!discount) return undefined;
-	let parsed = s.parseSafe(DiscountSchema, discount);
-	return parsed.success ? parsed.value : undefined;
+function readPriceCents(product: CatalogProduct): number {
+	return product.prices.at(0)?.amount?.amount ?? 0;
 }
 
 /** GET /release — the sales page. */
 export default createAction(routes.release, async (ctx) => {
 	let log = ctx.logger;
-	let polar = getServiceContainer().get(PolarClient);
 
 	let [essentials, complete, discountResult] = await Promise.all([
-		polar.getProduct(Product.Essentials),
-		polar.getProduct(Product.Complete),
-		findApplicableDiscount(polar),
+		ctx.billing.catalog.find(Product.Essentials),
+		ctx.billing.catalog.find(Product.Complete),
+		findApplicableDiscount(ctx.billing),
 	]);
 
-	if (!isSuccess(discountResult)) {
-		log.info("discount_lookup_failed", { error: discountResult.error.message });
+	if (isFailure(essentials)) return priceUnavailable(log, essentials.error);
+	if (isFailure(complete)) return priceUnavailable(log, complete.error);
+
+	if (isFailure(discountResult)) {
+		log.info("discount_lookup_failed", { code: discountResult.error.code });
 	}
 
 	let activeDiscount = isSuccess(discountResult) ? discountResult.data : undefined;
-	let discount = readDiscount(activeDiscount);
 
 	/**
 	 * Purchasing-power-parity pricing is offered except during the early-access campaign,
@@ -135,15 +116,15 @@ export default createAction(routes.release, async (ctx) => {
 	 */
 	let ppp = activeDiscount?.id !== Discounts.EARLY;
 
-	let essentialsCents = readPriceCents(essentials);
-	let completeCents = readPriceCents(complete);
+	let essentialsCents = readPriceCents(essentials.data);
+	let completeCents = readPriceCents(complete.data);
 
 	/**
 	 * Only Complete ever carries a discount: the launch campaigns are scoped
 	 * to it by the discount-selection rules.
 	 */
 	let prices: ReleaseViewTypes.Props["prices"] = {
-		complete: toPriceView(completeCents, discount),
+		complete: toPriceView(completeCents, activeDiscount?.amount?.amount),
 		essentials: toPriceView(essentialsCents),
 	};
 

@@ -1,9 +1,9 @@
 /**
  * Unit tests for the `checkTrialWatches` job: which watches a run claims, the
  * result recorded, the on-change email and its per-day cap, and the seven-day wrap-up.
- * Nothing here is billed or reported — the container gets no `PolarClient`, so a job
- * needing one would fail outright. `HttpCheck` is faked with a lightweight stand-in,
- * since the real check runs through a Durable Object the test runner lacks.
+ * Nothing here is billed or reported: a trial check reaches no billing platform and no
+ * dataset, which the suites below assert directly. `HttpCheck` is faked with a lightweight
+ * stand-in, since the real check runs through a Durable Object the test runner lacks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -453,7 +453,7 @@ describe("checkTrialWatches metering", () => {
 		expect(costs.dataPoints).toHaveLength(0);
 	});
 
-	test("runs without a Polar client in the container, so nothing can be billed", async () => {
+	test("records a result without reaching a billing platform at all", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedLead(db);
 		let watch = await seedWatch(db, lead.id);

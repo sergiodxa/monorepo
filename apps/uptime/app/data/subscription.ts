@@ -1,28 +1,30 @@
 /**
- * Data-access model for the local projection of Polar subscription state (ADR-005). Owns
- * writing that projection from a Polar subscription payload, reading an owner's entitlement
- * out of it, and applying that entitlement to whether the owner's monitors are scheduled.
+ * Data-access model for the local projection of billing state (ADR-005). Owns writing that
+ * projection from an entitlement snapshot, reading an owner's entitlement out of it, and
+ * applying that entitlement to whether the owner's monitors are scheduled.
  *
- * `PolarSubscription` types only the payloads this module is handed, which come from the
- * webhook and from the daily reconciliation sweep — this table's two writers.
+ * The projection is written wholesale from one snapshot rather than patched from a delivery,
+ * because deliveries arrive out of order and carry whatever shape they were sent under: a
+ * snapshot says what the owner holds right now, and `billing_read_at` is what stops an older
+ * read from overwriting a newer one. This table's two writers — the webhook endpoint and the
+ * daily repair sweep — both take that route.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Subscription as PolarSubscription } from "@pkg/polar";
+import type { EntitlementState } from "@pkg/billing";
 import type { AnyTable, Database } from "remix/data-table";
 
 import { logger } from "@pkg/logger";
-import { isActiveSubscriptionStatus } from "@pkg/polar";
 import { generateUUID } from "@pkg/uuid";
 import { getTableName } from "remix/data-table";
 
+import type { SelectSubscription } from "~/database/schema";
+
+import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { nextDueAtOnEnable } from "~/app/lib/scheduling";
 import { dnsMonitors, monitors, subscriptions, tcpMonitors, teams } from "~/database/schema";
-
-/** The Polar product id a paying team's owner must hold an active subscription to. */
-export const SUBSCRIPTION_PRODUCT_ID = "94161883-14eb-42e2-bb26-b4647199cda1";
 
 /**
  * What this app knows about an owner's entitlement. `"unknown"` means the projection has
@@ -31,15 +33,25 @@ export const SUBSCRIPTION_PRODUCT_ID = "94161883-14eb-42e2-bb26-b4647199cda1";
  */
 export type SubscriptionState = "active" | "inactive" | "unknown";
 
+/** What one snapshot write did, which is what its caller reschedules from. */
+export interface SubscriptionSync {
+	/** Whether this snapshot was at least as fresh as what the projection already held. */
+	applied: boolean;
+	/** Whether the owner holds a monitoring subscription in a state that grants checks. */
+	entitled: boolean;
+	/**
+	 * Whether the projection's answer actually moved. It separates a routine refresh from a
+	 * repair, which is the difference between a sweep that found nothing and one that found a
+	 * delivery had gone missing.
+	 */
+	changed: boolean;
+}
+
 /**
- * The fields of a Polar subscription this projection stores. Naming the seven that reach a
- * column keeps the mapping's inputs visible, and a full `Subscription` from either writer
- * satisfies it as-is.
+ * The statuses that grant monitoring. A trial is billing's own, granted by the platform
+ * before any money moves, and is as entitling as a paid period.
  */
-export type SubscriptionPayload = Pick<
-	PolarSubscription,
-	"id" | "productId" | "status" | "currentPeriodEnd" | "endedAt" | "createdAt" | "modifiedAt"
->;
+const ENTITLING_STATUSES: readonly string[] = ["active", "trialing"];
 
 /**
  * Every monitor table whose scheduling follows the owner's entitlement, with the predicate
@@ -52,61 +64,95 @@ const SCHEDULED_TABLES: readonly { table: AnyTable; enabled: string }[] = [
 	{ table: dnsMonitors, enabled: "is_enabled = 1" },
 ];
 
+/** Whether a stored status is one that grants monitoring. */
+export function isEntitlingStatus(status: string): boolean {
+	return ENTITLING_STATUSES.includes(status);
+}
+
 export default class Subscription {
 	/**
-	 * Records a Polar subscription, keyed on `polar_subscription_id` so a redelivered event
-	 * updates the row it already wrote. Returns whether the row now reflects this payload:
-	 * `false` means a newer payload already landed, so the caller skips its rescheduling.
+	 * Writes what the platform says this owner holds right now, keyed on
+	 * `billing_subscription_id` so a re-read updates the rows it already wrote. A subscription
+	 * the snapshot no longer lists is marked revoked rather than deleted, since a row saying
+	 * "positively not entitled" is what {@link stateFor} distinguishes from never having heard
+	 * of the owner at all.
+	 *
+	 * @param db - Database handle.
+	 * @param ownerId - The OIDC subject the platform customer is linked to.
+	 * @param state - The snapshot to write, as `entitlements.of(...)` answered it.
+	 * @returns Whether the snapshot landed, and what it says about the owner's entitlement.
 	 */
-	static async upsert(
+	static async sync(
 		db: Database,
 		ownerId: string,
-		subscription: SubscriptionPayload,
-	): Promise<boolean> {
-		let now = Date.now();
-		let modifiedAt = (subscription.modifiedAt ?? subscription.createdAt).getTime();
-
-		let result = await db.exec(
-			`INSERT INTO ${getTableName(subscriptions)}
-			        (id, created_at, updated_at, external_customer_id, polar_subscription_id,
-			         polar_product_id, status, current_period_end, revoked_at, polar_modified_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			 ON CONFLICT (polar_subscription_id) DO UPDATE
-			    SET updated_at = excluded.updated_at,
-			        external_customer_id = excluded.external_customer_id,
-			        polar_product_id = excluded.polar_product_id,
-			        status = excluded.status,
-			        current_period_end = excluded.current_period_end,
-			        revoked_at = excluded.revoked_at,
-			        polar_modified_at = excluded.polar_modified_at
-			  WHERE excluded.polar_modified_at >= ${getTableName(subscriptions)}.polar_modified_at
-			RETURNING id`,
-			[
-				generateUUID(),
-				now,
-				now,
-				ownerId,
-				subscription.id,
-				subscription.productId,
-				subscription.status,
-				subscription.currentPeriodEnd.getTime(),
-				subscription.endedAt?.getTime() ?? null,
-				modifiedAt,
-			],
+		state: EntitlementState,
+	): Promise<SubscriptionSync> {
+		let readAt = state.readAt.getTime();
+		let held = state.subscriptions.filter(
+			(subscription) => subscription.productSlug === MONITORING_PRODUCT,
 		);
 
-		return (result.rows ?? []).length > 0;
+		let stored = await db.findMany(subscriptions, {
+			where: { external_customer_id: ownerId },
+		});
+
+		let applied = false;
+		let changed = drifted(stored, held);
+
+		for (let subscription of held) {
+			let now = Date.now();
+
+			let result = await db.exec(
+				`INSERT INTO ${getTableName(subscriptions)}
+				        (id, created_at, updated_at, external_customer_id, billing_subscription_id,
+				         billing_product_slug, status, current_period_end, revoked_at, billing_read_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+				 ON CONFLICT (billing_subscription_id) DO UPDATE
+				    SET updated_at = excluded.updated_at,
+				        external_customer_id = excluded.external_customer_id,
+				        billing_product_slug = excluded.billing_product_slug,
+				        status = excluded.status,
+				        current_period_end = excluded.current_period_end,
+				        revoked_at = NULL,
+				        billing_read_at = excluded.billing_read_at
+				  WHERE excluded.billing_read_at >= ${getTableName(subscriptions)}.billing_read_at
+				RETURNING id`,
+				[
+					generateUUID(),
+					now,
+					now,
+					ownerId,
+					subscription.subscriptionId,
+					MONITORING_PRODUCT,
+					subscription.status,
+					subscription.currentPeriodEnd?.getTime() ?? null,
+					readAt,
+				],
+			);
+
+			if ((result.rows ?? []).length > 0) applied = true;
+		}
+
+		let revoked = await revokeMissing(
+			db,
+			ownerId,
+			held.map((subscription) => subscription.subscriptionId),
+			readAt,
+		);
+
+		return { applied: applied || revoked, changed, entitled: held.some(isSnapshotEntitling) };
 	}
 
-	/** Every row in the projection, for the reconciliation sweep to diff against Polar. */
+	/** Every row in the projection, for the repair sweep to re-read each owner from. */
 	static async listAll(db: Database) {
 		return await db.findMany(subscriptions);
 	}
 
 	/**
 	 * What the projection says about an owner's entitlement, from one indexed read. Every row
-	 * here grants monitoring when its status is active, since only subscriptions to this
-	 * product are ever recorded. Logs the unknown case, where a webhook may have gone missing.
+	 * here grants monitoring when its status is entitling, since only subscriptions to the
+	 * monitoring product are ever recorded. Logs the unknown case, where a delivery may have
+	 * gone missing.
 	 */
 	static async stateFor(db: Database, ownerId: string): Promise<SubscriptionState> {
 		let rows = await db.findMany(subscriptions, { where: { external_customer_id: ownerId } });
@@ -116,7 +162,7 @@ export default class Subscription {
 			return "unknown";
 		}
 
-		return rows.some((row) => isActiveSubscriptionStatus(row.status)) ? "active" : "inactive";
+		return rows.some((row) => isEntitlingStatus(row.status)) ? "active" : "inactive";
 	}
 
 	/**
@@ -151,4 +197,60 @@ export default class Subscription {
 
 		return moved;
 	}
+}
+
+/**
+ * Marks every one of the owner's rows the snapshot stopped listing as revoked. A snapshot
+ * carries only what is still held, so a subscription's absence from it is how this app learns
+ * one ended — and `revoked_at` records when we learned, which is the only date it supports.
+ *
+ * @returns Whether any row was moved, so a caller knows the projection changed.
+ */
+async function revokeMissing(
+	db: Database,
+	ownerId: string,
+	keep: string[],
+	readAt: number,
+): Promise<boolean> {
+	let placeholders = keep.map(() => "?").join(", ");
+
+	let result = await db.exec(
+		`UPDATE ${getTableName(subscriptions)}
+		    SET status = 'revoked', revoked_at = ?, billing_read_at = ?, updated_at = ?
+		  WHERE external_customer_id = ?
+		    AND billing_read_at <= ?
+		    AND status <> 'revoked'
+		    ${keep.length === 0 ? "" : `AND billing_subscription_id NOT IN (${placeholders})`}`,
+		[readAt, readAt, Date.now(), ownerId, readAt, ...keep],
+	);
+
+	return (result.affectedRows ?? 0) > 0;
+}
+
+/**
+ * Whether the snapshot says something the stored rows do not: a subscription the projection
+ * has never seen, one whose status or paid period moved, or one the projection still counts as
+ * live that the platform no longer lists.
+ */
+function drifted(
+	stored: readonly SelectSubscription[],
+	held: readonly EntitlementState["subscriptions"][number][],
+): boolean {
+	let rows = new Map(stored.map((row) => [row.billing_subscription_id, row]));
+
+	for (let subscription of held) {
+		let row = rows.get(subscription.subscriptionId);
+		if (!row) return true;
+		if (row.status !== subscription.status) return true;
+		if (row.current_period_end !== (subscription.currentPeriodEnd?.getTime() ?? null)) return true;
+	}
+
+	let live = new Set(held.map((subscription) => subscription.subscriptionId));
+
+	return stored.some((row) => row.status !== "revoked" && !live.has(row.billing_subscription_id));
+}
+
+/** Whether one snapshot subscription is in a state that grants monitoring. */
+function isSnapshotEntitling(subscription: EntitlementState["subscriptions"][number]): boolean {
+	return isEntitlingStatus(subscription.status);
 }

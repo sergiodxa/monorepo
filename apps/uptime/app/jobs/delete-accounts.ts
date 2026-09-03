@@ -14,7 +14,6 @@ import type { CurrentJobContext } from "@pkg/jobs";
 import { ManagementClient } from "@pkg/auth/management-client";
 import { createJobHandler } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 
@@ -27,13 +26,13 @@ import { AccountDeletedEmail } from "~/app/emails/account-deleted";
 import { emailTranslator } from "~/app/emails/locale";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 import jobs from "~/app/jobs";
+import { polar } from "~/app/lib/billing";
 import { eraseAccount } from "~/app/services/account-erasure";
 import { recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
 
 export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 	let mailer = getServiceContainer().get(Mailer);
-	let polar = getServiceContainer().get(PolarClient);
 	/** Only ever used to turn a former member's subject id into an address to notify. */
 	let admin = getServiceContainer().get(ManagementClient);
 
@@ -49,7 +48,7 @@ export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 	 */
 	for (let request of pending) {
 		try {
-			if (await erase(ctx, mailer, polar, admin, request)) deleted++;
+			if (await erase(ctx, mailer, admin, request)) deleted++;
 			else errorCount++;
 		} catch (error) {
 			errorCount++;
@@ -76,7 +75,6 @@ export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 async function erase(
 	ctx: CurrentJobContext,
 	mailer: Mailer,
-	polar: PolarClient,
 	admin: ManagementClient,
 	request: SelectAccountDeletion,
 ): Promise<boolean> {
@@ -84,7 +82,7 @@ async function erase(
 
 	if (isFailure(erased)) {
 		/**
-		 * Almost always a Polar failure, which is the case the ordering exists for: the row
+		 * Almost always a billing failure, which is the case the ordering exists for: the row
 		 * stays, nothing was deleted, and the person is still billed for an account that
 		 * still works.
 		 */

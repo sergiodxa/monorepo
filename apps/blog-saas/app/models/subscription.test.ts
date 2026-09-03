@@ -57,21 +57,21 @@ describe("Subscription.upsert", () => {
 		let accountId = await seedAccount();
 
 		let row = await Subscription.upsert(harness.db, accountId, {
-			polar_subscription_id: "sub_polar_1",
-			polar_product_id: "prod_1",
+			billing_subscription_id: "sub_1",
+			billing_product_slug: "pro",
 			status: "active",
 		});
 
 		expect(row.account_id).toBe(accountId);
 		expect(row.status).toBe("active");
-		expect(row.polar_subscription_id).toBe("sub_polar_1");
+		expect(row.billing_subscription_id).toBe("sub_1");
 	});
 
 	test("defaults a new subscription without a status to incomplete", async () => {
 		let accountId = await seedAccount();
 
 		let row = await Subscription.upsert(harness.db, accountId, {
-			polar_subscription_id: "sub_polar_1",
+			billing_subscription_id: "sub_1",
 		});
 
 		expect(row.status).toBe("incomplete");
@@ -90,14 +90,14 @@ describe("Subscription.upsert", () => {
 	test("leaves unspecified fields untouched on update", async () => {
 		let accountId = await seedAccount();
 		await Subscription.upsert(harness.db, accountId, {
-			polar_subscription_id: "sub_polar_1",
+			billing_subscription_id: "sub_1",
 			status: "active",
 		});
 
 		let updated = await Subscription.upsert(harness.db, accountId, { status: "past_due" });
 
 		expect(updated.status).toBe("past_due");
-		expect(updated.polar_subscription_id).toBe("sub_polar_1");
+		expect(updated.billing_subscription_id).toBe("sub_1");
 	});
 });
 
@@ -119,14 +119,14 @@ describe("Subscription lookups", () => {
 		expect(found).toBeNull();
 	});
 
-	test("findByPolarId resolves a subscription by its Polar id", async () => {
+	test("findByBillingId resolves a subscription by the id the platform issued", async () => {
 		let accountId = await seedAccount();
 		await Subscription.upsert(harness.db, accountId, {
-			polar_subscription_id: "sub_polar_42",
+			billing_subscription_id: "sub_42",
 			status: "active",
 		});
 
-		let found = await Subscription.findByPolarId(harness.db, "sub_polar_42");
+		let found = await Subscription.findByBillingId(harness.db, "sub_42");
 
 		expect(found?.account_id).toBe(accountId);
 	});

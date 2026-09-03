@@ -1,7 +1,7 @@
 /**
  * The `Account` control-plane model: one row per IdP subject, holding the platform
- * user's profile and Polar billing identity, plus the queries/mutations used to look
- * up, upsert, and update accounts during auth and billing flows.
+ * user's profile, plus the queries and mutations that look accounts up and keep them
+ * tracking the identity provider on every login.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +10,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-/** Platform account: one per IdP subject, carrying billing identity + profile. */
+/** Platform account: one per IdP subject, carrying the profile the dashboard reads. */
 export default class Account {
 	/** Control-plane `accounts` table. */
 	static table = table({
@@ -22,7 +22,6 @@ export default class Account {
 			oidc_subject: c.text(),
 			email: c.text(),
 			display_name: c.text().nullable(),
-			polar_customer_id: c.text().nullable(),
 			created_at: c.text(),
 			updated_at: c.text(),
 		},
@@ -91,30 +90,12 @@ export default class Account {
 			oidc_subject: profile.subject,
 			email: profile.email,
 			display_name: profile.displayName ?? null,
-			polar_customer_id: null,
 			created_at: now,
 			updated_at: now,
 		});
 		let created = await this.findById(db, id);
 		if (!created) throw new Error("Failed to create account");
 		return created;
-	}
-
-	/**
-	 * Sets (or clears) the account's Polar customer id, linking the local account to
-	 * its billing customer. Passing `null` unlinks it.
-	 *
-	 * @param db The control-plane database.
-	 * @param id The account id to update.
-	 * @param customerId The Polar customer id, or `null` to clear it.
-	 * @returns A promise resolving once the update completes.
-	 */
-	static async setPolarCustomerId(db: Database, id: string, customerId: string | null) {
-		await db.update(
-			this.table,
-			{ id },
-			{ polar_customer_id: customerId, updated_at: new Date().toISOString() },
-		);
 	}
 }
 

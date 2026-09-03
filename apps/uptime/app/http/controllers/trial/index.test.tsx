@@ -9,18 +9,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
+import type { UsageEvent } from "@pkg/billing";
 import type { Result } from "@pkg/result";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import billing from "@pkg/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
 } from "@pkg/cloudflare-mocks";
-import { PolarClient } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -46,8 +46,12 @@ import type { SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { BASE_PRICE_USD } from "~/app/lib/pricing";
+import {
+	createActiveSubscription,
+	createRevokedSubscription,
+	createTestBilling,
+} from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -141,15 +145,17 @@ function probeState(overrides: Partial<TrialProbeState> = {}): TrialProbeState {
 	};
 }
 
-/** Event batches the action handed the billing client, one entry per call. */
-let ingested: IngestEvent[][] = [];
+/**
+ * The platform the action bills against, with its one ingestion call spied on. The
+ * middleware resolves it per request, so the router built below reads this instance.
+ */
+let testBilling = createTestBilling();
+let ingestMock = vi.spyOn(testBilling.usage, "ingest");
 
-let polar = {
-	async ingestEventsSafe(events: IngestEvent[]) {
-		ingested.push(events);
-		return true;
-	},
-} as unknown as PolarClientType;
+/** Event batches the action handed the platform, one entry per call. */
+function ingested(): UsageEvent[][] {
+	return ingestMock.mock.calls.map(([events]) => [...events]);
+}
 
 let viewer: Viewer = {
 	id: "viewer-1",
@@ -204,11 +210,11 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 	let db = actor?.db ?? createTestDatabase().db;
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			billing({ provider: () => testBilling }) as Middleware,
 			((ctx, next) => {
 				if (actor === undefined) ctx.set(Auth, { ok: false });
 				else ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
@@ -264,7 +270,7 @@ async function runTry(body: Record<string, string>, session = new Session(), act
 beforeEach(() => {
 	probes.length = 0;
 	pingResults.reset();
-	ingested.length = 0;
+	ingestMock.mockClear();
 	deferred.length = 0;
 	guardTrialProbe.mockClear();
 	trialTurnstileSiteKey.mockReset();
@@ -740,10 +746,10 @@ describe("POST /try for a signed-in viewer", () => {
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(true);
 		expect(pingResults.dataPoints).toHaveLength(1);
 		expect(pingResults.dataPoints[0]?.indexes).toEqual([actor.team.id]);
-		expect(ingested).toHaveLength(1);
-		expect(ingested[0]?.[0]?.externalCustomerId).toBe(actor.team.owner_id);
-		expect(ingested[0]?.[0]?.metadata).toMatchObject({ teamId: actor.team.id, type: "adhoc" });
-		expect(ingested[0]?.[0]?.metadata).not.toHaveProperty("monitorId");
+		expect(ingested()).toHaveLength(1);
+		expect(ingested()[0]?.[0]?.customer).toEqual({ externalId: actor.team.owner_id });
+		expect(ingested()[0]?.[0]?.metadata).toMatchObject({ teamId: actor.team.id, type: "adhoc" });
+		expect(ingested()[0]?.[0]?.metadata).not.toHaveProperty("monitorId");
 	});
 
 	test("bills an owner whose subscription state cannot be determined", async () => {
@@ -762,7 +768,7 @@ describe("POST /try for a signed-in viewer", () => {
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(false);
 		expect(pingResults.dataPoints).toHaveLength(0);
-		expect(ingested).toHaveLength(0);
+		expect(ingested()).toHaveLength(0);
 		expect(body).toContain("HTTP 200");
 	});
 
@@ -839,7 +845,7 @@ describe("POST /try for a signed-in viewer", () => {
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(false);
 		expect(pingResults.dataPoints).toHaveLength(0);
-		expect(ingested).toHaveLength(0);
+		expect(ingested()).toHaveLength(0);
 		expect(body).toContain(`action="${routes.trial.lead.href()}"`);
 		expect(body).toContain("Also email me occasionally about Uptime itself.");
 		expect(body).not.toContain("Create a monitor for this URL");

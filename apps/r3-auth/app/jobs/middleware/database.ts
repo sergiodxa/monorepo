@@ -20,8 +20,7 @@ export const Database = createContextKey<DataTable>();
 
 /**
  * Opens a container scope around the rest of the chain, so everything one delivery
- * resolves — the database below, the background mailer, the Polar client — comes from a
- * scope of its own.
+ * resolves — the database below, the background mailer — comes from a scope of its own.
  *
  * @returns The middleware, to be declared before anything that resolves a service.
  */

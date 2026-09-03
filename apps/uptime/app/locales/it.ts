@@ -2508,6 +2508,7 @@ export default {
 			},
 			ownerOnly:
 				"Solo il proprietario del team può visualizzare e gestire la fatturazione di questo team.",
+			unavailable: "La fatturazione non è temporaneamente disponibile. Riprova tra qualche minuto.",
 		},
 
 		members: {

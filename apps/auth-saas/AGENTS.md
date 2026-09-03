@@ -47,10 +47,10 @@ relative path is only for a sibling inside the same directory.
 - `routes/web.ts` — the route registry mapped in `bootstrap/app.ts`.
 - `app/http/controllers/` and `app/http/middleware/` — the HTTP layer.
 - `app/models/` — data + business-logic models (`remix/data-table` tables).
-- `app/services/` — service classes (Polar, hostname, email, analytics, tenant API).
+- `app/services/` — service classes (hostname, email, analytics, tenant API).
 - `app/jobs/` — scheduled jobs (e.g. daily MAU reporting).
 - `app/lib/` — app-internal helpers (fetch-router action/middleware/form wrappers,
-  crypto, sessions, rate limiting).
+  crypto, sessions, rate limiting, the configured billing provider).
 - `resources/layouts/` — server-rendered HTML layouts.
 - `database/migrations/` — D1 control-plane migrations (`migrations_dir`).
 - `config/` — ambient `*.d.ts` (env + router-context augmentations).

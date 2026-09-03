@@ -9,15 +9,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UsageEvent } from "@pkg/billing";
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
-import type { IngestEvent } from "@pkg/polar";
 
+import { BillingError } from "@pkg/billing";
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
-import { PolarClient } from "@pkg/polar";
+import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -28,6 +29,7 @@ import type { InsertTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { tcpMonitors, teams } from "~/database/schema";
 
@@ -57,12 +59,18 @@ vi.doMock("~/app/services/tcp-check", () => ({
 }));
 
 /**
- * The billing client the container hands the job, with the one call `ingestPings` makes
- * spied on. The client is real — only the request is intercepted — so the events asserted
- * below are the ones the sweep actually built.
+ * The platform the job bills against, with the one call `ingestPings` makes spied on. The
+ * platform is real — only the observation is added — so the events asserted below are the
+ * ones the sweep actually built.
  */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+let billing = createTestBilling();
+let realIngest = billing.usage.ingest.bind(billing.usage);
+let ingestMock = vi.spyOn(billing.usage, "ingest");
+
+/** The job has no request behind it, so it reads the configured platform from this module. */
+let realBillingModule = await import("~/app/lib/billing");
+
+vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
@@ -80,7 +88,6 @@ async function runJob(db: Database) {
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	container.singleton(PolarClient, () => polar);
 	let ctx = createJobContext(jobs.checkTcp, {
 		id: "message-1",
 		attempts: 1,
@@ -108,7 +115,7 @@ async function seedMonitor(
 }
 
 /**
- * Seeds the team a monitor belongs to, which is what names the Polar customer its checks
+ * Seeds the team a monitor belongs to, which is what names the billing customer its checks
  * are billed to. Only the suites about metering need one, since a team the sweep can't
  * resolve an owner for is a supported (if unbillable) state.
  */
@@ -126,8 +133,8 @@ beforeEach(() => {
 	queue.reset();
 	sendBatch.mockClear();
 	pingResults.reset();
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	ingestMock.mockClear();
+	ingestMock.mockImplementation(realIngest);
 });
 
 describe("checkTcp", () => {
@@ -271,9 +278,9 @@ describe("checkTcp", () => {
  * check that finished, which is what keeps a failed connection attempt off the bill.
  */
 describe("checkTcp ping reporting", () => {
-	/** Every event the sweep handed Polar, flattened across the calls it made. */
-	function ingestedEvents(): IngestEvent[] {
-		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+	/** Every event the sweep handed the platform, flattened across the calls it made. */
+	function ingestedEvents(): UsageEvent[] {
+		return ingestMock.mock.calls.flatMap(([events]) => [...events]);
 	}
 
 	/**
@@ -339,7 +346,7 @@ describe("checkTcp ping reporting", () => {
 
 		let job = await runJob(db);
 
-		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
+		expect(ingestMock).toHaveBeenCalledTimes(1);
 		let events = ingestedEvents();
 		expect(events).toHaveLength(3);
 		expect(
@@ -347,7 +354,7 @@ describe("checkTcp ping reporting", () => {
 		).toEqual([first.id, second.id, third.id].sort((a, b) => a.localeCompare(b)));
 		expect(events).toContainEqual({
 			name: "ping",
-			externalCustomerId: "owner-1",
+			customer: { externalId: "owner-1" },
 			externalId: `ping:${await resultId(db, first.id)}`,
 			metadata: { teamId: "team-1", type: "tcp", monitorId: first.id },
 		});
@@ -413,14 +420,16 @@ describe("checkTcp ping reporting", () => {
 
 		await runJob(db);
 
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(ingestMock).not.toHaveBeenCalled();
 	});
 
 	test("a rejected ingestion doesn't fail the sweep or its recorded results", async () => {
 		let { db } = createTestDatabase();
 		await seedTeam(db, "team-1", "owner-1");
 		let monitor = await seedMonitor(db);
-		ingestEventsSafeMock.mockImplementation(async () => false);
+		ingestMock.mockImplementation(async () =>
+			failure(new BillingError("refused", { code: "invalid_request", connection: "memory" })),
+		);
 
 		let job = await runJob(db);
 

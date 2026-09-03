@@ -1,27 +1,23 @@
 /**
- * Polar webhook controller. Verifies the Standard-Webhooks signature and, on a paid
- * order, tags the buyer in Buttondown with the tier they bought so the newsletter can
- * segment on it. Polar retries on any non-2xx, so every failure here is returned as a
- * 400 the retry can succeed against, and a genuine success is a genuine 200.
+ * Billing webhook controller. On a paid order it tags the buyer in Buttondown
+ * with the tier they bought, so the newsletter can segment on it. Verification,
+ * deduplication and dispatch belong to the endpoint; what is left here is the
+ * one thing a paid order means to this funnel.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Logger } from "@pkg/logger/request";
-import type { Result } from "@pkg/result";
+import type { BillingWebhookHandlers } from "@pkg/billing";
+import type { RequestContext } from "remix/router";
 
-import { json } from "@pkg/http/response";
-import { BadRequest, Ok } from "@pkg/http/status-code";
-import { PolarClient } from "@pkg/polar";
-import { failure, isFailure, success } from "@pkg/result";
+import { BillingWebhook } from "@pkg/billing";
+import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { env } from "cloudflare:workers";
-import { createAction } from "remix/router";
 
 import { Product } from "~/app/data/product";
+import { polar } from "~/app/lib/billing";
 import { Buttondown } from "~/app/services/buttondown";
-import routes from "~/routes/web";
 
 /** The Buttondown metadata values that drive purchase segmentation. */
 const TIERS: Record<string, string> = {
@@ -30,66 +26,64 @@ const TIERS: Record<string, string> = {
 };
 
 /**
- * Verifies and handles one webhook delivery.
+ * Reads the buyer's address, which the order names only by customer. A read
+ * that fails is thrown so the delivery is retried rather than acknowledged as
+ * a purchase nobody was tagged for.
  *
- * @param request - The incoming webhook request, for its signature headers and raw body.
- * @param log - The request logger, so the outcome lands in the same trace as the request.
- * @returns `success` when the delivery was handled, `failure` with the reason otherwise.
- * Only the signature verdict reaches the logs or the response.
+ * @param context - The request context, for the platform the delivery came from.
+ * @param customerId - The customer the order was paid by, when it named one.
+ * @returns The buyer's address, or `null` when the platform holds none.
+ * @throws {BillingError} When the customer could not be read.
  */
-async function processWebhook(request: Request, log: Logger): Promise<Result<"OK", Error>> {
-	let polar = getServiceContainer().get(PolarClient);
-	let parsed = await polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
+async function buyerEmail(context: RequestContext, customerId: string | null) {
+	if (customerId === null) return null;
 
-	if (isFailure(parsed)) return failure(parsed.error);
+	let customer = await context.billing.customers.find({ id: customerId });
+	if (isFailure(customer)) throw customer.error;
 
-	let event = parsed.data;
+	return customer.data.email;
+}
 
-	if (event.type !== "order.paid") return success("OK");
+/**
+ * What this funnel does about each delivery it is sent. Tagging reaches only a
+ * buyer already subscribed, so every tagged address opted into the newsletter
+ * itself; an unsubscribed buyer's purchase is recorded in the log alone.
+ */
+export const handlers: BillingWebhookHandlers = {
+	/**
+	 * @param event - The paid order, with the package named by our own slug.
+	 * @param context - The request context, for the logger and the platform.
+	 */
+	async "order.paid"(event, context) {
+		let log = context.logger;
+		let tier = event.order.productSlug === null ? undefined : TIERS[event.order.productSlug];
 
-	if (!event.data.product) return failure(new Error("Product is required"));
-	if (!event.data.customer.email) return failure(new Error("Customer email is required"));
+		if (!tier) {
+			log.info("order_paid_untagged", { orderId: event.order.id });
+			return;
+		}
 
-	let productId = event.data.product.id;
-	let productName = event.data.product.name;
-	let customerEmail = event.data.customer.email;
+		let email = await buyerEmail(context, event.order.customerId);
 
-	try {
+		if (email === null) {
+			log.info("order_paid_untagged", { orderId: event.order.id });
+			return;
+		}
+
 		let buttondown = getServiceContainer().get(Buttondown);
 
-		/**
-		 * Tagging reaches only a buyer already subscribed, so every tagged address
-		 * opted into the newsletter itself; an unsubscribed buyer's purchase is
-		 * recorded in the log alone.
-		 */
-		if (await buttondown.isSubscribed(customerEmail)) {
-			let tier = TIERS[productId];
-			if (tier) await buttondown.addMetadata(customerEmail, { purchase: tier });
+		if (await buttondown.isSubscribed(email)) {
+			await buttondown.addMetadata(email, { purchase: tier });
 		}
 
 		log.info("order_paid", {
 			channel: "payments",
-			email: customerEmail,
-			product: productName,
-			productId,
+			email,
+			product: event.order.productSlug,
+			orderId: event.order.id,
 		});
-
-		return success("OK");
-	} catch (error) {
-		if (error instanceof Error) return failure(error);
-		return failure(new Error("Error processing webhook"));
-	}
-}
+	},
+};
 
 /** POST /webhooks/polar — records a paid order against the buyer's newsletter profile. */
-export default createAction(routes.webhooks.polar, async (ctx) => {
-	let log = ctx.logger;
-	let result = await processWebhook(ctx.request, log);
-
-	if (isFailure(result)) {
-		log.error("polar_webhook_failed", { error: result.error.message });
-		return json({ error: result.error.message }, BadRequest);
-	}
-
-	return json(null, Ok);
-});
+export default new BillingWebhook(polar, handlers);

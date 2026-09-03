@@ -1,52 +1,21 @@
 /**
- * Unit tests for the `Customer` billing service: creating a Polar customer and
- * linking it to the subject id, and the sign-up resolution that reuses a customer
- * already registered under the address without ever overwriting an existing link.
- * Uses a fake shaped like the subset of `PolarClient` these methods call.
+ * Unit tests for the `Customer` billing service: creating a customer already linked
+ * to the subject id, the sign-up resolution that reuses a customer registered under
+ * the address without ever moving its link, and the failure a resolution reports
+ * instead of provisioning a second customer. Drives a real in-memory platform.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Customer as PolarCustomer, PolarClient } from "@pkg/polar";
-
+import { MemoryBilling } from "@pkg/billing/providers/memory";
+import { isFailure, unwrap } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import type { BillableSubject } from "~/app/services/customer";
 
+import { refusingCustomers } from "~/app/lib/test/billing";
 import Customer from "~/app/services/customer";
-
-/** The subset of `PolarClient` this service actually calls. */
-type FakePolarClient = Pick<
-	PolarClient,
-	"createCustomer" | "findCustomerByEmail" | "updateCustomer"
->;
-
-/** Builds a fake `PolarClient` that throws for any method not explicitly overridden. */
-function fakePolar(overrides: Partial<FakePolarClient>): PolarClient {
-	let notImplemented = (name: string) => () => {
-		throw new Error(`unexpected call to PolarClient#${name} in this test`);
-	};
-
-	let fake: FakePolarClient = {
-		createCustomer: notImplemented("createCustomer"),
-		findCustomerByEmail: notImplemented("findCustomerByEmail"),
-		updateCustomer: notImplemented("updateCustomer"),
-		...overrides,
-	};
-
-	return fake as unknown as PolarClient;
-}
-
-/** A Polar customer with only the fields this service reads. */
-function polarCustomer(overrides: Partial<PolarCustomer> = {}): PolarCustomer {
-	return {
-		id: "cus_1",
-		email: "jane@example.com",
-		externalId: null,
-		...overrides,
-	} as unknown as PolarCustomer;
-}
 
 let subject: BillableSubject = {
 	id: "subject-1",
@@ -55,80 +24,51 @@ let subject: BillableSubject = {
 };
 
 describe("Customer.create", () => {
-	test("creates the customer and links it to the subject id", async () => {
-		let created: unknown[] = [];
-		let linked: unknown[] = [];
+	test("creates the customer linked to the subject id", async () => {
+		let billing = new MemoryBilling();
 
-		let polar = fakePolar({
-			async createCustomer(email, name) {
-				created.push([email, name]);
-				return polarCustomer();
-			},
-			async updateCustomer(customerId, updates) {
-				linked.push([customerId, updates.externalId]);
-				return polarCustomer({ externalId: "subject-1" });
-			},
-		});
+		let customer = await unwrap(Customer.create(billing, subject));
 
-		let customer = await Customer.create(polar, subject);
-
-		expect(created).toEqual([["jane@example.com", "Jane Doe"]]);
-		expect(linked).toEqual([["cus_1", "subject-1"]]);
+		expect(customer.email).toBe("jane@example.com");
+		expect(customer.name).toBe("Jane Doe");
 		expect(customer.externalId).toBe("subject-1");
 	});
 });
 
 describe("Customer.findOrCreateByEmail", () => {
-	test("creates a customer when the address is unknown to Polar", async () => {
-		let createdFor: string[] = [];
+	test("creates a customer when the address is unknown to the platform", async () => {
+		let billing = new MemoryBilling();
 
-		let polar = fakePolar({
-			async findCustomerByEmail() {
-				return null;
-			},
-			async createCustomer(email) {
-				createdFor.push(email);
-				return polarCustomer();
-			},
-			async updateCustomer() {
-				return polarCustomer({ externalId: "subject-1" });
-			},
-		});
+		let customer = await unwrap(Customer.findOrCreateByEmail(billing, subject));
 
-		let customer = await Customer.findOrCreateByEmail(polar, "jane@example.com", subject);
-
-		expect(createdFor).toEqual(["jane@example.com"]);
 		expect(customer.externalId).toBe("subject-1");
+		expect(await unwrap(billing.customers.findByEmail("jane@example.com"))).toEqual(customer);
 	});
 
-	test("links an existing customer that has no external id yet", async () => {
-		let linked: unknown[] = [];
+	test("reuses the customer already registered under the address", async () => {
+		let billing = new MemoryBilling();
+		let existing = await unwrap(
+			billing.customers.create({ email: "jane@example.com", externalId: "someone-else" }),
+		);
 
-		let polar = fakePolar({
-			async findCustomerByEmail() {
-				return polarCustomer({ id: "cus_existing", externalId: null });
-			},
-			async updateCustomer(customerId, updates) {
-				linked.push([customerId, updates.externalId]);
-				return polarCustomer({ id: "cus_existing", externalId: "subject-1" });
-			},
-		});
+		let customer = await unwrap(Customer.findOrCreateByEmail(billing, subject));
 
-		let customer = await Customer.findOrCreateByEmail(polar, "jane@example.com", subject);
-
-		expect(linked).toEqual([["cus_existing", "subject-1"]]);
-		expect(customer.id).toBe("cus_existing");
-	});
-
-	test("never overwrites an external id Polar already holds", async () => {
-		let polar = fakePolar({
-			async findCustomerByEmail() {
-				return polarCustomer({ id: "cus_existing", externalId: "someone-else" });
-			},
-		});
-
-		let customer = await Customer.findOrCreateByEmail(polar, "jane@example.com", subject);
-
+		expect(customer.id).toBe(existing.id);
 		expect(customer.externalId).toBe("someone-else");
+	});
+
+	test("reports a read that failed for any reason other than a miss", async () => {
+		let billing = new MemoryBilling();
+
+		let result = await Customer.findOrCreateByEmail(
+			refusingCustomers(billing, "rate_limited"),
+			subject,
+		);
+
+		expect(isFailure(result)).toBe(true);
+		expect(isFailure(result) && result.error.code).toBe("rate_limited");
+		expect(await billing.customers.findByEmail("jane@example.com")).toMatchObject({
+			error: { code: "not_found" },
+		});
 	});
 });

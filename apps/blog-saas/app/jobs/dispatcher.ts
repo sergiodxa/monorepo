@@ -15,18 +15,17 @@ import jobs from "~/app/jobs";
 
 import { database } from "./middleware/database";
 import { hostnames } from "./middleware/hostnames";
-import { polar } from "./middleware/polar";
 import { provisioner } from "./middleware/provisioner";
 
 /**
  * The registry both worker handlers run through. Every job gets the control-plane
- * database, the custom-hostname client, the provisioner, and the Polar client, since
- * building them is a constructor call apiece and no job pays for I/O it skips. The
+ * database, the custom-hostname client, and the provisioner, since building them is a
+ * constructor call apiece and no job pays for I/O it skips. The
  * timeout is under the consumer's own wall-clock budget, leaving each handler room to
  * settle its delivery once the signal aborts.
  */
 export const dispatcher = createJobDispatcher({
-	middleware: [database(), hostnames(), provisioner(), polar()],
+	middleware: [database(), hostnames(), provisioner()],
 	timeout: "10 minutes",
 
 	/**

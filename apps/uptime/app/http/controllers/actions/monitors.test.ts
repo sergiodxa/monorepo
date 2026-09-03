@@ -15,9 +15,9 @@ import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import billing from "@pkg/billing/middleware";
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -29,8 +29,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -61,16 +61,14 @@ vi.doMock("cloudflare:workers", () => ({
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
 
 /**
- * The billing client the container hands the actions, with the call it makes
- * spied on so "this request billed nothing" is asserted against a client that
- * was available to use, not one that would have thrown on resolution.
+ * The platform the actions bill against, published on every request below so
+ * "this request billed nothing" is asserted against a platform that was there
+ * to bill, not one whose absence would have refused the call.
  */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+let testBilling = createTestBilling();
 
 beforeEach(() => {
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	testBilling = createTestBilling();
 	queue.reset();
 });
 
@@ -134,9 +132,14 @@ async function send(
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar);
 
-	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+	let router = createRouter({
+		middleware: [
+			asyncContext(),
+			billing({ provider: () => testBilling }) as Middleware,
+			formData() as Middleware,
+		],
+	});
 	router.map(route, {
 		middleware: [seedLogger(logger, seedTeam(team, membership))],
 		handler,
@@ -464,7 +467,7 @@ describe("playMonitor billing", () => {
 
 		expect(queue.sent).toHaveLength(1);
 		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 	});
 
 	test("bills nothing when the owner is unsubscribed and no check is queued", async () => {
@@ -494,7 +497,7 @@ describe("playMonitor billing", () => {
 		);
 
 		expect(queue.sent).toHaveLength(0);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 	});
 });
 

@@ -89,9 +89,8 @@ bun run --cwd apps/blog-saas cf:deploy
 4. Add a **webhook** to `https://blog.sergiodxa.com/api/webhooks/polar` and set its
    signing secret → `POLAR_WEBHOOK_SECRET`.
 
-> Note: webhook signature verification in `app/services/polar.ts` is currently a
-> stub (`verifyWebhook` returns `true`). Wire the Polar SDK's `validateEvent`
-> before trusting production webhooks.
+> Note: deliveries are verified against `POLAR_WEBHOOK_SECRET` and fail closed while
+> it is unset, so set the secret before pointing the webhook at production.
 
 ## 7. Post-deploy checks
 

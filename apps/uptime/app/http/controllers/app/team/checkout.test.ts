@@ -1,19 +1,25 @@
 /**
- * Tests for the billing checkout entry point. A fake `PolarClient` stands in
- * for the real one, stubbing every `~/app/data/customer.ts` method call.
- * Subscription status is seeded into the `subscriptions` projection
- * (ADR-005), the store the controller reads from at request time. The
- * `bunfig.toml` preload supplies `cloudflare:workers` for `env` on this path.
+ * Tests for the billing checkout entry point: who gets redirected to a hosted page, which
+ * page, and what an owner sees when the platform cannot open one.
+ *
+ * The platform is a real in-memory one, so the hosted pages under assertion are the URLs it
+ * actually handed back rather than strings this file made up. Subscription status is seeded
+ * into the `subscriptions` projection (ADR-005), the store the controller reads at request
+ * time. The `bunfig.toml` preload supplies `cloudflare:workers` for `env` on this path.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Billing, Checkout } from "@pkg/billing";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import billing from "@pkg/billing/middleware";
+import { MemoryBilling } from "@pkg/billing/providers/memory";
 import { createTranslator } from "@pkg/i18n";
-import { PolarClient } from "@pkg/polar";
+import logger from "@pkg/logger/middleware";
+import { unwrap } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -26,13 +32,17 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { createActiveSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { createActiveSubscription } from "~/app/lib/test/polar";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 import * as checkoutModule from "./checkout";
+
+/** The controller's own logging is noise here; the assertions read the response. */
+vi.spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
 
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
@@ -86,10 +96,15 @@ async function renderCheckout(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
-	polar: PolarClient,
+	platform: Billing,
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			logger,
+			billing({ provider: platform }),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.checkout, {
 		middleware: [seedTeam(team, membership)],
@@ -98,7 +113,6 @@ async function renderCheckout(
 
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar);
 
 	let request = new Request(
 		new URL(routes.app.team.checkout.href({ team: team.slug }), "https://uptime.test"),
@@ -107,13 +121,20 @@ async function renderCheckout(
 	return container.scope(() => router.fetch(request));
 }
 
-function createFakePolar(overrides: Partial<Record<string, unknown>> = {}): PolarClient {
-	return {
-		getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
-		createCheckoutSession: vi.fn(async () => ({ url: "https://polar.sh/checkout/123" })),
-		createPortalSession: vi.fn(async () => ({ url: "https://polar.sh/portal/123" })),
-		...overrides,
-	} as unknown as PolarClient;
+/** The maps the platform keeps its state in, for the one checkout no method lists back. */
+interface PlatformState {
+	checkouts: Map<string, Checkout>;
+}
+
+/** The single session the request opened, which is the page the owner has to land on. */
+function onlyCheckout(platform: MemoryBilling): Checkout {
+	let opened = [...(platform.native as PlatformState).checkouts.values()];
+	expect(opened).toHaveLength(1);
+
+	let [checkout] = opened;
+	if (checkout === undefined) throw new Error("the platform opened no checkout");
+
+	return checkout;
 }
 
 describe("checkout page", () => {
@@ -124,9 +145,8 @@ describe("checkout page", () => {
 			{ id: crypto.randomUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
 			{ touch: true, returnRow: true },
 		);
-		let polar = createFakePolar();
 
-		let response = await renderCheckout(db, team, membership, polar);
+		let response = await renderCheckout(db, team, membership, createTestBilling());
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -134,40 +154,62 @@ describe("checkout page", () => {
 		expect(body).toContain("Only the team owner can view and manage billing for this team.");
 	});
 
-	test("redirects the owner to a Polar checkout session when there's no active subscription", async () => {
+	test("redirects the owner to a hosted checkout when there's no active subscription", async () => {
 		let { db, team } = await createFixture();
 		let membership = await db.create(
 			memberships,
 			{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
-		let polar = createFakePolar({
-			getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
-			createCheckoutSession: vi.fn(async () => ({ url: "https://polar.sh/checkout/123" })),
-		});
+		let platform = createTestBilling();
 
-		let response = await renderCheckout(db, team, membership, polar);
+		let response = await renderCheckout(db, team, membership, platform);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe("https://polar.sh/checkout/123");
+		expect(response.headers.get("Location")).toBe(onlyCheckout(platform).url);
 	});
 
-	test("redirects the owner to the Polar customer portal when there's an active subscription", async () => {
+	test("redirects the owner to the hosted portal when there's an active subscription", async () => {
 		let { db, team } = await createFixture();
 		let membership = await db.create(
 			memberships,
 			{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
-		let polar = createFakePolar({
-			getExternalCustomer: vi.fn(async () => ({ id: "cus_1" })),
-			createPortalSession: vi.fn(async () => ({ url: "https://polar.sh/portal/123" })),
-		});
+		let platform = createTestBilling();
+
+		/** The portal is a page for an existing customer, so the owner has to be one. */
+		let customer = await unwrap(
+			platform.customers.create({ email: "owner@example.com", externalId: team.owner_id }),
+		);
 		await createActiveSubscription(db, team.owner_id);
 
-		let response = await renderCheckout(db, team, membership, polar);
+		let response = await renderCheckout(db, team, membership, platform);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe("https://polar.sh/portal/123");
+		expect(response.headers.get("Location")).toBe(
+			(await unwrap(platform.portal.create({ customer: { id: customer.id } }))).url,
+		);
+	});
+
+	/**
+	 * A platform that cannot open the page still leaves the owner somewhere to read: the
+	 * billing page says so, rather than the request failing on them.
+	 */
+	test("renders the billing page when the platform opens no hosted page", async () => {
+		let { db, team } = await createFixture();
+		let membership = await db.create(
+			memberships,
+			{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
+			{ touch: true, returnRow: true },
+		);
+
+		/** A platform carrying nothing this app sells, so opening a checkout finds no product. */
+		let response = await renderCheckout(db, team, membership, new MemoryBilling());
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain(en.page.billing.header.title);
+		expect(body).toContain(en.page.billing.unavailable);
 	});
 });

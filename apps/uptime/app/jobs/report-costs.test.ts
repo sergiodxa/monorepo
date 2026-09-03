@@ -1,33 +1,32 @@
 /**
- * Unit tests for the `reportCosts` job, run against Polar intercepted with MSW.
- * `_cost.amount` must serialise as a decimal **string** — a small `number` would
- * print as `1e-7` and be unparseable. The Analytics Engine SQL API is stubbed the
- * same way, while `COSTS` is an in-memory dataset enforcing the platform's
- * per-point limits.
+ * Unit tests for the `reportCosts` job, run against a real in-memory billing platform.
+ * The reported amount must be a decimal **string** — a small `number` would print as
+ * `1e-7` and be unparseable. The Analytics Engine SQL API is stubbed with MSW, while
+ * `COSTS` is an in-memory dataset enforcing the platform's per-point limits.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UsageEvent } from "@pkg/billing";
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
+import { BillingError } from "@pkg/billing";
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
+import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import Subscription from "~/app/data/subscription";
 import { RATE_CARD_VERSION } from "~/app/lib/cost-rates";
+import { createActiveSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { polarSubscription } from "~/app/lib/test/polar";
 import { monitorResults, monitors, teams } from "~/database/schema";
 
 const ANALYTICS_URL =
 	"https://api.cloudflare.com/client/v4/accounts/test-account/analytics_engine/sql";
-const INGEST_URL = "https://api.polar.sh/v1/events/ingest";
 
 /**
  * The dataset the job's own run would be costed to. It lives at module scope because the
@@ -44,26 +43,31 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+/**
+ * The platform the job reports to, with its one ingestion call spied on: the job has no
+ * request behind it, so it reads the configured platform from this module.
+ */
+let billing = createTestBilling();
+let realIngest = billing.usage.ingest.bind(billing.usage);
+let ingestMock = vi.spyOn(billing.usage, "ingest");
+
+let realBillingModule = await import("~/app/lib/billing");
+
+vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+
 let { Job, createJobContext } = await import("@pkg/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let reportCosts = (await import("./report-costs")).default;
 
-/** One ingested event as Polar receives it over the wire, in its snake_case form. */
-interface IngestedEvent {
-	name: string;
-	external_customer_id?: string;
-	customer_id?: string;
-	external_id?: string;
-	timestamp?: string;
-	metadata?: Record<string, unknown>;
-}
-
 let server = setupServer();
-/** Every batch of events Polar was sent, in order. */
-let ingested: IngestedEvent[][] = [];
 /** The SQL the job asked Analytics Engine for, in order. */
 let queries: string[] = [];
+
+/** Every batch of events the job ingested, in order. */
+function ingested(): UsageEvent[][] {
+	return ingestMock.mock.calls.map(([events]) => [...events]);
+}
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
@@ -79,28 +83,21 @@ let db: Db;
 beforeEach(() => {
 	({ db } = createTestDatabase());
 	costs.reset();
-	ingested = [];
+	ingestMock.mockClear();
+	ingestMock.mockImplementation(realIngest);
 	queries = [];
 });
 
 /**
- * Serves the cost dataset and Polar's ingest endpoint.
- * @param rows Rows the daily cost query answers with.
- * @param options `ingestStatus` makes Polar reject the batch.
+ * Serves the cost dataset the job prices its report from.
+ *
+ * @param rows - Rows the daily cost query answers with.
  */
-function serve(rows: Record<string, unknown>[], options: { ingestStatus?: number } = {}) {
+function serve(rows: Record<string, unknown>[]) {
 	server.use(
 		http.post(ANALYTICS_URL, async ({ request }) => {
 			queries.push(await request.text());
 			return HttpResponse.json({ data: rows });
-		}),
-		http.post(INGEST_URL, async ({ request }) => {
-			let body = (await request.json()) as { events: IngestedEvent[] };
-			ingested.push(body.events);
-			if (options.ingestStatus) {
-				return HttpResponse.json({ detail: "rejected" }, { status: options.ingestStatus });
-			}
-			return HttpResponse.json({ inserted: body.events.length });
 		}),
 	);
 }
@@ -118,21 +115,20 @@ function costRow(teamId: string, overrides: Record<string, unknown> = {}) {
 	};
 }
 
-/** A team whose owner Polar knows about, plus one monitor so it has stored rows. */
+/** A team whose owner the projection knows about, which is what makes its cost reportable. */
 async function createBilledTeam(ownerId: string) {
 	let team = await db.create(
 		teams,
 		{ id: crypto.randomUUID(), owner_id: ownerId, name: "Acme", slug: `acme-${ownerId}` } as never,
 		{ touch: true, returnRow: true },
 	);
-	await Subscription.upsert(db, ownerId, polarSubscription({ externalId: ownerId }));
+	await createActiveSubscription(db, ownerId);
 	return team;
 }
 
 async function run() {
 	let logger = new BatchedLogger("test");
 	let container = new ServiceContainer();
-	container.singleton(PolarClient, () => new PolarClient({ accessToken: "polar_at_test" }));
 
 	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, logger });
 	ctx.set(JobDatabase, db, { property: "database" });
@@ -149,13 +145,13 @@ describe("reportCosts", () => {
 
 		await run();
 
-		let [batch] = ingested;
+		let [batch] = ingested();
 		expect(batch).toHaveLength(1);
 		let [event] = batch!;
 		expect(event?.name).toBe("infra.cost.daily");
-		expect(event?.external_customer_id).toBe("owner-1");
-		expect(event?.external_id).toMatch(new RegExp(`^infra_cost:${team.id}:\\d{4}-\\d{2}-\\d{2}$`));
-		expect(event?.customer_id).toBeUndefined();
+		/** Named by our own id, so the platform bills the owner it linked to that subject. */
+		expect(event?.customer).toEqual({ externalId: "owner-1" });
+		expect(event?.externalId).toMatch(new RegExp(`^infra_cost:${team.id}:\\d{4}-\\d{2}-\\d{2}$`));
 	});
 
 	test("sends the amount in cents as a decimal string", async () => {
@@ -164,11 +160,11 @@ describe("reportCosts", () => {
 
 		await run();
 
-		let cost = ingested[0]?.[0]?.metadata?._cost as { amount: unknown; currency: string };
-		expect(typeof cost.amount).toBe("string");
-		expect(cost.amount).toMatch(/^\d+\.\d{9}$/);
-		expect(Number(cost.amount)).toBeCloseTo(0.003018, 9);
-		expect(cost.currency).toBe("usd");
+		let cost = ingested()[0]?.[0]?.cost;
+		expect(typeof cost?.amount).toBe("string");
+		expect(cost?.amount).toMatch(/^\d+\.\d{9}$/);
+		expect(Number(cost?.amount)).toBeCloseTo(0.003018, 9);
+		expect(cost?.currency).toBe("usd");
 	});
 
 	test("carries the drivers behind the amount as metadata", async () => {
@@ -177,7 +173,7 @@ describe("reportCosts", () => {
 
 		await run();
 
-		let metadata = ingested[0]?.[0]?.metadata;
+		let metadata = ingested()[0]?.[0]?.metadata;
 		expect(metadata?.team_id).toBe(team.id);
 		expect(metadata?.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		expect(metadata?.rate_card).toBe(RATE_CARD_VERSION);
@@ -191,9 +187,10 @@ describe("reportCosts", () => {
 
 		await run();
 
-		let event = ingested[0]?.[0];
-		expect(event?.timestamp?.slice(0, 10)).toBe(String(event?.metadata?.day));
-		expect(event?.timestamp).toContain("23:59:59");
+		let event = ingested()[0]?.[0];
+		let timestamp = event?.timestamp?.toISOString();
+		expect(timestamp?.slice(0, 10)).toBe(String(event?.metadata?.day));
+		expect(timestamp).toContain("23:59:59");
 	});
 
 	test("re-prices a current-rate-card day from its quantities", async () => {
@@ -202,8 +199,8 @@ describe("reportCosts", () => {
 
 		await run();
 
-		let cost = ingested[0]?.[0]?.metadata?._cost as { amount: string };
-		expect(Number(cost.amount)).toBeCloseTo(0.003018, 9);
+		let cost = ingested()[0]?.[0]?.cost;
+		expect(Number(cost?.amount)).toBeCloseTo(0.003018, 9);
 	});
 
 	test("keeps the recorded total for a day priced under an older rate card", async () => {
@@ -212,11 +209,11 @@ describe("reportCosts", () => {
 
 		await run();
 
-		let cost = ingested[0]?.[0]?.metadata?._cost as { amount: string };
-		expect(Number(cost.amount)).toBeCloseTo(12.5, 9);
+		let cost = ingested()[0]?.[0]?.cost;
+		expect(Number(cost?.amount)).toBeCloseTo(12.5, 9);
 	});
 
-	test("skips a team whose owner Polar has never heard of, and says how much that was", async () => {
+	test("skips a team whose owner the projection has never heard of, and says how much that was", async () => {
 		let team = await db.create(
 			teams,
 			{ id: crypto.randomUUID(), owner_id: "owner-nobody", name: "Acme", slug: "acme" } as never,
@@ -226,7 +223,7 @@ describe("reportCosts", () => {
 
 		let logger = await run();
 
-		expect(ingested).toHaveLength(0);
+		expect(ingested()).toHaveLength(0);
 		expect(
 			logger.events.find((entry) => entry.event === "job.report_costs.unreportable_team"),
 		).toBeDefined();
@@ -240,8 +237,8 @@ describe("reportCosts", () => {
 
 		await run();
 
-		expect(ingested[0]).toHaveLength(1);
-		expect(ingested[0]?.[0]?.metadata?.team_id).toBe(team.id);
+		expect(ingested()[0]).toHaveLength(1);
+		expect(ingested()[0]?.[0]?.metadata?.team_id).toBe(team.id);
 	});
 
 	test("estimates each team's stored bytes from its retained rows", async () => {
@@ -290,9 +287,12 @@ describe("reportCosts", () => {
 		await expect(run()).rejects.toThrow(Job.Retry);
 	});
 
-	test("asks the queue to redeliver when Polar rejects the batch", async () => {
+	test("asks the queue to redeliver when the platform rejects the batch", async () => {
 		let team = await createBilledTeam("owner-1");
-		serve([costRow(team.id)], { ingestStatus: 500 });
+		serve([costRow(team.id)]);
+		ingestMock.mockImplementation(async () =>
+			failure(new BillingError("rejected", { code: "unknown", connection: "memory" })),
+		);
 
 		await expect(run()).rejects.toThrow(Job.Retry);
 	});
@@ -302,7 +302,7 @@ describe("reportCosts", () => {
 
 		let logger = await run();
 
-		expect(ingested).toHaveLength(0);
+		expect(ingested()).toHaveLength(0);
 		expect(
 			logger.events.find((entry) => entry.event === "job.report_costs.completed"),
 		).toBeDefined();

@@ -1,15 +1,12 @@
 /**
- * Unit tests for the usage-reporting job's metered-usage idempotency fix: each blog-day
- * is ingested into Polar with a deterministic `(blog_id, date)` external id, so a run
- * that ingests an event but fails to stamp `reported_at` re-sends the same id and Polar
- * deduplicates it on the next run. The handler is called with a context the test builds,
- * over the in-memory database harness and with a stubbed analytics `fetch`.
+ * Unit tests for the usage-reporting job: each blog-day reaches the meter once, under a
+ * deterministic `(blog_id, date)` key so a run that reports but fails to stamp
+ * `reported_at` re-sends the same key, and a rejected batch leaves every row for the
+ * next run. The handler runs over the in-memory database with the platform stubbed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { PolarClient as PolarClientType } from "@pkg/polar";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -17,73 +14,69 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 
 import type { TestDatabase } from "~/app/test/db";
 
+import { createTestDatabase } from "~/app/test/db";
+
 /**
- * Installed above the dynamic imports below so the mock is in place before
- * `env` is read at import time. Only the Analytics Engine SQL API credentials
- * are supplied, matching what the reporting path reads.
+ * Installed above the dynamic imports below so the mock is in place before `env` is
+ * read at import time: the analytics credentials the rollup reads, and the Polar
+ * configuration the provider is constructed with.
  */
 vi.doMock("cloudflare:workers", () => ({
-	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
+	env: createEnv<Cloudflare.Env>({
+		CF_ACCOUNT_ID: "acct-1",
+		CF_API_TOKEN: "token-1",
+		POLAR_ACCESS_TOKEN: "polar-token",
+		POLAR_PRODUCT_ID: "prod_configured",
+	}),
 	DurableObject: class {},
 }));
 
-let { createTestDatabase } = await import("~/app/test/db");
 let Account = (await import("~/app/models/account")).default;
+let BillingCustomer = (await import("~/app/models/billing-customer")).default;
 let Blog = (await import("~/app/models/blog")).default;
 let UsageDaily = (await import("~/app/models/usage")).default;
-let { PolarClient } = await import("@pkg/polar");
 let { createJobContext } = await import("@pkg/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database } = await import("~/app/jobs/middleware/database");
-let { Polar } = await import("~/app/jobs/middleware/polar");
 let handler = (await import("./report-usage")).default;
 
 /** The Analytics Engine SQL API endpoint `queryDailyPageViews` POSTs to. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
 
-/** MSW server intercepting the analytics SQL API. */
+/** The Polar endpoint the provider reports consumption to. */
+let INGEST_URL = "https://api.polar.sh/v1/events/ingest";
+
+/** MSW server intercepting the analytics SQL API and the platform's ingest endpoint. */
 let server = setupServer();
 
 let harness: TestDatabase;
 
-/** One recorded `ingestPageViews` call. */
-interface IngestCall {
-	customerId: string;
-	views: number;
-	day: string;
-	externalId: string | undefined;
+/** One event as the job sent it to the platform. */
+interface IngestedEvent {
+	name: string;
+	customer_id?: string;
+	external_id?: string;
+	metadata?: { views?: number; day?: string };
 }
 
-/** Recorded ingest calls, plus a switch to simulate Polar accepting the event. */
-let ingestCalls: IngestCall[];
-let ingestOk: boolean;
+/** Events recorded from every intercepted ingest request. */
+let ingested: IngestedEvent[];
 
-/**
- * A `PolarClient` with only `ingestPageViews` overridden, recording each call and
- * returning `ingestOk`.
- */
-function fakePolar(): PolarClientType {
-	let client = new PolarClient({ accessToken: "t" });
-	let fake: PolarClientType["ingestPageViews"] = async (customerId, views, day, externalId) => {
-		ingestCalls.push({ customerId, views, day, externalId });
-		return ingestOk;
-	};
-	(client as unknown as { ingestPageViews: PolarClientType["ingestPageViews"] }).ingestPageViews =
-		fake;
-	return client;
-}
+/** Whether the platform accepts the batch, so a test can drive the rejected path. */
+let ingestAccepts: boolean;
 
-/**
- * Builds one delivery's context over the test database and the recording Polar client:
- * the two services this handler reads, standing in for the dispatcher's chain.
- *
- * @returns The context to run the handler with.
- */
-function createContext() {
-	let ctx = createJobContext(jobs.reportUsage, { id: "message-1", attempts: 1 });
-	ctx.set(Database, harness.db, { property: "database" });
-	ctx.set(Polar, fakePolar(), { property: "polar" });
-	return ctx;
+/** Records each ingest request and answers with the configured verdict. */
+function stubIngest(): void {
+	server.use(
+		http.post(INGEST_URL, async ({ request }) => {
+			let body = (await request.json()) as { events: IngestedEvent[] };
+			ingested.push(...body.events);
+
+			if (!ingestAccepts) return HttpResponse.json({ detail: "nope" }, { status: 500 });
+
+			return HttpResponse.json({ inserted: body.events.length }, { status: 200 });
+		}),
+	);
 }
 
 /** Registers an MSW handler making the analytics SQL API return the given rows. */
@@ -91,13 +84,21 @@ function stubAnalytics(rows: Array<{ blogId: string; views: number }>): void {
 	server.use(http.post(SQL_URL, () => HttpResponse.json({ data: rows }, { status: 200 })));
 }
 
+/** Builds one delivery's context over the test database, the one service this job reads. */
+function createContext() {
+	let ctx = createJobContext(jobs.reportUsage, { id: "message-1", attempts: 1 });
+	ctx.set(Database, harness.db, { property: "database" });
+	return ctx;
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
 
 beforeEach(() => {
 	harness = createTestDatabase();
-	ingestCalls = [];
-	ingestOk = true;
+	ingested = [];
+	ingestAccepts = true;
+	stubIngest();
 });
 
 afterEach(() => {
@@ -105,13 +106,13 @@ afterEach(() => {
 	server.resetHandlers();
 });
 
-/** Seeds an account (with a Polar customer id) and a blog, returning both ids. */
+/** Seeds an account with a billing customer plus a blog, returning both ids. */
 async function seedBillableBlog(slug = "my-blog"): Promise<{ accountId: string; blogId: string }> {
 	let account = await Account.findOrCreateFromProfile(harness.db, {
 		subject: `sub-${slug}`,
 		email: `${slug}@example.com`,
 	});
-	await Account.setPolarCustomerId(harness.db, account.id, `cus-${slug}`);
+	await BillingCustomer.link(harness.db, account.id, "polar", `cus-${slug}`);
 	let blog = await Blog.create(harness.db, {
 		accountId: account.id,
 		name: slug,
@@ -126,22 +127,23 @@ describe("reportUsage — metered usage idempotency", () => {
 	 * Seeds a fixed-date usage row so the assertions hold regardless of the
 	 * actual UTC date `yesterday()` resolves to when the suite runs.
 	 */
-	test("ingests each blog-day with a deterministic (blog_id, date) external id", async () => {
+	test("reports each blog-day with a deterministic (blog_id, date) external id", async () => {
 		let { blogId } = await seedBillableBlog();
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
 		await handler(createContext());
 
-		let call = ingestCalls.find((c) => c.day === "2026-07-01");
-		expect(call).toBeDefined();
-		expect(call!.customerId).toBe("cus-my-blog");
-		expect(call!.views).toBe(120);
-		expect(call!.externalId).toBe(`page_views:${blogId}:2026-07-01`);
+		let event = ingested.find((row) => row.metadata?.day === "2026-07-01");
+		expect(event).toBeDefined();
+		expect(event!.name).toBe("page_views");
+		expect(event!.customer_id).toBe("cus-my-blog");
+		expect(event!.metadata?.views).toBe(120);
+		expect(event!.external_id).toBe(`page_views:${blogId}:2026-07-01`);
 	});
 
 	/**
-	 * Models a run that ingests the event but never persists `reported_at`, by
+	 * Models a run that reports the event but never persists `reported_at`, by
 	 * nulling it back out after the first run, then verifies the retry re-sends
 	 * the identical external id.
 	 */
@@ -150,46 +152,64 @@ describe("reportUsage — metered usage idempotency", () => {
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
-		ingestOk = true;
 		await handler(createContext());
-		let firstKeys = ingestCalls.filter((c) => c.day === "2026-07-01").map((c) => c.externalId);
-		expect(firstKeys).toEqual([`page_views:${blogId}:2026-07-01`]);
+		expect(ingested.map((row) => row.external_id)).toEqual([`page_views:${blogId}:2026-07-01`]);
 
 		let rows = await harness.db.findMany(UsageDaily.table, { where: { blog_id: blogId } });
 		await harness.db.update(UsageDaily.table, { id: rows[0]!.id }, { reported_at: null });
 
-		ingestCalls = [];
+		ingested = [];
 		await handler(createContext());
-		let secondKeys = ingestCalls.filter((c) => c.day === "2026-07-01").map((c) => c.externalId);
-		expect(secondKeys).toEqual([`page_views:${blogId}:2026-07-01`]);
+		expect(ingested.map((row) => row.external_id)).toEqual([`page_views:${blogId}:2026-07-01`]);
 	});
 
-	test("does not re-ingest a blog-day once it is marked reported", async () => {
+	test("does not re-report a blog-day once it is marked reported", async () => {
 		let { blogId } = await seedBillableBlog();
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
 		await handler(createContext());
-		expect(ingestCalls.filter((c) => c.day === "2026-07-01")).toHaveLength(1);
+		expect(ingested).toHaveLength(1);
 
-		ingestCalls = [];
+		ingested = [];
 		await handler(createContext());
-		expect(ingestCalls.filter((c) => c.day === "2026-07-01")).toHaveLength(0);
+		expect(ingested).toHaveLength(0);
 	});
 
-	test("leaves the row unreported when Polar rejects the event, retrying next run", async () => {
+	test("leaves the rows unreported when the platform rejects the batch", async () => {
 		let { blogId } = await seedBillableBlog();
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
-		ingestOk = false;
+		ingestAccepts = false;
 		await handler(createContext());
 
 		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(1);
-		ingestOk = true;
-		ingestCalls = [];
+
+		ingestAccepts = true;
+		ingested = [];
 		await handler(createContext());
-		expect(ingestCalls.map((c) => c.externalId)).toContain(`page_views:${blogId}:2026-07-01`);
+		expect(ingested.map((row) => row.external_id)).toContain(`page_views:${blogId}:2026-07-01`);
 		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(0);
+	});
+
+	test("skips a blog whose account has no billing customer", async () => {
+		let account = await Account.findOrCreateFromProfile(harness.db, {
+			subject: "sub-free",
+			email: "free@example.com",
+		});
+		let blog = await Blog.create(harness.db, {
+			accountId: account.id,
+			name: "free",
+			slug: "free",
+			region: "wnam",
+		});
+		await UsageDaily.record(harness.db, blog.id, "2026-07-01", 10);
+		stubAnalytics([]);
+
+		await handler(createContext());
+
+		expect(ingested).toHaveLength(0);
+		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(1);
 	});
 });

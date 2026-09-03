@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@pkg/auth": "workspace:*",
+		"@pkg/billing": "workspace:*",
 		"@pkg/cron": "workspace:*",
 		"@pkg/crypto": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
@@ -28,7 +29,6 @@
 		"@pkg/lucide-remix": "workspace:*",
 		"@pkg/mail": "workspace:*",
 		"@pkg/markdown": "workspace:*",
-		"@pkg/polar": "workspace:*",
 		"@pkg/rate-limit": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/seo": "workspace:*",

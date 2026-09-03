@@ -12,7 +12,6 @@ import { ServiceClient } from "@pkg/auth/service-client";
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { Mailer } from "@pkg/mail";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
@@ -48,7 +47,6 @@ export function createDatabase(): Database {
 }
 
 container.singleton(Database, createDatabase);
-container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 /**
  * Mailer for the send paths with no request behind them — the check jobs and the
  * queue consumer — sharing the mail middleware's sender identity. Handlers use

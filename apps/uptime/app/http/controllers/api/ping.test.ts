@@ -9,15 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
-
+import billing from "@pkg/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
 	createRateLimit,
 } from "@pkg/cloudflare-mocks";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -30,8 +28,8 @@ import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { createRevokedSubscription } from "~/app/lib/test/polar";
 import {
 	alertEvents,
 	alerts,
@@ -109,15 +107,27 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
-/** Event batches the endpoint handed the billing client, one entry per call. */
-let ingested: IngestEvent[][] = [];
+/**
+ * The platform the endpoint bills against, replaced per test so one request's meter events
+ * cannot be read back by the next. The middleware resolves it per request, so the router
+ * built below reads whatever this currently holds.
+ */
+let testBilling = createTestBilling();
 
-let polar = {
-	async ingestEventsSafe(events: IngestEvent[]) {
-		ingested.push(events);
-		return true;
-	},
-} as unknown as PolarClientType;
+/**
+ * Every event the endpoint billed, as the fields that describe *what* was billed: the id and
+ * the timestamp the platform stamps on a record are its own, not the endpoint's.
+ */
+async function billedFields() {
+	return (await billedEvents(testBilling)).map(
+		({ name, customerExternalId, externalId, metadata }) => ({
+			name,
+			customerExternalId,
+			externalId,
+			metadata,
+		}),
+	);
+}
 
 async function createTeamRow(db: Db) {
 	return await db.create(
@@ -165,18 +175,19 @@ async function createCaller(db: Db) {
 /**
  * Sends a ping request through the router. The handler defers its billing ingest
  * under `waitUntil`, so this drains it explicitly before returning, letting
- * assertions observe the ingested event.
+ * assertions observe the billed event.
  */
 async function dispatch(
 	db: Db,
 	request: { key?: string; body?: Record<string, unknown> | unknown[] },
 ) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({
+		middleware: [asyncContext(), billing({ provider: () => testBilling })],
+	});
 	router.map(routes.api.v1.ping, pingCreate);
 
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.instance(PolarClient, polar);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
@@ -245,7 +256,7 @@ beforeEach(() => {
 	pingResults.reset();
 	costs.reset();
 	rateLimiter.reset();
-	ingested.length = 0;
+	testBilling = createTestBilling();
 	deferred.length = 0;
 });
 
@@ -292,7 +303,7 @@ describe("POST /api/v1/ping entitlement", () => {
 		expect((await errorBody(response)).error.code).toBe("SUBSCRIPTION_REQUIRED");
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
-		expect(ingested).toHaveLength(0);
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 	});
 
 	/**
@@ -641,11 +652,11 @@ describe("POST /api/v1/ping side effects", () => {
 		let response = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 		let { data } = await pingBody(response);
 
-		expect(ingested).toHaveLength(1);
-		expect(ingested[0]).toEqual([
+		/** No `monitorId` key at all, which is what keeps an ad-hoc ping off a monitor's total. */
+		expect(await billedFields()).toEqual([
 			{
 				name: "ping",
-				externalCustomerId: team.owner_id,
+				customerExternalId: team.owner_id,
 				externalId: `ping:${data.ping.id}`,
 				metadata: { teamId: team.id, type: "adhoc" },
 			},
@@ -662,7 +673,7 @@ describe("POST /api/v1/ping side effects", () => {
 
 		await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 
-		expect(ingested).toHaveLength(1);
+		expect(await billedEvents(testBilling)).toHaveLength(1);
 		expect(pingResults.dataPoints[0]?.blobs).toEqual(["adhoc", "adhoc", "down"]);
 	});
 });

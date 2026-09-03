@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Customer as PolarCustomer, PolarClient } from "@pkg/polar";
-
+import { MemoryBilling } from "@pkg/billing/providers/memory";
+import { unwrap } from "@pkg/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { rawSql } from "remix/data-table";
@@ -19,6 +19,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
+import { refusingCustomers } from "~/app/lib/test/billing";
 import { createTestApp } from "~/app/lib/test/http";
 import { authorizeUrl, ORIGIN, REDIRECT_URI, seed } from "~/app/lib/test/seed";
 import { connections, subjects } from "~/database/schema";
@@ -71,50 +72,9 @@ function respondWithProfile(
 	);
 }
 
-/** A billing client that is down, for the tests about a sign-in outliving a billing outage. */
-function failingPolarClient(): PolarClient {
-	let fake: Pick<PolarClient, "createCustomer" | "findCustomerByEmail" | "updateCustomer"> = {
-		async createCustomer(): Promise<PolarCustomer> {
-			throw new Error("polar is unavailable");
-		},
-		async findCustomerByEmail() {
-			return null;
-		},
-		async updateCustomer(): Promise<PolarCustomer> {
-			throw new Error("polar is unavailable");
-		},
-	};
-
-	return fake as unknown as PolarClient;
-}
-
-/** What {@link recordingPolarClient} saw, so a test can assert on the customer provisioned. */
-interface PolarCalls {
-	/** `[email, name]` of every customer created. */
-	created: [string, string | null | undefined][];
-	/** `[customerId, externalId]` of every link written. */
-	linked: [string, string | null | undefined][];
-}
-
-/** A billing client that succeeds and records what provisioning asked it to do. */
-function recordingPolarClient(calls: PolarCalls): PolarClient {
-	let customer = { id: "cus_recorded", email: "", externalId: null } as unknown as PolarCustomer;
-
-	let fake: Pick<PolarClient, "createCustomer" | "findCustomerByEmail" | "updateCustomer"> = {
-		async createCustomer(email, name) {
-			calls.created.push([email, name]);
-			return { ...customer, email } as PolarCustomer;
-		},
-		async findCustomerByEmail() {
-			return null;
-		},
-		async updateCustomer(customerId, updates) {
-			calls.linked.push([customerId, updates.externalId]);
-			return { ...customer, externalId: updates.externalId ?? null } as PolarCustomer;
-		},
-	};
-
-	return fake as unknown as PolarClient;
+/** A billing platform that is down, for the tests about a sign-in outliving a billing outage. */
+function unavailableBilling() {
+	return refusingCustomers(new MemoryBilling(), "unknown");
 }
 
 /**
@@ -397,10 +357,6 @@ describe("GET /auth/:provider/callback", () => {
 	});
 
 	test("creates the billing customer and links it to the subject on a first sign-in", async () => {
-		let calls: PolarCalls = { created: [], linked: [] };
-		app = await createTestApp({ polar: recordingPolarClient(calls) });
-		fixtures = await seed(app);
-
 		respondWithProfile();
 		await finishFlow({ code: "gh-code", state: await startFlow() });
 
@@ -408,8 +364,10 @@ describe("GET /auth/:provider/callback", () => {
 			where: { email_address: GITHUB_PROFILE.email },
 		});
 
-		expect(calls.created).toEqual([[GITHUB_PROFILE.email, GITHUB_PROFILE.name]]);
-		expect(calls.linked).toEqual([["cus_recorded", subject!.id]]);
+		let customer = await unwrap(app.billing.customers.findByEmail(GITHUB_PROFILE.email));
+
+		expect(customer.name).toBe(GITHUB_PROFILE.name);
+		expect(customer.externalId).toBe(subject!.id);
 	});
 
 	/**
@@ -417,7 +375,7 @@ describe("GET /auth/:provider/callback", () => {
 	 * the account it provisioned, leaving a retry with the provisioning already done.
 	 */
 	test("signs the person in when the billing mirror fails, keeping the subject and the connection", async () => {
-		app = await createTestApp({ polar: failingPolarClient() });
+		app = await createTestApp({ billing: unavailableBilling() });
 		fixtures = await seed(app);
 
 		respondWithProfile();
@@ -446,7 +404,7 @@ describe("GET /auth/:provider/callback", () => {
 	 * travel outside the database.
 	 */
 	test("logs the failed billing mirror by subject id and never by address", async () => {
-		app = await createTestApp({ polar: failingPolarClient() });
+		app = await createTestApp({ billing: unavailableBilling() });
 		fixtures = await seed(app);
 
 		let calls: unknown[][] = [];

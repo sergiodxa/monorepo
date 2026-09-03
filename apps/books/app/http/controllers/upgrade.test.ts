@@ -8,28 +8,40 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PolarClient } from "@pkg/polar";
+import type { MemoryBilling } from "@pkg/billing/providers/memory";
+
+import { unwrap } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";
-import { FakePolarClient, makeCustomer, makeOrder } from "~/app/lib/test/polar";
+import { memoryBilling, purchase } from "~/app/lib/test/billing";
 import { fetchApp } from "~/app/lib/test/router";
 
-/** The hosted checkout URL the fake answers with. */
-const CHECKOUT_URL = "https://polar.test/checkout/upgrade";
+/** The address every reader under test submits. */
+const READER = "reader@example.com";
 
-/** Submits the upgrade form against a scripted billing client. */
-function submit(polar: FakePolarClient, email: string) {
+/** The ordinary checkout an unqualified reader is sent to, address carried along. */
+const ORDINARY_CHECKOUT = "/api/checkout/complete?email=reader%40example.com";
+
+/** A platform that also holds the hand-out campaign the upgrade price comes from. */
+function withUpgradeDiscount(): MemoryBilling {
+	return memoryBilling({
+		discounts: [{ id: Discounts.UPGRADE, amount: 5000, products: [Product.Complete] }],
+	});
+}
+
+/** Submits the upgrade form against a platform. */
+function submit(billing: MemoryBilling, email: string) {
 	return fetchApp("/upgrade", {
 		method: "POST",
 		body: new URLSearchParams({ email }),
-		services: [[PolarClient, polar]],
+		billing,
 	});
 }
 
 describe("GET /upgrade", () => {
 	test("renders the form with its heading and submit label", async () => {
-		let response = await fetchApp("/upgrade");
+		let response = await fetchApp("/upgrade", { billing: memoryBilling() });
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -39,63 +51,42 @@ describe("GET /upgrade", () => {
 });
 
 describe("POST /upgrade", () => {
-	test("creates a discounted upgrade checkout for a reader who owns Essentials", async () => {
-		let polar = new FakePolarClient({
-			checkoutUrl: CHECKOUT_URL,
-			customers: { "reader@example.com": makeCustomer("cus_1", "reader@example.com") },
-			orders: [makeOrder(Product.Essentials)],
-		});
+	test("opens a discounted upgrade checkout for a reader who owns Essentials", async () => {
+		let billing = withUpgradeDiscount();
+		let order = await purchase(billing, Product.Essentials, READER);
 
-		let response = await submit(polar, "reader@example.com");
+		let response = await submit(billing, READER);
+		let location = response.headers.get("location") ?? "";
+		let checkout = await unwrap(billing.checkouts.find(location.split("/").at(-1) ?? ""));
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(CHECKOUT_URL);
-		expect(polar.checkouts).toEqual([
-			{
-				productId: Product.Complete,
-				customerId: "cus_1",
-				discountId: Discounts.UPGRADE,
-				allowDiscountCodes: false,
-			},
-		]);
-		/**
-		 * The order lookup is scoped to Essentials, since any past purchase would
-		 * otherwise qualify for the discount.
-		 */
-		expect(polar.orderQueries).toEqual([{ customerId: "cus_1", productId: Product.Essentials }]);
+		expect(location).toBe(checkout.url);
+		expect(checkout.productSlug).toBe(Product.Complete);
+		expect(checkout.customerId).toBe(order.customerId);
+		expect(checkout.discountId).toBe(Discounts.UPGRADE);
 	});
 
 	test("sends a customer with no Essentials order to the ordinary checkout", async () => {
-		let polar = new FakePolarClient({
-			customers: { "reader@example.com": makeCustomer("cus_1", "reader@example.com") },
-			orders: [makeOrder(Product.Complete)],
-		});
+		let billing = withUpgradeDiscount();
+		await purchase(billing, Product.Complete, READER);
 
-		let response = await submit(polar, "reader@example.com");
+		let response = await submit(billing, READER);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(
-			"/api/checkout/complete?email=reader%40example.com",
-		);
-		expect(polar.checkouts).toEqual([]);
+		expect(response.headers.get("location")).toBe(ORDINARY_CHECKOUT);
 	});
 
 	test("sends an unknown address to the ordinary checkout", async () => {
-		let polar = new FakePolarClient();
-
-		let response = await submit(polar, "stranger@example.com");
+		let response = await submit(withUpgradeDiscount(), "stranger@example.com");
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(
 			"/api/checkout/complete?email=stranger%40example.com",
 		);
-		expect(polar.checkouts).toEqual([]);
 	});
 
 	test("re-renders the page with the error inline for a malformed address", async () => {
-		let polar = new FakePolarClient();
-
-		let response = await submit(polar, "not-an-email");
+		let response = await submit(memoryBilling(), "not-an-email");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);

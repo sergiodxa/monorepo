@@ -1,7 +1,7 @@
 /**
  * Unit tests for the `deleteAccounts` job.
  *
- * The queued row is the only state: it survives a Polar or transport failure so tomorrow's
+ * The queued row is the only state: it survives a billing or transport failure so tomorrow's
  * run can retry, and clears once the data is deleted and the confirmation is sent. A refused
  * member notice still lets the deletion finish for good.
  *
@@ -10,7 +10,6 @@
  */
 
 import type { NormalizedMessage, Transport } from "@pkg/mail";
-import type { PolarClient } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
 import {
@@ -19,12 +18,12 @@ import {
 	ManagementErrorCode,
 	SubjectNotFoundError,
 } from "@pkg/auth/management-client";
+import { BillingError } from "@pkg/billing";
 import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
-import { PolarClient as PolarClientClass } from "@pkg/polar";
-import { failure, success } from "@pkg/result";
+import { failure, isFailure, success, unwrap } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -34,10 +33,10 @@ import AccountDeletion from "~/app/data/account-deletion";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 import jobs from "~/app/jobs";
-import deleteAccounts from "~/app/jobs/delete-accounts";
 import { Database as JobDatabase } from "~/app/jobs/middleware/database";
+import { MONITORING_PRODUCT } from "~/app/lib/billing";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { polarSubscription } from "~/app/lib/test/polar";
 import { memberships, monitors, teams } from "~/database/schema";
 
 let transport = new MemoryTransport();
@@ -119,32 +118,70 @@ function notifiedAddresses(messages: readonly NormalizedMessage[]) {
 		.sort();
 }
 
-/** A Polar client that reports one active subscription and accepts its revocation. */
-function createFakePolar() {
-	return {
-		listActiveSubscriptions: vi.fn(async () => [polarSubscription()]),
-		revokeSubscription: vi.fn(async () => polarSubscription({ status: "revoked" })),
-	};
+/**
+ * A platform that really bills, with the two calls a cancellation makes watched: the sweep
+ * reads it through the module the job imports, so the assertions are about what the erasure
+ * actually did to it rather than about a double's call log.
+ */
+let billing = createTestBilling();
+let realList = billing.subscriptions.list.bind(billing.subscriptions);
+let listMock = vi.spyOn(billing.subscriptions, "list");
+let cancelMock = vi.spyOn(billing.subscriptions, "cancel");
+
+/** The job runs with no request behind it, so it reads the platform from this module. */
+let realBillingModule = await import("~/app/lib/billing");
+
+vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+
+let { default: deleteAccounts } = await import("~/app/jobs/delete-accounts");
+
+/** A subscription `subjectId` holds, sold the way a completed checkout sells it. */
+async function sell(subjectId: string): Promise<void> {
+	let existing = await billing.customers.find({ externalId: subjectId });
+	let customerId = isFailure(existing)
+		? (
+				await unwrap(
+					billing.customers.create({ email: `${subjectId}@example.com`, externalId: subjectId }),
+				)
+			).id
+		: existing.data.id;
+
+	let opened = await unwrap(
+		billing.checkouts.create({ product: MONITORING_PRODUCT, customer: { id: customerId } }),
+	);
+	await unwrap(billing.checkouts.finish(opened.id));
 }
 
-/** A Polar client that is unreachable, which must abort an erasure with nothing deleted. */
-function createFailingPolar() {
-	return {
-		listActiveSubscriptions: vi.fn(async () => {
-			throw new Error("Polar unavailable");
+/** How many subscriptions `subjectId` still holds, which is what an erasure has to leave at zero. */
+async function heldSubscriptions(subjectId: string): Promise<number> {
+	let listed = await unwrap(
+		realList({
+			customer: { externalId: subjectId },
+			product: MONITORING_PRODUCT,
+			status: ["active", "trialing"],
 		}),
-		revokeSubscription: vi.fn(async () => polarSubscription()),
-	};
+	);
+
+	return listed.items.length;
 }
 
-async function runJob(
-	db: Database,
-	polar: { listActiveSubscriptions: unknown; revokeSubscription: unknown },
-	mailTransport: Transport = transport,
-) {
+/** A platform that cannot be reached, which must abort an erasure with nothing deleted. */
+function refuseBilling(unreachable: (subjectId: string | null) => boolean): void {
+	listMock.mockImplementation(async (query) => {
+		let customer = query?.customer;
+		let subjectId = customer !== undefined && "externalId" in customer ? customer.externalId : null;
+
+		if (!unreachable(subjectId)) return await realList(query);
+
+		return failure(
+			new BillingError("platform unavailable", { code: "unknown", connection: "memory" }),
+		);
+	});
+}
+
+async function runJob(db: Database, mailTransport: Transport = transport) {
 	let container = new ServiceContainer();
 	container.singleton(Mailer, () => new Mailer({ transport: mailTransport, from: MAIL_FROM }));
-	container.instance(PolarClientClass, polar as unknown as PolarClient);
 	container.instance(ManagementClient, fakeAdmin());
 
 	let ctx = createJobContext(jobs.deleteAccounts, {
@@ -190,16 +227,17 @@ beforeEach(() => {
 	transport = new MemoryTransport();
 	addresses = new Map();
 	authenticates = true;
+	listMock.mockClear();
+	listMock.mockImplementation(realList);
+	cancelMock.mockClear();
 });
 
 describe("deleteAccounts", () => {
 	test("does nothing at all when the queue is empty", async () => {
 		let { db } = createTestDatabase();
-		let polar = createFakePolar();
+		await runJob(db);
 
-		await runJob(db, polar);
-
-		expect(polar.listActiveSubscriptions).not.toHaveBeenCalled();
+		expect(listMock).not.toHaveBeenCalled();
 		expect(transport.messages).toHaveLength(0);
 	});
 
@@ -220,11 +258,12 @@ describe("deleteAccounts", () => {
 			{ touch: true, returnRow: true },
 		);
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await sell("subject-1");
 
-		let polar = createFakePolar();
-		await runJob(db, polar);
+		await runJob(db);
 
-		expect(polar.revokeSubscription).toHaveBeenCalledTimes(1);
+		expect(cancelMock).toHaveBeenCalledTimes(1);
+		expect(await heldSubscriptions("subject-1")).toBe(0);
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
 		expect(await db.count(memberships, { where: { team_id: team.id } })).toBe(0);
 		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(0);
@@ -243,7 +282,7 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "subject-1", "member");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 		expect(
@@ -265,7 +304,9 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "subject-1");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFailingPolar());
+		refuseBilling(() => true);
+
+		await runJob(db);
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 		expect(await db.count(memberships, { where: { subject_id: "subject-1" } })).toBe(1);
@@ -280,7 +321,7 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "subject-1");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar(), new RefusingTransport());
+		await runJob(db, new RefusingTransport());
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
 		/** The row is the only copy of the address, so it has to outlive a refused send. */
@@ -298,14 +339,14 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "subject-1");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar(), new RefusingTransport());
+		await runJob(db, new RefusingTransport());
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
 
-		let polar = createFakePolar();
-		polar.listActiveSubscriptions = vi.fn(async () => []);
-		await runJob(db, polar);
+		cancelMock.mockClear();
+		await runJob(db);
 
-		expect(polar.revokeSubscription).not.toHaveBeenCalled();
+		/** The first run already ended the billing, so this one finds nothing left to cancel. */
+		expect(cancelMock).not.toHaveBeenCalled();
 		expect(transport.messages).toHaveLength(1);
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
 	});
@@ -317,11 +358,11 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "colleague-1", "member");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 		expect(transport.messages).toHaveLength(1);
 
 		/** The queue is empty now, so the second run finds nothing and mails nothing. */
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		expect(transport.messages).toHaveLength(1);
 		expect(await db.count(teams, { where: { id: team.id } })).toBe(0);
@@ -339,7 +380,7 @@ describe("deleteAccounts", () => {
 		addresses.set("colleague-2", "two@example.com");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual(["one@example.com", "two@example.com"]);
 
@@ -355,7 +396,7 @@ describe("deleteAccounts", () => {
 		addresses.set("subject-1", "ada@example.com");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual([]);
 		expect(transport.messages).toHaveLength(1);
@@ -371,7 +412,7 @@ describe("deleteAccounts", () => {
 		addresses.set("colleague-1", "one@example.com");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		/** The team survives, so nobody lost anything and nobody is told anything. */
 		expect(notifiedAddresses(transport.messages)).toEqual([]);
@@ -388,7 +429,7 @@ describe("deleteAccounts", () => {
 		addresses.set("colleague-2", "two@example.com");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual(["two@example.com"]);
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
@@ -403,7 +444,7 @@ describe("deleteAccounts", () => {
 		authenticates = false;
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db, createFakePolar());
+		await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual([]);
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
@@ -424,7 +465,7 @@ describe("deleteAccounts", () => {
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
 		let selective = new SelectiveTransport((message) => message.email instanceof TeamDeletedEmail);
-		await runJob(db, createFakePolar(), selective);
+		await runJob(db, selective);
 
 		expect(notifiedAddresses(selective.messages)).toEqual(["one@example.com"]);
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
@@ -441,15 +482,9 @@ describe("deleteAccounts", () => {
 		await AccountDeletion.enqueue(db, "subject-2", "two@example.com", 2_000);
 
 		/** Fails for the first subject only, so the run has to carry on to the second. */
-		let polar = {
-			listActiveSubscriptions: vi.fn(async (externalCustomerId: string) => {
-				if (externalCustomerId === "subject-1") throw new Error("Polar unavailable");
-				return [];
-			}),
-			revokeSubscription: vi.fn(async () => polarSubscription()),
-		};
+		refuseBilling((subjectId) => subjectId === "subject-1");
 
-		await runJob(db, polar);
+		await runJob(db);
 
 		expect(await db.findOne(teams, { where: { id: first.id } })).not.toBeNull();
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();

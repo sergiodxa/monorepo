@@ -2528,6 +2528,7 @@ export default {
 				title: "Billing",
 			},
 			ownerOnly: "Only the team owner can view and manage billing for this team.",
+			unavailable: "Billing is temporarily unavailable. Please try again in a few minutes.",
 		},
 
 		members: {

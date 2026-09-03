@@ -107,7 +107,7 @@ describe("subscription middleware — status gating", () => {
 	test("allows access for an active subscription", async () => {
 		let { response, next } = await runWithSubscription(
 			{ id: "t1", internal: false },
-			{ id: "sub1", status: "active", polar_customer_id: "cus1" },
+			{ id: "sub1", status: "active" },
 		);
 
 		expect(next).toHaveBeenCalledTimes(1);
@@ -117,7 +117,7 @@ describe("subscription middleware — status gating", () => {
 	test("allows access for a trialing subscription", async () => {
 		let { response, next } = await runWithSubscription(
 			{ id: "t1", internal: false },
-			{ id: "sub1", status: "trialing", polar_customer_id: "cus1" },
+			{ id: "sub1", status: "trialing" },
 		);
 
 		expect(next).toHaveBeenCalledTimes(1);
@@ -127,7 +127,7 @@ describe("subscription middleware — status gating", () => {
 	test("allows access for a past_due subscription (warning, not blocked)", async () => {
 		let { response, next } = await runWithSubscription(
 			{ id: "t1", internal: false },
-			{ id: "sub1", status: "past_due", polar_customer_id: "cus1" },
+			{ id: "sub1", status: "past_due" },
 		);
 
 		expect(next).toHaveBeenCalledTimes(1);
@@ -138,7 +138,7 @@ describe("subscription middleware — status gating", () => {
 		test(`blocks and redirects a ${status} subscription to billing`, async () => {
 			let { response, next } = await runWithSubscription(
 				{ id: "t1", internal: false },
-				{ id: "sub1", status, polar_customer_id: "cus1" },
+				{ id: "sub1", status },
 			);
 
 			expect(next).not.toHaveBeenCalled();

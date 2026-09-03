@@ -10,7 +10,6 @@
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -63,9 +62,23 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 	}
 
 	let db = getServiceContainer().get(Database);
-	let polar = getServiceContainer().get(PolarClient);
 
-	await Customer.cancelSubscriptions(polar, ctx.team.owner_id);
+	/**
+	 * A refused cancellation is logged rather than raised: the team and its data go either
+	 * way, and leaving a subscription running is recoverable from the platform's own dashboard
+	 * while a half-deleted team is not.
+	 */
+	let cancelled = await Customer.cancelSubscriptions(ctx.billing, ctx.team.owner_id);
+
+	if (isFailure(cancelled)) {
+		ctx.logger.error("team.delete.cancel_failed", {
+			code: cancelled.error.code,
+			providerCode: cancelled.error.providerCode,
+			connection: cancelled.error.connection,
+			ownerId: ctx.team.owner_id,
+		});
+	}
+
 	await Team.deleteById(db, ctx.team.id);
 
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });

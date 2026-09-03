@@ -1,21 +1,23 @@
 /**
  * The `/dashboard/billing` controller: shows the account's subscription status and,
- * on submit, sends the owner to the right Polar surface — the customer portal if they
- * already have a Polar customer, otherwise a checkout session to start a subscription.
+ * on submit, sends the owner to the right hosted page — the billing portal once they
+ * are a customer, otherwise a checkout that starts the subscription.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { supports } from "@pkg/billing";
 import { redirect } from "@pkg/http/response";
-import { PolarClient } from "@pkg/polar";
+import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
-import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAccountId } from "~/app/http/middleware/session";
+import { PRO_PRODUCT } from "~/app/lib/billing";
 import Account from "~/app/models/account";
+import BillingCustomer from "~/app/models/billing-customer";
 import Subscription from "~/app/models/subscription";
 import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
@@ -23,11 +25,11 @@ import routes from "~/routes/web";
 
 /**
  * Billing controller for `/dashboard/billing`: `index` renders subscription status
- * and the portal/checkout button; `action` redirects to the Polar portal or checkout
- * (falling back to the billing page if Polar is unavailable).
+ * and the portal/checkout button; `action` redirects to the hosted page, falling back
+ * to the billing page when the platform cannot open one.
  *
- * @returns The billing page (`index`), or a redirect to Polar or `/auth/login`
- *   (`action`).
+ * @returns The billing page (`index`), or a redirect to the hosted page or
+ *   `/auth/login` (`action`).
  */
 export default createController(routes.dashboard.billing, {
 	actions: {
@@ -36,8 +38,8 @@ export default createController(routes.dashboard.billing, {
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-			let [account, subscription] = await Promise.all([
-				Account.findById(db, accountId),
+			let [customer, subscription] = await Promise.all([
+				BillingCustomer.findDefault(db, accountId),
 				Subscription.findByAccount(db, accountId),
 			]);
 
@@ -55,7 +57,7 @@ export default createController(routes.dashboard.billing, {
 						overage is metered.
 					</p>
 					<form method="post" action="/dashboard/billing" data-rmx-document="">
-						{account?.polar_customer_id ? (
+						{customer ? (
 							<button mix={[s.button]} type="submit" name="intent" value="portal">
 								Manage billing
 							</button>
@@ -69,30 +71,55 @@ export default createController(routes.dashboard.billing, {
 			);
 		}),
 
-		action: inject([Database, PolarClient] as const, async (db, polar) => {
+		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-			let account = await Account.findById(db, accountId);
 			let origin = new URL(ctx.request.url).origin;
+			let customer = await BillingCustomer.findDefault(db, accountId);
 
-			try {
-				if (account?.polar_customer_id) {
-					let { url } = await polar.createPortalSession(account.polar_customer_id);
-					return redirect(url, { status: redirect.Status.SeeOther });
-				} else {
-					let { url } = await polar.createCheckoutSession(
-						env.POLAR_PRODUCT_ID,
-						undefined,
-						`${origin}/dashboard`,
-						{ account_id: accountId },
-					);
-					return redirect(url, { status: redirect.Status.SeeOther });
+			if (customer && supports(ctx.billing, "portal")) {
+				let session = await ctx.billing.portal.create({
+					customer: { id: customer.provider_customer_id },
+					returnTo: `${origin}/dashboard/billing`,
+				});
+
+				if (isFailure(session)) {
+					ctx.logger.error("billing.portal_failed", {
+						code: session.error.code,
+						providerCode: session.error.providerCode,
+					});
+
+					return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
 				}
-			} catch {
+
+				return redirect(session.data.url, { status: redirect.Status.SeeOther });
+			}
+
+			let account = await Account.findById(db, accountId);
+
+			let checkout = await ctx.billing.checkouts.create({
+				product: PRO_PRODUCT,
+				customer: { externalId: accountId },
+				email: account?.email,
+				returnTo: `${origin}/dashboard`,
+			});
+
+			if (isFailure(checkout)) {
+				ctx.logger.error("billing.checkout_failed", {
+					code: checkout.error.code,
+					providerCode: checkout.error.providerCode,
+				});
+
 				return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
 			}
+
+			if (checkout.data.url === null) {
+				return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
+			}
+
+			return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
 		}),
 	},
 });

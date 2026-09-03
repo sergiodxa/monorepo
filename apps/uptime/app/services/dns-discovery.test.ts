@@ -18,7 +18,6 @@ import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -30,6 +29,7 @@ import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/servic
 import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { MAIL_FROM } from "~/app/emails/sender";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { dnsMonitors } from "~/database/schema";
 
@@ -82,6 +82,14 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
+
+/**
+ * The platform the sweep bills against. The job has no request behind it, so it reads the
+ * configured platform from this module, which is replaced with a real in-memory one.
+ */
+let realBillingModule = await import("~/app/lib/billing");
+
+vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: createTestBilling() }));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
@@ -411,7 +419,6 @@ describe("scheduled and on-demand checks", () => {
 			Mailer,
 			() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		);
-		container.singleton(PolarClient, () => new PolarClient({ accessToken: "polar_at_test" }));
 
 		let ctx = createJobContext(jobs.checkDns, {
 			id: "message-1",

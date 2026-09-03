@@ -1,5 +1,5 @@
 /**
- * Unit tests for the `Subscription` projection model: the upsert's idempotency and its
+ * Unit tests for the `Subscription` projection model: the snapshot write's idempotency and its
  * out-of-order guard, the three-state entitlement read, the scheduling write, and the
  * sweep still claiming an owner nothing is known about. Runs against in-memory SQLite
  * with every migration applied, so the raw upsert and the cross-table `next_due_at`
@@ -11,10 +11,11 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
+import Subscription from "~/app/data/subscription";
+import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { claimDue } from "~/app/lib/scheduling";
+import { emptyEntitlementState, entitlementState } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { polarSubscription } from "~/app/lib/test/polar";
 import { dnsMonitors, monitors, tcpMonitors, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -60,75 +61,95 @@ async function createMonitor(db: Db, teamId: string, changes: Record<string, unk
 	);
 }
 
-describe("Subscription.upsert", () => {
-	test("maps a Polar payload onto the projection's columns", async () => {
-		expect(await Subscription.upsert(db, "owner-1", polarSubscription())).toBe(true);
+describe("Subscription.sync", () => {
+	test("maps a snapshot onto the projection's columns", async () => {
+		let synced = await Subscription.sync(db, "owner-1", entitlementState());
+
+		expect(synced).toEqual({ applied: true, changed: true, entitled: true });
 
 		let [row] = await Subscription.listAll(db);
 		expect(row?.external_customer_id).toBe("owner-1");
-		expect(row?.polar_subscription_id).toBe("sub_1");
-		expect(row?.polar_product_id).toBe(SUBSCRIPTION_PRODUCT_ID);
+		expect(row?.billing_subscription_id).toBe("sub_1");
+		expect(row?.billing_product_slug).toBe(MONITORING_PRODUCT);
 		expect(row?.status).toBe("active");
 		expect(row?.current_period_end).toBe(new Date("2026-08-01T00:00:00.000Z").getTime());
 		expect(row?.revoked_at).toBeNull();
-		expect(row?.polar_modified_at).toBe(new Date("2026-07-15T00:00:00.000Z").getTime());
+		expect(row?.billing_read_at).toBe(new Date("2026-07-15T00:00:00.000Z").getTime());
 	});
 
-	test("records when Polar ended the subscription", async () => {
-		await Subscription.upsert(
-			db,
-			"owner-1",
-			polarSubscription({ status: "canceled", endedAt: "2026-07-20T00:00:00.000Z" }),
-		);
+	test("keeps a status the platform still reports, ended period and all", async () => {
+		await Subscription.sync(db, "owner-1", entitlementState({ status: "canceled" }));
 
 		let [row] = await Subscription.listAll(db);
 		expect(row?.status).toBe("canceled");
+		expect(row?.revoked_at).toBeNull();
+	});
+
+	test("revokes a subscription the snapshot stopped listing, rather than deleting it", async () => {
+		await Subscription.sync(db, "owner-1", entitlementState());
+
+		let synced = await Subscription.sync(
+			db,
+			"owner-1",
+			emptyEntitlementState({ readAt: "2026-07-20T00:00:00.000Z" }),
+		);
+
+		expect(synced).toEqual({ applied: true, changed: true, entitled: false });
+
+		let [row] = await Subscription.listAll(db);
+		expect(row?.status).toBe("revoked");
 		expect(row?.revoked_at).toBe(new Date("2026-07-20T00:00:00.000Z").getTime());
 	});
 
-	test("is idempotent: a redelivered event updates the same row", async () => {
-		await Subscription.upsert(db, "owner-1", polarSubscription());
-		expect(await Subscription.upsert(db, "owner-1", polarSubscription())).toBe(true);
+	test("is idempotent: a re-read updates the same row and reports no change", async () => {
+		await Subscription.sync(db, "owner-1", entitlementState());
+
+		expect(await Subscription.sync(db, "owner-1", entitlementState())).toEqual({
+			applied: true,
+			changed: false,
+			entitled: true,
+		});
 
 		expect(await Subscription.listAll(db)).toHaveLength(1);
 	});
 
-	test("applies a newer payload", async () => {
-		await Subscription.upsert(db, "owner-1", polarSubscription());
+	test("applies a fresher snapshot", async () => {
+		await Subscription.sync(db, "owner-1", entitlementState());
 
 		expect(
-			await Subscription.upsert(
+			await Subscription.sync(
 				db,
 				"owner-1",
-				polarSubscription({ status: "canceled", modifiedAt: "2026-07-16T00:00:00.000Z" }),
+				entitlementState({ status: "past_due", readAt: "2026-07-16T00:00:00.000Z" }),
 			),
-		).toBe(true);
+		).toEqual({ applied: true, changed: true, entitled: false });
 
 		let [row] = await Subscription.listAll(db);
-		expect(row?.status).toBe("canceled");
+		expect(row?.status).toBe("past_due");
 	});
 
-	test("refuses an older payload, so out-of-order deliveries can't roll state back", async () => {
-		await Subscription.upsert(
+	test("refuses an older snapshot, so a slower read can't roll state back", async () => {
+		await Subscription.sync(
 			db,
 			"owner-1",
-			polarSubscription({ status: "canceled", modifiedAt: "2026-07-16T00:00:00.000Z" }),
+			entitlementState({ status: "past_due", readAt: "2026-07-16T00:00:00.000Z" }),
 		);
 
-		expect(await Subscription.upsert(db, "owner-1", polarSubscription({ status: "active" }))).toBe(
-			false,
-		);
+		expect(await Subscription.sync(db, "owner-1", entitlementState())).toMatchObject({
+			applied: false,
+		});
 
 		let [row] = await Subscription.listAll(db);
-		expect(row?.status).toBe("canceled");
+		expect(row?.status).toBe("past_due");
 		expect(await Subscription.listAll(db)).toHaveLength(1);
 	});
 
-	test("falls back to the creation time when Polar reports no modification time", async () => {
-		await Subscription.upsert(db, "owner-1", polarSubscription({ modifiedAt: null }));
+	test("records nothing for a product this app does not sell", async () => {
+		expect(
+			await Subscription.sync(db, "owner-1", entitlementState({ productSlug: "ebook" })),
+		).toEqual({ applied: false, changed: false, entitled: false });
 
-		let [row] = await Subscription.listAll(db);
-		expect(row?.polar_modified_at).toBe(new Date("2026-07-01T00:00:00.000Z").getTime());
+		expect(await Subscription.listAll(db)).toHaveLength(0);
 	});
 });
 
@@ -138,22 +159,22 @@ describe("Subscription.stateFor", () => {
 		expect(await Subscription.isActive(db, "owner-1")).toBe(false);
 	});
 
-	test("is active when a recorded subscription is in an active status", async () => {
-		await Subscription.upsert(db, "owner-1", polarSubscription({ status: "trialing" }));
+	test("is active when a recorded subscription is in an entitling status", async () => {
+		await Subscription.sync(db, "owner-1", entitlementState({ status: "trialing" }));
 
 		expect(await Subscription.stateFor(db, "owner-1")).toBe("active");
 		expect(await Subscription.isActive(db, "owner-1")).toBe(true);
 	});
 
 	test("is inactive — not unknown — once a lapsed subscription is on record", async () => {
-		await Subscription.upsert(db, "owner-1", polarSubscription({ status: "canceled" }));
+		await Subscription.sync(db, "owner-1", entitlementState({ status: "canceled" }));
 
 		expect(await Subscription.stateFor(db, "owner-1")).toBe("inactive");
 		expect(await Subscription.isActive(db, "owner-1")).toBe(false);
 	});
 
 	test("ignores another owner's subscription", async () => {
-		await Subscription.upsert(db, "owner-2", polarSubscription());
+		await Subscription.sync(db, "owner-2", entitlementState());
 
 		expect(await Subscription.stateFor(db, "owner-1")).toBe("unknown");
 	});

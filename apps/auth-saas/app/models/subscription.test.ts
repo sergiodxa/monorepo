@@ -1,8 +1,8 @@
 /**
- * Behavioural tests for `Subscription`'s pure billing helpers: the Polar → local
- * status mapping (including the aliases `revoked`/`incomplete_expired` and the
- * unknown-status fallback) and the human-readable status label / badge-colour
- * derivations shown in the dashboard. No network or database is touched.
+ * Behavioural tests for `Subscription`'s pure billing helpers: the platform → local
+ * status mapping (where a revoked subscription lands on the same lapsed state a
+ * canceled one does) and the human-readable status label / badge-colour derivations
+ * shown in the dashboard. No network or database is touched.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,45 +11,15 @@ import { describe, expect, test } from "vitest";
 
 import Subscription from "./subscription";
 
-describe("Subscription.mapPolarStatus", () => {
-	test("maps active to active", () => {
-		expect(Subscription.mapPolarStatus("active")).toBe("active");
-	});
-
-	test("maps canceled to canceled", () => {
-		expect(Subscription.mapPolarStatus("canceled")).toBe("canceled");
-	});
+describe("Subscription.mapBillingStatus", () => {
+	for (let status of ["active", "trialing", "past_due", "canceled", "incomplete"] as const) {
+		test(`keeps ${status} as it is`, () => {
+			expect(Subscription.mapBillingStatus(status)).toBe(status);
+		});
+	}
 
 	test("maps revoked to canceled", () => {
-		expect(Subscription.mapPolarStatus("revoked")).toBe("canceled");
-	});
-
-	test("maps past_due to past_due", () => {
-		expect(Subscription.mapPolarStatus("past_due")).toBe("past_due");
-	});
-
-	test("maps unpaid to unpaid", () => {
-		expect(Subscription.mapPolarStatus("unpaid")).toBe("unpaid");
-	});
-
-	test("maps incomplete to incomplete", () => {
-		expect(Subscription.mapPolarStatus("incomplete")).toBe("incomplete");
-	});
-
-	test("maps incomplete_expired to incomplete", () => {
-		expect(Subscription.mapPolarStatus("incomplete_expired")).toBe("incomplete");
-	});
-
-	test("maps trialing to trialing", () => {
-		expect(Subscription.mapPolarStatus("trialing")).toBe("trialing");
-	});
-
-	test("falls back to incomplete for an unknown status", () => {
-		expect(Subscription.mapPolarStatus("something-new")).toBe("incomplete");
-	});
-
-	test("falls back to incomplete for an empty status", () => {
-		expect(Subscription.mapPolarStatus("")).toBe("incomplete");
+		expect(Subscription.mapBillingStatus("revoked")).toBe("canceled");
 	});
 });
 

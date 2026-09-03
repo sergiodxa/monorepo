@@ -2519,6 +2519,8 @@ export default {
 			},
 			ownerOnly:
 				"Seul le propriétaire de l'équipe peut consulter et gérer la facturation de cette équipe.",
+			unavailable:
+				"La facturation est temporairement indisponible. Réessayez dans quelques minutes.",
 		},
 
 		members: {

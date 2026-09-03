@@ -13,6 +13,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/billing": "workspace:*",
 		"@pkg/crypto": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/dates": "workspace:*",
@@ -24,7 +25,6 @@
 		"@pkg/jwt": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/mail": "workspace:*",
-		"@pkg/polar": "workspace:*",
 		"@pkg/rate-limit": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/server-timing": "workspace:*",

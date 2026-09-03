@@ -1,65 +1,227 @@
 /**
- * Billing customer provisioning for the auth flow. Resolves a signed-in subject to a
- * Polar customer — by external id first, then by email, creating one when neither
- * exists — and links the external id when a matched customer lacks one. Wraps
- * `@pkg/polar` so login provisioning stays independent of the Polar SDK's shapes.
+ * The app's own billing policy: which subject a platform customer belongs to, what a team's
+ * owner is sent back to after a hosted page, and what "cancel this account's billing" means
+ * here. The platform calls themselves are one line each — what this module holds is the
+ * decisions around them, so no controller has to re-make them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { IdToken } from "@pkg/auth/id-token";
-import type { PolarClient } from "@pkg/polar";
+import type { Billing, BillingError, Customer as BillingCustomer } from "@pkg/billing";
+import type { Result } from "@pkg/result";
 
-import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
+import { BillingError as BillingFailure, supports } from "@pkg/billing";
+import { failure, isFailure, success } from "@pkg/result";
+
+import { MONITORING_PRODUCT } from "~/app/lib/billing";
+import routes from "~/routes/web";
+
+/** What a hosted page needs to know about the team it was opened for. */
+export interface BillableTeam {
+	slug: string;
+	owner_id: string;
+}
+
+/** The states a subscription has to be in for cancelling it to mean anything. */
+const CANCELLABLE_STATUSES = ["active", "trialing"] as const;
+
+/** Subscriptions read per page while cancelling, which is far more than an owner ever holds. */
+const CANCEL_PAGE_SIZE = 100;
+
+/** Pages the cancellation walk follows before giving up, so no account can hang the sweep. */
+const MAX_CANCEL_PAGES = 10;
 
 export default class Customer {
 	/**
-	 * Finds or creates the Polar customer for a signed-in subject, linking the
-	 * external id when an existing customer (found by email) is missing one.
+	 * Resolves a signed-in subject to a platform customer, creating one when the platform holds
+	 * none. An address that already has a customer is adopted rather than duplicated, since a
+	 * second customer for the same person would split their billing history in two.
+	 *
+	 * @param billing - The configured platform.
+	 * @param idToken - The claims of the subject that just signed in.
+	 * @returns The customer the subject bills as.
 	 */
-	static async findOrCreate(polar: PolarClient, idToken: IdToken) {
-		let customer = await polar.getExternalCustomer(idToken.subject);
-		if (customer) return customer;
+	static async provision(
+		billing: Billing,
+		idToken: IdToken,
+	): Promise<Result<BillingCustomer, BillingError>> {
+		let linked = await billing.customers.find({ externalId: idToken.subject });
+		if (!isFailure(linked)) return linked;
+		if (linked.error.code !== "not_found") return linked;
 
 		let email = idToken.email ?? "";
-		customer = await polar.findCustomerByEmail(email);
-		if (!customer) return await polar.createCustomer(email, idToken.name);
-		if (customer.externalId) return customer;
+		let matched = await billing.customers.findByEmail(email);
 
-		return await polar.updateCustomer(customer.id, { externalId: idToken.subject });
-	}
+		if (isFailure(matched)) {
+			if (matched.error.code !== "not_found") return matched;
 
-	/** Creates a hosted Polar checkout session for the team owner to subscribe. */
-	static async checkout(polar: PolarClient, ownerId: string, successUrl: string): Promise<string> {
-		let customer = await polar.getExternalCustomer(ownerId);
-		let session = await polar.createCheckoutSession(
-			SUBSCRIPTION_PRODUCT_ID,
-			customer?.id,
-			successUrl,
-		);
-		return session.url;
-	}
+			return await billing.customers.create({
+				email,
+				externalId: idToken.subject,
+				name: idToken.name ?? undefined,
+			});
+		}
 
-	/** Creates a hosted Polar customer-portal session for the team owner to manage billing. */
-	static async portal(polar: PolarClient, ownerId: string): Promise<string> {
-		let customer = await polar.getExternalCustomer(ownerId);
-		if (!customer) throw new Error(`No Polar customer found for owner ${ownerId}`);
-		let session = await polar.createPortalSession(customer.id);
-		return session.url;
+		if (matched.data.externalId !== null) return matched;
+
+		return await link(billing, matched.data, idToken.subject);
 	}
 
 	/**
-	 * Revokes the team owner's active monitoring subscriptions on team deletion.
-	 * Swallows Polar failures so deleting the team and its data always proceeds,
-	 * matching {@link PolarClient.hasActiveSubscription}'s fail-open convention.
+	 * Opens the hosted checkout the team's owner subscribes through, returning them to the
+	 * team's own dashboard, which is where a completed purchase is visible.
+	 *
+	 * @param billing - The configured platform.
+	 * @param team - The team being subscribed, whose owner pays.
+	 * @param url - The current request's URL, which the return address is resolved against.
+	 * @returns The page to redirect the owner to.
 	 */
-	static async cancelSubscriptions(polar: PolarClient, ownerId: string): Promise<void> {
-		try {
-			let subscriptions = await polar.listActiveSubscriptions(ownerId, SUBSCRIPTION_PRODUCT_ID);
-			await Promise.all(
-				subscriptions.map((subscription) => polar.revokeSubscription(subscription.id)),
-			);
-		} catch {}
+	static async checkout(
+		billing: Billing,
+		team: BillableTeam,
+		url: URL,
+	): Promise<Result<string, BillingError>> {
+		let opened = await billing.checkouts.create({
+			product: MONITORING_PRODUCT,
+			customer: { externalId: team.owner_id },
+			returnTo: returnTo(team, url),
+		});
+
+		if (isFailure(opened)) return opened;
+		if (opened.data.url === null) return unpayable(billing);
+
+		return success(opened.data.url);
 	}
+
+	/**
+	 * Opens the hosted portal the team's owner manages an existing subscription through —
+	 * upgrades, payment methods and cancellation all live there, so proration stays the
+	 * platform's.
+	 *
+	 * @param billing - The configured platform.
+	 * @param team - The team whose billing is being managed.
+	 * @param url - The current request's URL, which the return address is resolved against.
+	 * @returns The page to redirect the owner to.
+	 */
+	static async portal(
+		billing: Billing,
+		team: BillableTeam,
+		url: URL,
+	): Promise<Result<string, BillingError>> {
+		if (!supports(billing, "portal")) return noPortal(billing);
+
+		let opened = await billing.portal.create({
+			customer: { externalId: team.owner_id },
+			returnTo: returnTo(team, url),
+		});
+
+		if (isFailure(opened)) return opened;
+
+		return success(opened.data.url);
+	}
+
+	/**
+	 * Ends every monitoring subscription the owner still holds, and reports how many. Listing
+	 * only the states worth cancelling makes it idempotent: a second pass over an already
+	 * cancelled account cancels nothing and succeeds with `0`.
+	 *
+	 * @param billing - The configured platform.
+	 * @param ownerId - The OIDC subject whose billing ends.
+	 * @returns How many subscriptions were cancelled.
+	 */
+	static async cancelSubscriptions(
+		billing: Billing,
+		ownerId: string,
+	): Promise<Result<number, BillingError>> {
+		let cursor: string | undefined;
+		let cancelled = 0;
+
+		for (let page = 0; page < MAX_CANCEL_PAGES; page++) {
+			let listed = await billing.subscriptions.list({
+				customer: { externalId: ownerId },
+				product: MONITORING_PRODUCT,
+				status: [...CANCELLABLE_STATUSES],
+				limit: CANCEL_PAGE_SIZE,
+				cursor,
+			});
+
+			if (isFailure(listed)) return listed;
+
+			for (let subscription of listed.data.items) {
+				let ended = await billing.subscriptions.cancel(subscription.id);
+				if (isFailure(ended)) return ended;
+				cancelled++;
+			}
+
+			if (listed.data.cursor === null) break;
+			cursor = listed.data.cursor;
+		}
+
+		return success(cancelled);
+	}
+}
+
+/** Where a hosted page sends the owner back to, which is the team they were billing for. */
+function returnTo(team: BillableTeam, url: URL): string {
+	return new URL(routes.app.team.dashboard.index.href({ team: team.slug }), url).toString();
+}
+
+/** A session the platform opened but will not take money through, which is nothing to show. */
+function unpayable(billing: Billing): Result<never, BillingError> {
+	return failure(
+		new BillingFailure("the opened checkout carries no page to pay on", {
+			code: "invalid_response",
+			connection: billing.connection,
+		}),
+	);
+}
+
+/** A platform with nowhere for an existing subscriber to manage what they already bought. */
+function noPortal(billing: Billing): Result<never, BillingError> {
+	return failure(
+		new BillingFailure("this platform hosts no billing portal", {
+			code: "unsupported",
+			connection: billing.connection,
+		}),
+	);
+}
+
+/** The one verb {@link link} needs, which a provider exposes as its own configured client. */
+interface Linkable {
+	patch(path: string, init: { headers: Record<string, string>; body: string }): Promise<Response>;
+}
+
+/**
+ * Adopts a platform customer created before this subject signed in — by a hosted page that
+ * collected only an address, say — so that customer's events arrive naming an owner.
+ *
+ * It goes through the provider's own client because the contract treats an external id as
+ * immutable: `customers.update` has no field for one, which leaves an app no way to claim a
+ * record it did not create.
+ */
+async function link(
+	billing: Billing,
+	customer: BillingCustomer,
+	subject: string,
+): Promise<Result<BillingCustomer, BillingError>> {
+	let client = billing.native as Linkable;
+
+	let response = await client.patch(`/v1/customers/${encodeURIComponent(customer.id)}`, {
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ external_id: subject }),
+	});
+
+	if (!response.ok) {
+		return failure(
+			new BillingFailure(`the platform refused to link customer ${customer.id}`, {
+				code: "unknown",
+				connection: billing.connection,
+				providerCode: String(response.status),
+			}),
+		);
+	}
+
+	return await billing.customers.find({ externalId: subject });
 }

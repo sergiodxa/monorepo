@@ -856,9 +856,10 @@ export type SelectMonitorDailyStats = TableRow<typeof monitorDailyStats>;
 export type InsertMonitorDailyStats = InsertRow<typeof monitorDailyStats>;
 
 /**
- * A **projection** of Polar's subscription state (ADR-005): Polar stays authoritative, and
- * only the webhook and the daily reconciliation sweep write here, keeping authorisation to
- * one indexed read per request. Rows persist after a subscription ends; `status` says how.
+ * A **projection** of the billing platform's subscription state (ADR-005): the platform stays
+ * authoritative, and only the webhook and the daily reconciliation sweep write here, keeping
+ * authorisation to one indexed read per request. Rows persist after a subscription ends;
+ * `status` says how.
  */
 export const subscriptions = table({
 	name: "subscriptions",
@@ -868,28 +869,59 @@ export const subscriptions = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		/**
-		 * The OIDC subject the Polar customer is linked to by `Customer.findOrCreate`, which
+		 * The OIDC subject the billing customer is linked to by `Customer.provision`, which
 		 * equals `teams.owner_id` — so authorisation needs no join hop from a team to its
 		 * billing identity.
 		 */
 		external_customer_id: c.text(),
-		polar_subscription_id: c.text(),
-		polar_product_id: c.text(),
-		/** Polar's own status string, not an app enum — see `isActiveSubscriptionStatus`. */
+		billing_subscription_id: c.text(),
+		/** Our own name for what was bought, never the platform's product id. */
+		billing_product_slug: c.text(),
+		/** The normalized subscription status, not an app enum — see `isEntitlingStatus`. */
 		status: c.text(),
 		current_period_end: c.integer().nullable(),
 		revoked_at: c.integer().nullable(),
 		/**
-		 * When Polar last modified the subscription, taken from the payload itself — the
-		 * version stamp the upsert orders events by, since Polar can retry and redeliver
-		 * out of order. `updated_at` only records when this app wrote the row.
+		 * When the platform answered the snapshot this row was written from — the version
+		 * stamp the write orders by, since a repair sweep and a delivery can read
+		 * concurrently. `updated_at` only records when this app wrote the row.
 		 */
-		polar_modified_at: c.integer(),
+		billing_read_at: c.integer(),
 	},
 });
 
 export type SelectSubscription = TableRow<typeof subscriptions>;
 export type InsertSubscription = InsertRow<typeof subscriptions>;
+
+/**
+ * Every billing delivery this app has received, written with the signature verdict before
+ * anything trusts it. It is what makes a redelivery cheap to recognise — the platform retries
+ * the same delivery id — and it keeps the body that a signature covered, so a handler that
+ * turned out to be wrong can be answered for after the fact.
+ *
+ * `valid` and `processed` are separate because a forged delivery is worth keeping as evidence
+ * while an unprocessed one is worth repairing, which the daily sweep does by re-reading the
+ * customer rather than by replaying the row.
+ */
+export const billingWebhookDeliveries = table({
+	name: "billing_webhook_deliveries",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		/** The platform's own delivery id, which is the deduplication key. */
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		/** Type of the object the delivery named, or `unknown` when it named none. */
+		type: c.text(),
+		/** The body exactly as received, so a replay is judged against the same bytes. */
+		payload: c.text(),
+		valid: c.integer(),
+		processed: c.integer(),
+	},
+});
+
+export type SelectBillingWebhookDelivery = TableRow<typeof billingWebhookDeliveries>;
+export type InsertBillingWebhookDelivery = InsertRow<typeof billingWebhookDeliveries>;
 
 /**
  * Someone who probed a target on the public trial page and left an email to be followed up

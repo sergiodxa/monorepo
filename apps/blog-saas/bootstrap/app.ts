@@ -1,15 +1,18 @@
 /**
- * Assembles the platform-domain HTTP router: the shared middleware stack (async
- * context, HTML rendering, signed session, cross-origin protection, form/method
- * parsing) and every dashboard, auth, marketing, and webhook route mapping.
+ * Assembles the platform-domain HTTP router: the shared middleware stack (request
+ * logging, async context, HTML rendering, signed session, cross-origin protection,
+ * billing, form/method parsing) and every dashboard, auth, marketing, and webhook
+ * route mapping.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { Middleware } from "remix/router";
 
+import billing from "@pkg/billing/middleware";
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import { notFound } from "@pkg/http/response/html";
+import { logger } from "@pkg/logger/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -19,13 +22,14 @@ import { createRouter } from "remix/router";
 
 import polarWebhook from "~/app/http/controllers/api/webhooks/polar";
 import * as auth from "~/app/http/controllers/auth";
-import billing from "~/app/http/controllers/dashboard/billing";
+import billingPage from "~/app/http/controllers/dashboard/billing";
 import blogs, { domain, restore, usage } from "~/app/http/controllers/dashboard/blogs";
 import dashboardIndex from "~/app/http/controllers/dashboard/index";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
 import renderMiddleware from "~/app/http/middleware/render";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import { polar } from "~/app/lib/billing";
 import routes from "~/routes/web";
 
 /**
@@ -44,6 +48,7 @@ export function createDashboardRouter() {
 	 */
 	let middleware: Middleware[] = [
 		headRequests(),
+		logger,
 		asyncContext(),
 		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),
@@ -53,6 +58,7 @@ export function createDashboardRouter() {
 		 * via its own request signature.
 		 */
 		cop({ insecureBypassPatterns: ["/api/webhooks/"] }),
+		billing({ provider: polar }),
 		formData() as Middleware,
 		methodOverride(),
 	];
@@ -72,7 +78,7 @@ export function createDashboardRouter() {
 	router.map(routes.api.webhooks.polar, polarWebhook);
 
 	router.map(routes.dashboard.index, dashboardIndex);
-	router.map(routes.dashboard.billing, billing);
+	router.map(routes.dashboard.billing, billingPage);
 	router.map(routes.dashboard.blogs, blogs);
 	router.map(routes.dashboard.blogDomain, domain);
 	router.map(routes.dashboard.blogUsage, usage);

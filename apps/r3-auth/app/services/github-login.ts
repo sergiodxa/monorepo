@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PolarClient } from "@pkg/polar";
+import type { Billing } from "@pkg/billing";
 import type { Result } from "@pkg/result";
 import type { GitHubAuthProfile } from "remix/auth";
 import type { Database } from "remix/data-table";
@@ -206,14 +206,14 @@ function externalIdOf(profile: GitHubProfile): string {
  * since address alone proves no ownership and adopting the account on it would be a takeover.
  *
  * @param db - Database the subject and connection are written to.
- * @param polar - Billing client the subject is mirrored into, best effort; a
+ * @param billing - Billing platform the subject is mirrored into, best effort; a
  * failed mirror is only logged, since a later lookup by address recovers it.
  * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */
 export async function resolveGitHubSubject(
 	db: Database,
-	polar: PolarClient,
+	billing: Billing,
 	identity: GitHubIdentity,
 ): Promise<Result<string, ProviderLoginError>> {
 	let logger = getContext().logger;
@@ -263,10 +263,14 @@ export async function resolveGitHubSubject(
 		return failure(new ProviderLoginError("server_error", PROVISIONING_FAILED));
 	}
 
-	try {
-		await Customer.findOrCreateByEmail(polar, email, subject);
-	} catch {
-		logger.error("github_customer_create_failed", { subjectId: subject.id });
+	let customer = await Customer.findOrCreateByEmail(billing, subject);
+
+	if (isFailure(customer)) {
+		logger.error("github_customer_create_failed", {
+			subjectId: subject.id,
+			code: customer.error.code,
+			providerCode: customer.error.providerCode,
+		});
 	}
 
 	logger.info("github_subject_created", { subjectId: subject.id, emailVerified });

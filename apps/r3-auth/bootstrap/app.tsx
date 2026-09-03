@@ -8,10 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Billing } from "@pkg/billing";
 import type { Middleware, RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import billing from "@pkg/billing/middleware";
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
 import mail from "@pkg/mail/middleware";
@@ -61,6 +63,7 @@ import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-au
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
 import i18n from "~/app/http/middleware/i18n";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import { polar } from "~/app/lib/billing";
 import { MailTransport } from "~/app/services/mail-transport";
 import routes from "~/routes/web";
 
@@ -81,6 +84,8 @@ namespace application {
 		secure: boolean;
 		/** Cookie domain, so one sign-in covers every subdomain in production. */
 		cookieDomain?: string;
+		/** Billing platform published on every request; defaults to the configured Polar organization. */
+		billing?: Billing;
 	}
 }
 
@@ -103,6 +108,7 @@ export default function application(options: application.Options) {
 			options.cookieDomain,
 		) as Middleware,
 		i18n,
+		billing({ provider: options.billing ?? polar }),
 		mail({
 			transport: () => getServiceContainer().get(MailTransport),
 			from: MAIL_FROM,

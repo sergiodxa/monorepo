@@ -11,8 +11,6 @@
 import type { Database } from "remix/data-table";
 
 import { createJobHandler } from "@pkg/jobs";
-import { PolarClient } from "@pkg/polar";
-import { getServiceContainer } from "@pkg/service-container";
 
 import type { ClaimedTcpMonitor } from "~/app/data/tcp-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
@@ -22,6 +20,7 @@ import type { TcpCheckStatus } from "~/app/services/tcp-check";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
+import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyTcpResult } from "~/app/services/alerts";
@@ -41,7 +40,6 @@ interface CheckedMonitor {
 }
 
 export default createJobHandler(jobs.checkTcp, async (ctx) => {
-	let polar = getServiceContainer().get(PolarClient);
 	/**
 	 * Claimed as of now rather than the cron's `scheduledTime`: the claim advances each
 	 * monitor from its own previous due time, so this instant only decides which monitors

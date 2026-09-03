@@ -16,6 +16,7 @@
 	},
 	"dependencies": {
 		"@pkg/auth": "workspace:*",
+		"@pkg/billing": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/data-table-sqlstorage": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
@@ -25,7 +26,6 @@
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/oidc-provider": "workspace:*",
-		"@pkg/polar": "workspace:*",
 		"@pkg/response": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/service-container": "workspace:*",

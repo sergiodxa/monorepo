@@ -1,253 +1,309 @@
 /**
- * Unit tests for the `Customer` billing model: resolving a signed-in subject to a
- * Polar customer (by external id first, then by email, creating one when neither
- * exists), subscription status, and hosted checkout/portal/cancellation flows. Every
- * call runs against a fake object shaped like the subset of `PolarClient` these
- * methods use, so the suite stays offline.
+ * Unit tests for the `Customer` billing policy: resolving a signed-in subject to a platform
+ * customer (by our own id first, then by address, creating one when neither matches), the
+ * hosted checkout and portal it opens, and what cancelling an account's billing means here.
+ *
+ * The hosted pages and the cancellation run against a real in-memory platform, so what one
+ * call writes is what the next call reads. The resolution branches run against a stand-in
+ * instead: they are about which lookup happens in which order, and one of them needs a state
+ * the in-memory platform cannot hold — a customer it knows with none of our ids on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Customer as PolarCustomer, PolarClient, Subscription } from "@pkg/polar";
+import type {
+	Billing,
+	CreateCheckoutInput,
+	CreatePortalInput,
+	Customer as BillingCustomer,
+	CustomerApi,
+} from "@pkg/billing";
 
 import { IdToken } from "@pkg/auth/id-token";
+import { BillingError } from "@pkg/billing";
+import { failure, isFailure, success, unwrap } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import Customer from "~/app/data/customer";
-import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
+import { MONITORING_PRODUCT } from "~/app/lib/billing";
+import { createTestBilling } from "~/app/lib/test/billing";
+import routes from "~/routes/web";
 
-/** The subset of `PolarClient` that `Customer` actually calls. */
-type FakePolarClient = Pick<
-	PolarClient,
-	| "getExternalCustomer"
-	| "findCustomerByEmail"
-	| "createCustomer"
-	| "updateCustomer"
-	| "hasActiveSubscription"
-	| "createCheckoutSession"
-	| "createPortalSession"
-	| "listSubscriptions"
-	| "listActiveSubscriptions"
-	| "revokeSubscription"
->;
+/** The team every hosted page below is opened for. */
+const TEAM = { slug: "acme", owner_id: "owner-1" };
 
-/**
- * Builds a fake `PolarClient`: the overrides answer, and every other method throws,
- * so a test that reaches an unexpected call fails loudly.
- */
-function fakePolar(overrides: Partial<FakePolarClient>): PolarClient {
-	let notImplemented = (name: string) => () => {
-		throw new Error(`unexpected call to PolarClient#${name} in this test`);
-	};
+/** The page the owner was on when they asked for billing. */
+const REQUEST_URL = new URL("https://app.example.com/app/acme/checkout");
 
-	let fake: FakePolarClient = {
-		getExternalCustomer: notImplemented("getExternalCustomer"),
-		findCustomerByEmail: notImplemented("findCustomerByEmail"),
-		createCustomer: notImplemented("createCustomer"),
-		updateCustomer: notImplemented("updateCustomer"),
-		hasActiveSubscription: notImplemented("hasActiveSubscription"),
-		createCheckoutSession: notImplemented("createCheckoutSession"),
-		createPortalSession: notImplemented("createPortalSession"),
-		listSubscriptions: notImplemented("listSubscriptions"),
-		listActiveSubscriptions: notImplemented("listActiveSubscriptions"),
-		revokeSubscription: notImplemented("revokeSubscription"),
-		...overrides,
-	};
+/** Where both hosted pages have to send the owner back to. */
+const DASHBOARD = new URL(
+	routes.app.team.dashboard.index.href({ team: TEAM.slug }),
+	REQUEST_URL,
+).toString();
 
-	return fake as unknown as PolarClient;
-}
+let idToken = new IdToken({ sub: "user-1", email: "user@example.com", name: "User One" });
 
-function polarCustomer(overrides: Partial<PolarCustomer> = {}): PolarCustomer {
+/** A platform customer as a read reports one. */
+function customer(overrides: Partial<BillingCustomer> = {}): BillingCustomer {
 	return {
 		id: "cus-1",
 		externalId: null,
 		email: "user@example.com",
 		name: "User One",
+		metadata: {},
+		createdAt: new Date("2026-07-01T00:00:00.000Z"),
+		providerData: {},
 		...overrides,
-	} as PolarCustomer;
+	};
 }
 
-function subscription(overrides: Partial<Subscription> = {}): Subscription {
+/** A `not_found`, which is how every read reports a record the platform does not hold. */
+function missing(what: string) {
+	return failure(new BillingError(what, { code: "not_found", connection: "stub" }));
+}
+
+/**
+ * A platform answering only the customer reads under test; every other call fails the test
+ * loudly, so a branch that reaches further than it should is visible rather than silent.
+ */
+function stubBilling(customers: Partial<CustomerApi>, native: unknown = null): Billing {
+	let unexpected = (name: string) => () => {
+		throw new Error(`unexpected call to ${name} in this test`);
+	};
+
 	return {
-		id: "sub-1",
-		productId: SUBSCRIPTION_PRODUCT_ID,
-		status: "active",
-		...overrides,
-	} as Subscription;
+		connection: "stub",
+		native,
+		customers: {
+			find: unexpected("customers.find"),
+			findByEmail: unexpected("customers.findByEmail"),
+			create: unexpected("customers.create"),
+			update: unexpected("customers.update"),
+			list: unexpected("customers.list"),
+			...customers,
+		},
+	} as unknown as Billing;
 }
 
-let idToken = new IdToken({ sub: "user-1", email: "user@example.com", name: "User One" });
+describe("Customer.provision", () => {
+	test("answers the customer already linked to the subject, looking no further", async () => {
+		let linked = customer({ id: "cus-linked", externalId: "user-1" });
+		let billing = stubBilling({ find: async () => success(linked) });
 
-describe("Customer.findOrCreate", () => {
-	test("returns the customer found by external id without any other lookup", async () => {
-		let existing = polarCustomer({ id: "cus-external" });
-		let polar = fakePolar({ getExternalCustomer: async () => existing });
-
-		let customer = await Customer.findOrCreate(polar, idToken);
-		expect(customer).toEqual(existing);
+		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(linked);
 	});
 
-	test("links the external id when found by email without one", async () => {
-		let byEmail = polarCustomer({ id: "cus-by-email", externalId: null });
-		let updated = polarCustomer({ id: "cus-by-email", externalId: "user-1" });
+	test("adopts a customer holding the address but none of our ids", async () => {
+		let unlinked = customer({ id: "cus-by-email", externalId: null });
+		let adopted = customer({ id: "cus-by-email", externalId: "user-1" });
+		let patched: { path: string; body: string }[] = [];
+		let reads = 0;
 
-		let updateCalls: Array<{ id: string; updates: unknown }> = [];
-		let polar = fakePolar({
-			getExternalCustomer: async () => null,
-			findCustomerByEmail: async () => byEmail,
-			updateCustomer: async (id, updates) => {
-				updateCalls.push({ id, updates });
-				return updated;
+		let billing = stubBilling(
+			{
+				/** The second read is the one that runs after the link, and finds it took. */
+				find: async () => (reads++ === 0 ? missing("no such customer") : success(adopted)),
+				findByEmail: async () => success(unlinked),
+			},
+			{
+				patch: async (path: string, init: { body: string }) => {
+					patched.push({ path, body: init.body });
+					return new Response(null, { status: 200 });
+				},
+			},
+		);
+
+		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(adopted);
+		expect(patched).toEqual([
+			{ path: "/v1/customers/cus-by-email", body: JSON.stringify({ external_id: "user-1" }) },
+		]);
+	});
+
+	test("leaves a customer already linked to somebody else alone", async () => {
+		let theirs = customer({ id: "cus-by-email", externalId: "some-other-subject" });
+		let billing = stubBilling({
+			find: async () => missing("no such customer"),
+			findByEmail: async () => success(theirs),
+		});
+
+		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(theirs);
+	});
+
+	test("creates a customer when neither our id nor the address matches", async () => {
+		let created = customer({ id: "cus-new", externalId: "user-1" });
+		let inputs: unknown[] = [];
+
+		let billing = stubBilling({
+			find: async () => missing("no such customer"),
+			findByEmail: async () => missing("no customer holds that address"),
+			create: async (input) => {
+				inputs.push(input);
+				return success(created);
 			},
 		});
 
-		let customer = await Customer.findOrCreate(polar, idToken);
-		expect(customer).toEqual(updated);
-		expect(updateCalls).toEqual([{ id: "cus-by-email", updates: { externalId: "user-1" } }]);
+		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(created);
+		expect(inputs).toEqual([{ email: "user@example.com", externalId: "user-1", name: "User One" }]);
 	});
 
-	test("returns the customer found by email as-is when it already has an external id", async () => {
-		let byEmail = polarCustomer({ id: "cus-by-email", externalId: "some-other-subject" });
-		let polar = fakePolar({
-			getExternalCustomer: async () => null,
-			findCustomerByEmail: async () => byEmail,
+	test("reports a platform failure that is not a missing record", async () => {
+		let billing = stubBilling({
+			find: async () =>
+				failure(
+					new BillingError("token rejected", { code: "unauthenticated", connection: "stub" }),
+				),
 		});
 
-		let customer = await Customer.findOrCreate(polar, idToken);
-		expect(customer).toEqual(byEmail);
-	});
+		let provisioned = await Customer.provision(billing, idToken);
 
-	test("creates a new customer when neither external id nor email match", async () => {
-		let created = polarCustomer({ id: "cus-new" });
-		let createCalls: Array<{ email: string; name: string | null }> = [];
-		let polar = fakePolar({
-			getExternalCustomer: async () => null,
-			findCustomerByEmail: async () => null,
-			createCustomer: async (email, name) => {
-				createCalls.push({ email, name: name ?? null });
-				return created;
-			},
-		});
-
-		let customer = await Customer.findOrCreate(polar, idToken);
-		expect(customer).toEqual(created);
-		expect(createCalls).toEqual([{ email: "user@example.com", name: "User One" }]);
+		expect(isFailure(provisioned)).toBe(true);
+		if (isFailure(provisioned)) expect(provisioned.error.code).toBe("unauthenticated");
 	});
 });
 
 describe("Customer.checkout", () => {
-	test("creates a checkout session for the owner's existing customer", async () => {
-		let customer = polarCustomer({ id: "cus-owner" });
-		let checkoutCalls: Array<{
-			productId: string;
-			customerId: string | undefined;
-			successUrl: string;
-		}> = [];
-		let polar = fakePolar({
-			getExternalCustomer: async () => customer,
-			createCheckoutSession: async (productId, customerId, successUrl) => {
-				checkoutCalls.push({ productId, customerId, successUrl });
-				return { url: "https://polar.sh/checkout/123" };
-			},
-		});
+	test("opens a session for the monitoring product and returns the owner to their team", async () => {
+		let billing = createTestBilling();
+		await unwrap(
+			billing.customers.create({ email: "owner@example.com", externalId: TEAM.owner_id }),
+		);
 
-		let url = await Customer.checkout(polar, "owner-1", "https://app.example.com/success");
-		expect(url).toBe("https://polar.sh/checkout/123");
-		expect(checkoutCalls).toEqual([
+		let opened: CreateCheckoutInput[] = [];
+		let recording: Billing = {
+			...billing,
+			checkouts: {
+				...billing.checkouts,
+				create: async (input) => {
+					opened.push(input);
+					return await billing.checkouts.create(input);
+				},
+			},
+		};
+
+		let url = await unwrap(Customer.checkout(recording, TEAM, REQUEST_URL));
+
+		expect(url).not.toBe("");
+		expect(opened).toEqual([
 			{
-				productId: SUBSCRIPTION_PRODUCT_ID,
-				customerId: "cus-owner",
-				successUrl: "https://app.example.com/success",
+				product: MONITORING_PRODUCT,
+				customer: { externalId: TEAM.owner_id },
+				returnTo: DASHBOARD,
 			},
 		]);
 	});
 
-	test("lets Polar create the customer during checkout when none exists yet", async () => {
-		let checkoutCalls: Array<{ customerId: string | undefined }> = [];
-		let polar = fakePolar({
-			getExternalCustomer: async () => null,
-			createCheckoutSession: async (_productId, customerId) => {
-				checkoutCalls.push({ customerId });
-				return { url: "https://polar.sh/checkout/456" };
+	test("reports the platform's refusal rather than throwing", async () => {
+		let billing = createTestBilling();
+		let refusing: Billing = {
+			...billing,
+			checkouts: {
+				...billing.checkouts,
+				create: async () =>
+					failure(new BillingError("gateway timeout", { code: "unknown", connection: "memory" })),
 			},
-		});
+		};
 
-		let url = await Customer.checkout(polar, "owner-1", "https://app.example.com/success");
-		expect(url).toBe("https://polar.sh/checkout/456");
-		expect(checkoutCalls).toEqual([{ customerId: undefined }]);
+		let opened = await Customer.checkout(refusing, TEAM, REQUEST_URL);
+
+		expect(isFailure(opened)).toBe(true);
+		if (isFailure(opened)) expect(opened.error.code).toBe("unknown");
 	});
 });
 
 describe("Customer.portal", () => {
-	test("creates a portal session for the owner's customer", async () => {
-		let customer = polarCustomer({ id: "cus-owner" });
-		let portalCalls: string[] = [];
-		let polar = fakePolar({
-			getExternalCustomer: async () => customer,
-			createPortalSession: async (customerId) => {
-				portalCalls.push(customerId);
-				return { url: "https://polar.sh/portal/123" };
-			},
-		});
+	test("opens the hosted portal and returns the owner to their team", async () => {
+		let billing = createTestBilling();
+		await unwrap(
+			billing.customers.create({ email: "owner@example.com", externalId: TEAM.owner_id }),
+		);
 
-		let url = await Customer.portal(polar, "owner-1");
-		expect(url).toBe("https://polar.sh/portal/123");
-		expect(portalCalls).toEqual(["cus-owner"]);
+		let hosted = billing.portal;
+		if (hosted === undefined) throw new Error("the in-memory platform hosts a portal");
+
+		let opened: CreatePortalInput[] = [];
+		let recording: Billing = {
+			...billing,
+			portal: {
+				create: async (input) => {
+					opened.push(input);
+					return await hosted.create(input);
+				},
+			},
+		};
+
+		let url = await unwrap(Customer.portal(recording, TEAM, REQUEST_URL));
+
+		expect(url).not.toBe("");
+		expect(opened).toEqual([{ customer: { externalId: TEAM.owner_id }, returnTo: DASHBOARD }]);
 	});
 
-	test("throws when the owner has no Polar customer", async () => {
-		let polar = fakePolar({ getExternalCustomer: async () => null });
+	test("reports `unsupported` on a platform that hosts no portal", async () => {
+		let billing = createTestBilling();
+		let portalless = { ...billing, portal: undefined } as unknown as Billing;
 
-		await expect(Customer.portal(polar, "owner-1")).rejects.toThrow(
-			"No Polar customer found for owner owner-1",
-		);
+		let opened = await Customer.portal(portalless, TEAM, REQUEST_URL);
+
+		expect(isFailure(opened)).toBe(true);
+		if (isFailure(opened)) expect(opened.error.code).toBe("unsupported");
 	});
 });
 
 describe("Customer.cancelSubscriptions", () => {
-	test("does nothing when the owner has no active monitoring subscription", async () => {
-		let polar = fakePolar({ listActiveSubscriptions: async () => [] });
+	test("succeeds with zero when the owner holds nothing", async () => {
+		let billing = createTestBilling();
+		await unwrap(
+			billing.customers.create({ email: "owner@example.com", externalId: TEAM.owner_id }),
+		);
 
-		await expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
+		expect(await unwrap(Customer.cancelSubscriptions(billing, TEAM.owner_id))).toBe(0);
 	});
 
-	test("revokes every active subscription to the monitoring product", async () => {
-		let revokedIds: string[] = [];
-		let polar = fakePolar({
-			listActiveSubscriptions: async (externalCustomerId, productId) => {
-				expect(externalCustomerId).toBe("owner-1");
-				expect(productId).toBe(SUBSCRIPTION_PRODUCT_ID);
-				return [
-					subscription({
-						id: "sub-active-1",
-						productId: SUBSCRIPTION_PRODUCT_ID,
-						status: "active",
-					}),
-					subscription({
-						id: "sub-active-2",
-						productId: SUBSCRIPTION_PRODUCT_ID,
-						status: "active",
-					}),
-				];
-			},
-			revokeSubscription: async (subscriptionId) => {
-				revokedIds.push(subscriptionId);
-				return subscription({ id: subscriptionId, status: "canceled" });
-			},
-		});
+	test("ends every monitoring subscription the owner still holds", async () => {
+		let billing = createTestBilling();
+		let owner = await unwrap(
+			billing.customers.create({ email: "owner@example.com", externalId: TEAM.owner_id }),
+		);
 
-		await Customer.cancelSubscriptions(polar, "owner-1");
-		expect(revokedIds).toEqual(["sub-active-1", "sub-active-2"]);
+		for (let attempt of [1, 2]) {
+			let opened = await unwrap(
+				billing.checkouts.create({
+					product: MONITORING_PRODUCT,
+					customer: { id: owner.id },
+					idempotencyKey: `checkout_${attempt}`,
+				}),
+			);
+			await unwrap(billing.checkouts.finish(opened.id));
+		}
+
+		expect(await unwrap(Customer.cancelSubscriptions(billing, TEAM.owner_id))).toBe(2);
+
+		let left = await unwrap(
+			billing.subscriptions.list({
+				customer: { externalId: TEAM.owner_id },
+				status: ["active", "trialing"],
+			}),
+		);
+
+		expect(left.items).toEqual([]);
 	});
 
-	test("never throws when Polar fails, so team deletion is never blocked", async () => {
-		let polar = fakePolar({
-			listActiveSubscriptions: async () => {
-				throw new Error("Polar is down");
+	test("reports the platform's refusal, so its caller decides what that costs", async () => {
+		let billing = createTestBilling();
+		let refusing: Billing = {
+			...billing,
+			subscriptions: {
+				...billing.subscriptions,
+				list: async () =>
+					failure(
+						new BillingError("service unavailable", { code: "unknown", connection: "memory" }),
+					),
 			},
-		});
+		};
 
-		await expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
+		let cancelled = await Customer.cancelSubscriptions(refusing, TEAM.owner_id);
+
+		expect(isFailure(cancelled)).toBe(true);
+		if (isFailure(cancelled)) expect(cancelled.error.code).toBe("unknown");
 	});
 });

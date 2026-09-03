@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IngestEvent } from "@pkg/polar";
-
+import { BillingError } from "@pkg/billing";
+import billing from "@pkg/billing/middleware";
 import { createAnalyticsEngine, createEnv, createRateLimit } from "@pkg/cloudflare-mocks";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
-import { PolarClient } from "@pkg/polar";
+import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -24,6 +24,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
+import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { cronJobMonitors, cronJobPings, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -61,24 +62,32 @@ vi.doMock("cloudflare:workers", () => ({
 let { default: cronJobPing } = await import("~/app/http/controllers/api/cron-job-ping");
 
 /**
- * The billing client the container hands the handler, with the one call `ingestPings`
- * makes spied on. The client is real — only the request is intercepted — so the events
- * asserted below are the ones the endpoint actually built.
+ * The platform the endpoint bills against, replaced per test so one request's meter events
+ * cannot be read back by the next. It is a real implementation, so the events asserted below
+ * are the ones the endpoint actually built.
  */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+let testBilling = createTestBilling();
 
 beforeEach(() => {
 	pingResults.reset();
 	rateLimiter.reset();
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	testBilling = createTestBilling();
 	deferred = [];
 });
 
-/** Every event the endpoint handed Polar, flattened across the calls it made. */
-function ingestedEvents(): IngestEvent[] {
-	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+/**
+ * Every event the endpoint billed, as the fields that describe *what* was billed: the id and
+ * the timestamp the platform stamps on a record are its own, not the endpoint's.
+ */
+async function billedFields() {
+	return (await billedEvents(testBilling)).map(
+		({ name, customerExternalId, externalId, metadata }) => ({
+			name,
+			customerExternalId,
+			externalId,
+			metadata,
+		}),
+	);
 }
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -135,13 +144,16 @@ async function createCaller(db: Db, overrides: Record<string, unknown> = {}) {
  */
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [asyncContext(), mail({ transport: new MemoryTransport(), from: MAIL_FROM })],
+		middleware: [
+			asyncContext(),
+			billing({ provider: () => testBilling }),
+			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
+		],
 	});
 	router.map(routes.api.cronJobPing, cronJobPing);
 
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.singleton(PolarClient, () => polar);
 
 	let response = await container.scope(() => router.fetch(request));
 	await Promise.all(deferred.splice(0));
@@ -170,7 +182,7 @@ async function recorded(db: Db, monitorId: string) {
 	return {
 		pings: pings.length,
 		dataPoints: pingResults.dataPoints.length,
-		events: ingestedEvents().length,
+		events: (await billedEvents(testBilling)).length,
 	};
 }
 
@@ -378,11 +390,10 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		await dispatch(db, ping(monitor.id, { key, address: "203.0.113.30" }));
 
 		let [row] = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
-		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
-		expect(ingestedEvents()).toEqual([
+		expect(await billedFields()).toEqual([
 			{
 				name: "ping",
-				externalCustomerId: team.owner_id,
+				customerExternalId: team.owner_id,
 				externalId: `ping:${row?.id}`,
 				metadata: { teamId: team.id, type: "cron", monitorId: monitor.id },
 			},
@@ -418,7 +429,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		expect(pingResults.dataPoints).toEqual([
 			{ blobs: [monitor.id, "cron", "degraded"], doubles: [0, 1, 0, 0], indexes: [team.id] },
 		]);
-		expect(ingestedEvents()).toHaveLength(1);
+		expect(await billedEvents(testBilling)).toHaveLength(1);
 	});
 
 	test("bills nothing for an unauthenticated ping", async () => {
@@ -428,7 +439,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let response = await dispatch(db, ping(monitor.id, { address: "203.0.113.38" }));
 
 		expect(response.status).toBe(401);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
@@ -441,7 +452,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.39" }));
 
 		expect(response.status).toBe(403);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
@@ -453,7 +464,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let response = await dispatch(db, ping(crypto.randomUUID(), { key, address: "203.0.113.33" }));
 
 		expect(response.status).toBe(404);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
@@ -464,7 +475,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.34" }));
 
 		expect(response.status).toBe(409);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
@@ -480,7 +491,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.35" }));
 
 		expect(response.status).toBe(429);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
@@ -492,21 +503,28 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		for (let attempt = 0; attempt <= CALLER_LIMIT; attempt++) {
 			await dispatch(db, ping(monitor.id, { key, address }));
 		}
-		ingestEventsSafeMock.mockClear();
+		testBilling = createTestBilling();
 		pingResults.reset();
 
 		/** The middleware refuses the request, so the handler never runs at all. */
 		let refused = await dispatch(db, ping(monitor.id, { key, address }));
 
 		expect(refused.status).toBe(429);
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("answers the caller even when ingestion is rejected", async () => {
 		let { db } = createTestDatabase();
 		let { monitor, key } = await createCaller(db);
-		ingestEventsSafeMock.mockImplementation(async () => false);
+		vi.spyOn(testBilling.usage, "ingest").mockResolvedValue(
+			failure(
+				new BillingError("meter unavailable", {
+					code: "unknown",
+					connection: testBilling.connection,
+				}),
+			),
+		);
 
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.37" }));
 

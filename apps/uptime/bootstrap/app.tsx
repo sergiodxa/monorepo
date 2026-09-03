@@ -15,6 +15,7 @@
 
 import type { Middleware } from "remix/router";
 
+import billing from "@pkg/billing/middleware";
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
@@ -227,6 +228,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
+import { polar } from "~/app/lib/billing";
 import routes from "~/routes/web";
 
 /**
@@ -289,6 +291,12 @@ export default function application(options: application.Options) {
 		}),
 		formData() as Middleware,
 		methodOverride(),
+		/**
+		 * Publishes `ctx.billing` on every surface. It costs nothing per request — the provider
+		 * is one module-scope object — and the webhook endpoint is a machine surface that needs
+		 * it as much as a checkout redirect does.
+		 */
+		billing({ provider: polar }),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
 		auth as Middleware,
 		/**

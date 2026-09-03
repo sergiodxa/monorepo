@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PolarClient } from "@pkg/polar";
+import type { Billing } from "@pkg/billing";
 import type { Result } from "@pkg/result";
 import type { Database } from "remix/data-table";
 
 import { failure, isFailure, success } from "@pkg/result";
 
+import Customer from "~/app/data/customer";
 import Lead from "~/app/data/lead";
-import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 import Team from "~/app/data/team";
 import { invites, subscriptions, userPreferences } from "~/database/schema";
 
@@ -68,7 +68,7 @@ export interface AccountErasureReport {
 	teamsDeleted: number;
 	/** Memberships given up in teams that survive. */
 	membershipsRemoved: number;
-	/** Polar subscriptions revoked on this run; `0` on a re-run of an already-cancelled account. */
+	/** Subscriptions cancelled on this run; `0` on a re-run of an already-cancelled account. */
 	subscriptionsRevoked: number;
 	/**
 	 * The destroyed teams that had other members, for the sweep to notify. Empty for a
@@ -120,17 +120,17 @@ export async function planAccountErasure(
  * the caller removes that row itself, once the confirmation mail is accepted.
  *
  * @param db - Database handle.
- * @param polar - Polar client, used only to revoke the subject's active subscriptions.
+ * @param billing - The configured platform, used only to end the subject's subscriptions.
  * @param subjectId - The OIDC subject being erased.
  * @param email - The address captured with the request, used to find a trial lead to forget.
  */
 export async function eraseAccount(
 	db: Database,
-	polar: PolarClient,
+	billing: Billing,
 	subjectId: string,
 	email: string,
 ): Promise<Result<AccountErasureReport, Error>> {
-	let revoked = await cancelBilling(polar, subjectId);
+	let revoked = await cancelBilling(billing, subjectId);
 	if (isFailure(revoked)) return revoked;
 
 	let memberships = await Team.listWithRoleBySubjectId(db, subjectId);
@@ -160,9 +160,9 @@ export async function eraseAccount(
 	}
 
 	/**
-	 * The local projection of Polar's state. Revoking upstream leaves a row saying "revoked"
-	 * about a person who no longer exists here, while the invoices that must survive stay on
-	 * Polar's side.
+	 * The local projection of the platform's state. Cancelling upstream leaves a row saying
+	 * "revoked" about a person who no longer exists here, while the invoices that must survive
+	 * stay on the platform's side.
 	 */
 	await db.deleteMany(subscriptions, { where: { external_customer_id: subjectId } });
 
@@ -193,20 +193,18 @@ export async function eraseAccount(
 }
 
 /**
- * Revokes every active subscription the subject holds and reports how many. Idempotent by
- * construction: only *active* subscriptions are listed, so a second pass over an already-
- * cancelled account revokes nothing and succeeds with `0`.
+ * Ends every subscription the subject holds and reports how many. A refusal aborts the whole
+ * erasure, since deleting the account while its billing keeps renewing is the one outcome
+ * neither side can correct afterwards.
  */
-async function cancelBilling(
-	polar: PolarClient,
-	subjectId: string,
-): Promise<Result<number, Error>> {
-	try {
-		let active = await polar.listActiveSubscriptions(subjectId, SUBSCRIPTION_PRODUCT_ID);
-		for (let subscription of active) await polar.revokeSubscription(subscription.id);
-		return success(active.length);
-	} catch (error) {
-		let cause = error instanceof Error ? error.message : String(error);
-		return failure(new Error(`Could not cancel billing for ${subjectId}: ${cause}`));
+async function cancelBilling(billing: Billing, subjectId: string): Promise<Result<number, Error>> {
+	let cancelled = await Customer.cancelSubscriptions(billing, subjectId);
+
+	if (isFailure(cancelled)) {
+		return failure(
+			new Error(`Could not cancel billing for ${subjectId}: ${cancelled.error.message}`),
+		);
 	}
+
+	return cancelled;
 }

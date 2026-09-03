@@ -11,13 +11,13 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/billing": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/highlight": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/markdown": "workspace:*",
-		"@pkg/polar": "workspace:*",
 		"@pkg/response": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/seo": "workspace:*",

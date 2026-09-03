@@ -13,7 +13,6 @@ import type { RequestContext } from "remix/router";
 
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/http/response/json";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -83,7 +82,7 @@ async function errorResponse(
  */
 export default createAction(
 	routes.auth.providerCallback,
-	inject([Database, PolarClient, RateLimiters] as const, async (db, polar, limiters) => {
+	inject([Database, RateLimiters] as const, async (db, limiters) => {
 		let ctx = getContext();
 		ctx.logger.info("oauth_callback_received", { provider: ctx.params.provider });
 
@@ -107,7 +106,7 @@ export default createAction(
 			return await errorResponse(ctx, authz, identity.error);
 		}
 
-		let subject = await resolveGitHubSubject(db, polar, identity.data);
+		let subject = await resolveGitHubSubject(db, ctx.billing, identity.data);
 		if (isFailure(subject)) {
 			ctx.logger.info("oauth_subject_resolution_failed", { error: subject.error.code });
 			return await errorResponse(ctx, authz, subject.error);

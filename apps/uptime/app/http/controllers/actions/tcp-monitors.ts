@@ -10,7 +10,6 @@
 
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -173,7 +172,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	 * meter event on a response path: ingestion is best-effort and logs its own failures.
 	 */
 	waitUntil(
-		ingestPings(getServiceContainer().get(PolarClient), [
+		ingestPings(ctx.billing, [
 			{
 				externalId: `ping:${resultId}`,
 				ownerId: ctx.team.owner_id,

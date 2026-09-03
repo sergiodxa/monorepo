@@ -1075,7 +1075,7 @@ export default createController(routes.trial.check, {
 			});
 
 			if (billedTeam !== null) {
-				recordAdhocPing({
+				recordAdhocPing(ctx.billing, {
 					id: generateUUID(),
 					team: billedTeam,
 					status: probe.status,

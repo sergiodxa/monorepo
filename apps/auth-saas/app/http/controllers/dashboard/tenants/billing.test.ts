@@ -19,6 +19,7 @@ import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import render from "~/app/http/middleware/render";
+import BillingCustomer from "~/app/models/billing-customer";
 import Tenant from "~/app/models/tenant";
 import routes from "~/routes/web";
 
@@ -53,10 +54,13 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 /**
- * Answers the two reads this page makes, keyed by table so the tenant lookup and the
- * subscription lookup stay independent of the order the page performs them in.
+ * Answers the three reads this page makes, keyed by table so the tenant, subscription
+ * and customer lookups stay independent of the order the page performs them in.
  */
-function fakeDatabase(subscription: Record<string, unknown> | null): Database {
+function fakeDatabase(
+	subscription: Record<string, unknown> | null,
+	customer: Record<string, unknown> | null,
+): Database {
 	return {
 		async findOne(table: unknown) {
 			if (table === Tenant.table) {
@@ -70,18 +74,23 @@ function fakeDatabase(subscription: Record<string, unknown> | null): Database {
 					internal: false,
 				};
 			}
+			if (table === BillingCustomer.table) return customer;
 			return subscription;
 		},
 	} as unknown as Database;
 }
 
 /**
- * Renders the billing page for an owner whose tenant carries the given subscription,
- * standing in for the session middleware by setting `platformSession` directly.
+ * Renders the billing page for an owner whose tenant carries the given subscription and
+ * customer link, standing in for the session middleware by setting `platformSession`
+ * directly. A tenant with no customer link is one that has never subscribed.
  */
-async function renderBilling(subscription: Record<string, unknown> | null): Promise<string> {
+async function renderBilling(
+	subscription: Record<string, unknown> | null,
+	customer: Record<string, unknown> | null = null,
+): Promise<string> {
 	let container = new ServiceContainer();
-	container.instance(Database, fakeDatabase(subscription));
+	container.instance(Database, fakeDatabase(subscription, customer));
 
 	let router = createRouter({
 		middleware: [
@@ -108,7 +117,10 @@ let action = routes.dashboard.tenants.billing.action.href({ tenantId: TENANT_ID 
 
 describe("GET /dashboard/tenants/:tenantId/billing", () => {
 	test("marks the billing-portal form as a document submission", async () => {
-		let body = await renderBilling({ id: "sub-1", status: "active", polar_customer_id: "cus-1" });
+		let body = await renderBilling(
+			{ id: "sub-1", status: "active" },
+			{ tenant_id: TENANT_ID, connection: "polar", provider_customer_id: "cus-1" },
+		);
 
 		let form = body.match(new RegExp(`<form[^>]*action="${action}\\?action=portal"[^>]*>`));
 		expect(form?.[0]).toContain("data-rmx-document");

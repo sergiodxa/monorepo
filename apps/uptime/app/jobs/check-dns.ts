@@ -12,8 +12,6 @@
 import type { CurrentJobContext } from "@pkg/jobs";
 
 import { createJobHandler } from "@pkg/jobs";
-import { PolarClient } from "@pkg/polar";
-import { getServiceContainer } from "@pkg/service-container";
 
 import type { ClaimedDnsMonitor } from "~/app/data/dns-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
@@ -24,6 +22,7 @@ import type { BillablePing } from "~/app/services/ping-meter";
 import DnsMonitor from "~/app/data/dns-monitor";
 import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
+import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyDnsResult } from "~/app/services/alerts";
@@ -80,7 +79,6 @@ function createQueryBudget(queries: number): QueryBudget {
 }
 
 export default createJobHandler(jobs.checkDns, async (ctx) => {
-	let polar = getServiceContainer().get(PolarClient);
 	/**
 	 * Claimed as of now: the claim advances each monitor from its own previous due time, so
 	 * this instant only decides which monitors are owed a check, tolerant of the few seconds

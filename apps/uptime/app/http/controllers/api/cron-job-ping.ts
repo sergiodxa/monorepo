@@ -13,7 +13,6 @@ import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
 import type { Middleware } from "remix/router";
 
 import { conflict, created, notFound, tooManyRequests } from "@pkg/http/response/json";
-import { PolarClient } from "@pkg/polar";
 import { CloudflareAdapter, MemoryAdapter } from "@pkg/rate-limit";
 import { rateLimit } from "@pkg/rate-limit/middleware";
 import { getServiceContainer } from "@pkg/service-container";
@@ -182,7 +181,7 @@ export default createAction(routes.api.cronJobPing, {
 			 * round trip belongs after the caller is already answered.
 			 */
 			waitUntil(
-				ingestPings(getServiceContainer().get(PolarClient), [
+				ingestPings(ctx.billing, [
 					{
 						externalId: `ping:${pingId}`,
 						ownerId,

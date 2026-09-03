@@ -20,7 +20,6 @@ vi.doMock("cloudflare:workers", () => ({
 		DB: createD1Database(),
 		EMAIL: createSendEmail(),
 		KV: createKVNamespace(),
-		POLAR_ACCESS_TOKEN: "test-polar-token",
 		CLIENT_ID: "test-client-id",
 		CLIENT_SECRET: "test-client-secret",
 	}),
@@ -29,7 +28,6 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { ManagementClient } = await import("@pkg/auth/management-client");
 let { Mailer } = await import("@pkg/mail");
-let { PolarClient } = await import("@pkg/polar");
 let { ServiceContainer } = await import("@pkg/service-container");
 let { Database } = await import("remix/data-table");
 let { container } = await import("./container");
@@ -44,13 +42,6 @@ describe("container", () => {
 
 		expect(db).toBeInstanceOf(Database);
 		expect(container.get(Database)).toBe(db);
-	});
-
-	test("resolves a PolarClient singleton", () => {
-		let client = container.get(PolarClient);
-
-		expect(client).toBeInstanceOf(PolarClient);
-		expect(container.get(PolarClient)).toBe(client);
 	});
 
 	test("resolves a Mailer singleton for the send paths with no request behind them", () => {

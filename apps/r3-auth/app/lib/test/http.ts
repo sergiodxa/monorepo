@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Customer } from "@pkg/polar";
+import type { Billing } from "@pkg/billing";
 import type { Database } from "remix/data-table";
 
+import { MemoryBilling } from "@pkg/billing/providers/memory";
 import { createKVNamespace, createR2Bucket, createRateLimit } from "@pkg/cloudflare-mocks";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { KVSessionStorage } from "@pkg/session-storage-kv";
 import { createCookie } from "remix/cookie";
@@ -49,41 +49,17 @@ export interface TestAppOptions {
 	/** Per-limiter budgets, so a test can drive one limiter to its threshold. */
 	limits?: RateLimitBudgets;
 	/**
-	 * The billing client provisioning resolves. Defaults to one that answers every call
-	 * with a canned customer, so tests unrelated to billing run entirely offline; pass a
-	 * failing client to exercise an outage, or a recording one to assert on provisioning.
+	 * The billing platform provisioning bills against. Defaults to an empty in-memory
+	 * one, so tests unrelated to billing run entirely offline; pass a failing platform
+	 * to exercise an outage, or read the default back to assert on provisioning.
 	 */
-	polar?: PolarClient;
+	billing?: Billing;
 	/**
 	 * Transport every mailer in this instance delivers through. Defaults to a recording
 	 * one, so a test reads what the app actually sent; pass a transport that fails to
 	 * exercise a send path's behaviour when delivery is refused.
 	 */
 	mailTransport?: MailTransport;
-}
-
-/**
- * A billing client that answers every call from memory.
- *
- * Shaped as the subset of the real client provisioning calls, because the vendor SDK
- * would otherwise be loaded and a request issued for a concern no HTTP test is about.
- */
-function createStubPolarClient(): PolarClient {
-	let customer = { id: "cus_test", email: "", externalId: null } as unknown as Customer;
-
-	let stub: Pick<PolarClient, "createCustomer" | "findCustomerByEmail" | "updateCustomer"> = {
-		async createCustomer(email) {
-			return { ...customer, email } as Customer;
-		},
-		async findCustomerByEmail() {
-			return null;
-		},
-		async updateCustomer(_id, updates) {
-			return { ...customer, externalId: updates.externalId ?? null } as Customer;
-		},
-	};
-
-	return stub as unknown as PolarClient;
 }
 
 /** Secrets read from `env` at call time, given values no real provider would accept. */
@@ -159,6 +135,8 @@ export interface TestApp {
 	kv: ReturnType<typeof createKVNamespace>;
 	/** The bucket the signing keys are generated into on first use. */
 	r2: ReturnType<typeof createR2Bucket>;
+	/** The billing platform this instance bills against, so a test reads back what it provisioned. */
+	billing: Billing;
 	/**
 	 * The recording transport both mailers deliver through, so a test asserts on the
 	 * messages the app actually produced. Stays empty when a test option supplies a
@@ -230,7 +208,6 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	let container = new ServiceContainer();
 	container.singleton(DatabaseKey, () => db);
-	container.singleton(PolarClient, () => options.polar ?? createStubPolarClient());
 
 	let recorder = new MemoryTransport();
 	let transport: MailTransport = options.mailTransport ?? recorder;
@@ -251,7 +228,14 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 			}),
 	);
 
-	let router = application({ kv: appKv, cookieSecret: COOKIE_SECRET, secure: false });
+	let billing = options.billing ?? new MemoryBilling();
+
+	let router = application({
+		kv: appKv,
+		cookieSecret: COOKIE_SECRET,
+		secure: false,
+		billing,
+	});
 	let cookies = new Map<string, string>();
 
 	return {
@@ -259,6 +243,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 		db,
 		kv: appKv,
 		r2: appR2,
+		billing,
 		mail: recorder,
 		resetCookies() {
 			cookies.clear();

@@ -1,19 +1,20 @@
 /**
  * Unit tests for the `checkHttp` job: classification, degraded thresholds and
  * content checks, at-least-once idempotency, Durable Object sharding and EU
- * jurisdiction pinning (ADR-013), the D1 cost model (ADR-019), and Polar metering.
- * The database is a real in-memory SQLite instance and MSW serves the webhook and
- * Analytics Engine endpoints, so only the Polar client is mocked.
+ * jurisdiction pinning (ADR-013), the D1 cost model (ADR-019), and usage metering.
+ * The database is a real in-memory SQLite instance, MSW serves the webhook and Analytics
+ * Engine endpoints, and billing runs against a real in-memory platform.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UsageEvent } from "@pkg/billing";
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import type { IngestEvent } from "@pkg/polar";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
+import { BillingError } from "@pkg/billing";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
@@ -24,7 +25,7 @@ import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
-import { PolarClient } from "@pkg/polar";
+import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -34,6 +35,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { createTestBilling } from "~/app/lib/test/billing";
 import {
 	applyMigrations,
 	compileSqliteStatement,
@@ -69,14 +71,6 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchM
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-/**
- * The billing client the container hands the job, with the one call `ingestPings` makes
- * spied on. The client is real — only the request is intercepted — so the event shape
- * asserted below is the one `ingestPings` actually built.
- */
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
-
 /** The queue, watched so a stray send from the check would be caught here. */
 let queue: QueueMock = createQueue();
 
@@ -93,19 +87,32 @@ vi.doMock("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
+/**
+ * The platform the job bills against, with the one call `ingestPings` makes spied on. The
+ * platform is real — only the observation is added — so the event shape asserted below is
+ * the one `ingestPings` actually built.
+ */
+let billing = createTestBilling();
+let realIngest = billing.usage.ingest.bind(billing.usage);
+let ingestMock = vi.spyOn(billing.usage, "ingest");
+
+/** The job has no request behind it, so it reads the configured platform from this module. */
+let realBillingModule = await import("~/app/lib/billing");
+
+vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+
 let { Job, createJobContext } = await import("@pkg/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let checkHttp = (await import("./check-http")).default;
 
-/** Builds a container with a mailer that records instead of sending, and the spied-on billing client. */
+/** Builds a container with a mailer that records instead of sending. */
 function makeContainer() {
 	let container = new ServiceContainer();
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	container.singleton(PolarClient, () => polar);
 	return container;
 }
 
@@ -133,7 +140,7 @@ async function runJob(db: Database, monitorId: string, options: { jobId?: string
 }
 
 /**
- * Seeds the team a monitor belongs to, which is what names the Polar customer the check
+ * Seeds the team a monitor belongs to, which is what names the billing customer the check
  * is billed to. Only the metering and cost suites need it seeded, since billing is the
  * one thing here that reads it.
  */
@@ -248,8 +255,8 @@ beforeEach(() => {
 	);
 	pingResults.reset();
 	geoFetch.reset();
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	ingestMock.mockClear();
+	ingestMock.mockImplementation(realIngest);
 	deliveries.length = 0;
 });
 
@@ -910,13 +917,14 @@ describe("checkHttp cached status", () => {
 
 /**
  * The check as a billable ping: one event against the `ping` meter, keyed on the job id
- * so a redelivery is deduplicated on Polar's side as well as short-circuited on ours, with
+ * so a redelivery is deduplicated on the platform's side as well as short-circuited on ours,
+ * with
  * billing happening only once a result has actually committed.
  */
 describe("checkHttp metering", () => {
-	/** Every event the job handed Polar, flattened across the calls it made. */
-	function ingestedEvents(): IngestEvent[] {
-		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+	/** Every event the job handed the platform, flattened across the calls it made. */
+	function ingestedEvents(): UsageEvent[] {
+		return ingestMock.mock.calls.flatMap(([events]) => [...events]);
 	}
 
 	test("bills one ping, keyed on the job id and charged to the team's owner", async () => {
@@ -927,11 +935,11 @@ describe("checkHttp metering", () => {
 
 		await runJob(db, monitor.id, { jobId });
 
-		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
+		expect(ingestMock).toHaveBeenCalledTimes(1);
 		expect(ingestedEvents()).toEqual([
 			{
 				name: "ping",
-				externalCustomerId: "owner-1",
+				customer: { externalId: "owner-1" },
 				externalId: `ping:${jobId}`,
 				metadata: { teamId: "team-1", type: "http", monitorId: monitor.id },
 			},
@@ -969,7 +977,7 @@ describe("checkHttp metering", () => {
 
 		let logger = await runJob(db, monitor.id);
 
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(ingestMock).not.toHaveBeenCalled();
 		let unbillable = logger.events.find(
 			(entry) => entry.event === "job.check_http.unbillable_team",
 		);
@@ -981,7 +989,9 @@ describe("checkHttp metering", () => {
 		let { db } = createTestDatabase();
 		await seedTeam(db);
 		let monitor = await seedMonitor(db);
-		ingestEventsSafeMock.mockImplementation(async () => false);
+		ingestMock.mockImplementation(async () =>
+			failure(new BillingError("refused", { code: "invalid_request", connection: "memory" })),
+		);
 
 		let logger = await runJob(db, monitor.id);
 
@@ -999,6 +1009,6 @@ describe("checkHttp metering", () => {
 
 		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.Retry);
 
-		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(ingestMock).not.toHaveBeenCalled();
 	});
 });

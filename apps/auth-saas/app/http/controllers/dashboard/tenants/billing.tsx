@@ -8,13 +8,15 @@
  */
 
 import { Location } from "@pkg/location";
+import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
-import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
+import { failureFields } from "~/app/lib/billing";
+import BillingCustomer from "~/app/models/billing-customer";
 import Subscription from "~/app/models/subscription";
 import AnalyticsService from "~/app/services/analytics";
 import { SubscriptionBadge } from "~/app/views/components";
@@ -36,6 +38,7 @@ export default createController(routes.dashboard.tenants.billing, {
 			let blockedReason = url.searchParams.get("blocked");
 
 			let subscription = await Subscription.findByTenant(db, tenant.id);
+			let customer = await BillingCustomer.findByTenant(db, tenant.id);
 
 			let month = AnalyticsService.getCurrentMonth();
 			let mau = 0;
@@ -172,7 +175,7 @@ export default createController(routes.dashboard.tenants.billing, {
 						)}
 					</section>
 
-					{subscription?.polar_customer_id ? (
+					{customer ? (
 						<section mix={[s.section]}>
 							<h3 mix={[s.cardTitle]}>Manage Subscription</h3>
 							<p mix={[s.lead]}>
@@ -210,64 +213,64 @@ export default createController(routes.dashboard.tenants.billing, {
 			let actionType = url.searchParams.get("action");
 
 			if (actionType === "portal") {
-				try {
-					let portalUrl = await Subscription.createPortalUrl(db, tenant.id);
-					log.info("Redirecting to billing portal", { tenantId: tenant.id });
-					return new Response(null, {
-						status: 302,
-						headers: { Location: portalUrl },
-					});
-				} catch (error) {
+				let portal = await Subscription.createPortalUrl(db, tenant.id);
+
+				if (isFailure(portal)) {
 					log.error("Failed to create portal session", {
 						tenantId: tenant.id,
-						error: error instanceof Error ? error.message : String(error),
+						...failureFields(portal.error),
 					});
 					return new Response("Failed to open billing portal", { status: 500 });
 				}
+
+				log.info("Redirecting to billing portal", { tenantId: tenant.id });
+				return new Response(null, {
+					status: 302,
+					headers: { Location: portal.data },
+				});
 			}
 
 			if (actionType === "checkout") {
-				try {
-					let productId = env.POLAR_PRODUCT_ID ?? "placeholder-product-id";
-					let successPath = String(
-						new Location({
-							pathname: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }),
-							search: new URLSearchParams({ success: "true" }),
-						}),
-					);
-					let successUrl = `${url.origin}${successPath}`;
+				let successPath = String(
+					new Location({
+						pathname: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }),
+						search: new URLSearchParams({ success: "true" }),
+					}),
+				);
 
-					let checkoutUrl = await Subscription.createCheckoutUrl(
-						db,
-						tenant.id,
-						productId,
-						successUrl,
-					);
-					log.info("Redirecting to checkout", { tenantId: tenant.id });
-					return new Response(null, {
-						status: 302,
-						headers: { Location: checkoutUrl },
-					});
-				} catch (error) {
+				let checkout = await Subscription.createCheckoutUrl(
+					db,
+					tenant.id,
+					`${url.origin}${successPath}`,
+				);
+
+				if (isFailure(checkout)) {
 					log.error("Failed to create checkout session", {
 						tenantId: tenant.id,
-						error: error instanceof Error ? error.message : String(error),
+						...failureFields(checkout.error),
 					});
 					return new Response("Failed to start checkout", { status: 500 });
 				}
+
+				log.info("Redirecting to checkout", { tenantId: tenant.id });
+				return new Response(null, {
+					status: 302,
+					headers: { Location: checkout.data },
+				});
 			}
 
 			if (actionType === "cancel") {
-				try {
-					await Subscription.cancel(db, tenant.id);
-					log.info("Subscription canceled", { tenantId: tenant.id });
-				} catch (error) {
+				let canceled = await Subscription.cancel(db, tenant.id);
+
+				if (isFailure(canceled)) {
 					log.error("Failed to cancel subscription", {
 						tenantId: tenant.id,
-						error: error instanceof Error ? error.message : String(error),
+						...failureFields(canceled.error),
 					});
 					return new Response("Failed to cancel subscription", { status: 500 });
 				}
+
+				log.info("Subscription canceled", { tenantId: tenant.id });
 			}
 
 			return new Response(null, {

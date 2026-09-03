@@ -11,7 +11,6 @@
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { ok } from "@pkg/http/response/json";
-import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -223,7 +222,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 				type: "flow",
 			});
 		}
-		waitUntil(ingestPings(getServiceContainer().get(PolarClient), pings));
+		waitUntil(ingestPings(ctx.billing, pings));
 	}
 
 	/**

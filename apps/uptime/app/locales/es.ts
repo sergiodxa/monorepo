@@ -2498,6 +2498,8 @@ export default {
 			},
 			ownerOnly:
 				"Solo el propietario del equipo puede ver y gestionar la facturación de este equipo.",
+			unavailable:
+				"La facturación no está disponible temporalmente. Vuelve a intentarlo en unos minutos.",
 		},
 
 		members: {

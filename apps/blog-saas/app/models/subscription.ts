@@ -1,7 +1,7 @@
 /**
- * The `Subscription` control-plane model: one account-level Polar subscription (base
- * fee plus a pooled metered allowance), mirroring Polar's status and period so the
- * platform can decide entitlement without calling Polar on every request.
+ * The `Subscription` control-plane model: one account-level subscription (base fee
+ * plus a pooled metered allowance), projecting the billing platform's status and
+ * period so entitlement is decided without reaching the platform on a request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +10,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-/** Polar subscription status values. */
+/** Subscription status values the projection stores. */
 export type SubscriptionStatus =
 	| "incomplete"
 	| "active"
@@ -29,8 +29,8 @@ export default class Subscription {
 		columns: {
 			id: c.text(),
 			account_id: c.text(),
-			polar_subscription_id: c.text().nullable(),
-			polar_product_id: c.text().nullable(),
+			billing_subscription_id: c.text().nullable(),
+			billing_product_slug: c.text().nullable(),
 			status: c.text(),
 			current_period_start: c.text().nullable(),
 			current_period_end: c.text().nullable(),
@@ -51,14 +51,14 @@ export default class Subscription {
 	}
 
 	/**
-	 * Finds a subscription by its Polar subscription id.
+	 * Finds a subscription by the id the billing platform issued for it.
 	 *
 	 * @param db The control-plane database.
-	 * @param polarSubscriptionId The Polar subscription id.
+	 * @param billingSubscriptionId The platform's subscription id.
 	 * @returns The subscription row, or `null` if none matches.
 	 */
-	static findByPolarId(db: Database, polarSubscriptionId: string) {
-		return db.findOne(this.table, { where: { polar_subscription_id: polarSubscriptionId } });
+	static findByBillingId(db: Database, billingSubscriptionId: string) {
+		return db.findOne(this.table, { where: { billing_subscription_id: billingSubscriptionId } });
 	}
 
 	/**
@@ -74,8 +74,8 @@ export default class Subscription {
 
 	/**
 	 * Upserts an account's subscription from a partial patch: updates the existing row
-	 * or creates one with sensible defaults. Called by the Polar webhook to keep local
-	 * state in sync with billing events.
+	 * or creates one with sensible defaults. The entitlement sync writes through here,
+	 * so a delivery about an account that never subscribed still lands a row.
 	 *
 	 * @param db The control-plane database.
 	 * @param accountId The owning account id.
@@ -98,8 +98,8 @@ export default class Subscription {
 		await db.create(this.table, {
 			id,
 			account_id: accountId,
-			polar_subscription_id: patch.polar_subscription_id ?? null,
-			polar_product_id: patch.polar_product_id ?? null,
+			billing_subscription_id: patch.billing_subscription_id ?? null,
+			billing_product_slug: patch.billing_product_slug ?? null,
 			status: patch.status ?? "incomplete",
 			current_period_start: patch.current_period_start ?? null,
 			current_period_end: patch.current_period_end ?? null,

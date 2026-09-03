@@ -14,7 +14,6 @@ import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -24,6 +23,7 @@ import type { FlowCheckResult } from "~/app/services/flow-check";
 import type { InsertFlowMonitor } from "~/database/schema";
 
 import FlowMonitor from "~/app/data/flow-monitor";
+import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 /** A run whose every test passed, which is the neutral result each case narrows from. */
@@ -70,8 +70,17 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
-let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
+/**
+ * The platform the sweep bills against, with the one call `ingestPings` makes spied on. The
+ * job has no request behind it, so it reads the configured platform from this module.
+ */
+let billing = createTestBilling();
+let realIngest = billing.usage.ingest.bind(billing.usage);
+let ingestMock = vi.spyOn(billing.usage, "ingest");
+
+let realBillingModule = await import("~/app/lib/billing");
+
+vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let realFlowCheckModule = await import("~/app/services/flow-check");
 
@@ -92,7 +101,6 @@ function enqueued(): NotifyMessage[] {
 /** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(PolarClient, () => polar);
 
 	let ctx = createJobContext(jobs.checkFlows, {
 		id: "message-1",
@@ -119,8 +127,8 @@ beforeEach(() => {
 	runFlowCheckMock.mockImplementation(async () => passing());
 	queue.reset();
 	pingResults.reset();
-	ingestEventsSafeMock.mockClear();
-	ingestEventsSafeMock.mockImplementation(async () => true);
+	ingestMock.mockClear();
+	ingestMock.mockImplementation(realIngest);
 });
 
 describe("checkFlows", () => {

@@ -21,13 +21,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
 
+import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/billing";
 import {
 	applyMigrations,
 	compileSqliteStatement,
 	createSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/lib/test/db";
-import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/polar";
 import {
 	cronJobMonitors,
 	cronJobPings,

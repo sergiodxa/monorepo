@@ -13,8 +13,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PolarClient } from "@pkg/polar";
-import { getServiceContainer } from "@pkg/service-container";
+import type { Billing } from "@pkg/billing";
+
 import { waitUntil } from "cloudflare:workers";
 
 import type { PingStatus } from "~/app/services/analytics";
@@ -27,7 +27,7 @@ import { ingestPings } from "~/app/services/ping-meter";
  * value: every ad-hoc ping is a one-off, so per-ping ids would make a high-cardinality
  * dimension nothing can group by, while this one counts a team's ad-hoc traffic as one stream.
  *
- * @see {@link recordAdhocPing} — the Polar event, which identifies the same ping by its own id.
+ * @see {@link recordAdhocPing} — the meter event, which identifies the same ping by its own id.
  */
 export const ADHOC_MONITOR_ID = "adhoc";
 
@@ -35,7 +35,7 @@ export const ADHOC_MONITOR_ID = "adhoc";
 export interface AdhocPing {
 	/** Unique id for this ping; becomes the meter event's idempotency key. */
 	id: string;
-	/** The team that asked for it, and whose owner is the Polar customer. */
+	/** The team that asked for it, and whose owner is the billing customer. */
 	team: { id: string; owner_id: string };
 	status: PingStatus;
 	responseTimeMs: number;
@@ -46,7 +46,7 @@ export interface AdhocPing {
  * caller already holding its result must not wait on billing. The billed event's
  * metadata is team and type only, so it lands in the team's shared total.
  */
-export function recordAdhocPing(ping: AdhocPing): void {
+export function recordAdhocPing(billing: Billing, ping: AdhocPing): void {
 	writePingResult({
 		monitorId: ADHOC_MONITOR_ID,
 		teamId: ping.team.id,
@@ -56,7 +56,7 @@ export function recordAdhocPing(ping: AdhocPing): void {
 	});
 
 	waitUntil(
-		ingestPings(getServiceContainer().get(PolarClient), [
+		ingestPings(billing, [
 			{
 				externalId: `ping:${ping.id}`,
 				ownerId: ping.team.owner_id,

@@ -35,8 +35,8 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectMonitor, SelectTeam } from "~/database/schema";
 
+import { createActiveSubscription } from "~/app/lib/test/billing";
 import { createSqliteDatabaseAdapter, createTestDatabase } from "~/app/lib/test/db";
-import { createActiveSubscription } from "~/app/lib/test/polar";
 import en from "~/app/locales/en";
 import { memberships, monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";

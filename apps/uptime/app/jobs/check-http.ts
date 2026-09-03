@@ -13,7 +13,6 @@ import type { CurrentJobContext } from "@pkg/jobs";
 
 import { createJobHandler } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
-import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 
 import type { CheckHttpInput } from "~/app/jobs";
@@ -23,6 +22,7 @@ import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 import Monitor from "~/app/data/monitor";
 import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
+import { polar } from "~/app/lib/billing";
 import { notifyHttpResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
@@ -197,7 +197,7 @@ async function meter(ctx: CheckHttpContext, teamId: string): Promise<void> {
 		return;
 	}
 
-	await ingestPings(getServiceContainer().get(PolarClient), [
+	await ingestPings(polar, [
 		{
 			externalId: `ping:${ctx.input.id}`,
 			ownerId,
