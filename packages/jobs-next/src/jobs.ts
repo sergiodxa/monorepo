@@ -50,6 +50,18 @@ export type JobMap<Tree> = {
 		: JobMap<Tree[Key]>;
 };
 
+/**
+ * What enqueuing one job takes, named from the definition rather than its schema, so an
+ * app writing its own enqueue helper does not have to name the schema library.
+ *
+ * @example
+ * export function enqueue<Job extends AnyJobDefinition>(job: Job, input: JobInput<Job>) {
+ * 	return sendQueueBatch([messageBody(job, input)]);
+ * }
+ */
+export type JobInput<Definition> =
+	Definition extends JobDefinition<infer Schema> ? EnqueueInput<Schema> : never;
+
 /** A definition whatever its schema, for the places that hold many at once. */
 // oxlint-disable-next-line typescript/no-explicit-any -- definitions vary by schema
 export type AnyJobDefinition = JobDefinition<any>;

@@ -102,6 +102,20 @@ describe("ending a delivery", () => {
 		}
 	});
 
+	test("every ending shares one base, so a catch can re-throw without naming all four", () => {
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		for (let end of [() => ctx.ack(), () => ctx.retry(), () => ctx.exit(), () => ctx.timeout()]) {
+			expect(end).toThrow(Job.Ending);
+		}
+	});
+
+	test("retrying carries the reason it was given", () => {
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		expect(() => ctx.retry({ reason: "Rate limited" })).toThrow("Rate limited");
+	});
+
 	test("timing out throws the ending that pings no monitor", () => {
 		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
 

@@ -25,6 +25,7 @@ export type {
 	EnqueueArgs,
 	EnqueueInput,
 	JobDefinition,
+	JobInput,
 	JobMap,
 	JobTree,
 } from "./jobs";
@@ -49,7 +50,7 @@ export type {
 
 export { JobContext } from "./context";
 export { createJobDispatcher } from "./dispatcher";
-export { Job } from "./errors";
+export { Ending, Job } from "./errors";
 export { createJobContext, createJobHandler } from "./handler";
 export { job } from "./job";
 export { jobs, messageBody } from "./jobs";

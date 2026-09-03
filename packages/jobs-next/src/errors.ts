@@ -19,6 +19,24 @@ export interface RetryOptions extends ErrorOptions {
 	 * by accident.
 	 */
 	delay?: DurationInput;
+	/** Why this delivery is coming back, for the `job.retrying` event. */
+	reason?: string;
+}
+
+/**
+ * What every ending is. A handler that catches broadly re-throws one of these rather
+ * than swallowing its own decision:
+ *
+ * @example
+ * try {
+ * 	await charge(invoice);
+ * } catch (error) {
+ * 	if (error instanceof Ending) throw error;
+ * 	ctx.retry({ cause: error });
+ * }
+ */
+export class Ending extends Error {
+	override name = "Job.Ending";
 }
 
 /**
@@ -27,7 +45,7 @@ export interface RetryOptions extends ErrorOptions {
  *
  * @example ctx.ack();
  */
-export class Ack extends Error {
+export class Ack extends Ending {
 	override name = "Job.Ack";
 
 	constructor(message = "Job finished its work.", options?: ErrorOptions) {
@@ -41,7 +59,7 @@ export class Ack extends Error {
  *
  * @example ctx.retry({ delay: "5 minutes" });
  */
-export class Retry extends Error {
+export class Retry extends Ending {
 	override name = "Job.Retry";
 
 	/** How long to hold the message, when the thrower asked for a backoff. */
@@ -59,7 +77,7 @@ export class Retry extends Error {
  *
  * @example ctx.exit("Team no longer exists", { cause: error });
  */
-export class NonRetriable extends Error {
+export class NonRetriable extends Ending {
 	override name = "Job.NonRetriable";
 
 	constructor(message = "Job cannot succeed for this message.", options?: ErrorOptions) {
@@ -73,7 +91,7 @@ export class NonRetriable extends Error {
  *
  * @example if (ctx.signal.aborted) ctx.timeout();
  */
-export class Timeout extends Error {
+export class Timeout extends Ending {
 	override name = "Job.Timeout";
 
 	constructor(message = "Job ran out of time.", options?: ErrorOptions) {
@@ -88,4 +106,4 @@ export class Timeout extends Error {
  *
  * @example if (error instanceof Job.Retry) hold(error.delay);
  */
-export const Job = Object.assign({}, { Ack, Retry, NonRetriable, Timeout });
+export const Job = Object.assign({}, { Ending, Ack, Retry, NonRetriable, Timeout });

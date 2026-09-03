@@ -91,12 +91,12 @@ export class JobContext<Input = undefined> {
 	/**
 	 * Gives up on this delivery and asks for another.
 	 *
-	 * @param options How long to hold the message, and what caused this.
+	 * @param options Why it is coming back, how long to hold it, and what caused this.
 	 * @throws {Retry} Always.
 	 * @example ctx.retry({ delay: "5 minutes" });
 	 */
 	retry(options?: RetryOptions): never {
-		throw new Retry(undefined, options);
+		throw new Retry(options?.reason, options);
 	}
 
 	/**

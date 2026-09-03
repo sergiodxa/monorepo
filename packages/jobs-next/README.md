@@ -427,10 +427,13 @@ function holdFor(error: Retry) {
 try {
 	await charge(invoice);
 } catch (error) {
-	if (error instanceof Job.Retry) throw error; // Never swallow an ending.
-	ctx.retry({ delay: "1 minute", cause: error });
+	if (error instanceof Job.Ending) throw error; // Never swallow an ending.
+	ctx.retry({ reason: "Charge failed", delay: "1 minute", cause: error });
 }
 ```
+
+`Job.Ending` is the base all four share, so a broad `catch` re-throws whichever one the
+handler chose without naming each.
 
 ### Types
 
@@ -485,28 +488,28 @@ export function database(): JobMiddleware<{
 }
 ```
 
-## Pattern: One Handler For Several Schedules
+## Pattern: One Body Of Work, Several Schedules
 
-Two leaves that differ only by schedule share one handler, which reads `ctx.cron` to
-tell them apart.
+Two leaves that differ only by schedule share their work through a plain function, and
+each gets its own thin handler module. A handler is paired with exactly one job — the
+dispatcher refuses a handler mapped to a different one — so the sharing happens below
+`createJobHandler`, not around it.
 
 ```typescript
-// app/jobs/index.ts
-digests: {
-	daily: job({ cron: "0 8 * * *", monitorId: "3d1a…" }),
-	weekly: job({ cron: "0 9 * * 1", monitorId: "77b2…" }),
+// app/jobs/send-team-digests.ts
+export async function sendTeamDigests(ctx: JobHandlerContext<undefined>, period: "day" | "week") {
+	await mailDigests(ctx.database, period);
 }
 
-// app/jobs/dispatcher.ts
-dispatcher.map(jobs.digests.daily, () => import("~/app/jobs/digests"));
-dispatcher.map(jobs.digests.weekly, () => import("~/app/jobs/digests"));
+// app/jobs/send-team-daily-digests.ts
+export default createJobHandler(jobs.sendTeamDailyDigests, (ctx) => sendTeamDigests(ctx, "day"));
 
-// app/jobs/digests.ts
-export default createJobHandler(jobs.digests.daily, async (ctx) => {
-	let since = ctx.cron === "0 9 * * 1" ? "7 days" : "1 day";
-	await sendDigests(ctx.database, since);
-});
+// app/jobs/send-team-weekly-digests.ts
+export default createJobHandler(jobs.sendTeamWeeklyDigests, (ctx) => sendTeamDigests(ctx, "week"));
 ```
+
+Each leaf keeps its own monitor and its own loader, so one schedule failing is one
+monitor alerting.
 
 ## Pattern: Cooperative Cancellation
 
@@ -588,10 +591,13 @@ dispatcher itself uses.
    request path's module graph. For the same reason, prefer `messageBody()` plus the
    app's own queue helper when a controller enqueues, over importing the dispatcher.
 4. **Never swallow an ending** - A `catch` around a `ctx.*` call catches the thrown
-   ending too; re-throw anything you did not mean to handle.
-5. **Reach for `ctx.exit()` for bad input** - Invalid data will not become valid on a
+   ending too. Re-throw it with `if (error instanceof Job.Ending) throw error;`.
+5. **Write `return ctx.retry(…)`** - The verbs return `never`, but TypeScript only
+   narrows on a never-returning call through a `const` name, and `ctx` is a parameter —
+   so returning is what tells the compiler the lines below are unreachable.
+6. **Reach for `ctx.exit()` for bad input** - Invalid data will not become valid on a
    redelivery, so acking and recording beats spending the retries.
-6. **Pass `ctx.signal` to every fetch** - It is what makes a timeout cancel work rather
+7. **Pass `ctx.signal` to every fetch** - It is what makes a timeout cancel work rather
    than merely stop waiting for it.
-7. **Let a monitor mean what it says** - A run that timed out pings nothing, so a
+8. **Let a monitor mean what it says** - A run that timed out pings nothing, so a
    monitor alerting is evidence the job really stopped completing.
