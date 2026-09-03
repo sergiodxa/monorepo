@@ -24,7 +24,7 @@ const ID_TOKEN_CLOCK_TOLERANCE = 60;
  * The algorithm the provider signs ID tokens with, stated so a token presenting any
  * other one is refused before a key is chosen for it.
  */
-const ID_TOKEN_ALGORITHMS = [JWK.Algorithm.ES256];
+const ID_TOKEN_ALGORITHMS: JWK.Algorithm[] = [JWK.Algorithm.ES256];
 
 /**
  * Verifies the token's signature, `iss`, `aud`, and lifetime claims, reading the provider's
