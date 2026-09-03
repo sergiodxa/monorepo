@@ -944,9 +944,15 @@ If the real requirement is being able to stop being the merchant of record witho
   - [x] `StripeBilling`, deliberately narrow, adopted by no app
   - [x] `MercadoPagoBilling`, a PSP rather than a merchant of record, missing four capability groups
   - [x] Contract bugs the second and third providers found, fixed and recorded in this ADR
-- [ ] Phase 4: App adoption
+- [x] Phase 4: App adoption
+  - [x] All five apps on a module-scope provider, off the service container
+  - [x] `reportMAU` and `ingestPageViews` replaced by app-owned meters
+  - [x] `billing_customers` and the delivery store in the three apps that persist billing state
+  - [x] Migrations written; not yet applied, so a deploy still runs build, migrate, deploy in that order
 - [ ] Phase 5: Capability build-out
-- [ ] Phase 6: Remove `@pkg/polar`
+  - [x] Meters, which a waiting feature needed
+  - [ ] Refunds, license keys, files, custom fields, metrics, webhook endpoints, each when an app reaches for one
+- [x] Phase 6: Remove `@pkg/polar`
 
 ## Notes
 
