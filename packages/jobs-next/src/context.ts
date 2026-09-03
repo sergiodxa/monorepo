@@ -84,9 +84,9 @@ export class JobContext<Input = undefined> {
 	 * @param reason What finished the job early, for the thrown error's message.
 	 * @throws {Ack} Always.
 	 */
-	ack = (reason?: string): never => {
+	ack(reason?: string): never {
 		throw new Ack(reason);
-	};
+	}
 
 	/**
 	 * Gives up on this delivery and asks for another.
@@ -95,9 +95,9 @@ export class JobContext<Input = undefined> {
 	 * @throws {Retry} Always.
 	 * @example ctx.retry({ delay: "5 minutes" });
 	 */
-	retry = (options?: RetryOptions): never => {
+	retry(options?: RetryOptions): never {
 		throw new Retry(undefined, options);
-	};
+	}
 
 	/**
 	 * Gives up for good: the delivery is acked, because a redelivery reaches the
@@ -108,9 +108,9 @@ export class JobContext<Input = undefined> {
 	 * @throws {NonRetriable} Always.
 	 * @example ctx.exit("Team no longer exists", { cause: error });
 	 */
-	exit = (reason?: string, options?: ErrorOptions): never => {
+	exit(reason?: string, options?: ErrorOptions): never {
 		throw new NonRetriable(reason, options);
-	};
+	}
 
 	/**
 	 * Gives up because time ran out: the delivery is retried, and no monitor is
@@ -120,25 +120,27 @@ export class JobContext<Input = undefined> {
 	 * @throws {Timeout} Always.
 	 * @example if (ctx.signal.aborted) ctx.timeout();
 	 */
-	timeout = (reason?: string): never => {
+	timeout(reason?: string): never {
 		throw new Timeout(reason);
-	};
+	}
 
 	/**
 	 * Reads a value some middleware published.
 	 * @param key The context key to read.
 	 * @returns Its value, the key's default, or `undefined`.
 	 */
-	get = <Key extends object>(key: Key): ContextValue<Key> | undefined => {
+	get<Key extends object>(key: Key): ContextValue<Key> | undefined {
 		if (this.#values.has(key)) return this.#values.get(key) as ContextValue<Key>;
 		return (key as { defaultValue?: ContextValue<Key> }).defaultValue;
-	};
+	}
 
 	/**
 	 * Whether a value has been published for a key.
 	 * @param key The context key to check.
 	 */
-	has = (key: object): boolean => this.#values.has(key);
+	has(key: object): boolean {
+		return this.#values.has(key);
+	}
 
 	/**
 	 * Publishes a value for a key, optionally installing it as a direct property so
@@ -148,11 +150,11 @@ export class JobContext<Input = undefined> {
 	 * @param value The value to publish.
 	 * @param options The property name to install it under.
 	 */
-	set = <Key extends object>(
+	set<Key extends object>(
 		key: Key,
 		value: ContextValue<Key>,
 		options?: { property: string },
-	): void => {
+	): void {
 		this.#values.set(key, value);
 
 		if (options === undefined) return;
@@ -163,7 +165,7 @@ export class JobContext<Input = undefined> {
 			enumerable: true,
 			writable: false,
 		});
-	};
+	}
 }
 
 /** A context whatever payload it carries, for the places that hold any of them. */
