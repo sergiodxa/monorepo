@@ -299,7 +299,7 @@ Throwing rather than settling is what keeps the cooperative path clear of the on
 if (signal.aborted) return ack(); // The mail already sent must not be sent twice.
 ```
 
-The router's own default is the other one: leave the message unacked so the platform redelivers, which is right for a job that hung before doing anything durable. Only the handler can tell those apart, which is what the grace is for, and it is sized to unwind rather than to keep working.
+The router's own default is the other one: leave the message unacked so the platform redelivers, which is right for a job that hung before doing anything durable. Only the handler can tell those apart, which is what the grace is for, and it is sized to unwind rather than to keep working. Acking that way settles the message and nothing more: the run still reports a timeout and still pings no monitor, because a handler that gave up early has not done the work the monitor watches for.
 
 All three paths report the same thing. A thrown `JobTimeout`, an `AbortError` surfacing from a `fetch` that was given `ctx.signal`, and the router giving up all log `job.timed-out` and skip the uptime ping. With no `timeout` configured, `ctx.signal` is a signal that never aborts, so handlers pass it along unconditionally.
 
