@@ -136,17 +136,39 @@ a job that declares none. A batch is one write, and enqueuing nothing writes not
 
 ### Ending a delivery
 
-| From the handler                       | What happens                                                                |
-| -------------------------------------- | --------------------------------------------------------------------------- |
-| Return                                 | Ping the job's monitor, ack, log `job.completed`                            |
-| `throw new RetryError(msg, { delay })` | Log `job.retrying`, retry the message, optionally after a delay             |
-| `throw new NonRetriableError()`        | Log `job.non-retriable`, ack — a redelivery reaches the same result         |
-| `throw new JobTimeout()`               | Log `job.timed-out`, retry, no ping                                         |
-| `ctx.ack()`                            | Settle now and keep going, for work already durable                         |
-| `ctx.retry({ delay: "5 minutes" })`    | Settle for redelivery; return next                                          |
-| Anything else thrown                   | Log `job.failed` and re-throw, leaving the platform to retry the invocation |
+A job ends its delivery through the context. Each verb throws, so the handler stops
+where it was called and nothing after it runs — there is no ending to forget to return.
 
-The first settlement wins, and the dispatcher settles nothing a handler already settled.
+| Call                                | What happens                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------- |
+| Return                              | Ping the job's monitor, ack, log `job.completed`                            |
+| `ctx.ack()`                         | The same, from anywhere in the call stack                                   |
+| `ctx.retry({ delay: "5 minutes" })` | Log `job.retrying`, retry the message, optionally after a delay             |
+| `ctx.exit("Team is gone")`          | Log `job.non-retriable`, ack — a redelivery reaches the same result         |
+| `ctx.timeout()`                     | Log `job.timed-out`, retry, ping nothing                                    |
+| Anything else thrown                | Log `job.failed` and re-throw, leaving the platform to retry the invocation |
+
+Each verb throws its own class, and those are exported to catch, construct, and narrow:
+
+```typescript
+import { Job } from "@pkg/jobs-next";
+import { Retry } from "@pkg/jobs-next/errors";
+
+try {
+	await charge(invoice);
+} catch (error) {
+	if (error instanceof Job.Retry) throw error; // Never swallow an ending.
+	ctx.retry({ delay: "1 minute", cause: error });
+}
+
+function holdFor(error: Retry) {
+	return error.delay;
+}
+```
+
+A `catch` around a `ctx.*` call catches the ending too, so re-throw anything you did not
+mean to handle. `@pkg/jobs-next/errors` exports `Ack`, `Retry`, `NonRetriable`, and
+`Timeout` individually, which is what a type position needs; `Job.Retry` names a value.
 
 ### Timeouts
 
@@ -157,15 +179,16 @@ that agreed to be cancelled, and stop the batch being held open by one stuck job
 ```typescript
 export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	for (let flow of await flowsDue(ctx.database)) {
-		if (ctx.signal.aborted) throw new JobTimeout();
+		if (ctx.signal.aborted) ctx.timeout();
 		await runFlow(flow, { signal: ctx.signal });
 	}
 });
 ```
 
 At the deadline the signal aborts and the handler has a short grace to give up on its
-own, before the dispatcher leaves the message unacked for redelivery. A handler whose work
-is durable and must not repeat can `ctx.ack()` instead. A run whose signal aborted
+own, before the dispatcher leaves the message unacked for redelivery. A handler whose work is
+durable and must not repeat can `ctx.ack()` instead, which acks the message without
+claiming the run finished. A run whose signal aborted
 reports `job.timed-out` and pings no monitor however it was settled.
 
 ## API
@@ -177,9 +200,7 @@ reports `job.timed-out` and pings no monitor however it was settled.
 | `createJobHandler()`    | Pairs a handler with the job it runs, and types its payload              |
 | `createJobDispatcher()` | The registry both worker handlers delegate to                            |
 | `JobContext`            | The context handlers and middleware share; tests build one directly      |
-| `JobTimeout`            | Give up because the timeout fired                                        |
-| `RetryError`            | Retry this delivery, optionally after a `delay`                          |
-| `NonRetriableError`     | Ack this delivery; it will not get better                                |
+| `Job`                   | The four endings, grouped: `Ack`, `Retry`, `NonRetriable`, `Timeout`     |
 
 ### Dispatcher
 
@@ -216,13 +237,17 @@ test("deletes rows past the retention window", async () => {
 	ctx.set(Database, await testDatabase(), { property: "database" });
 
 	await handler(ctx);
+});
 
-	expect(ctx.settlement).toBeUndefined();
+test("asks for a retry while the API is rate limiting", async () => {
+	let ctx = new JobContext(jobs.checkHttp, { id: "message-1", attempts: 1, input });
+
+	await expect(handler(ctx)).rejects.toBeInstanceOf(Job.Retry);
 });
 ```
 
-A context built without a message records what the handler asked for on
-`ctx.settlement` rather than calling a platform, so a retry is asserted like a row.
+The verbs throw whether or not a delivery is behind the context, so a test asserts an
+ending by catching it — no queue, and nothing to mock.
 
 ## Related Packages
 

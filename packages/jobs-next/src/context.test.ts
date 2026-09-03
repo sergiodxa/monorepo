@@ -7,31 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Message } from "@cloudflare/workers-types";
-
 import { createContextKey } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
-import { job, JobContext, jobs } from "./index";
+import type { NonRetriable, Retry } from "./errors";
+
+import { Job, job, JobContext, jobs } from "./index";
 
 let map = jobs(
 	{ clean: job({ cron: "0 0 * * *", monitorId: "monitor-1" }) },
 	{ send: async () => {} },
 );
-
-/** A delivery that records what was done to it. */
-function message() {
-	return {
-		id: "message-1",
-		attempts: 1,
-		body: {},
-		ack: vi.fn(),
-		retry: vi.fn(),
-	} as unknown as Message<unknown> & {
-		ack: ReturnType<typeof vi.fn>;
-		retry: ReturnType<typeof vi.fn>;
-	};
-}
 
 describe("JobContext", () => {
 	test("carries the job's own declaration", () => {
@@ -66,53 +52,55 @@ describe("JobContext", () => {
 	});
 });
 
-describe("settling", () => {
-	test("acks the delivery and records it", () => {
-		let delivery = message();
-		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1, message: delivery });
-
-		ctx.ack();
-
-		expect(delivery.ack).toHaveBeenCalledTimes(1);
-		expect(ctx.settlement).toEqual({ type: "ack" });
-	});
-
-	test("converts a retry delay to whole seconds", () => {
-		let delivery = message();
-		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1, message: delivery });
-
-		ctx.retry({ delay: "2 minutes" });
-
-		expect(delivery.retry).toHaveBeenCalledWith({ delaySeconds: 120 });
-	});
-
-	test("retries without a delay when none was asked for", () => {
-		let delivery = message();
-		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1, message: delivery });
-
-		ctx.retry();
-
-		expect(delivery.retry).toHaveBeenCalledWith({});
-	});
-
-	test("keeps the first settlement and ignores the second", () => {
-		let delivery = message();
-		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1, message: delivery });
-
-		ctx.ack();
-		ctx.retry({ delay: "1 hour" });
-
-		expect(ctx.settlement).toEqual({ type: "ack" });
-		expect(delivery.retry).not.toHaveBeenCalled();
-	});
-
-	test("records the outcome instead of calling a platform when built without a message", () => {
+describe("ending a delivery", () => {
+	test("acking throws the ending that finishes the job", () => {
 		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
 
-		expect(ctx.settlement).toBeUndefined();
+		expect(() => ctx.ack()).toThrow(Job.Ack);
+	});
 
-		ctx.retry({ delay: "5 minutes" });
+	test("retrying carries the delay it was asked to hold for", () => {
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
 
-		expect(ctx.settlement).toEqual({ type: "retry", delay: "5 minutes" });
+		try {
+			ctx.retry({ delay: "5 minutes" });
+			expect.unreachable("retry() must throw");
+		} catch (error) {
+			expect(error).toBeInstanceOf(Job.Retry);
+			expect((error as Retry).delay).toBe("5 minutes");
+		}
+	});
+
+	test("exiting carries the reason and the cause it was given", () => {
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+		let cause = new Error("row is gone");
+
+		try {
+			ctx.exit("Team no longer exists", { cause });
+			expect.unreachable("exit() must throw");
+		} catch (error) {
+			expect(error).toBeInstanceOf(Job.NonRetriable);
+			expect((error as NonRetriable).message).toBe("Team no longer exists");
+			expect((error as NonRetriable).cause).toBe(cause);
+		}
+	});
+
+	test("timing out throws the ending that pings no monitor", () => {
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		expect(() => ctx.timeout()).toThrow(Job.Timeout);
+	});
+
+	test("stops the handler where it was called", () => {
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+		let after = vi.fn();
+
+		function handler() {
+			ctx.retry();
+			after();
+		}
+
+		expect(handler).toThrow(Job.Retry);
+		expect(after).not.toHaveBeenCalled();
 	});
 });

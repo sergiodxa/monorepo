@@ -1,14 +1,14 @@
 /**
- * Public surface of the jobs package: the declaration helpers that build a job map,
- * the handler and middleware types an app writes against, the dispatcher both worker
- * handlers delegate to, the context they all share, and the errors that end a delivery.
+ * Public surface of the jobs package: the declaration helpers that build a job map, the
+ * handler and middleware types an app writes against, the dispatcher both worker handlers
+ * delegate to, and the context they all share. The endings a job throws are grouped here
+ * as `Job`, and exported one by one from `@pkg/jobs-next/errors`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { AnyJobContext, JobContextInit, RetryDeliveryOptions, Settlement } from "./context";
-export type { RetryOptions } from "./errors";
+export type { AnyJobContext, JobContextInit } from "./context";
 export type {
 	AnyJobHandler,
 	CurrentJobContext,
@@ -49,8 +49,8 @@ export type {
 } from "./dispatcher";
 
 export { JobContext } from "./context";
-export { JobTimeout, NonRetriableError, RetryError } from "./errors";
+export { createJobDispatcher } from "./dispatcher";
+export { Job } from "./errors";
 export { createJobHandler } from "./handler";
 export { job } from "./job";
 export { jobs } from "./jobs";
-export { createJobDispatcher } from "./dispatcher";

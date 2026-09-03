@@ -15,7 +15,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createJobHandler, createJobDispatcher, job, jobs, JobTimeout } from "./index";
+import { createJobDispatcher, createJobHandler, job, jobs } from "./index";
 
 const UPTIME_URL = "https://uptime.sergiodxa.com";
 const MONITOR_ID = "monitor-1";
@@ -80,8 +80,8 @@ describe("timeouts", () => {
 		let dispatcher = createJobDispatcher({ timeout: "1 second" });
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, ({ signal }) => {
-				signal.addEventListener("abort", () => aborted());
+			createJobHandler(map.clean, (ctx) => {
+				ctx.signal.addEventListener("abort", () => aborted());
 				return new Promise<void>(() => {});
 			}),
 		);
@@ -107,9 +107,9 @@ describe("timeouts", () => {
 		let dispatcher = createJobDispatcher({ timeout: "1 second" });
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, async ({ signal, ack }) => {
-				await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()));
-				ack();
+			createJobHandler(map.clean, async (ctx) => {
+				await new Promise<void>((resolve) => ctx.signal.addEventListener("abort", () => resolve()));
+				ctx.ack();
 			}),
 		);
 
@@ -123,15 +123,13 @@ describe("timeouts", () => {
 		expect(events()).toContain("job.timed-out");
 	});
 
-	test("reports a thrown JobTimeout as a timeout", async () => {
+	test("reports a job that timed itself out", async () => {
 		let { queue, map } = setup();
 
 		let dispatcher = createJobDispatcher({ timeout: "1 minute" });
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, () => {
-				throw new JobTimeout();
-			}),
+			createJobHandler(map.clean, (ctx) => ctx.timeout()),
 		);
 
 		await map.clean.enqueue();
@@ -147,8 +145,8 @@ describe("timeouts", () => {
 		let dispatcher = createJobDispatcher();
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, ({ signal }) => {
-				expect(signal.aborted).toBe(false);
+			createJobHandler(map.clean, (ctx) => {
+				expect(ctx.signal.aborted).toBe(false);
 			}),
 		);
 

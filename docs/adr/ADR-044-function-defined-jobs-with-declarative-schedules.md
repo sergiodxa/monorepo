@@ -108,21 +108,20 @@ export default createJobHandler(jobs.clean, async ({ database, logger }) => {
 
 The handler receives one context object: the job's own declaration, the message it is running for, and whatever the middleware published. Passing the definition is what supplies the input type, the same way `createAction()` types a stored Remix handler.
 
-A handler settles its own delivery when it wants to, through `ctx.ack()` and `ctx.retry(options?)`. The `Message` itself stays out of reach: the context exposes the two verbs, so the dispatcher keeps owning the logging, the uptime ping, and the decision it makes when the handler settles nothing.
+A handler ends its own delivery through the context, and every verb throws: the handler stops where it was called, and nothing after it runs. The `Message` itself stays out of reach, so the dispatcher keeps owning the logging, the uptime ping, and the ending it reads out of what was thrown.
 
-| Call                                | Effect                                                                                                                        |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `ctx.ack()`                         | Settles the delivery now and returns. The run continues, and completing still pings and logs `job.completed`                  |
-| `ctx.retry()`                       | Settles the delivery for redelivery and returns. The handler is expected to return next; the run logs `job.retrying`, no ping |
-| `ctx.retry({ delay: "5 minutes" })` | The same, held for that long — the backoff `RetryError` has no way to express                                                 |
-| Returning without settling          | Unchanged: ping, then ack, then `job.completed`                                                                               |
-| Throwing                            | Unchanged: `RetryError` retries, `NonRetriableError` acks, `JobTimeout` reports a timeout, anything else re-throws            |
+| Call                                | The ending                                                            |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| Returning                           | Ping the monitor, ack, log `job.completed`                            |
+| `ctx.ack()`                         | The same, from anywhere in the call stack                             |
+| `ctx.retry({ delay: "5 minutes" })` | Log `job.retrying`, retry the message, held for as long as it asked   |
+| `ctx.exit("Team is gone")`          | Log `job.non-retriable`, ack — a redelivery reaches the same result   |
+| `ctx.timeout()`                     | Log `job.timed-out`, retry, ping nothing                              |
+| Anything else thrown                | Log `job.failed` and re-throw, so the platform retries the invocation |
 
-The first settlement wins. A second call is ignored, and so is the dispatcher's own ack at the end of a run the handler already settled — which is what makes early-acking safe for a job that wants its delivery released before a slow tail finishes. A handler that settles and then throws still logs the throw; it does not re-settle.
+Throwing is what makes an ending impossible to forget: there is no ending that returns, so no handler decides one and then keeps working. The four classes are exported for `instanceof` and for helpers that take one — grouped as `Job.Ack`, `Job.Retry`, `Job.NonRetriable`, and `Job.Timeout`, and individually from the package's `errors` entry point, which is what a type position needs. The cost is the cost of every throw-based control flow: a `catch` around a `ctx.*` call catches the ending too, and has to re-throw what it did not mean to handle.
 
 `delay` is a `DurationInput` from `@pkg/duration`, so a backoff is written the way the cron package already takes a grace period: `ctx.retry({ delay: "5 minutes" })`. The package converts it with `toSeconds()`, which rounds to the nearest second, and hands that to the platform's `delaySeconds`. Taking a duration rather than a raw seconds number is what keeps a caller from passing milliseconds to a seconds-shaped API, which is the mistake that package exists to prevent — a bare number in a `DurationInput` is already milliseconds.
-
-`RetryError` accepts `delay` alongside `cause`, so the thrown and the called spelling of a retry carry the same options and neither is the second-class one.
 
 ### 3. Middleware And Context
 
@@ -173,7 +172,7 @@ Context keys come from `remix/router`: `createContextKey()` returns a plain type
 
 Middleware is dispatcher-level only. Per-job middleware is deliberately absent: a job that needs setup nothing else needs can do it in its own first lines, and one chain for every job is what keeps the ordering guarantees legible.
 
-Ordering inside a delivery is: read `type`, find the definition, parse the body, build the context, run the middleware chain, load the handler module, run the handler. Middleware therefore never runs for a message that was never going to be handled, and a throw from middleware is classified exactly as a throw from a handler — `RetryError` retries, `NonRetriableError` acks.
+Ordering inside a delivery is: read `type`, find the definition, parse the body, build the context, run the middleware chain, load the handler module, run the handler. Middleware therefore never runs for a message that was never going to be handled, and a throw from middleware is read exactly as a throw from a handler: `ctx.retry()` retries, `ctx.exit()` acks.
 
 This is what makes a handler testable without a worker:
 
@@ -185,12 +184,10 @@ test("deletes pings past the retention window", async () => {
 	ctx.set(Database, await testDatabase(), { property: "database" });
 
 	await handler(ctx);
-
-	expect(ctx.settlement).toBeUndefined();
 });
 ```
 
-A context built without a message records what the handler asked for on `ctx.settlement` rather than calling into the platform, so a test asserts a retry the same way it asserts a row.
+The verbs throw whether or not a delivery is behind the context, so an ending is asserted by catching it — `await expect(handler(ctx)).rejects.toBeInstanceOf(Job.Retry)` — with no queue and nothing to mock.
 
 ### 4. Enqueuing Goes Through The Map
 
@@ -283,25 +280,25 @@ That is worth having because `queue()` awaits every message: one hung job holds 
 At the deadline the dispatcher aborts `ctx.signal` and gives the handler a short, package-fixed grace to give up on its own before settling on its behalf. A handler that notices gives up by throwing, in the same vocabulary as every other outcome:
 
 ```typescript
-export default createJobHandler(jobs.checkFlows, async ({ signal, database }) => {
-	for (let flow of await flowsDue(database)) {
-		if (signal.aborted) throw new JobTimeout();
-		await runFlow(flow, { signal });
+export default createJobHandler(jobs.checkFlows, async (ctx) => {
+	for (let flow of await flowsDue(ctx.database)) {
+		if (ctx.signal.aborted) ctx.timeout();
+		await runFlow(flow, { signal: ctx.signal });
 	}
 });
 ```
 
-Throwing rather than settling is what keeps the cooperative path clear of the one hazard `ctx.retry()` carries: it unwinds, so there is no handler that gives up and keeps working anyway. `new JobTimeout()` is spelled like the two error classes beside it, and named to stay clear of the `TimeoutError` DOMException that `AbortSignal.timeout()` raises.
+`ctx.timeout()` throws like every other ending, so a handler that gives up cannot keep working by accident. The class it throws is named `Job.Timeout` to stay clear of the `TimeoutError` DOMException that `AbortSignal.timeout()` raises, which a handler may well be catching in the same place.
 
 `ctx.ack()` stays the escape hatch for what a throw cannot express. A sweep partway through sending mail has done durable, non-idempotent work, and wants the delivery gone rather than redelivered:
 
 ```typescript
-if (signal.aborted) return ack(); // The mail already sent must not be sent twice.
+if (ctx.signal.aborted) ctx.ack(); // The mail already sent must not be sent twice.
 ```
 
 The dispatcher's own default is the other one: leave the message unacked so the platform redelivers, which is right for a job that hung before doing anything durable. Only the handler can tell those apart, which is what the grace is for, and it is sized to unwind rather than to keep working. Acking that way settles the message and nothing more: the run still reports a timeout and still pings no monitor, because a handler that gave up early has not done the work the monitor watches for.
 
-All three paths report the same thing. A thrown `JobTimeout`, an `AbortError` surfacing from a `fetch` that was given `ctx.signal`, and the dispatcher giving up all log `job.timed-out` and skip the uptime ping. With no `timeout` configured, `ctx.signal` is a signal that never aborts, so handlers pass it along unconditionally.
+All three paths report the same thing. `ctx.timeout()`, an `AbortError` surfacing from a `fetch` that was given `ctx.signal`, and the dispatcher giving up all log `job.timed-out` and skip the uptime ping. With no `timeout` configured, `ctx.signal` is a signal that never aborts, so handlers pass it along unconditionally.
 
 ### 7. The Wire Format Does Not Change
 
@@ -321,7 +318,7 @@ Validity is checked where it costs nothing at runtime. Each app gets one test as
 
 ### 9. The Lifecycle Carries Over Unchanged
 
-Log event names (`job.started`, `job.completed`, `job.retrying`, `job.non-retriable`, `job.failed`, `job.uptime-failed`), the `job:<name>:<message id>` logger identifier, the ack/retry decision for a handler that settles nothing itself, and the uptime ping with its swallowed failures all keep their current behavior. `RetryError` and `NonRetriableError` become top-level named exports instead of statics on `Job`; they are the same classes, so `instanceof` keeps working across the migration.
+Log event names (`job.started`, `job.completed`, `job.retrying`, `job.non-retriable`, `job.failed`, `job.uptime-failed`), the `job:<name>:<message id>` logger identifier, the ack/retry decision for a handler that ends nothing itself, and the uptime ping with its swallowed failures all keep their current behavior. The error vocabulary is what changes shape: `Job.RetryError` and `Job.NonRetriableError` become `Job.Retry` and `Job.NonRetriable`, thrown by `ctx.retry()` and `ctx.exit()` rather than constructed at each site.
 
 The logger identifier is now the map key rather than a kebab-cased class name, which changes `job:check-http-job:…` to `job:check-http:…`. Dashboards filtering on those identifiers are updated with the app that produces them.
 
@@ -329,17 +326,15 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 
 ### API Surface
 
-| Export                  | Kind     | Note                                                                                              |
-| ----------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `jobs()`                | Function | Builds a job map, naming each leaf after its key                                                  |
-| `job()`                 | Function | Declares one leaf: `input`, `cron`, `monitorId`                                                   |
-| `createJobHandler()`    | Function | Types a handler against a definition, returns a `JobHandler`                                      |
-| `createJobDispatcher()` | Function | Returns `map` / `queue` / `scheduled` / `crons`                                                   |
-| `JobContext`            | Class    | The context handlers and middleware share; built from a leaf and a message, or by a test directly |
-| `JobMiddleware`         | Type     | `(context, next) => Promise<void>`, entry-typed like `Middleware`                                 |
-| `JobTimeout`            | Class    | Give up because the timeout fired; also what the dispatcher reports when it gives up              |
-| `RetryError`            | Class    | Retry this message, optionally after a `delay`                                                    |
-| `NonRetriableError`     | Class    | Ack this message, it will not get better                                                          |
+| Export                  | Kind     | Note                                                                                                                  |
+| ----------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `jobs()`                | Function | Builds a job map, naming each leaf after its key                                                                      |
+| `job()`                 | Function | Declares one leaf: `input`, `cron`, `monitorId`                                                                       |
+| `createJobHandler()`    | Function | Types a handler against a definition, returns a `JobHandler`                                                          |
+| `createJobDispatcher()` | Function | Returns `map` / `queue` / `scheduled` / `crons`                                                                       |
+| `JobContext`            | Class    | The context handlers and middleware share; built from a leaf and a message, or by a test directly                     |
+| `JobMiddleware`         | Type     | `(context, next) => Promise<void>`, entry-typed like `Middleware`                                                     |
+| `Job`                   | Object   | The four endings — `Ack`, `Retry`, `NonRetriable`, `Timeout` — also exported one by one from the `errors` entry point |
 
 ## Consequences
 
@@ -367,7 +362,7 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 - **The package reimplements a slice of Remix's context types** - Entry-typed middleware that installs `ctx.db` needs the conditional types behind `property`, and those are internal to `fetch-router`. They have to be written here and kept in step. If they prove unstable, the fallback is keys only, and handlers read `ctx.get(Database)` with an `undefined` to narrow.
 - **Dead-letter records are the package's shape** - An app names the queue and gets the package's log events for it. `onInvalid` still decides what is forwarded and where, but what a dead-letter record looks like is no longer an app's to change.
 - **A timeout can duplicate work** - The handler keeps running after the dispatcher stops waiting, so a job that hangs partway can finish its writes and then have its redelivery do them again. Queues are at-least-once and jobs already tolerate redelivery, but the timeout turns "hung" into "possibly done twice", and only a cooperative `ctx.ack()` avoids it.
-- **Two ways to settle a delivery** - Throwing and calling both exist, and `ctx.retry()` returns rather than unwinding, so a handler that calls it and keeps working is a mistake the compiler cannot catch. Throwing is the path to reach for, and first-settlement-wins bounds the other to wasted work rather than a double settle.
+- **An ending is a thrown error** - A `catch` around a `ctx.*` call catches it, so a handler that swallows broadly swallows its own ending and runs on as though nothing happened. The alternative — verbs that return — trades that for handlers that decide an ending and keep working, which is the worse of the two.
 - **A job in the map with no mapping is silently dead** - It still accepts enqueues, and nothing in the type system objects. One test catches it; the compiler does not.
 - **A large mechanical migration** - 21 job classes become handlers, two apps gain a map, a dispatcher, and middleware, two workers change, and every enqueue call site moves to the map. `apps/uptime` is the bulk of it and carries the traffic.
 - **Log identifiers change** - `job:check-http-job:…` becomes `job:check-http:…`, which breaks saved queries at the cutover.
@@ -392,8 +387,8 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 1. Scaffold `packages/jobs-next` and add `jobs()`, `job()`, `createJobHandler()`, `createJobDispatcher()`, `JobContext`, and `JobMiddleware`, taking `@pkg/duration` as a dependency for the retry delay.
 2. Build the context on `createContextKey` from `remix/router`, with `get` / `has` / `set(key, value, { property })` and the entry typing that makes an installed property visible to handlers.
 3. Port the lifecycle — logger identifier, ack/retry classification, uptime ping — from `@pkg/jobs`, keeping its log event names.
-4. Export `RetryError`, `NonRetriableError`, and `JobTimeout` at the top level.
-5. Tests: naming from map keys including nested paths, dispatch by `type`, a loader resolved once and reused, a handler module left unloaded for a body that fails its schema, middleware ordering and its `RetryError` classification, settlement precedence across `ctx.ack()` / `ctx.retry()` / a later throw / the dispatcher's own ack, a `delay` converted to whole seconds and reaching the platform from both spellings, a context property installed by middleware and read by a handler, a timeout aborting `ctx.signal`, a thrown `JobTimeout` and a cooperative `ctx.ack()` both winning inside the grace, the dispatcher settling after it, an `AbortError` from the shared signal reported as a timeout, and `job.timed-out` logged with no ping, a dead-letter batch recorded and acked with both body shapes told apart, `ctx.batchSize` reporting the batch, `scheduled()` matching one cron across several jobs and enqueuing them rather than running them, `enqueue` / `enqueueMany` batching into one `send`, duplicate-name rejection, and the unchanged ack/retry/ping behavior.
+4. Export the endings as `Job`, and one by one from the package's `errors` entry point.
+5. Tests: naming from map keys including nested paths, dispatch by `type`, a loader resolved once and reused, a handler module left unloaded for a body that fails its schema, middleware ordering and an ending thrown from inside it, every verb ending the delivery as its class says and stopping the handler where it was called, a `delay` converted to whole seconds, a context property installed by middleware and read by a handler, a timeout aborting `ctx.signal`, `ctx.timeout()` and a cooperative `ctx.ack()` both landing inside the grace, the dispatcher settling after it, an `AbortError` from the shared signal reported as a timeout, and `job.timed-out` logged with no ping, a dead-letter batch recorded and acked with both body shapes told apart, `ctx.batchSize` reporting the batch, `scheduled()` matching one cron across several jobs and enqueuing them rather than running them, `enqueue` / `enqueueMany` batching into one `send`, duplicate-name rejection, and the unchanged ack/retry/ping behavior.
 6. Write the README around the new API. `@pkg/jobs` is not touched in this phase and keeps serving both apps.
 
 ### Phase 2: `apps/r3-auth`

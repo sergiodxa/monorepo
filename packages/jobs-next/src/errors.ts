@@ -1,7 +1,9 @@
 /**
- * The outcomes a handler throws to end its delivery: retry it, refuse it, or
- * give up because the timeout fired. The dispatcher classifies by these classes, so
- * throwing one is how a handler decides what happens to the message it was given.
+ * The four endings a job can throw. Every one of them unwinds the handler, so a job that
+ * decides how its delivery ends stops deciding anything else, and the dispatcher settles
+ * the message from the class it catches. Thrown by the context's own verbs — `ctx.ack()`,
+ * `ctx.retry()`, `ctx.exit()`, `ctx.timeout()` — and grouped under `Job` for the helpers
+ * and `instanceof` checks that name them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,56 +14,78 @@ import type { DurationInput } from "@pkg/duration";
 /** Options a retry accepts, adding a backoff to the standard `cause`. */
 export interface RetryOptions extends ErrorOptions {
 	/**
-	 * How long the platform holds the message before redelivering it. A duration
-	 * rather than a number of seconds, so milliseconds cannot be passed to a
-	 * seconds-shaped API by accident.
+	 * How long the platform holds the message before redelivering it. A duration rather
+	 * than a number of seconds, so milliseconds cannot be passed to a seconds-shaped API
+	 * by accident.
 	 */
 	delay?: DurationInput;
 }
 
 /**
- * Throw to have this delivery redelivered, optionally after a delay. The same
- * options `ctx.retry()` takes, so the thrown and the called spelling agree.
+ * The work is finished: ack the delivery and report a completed run. What returning
+ * does, from anywhere in the call stack.
  *
- * @example throw new RetryError("Rate limited", { delay: "5 minutes" });
+ * @example ctx.ack();
  */
-export class RetryError extends Error {
-	override name = "RetryError";
+export class Ack extends Error {
+	override name = "Job.Ack";
+
+	constructor(message = "Job finished its work.", options?: ErrorOptions) {
+		super(message, options);
+	}
+}
+
+/**
+ * The work did not finish, but a redelivery could: retry the message, optionally after
+ * a delay.
+ *
+ * @example ctx.retry({ delay: "5 minutes" });
+ */
+export class Retry extends Error {
+	override name = "Job.Retry";
 
 	/** How long to hold the message, when the thrower asked for a backoff. */
 	readonly delay: DurationInput | undefined;
 
-	constructor(message = "Failed to run job. Retry.", options?: RetryOptions) {
+	constructor(message = "Job asked to be retried.", options?: RetryOptions) {
 		super(message, options);
 		this.delay = options?.delay;
 	}
 }
 
 /**
- * Throw to ack this delivery without succeeding: a redelivery reaches the same
- * result, so spending the retries is waste.
+ * The work cannot succeed: ack the delivery and report the failure, since a redelivery
+ * reaches the same result and spending the retries is waste.
  *
- * @example throw new NonRetriableError("Invalid input", { cause: result.error });
+ * @example ctx.exit("Team no longer exists", { cause: error });
  */
-export class NonRetriableError extends Error {
-	override name = "NonRetriableError";
+export class NonRetriable extends Error {
+	override name = "Job.NonRetriable";
 
-	constructor(message = "Failed to run job. Not retriable.", options?: ErrorOptions) {
+	constructor(message = "Job cannot succeed for this message.", options?: ErrorOptions) {
 		super(message, options);
 	}
 }
 
 /**
- * Throw when `ctx.signal` has aborted and the handler is giving up. Named to
- * stay clear of the `TimeoutError` DOMException `AbortSignal.timeout()` raises,
- * which a handler may well be catching in the same place.
+ * The job ran out of time: retry the message, and report a run that never finished so
+ * no monitor is told it did.
  *
- * @example if (signal.aborted) throw new JobTimeout();
+ * @example if (ctx.signal.aborted) ctx.timeout();
  */
-export class JobTimeout extends Error {
-	override name = "JobTimeout";
+export class Timeout extends Error {
+	override name = "Job.Timeout";
 
-	constructor(message = "Job gave up: its timeout expired.", options?: ErrorOptions) {
+	constructor(message = "Job ran out of time.", options?: ErrorOptions) {
 		super(message, options);
 	}
 }
+
+/**
+ * The endings, under one name to catch and construct them by. `@pkg/jobs-next/errors`
+ * exports each of them on its own, which is what a type position needs — `Job.Retry`
+ * names a value.
+ *
+ * @example if (error instanceof Job.Retry) hold(error.delay);
+ */
+export const Job = Object.assign({}, { Ack, Retry, NonRetriable, Timeout });

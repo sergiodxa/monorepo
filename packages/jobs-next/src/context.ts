@@ -1,30 +1,21 @@
 /**
- * The context every middleware and handler shares for one delivery. It carries
- * the job's own declaration, the message it is running for, the two verbs that
- * settle that message, and the typed key store middleware publishes through, so
- * a handler reads what it needs off one object and a test builds that object itself.
+ * The context every middleware and handler shares for one delivery. It carries the
+ * job's own declaration, the message it is running for, the typed key store middleware
+ * publishes through, and the four verbs that end a delivery. Each verb throws, so a job
+ * that decides how its delivery ends stops there and cannot forget to stop.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Message } from "@cloudflare/workers-types";
-import type { DurationInput } from "@pkg/duration";
 import type { ContextValue } from "remix/router";
 
-import { toSeconds } from "@pkg/duration";
 import { BatchedLogger } from "@pkg/logger";
 
+import type { RetryOptions } from "./errors";
 import type { AnyJobDefinition } from "./jobs";
 
-/** How a delivery ended, once something settled it. */
-export type Settlement = { type: "ack" } | { type: "retry"; delay: DurationInput | undefined };
-
-/** Options `ctx.retry()` accepts. */
-export interface RetryDeliveryOptions {
-	/** How long the platform holds the message before redelivering it. */
-	delay?: DurationInput;
-}
+import { Ack, NonRetriable, Retry, Timeout } from "./errors";
 
 /** What a context needs to exist, beyond the job it is running. */
 export interface JobContextInit<Input = undefined> {
@@ -40,11 +31,6 @@ export interface JobContextInit<Input = undefined> {
 	logger?: BatchedLogger;
 	/** Aborts when the job's timeout expires. Never aborts when omitted. */
 	signal?: AbortSignal;
-	/**
-	 * The delivery being run. Omitting it — as a test does — keeps `ack` and `retry`
-	 * recording the outcome on {@link JobContext.settlement} instead of calling the platform.
-	 */
-	message?: Message<unknown>;
 }
 
 /**
@@ -73,8 +59,6 @@ export class JobContext<Input = undefined> {
 	readonly signal: AbortSignal;
 
 	readonly #values = new Map<object, unknown>();
-	readonly #message: Message<unknown> | undefined;
-	#settlement: Settlement | undefined;
 
 	/**
 	 * @param job The job being run, which supplies the name, schedule, and monitor.
@@ -90,37 +74,53 @@ export class JobContext<Input = undefined> {
 		this.batchSize = init.batchSize ?? 1;
 		this.logger = init.logger ?? new BatchedLogger(`job:${job.name}:${init.id}`);
 		this.signal = init.signal ?? new AbortController().signal;
-		this.#message = init.message;
-	}
-
-	/** How this delivery was settled, or `undefined` while nothing has settled it. */
-	get settlement(): Settlement | undefined {
-		return this.#settlement;
 	}
 
 	/**
-	 * Settles this delivery now and returns. The run continues, so a job whose work is
-	 * already durable can release the message before a slow tail finishes.
+	 * Finishes here: the delivery is acked and the run is reported as completed.
+	 * What returning does, from anywhere in the call stack.
+	 *
+	 * @param reason What finished the job early, for the thrown error's message.
+	 * @throws {Ack} Always.
 	 */
-	ack = (): void => {
-		if (this.#settlement !== undefined) return;
-		this.#settlement = { type: "ack" };
-		this.#message?.ack();
+	ack = (reason?: string): never => {
+		throw new Ack(reason);
 	};
 
 	/**
-	 * Settles this delivery for redelivery and returns; the handler is expected to
-	 * return next. Prefer throwing when giving up, which cannot be forgotten.
+	 * Gives up on this delivery and asks for another.
 	 *
-	 * @param options How long to hold the message before it comes back.
+	 * @param options How long to hold the message, and what caused this.
+	 * @throws {Retry} Always.
 	 * @example ctx.retry({ delay: "5 minutes" });
 	 */
-	retry = (options?: RetryDeliveryOptions): void => {
-		if (this.#settlement !== undefined) return;
-		this.#settlement = { type: "retry", delay: options?.delay };
-		this.#message?.retry(
-			options?.delay === undefined ? {} : { delaySeconds: toSeconds(options.delay) },
-		);
+	retry = (options?: RetryOptions): never => {
+		throw new Retry(undefined, options);
+	};
+
+	/**
+	 * Gives up for good: the delivery is acked, because a redelivery reaches the
+	 * same result, and the run is reported as a failure.
+	 *
+	 * @param reason Why this message can never succeed.
+	 * @param options The error that led here.
+	 * @throws {NonRetriable} Always.
+	 * @example ctx.exit("Team no longer exists", { cause: error });
+	 */
+	exit = (reason?: string, options?: ErrorOptions): never => {
+		throw new NonRetriable(reason, options);
+	};
+
+	/**
+	 * Gives up because time ran out: the delivery is retried, and no monitor is
+	 * told the job ran.
+	 *
+	 * @param reason What was still outstanding.
+	 * @throws {Timeout} Always.
+	 * @example if (ctx.signal.aborted) ctx.timeout();
+	 */
+	timeout = (reason?: string): never => {
+		throw new Timeout(reason);
 	};
 
 	/**

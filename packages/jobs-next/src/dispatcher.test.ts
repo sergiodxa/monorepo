@@ -17,14 +17,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { JobMiddleware, JobDispatcherContext } from "./index";
 
-import {
-	createJobHandler,
-	createJobDispatcher,
-	job,
-	jobs,
-	NonRetriableError,
-	RetryError,
-} from "./index";
+import { createJobDispatcher, createJobHandler, job, jobs } from "./index";
 
 let consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
 let consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -70,7 +63,7 @@ describe("queue()", () => {
 		let dispatcher = createJobDispatcher();
 		dispatcher.map(
 			map.checkHttp,
-			createJobHandler(map.checkHttp, ({ input }) => void seen.push(input.monitorId)),
+			createJobHandler(map.checkHttp, (ctx) => void seen.push(ctx.input.monitorId)),
 		);
 
 		await map.checkHttp.enqueue({ monitorId: "m1" });
@@ -124,15 +117,13 @@ describe("queue()", () => {
 		expect(load).toHaveBeenCalledTimes(1);
 	});
 
-	test("retries a message whose handler throws RetryError", async () => {
+	test("retries a message whose handler asked to be retried", async () => {
 		let { queue, map } = setup();
 
 		let dispatcher = createJobDispatcher();
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, () => {
-				throw new RetryError("later");
-			}),
+			createJobHandler(map.clean, (ctx) => ctx.retry()),
 		);
 
 		await map.clean.enqueue();
@@ -142,15 +133,13 @@ describe("queue()", () => {
 		expect(result.acked).toHaveLength(0);
 	});
 
-	test("acks a message whose handler throws NonRetriableError", async () => {
+	test("acks a message whose handler gave up for good", async () => {
 		let { queue, map } = setup();
 
 		let dispatcher = createJobDispatcher();
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, () => {
-				throw new NonRetriableError("never");
-			}),
+			createJobHandler(map.clean, (ctx) => ctx.exit("never")),
 		);
 
 		await map.clean.enqueue();
@@ -160,19 +149,19 @@ describe("queue()", () => {
 		expect(result.retried).toHaveLength(0);
 	});
 
-	test("settles a delivery the handler retried itself", async () => {
+	test("acks a delivery the handler finished early", async () => {
 		let { queue, map } = setup();
 
 		let dispatcher = createJobDispatcher();
 		dispatcher.map(
 			map.clean,
-			createJobHandler(map.clean, ({ retry }) => retry()),
+			createJobHandler(map.clean, (ctx) => ctx.ack()),
 		);
 
 		await map.clean.enqueue();
 		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
-		expect(result.retried).toHaveLength(1);
+		expect(result.acked).toHaveLength(1);
 	});
 
 	test("tells the batch how many messages share the invocation", async () => {
@@ -182,7 +171,7 @@ describe("queue()", () => {
 		let dispatcher = createJobDispatcher();
 		dispatcher.map(
 			map.checkHttp,
-			createJobHandler(map.checkHttp, ({ batchSize }) => void sizes.push(batchSize)),
+			createJobHandler(map.checkHttp, (ctx) => void sizes.push(ctx.batchSize)),
 		);
 
 		await map.checkHttp.enqueueMany([{ monitorId: "a" }, { monitorId: "b" }]);
