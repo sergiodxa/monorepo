@@ -84,3 +84,43 @@ describe("a caller's own vocabulary", () => {
 		expect(module("custom", data).words(3)).toBe("alpha alpha alpha");
 	});
 });
+
+describe("the wider prose", () => {
+	test("returns one word, and several sentences", () => {
+		let lorem = module("prose");
+
+		expect(en.lorem).toContain(lorem.word());
+		expect(lorem.sentences(3).match(/\./g)).toHaveLength(3);
+	});
+
+	test("separates paragraphs by a blank line", () => {
+		let lorem = module("paragraphs");
+		let text = lorem.paragraphs({ count: 3 });
+
+		expect(text.split("\n\n")).toHaveLength(3);
+	});
+
+	test("honors a separator it is given", () => {
+		expect(module("paragraphs").paragraphs({ count: 2, separator: " | " }).split(" | ")).toHaveLength(
+			2,
+		);
+	});
+
+	test("writes one sentence per line", () => {
+		expect(module("lines").lines(4).split("\n")).toHaveLength(4);
+	});
+
+	test("writes a slug of dashed words", () => {
+		let lorem = module("slugs");
+
+		expect(lorem.slug()).toMatch(/^[a-z]+(-[a-z]+){2}$/);
+		expect(lorem.slug(5).split("-")).toHaveLength(5);
+	});
+
+	test("writes text of a few sentences", () => {
+		let text = module("text").text();
+
+		expect(text.length).toBeGreaterThan(10);
+		expect(text.endsWith(".")).toBe(true);
+	});
+});

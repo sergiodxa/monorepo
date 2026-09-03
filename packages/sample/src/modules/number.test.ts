@@ -81,3 +81,67 @@ describe("float", () => {
 		}
 	});
 });
+
+describe("the other bases", () => {
+	test("writes hex, binary and octal digits", () => {
+		let numbers = module("bases");
+
+		expect(numbers.hex()).toMatch(/^[0-9a-f]+$/);
+		expect(numbers.binary()).toMatch(/^[01]+$/);
+		expect(numbers.octal()).toMatch(/^[0-7]+$/);
+	});
+
+	test("honors the bounds a base is given", () => {
+		let numbers = module("bounded");
+
+		for (let count = 0; count < 50; count++) {
+			expect(Number.parseInt(numbers.hex({ min: 16, max: 31 }), 16)).toBeGreaterThanOrEqual(16);
+			expect(Number.parseInt(numbers.hex({ min: 16, max: 31 }), 16)).toBeLessThanOrEqual(31);
+		}
+	});
+});
+
+describe("romanNumeral", () => {
+	test("writes only roman digits", () => {
+		let numbers = module("roman");
+
+		for (let count = 0; count < 100; count++) {
+			expect(numbers.romanNumeral()).toMatch(/^[MDCLXVI]+$/);
+		}
+	});
+
+	test("writes the numeral a known value has", () => {
+		let numbers = module("roman");
+
+		expect(numbers.romanNumeral({ min: 4, max: 4 })).toBe("IV");
+		expect(numbers.romanNumeral({ min: 1994, max: 1994 })).toBe("MCMXCIV");
+		expect(numbers.romanNumeral({ min: 3999, max: 3999 })).toBe("MMMCMXCIX");
+	});
+
+	test("refuses a value it cannot write", () => {
+		expect(() => module("roman").romanNumeral({ min: 0, max: 0 })).toThrow(RangeError);
+	});
+});
+
+describe("bigInt", () => {
+	test("stays inside the range it is given", () => {
+		let numbers = module("big");
+
+		for (let count = 0; count < 50; count++) {
+			let value = numbers.bigInt({ min: 10n, max: 20n });
+			expect(value).toBeGreaterThanOrEqual(10n);
+			expect(value).toBeLessThanOrEqual(20n);
+		}
+	});
+
+	test("reaches past what a number can hold", () => {
+		let numbers = module("big");
+		let value = numbers.bigInt({ min: 2n ** 64n, max: 2n ** 65n });
+
+		expect(value).toBeGreaterThanOrEqual(2n ** 64n);
+	});
+
+	test("refuses a reversed range", () => {
+		expect(() => module("big").bigInt({ min: 20n, max: 10n })).toThrow(RangeError);
+	});
+});

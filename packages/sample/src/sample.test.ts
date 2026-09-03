@@ -10,6 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Dataset } from "./dataset";
 
+import { en } from "./data/en";
 import { createRandom } from "./random";
 import { createSample } from "./sample";
 
@@ -68,9 +69,10 @@ describe("derive", () => {
 
 	test("carries the dataset and reference instant with it", () => {
 		let data: Dataset = {
-			firstNames: ["Ada"],
+			...en,
+			firstNames: { female: ["Ada"], male: ["Ada"] },
 			lastNames: ["Lovelace"],
-			countries: [{ name: "Nowhere", cities: ["Somewhere"] }],
+			countries: [{ name: "Nowhere", code: "NW", cities: ["Somewhere"] }],
 			companyWords: ["Analytical"],
 			companySuffixes: ["Engine"],
 			lorem: ["note"],
@@ -85,9 +87,10 @@ describe("derive", () => {
 describe("options", () => {
 	test("hands a caller's dataset to every module that reads one", () => {
 		let data: Dataset = {
-			firstNames: ["Ada"],
+			...en,
+			firstNames: { female: ["Ada"], male: ["Ada"] },
 			lastNames: ["Lovelace"],
-			countries: [{ name: "Nowhere", cities: ["Somewhere"] }],
+			countries: [{ name: "Nowhere", code: "NW", cities: ["Somewhere"] }],
 			companyWords: ["Analytical"],
 			companySuffixes: ["Engine"],
 			lorem: ["note"],

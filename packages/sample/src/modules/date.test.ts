@@ -8,6 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
+import { en } from "../data/en";
 import { createRandom } from "../random";
 
 import { createDateModule } from "./date";
@@ -17,7 +18,7 @@ const REFERENCE = new Date("2026-06-15T12:00:00.000Z");
 const DAY = 86_400_000;
 
 function module(seed: string, now: Date = REFERENCE) {
-	return createDateModule(createRandom(seed), now);
+	return createDateModule(createRandom(seed), en, now);
 }
 
 describe("past", () => {
@@ -107,5 +108,67 @@ describe("between", () => {
 describe("determinism", () => {
 	test("replays the same instant from the same seed", () => {
 		expect(module("dates").past()).toEqual(module("dates").past());
+	});
+});
+
+describe("the wider calendar", () => {
+	test("keeps recent and soon within a day by default", () => {
+		let dates = module("near");
+
+		for (let count = 0; count < 50; count++) {
+			expect(REFERENCE.getTime() - dates.recent().getTime()).toBeLessThanOrEqual(DAY);
+			expect(dates.soon().getTime() - REFERENCE.getTime()).toBeLessThanOrEqual(DAY);
+		}
+	});
+
+	test("places anytime within a year either side", () => {
+		let dates = module("anytime");
+
+		for (let count = 0; count < 50; count++) {
+			expect(Math.abs(dates.anytime().getTime() - REFERENCE.getTime())).toBeLessThanOrEqual(
+				366 * DAY,
+			);
+		}
+	});
+
+	test("returns several instants in ascending order", () => {
+		let dates = module("betweens");
+		let from = new Date("2026-01-01T00:00:00.000Z");
+		let to = new Date("2026-02-01T00:00:00.000Z");
+		let values = dates.betweens({ from, to, count: 5 });
+
+		expect(values).toHaveLength(5);
+		for (let index = 1; index < values.length; index++) {
+			expect((values[index] as Date).getTime()).toBeGreaterThanOrEqual(
+				(values[index - 1] as Date).getTime(),
+			);
+		}
+	});
+
+	test("puts a birthdate inside the age range asked for", () => {
+		let dates = module("birthdays");
+
+		for (let count = 0; count < 50; count++) {
+			let age = (REFERENCE.getTime() - dates.birthdate({ min: 20, max: 30 }).getTime()) / (365 * DAY);
+			expect(age).toBeGreaterThanOrEqual(20);
+			expect(age).toBeLessThanOrEqual(30);
+		}
+	});
+
+	test("refuses an age range that ends before it starts", () => {
+		expect(() => module("birthdays").birthdate({ min: 40, max: 20 })).toThrow(RangeError);
+	});
+
+	test("names months and weekdays, abbreviated on request", () => {
+		let dates = module("names");
+
+		expect(en.months).toContain(dates.month());
+		expect(en.weekdays).toContain(dates.weekday());
+		expect(dates.month({ abbreviated: true })).toHaveLength(3);
+		expect(dates.weekday({ abbreviated: true })).toHaveLength(3);
+	});
+
+	test("draws a time zone from the dataset", () => {
+		expect(en.timeZones).toContain(module("zones").timeZone());
 	});
 });

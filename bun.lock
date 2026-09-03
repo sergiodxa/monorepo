@@ -566,6 +566,7 @@
         "@pkg/crypto": "workspace:*",
         "@pkg/dates": "workspace:*",
         "@pkg/duration": "workspace:*",
+        "@pkg/jwt": "workspace:*",
       },
     },
     "packages/seo": {

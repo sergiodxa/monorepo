@@ -12,6 +12,8 @@
 
 import * as jose from "jose";
 
+import { Algorithm as SignatureAlgorithm } from "./algorithm";
+
 import type { KeyStorage } from "./key-storage";
 
 /**
@@ -46,15 +48,10 @@ const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undef
  * sense qualified: `JWK.KeyPair`, `JWK.generateKeyPair`, `JWK.toJSON`.
  */
 export namespace JWK {
-	/**
-	 * ES256 is issued here; RS256 verifies tokens from upstream identity
-	 * providers; EdDSA derives its nonce from the key and message, keeping the
-	 * ECDSA nonce-reuse leak that exposes a private key out of reach.
-	 */
-	export const Algorithm = { ES256: "ES256", RS256: "RS256", EdDSA: "EdDSA" } as const;
+	export const Algorithm = SignatureAlgorithm;
 
 	/** One of the supported signature algorithms. */
-	export type Algorithm = (typeof Algorithm)[keyof typeof Algorithm];
+	export type Algorithm = SignatureAlgorithm;
 
 	/** A key pair imported into a usable form, with the public half in JWK format. */
 	export interface KeyPair {

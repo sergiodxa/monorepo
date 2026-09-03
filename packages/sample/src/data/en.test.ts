@@ -21,7 +21,8 @@ function duplicates(values: readonly string[]): string[] {
 
 describe("the English dataset", () => {
 	test("holds each entry once", () => {
-		expect(duplicates(en.firstNames)).toEqual([]);
+		expect(duplicates(en.firstNames.female)).toEqual([]);
+		expect(duplicates(en.firstNames.male)).toEqual([]);
 		expect(duplicates(en.lastNames)).toEqual([]);
 		expect(duplicates(en.companyWords)).toEqual([]);
 		expect(duplicates(en.companySuffixes)).toEqual([]);
@@ -37,7 +38,7 @@ describe("the English dataset", () => {
 	});
 
 	test("carries enough of each list to keep values varied", () => {
-		expect(en.firstNames.length).toBeGreaterThanOrEqual(100);
+		expect(en.firstNames.female.length + en.firstNames.male.length).toBeGreaterThanOrEqual(100);
 		expect(en.lastNames.length).toBeGreaterThanOrEqual(100);
 		expect(en.countries.length).toBeGreaterThanOrEqual(40);
 		expect(en.companyWords.length).toBeGreaterThanOrEqual(60);

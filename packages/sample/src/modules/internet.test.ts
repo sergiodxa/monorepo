@@ -15,6 +15,12 @@ import { createInternetModule } from "./internet";
 
 const RESERVED = /^example\.(com|org|net)$/;
 
+/** Decode one base64url segment of a token into the object it carries. */
+function segment(value: string | undefined): Record<string, string | number> {
+	let text = atob((value ?? "").replace(/-/g, "+").replace(/_/g, "/"));
+	return JSON.parse(text) as Record<string, string | number>;
+}
+
 function module(seed: string) {
 	return createInternetModule(createRandom(seed), en);
 }
@@ -74,10 +80,10 @@ describe("username", () => {
 	});
 });
 
-describe("domain and url", () => {
+describe("domainName and url", () => {
 	test("returns only reserved domains", () => {
 		let internet = module("domains");
-		let seen = new Set(Array.from({ length: 200 }, () => internet.domain()));
+		let seen = new Set(Array.from({ length: 200 }, () => internet.domainName()));
 
 		for (let domain of seen) expect(domain).toMatch(RESERVED);
 		expect(seen.size).toBe(3);
@@ -108,5 +114,104 @@ describe("password", () => {
 		for (let character of ["l", "I", "1", "O", "0"]) {
 			expect(drawn).not.toContain(character);
 		}
+	});
+});
+
+describe("protocol values", () => {
+	test("returns an HTTP verb and a status code", () => {
+		let internet = module("http");
+
+		expect(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]).toContain(
+			internet.httpMethod(),
+		);
+		let status = internet.httpStatusCode();
+		expect(status).toBeGreaterThanOrEqual(100);
+		expect(status).toBeLessThan(600);
+	});
+
+	test("returns a scheme and a port above the well-known range", () => {
+		let internet = module("net");
+
+		expect(["http", "https"]).toContain(internet.protocol());
+		let port = internet.port();
+		expect(port).toBeGreaterThanOrEqual(1024);
+		expect(port).toBeLessThanOrEqual(65535);
+	});
+
+	test("writes addresses in each family", () => {
+		let internet = module("addresses");
+
+		expect(internet.ipv4()).toMatch(/^(\d{1,3}\.){3}\d{1,3}$/);
+		expect(internet.ipv6()).toMatch(/^([0-9a-f]{4}:){7}[0-9a-f]{4}$/);
+		expect(internet.mac()).toMatch(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/);
+
+		for (let count = 0; count < 50; count++) {
+			expect(internet.ip()).toMatch(/[.:]/);
+		}
+	});
+
+	test("keeps every ipv4 octet inside a byte", () => {
+		let internet = module("octets");
+
+		for (let count = 0; count < 100; count++) {
+			for (let octet of internet.ipv4().split(".")) {
+				expect(Number(octet)).toBeLessThanOrEqual(255);
+			}
+		}
+	});
+});
+
+describe("tokens and agents", () => {
+	test("names an algorithm the repository signs with", () => {
+		let internet = module("algorithms");
+
+		for (let count = 0; count < 30; count++) {
+			expect(["ES256", "RS256", "EdDSA"]).toContain(internet.jwtAlgorithm());
+		}
+	});
+
+	test("writes a token of three segments whose claims decode", () => {
+		let token = module("jwt").jwt();
+		let [header, payload, signature] = token.split(".");
+
+		expect(signature).toMatch(/^[0-9a-f]{64}$/);
+		let decoded = segment(payload);
+
+		expect(segment(header).typ).toBe("JWT");
+		expect(String(decoded.sub)).toMatch(/^[a-z0-9]+\.[a-z0-9]+$/);
+		expect(Number(decoded.exp)).toBeGreaterThan(Number(decoded.iat));
+	});
+
+	test("merges the claims it is given", () => {
+		let token = module("jwt").jwt({ payload: { sub: "known" }, algorithm: "ES256" });
+		let [header, payload] = token.split(".");
+
+		expect(segment(header).alg).toBe("ES256");
+		expect(segment(payload).sub).toBe("known");
+	});
+
+	test("writes a browser user agent", () => {
+		expect(module("agents").userAgent()).toMatch(/^Mozilla\/5\.0 \(.+\).+\/[\d.]+/);
+	});
+
+	test("returns an emoji and a display name", () => {
+		let internet = module("profile");
+
+		expect(en.emojis).toContain(internet.emoji());
+		expect(internet.displayName({ firstName: "Ada", lastName: "Lovelace" })).toBe("Ada L.");
+	});
+
+	test("returns a domain suffix and a domain word", () => {
+		let internet = module("domains");
+
+		expect(["com", "org", "net"]).toContain(internet.domainSuffix());
+		expect(internet.domainWord()).toMatch(/^[a-z0-9]+$/);
+	});
+
+	test("appends a slash and honors a protocol on request", () => {
+		let internet = module("urls");
+
+		expect(internet.url({ appendSlash: true }).endsWith("/")).toBe(true);
+		expect(internet.url({ protocol: "http" }).startsWith("http://")).toBe(true);
 	});
 });

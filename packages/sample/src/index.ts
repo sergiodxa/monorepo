@@ -6,30 +6,82 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export type { Country, Dataset } from "./dataset";
+export type { Country, Dataset, FirstNames } from "./dataset";
+
+export type {
+	ColorFormat,
+	ColorModule,
+	ColorOptions,
+	RgbOptions,
+	SpaceOptions,
+} from "./modules/color";
 
 export type { CompanyModule } from "./modules/company";
 
-export type { BetweenOptions, DateModule, SpanOptions } from "./modules/date";
+export type { BooleanOptions, DatatypeModule } from "./modules/datatype";
 
 export type {
+	BetweenOptions,
+	BetweensOptions,
+	BirthdateOptions,
+	DateModule,
+	NameOptions as DateNameOptions,
+	SpanOptions,
+} from "./modules/date";
+
+export type { GitModule, ShaOptions } from "./modules/git";
+
+export type { HackerModule } from "./modules/hacker";
+
+export type {
+	GeneratorLookup,
 	HelpersModule,
 	MaybeOptions,
 	MultipleOptions,
+	MustacheValues,
+	NumberRange,
 	PickManyOptions,
+	WeightedChoice,
 } from "./modules/helpers";
 
-export type { InternetModule, NameOptions, PasswordOptions } from "./modules/internet";
+export type { InternetModule, JwtOptions, NameOptions, PasswordOptions } from "./modules/internet";
 
-export type { CityOptions, LocationModule } from "./modules/location";
+export type {
+	CityOptions,
+	CoordinateOptions,
+	LocationModule,
+	NearbyOptions,
+	StateOptions,
+} from "./modules/location";
 
-export type { LoremModule, ParagraphOptions } from "./modules/lorem";
+export type {
+	CountOptions,
+	LoremModule,
+	ParagraphOptions,
+	ParagraphsOptions,
+} from "./modules/lorem";
 
-export type { FloatOptions, IntOptions, NumberModule } from "./modules/number";
+export type {
+	BaseOptions,
+	BigIntOptions,
+	FloatOptions,
+	IntOptions,
+	NumberModule,
+} from "./modules/number";
 
-export type { PersonModule, PersonRecord } from "./modules/person";
+export type {
+	FirstNameOptions,
+	FullNameOptions,
+	PersonModule,
+	PersonRecord,
+	SexType,
+} from "./modules/person";
 
-export type { StringModule } from "./modules/string";
+export type { PhoneModule, PhoneNumberOptions, PhoneStyle } from "./modules/phone";
+
+export type { AlphaOptions, HexadecimalOptions, StringModule } from "./modules/string";
+
+export type { FileNameOptions, NetworkInterfaceOptions, SystemModule } from "./modules/system";
 
 export type { Random, Seed } from "./random";
 
