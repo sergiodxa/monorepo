@@ -156,7 +156,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   the validated `redirect_uri` with `error`, `error_description`, `state` and `iss`.
 - MUST keep refusals indistinguishable where distinguishing them helps an attacker (missing
   vs. malformed vs. expired token, wrong password vs. unknown address).
-- MUST use `@pkg/logger` (`ctx.logger` in HTTP handlers, the job's own `this.logger`), never
+- MUST use `@pkg/logger` (`ctx.logger` in HTTP handlers and in job handlers alike), never
   `console.log`, and MUST log event names plus ids only — never token, code, secret or
   password material.
 - MUST send `Cache-Control: no-store` (and `Pragma: no-cache`) on token responses and on the

@@ -18,7 +18,7 @@ import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 
 import type { JobContext } from "./context";
-import type { AnyJobHandler, JobHandler } from "./handler";
+import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler";
 import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs";
 import type { AnyJobMiddleware, ChainProperties } from "./middleware";
 
@@ -153,7 +153,7 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	 * its result, so a batch whose messages dispatch together shares one import instead
 	 * of racing several; a load that fails is dropped, leaving the next delivery to retry it.
 	 */
-	let resolved = new Map<string, Promise<AnyJobHandler>>();
+	let resolved = new Map<string, Promise<RunnableJobHandler>>();
 
 	/**
 	 * Loads a job's handler, once per isolate. The loader is awaited only after a
@@ -161,13 +161,23 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	 * @param name The job whose handler is wanted.
 	 * @param load Its loader.
 	 */
-	function handlerFor(name: string, load: LoadHandler | AnyJobHandler): Promise<AnyJobHandler> {
+	function handlerFor(
+		name: string,
+		load: LoadHandler | AnyJobHandler,
+	): Promise<RunnableJobHandler> {
 		let cached = resolved.get(name);
 		if (cached !== undefined) return cached;
 
 		let loading = (async () => {
 			let module = isHandler(load) ? load : await load();
-			return isHandler(module) ? module : module.default;
+			let handler = isHandler(module) ? module : module.default;
+
+			/**
+			 * The one place an app's handler becomes something this package calls. Its
+			 * declared parameter is the context that app says its middleware installs;
+			 * every call below runs that chain first, which is what makes it so.
+			 */
+			return handler as unknown as RunnableJobHandler;
 		})().catch((error: unknown) => {
 			resolved.delete(name);
 			throw error;

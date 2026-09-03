@@ -16,7 +16,7 @@ import { BatchedLogger } from "@pkg/logger";
 import { ValidationError } from "@pkg/validate";
 
 import type { AnyJobContext } from "./context";
-import type { AnyJobHandler } from "./handler";
+import type { RunnableJobHandler } from "./handler";
 import type { AnyJobDefinition } from "./jobs";
 import type { AnyJobMiddleware } from "./middleware";
 
@@ -36,7 +36,7 @@ const SETTLE_GRACE = "5 seconds";
 export interface RunOptions {
 	job: AnyJobDefinition;
 	/** Resolves the handler, which a malformed message never gets far enough to call. */
-	handler: () => Promise<AnyJobHandler>;
+	handler: () => Promise<RunnableJobHandler>;
 	message: Message<unknown>;
 	/** The payload, already parsed against the job's schema. */
 	input: unknown;
@@ -217,13 +217,7 @@ export async function runJob(options: RunOptions): Promise<void> {
 						);
 					}
 
-					/**
-					 * The context is handed over as the handler's own type. An app that
-					 * declares what its middleware installs makes that type wider than the
-					 * bare context built here, and the chain above is what has just made the
-					 * claim true; the package cannot see either half of that from in here.
-					 */
-					await (handler as (context: AnyJobContext) => Promise<void> | void)(context);
+					await handler(context);
 				}),
 			options.timeout,
 			controller,

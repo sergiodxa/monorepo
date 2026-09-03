@@ -8,36 +8,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Job } from "@pkg/jobs";
-import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import { createJobHandler } from "@pkg/jobs-next";
 
 import Session from "~/app/data/session";
+import jobs from "~/app/jobs";
 
-/** Deletes expired sessions, logging how many rows the sweep removed. */
-export class CleanExpiredSessionsJob extends Job {
-	/**
-	 * The cron monitor this sweep pings when it completes. Frozen: the monitor exists
-	 * under this id and alerts on a missed run, so this exact value is what keeps the
-	 * alert pointed at this job.
-	 */
-	static override monitorId = "74f508a2-e6e9-4f01-8c25-2884330e7870";
+/**
+ * Reads the expired ids first so the log line reports what the sweep actually removed,
+ * and logs the count alone: a session id stays a live refresh token until it expires.
+ */
+export default createJobHandler(jobs.cleanExpiredSessions, async (ctx) => {
+	let expiredSessions = await Session.findExpiredSessions(ctx.database);
 
-	/**
-	 * Reads the expired ids first so the log line reports what the sweep actually removed,
-	 * and logs the count alone: a session id stays a live refresh token until it expires.
-	 */
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-
-		let expiredSessions = await Session.findExpiredSessions(db);
-
-		if (expiredSessions.length === 0) {
-			return this.logger.info("job.clean_expired_sessions.no_expired");
-		}
-
-		let deletedCount = await Session.deleteExpiredSessions(db);
-
-		this.logger.info("job.clean_expired_sessions.completed", { deletedCount });
+	if (expiredSessions.length === 0) {
+		ctx.logger.info("job.clean_expired_sessions.no_expired");
+		return;
 	}
-}
+
+	let deletedCount = await Session.deleteExpiredSessions(ctx.database);
+
+	ctx.logger.info("job.clean_expired_sessions.completed", { deletedCount });
+});

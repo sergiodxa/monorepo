@@ -1,53 +1,30 @@
 /**
  * Tests for the daily session sweep, run against the real schema: it must delete every
  * row whose expiry has passed, leave every live row alone, and leave the table untouched
- * when nothing has expired.
+ * when nothing has expired. The handler is a function over a context, so each test builds
+ * one and hands it the database itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Job } from "@pkg/jobs";
 import type { Database as DataTableDatabase } from "remix/data-table";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { createJobContext } from "@pkg/jobs-next";
 import { generateUUID } from "@pkg/uuid";
-import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import Client from "~/app/data/client";
 import Subject from "~/app/data/subject";
-import { CleanExpiredSessionsJob } from "~/app/jobs/clean-expired-sessions";
+import jobs from "~/app/jobs";
+import handler from "~/app/jobs/clean-expired-sessions";
+import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { sessions } from "~/database/schema";
 
-/** The message shape the job lifecycle consumes, taken from the runner's own signature. */
-type QueuedMessage = Parameters<typeof Job.run>[0]["message"];
-
 let db: DataTableDatabase;
-let container: ServiceContainer;
 let subjectId: string;
 let clientId: string;
-
-/** A queue message that records whether the job acked or retried it. */
-function createMessage(): QueuedMessage & { acked: boolean; retried: boolean } {
-	let message = {
-		id: "message-1",
-		timestamp: new Date(),
-		body: { type: "cleanExpiredSessions" },
-		attempts: 1,
-		acked: false,
-		retried: false,
-		ack() {
-			message.acked = true;
-		},
-		retry() {
-			message.retried = true;
-		},
-	};
-
-	return message as unknown as QueuedMessage & { acked: boolean; retried: boolean };
-}
 
 /**
  * Inserts a session row expiring at the given instant, written straight through the table
@@ -70,18 +47,19 @@ async function createSession(expiresAt: number): Promise<string> {
 	return session.id;
 }
 
-/** Runs the job inside a container scope holding the test database. */
-async function run(): Promise<ReturnType<typeof createMessage>> {
-	let message = createMessage();
-	await container.scope(() => CleanExpiredSessionsJob.run({ message }));
-	return message;
+/**
+ * Runs the sweep against a context carrying the test database, published the way the
+ * middleware publishes it: the cast is what stands in for a chain having run.
+ */
+async function run(): Promise<void> {
+	let ctx = createJobContext(jobs.cleanExpiredSessions, { id: "message-1", attempts: 1 });
+	ctx.set(Database, db, { property: "database" });
+
+	await handler(ctx);
 }
 
 beforeEach(async () => {
 	db = createTestDatabase().db;
-
-	container = new ServiceContainer();
-	container.singleton(Database, () => db);
 
 	let client = await Client.create(db, {
 		name: "Client App",
@@ -99,9 +77,9 @@ beforeEach(async () => {
 	subjectId = subject.id;
 });
 
-describe("CleanExpiredSessionsJob", () => {
+describe("cleanExpiredSessions", () => {
 	test("keeps the monitor id the cron monitor already watches", () => {
-		expect(CleanExpiredSessionsJob.monitorId).toBe("74f508a2-e6e9-4f01-8c25-2884330e7870");
+		expect(jobs.cleanExpiredSessions.monitorId).toBe("74f508a2-e6e9-4f01-8c25-2884330e7870");
 	});
 
 	test("deletes expired sessions and keeps live ones", async () => {
@@ -109,29 +87,25 @@ describe("CleanExpiredSessionsJob", () => {
 		let alsoExpired = await createSession(Date.now() - 30 * 24 * 60 * 60 * 1000);
 		let live = await createSession(Date.now() + 60 * 1000);
 
-		let message = await run();
+		await run();
 
 		let remaining = await db.findMany(sessions);
 		expect(remaining.map((row) => row.id)).toEqual([live]);
 		expect(remaining.map((row) => row.id)).not.toContain(expired);
 		expect(remaining.map((row) => row.id)).not.toContain(alsoExpired);
-		expect(message.acked).toBe(true);
-		expect(message.retried).toBe(false);
 	});
 
 	test("does nothing when no session has expired", async () => {
 		let live = await createSession(Date.now() + 60 * 1000);
 
-		let message = await run();
+		await run();
 
 		expect((await db.findMany(sessions)).map((row) => row.id)).toEqual([live]);
-		expect(message.acked).toBe(true);
 	});
 
-	test("acks an empty database", async () => {
-		let message = await run();
+	test("leaves an empty table alone", async () => {
+		await run();
 
 		expect(await db.count(sessions)).toBe(0);
-		expect(message.acked).toBe(true);
 	});
 });

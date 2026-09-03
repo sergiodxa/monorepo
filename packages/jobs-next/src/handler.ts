@@ -10,8 +10,8 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import type { JobContext, JobContextInit } from "./context";
-import type { JobDefinition } from "./jobs";
+import type { AnyJobContext, JobContext, JobContextInit } from "./context";
+import type { AnyJobDefinition, JobDefinition } from "./jobs";
 
 import { JobContext as Context } from "./context";
 
@@ -59,6 +59,18 @@ export interface JobHandler<Schema extends StandardSchemaV1 | undefined = undefi
 /** A handler whatever it runs, for the places that hold any of them. */
 // oxlint-disable-next-line typescript/no-explicit-any -- payloads vary per job
 export type AnyJobHandler = JobHandler<any>;
+
+/**
+ * How the dispatcher holds a handler once it has accepted one.
+ *
+ * A handler's declared parameter is whatever its app says the middleware installs; the
+ * dispatcher builds the bare context and runs that chain over it, which is what makes
+ * the claim true. Holding handlers in this shape puts that reconciliation at the one
+ * boundary an app's handler enters the package, instead of at every call.
+ */
+export type RunnableJobHandler = ((context: AnyJobContext) => Promise<void> | void) & {
+	readonly job: AnyJobDefinition;
+};
 
 /**
  * Pairs a handler with its job.
