@@ -21,7 +21,6 @@
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/hostname": "workspace:*",
 		"@pkg/http": "workspace:*",
-		"@pkg/jobs": "workspace:*",
 		"@pkg/jwt": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
