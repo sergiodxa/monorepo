@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CleanJob.perform`: each of the four result tables sweeps on its own
+ * Unit tests for the `clean` job: each of the four result tables sweeps on its own
  * retention window and date column, recent and still-`NULL`-dated rows survive, and the
  * completion log carries the total and per-table breakdown. The free-watch suite below
  * tests order instead of a window, since its three sweeps run in sequence.
@@ -8,13 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import TrialConversion from "~/app/data/trial-conversion";
-import { CleanJob } from "~/app/jobs/clean";
+import jobs from "~/app/jobs";
+import clean from "~/app/jobs/clean";
+import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	alertEvents,
@@ -28,14 +29,11 @@ import {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-describe("CleanJob.perform", () => {
+describe("clean", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
-	let container: ServiceContainer;
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
-		container = new ServiceContainer();
-		container.singleton(Database, () => db);
 	});
 
 	function seedResult(id: string, completedAt: number | null) {
@@ -90,10 +88,9 @@ describe("CleanJob.perform", () => {
 	}
 
 	async function run(logger = new BatchedLogger("test")) {
-		await container.scope(async () => {
-			let job = new CleanJob({ logger }, {});
-			await job.perform();
-		});
+		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1, logger });
+		ctx.set(Database, db, { property: "database" });
+		await clean(ctx);
 
 		return logger;
 	}
@@ -212,20 +209,17 @@ describe("CleanJob.perform", () => {
  * The free-watch pass: its three sweeps run as a sequence, so each case below is about
  * what a sweep may remove given what already ran before it.
  */
-describe("CleanJob.perform trial cleanup", () => {
+describe("clean trial cleanup", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
-	let container: ServiceContainer;
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
-		container = new ServiceContainer();
-		container.singleton(Database, () => db);
 	});
 
 	async function run() {
-		await container.scope(async () => {
-			await new CleanJob({ logger: new BatchedLogger("test") }, {}).perform();
-		});
+		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1 });
+		ctx.set(Database, db, { property: "database" });
+		await clean(ctx);
 	}
 
 	async function seedLead(id: string, createdAt: number) {

@@ -1,5 +1,5 @@
 /**
- * Unit tests for `EnqueuePendingDomainsJob.perform`: verifies it batches one
+ * Unit tests for the `enqueuePendingDomains` job: verifies it batches one
  * `verifyDomainOwnership` message per unverified team domain and skips the
  * queue call when nothing is pending. `QUEUE` is an in-memory queue mocked
  * via `vi.doMock("cloudflare:workers", ...)` since the job calls
@@ -12,9 +12,8 @@
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
@@ -31,19 +30,29 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }
 
 let TeamDomain = (await import("~/app/data/team-domain")).default;
 let { createTestDatabase } = await import("~/app/lib/test/db");
-let { EnqueuePendingDomainsJob } = await import("./enqueue-pending-domains");
+let jobs = (await import("~/app/jobs")).default;
+let { Database } = await import("~/app/jobs/middleware/database");
+let enqueuePendingDomains = (await import("./enqueue-pending-domains")).default;
 
-describe("EnqueuePendingDomainsJob.perform", () => {
+describe("enqueuePendingDomains", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
-	let container: ServiceContainer;
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
-		container = new ServiceContainer();
-		container.singleton(Database, () => db);
 		queue.reset();
 		sendBatch.mockClear();
 	});
+
+	/** Runs the handler over a context carrying the test's database, as the chain would. */
+	async function run(logger: BatchedLogger) {
+		let ctx = createJobContext(jobs.enqueuePendingDomains, {
+			id: "message-1",
+			attempts: 1,
+			logger,
+		});
+		ctx.set(Database, db, { property: "database" });
+		await enqueuePendingDomains(ctx);
+	}
 
 	test("does nothing when there are no unverified domains", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "verified.example.com");
@@ -51,10 +60,7 @@ describe("EnqueuePendingDomainsJob.perform", () => {
 
 		let logger = new BatchedLogger("test");
 
-		await container.scope(async () => {
-			let job = new EnqueuePendingDomainsJob({ logger }, {});
-			await job.perform();
-		});
+		await run(logger);
 
 		expect(sendBatch).not.toHaveBeenCalled();
 		expect(queue.sent).toHaveLength(0);
@@ -70,10 +76,7 @@ describe("EnqueuePendingDomainsJob.perform", () => {
 
 		let logger = new BatchedLogger("test");
 
-		await container.scope(async () => {
-			let job = new EnqueuePendingDomainsJob({ logger }, {});
-			await job.perform();
-		});
+		await run(logger);
 
 		expect(sendBatch).toHaveBeenCalledTimes(1);
 		let messages = queue.sent;

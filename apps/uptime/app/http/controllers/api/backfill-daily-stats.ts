@@ -13,7 +13,8 @@ import { Accepted } from "@pkg/http/status-code";
 import { createAction } from "remix/router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { sendQueueMessage } from "~/app/lib/queue";
+import jobs from "~/app/jobs";
+import { enqueue } from "~/app/lib/queue";
 import { apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -21,7 +22,7 @@ import routes from "~/routes/web";
 export const backfillDailyStatsCreate = createAction(routes.api.v1.backfillDailyStats, {
 	middleware: [requireApiKey("monitors:write")],
 	handler: async () => {
-		await sendQueueMessage({ type: "aggregateDailyStats" });
+		await enqueue(jobs.aggregateDailyStats);
 		return apiSuccess({ status: "queued" }, Accepted);
 	},
 });

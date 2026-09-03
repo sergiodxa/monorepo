@@ -1,23 +1,22 @@
 /**
- * Scheduled jobs behind both team digests: for every member of every team owed one, a single
+ * The sweep behind both team digests: for every member of every team owed one, a single
  * email covering that team's monitors over the window their schedule reports.
- * The daily and weekly digests differ only in window length, stamp, and email class; each
- * subclass names its own cron-job monitor, since a monitor watches one schedule. The
- * membership, not the subject, is the unit of delivery, and the per-period stamp on
- * `memberships` keeps a redelivered run from sending the same digest twice.
+ * The daily and weekly digests differ only in window length, stamp, and email class, and
+ * each is its own job, since a cron-job monitor watches one schedule. The membership, not
+ * the subject, is the unit of delivery, and the per-period stamp on `memberships` keeps a
+ * redelivered run from sending the same digest twice.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { TFunction } from "@pkg/i18n";
+import type { CurrentJobContext } from "@pkg/jobs-next";
 
 import { ManagementClient } from "@pkg/auth/management-client";
 import { subDays, toDayKey } from "@pkg/dates";
-import { Job } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
 import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";
@@ -54,14 +53,6 @@ const PREFERENCE: Record<DigestPeriod, OptionalEmail> = {
 	weekly: "teamWeeklyDigest",
 };
 
-/**
- * The cron-job monitors each schedule reports itself to, one per trigger since a monitor
- * holds one cron expression: `0 8 * * *` for the daily, `0 9 * * 1` for the weekly. A missing
- * id fails the run's ping, so these are ids of monitors already created in the operator's team.
- */
-const DAILY_MONITOR_ID = "03acb710-cd5b-4c8a-8242-c2a2a9dae201";
-const WEEKLY_MONITOR_ID = "4715a9ac-7fe6-4423-816c-b4a711b00dda";
-
 /** The days one run reports, resolved once so every team's report covers the same window. */
 interface DigestWindow {
 	/** Every reported UTC day, oldest first, which fixes the bar's segment order. */
@@ -83,263 +74,236 @@ interface TeamDigestContext {
 }
 
 /**
- * The sweep both digests run, with the period left to the subclass. Abstract because a
- * cron-job monitor watches one schedule and `Job.run` reads `monitorId` off the class it is
- * given, so the period lives in the type and each subclass names its own schedule's monitor.
+ * Mails every due member of every due team their digest for `period`.
+ *
+ * @param ctx - The running job, for its database and its log.
+ * @param period - Which digest this run sends, and therefore which window and which stamp.
  */
-abstract class SendTeamDigestsJob extends Job {
-	/** Which digest this subclass sends, and therefore which window and which stamp. */
-	protected abstract readonly period: DigestPeriod;
+export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeriod): Promise<void> {
+	let mailer = getServiceContainer().get(Mailer);
+	let admin = getServiceContainer().get(ManagementClient);
 
-	async perform(): Promise<void> {
-		let { period } = this;
-		let db = getServiceContainer().get(Database);
-		let mailer = getServiceContainer().get(Mailer);
-		let admin = getServiceContainer().get(ManagementClient);
+	/**
+	 * One instant for the whole run, so the window every digest reports, the bound every
+	 * membership was selected against, and the stamp each one receives all agree.
+	 */
+	let now = Date.now();
+	let reported = digestWindow(period, now);
+	let recipients = await TeamDigest.listDue(ctx.database, period, startOfUtcDay(now));
 
-		/**
-		 * One instant for the whole run, so the window every digest reports, the bound every
-		 * membership was selected against, and the stamp each one receives all agree.
-		 */
-		let now = Date.now();
-		let reported = digestWindow(period, now);
-		let recipients = await TeamDigest.listDue(db, period, startOfUtcDay(now));
+	/**
+	 * The opt-out is applied before anything else is loaded, and that ordering is the point:
+	 * a member's address comes from the auth server one request at a time, so filtering here
+	 * turns a team of ten with two subscribers into just two requests.
+	 */
+	let preferences = await UserPreferences.findBySubjectIds(
+		ctx.database,
+		recipients.map((recipient) => recipient.subjectId),
+	);
+	let wanted = recipients.filter((recipient) =>
+		UserPreferences.wants(preferences.get(recipient.subjectId) ?? null, PREFERENCE[period]),
+	);
 
-		/**
-		 * The opt-out is applied before anything else is loaded, and that ordering is the point:
-		 * a member's address comes from the auth server one request at a time, so filtering here
-		 * turns a team of ten with two subscribers into just two requests.
-		 */
-		let preferences = await UserPreferences.findBySubjectIds(
-			db,
-			recipients.map((recipient) => recipient.subjectId),
-		);
-		let wanted = recipients.filter((recipient) =>
-			UserPreferences.wants(preferences.get(recipient.subjectId) ?? null, PREFERENCE[period]),
-		);
+	if (wanted.length === 0) {
+		ctx.logger.info("job.send_team_digests.nobody_due", { period, due: recipients.length });
+		return;
+	}
 
-		if (wanted.length === 0) {
-			this.logger.info("job.send_team_digests.nobody_due", { period, due: recipients.length });
-			return;
-		}
+	let byTeam = groupByTeam(wanted);
+	let [teams, profiles] = await Promise.all([
+		Team.findByIds(ctx.database, [...byTeam.keys()]),
+		resolveSubjects(
+			admin,
+			wanted.map((recipient) => recipient.subjectId),
+		),
+	]);
 
-		let byTeam = groupByTeam(wanted);
-		let [teams, profiles] = await Promise.all([
-			Team.findByIds(db, [...byTeam.keys()]),
-			resolveSubjects(
-				admin,
-				wanted.map((recipient) => recipient.subjectId),
-			),
-		]);
-
-		let settled = await mapWithConcurrency([...byTeam], ([teamId, members]) =>
-			this.digestTeam(db, mailer, {
-				period,
-				window: reported,
-				now,
-				members,
-				team: teams.get(teamId) ?? null,
-				profiles,
-				preferences,
-			}),
-		);
-
-		let sent = 0;
-		let skipped = 0;
-		let errorCount = 0;
-
-		for (let outcome of settled) {
-			if (!outcome.ok) {
-				errorCount++;
-				this.logger.error("job.send_team_digests.team_failed", {
-					period,
-					teamId: outcome.item[0],
-					error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
-				});
-				continue;
-			}
-
-			sent += outcome.value.sent;
-			skipped += outcome.value.skipped;
-		}
-
-		/**
-		 * Split by emails delivered per team (ADR-007 §5): the number of members who wanted the
-		 * digest is exactly the share of this run's cost each team caused. Declared after the fact,
-		 * since that is when the number is known — the ledger prices it at flush time either way.
-		 */
-		apportionCostByTeam(
-			settled.flatMap((outcome) =>
-				outcome.ok ? Array.from({ length: outcome.value.sent }, () => outcome.item[0]) : [],
-			),
-		);
-
-		this.logger.info("job.send_team_digests.completed", {
+	let settled = await mapWithConcurrency([...byTeam], ([teamId, members]) =>
+		digestTeam(ctx, mailer, {
 			period,
-			teams: byTeam.size,
-			sent,
-			skipped,
-			errorCount,
-		});
+			window: reported,
+			now,
+			members,
+			team: teams.get(teamId) ?? null,
+			profiles,
+			preferences,
+		}),
+	);
+
+	let sent = 0;
+	let skipped = 0;
+	let errorCount = 0;
+
+	for (let outcome of settled) {
+		if (!outcome.ok) {
+			errorCount++;
+			ctx.logger.error("job.send_team_digests.team_failed", {
+				period,
+				teamId: outcome.item[0],
+				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
+			});
+			continue;
+		}
+
+		sent += outcome.value.sent;
+		skipped += outcome.value.skipped;
 	}
 
 	/**
-	 * Builds one team's report and mails it to each of its due members, one after another: the
-	 * teams above already run ten at a time, so a second fan-out here would put a hundred sends
-	 * in flight at once against a per-invocation subrequest ceiling.
-	 *
-	 * @returns How many digests went out and how many members were passed over.
+	 * Split by emails delivered per team (ADR-007 §5): the number of members who wanted the
+	 * digest is exactly the share of this run's cost each team caused. Declared after the fact,
+	 * since that is when the number is known — the ledger prices it at flush time either way.
 	 */
-	private async digestTeam(
-		db: Database,
-		mailer: Mailer,
-		run: {
-			period: DigestPeriod;
-			window: DigestWindow;
-			now: number;
-			members: DigestRecipient[];
-			team: SelectTeam | null;
-			profiles: Map<string, ManagementClient.Subject>;
-			preferences: Map<string, SelectUserPreferences>;
-		},
-	): Promise<{ sent: number; skipped: number }> {
-		let { period, window: reported, now, members, team, profiles, preferences } = run;
+	apportionCostByTeam(
+		settled.flatMap((outcome) =>
+			outcome.ok ? Array.from({ length: outcome.value.sent }, () => outcome.item[0]) : [],
+		),
+	);
 
-		/** A team deleted between the query that selected its members and this read. */
-		if (team === null) {
-			this.logger.error("job.send_team_digests.team_missing", { teamId: members[0]?.teamId });
-			return { sent: 0, skipped: members.length };
-		}
+	ctx.logger.info("job.send_team_digests.completed", {
+		period,
+		teams: byTeam.size,
+		sent,
+		skipped,
+		errorCount,
+	});
+}
 
-		let monitors = await TeamDigest.listMonitors(db, team.id, reported.since, reported.until);
+/**
+ * Builds one team's report and mails it to each of its due members, one after another: the
+ * teams above already run ten at a time, so a second fan-out here would put a hundred sends
+ * in flight at once against a per-invocation subrequest ceiling.
+ *
+ * @returns How many digests went out and how many members were passed over.
+ */
+async function digestTeam(
+	ctx: CurrentJobContext,
+	mailer: Mailer,
+	run: {
+		period: DigestPeriod;
+		window: DigestWindow;
+		now: number;
+		members: DigestRecipient[];
+		team: SelectTeam | null;
+		profiles: Map<string, ManagementClient.Subject>;
+		preferences: Map<string, SelectUserPreferences>;
+	},
+): Promise<{ sent: number; skipped: number }> {
+	let { period, window: reported, now, members, team, profiles, preferences } = run;
+
+	/** A team deleted between the query that selected its members and this read. */
+	if (team === null) {
+		ctx.logger.error("job.send_team_digests.team_missing", { teamId: members[0]?.teamId });
+		return { sent: 0, skipped: members.length };
+	}
+
+	let monitors = await TeamDigest.listMonitors(
+		ctx.database,
+		team.id,
+		reported.since,
+		reported.until,
+	);
+
+	/**
+	 * Nothing was checked, so nothing is reported and no stamp is written, leaving the team
+	 * reportable again tomorrow. Covers both a lapsed subscription, which unschedules every
+	 * monitor (ADR-005), and a monitor disabled mid-run, which `TeamDigest.listDue`'s `EXISTS` misses.
+	 */
+	if (monitors.every((monitor) => monitor.days.length === 0)) {
+		ctx.logger.info("job.send_team_digests.nothing_to_report", {
+			teamId: team.id,
+			period,
+			monitors: monitors.length,
+		});
+		return { sent: 0, skipped: members.length };
+	}
+
+	let context: TeamDigestContext = {
+		team,
+		monitors: monitors.map(toReport),
+		segments: teamSegments(monitors, reported.days),
+		uptime: teamUptime(monitors),
+	};
+
+	let sent = 0;
+	let skipped = 0;
+
+	for (let member of members) {
+		let profile = profiles.get(member.subjectId);
 
 		/**
-		 * Nothing was checked, so nothing is reported and no stamp is written, leaving the team
-		 * reportable again tomorrow. Covers both a lapsed subscription, which unschedules every
-		 * monitor (ADR-005), and a monitor disabled mid-run, which `TeamDigest.listDue`'s `EXISTS` misses.
+		 * No address, no email. The auth server is the only place a member's address lives, so
+		 * a profile that failed to resolve is a send this run cannot make — and one it must not
+		 * stamp, or the member would silently lose that day's digest.
 		 */
-		if (monitors.every((monitor) => monitor.days.length === 0)) {
-			this.logger.info("job.send_team_digests.nothing_to_report", {
+		if (!profile) {
+			skipped++;
+			ctx.logger.error("job.send_team_digests.profile_missing", {
 				teamId: team.id,
-				period,
-				monitors: monitors.length,
+				subjectId: member.subjectId,
 			});
-			return { sent: 0, skipped: members.length };
+			continue;
 		}
 
-		let context: TeamDigestContext = {
-			team,
-			monitors: monitors.map(toReport),
-			segments: teamSegments(monitors, reported.days),
-			uptime: teamUptime(monitors),
-		};
+		let { locale, t } = await emailTranslator(
+			preferences.get(member.subjectId)?.preferred_language ?? undefined,
+		);
 
-		let sent = 0;
-		let skipped = 0;
+		/** Counted before the send, because a rejected send is still a billed one. */
+		recordCost("emailSent");
+		let result = await mailer.send(
+			email({ period, context, to: profile.emailAddress, window: reported, locale, t }),
+		);
 
-		for (let member of members) {
-			let profile = profiles.get(member.subjectId);
-
-			/**
-			 * No address, no email. The auth server is the only place a member's address lives, so
-			 * a profile that failed to resolve is a send this run cannot make — and one it must not
-			 * stamp, or the member would silently lose that day's digest.
-			 */
-			if (!profile) {
-				skipped++;
-				this.logger.error("job.send_team_digests.profile_missing", {
-					teamId: team.id,
-					subjectId: member.subjectId,
-				});
-				continue;
-			}
-
-			let { locale, t } = await emailTranslator(
-				preferences.get(member.subjectId)?.preferred_language ?? undefined,
-			);
-
-			/** Counted before the send, because a rejected send is still a billed one. */
-			recordCost("emailSent");
-			let result = await mailer.send(
-				this.email({ period, context, to: profile.emailAddress, window: reported, locale, t }),
-			);
-
-			if (isFailure(result)) {
-				skipped++;
-				this.logger.error("job.send_team_digests.email_failed", {
-					teamId: team.id,
-					subjectId: member.subjectId,
-					error: result.error.message,
-				});
-				continue;
-			}
-
-			/** Only now: the stamp is what keeps a redelivered trigger from sending a second copy. */
-			await TeamDigest.markSent(db, member.id, period, now);
-			sent++;
+		if (isFailure(result)) {
+			skipped++;
+			ctx.logger.error("job.send_team_digests.email_failed", {
+				teamId: team.id,
+				subjectId: member.subjectId,
+				error: result.error.message,
+			});
+			continue;
 		}
 
-		return { sent, skipped };
+		/** Only now: the stamp is what keeps a redelivered trigger from sending a second copy. */
+		await TeamDigest.markSent(ctx.database, member.id, period, now);
+		sent++;
 	}
 
-	/** The email one member gets, which is the only place the two periods produce different mail. */
-	private email(send: {
-		period: DigestPeriod;
-		context: TeamDigestContext;
-		to: string;
-		window: DigestWindow;
-		locale: string;
-		t: TFunction;
-	}) {
-		let { period, context, to, window: reported, locale, t } = send;
-		let { team, monitors, segments, uptime } = context;
-
-		let shared = {
-			to,
-			teamName: team.name,
-			monitors,
-			dashboardUrl: teamDigestDashboardUrl(team.slug),
-			preferencesUrl: teamDigestPreferencesUrl(team.slug),
-			locale,
-			t,
-		};
-
-		if (period === "daily") return new TeamDailyDigestEmail({ ...shared, date: reported.until });
-
-		return new TeamWeeklyDigestEmail({
-			...shared,
-			since: reported.since,
-			until: reported.until,
-			segments,
-			uptime,
-		});
-	}
+	return { sent, skipped };
 }
 
-/**
- * The 08:00 UTC run: yesterday, for every team.
- *
- * @example waitUntil(SendTeamDailyDigestsJob.run({ message, uptime }));
- */
-export class SendTeamDailyDigestsJob extends SendTeamDigestsJob {
-	/** The "Team Daily Digest" cron monitor this run reports itself to when it completes. */
-	static override monitorId = DAILY_MONITOR_ID;
+/** The email one member gets, which is the only place the two periods produce different mail. */
+function email(send: {
+	period: DigestPeriod;
+	context: TeamDigestContext;
+	to: string;
+	window: DigestWindow;
+	locale: string;
+	t: TFunction;
+}) {
+	let { period, context, to, window: reported, locale, t } = send;
+	let { team, monitors, segments, uptime } = context;
 
-	protected override readonly period = "daily" as const;
-}
+	let shared = {
+		to,
+		teamName: team.name,
+		monitors,
+		dashboardUrl: teamDigestDashboardUrl(team.slug),
+		preferencesUrl: teamDigestPreferencesUrl(team.slug),
+		locale,
+		t,
+	};
 
-/**
- * The Monday 09:00 UTC run: the seven days that just ended.
- *
- * Its own class, so it reports to its own cron-job monitor — see {@link SendTeamDigestsJob}.
- *
- * @example waitUntil(SendTeamWeeklyDigestsJob.run({ message, uptime }));
- */
-export class SendTeamWeeklyDigestsJob extends SendTeamDigestsJob {
-	/** The "Team Weekly Digest" cron monitor this run reports itself to when it completes. */
-	static override monitorId = WEEKLY_MONITOR_ID;
+	if (period === "daily") return new TeamDailyDigestEmail({ ...shared, date: reported.until });
 
-	protected override readonly period = "weekly" as const;
+	return new TeamWeeklyDigestEmail({
+		...shared,
+		since: reported.since,
+		until: reported.until,
+		segments,
+		uptime,
+	});
 }
 
 /** Midnight UTC on the day `now` falls in, which is the once-a-day bound as an instant. */

@@ -9,20 +9,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CurrentJobContext } from "@pkg/jobs-next";
 import type { IngestEvent } from "@pkg/polar";
+import type { Database } from "remix/data-table";
 
-import { Job } from "@pkg/jobs";
+import { createJobHandler } from "@pkg/jobs-next";
 import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { underscore } from "@pkg/strings";
-import { Database, inList } from "remix/data-table";
+import { inList } from "remix/data-table";
 
 import type { CostQuantities } from "~/app/lib/cost-rates";
 import type { DailyTeamCost } from "~/app/services/cost";
 
 import { getYesterdayDateUtc, utcDayBounds } from "~/app/data/monitor-daily-stats";
 import Subscription from "~/app/data/subscription";
+import jobs from "~/app/jobs";
 import {
 	BYTES_PER_GB,
 	COST_RESOURCES,
@@ -65,93 +68,88 @@ interface TeamDay {
 	rateCards: string[];
 }
 
-export class ReportCostsJob extends Job {
-	/** The "Report Infrastructure Costs" cron monitor this job reports itself to when it completes. */
-	static override monitorId = "ddf291cc-5fd5-4ab7-b016-dea824399990";
+export default createJobHandler(jobs.reportCosts, async (ctx) => {
+	let polar = getServiceContainer().get(PolarClient);
+	let day = getYesterdayDateUtc();
 
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-		let polar = getServiceContainer().get(PolarClient);
-		let day = getYesterdayDateUtc();
+	await recordStorage(ctx);
 
-		await this.recordStorage(db);
+	let result = await queryAnalytics<Record<string, unknown>>(dailyCostQuery(day));
+	if (isFailure(result)) {
+		ctx.logger.error("job.report_costs.query_failed", { day, error: result.error.message });
+		return ctx.retry({ cause: result.error });
+	}
 
-		let result = await queryAnalytics<Record<string, unknown>>(dailyCostQuery(day));
-		if (isFailure(result)) {
-			this.logger.error("job.report_costs.query_failed", { day, error: result.error.message });
-			throw new Job.RetryError("Could not read the cost dataset", { cause: result.error });
-		}
+	let byTeam = summariseByTeam(result.data.map(toDailyTeamCost));
+	let unattributedCents = 0;
 
-		let byTeam = summariseByTeam(result.data.map(toDailyTeamCost));
-		let unattributedCents = 0;
+	for (let teamId of UNREPORTABLE_TEAM_IDS) {
+		unattributedCents += byTeam.get(teamId)?.cents ?? 0;
+		byTeam.delete(teamId);
+	}
 
-		for (let teamId of UNREPORTABLE_TEAM_IDS) {
-			unattributedCents += byTeam.get(teamId)?.cents ?? 0;
-			byTeam.delete(teamId);
-		}
+	let owners = await resolveOwners(ctx.database, [...byTeam.keys()]);
+	let timestamp = new Date(utcDayBounds(day).end - 1);
+	let events: IngestEvent[] = [];
+	let reportedCents = 0;
+	let skippedCents = 0;
 
-		let owners = await this.resolveOwners(db, [...byTeam.keys()]);
-		let timestamp = new Date(utcDayBounds(day).end - 1);
-		let events: IngestEvent[] = [];
-		let reportedCents = 0;
-		let skippedCents = 0;
+	for (let [teamId, teamDay] of byTeam) {
+		let ownerId = owners.get(teamId);
 
-		for (let [teamId, teamDay] of byTeam) {
-			let ownerId = owners.get(teamId);
-
-			if (!ownerId) {
-				skippedCents += teamDay.cents;
-				this.logger.error("job.report_costs.unreportable_team", {
-					day,
-					teamId,
-					cents: teamDay.cents,
-				});
-				continue;
-			}
-
-			reportedCents += teamDay.cents;
-			events.push({
-				name: EVENT_NAME,
-				externalCustomerId: ownerId,
-				/** Keyed on team and day and nothing time-dependent, which is what makes a retry free. */
-				externalId: `infra_cost:${teamId}:${day}`,
-				/** Explicit, so a run that is late by two days still books cost to the day it happened. */
-				timestamp,
-				cost: { amount: teamDay.cents.toFixed(AMOUNT_DECIMALS), currency: "usd" },
-				metadata: toMetadata(teamId, day, teamDay),
+		if (!ownerId) {
+			skippedCents += teamDay.cents;
+			ctx.logger.error("job.report_costs.unreportable_team", {
+				day,
+				teamId,
+				cents: teamDay.cents,
 			});
+			continue;
 		}
 
-		if (events.length > 0 && !(await polar.ingestEventsSafe(events))) {
-			this.logger.error("job.report_costs.ingest_failed", { day, events: events.length });
-			throw new Job.RetryError("Polar rejected the cost events");
-		}
-
-		/**
-		 * Logged at error level on purpose: a growing unattributed or skipped figure means
-		 * real spend is landing on nobody, the number that would otherwise stay invisible
-		 * while per-customer margin quietly stopped adding up.
-		 */
-		if (unattributedCents > 0 || skippedCents > 0) {
-			this.logger.error("job.report_costs.unreported", { day, unattributedCents, skippedCents });
-		}
-
-		this.logger.info("job.report_costs.completed", {
-			day,
-			teams: byTeam.size,
-			events: events.length,
-			reportedCents,
+		reportedCents += teamDay.cents;
+		events.push({
+			name: EVENT_NAME,
+			externalCustomerId: ownerId,
+			/** Keyed on team and day and nothing time-dependent, which is what makes a retry free. */
+			externalId: `infra_cost:${teamId}:${day}`,
+			/** Explicit, so a run that is late by two days still books cost to the day it happened. */
+			timestamp,
+			cost: { amount: teamDay.cents.toFixed(AMOUNT_DECIMALS), currency: "usd" },
+			metadata: toMetadata(teamId, day, teamDay),
 		});
 	}
 
+	if (events.length > 0 && !(await polar.ingestEventsSafe(events))) {
+		ctx.logger.error("job.report_costs.ingest_failed", { day, events: events.length });
+		return ctx.retry();
+	}
+
 	/**
-	 * Estimates each team's stored bytes as retained result rows × a mean row size, since
-	 * nothing reports a real per-team byte count, and apportions this job's own ledger by
-	 * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day.
+	 * Logged at error level on purpose: a growing unattributed or skipped figure means
+	 * real spend is landing on nobody, the number that would otherwise stay invisible
+	 * while per-customer margin quietly stopped adding up.
 	 */
-	private async recordStorage(db: Database): Promise<void> {
-		let result = await db.exec(
-			`SELECT team_id AS teamId, COUNT(*) AS count
+	if (unattributedCents > 0 || skippedCents > 0) {
+		ctx.logger.error("job.report_costs.unreported", { day, unattributedCents, skippedCents });
+	}
+
+	ctx.logger.info("job.report_costs.completed", {
+		day,
+		teams: byTeam.size,
+		events: events.length,
+		reportedCents,
+	});
+});
+
+/**
+ * Estimates each team's stored bytes as retained result rows × a mean row size, since
+ * nothing reports a real per-team byte count, and apportions this job's own ledger by
+ * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day.
+ */
+async function recordStorage(ctx: CurrentJobContext): Promise<void> {
+	let result = await ctx.database.exec(
+		`SELECT team_id AS teamId, COUNT(*) AS count
 			   FROM (SELECT m.team_id
 			           FROM monitor_results r JOIN monitors m ON m.id = r.monitor_id
 			         UNION ALL
@@ -164,40 +162,39 @@ export class ReportCostsJob extends Job {
 			         SELECT m.team_id
 			           FROM cron_job_pings p JOIN cron_job_monitors m ON m.id = p.cron_job_monitor_id)
 			  GROUP BY team_id`,
-		);
+	);
 
-		let rows = (result.rows ?? []) as unknown as { teamId: string; count: number }[];
-		let gbByTeam = new Map(
-			rows.map((row) => [row.teamId, (Number(row.count) * D1_MEAN_ROW_BYTES) / BYTES_PER_GB]),
-		);
+	let rows = (result.rows ?? []) as unknown as { teamId: string; count: number }[];
+	let gbByTeam = new Map(
+		rows.map((row) => [row.teamId, (Number(row.count) * D1_MEAN_ROW_BYTES) / BYTES_PER_GB]),
+	);
 
-		let d1Gb = 0;
-		for (let gb of gbByTeam.values()) d1Gb += gb;
+	let d1Gb = 0;
+	for (let gb of gbByTeam.values()) d1Gb += gb;
 
-		recordCost("d1StorageGbDay", d1Gb);
-		recordCost("kvStorageGbDay", (gbByTeam.size * KV_MEAN_BYTES_PER_TEAM) / BYTES_PER_GB);
-		apportionCost(gbByTeam);
+	recordCost("d1StorageGbDay", d1Gb);
+	recordCost("kvStorageGbDay", (gbByTeam.size * KV_MEAN_BYTES_PER_TEAM) / BYTES_PER_GB);
+	apportionCost(gbByTeam);
 
-		this.logger.info("job.report_costs.storage_estimated", { teams: gbByTeam.size, d1Gb });
+	ctx.logger.info("job.report_costs.storage_estimated", { teams: gbByTeam.size, d1Gb });
+}
+
+/**
+ * Maps each team to the owner its cost reports against, using the subscription
+ * projection as the source of truth — a row exists for every owner billing has
+ * touched, and one event naming a customer Polar cannot resolve rejects the batch.
+ */
+async function resolveOwners(db: Database, teamIds: string[]): Promise<Map<string, string>> {
+	if (teamIds.length === 0) return new Map();
+
+	let rows = await db.findMany(teams, { where: inList("id", teamIds) });
+	let known = new Set((await Subscription.listAll(db)).map((row) => row.external_customer_id));
+
+	let owners = new Map<string, string>();
+	for (let row of rows) {
+		if (known.has(row.owner_id)) owners.set(row.id, row.owner_id);
 	}
-
-	/**
-	 * Maps each team to the owner its cost reports against, using the subscription
-	 * projection as the source of truth — a row exists for every owner billing has
-	 * touched, and one event naming a customer Polar cannot resolve rejects the batch.
-	 */
-	private async resolveOwners(db: Database, teamIds: string[]): Promise<Map<string, string>> {
-		if (teamIds.length === 0) return new Map();
-
-		let rows = await db.findMany(teams, { where: inList("id", teamIds) });
-		let known = new Set((await Subscription.listAll(db)).map((row) => row.external_customer_id));
-
-		let owners = new Map<string, string>();
-		for (let row of rows) {
-			if (known.has(row.owner_id)) owners.set(row.id, row.owner_id);
-		}
-		return owners;
-	}
+	return owners;
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Unit tests for `DeleteAccountsJob.perform()`.
+ * Unit tests for the `deleteAccounts` job.
  *
  * The queued row is the only state: it survives a Polar or transport failure so tomorrow's
  * run can retry, and clears once the data is deleted and the confirmation is sent. A refused
@@ -19,13 +19,13 @@ import {
 	ManagementErrorCode,
 	SubjectNotFoundError,
 } from "@pkg/auth/management-client";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient as PolarClientClass } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
-import { Database as DatabaseClass } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
@@ -33,7 +33,9 @@ import type { SelectTeam } from "~/database/schema";
 import AccountDeletion from "~/app/data/account-deletion";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
-import { DeleteAccountsJob } from "~/app/jobs/delete-accounts";
+import jobs from "~/app/jobs";
+import deleteAccounts from "~/app/jobs/delete-accounts";
+import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { polarSubscription } from "~/app/lib/test/polar";
 import { memberships, monitors, teams } from "~/database/schema";
@@ -141,14 +143,19 @@ async function runJob(
 	mailTransport: Transport = transport,
 ) {
 	let container = new ServiceContainer();
-	container.singleton(DatabaseClass, () => db);
 	container.singleton(Mailer, () => new Mailer({ transport: mailTransport, from: MAIL_FROM }));
 	container.instance(PolarClientClass, polar as unknown as PolarClient);
 	container.instance(ManagementClient, fakeAdmin());
 
-	let job = new DeleteAccountsJob({ logger: new BatchedLogger("test") }, {});
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.deleteAccounts, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => deleteAccounts(ctx));
+	return ctx;
 }
 
 async function createTeamRow(db: Database, overrides: Partial<SelectTeam> = {}) {
@@ -185,7 +192,7 @@ beforeEach(() => {
 	authenticates = true;
 });
 
-describe("DeleteAccountsJob", () => {
+describe("deleteAccounts", () => {
 	test("does nothing at all when the queue is empty", async () => {
 		let { db } = createTestDatabase();
 		let polar = createFakePolar();

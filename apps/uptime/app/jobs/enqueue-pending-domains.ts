@@ -8,37 +8,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Job } from "@pkg/jobs";
-import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import { createJobHandler } from "@pkg/jobs-next";
 
 import TeamDomain from "~/app/data/team-domain";
-import { sendQueueBatch } from "~/app/lib/queue";
+import jobs from "~/app/jobs";
+import { enqueueMany } from "~/app/lib/queue";
 import { apportionCostByTeam } from "~/app/services/cost";
 
-export class EnqueuePendingDomainsJob extends Job {
-	/** The "Enqueue Pending Domains" cron monitor this sweep reports itself to when it completes. */
-	static override monitorId = "9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c";
+export default createJobHandler(jobs.enqueuePendingDomains, async (ctx) => {
+	let pending = await TeamDomain.listUnverified(ctx.database);
 
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-		let pending = await TeamDomain.listUnverified(db);
-
-		if (pending.length === 0) {
-			this.logger.info("job.enqueue_pending_domains.none", {});
-			return;
-		}
-
-		await sendQueueBatch(
-			pending.map((domain) => ({ type: "verifyDomainOwnership", teamDomainId: domain.id })),
-		);
-
-		/**
-		 * The sweep exists because these domains are pending, so its cost belongs to the teams
-		 * that own them; a delivery with nothing pending returns above and is platform cost.
-		 */
-		apportionCostByTeam(pending.map((domain) => domain.team_id));
-
-		this.logger.info("job.enqueue_pending_domains.enqueued", { count: pending.length });
+	if (pending.length === 0) {
+		ctx.logger.info("job.enqueue_pending_domains.none", {});
+		return;
 	}
-}
+
+	await enqueueMany(
+		jobs.verifyDomainOwnership,
+		pending.map((domain) => ({ teamDomainId: domain.id })),
+	);
+
+	/**
+	 * The sweep exists because these domains are pending, so its cost belongs to the teams
+	 * that own them; a delivery with nothing pending returns above and is platform cost.
+	 */
+	apportionCostByTeam(pending.map((domain) => domain.team_id));
+
+	ctx.logger.info("job.enqueue_pending_domains.enqueued", { count: pending.length });
+});

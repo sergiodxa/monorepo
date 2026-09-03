@@ -17,7 +17,8 @@ import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 import type { CronJobStatus, FlowStatus } from "~/database/schema";
 
-import { sendQueueBatch } from "~/app/lib/queue";
+import jobs from "~/app/jobs";
+import { enqueueMany } from "~/app/lib/queue";
 
 /** Monitor kinds whose sweeps hand notification off to the queue. */
 export type NotifyMonitorType = "dns" | "tcp" | "cron" | "flow" | "ssl";
@@ -29,35 +30,30 @@ export type NotifyMonitorType = "dns" | "tcp" | "cron" | "flow" | "ssl";
  */
 export type NotifyMessage =
 	| {
-			type: "notify";
 			monitorType: "tcp";
 			monitorId: string;
 			previousStatus: TcpCheckStatus | null;
 			newStatus: TcpCheckStatus;
 	  }
 	| {
-			type: "notify";
 			monitorType: "dns";
 			monitorId: string;
 			previousStatus: DnsCheckStatus | null;
 			newStatus: DnsCheckStatus;
 	  }
 	| {
-			type: "notify";
 			monitorType: "cron";
 			monitorId: string;
 			previousStatus: CronJobStatus | null;
 			newStatus: CronJobStatus;
 	  }
 	| {
-			type: "notify";
 			monitorType: "flow";
 			monitorId: string;
 			previousStatus: FlowStatus | null;
 			newStatus: FlowStatus;
 	  }
 	| {
-			type: "notify";
 			monitorType: "ssl";
 			monitorId: string;
 			previousStatus: SslStatus | null;
@@ -69,5 +65,5 @@ export type NotifyMessage =
  * don't have to guard an empty sweep.
  */
 export async function enqueueNotifications(messages: NotifyMessage[]): Promise<void> {
-	await sendQueueBatch(messages);
+	await enqueueMany(jobs.notify, messages);
 }

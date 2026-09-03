@@ -10,7 +10,6 @@
 import { ManagementClient } from "@pkg/auth/management-client";
 import { ServiceClient } from "@pkg/auth/service-client";
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { setJobUsageTracker } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import { PolarClient } from "@pkg/polar";
@@ -20,7 +19,7 @@ import { Database } from "remix/data-table";
 
 import { issuer } from "~/app/auth/issuer";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
-import { recordD1Statement, trackJobCost } from "~/app/services/cost";
+import { recordD1Statement } from "~/app/services/cost";
 
 /**
  * The app service container (ADR-008). Registered once per isolate; the worker wraps
@@ -33,24 +32,22 @@ import { recordD1Statement, trackJobCost } from "~/app/services/cost";
 export const container = new ServiceContainer();
 
 /**
- * Every job's D1 row counts are attributed to that job (ADR-019): `Job.run` wraps its
- * lifecycle in this tracker, so its statements land on its own `job.completed` log line
- * and get priced through the cost ledger (ADR-007) for that job's teams.
- */
-setJobUsageTracker(trackJobCost);
-
-/**
+ * Opens a connection to the app's D1 database, counting every statement it runs against
+ * the cost ledger of whatever unit of work is running (ADR-019, ADR-007).
+ *
  * `now` is overridden to epoch-ms because `database/schema.ts` types timestamp columns
  * as `c.integer()`, and the library's default `now()` returns a `Date`, which D1 cannot
  * bind; `onStatement` reuses the row counts D1 already returns in `meta`.
+ *
+ * @returns A database bound to the `DB` binding.
  */
-container.singleton(
-	Database,
-	() =>
-		new Database(createD1DatabaseAdapter(env.DB, { onStatement: recordD1Statement }), {
-			now: () => Date.now(),
-		}),
-);
+export function createDatabase(): Database {
+	return new Database(createD1DatabaseAdapter(env.DB, { onStatement: recordD1Statement }), {
+		now: () => Date.now(),
+	});
+}
+
+container.singleton(Database, createDatabase);
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 /**
  * Mailer for the send paths with no request behind them — the check jobs and the

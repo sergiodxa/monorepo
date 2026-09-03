@@ -1,5 +1,5 @@
 /**
- * Unit tests for `AggregateDailyStatsJob.perform()`, covering its aggregation sources
+ * Unit tests for the `aggregateDailyStats` job, covering its aggregation sources
  * (HTTP via Analytics Engine, DNS/TCP/flow via D1 result tables, cron via
  * `cron_job_pings`) and `MonitorDailyStats.upsertDay`'s replace-on-rerun idempotency.
  * `getHttpDailyAggregate` is mocked since Analytics Engine access has its own
@@ -14,9 +14,9 @@
 
 import type { Result } from "@pkg/result";
 
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { failure, success } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -58,18 +58,21 @@ vi.doMock("~/app/data/monitor-daily-stats", () => ({
 	default: FakeMonitorDailyStats,
 }));
 
-let { AggregateDailyStatsJob } = await import("./aggregate-daily-stats");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let aggregateDailyStats = (await import("./aggregate-daily-stats")).default;
 
-function makeJob() {
-	return new AggregateDailyStatsJob({ logger: new BatchedLogger("test") }, {});
-}
-
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-	let job = makeJob();
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.aggregateDailyStats, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await aggregateDailyStats(ctx);
+	return ctx;
 }
 
 /**
@@ -111,7 +114,7 @@ beforeEach(() => {
 	failingWrites.clear();
 });
 
-describe("AggregateDailyStatsJob", () => {
+describe("aggregateDailyStats", () => {
 	test("aggregates HTTP totals from the analytics engine, rounding response times", async () => {
 		let { db } = createTestDatabase();
 		getHttpDailyAggregateMock.mockImplementation(async () =>

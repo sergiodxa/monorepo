@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CleanCronJobPingsJob.perform`: verifies both of its windows against a
+ * Unit tests for the `cleanCronJobPings` job: verifies both of its windows against a
  * real in-memory database — rows are deleted after `PING_RETENTION_DAYS`, and the
  * `source_ip`/`user_agent` details are nulled after the shorter detail window while the
  * row itself and its timing survive the full year.
@@ -8,26 +8,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
-import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
+import jobs from "~/app/jobs";
+import cleanCronJobPings from "~/app/jobs/clean-cron-job-pings";
+import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { cronJobPings } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-describe("CleanCronJobPingsJob.perform", () => {
+describe("cleanCronJobPings", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
-	let container: ServiceContainer;
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
-		container = new ServiceContainer();
-		container.singleton(Database, () => db);
 	});
 
 	function seedPing(id: string, createdAt: number) {
@@ -42,10 +40,9 @@ describe("CleanCronJobPingsJob.perform", () => {
 	}
 
 	async function run(logger = new BatchedLogger("test")) {
-		await container.scope(async () => {
-			let job = new CleanCronJobPingsJob({ logger }, {});
-			await job.perform();
-		});
+		let ctx = createJobContext(jobs.cleanCronJobPings, { id: "message-1", attempts: 1, logger });
+		ctx.set(Database, db, { property: "database" });
+		await cleanCronJobPings(ctx);
 
 		return logger;
 	}

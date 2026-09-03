@@ -24,6 +24,7 @@ export type {
 	AnyJobLeaf,
 	EnqueueArgs,
 	EnqueueInput,
+	JobArgs,
 	JobDefinition,
 	JobInput,
 	JobMap,

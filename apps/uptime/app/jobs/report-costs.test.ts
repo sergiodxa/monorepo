@@ -1,5 +1,5 @@
 /**
- * Unit tests for `ReportCostsJob.perform`, run against Polar intercepted with MSW.
+ * Unit tests for the `reportCosts` job, run against Polar intercepted with MSW.
  * `_cost.amount` must serialise as a decimal **string** — a small `number` would
  * print as `1e-7` and be unparseable. The Analytics Engine SQL API is stubbed the
  * same way, while `COSTS` is an in-memory dataset enforcing the platform's
@@ -17,7 +17,6 @@ import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
@@ -45,8 +44,10 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
-let { Job } = await import("@pkg/jobs");
-let { ReportCostsJob } = await import("./report-costs");
+let { Job, createJobContext } = await import("@pkg/jobs-next");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let reportCosts = (await import("./report-costs")).default;
 
 /** One ingested event as Polar receives it over the wire, in its snake_case form. */
 interface IngestedEvent {
@@ -131,17 +132,17 @@ async function createBilledTeam(ownerId: string) {
 async function run() {
 	let logger = new BatchedLogger("test");
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(PolarClient, () => new PolarClient({ accessToken: "polar_at_test" }));
 
-	await container.scope(async () => {
-		await new ReportCostsJob({ logger }, {}).perform();
-	});
+	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, logger });
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => reportCosts(ctx));
 
 	return logger;
 }
 
-describe("ReportCostsJob", () => {
+describe("reportCosts", () => {
 	test("reports yesterday's cost as one event per team, keyed for deduplication", async () => {
 		let team = await createBilledTeam("owner-1");
 		serve([costRow(team.id)]);
@@ -286,14 +287,14 @@ describe("ReportCostsJob", () => {
 			http.post(ANALYTICS_URL, () => HttpResponse.text("upstream error", { status: 500 })),
 		);
 
-		await expect(run()).rejects.toThrow(Job.RetryError);
+		await expect(run()).rejects.toThrow(Job.Retry);
 	});
 
 	test("asks the queue to redeliver when Polar rejects the batch", async () => {
 		let team = await createBilledTeam("owner-1");
 		serve([costRow(team.id)], { ingestStatus: 500 });
 
-		await expect(run()).rejects.toThrow(Job.RetryError);
+		await expect(run()).rejects.toThrow(Job.Retry);
 	});
 
 	test("sends nothing and completes when the day recorded no cost", async () => {

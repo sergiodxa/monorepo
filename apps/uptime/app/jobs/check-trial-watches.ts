@@ -3,17 +3,18 @@
  * page: one HTTP probe an hour for seven days, then a wrap-up. Shaped after the paid
  * monitor sweeps — the same atomic claim, bounded-concurrency probing, and `HttpCheck`
  * class — so a trial result means what a paid result means. Trial checks are free and
- * unbilled; the sweep's own cost lands on `PLATFORM_TEAM_ID` (see `perform`).
+ * unbilled; the sweep's own cost lands on `PLATFORM_TEAM_ID`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Job } from "@pkg/jobs";
+import type { CurrentJobContext } from "@pkg/jobs-next";
+
+import { createJobHandler } from "@pkg/jobs-next";
 import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 
 import type { ClaimedTrialWatch } from "~/app/data/trial-watch";
 import type { HttpCheckResult } from "~/app/services/http-check";
@@ -29,6 +30,7 @@ import TrialWatch, {
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
+import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
@@ -66,303 +68,304 @@ interface CheckedWatch {
 /** A watch that did none of the three, for the branches that end one without checking it. */
 const DID_NOTHING: CheckedWatch = { probed: false, changed: false, wrappedUp: false };
 
-export class CheckTrialWatchesJob extends Job {
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-		let mailer = getServiceContainer().get(Mailer);
-		/**
-		 * One instant for the whole sweep, matching the claim's own, so "has this watch expired"
-		 * and "was today's change email already sent" agree with the timestamps written to both
-		 * emails — a per-branch `Date.now()` could straddle midnight and double-send in one day.
-		 */
-		let now = Date.now();
+export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
+	let mailer = getServiceContainer().get(Mailer);
+	/**
+	 * One instant for the whole sweep, matching the claim's own, so "has this watch expired"
+	 * and "was today's change email already sent" agree with the timestamps written to both
+	 * emails — a per-branch `Date.now()` could straddle midnight and double-send in one day.
+	 */
+	let now = Date.now();
 
-		let watches = await TrialWatch.claimDue(db, now);
-
-		/**
-		 * No `apportionCost` call: a lead is never a billing team, so leaving its weights empty
-		 * lets the ledger default this delivery to `PLATFORM_TEAM_ID` under a `platform`
-		 * attribution, keeping it distinguishable from a team's own direct spend.
-		 */
-
-		let settled = await mapWithConcurrency(watches, (watch) => this.check(db, mailer, watch, now));
-
-		let probed = 0;
-		let changed = 0;
-		let wrappedUp = 0;
-		let errorCount = 0;
-
-		for (let outcome of settled) {
-			if (!outcome.ok) {
-				errorCount++;
-				this.logger.error("job.check_trial_watches.watch_failed", {
-					watchId: outcome.item.id,
-					error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
-				});
-				continue;
-			}
-
-			if (outcome.value.probed) probed++;
-			if (outcome.value.changed) changed++;
-			if (outcome.value.wrappedUp) wrappedUp++;
-		}
-
-		this.logger.info("job.check_trial_watches.completed", {
-			total: watches.length,
-			probed,
-			changed,
-			wrappedUp,
-			errorCount,
-		});
-	}
+	let watches = await TrialWatch.claimDue(ctx.database, now);
 
 	/**
-	 * Runs one claimed watch's turn: a wrap-up when its week is over, otherwise a probe,
-	 * a recorded result, and any on-change email it warrants. Throwing here fails only
-	 * this watch; an expired one skips the probe since a 169th check would widen the week.
+	 * No `apportionCost` call: a lead is never a billing team, so leaving its weights empty
+	 * lets the ledger default this delivery to `PLATFORM_TEAM_ID` under a `platform`
+	 * attribution, keeping it distinguishable from a team's own direct spend.
 	 */
-	private async check(
-		db: Database,
-		mailer: Mailer,
-		watch: ClaimedTrialWatch,
-		now: number,
-	): Promise<CheckedWatch> {
-		if (now >= watch.expires_at) return await this.expire(db, mailer, watch, now);
 
-		/**
-		 * `trialProbeOptions` disables redirect-following; `app/services/trial-guard.ts` clears
-		 * the URL by resolving its hostname, and following a redirect afterwards could still
-		 * land on an address the guard never saw. Keep it disabled here.
-		 */
-		let result = await new HttpCheck(trialProbeOptions(watch.url)).run();
+	let settled = await mapWithConcurrency(watches, (watch) => check(ctx, mailer, watch, now));
 
-		let previousStatus = watch.last_status;
-		/** Read from the claimed row before `recordCheck` overwrites the column it compares. */
-		let notify = shouldNotifyChange(watch, result.status, now);
-		/**
-		 * Read before the send stamps it, for the same reason: `null` here is what makes the
-		 * email below this watch's *first* alert, with any later flap repeating that step.
-		 */
-		let firstAlert = watch.change_notified_at === null;
+	let probed = 0;
+	let changed = 0;
+	let wrappedUp = 0;
+	let errorCount = 0;
 
-		await TrialWatch.recordCheck(db, watch, {
-			status: result.status,
-			responseTimeMs: result.outcome.responseTimeMs,
-		});
-
-		await this.reportFirstCheck(db, watch, result.status, now);
-
-		/**
-		 * `shouldNotifyChange` already refused a watch with no previous status; naming that
-		 * condition again is what gives the email a status of its own to report here.
-		 */
-		if (!notify || previousStatus === null)
-			return { probed: true, changed: false, wrappedUp: false };
-
-		let sent = await this.sendChange(db, mailer, watch, previousStatus, result, now);
-		/**
-		 * Stamped only on a send that happened. The stamp is what closes the day's bound, so
-		 * stamping a failed send would spend the day's one change email on nothing and leave
-		 * the reader unaware their site went down.
-		 */
-		if (sent) {
-			await TrialWatch.markChangeNotified(db, watch.id, now);
-			/** Same condition, one row up: the funnel counts confirmed sends. */
-			await Lead.recordEmailSent(db, watch.lead_id, now);
-
-			if (firstAlert) {
-				trackFirstTrialAlertSent(this.logger, {
-					leadId: watch.lead_id,
-					watchId: watch.id,
-					hostname: hostnameOf(watch.url),
-					monitorType: "http",
-					status: result.status,
-					previousStatus,
-				});
-			}
+	for (let outcome of settled) {
+		if (!outcome.ok) {
+			errorCount++;
+			ctx.logger.error("job.check_trial_watches.watch_failed", {
+				watchId: outcome.item.id,
+				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
+			});
+			continue;
 		}
 
-		return { probed: true, changed: sent, wrappedUp: false };
+		if (outcome.value.probed) probed++;
+		if (outcome.value.changed) changed++;
+		if (outcome.value.wrappedUp) wrappedUp++;
 	}
 
+	ctx.logger.info("job.check_trial_watches.completed", {
+		total: watches.length,
+		probed,
+		changed,
+		wrappedUp,
+		errorCount,
+	});
+});
+
+/**
+ * Runs one claimed watch's turn: a wrap-up when its week is over, otherwise a probe,
+ * a recorded result, and any on-change email it warrants. Throwing here fails only
+ * this watch; an expired one skips the probe since a 169th check would widen the week.
+ */
+async function check(
+	ctx: CurrentJobContext,
+	mailer: Mailer,
+	watch: ClaimedTrialWatch,
+	now: number,
+): Promise<CheckedWatch> {
+	if (now >= watch.expires_at) return await expire(ctx, mailer, watch, now);
+
 	/**
-	 * Emits the funnel's first-unattended-check event when `checks_run` reads exactly `1`
-	 * after `recordCheck` incremented it — the one fact about "first check" that cannot drift.
-	 * Its own try/catch keeps a failed read from costing the sweep an already-checked watch.
+	 * `trialProbeOptions` disables redirect-following; `app/services/trial-guard.ts` clears
+	 * the URL by resolving its hostname, and following a redirect afterwards could still
+	 * land on an address the guard never saw. Keep it disabled here.
 	 */
-	private async reportFirstCheck(
-		db: Database,
-		watch: ClaimedTrialWatch,
-		status: MonitorStatus,
-		now: number,
-	): Promise<void> {
-		if (now - watch.created_at > FIRST_CHECK_WINDOW_MS) return;
+	let result = await new HttpCheck(trialProbeOptions(watch.url)).run();
 
-		try {
-			let row = await TrialWatch.findById(db, watch.id);
-			if (row?.checks_run !== 1) return;
+	let previousStatus = watch.last_status;
+	/** Read from the claimed row before `recordCheck` overwrites the column it compares. */
+	let notify = shouldNotifyChange(watch, result.status, now);
+	/**
+	 * Read before the send stamps it, for the same reason: `null` here is what makes the
+	 * email below this watch's *first* alert, with any later flap repeating that step.
+	 */
+	let firstAlert = watch.change_notified_at === null;
 
-			trackFirstTrialCheckCompleted(this.logger, {
+	await TrialWatch.recordCheck(ctx.database, watch, {
+		status: result.status,
+		responseTimeMs: result.outcome.responseTimeMs,
+	});
+
+	await reportFirstCheck(ctx, watch, result.status, now);
+
+	/**
+	 * `shouldNotifyChange` already refused a watch with no previous status; naming that
+	 * condition again is what gives the email a status of its own to report here.
+	 */
+	if (!notify || previousStatus === null) return { probed: true, changed: false, wrappedUp: false };
+
+	let sent = await sendChange(ctx, mailer, watch, previousStatus, result, now);
+	/**
+	 * Stamped only on a send that happened. The stamp is what closes the day's bound, so
+	 * stamping a failed send would spend the day's one change email on nothing and leave
+	 * the reader unaware their site went down.
+	 */
+	if (sent) {
+		await TrialWatch.markChangeNotified(ctx.database, watch.id, now);
+		/** Same condition, one row up: the funnel counts confirmed sends. */
+		await Lead.recordEmailSent(ctx.database, watch.lead_id, now);
+
+		if (firstAlert) {
+			trackFirstTrialAlertSent(ctx.logger, {
 				leadId: watch.lead_id,
 				watchId: watch.id,
 				hostname: hostnameOf(watch.url),
 				monitorType: "http",
-				status,
-				succeeded: isHealthyTrialStatus(status),
-			});
-		} catch (error) {
-			this.logger.error("job.check_trial_watches.first_check_report_failed", {
-				watchId: watch.id,
-				error: error instanceof Error ? error.message : String(error),
-			});
-		}
-	}
-
-	/**
-	 * Ends a watch whose seven days are up, sending the wrap-up when one is still owed.
-	 * An already-wrapped-up or lead-gone watch finishes immediately, closing off the
-	 * hourly reclaim; a failed send stays due, bounded by deletion at `converts_until`.
-	 */
-	private async expire(
-		db: Database,
-		mailer: Mailer,
-		watch: ClaimedTrialWatch,
-		now: number,
-	): Promise<CheckedWatch> {
-		if (!shouldSendSummary(watch, now)) {
-			await TrialWatch.finish(db, watch.id);
-			return DID_NOTHING;
-		}
-
-		let lead = await Lead.findById(db, watch.lead_id);
-		if (!lead) {
-			this.logger.error("job.check_trial_watches.lead_missing", {
-				watchId: watch.id,
-				leadId: watch.lead_id,
-			});
-			await TrialWatch.finish(db, watch.id);
-			return DID_NOTHING;
-		}
-
-		if (!(await this.sendSummary(db, mailer, watch, lead))) return DID_NOTHING;
-
-		/** One write that both records the send and ends the watch; the two are one event. */
-		await TrialWatch.markSummarySent(db, watch.id, now);
-		/** Same condition: the funnel counts confirmed sends. */
-		await Lead.recordEmailSent(db, lead.id, now);
-		return { probed: false, changed: false, wrappedUp: true };
-	}
-
-	/**
-	 * Tells one lead that a target they are watching is doing something different, in the
-	 * language they were browsing in. A rejected send is still billed, so cost is recorded
-	 * before the send resolves.
-	 *
-	 * @returns Whether the message was accepted, which is what decides the day's bound.
-	 */
-	private async sendChange(
-		db: Database,
-		mailer: Mailer,
-		watch: ClaimedTrialWatch,
-		previousStatus: MonitorStatus,
-		result: HttpCheckResult,
-		now: number,
-	): Promise<boolean> {
-		let lead = await Lead.findById(db, watch.lead_id);
-		if (!lead) {
-			this.logger.error("job.check_trial_watches.lead_missing", {
-				watchId: watch.id,
-				leadId: watch.lead_id,
-			});
-			return false;
-		}
-
-		let { locale, t } = await emailTranslator(lead.locale);
-
-		recordCost("emailSent");
-		let sent = await mailer.send(
-			new TrialChangeEmail({
-				to: lead.email,
-				url: watch.url,
 				status: result.status,
 				previousStatus,
-				responseStatus: result.outcome.responseStatus,
-				responseTimeMs: result.outcome.responseTimeMs,
-				changedAt: new Date(now),
-				unsubscribeToken: lead.unsubscribe_token,
-				locale,
-				t,
-			}),
-		);
-
-		if (isFailure(sent)) {
-			this.logger.error("job.check_trial_watches.change_email_failed", {
-				watchId: watch.id,
-				error: sent.error.message,
 			});
-			return false;
 		}
-
-		return true;
 	}
+
+	return { probed: true, changed: sent, wrappedUp: false };
+}
+
+/**
+ * Emits the funnel's first-unattended-check event when `checks_run` reads exactly `1`
+ * after `recordCheck` incremented it — the one fact about "first check" that cannot drift.
+ * Its own try/catch keeps a failed read from costing the sweep an already-checked watch.
+ */
+async function reportFirstCheck(
+	ctx: CurrentJobContext,
+	watch: ClaimedTrialWatch,
+	status: MonitorStatus,
+	now: number,
+): Promise<void> {
+	if (now - watch.created_at > FIRST_CHECK_WINDOW_MS) return;
+
+	try {
+		let row = await TrialWatch.findById(ctx.database, watch.id);
+		if (row?.checks_run !== 1) return;
+
+		trackFirstTrialCheckCompleted(ctx.logger, {
+			leadId: watch.lead_id,
+			watchId: watch.id,
+			hostname: hostnameOf(watch.url),
+			monitorType: "http",
+			status,
+			succeeded: isHealthyTrialStatus(status),
+		});
+	} catch (error) {
+		ctx.logger.error("job.check_trial_watches.first_check_report_failed", {
+			watchId: watch.id,
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
+}
+
+/**
+ * Ends a watch whose seven days are up, sending the wrap-up when one is still owed.
+ * An already-wrapped-up or lead-gone watch finishes immediately, closing off the
+ * hourly reclaim; a failed send stays due, bounded by deletion at `converts_until`.
+ */
+async function expire(
+	ctx: CurrentJobContext,
+	mailer: Mailer,
+	watch: ClaimedTrialWatch,
+	now: number,
+): Promise<CheckedWatch> {
+	if (!shouldSendSummary(watch, now)) {
+		await TrialWatch.finish(ctx.database, watch.id);
+		return DID_NOTHING;
+	}
+
+	let lead = await Lead.findById(ctx.database, watch.lead_id);
+	if (!lead) {
+		ctx.logger.error("job.check_trial_watches.lead_missing", {
+			watchId: watch.id,
+			leadId: watch.lead_id,
+		});
+		await TrialWatch.finish(ctx.database, watch.id);
+		return DID_NOTHING;
+	}
+
+	if (!(await sendSummary(ctx, mailer, watch, lead))) return DID_NOTHING;
+
+	/** One write that both records the send and ends the watch; the two are one event. */
+	await TrialWatch.markSummarySent(ctx.database, watch.id, now);
+	/** Same condition: the funnel counts confirmed sends. */
+	await Lead.recordEmailSent(ctx.database, lead.id, now);
+	return { probed: false, changed: false, wrappedUp: true };
+}
+
+/**
+ * Tells one lead that a target they are watching is doing something different, in the
+ * language they were browsing in. A rejected send is still billed, so cost is recorded
+ * before the send resolves.
+ *
+ * @returns Whether the message was accepted, which is what decides the day's bound.
+ */
+async function sendChange(
+	ctx: CurrentJobContext,
+	mailer: Mailer,
+	watch: ClaimedTrialWatch,
+	previousStatus: MonitorStatus,
+	result: HttpCheckResult,
+	now: number,
+): Promise<boolean> {
+	let lead = await Lead.findById(ctx.database, watch.lead_id);
+	if (!lead) {
+		ctx.logger.error("job.check_trial_watches.lead_missing", {
+			watchId: watch.id,
+			leadId: watch.lead_id,
+		});
+		return false;
+	}
+
+	let { locale, t } = await emailTranslator(lead.locale);
+
+	recordCost("emailSent");
+	let sent = await mailer.send(
+		new TrialChangeEmail({
+			to: lead.email,
+			url: watch.url,
+			status: result.status,
+			previousStatus,
+			responseStatus: result.outcome.responseStatus,
+			responseTimeMs: result.outcome.responseTimeMs,
+			changedAt: new Date(now),
+			unsubscribeToken: lead.unsubscribe_token,
+			locale,
+			t,
+		}),
+	);
+
+	if (isFailure(sent)) {
+		ctx.logger.error("job.check_trial_watches.change_email_failed", {
+			watchId: watch.id,
+			error: sent.error.message,
+		});
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Sends one target's seven-day wrap-up: the week as a bar plus its three summary
+ * numbers, read from the watch row's own running totals — cheaper than re-deriving
+ * them from 168 history rows, which the bar still needs for its daily segments.
+ *
+ * @returns Whether the message was accepted, which is what decides whether the watch ends.
+ */
+async function sendSummary(
+	ctx: CurrentJobContext,
+	mailer: Mailer,
+	watch: ClaimedTrialWatch,
+	lead: SelectLead,
+): Promise<boolean> {
+	let row = await TrialWatch.findById(ctx.database, watch.id);
+	if (!row) {
+		ctx.logger.error("job.check_trial_watches.watch_missing", { watchId: watch.id });
+		return false;
+	}
+
+	let results = await TrialWatch.listResultsBetween(
+		ctx.database,
+		row.id,
+		row.created_at,
+		row.expires_at,
+	);
+	let { locale, t } = await emailTranslator(lead.locale);
 
 	/**
-	 * Sends one target's seven-day wrap-up: the week as a bar plus its three summary
-	 * numbers, read from the watch row's own running totals — cheaper than re-deriving
-	 * them from 168 history rows, which the bar still needs for its daily segments.
-	 *
-	 * @returns Whether the message was accepted, which is what decides whether the watch ends.
+	 * Built inside the request: signing in is what turns a watched target into a real
+	 * monitor, and `TrialWatch.listConvertibleByLead` runs on the sign-in path, so the
+	 * link is the app entry point, carrying a signed-out reader through sign-in first.
 	 */
-	private async sendSummary(
-		db: Database,
-		mailer: Mailer,
-		watch: ClaimedTrialWatch,
-		lead: SelectLead,
-	): Promise<boolean> {
-		let row = await TrialWatch.findById(db, watch.id);
-		if (!row) {
-			this.logger.error("job.check_trial_watches.watch_missing", { watchId: watch.id });
-			return false;
-		}
+	let subscribeUrl = `${APP_ORIGIN}${routes.app.index.href()}`;
 
-		let results = await TrialWatch.listResultsBetween(db, row.id, row.created_at, row.expires_at);
-		let { locale, t } = await emailTranslator(lead.locale);
+	recordCost("emailSent");
+	let sent = await mailer.send(
+		new TrialWeeklyDigestEmail({
+			to: lead.email,
+			url: row.url,
+			segments: segmentsOver(results, row.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
+			stats: watchStats(row),
+			subscribeUrl,
+			/**
+			 * The same report as a page, so a reader who comes back to it in a month — or
+			 * forwards it to the client whose site it describes — can revisit it straight
+			 * from the link. `row` is the whole watch, so the token is already in hand.
+			 */
+			reportToken: row.report_token,
+			unsubscribeToken: lead.unsubscribe_token,
+			locale,
+			t,
+		}),
+	);
 
-		/**
-		 * Built inside the request: signing in is what turns a watched target into a real
-		 * monitor, and `TrialWatch.listConvertibleByLead` runs on the sign-in path, so the
-		 * link is the app entry point, carrying a signed-out reader through sign-in first.
-		 */
-		let subscribeUrl = `${APP_ORIGIN}${routes.app.index.href()}`;
-
-		recordCost("emailSent");
-		let sent = await mailer.send(
-			new TrialWeeklyDigestEmail({
-				to: lead.email,
-				url: row.url,
-				segments: segmentsOver(results, row.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
-				stats: watchStats(row),
-				subscribeUrl,
-				/**
-				 * The same report as a page, so a reader who comes back to it in a month — or
-				 * forwards it to the client whose site it describes — can revisit it straight
-				 * from the link. `row` is the whole watch, so the token is already in hand.
-				 */
-				reportToken: row.report_token,
-				unsubscribeToken: lead.unsubscribe_token,
-				locale,
-				t,
-			}),
-		);
-
-		if (isFailure(sent)) {
-			this.logger.error("job.check_trial_watches.summary_email_failed", {
-				watchId: watch.id,
-				error: sent.error.message,
-			});
-			return false;
-		}
-
-		return true;
+	if (isFailure(sent)) {
+		ctx.logger.error("job.check_trial_watches.summary_email_failed", {
+			watchId: watch.id,
+			error: sent.error.message,
+		});
+		return false;
 	}
+
+	return true;
 }

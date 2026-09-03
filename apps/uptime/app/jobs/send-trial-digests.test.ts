@@ -1,5 +1,5 @@
 /**
- * Unit tests for `SendTrialDigestsJob.perform()`: which leads a run picks up, that a lead
+ * Unit tests for the `sendTrialDigests` job: which leads a run picks up, that a lead
  * watching three URLs gets exactly one email covering all three, that a lead with no active
  * watch gets none at all, and that the stamp is what moves the next digest to the following
  * day.
@@ -14,6 +14,7 @@
 
 import type { Transport } from "@pkg/mail";
 
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -28,7 +29,9 @@ import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
-import { SendTrialDigestsJob } from "~/app/jobs/send-trial-digests";
+import jobs from "~/app/jobs";
+import { Database as JobDatabase } from "~/app/jobs/middleware/database";
+import sendTrialDigests from "~/app/jobs/send-trial-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { leads, trialWatches } from "~/database/schema";
 
@@ -44,14 +47,20 @@ class RefusingTransport implements Transport {
 	}
 }
 
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
 
-	let job = new SendTrialDigestsJob({ logger: new BatchedLogger("test") }, {});
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.sendTrialDigests, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => sendTrialDigests(ctx));
+	return ctx;
 }
 
 /**
@@ -120,7 +129,7 @@ beforeEach(() => {
 	transport.clear();
 });
 
-describe("SendTrialDigestsJob", () => {
+describe("sendTrialDigests", () => {
 	/** The subject reports a count, not a list — one line has room for a number, not three hostnames. */
 	test("sends one lead watching three URLs exactly one email", async () => {
 		let { db } = createTestDatabase();
@@ -268,13 +277,17 @@ describe("SendTrialDigestsJob", () => {
 		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
 
 		let container = new ServiceContainer();
-		container.singleton(Database, () => db);
 		container.singleton(
 			Mailer,
 			() => new Mailer({ transport: new RefusingTransport(), from: MAIL_FROM }),
 		);
-		let job = new SendTrialDigestsJob({ logger: new BatchedLogger("test") }, {});
-		await container.scope(() => job.perform());
+		let ctx = createJobContext(jobs.sendTrialDigests, {
+			id: "message-1",
+			attempts: 1,
+			logger: new BatchedLogger("test"),
+		});
+		ctx.set(JobDatabase, db, { property: "database" });
+		await container.scope(() => sendTrialDigests(ctx));
 
 		let row = await Lead.findById(db, lead.id);
 		expect(row?.emails_sent).toBe(0);
@@ -288,7 +301,7 @@ describe("SendTrialDigestsJob", () => {
  * stamp — a send the transport accepted — because a report of an email nobody received would
  * overstate the only engagement measure this funnel has.
  */
-describe("SendTrialDigestsJob funnel events", () => {
+describe("sendTrialDigests funnel events", () => {
 	/** Every progress-email event a run emitted. */
 	function funnelEvents(job: { logger: BatchedLogger }) {
 		return job.logger.events.filter((event) => event.event === "funnel.trial_progress_email_sent");
@@ -353,14 +366,18 @@ describe("SendTrialDigestsJob funnel events", () => {
 		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
 
 		let container = new ServiceContainer();
-		container.singleton(Database, () => db);
 		container.singleton(
 			Mailer,
 			() => new Mailer({ transport: new RefusingTransport(), from: MAIL_FROM }),
 		);
-		let job = new SendTrialDigestsJob({ logger: new BatchedLogger("test") }, {});
-		await container.scope(() => job.perform());
+		let ctx = createJobContext(jobs.sendTrialDigests, {
+			id: "message-1",
+			attempts: 1,
+			logger: new BatchedLogger("test"),
+		});
+		ctx.set(JobDatabase, db, { property: "database" });
+		await container.scope(() => sendTrialDigests(ctx));
 
-		expect(funnelEvents(job)).toHaveLength(0);
+		expect(funnelEvents(ctx)).toHaveLength(0);
 	});
 });

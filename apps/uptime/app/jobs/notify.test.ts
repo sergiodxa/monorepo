@@ -1,5 +1,5 @@
 /**
- * Unit tests for `NotifyJob.perform()`: that each monitor type routes to its own
+ * Unit tests for the `notify` job: that each monitor type routes to its own
  * `notify*` helper with a snapshot reloaded from the monitor row, that a monitor deleted
  * between the sweep and this job is acknowledged rather than retried, and how malformed
  * messages versus failed lookups map onto non-retriable/retriable outcomes.
@@ -15,6 +15,8 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { NotifyInput } from "~/app/jobs";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -76,32 +78,30 @@ vi.doMock("~/app/services/alerts", () => ({
 	notifySslResult: notifySslResultMock,
 }));
 
-let { Job } = await import("@pkg/jobs");
-let { NotifyJob } = await import("./notify");
+let { Job, createJobContext } = await import("@pkg/jobs-next");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let notify = (await import("./notify")).default;
 let { default: Monitor } = await import("~/app/data/monitor");
 
-/**
- * The message bodies these tests hand the job, loose enough to include the malformed
- * shapes the rejection cases require.
- */
-type MessageBody = {
-	type: string;
-	monitorType: string;
-	monitorId: string;
-	previousStatus?: string | null;
-	newStatus?: string;
-};
-
-async function runJob(db: Database, body: MessageBody) {
+/** Runs the handler over a context carrying the test's database, as the chain would. */
+async function runJob(db: Database, input: NotifyInput) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	let job = new NotifyJob({ logger: new BatchedLogger("test") }, body);
-	await container.scope(() => job.perform());
-	return job;
+
+	let ctx = createJobContext(jobs.notify, {
+		id: "message-1",
+		attempts: 1,
+		input,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => notify(ctx));
+	return ctx;
 }
 
 beforeEach(() => {
@@ -119,7 +119,7 @@ beforeEach(() => {
 	notifyCalls = [];
 });
 
-describe("NotifyJob", () => {
+describe("notify", () => {
 	test("dispatches a TCP transition with a result rebuilt from the monitor row", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await TcpMonitor.create(db, "team-1", {
@@ -133,7 +133,6 @@ describe("NotifyJob", () => {
 		});
 
 		let job = await runJob(db, {
-			type: "notify",
 			monitorType: "tcp",
 			monitorId: monitor.id,
 			previousStatus: "up",
@@ -200,7 +199,6 @@ describe("NotifyJob", () => {
 		]);
 
 		await runJob(db, {
-			type: "notify",
 			monitorType: "dns",
 			monitorId: monitor.id,
 			previousStatus: null,
@@ -243,7 +241,6 @@ describe("NotifyJob", () => {
 		});
 
 		await runJob(db, {
-			type: "notify",
 			monitorType: "cron",
 			monitorId: monitor.id,
 			previousStatus: "late",
@@ -287,7 +284,6 @@ describe("NotifyJob", () => {
 		});
 
 		await runJob(db, {
-			type: "notify",
 			monitorType: "flow",
 			monitorId: monitor.id,
 			previousStatus: "up",
@@ -325,7 +321,6 @@ describe("NotifyJob", () => {
 		});
 
 		await runJob(db, {
-			type: "notify",
 			monitorType: "ssl",
 			monitorId: monitor.id,
 			previousStatus: "valid",
@@ -344,7 +339,6 @@ describe("NotifyJob", () => {
 		let { db } = createTestDatabase();
 
 		let job = await runJob(db, {
-			type: "notify",
 			monitorType: "tcp",
 			monitorId: "deleted-monitor",
 			previousStatus: "up",
@@ -354,14 +348,6 @@ describe("NotifyJob", () => {
 		expect(notifyCalls).toHaveLength(0);
 		let event = job.logger.events.find((event) => event.event === "job.notify.monitor_not_found");
 		expect(event?.monitorId).toBe("deleted-monitor");
-	});
-
-	test("never retries a message whose shape is invalid", async () => {
-		let { db } = createTestDatabase();
-
-		await expect(
-			runJob(db, { type: "notify", monitorType: "carrier-pigeon", monitorId: "monitor-1" }),
-		).rejects.toBeInstanceOf(Job.NonRetriableError);
 	});
 
 	test("never retries a status the monitor type doesn't have", async () => {
@@ -376,13 +362,12 @@ describe("NotifyJob", () => {
 
 		await expect(
 			runJob(db, {
-				type: "notify",
 				monitorType: "tcp",
 				monitorId: monitor.id,
 				previousStatus: null,
 				newStatus: "changed",
 			}),
-		).rejects.toBeInstanceOf(Job.NonRetriableError);
+		).rejects.toBeInstanceOf(Job.NonRetriable);
 	});
 
 	test("retries when the alert lookup itself fails", async () => {
@@ -401,12 +386,11 @@ describe("NotifyJob", () => {
 
 		await expect(
 			runJob(db, {
-				type: "notify",
 				monitorType: "tcp",
 				monitorId: monitor.id,
 				previousStatus: null,
 				newStatus: "down",
 			}),
-		).rejects.toBeInstanceOf(Job.RetryError);
+		).rejects.toBeInstanceOf(Job.Retry);
 	});
 });

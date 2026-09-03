@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckTrialWatchesJob.perform()`: which watches a run claims, the
+ * Unit tests for the `checkTrialWatches` job: which watches a run claims, the
  * result recorded, the on-change email and its per-day cap, and the seven-day wrap-up.
  * Nothing here is billed or reported — the container gets no `PolarClient`, so a job
  * needing one would fail outright. `HttpCheck` is faked with a lightweight stand-in,
@@ -12,6 +12,7 @@
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -76,18 +77,26 @@ vi.doMock("~/app/services/http-check", () => ({
 	},
 }));
 
-let { CheckTrialWatchesJob } = await import("./check-trial-watches");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkTrialWatches = (await import("./check-trial-watches")).default;
 
 let transport = new MemoryTransport();
 
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
 
-	let job = new CheckTrialWatchesJob({ logger: new BatchedLogger("test") }, {});
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.checkTrialWatches, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => checkTrialWatches(ctx));
+	return ctx;
 }
 
 async function seedLead(db: Database, email = "visitor@example.com"): Promise<SelectLead> {
@@ -160,7 +169,7 @@ beforeEach(() => {
 	answering("up");
 });
 
-describe("CheckTrialWatchesJob", () => {
+describe("checkTrialWatches", () => {
 	test("probes a due watch, records the result, and folds it into the running totals", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedLead(db);
@@ -253,7 +262,7 @@ describe("CheckTrialWatchesJob", () => {
 	});
 });
 
-describe("CheckTrialWatchesJob change notifications", () => {
+describe("checkTrialWatches change notifications", () => {
 	test("emails the lead when the status disagrees with the last one", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedLead(db);
@@ -333,7 +342,7 @@ describe("CheckTrialWatchesJob change notifications", () => {
 	});
 });
 
-describe("CheckTrialWatchesJob wrap-up", () => {
+describe("checkTrialWatches wrap-up", () => {
 	test("wraps up an expired watch without probing it, and stops claiming it", async () => {
 		let { db } = createTestDatabase();
 		let lead = await seedLead(db);
@@ -431,7 +440,7 @@ describe("CheckTrialWatchesJob wrap-up", () => {
 	});
 });
 
-describe("CheckTrialWatchesJob metering", () => {
+describe("checkTrialWatches metering", () => {
 	/** A watch belongs to no team, so no ping point exists for a query to ever select. */
 	test("writes no Analytics Engine point for a trial check", async () => {
 		let { db } = createTestDatabase();
@@ -460,7 +469,7 @@ describe("CheckTrialWatchesJob metering", () => {
  * the boundary in each: only the first check and first alert count as a new step, and
  * neither event may name the URL it is about.
  */
-describe("CheckTrialWatchesJob funnel events", () => {
+describe("checkTrialWatches funnel events", () => {
 	/** Every `funnel.*` line of one kind a run emitted. */
 	function funnelEvents(job: { logger: BatchedLogger }, name: string) {
 		return job.logger.events.filter((event) => event.event === `funnel.${name}`);

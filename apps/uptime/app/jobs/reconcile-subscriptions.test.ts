@@ -1,5 +1,5 @@
 /**
- * Unit tests for `ReconcileSubscriptionsJob.perform`: it repairs drift in both directions
+ * Unit tests for the `reconcileSubscriptions` job: it repairs drift in both directions
  * (a subscription Polar lists as active that the projection missed, and a projection row
  * Polar no longer lists), leaves an agreeing projection untouched, and logs every repair
  * at error level so a broken webhook delivery stays visible. `PolarClient` is a container
@@ -11,14 +11,16 @@
 
 import type { Subscription as PolarSubscription } from "@pkg/polar";
 
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
-import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
+import jobs from "~/app/jobs";
+import { Database } from "~/app/jobs/middleware/database";
+import reconcileSubscriptions from "~/app/jobs/reconcile-subscriptions";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { polarSubscription } from "~/app/lib/test/polar";
 import { monitors, teams } from "~/database/schema";
@@ -50,13 +52,12 @@ function fakePolar(live: PolarSubscription[], byId: Record<string, PolarSubscrip
 async function run(polar: PolarClient) {
 	let logger = new BatchedLogger("test");
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(PolarClient, () => polar);
 
-	await container.scope(async () => {
-		let job = new ReconcileSubscriptionsJob({ logger }, {});
-		await job.perform();
-	});
+	let ctx = createJobContext(jobs.reconcileSubscriptions, { id: "message-1", attempts: 1, logger });
+	ctx.set(Database, db, { property: "database" });
+
+	await container.scope(() => reconcileSubscriptions(ctx));
 
 	return logger;
 }
@@ -90,7 +91,7 @@ async function createTeamWithMonitor(ownerId: string, nextDueAt: number | null) 
 	);
 }
 
-describe("ReconcileSubscriptionsJob.perform", () => {
+describe("reconcileSubscriptions", () => {
 	test("repairs nothing when the projection already agrees with Polar", async () => {
 		await Subscription.upsert(db, "owner-1", polarSubscription());
 

@@ -3,21 +3,22 @@
  * grows with monitor activity (ADR-020), batched in one job so the schedule and log line
  * stay shared. A row whose date column is still `NULL` is never matched by a cutoff. The
  * free-watch tables are the exception: their three sweeps run in a load-bearing order —
- * see {@link CleanJob.sweepTrial}.
+ * see {@link sweepTrial}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Job } from "@pkg/jobs";
-import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import type { Database } from "remix/data-table";
+
+import { createJobHandler } from "@pkg/jobs-next";
 
 import type { BatchedSweepResult } from "~/app/lib/retention";
 
 import Lead from "~/app/data/lead";
 import Team from "~/app/data/team";
 import TrialWatch from "~/app/data/trial-watch";
+import jobs from "~/app/jobs";
 import { deleteOlderThan } from "~/app/lib/retention";
 import { apportionCost } from "~/app/services/cost";
 
@@ -82,62 +83,56 @@ interface SweptTable {
 	reachedCeiling: boolean;
 }
 
-export class CleanJob extends Job {
-	/** The "Clean Old Monitor Results" cron monitor this sweep reports itself to when it completes. */
-	static override monitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
-
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-		let now = Date.now();
-
-		/**
-		 * Charged when the delete happens, split by monitors per team (ADR-007 §5): a bulk
-		 * `DELETE` cannot say whose rows it removed, so monitor count is the closest proxy
-		 * for the volume each team contributed.
-		 */
-		apportionCost(await Team.countMonitorsByTeam(db));
-
-		let tables: SweptTable[] = [];
-
-		/**
-		 * One table at a time, and one batch at a time inside each: the point of the
-		 * batching is to bound how much this job writes at once, which running the tables
-		 * concurrently would immediately undo.
-		 */
-		for (let entry of RETAINED_TABLES) {
-			let cutoff = now - entry.retentionDays * MS_PER_DAY;
-			let swept = await deleteOlderThan(db, entry.table, entry.dateColumn, cutoff);
-			tables.push(record(entry.table, swept));
-		}
-
-		tables.push(...(await this.sweepTrial(db, now)));
-
-		let rowsDeleted = tables.reduce((total, entry) => total + entry.rowsDeleted, 0);
-		/**
-		 * `reachedCeiling` is the field to watch after a window changes: it means a table
-		 * still has rows past its cutoff and the next run will continue draining it.
-		 */
-		let reachedCeiling = tables.some((entry) => entry.reachedCeiling);
-
-		this.logger.info("job.clean.completed", { rowsDeleted, reachedCeiling, tables });
-	}
+export default createJobHandler(jobs.clean, async (ctx) => {
+	let now = Date.now();
 
 	/**
-	 * Sweeps free-watch tables in the only correct order: results before the watch that
-	 * identifies them, then watches past their `converts_until`, then leads with no watch
-	 * left — each step's own condition only holds once the step before it has already run.
+	 * Charged when the delete happens, split by monitors per team (ADR-007 §5): a bulk
+	 * `DELETE` cannot say whose rows it removed, so monitor count is the closest proxy
+	 * for the volume each team contributed.
 	 */
-	private async sweepTrial(db: Database, now: number): Promise<SweptTable[]> {
-		let results = await TrialWatch.deleteExpiredResults(db, now);
-		let watches = await TrialWatch.deleteExpired(db, now);
-		let leads = await Lead.deleteOrphaned(db, now);
+	apportionCost(await Team.countMonitorsByTeam(ctx.database));
 
-		return [
-			record("trial_watch_results", results),
-			record("trial_watches", watches),
-			record("leads", leads),
-		];
+	let tables: SweptTable[] = [];
+
+	/**
+	 * One table at a time, and one batch at a time inside each: the point of the
+	 * batching is to bound how much this job writes at once, which running the tables
+	 * concurrently would immediately undo.
+	 */
+	for (let entry of RETAINED_TABLES) {
+		let cutoff = now - entry.retentionDays * MS_PER_DAY;
+		let swept = await deleteOlderThan(ctx.database, entry.table, entry.dateColumn, cutoff);
+		tables.push(record(entry.table, swept));
 	}
+
+	tables.push(...(await sweepTrial(ctx.database, now)));
+
+	let rowsDeleted = tables.reduce((total, entry) => total + entry.rowsDeleted, 0);
+	/**
+	 * `reachedCeiling` is the field to watch after a window changes: it means a table
+	 * still has rows past its cutoff and the next run will continue draining it.
+	 */
+	let reachedCeiling = tables.some((entry) => entry.reachedCeiling);
+
+	ctx.logger.info("job.clean.completed", { rowsDeleted, reachedCeiling, tables });
+});
+
+/**
+ * Sweeps free-watch tables in the only correct order: results before the watch that
+ * identifies them, then watches past their `converts_until`, then leads with no watch
+ * left — each step's own condition only holds once the step before it has already run.
+ */
+async function sweepTrial(db: Database, now: number): Promise<SweptTable[]> {
+	let results = await TrialWatch.deleteExpiredResults(db, now);
+	let watches = await TrialWatch.deleteExpired(db, now);
+	let leads = await Lead.deleteOrphaned(db, now);
+
+	return [
+		record("trial_watch_results", results),
+		record("trial_watches", watches),
+		record("leads", leads),
+	];
 }
 
 /** One sweep's outcome as the completion log reports it. */

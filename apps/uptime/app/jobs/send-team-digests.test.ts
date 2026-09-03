@@ -10,6 +10,7 @@
 import type { Transport } from "@pkg/mail";
 
 import { ManagementClient, SubjectNotFoundError } from "@pkg/auth/management-client";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -26,7 +27,10 @@ import Monitor from "~/app/data/monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
-import { SendTeamDailyDigestsJob, SendTeamWeeklyDigestsJob } from "~/app/jobs/send-team-digests";
+import jobs from "~/app/jobs";
+import { Database as JobDatabase } from "~/app/jobs/middleware/database";
+import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
+import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	flowMonitors,
@@ -81,21 +85,27 @@ function fakeAdmin(): ManagementClient {
 /** Runs one digest, the way a cron trigger's queue message would. */
 async function runJob(db: Database, period: DigestPeriod, options: { transport?: Transport } = {}) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }),
 	);
 	container.instance(ManagementClient, fakeAdmin());
 
-	/** The period picks the class and its message type, exactly as the worker's routing does. */
-	let [Digest, body] =
+	/** The period picks the job and its handler, exactly as the dispatcher's routing does. */
+	let [job, handler] =
 		period === "daily"
-			? ([SendTeamDailyDigestsJob, { type: "sendTeamDailyDigests" }] as const)
-			: ([SendTeamWeeklyDigestsJob, { type: "sendTeamWeeklyDigests" }] as const);
-	let job = new Digest({ logger: new BatchedLogger("test") }, body);
-	await container.scope(() => job.perform());
-	return job;
+			? ([jobs.sendTeamDailyDigests, sendTeamDailyDigests] as const)
+			: ([jobs.sendTeamWeeklyDigests, sendTeamWeeklyDigests] as const);
+
+	let ctx = createJobContext(job, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => handler(ctx));
+	return ctx;
 }
 
 async function seedTeam(db: Database, name: string): Promise<SelectTeam> {
@@ -232,7 +242,7 @@ beforeEach(() => {
 	addresses.clear();
 });
 
-describe("SendTeamDigestsJob period", () => {
+describe("sendTeamDigests period", () => {
 	test("sends the daily digest when the message names that period", async () => {
 		let { db } = createTestDatabase();
 		let team = await seedTeam(db, "Acme");
@@ -269,13 +279,13 @@ describe("SendTeamDigestsJob period", () => {
 	});
 
 	/**
-	 * Two classes exist so each can report to its own cron-job monitor: a monitor holds one cron
-	 * expression and `Job.run` reads `monitorId` off the class it was handed, so one class serving
-	 * both periods could only ever ping one of them, leaving the other digest unwatched.
+	 * Two jobs exist so each can report to its own cron-job monitor: a monitor holds one cron
+	 * expression and the dispatcher reads `monitorId` off the job it delivered, so one job
+	 * serving both periods could only ever ping one of them, leaving the other unwatched.
 	 */
 	test("gives each schedule its own cron-job monitor to report to", () => {
-		let daily = SendTeamDailyDigestsJob.monitorId;
-		let weekly = SendTeamWeeklyDigestsJob.monitorId;
+		let daily = jobs.sendTeamDailyDigests.monitorId;
+		let weekly = jobs.sendTeamWeeklyDigests.monitorId;
 
 		expect(daily).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 		expect(weekly).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
@@ -283,7 +293,7 @@ describe("SendTeamDigestsJob period", () => {
 	});
 });
 
-describe("SendTeamDigestsJob recipients", () => {
+describe("sendTeamDigests recipients", () => {
 	test("sends one email per membership, each naming its own team", async () => {
 		let { db } = createTestDatabase();
 		let acme = await seedTeam(db, "Acme");
@@ -367,7 +377,7 @@ describe("SendTeamDigestsJob recipients", () => {
 	});
 });
 
-describe("SendTeamDigestsJob monitors", () => {
+describe("sendTeamDigests monitors", () => {
 	/**
 	 * A team running flows is billed for them, so a digest that quietly left them out would
 	 * report a morning as clean that the dashboard reports as broken.
@@ -404,7 +414,7 @@ describe("SendTeamDigestsJob monitors", () => {
 	});
 });
 
-describe("SendTeamDigestsJob stamp", () => {
+describe("sendTeamDigests stamp", () => {
 	/**
 	 * The weekly digest is a different schedule with its own stamp, so it stays untouched here and
 	 * Monday's run still finds this membership due.
@@ -463,7 +473,7 @@ describe("SendTeamDigestsJob stamp", () => {
 	});
 });
 
-describe("SendTeamDigestsJob window", () => {
+describe("sendTeamDigests window", () => {
 	/**
 	 * A window of just yesterday reads "Up 100.0%"; folding in the day before, which was fully
 	 * down, would read "Down 50.0%" instead — the whole difference a one-day window makes.

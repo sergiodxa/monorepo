@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckSslJob.perform()`: persisting `calculateSslStatus`'s
+ * Unit tests for the `checkSsl` job: persisting `calculateSslStatus`'s
  * result onto the monitor row, passing each monitor's own expiry settings,
  * enqueuing a `notify` message only when a warning threshold is crossed, and
  * surviving one monitor's failure without stopping the rest of the sweep.
@@ -12,6 +12,7 @@
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -61,7 +62,9 @@ vi.doMock("~/app/services/ssl-info", () => ({
 	calculateSslStatus: calculateSslStatusMock,
 }));
 
-let { CheckSslJob } = await import("./check-ssl");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkSsl = (await import("./check-ssl")).default;
 /**
  * Imported dynamically, after the `cloudflare:workers` mock above, since `Monitor`
  * itself reads `env` at module load and a static import would be hoisted before it.
@@ -73,20 +76,23 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-function makeJob() {
-	return new CheckSslJob({ logger: new BatchedLogger("test") }, {});
-}
-
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	let job = makeJob();
-	await container.scope(() => job.perform());
-	return job;
+
+	let ctx = createJobContext(jobs.checkSsl, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => checkSsl(ctx));
+	return ctx;
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertMonitor> = {}) {
@@ -111,7 +117,7 @@ beforeEach(() => {
 	sendBatch.mockClear();
 });
 
-describe("CheckSslJob", () => {
+describe("checkSsl", () => {
 	test("re-evaluates SSL status, persists it, and enqueues a notification for an expiring certificate", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);

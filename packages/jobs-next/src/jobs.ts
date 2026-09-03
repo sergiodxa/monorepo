@@ -62,6 +62,18 @@ export type JobMap<Tree> = {
 export type JobInput<Definition> =
 	Definition extends JobDefinition<infer Schema> ? EnqueueInput<Schema> : never;
 
+/**
+ * What enqueuing one job takes as arguments: its payload, or nothing at all for a job
+ * that declares no schema. The variadic half of {@link JobInput}.
+ *
+ * @example
+ * export function enqueue<Job extends AnyJobDefinition>(job: Job, ...input: JobArgs<Job>) {
+ * 	return sendQueueBatch([messageBody(job, input[0])]);
+ * }
+ */
+export type JobArgs<Definition> =
+	Definition extends JobDefinition<infer Schema> ? EnqueueArgs<Schema> : never;
+
 /** A definition whatever its schema, for the places that hold many at once. */
 // oxlint-disable-next-line typescript/no-explicit-any -- definitions vary by schema
 export type AnyJobDefinition = JobDefinition<any>;

@@ -98,7 +98,7 @@
 	"r2_buckets": [],
 
 	// Without a `dead_letter_queue` an exhausted message is discarded, and nothing records
-	// that a scheduled check was never performed. `CheckHttpJob` only retries infrastructure
+	// that a scheduled check was never performed. The `checkHttp` job only retries infrastructure
 	// faults — a monitored endpoint being down is a stored result, not an error — so an
 	// exhausted message is always the class worth knowing about, and since scheduling claims
 	// a monitor's next due time up front it doesn't come back on the next tick either: the

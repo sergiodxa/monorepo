@@ -13,7 +13,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { D1StatementObservation } from "@pkg/data-table-d1";
-import type { Job } from "@pkg/jobs";
 
 import { logger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
@@ -54,6 +53,22 @@ export const OVERFLOW_TEAM_ID = "overflow";
  */
 export type CostAttribution = "direct" | "apportioned" | "platform";
 
+/**
+ * Database work one unit of work did, accumulated in place while it ran. Counters are
+ * mutated by {@link recordD1Statement} on the hot path, which is what makes per-job
+ * attribution cost nothing beyond the additions.
+ */
+export interface D1Usage {
+	/** Statements executed. */
+	statements: number;
+	/** Rows read from tables and indexes. */
+	rowsRead: number;
+	/** Rows written to tables and indexes. */
+	rowsWritten: number;
+	/** Milliseconds the database reported for those statements, summed. */
+	durationMs: number;
+}
+
 /** Options for one {@link CostLedger}. */
 export interface CostLedgerOptions {
 	/** Worker handler this unit of work runs under; picks the modelled CPU constant. */
@@ -66,11 +81,8 @@ export interface CostLedgerOptions {
 	 * request running many jobs, so each job owns `1 / batch.messages.length` of it.
 	 */
 	workerRequests?: number;
-	/**
-	 * D1 counters to accumulate into. A job passes the object `Job.run` will report on its
-	 * `job.completed` line, so the ledger and that log line count the same statements once.
-	 */
-	usage?: Job.Usage;
+	/** D1 counters to accumulate into, when the caller wants to read them back itself. */
+	usage?: D1Usage;
 }
 
 /**
@@ -79,8 +91,8 @@ export interface CostLedgerOptions {
  * every resource scales with the same per-team weights, so one split serves both.
  */
 export class CostLedger {
-	/** D1 row counts for this unit of work, shared with its `job.completed` log line. */
-	readonly usage: Job.Usage;
+	/** D1 row counts for this unit of work, accumulated as its statements run. */
+	readonly usage: D1Usage;
 
 	readonly #handler: WorkerHandler;
 	readonly #source: string;
@@ -221,7 +233,7 @@ export class CostLedger {
 const storage = new AsyncLocalStorage<CostLedger>();
 
 /** A fresh, zeroed set of D1 counters. */
-export function createD1Usage(): Job.Usage {
+export function createD1Usage(): D1Usage {
 	return { statements: 0, rowsRead: 0, rowsWritten: 0, durationMs: 0 };
 }
 
@@ -301,51 +313,6 @@ export async function trackCost<T>(ledger: CostLedger, body: () => Promise<T>): 
 	} finally {
 		ledger.flush();
 	}
-}
-
-/**
- * Share of one Workers request each job in the current queue batch owns.
- * Module-level because batch size is a property of the invocation shared
- * by every job in it; `queue()` sets it before constructing any ledger.
- */
-let queuedWorkerRequestShare = 1;
-
-/**
- * Records how many messages the batch now being consumed carries, so each of its jobs is
- * charged its share of the one Workers request the whole batch is billed as. Called by the
- * `queue` handler before it dispatches anything.
- *
- * @param messages - Number of messages in the batch.
- */
-export function setQueueBatchSize(messages: number): void {
-	queuedWorkerRequestShare = messages > 0 ? 1 / messages : 1;
-}
-
-/**
- * The `Job.UsageTracker` this app registers: gives every job its own ledger,
- * keyed to the counters `Job.run` logs, flushed when the lifecycle ends. A
- * delivered message costs one queue read and delete; each redelivery counts its own two.
- *
- * @param usage - Counters `Job.run` reports on `job.completed`.
- * @param body - The job lifecycle.
- * @param context - Which job is running, which becomes the recorded source.
- * @returns Whatever the lifecycle returns.
- */
-export function trackJobCost<T>(
-	usage: Job.Usage,
-	body: () => Promise<T>,
-	context: Job.UsageContext,
-): Promise<T> {
-	let ledger = new CostLedger({
-		handler: "queue",
-		detail: context.job,
-		workerRequests: queuedWorkerRequestShare,
-		usage,
-	});
-
-	ledger.record("queueOperation", 2);
-
-	return trackCost(ledger, body);
 }
 
 /** Which KV operation each `KVNamespace` method is, for the two rates KV is billed at. */

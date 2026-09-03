@@ -1,5 +1,5 @@
 /**
- * Unit tests for `SendFunnelReportJob.perform()`: what it counts, when it stays quiet, and
+ * Unit tests for the `sendFunnelReport` job: what it counts, when it stays quiet, and
  * the one thing it must do on every single run whether it sends or not.
  *
  * The two silences are the cases most likely to regress into noise: an unconfigured
@@ -53,7 +53,10 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
 
-let { SendFunnelReportJob } = await import("~/app/jobs/send-funnel-report");
+let { createJobContext } = await import("@pkg/jobs-next");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;
 
 let db: Database;
 let transport = new MemoryTransport();
@@ -76,11 +79,16 @@ function duringYesterday(): number {
 
 async function runJob() {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
 
-	let job = new SendFunnelReportJob({ logger: new BatchedLogger("test") }, {});
-	await container.scope(() => job.perform());
+	let ctx = createJobContext(jobs.sendFunnelReport, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => sendFunnelReport(ctx));
 }
 
 /** A lead created yesterday, with a watch under it — one submission of the free form. */

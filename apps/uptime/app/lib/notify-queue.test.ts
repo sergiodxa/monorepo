@@ -32,12 +32,16 @@ let { enqueueNotifications } = await import("~/app/lib/notify-queue");
 
 function makeMessage(monitorId: string): NotifyMessage {
 	return {
-		type: "notify",
 		monitorType: "tcp",
 		monitorId,
 		previousStatus: "up",
 		newStatus: "down",
 	};
+}
+
+/** The body one notification lands on the queue as: its own fields, plus the job's name. */
+function makeBody(monitorId: string) {
+	return { ...makeMessage(monitorId), type: "notify" };
 }
 
 beforeEach(() => {
@@ -53,8 +57,8 @@ describe("enqueueNotifications", () => {
 		expect(
 			queue.sent.map((message) => ({ body: message.body, type: message.contentType })),
 		).toEqual([
-			{ body: makeMessage("monitor-1"), type: "json" },
-			{ body: makeMessage("monitor-2"), type: "json" },
+			{ body: makeBody("monitor-1"), type: "json" },
+			{ body: makeBody("monitor-2"), type: "json" },
 		]);
 	});
 
@@ -65,7 +69,6 @@ describe("enqueueNotifications", () => {
 	 */
 	test("puts nothing but the transition on the wire for a domain monitor", async () => {
 		let message: NotifyMessage = {
-			type: "notify",
 			monitorType: "dns",
 			monitorId: "dns-monitor-1",
 			previousStatus: "ok",
@@ -74,13 +77,13 @@ describe("enqueueNotifications", () => {
 
 		await enqueueNotifications([message]);
 
-		expect(queue.sent.map((sent) => sent.body)).toEqual([message]);
+		expect(queue.sent.map((sent) => sent.body)).toEqual([{ ...message, type: "notify" }]);
 		expect(Object.keys(queue.sent[0]!.body)).toEqual([
-			"type",
 			"monitorType",
 			"monitorId",
 			"previousStatus",
 			"newStatus",
+			"type",
 		]);
 	});
 

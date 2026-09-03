@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckHttpJob.perform()`: classification, degraded thresholds and
+ * Unit tests for the `checkHttp` job: classification, degraded thresholds and
  * content checks, at-least-once idempotency, Durable Object sharding and EU
  * jurisdiction pinning (ADR-013), the D1 cost model (ADR-019), and Polar metering.
  * The database is a real in-memory SQLite instance and MSW serves the webhook and
@@ -93,16 +93,14 @@ vi.doMock("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
-let { Job } = await import("@pkg/jobs");
-let { CheckHttpJob } = await import("./check-http");
+let { Job, createJobContext } = await import("@pkg/jobs-next");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkHttp = (await import("./check-http")).default;
 
-/**
- * Builds a container with the database, a mailer that records instead of sending, and the
- * spied-on billing client.
- */
-function makeContainer(db: Database) {
+/** Builds a container with a mailer that records instead of sending, and the spied-on billing client. */
+function makeContainer() {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
@@ -111,20 +109,27 @@ function makeContainer(db: Database) {
 	return container;
 }
 
-/** Runs the job against `db`, returning its logger so callers can assert on events. */
-async function runJob(db: Database, monitorId: string, options: { jobId?: string } = {}) {
-	let logger = new BatchedLogger("test");
-	let job = new CheckHttpJob(
-		{ logger },
-		{
+/** Builds the context the handler receives, carrying the database its chain would publish. */
+function makeContext(db: Database, monitorId: string, options: { jobId?: string } = {}) {
+	let ctx = createJobContext(jobs.checkHttp, {
+		id: "message-1",
+		attempts: 1,
+		input: {
 			id: options.jobId ?? `${monitorId}:1700000000000`,
 			monitorId,
 			scheduledAt: 1_700_000_000_000,
 		},
-	);
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+	return ctx;
+}
 
-	await makeContainer(db).scope(() => job.perform());
-	return logger;
+/** Runs the job against `db`, returning its logger so callers can assert on events. */
+async function runJob(db: Database, monitorId: string, options: { jobId?: string } = {}) {
+	let ctx = makeContext(db, monitorId, options);
+	await makeContainer().scope(() => checkHttp(ctx));
+	return ctx.logger;
 }
 
 /**
@@ -248,16 +253,7 @@ beforeEach(() => {
 	deliveries.length = 0;
 });
 
-describe("CheckHttpJob input", () => {
-	test("throws Job.NonRetriableError on invalid input", async () => {
-		let job = new CheckHttpJob({ logger: new BatchedLogger("test") }, { monitorId: "monitor-1" });
-
-		await expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
-		expect(doFetchMock).not.toHaveBeenCalled();
-	});
-});
-
-describe("CheckHttpJob classification", () => {
+describe("checkHttp classification", () => {
 	test("records an 'up' result when the response matches the expected status", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -348,7 +344,7 @@ describe("CheckHttpJob classification", () => {
 	});
 });
 
-describe("CheckHttpJob content checks", () => {
+describe("checkHttp content checks", () => {
 	test("classifies a matching status with failing content checks as 'down'", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -405,7 +401,7 @@ describe("CheckHttpJob content checks", () => {
  * the location hint, sharded eight ways to spread probing across objects, and pinned
  * per monitor so a shard move can't fake a response-time change.
  */
-describe("CheckHttpJob Durable Object sharding", () => {
+describe("checkHttp Durable Object sharding", () => {
 	test("probes through a shard of the monitor's region", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { location_hint: "weur" });
@@ -444,7 +440,7 @@ describe("CheckHttpJob Durable Object sharding", () => {
  * subnamespace handed to `get`, since a jurisdiction lives on the id and a mismatch is
  * what the real binding rejects (ADR-013) — the bug that once retried every EU check.
  */
-describe("CheckHttpJob EU jurisdiction", () => {
+describe("checkHttp EU jurisdiction", () => {
 	/** Every value `monitors.location_hint` accepts. */
 	const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
 
@@ -486,7 +482,7 @@ describe("CheckHttpJob EU jurisdiction", () => {
 	});
 });
 
-describe("CheckHttpJob idempotency", () => {
+describe("checkHttp idempotency", () => {
 	test("a redelivered job records one result, one data point, and one alert", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { expected_status: 500 });
@@ -536,7 +532,7 @@ describe("CheckHttpJob idempotency", () => {
 	});
 });
 
-describe("CheckHttpJob error handling", () => {
+describe("checkHttp error handling", () => {
 	test("an unreachable endpoint is a stored result, not a retry", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -556,13 +552,9 @@ describe("CheckHttpJob error handling", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		let logger = new BatchedLogger("test");
-		let job = new CheckHttpJob(
-			{ logger },
-			{ id: `${monitor.id}:1`, monitorId: monitor.id, scheduledAt: 1 },
-		);
+		let ctx = makeContext(db, monitor.id, { jobId: `${monitor.id}:1` });
 
-		await expect(makeContainer(db).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
+		await expect(makeContainer().scope(() => checkHttp(ctx))).rejects.toThrow(Job.Retry);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).toBeNull();
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
@@ -576,15 +568,11 @@ describe("CheckHttpJob error handling", () => {
 			},
 		} as unknown as Database;
 
-		let logger = new BatchedLogger("test");
-		let job = new CheckHttpJob(
-			{ logger },
-			{ id: `${monitor.id}:1`, monitorId: monitor.id, scheduledAt: 1 },
-		);
+		let ctx = makeContext(broken, monitor.id, { jobId: `${monitor.id}:1` });
 
-		await expect(makeContainer(broken).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
+		await expect(makeContainer().scope(() => checkHttp(ctx))).rejects.toThrow(Job.Retry);
 		expect(
-			logger.events.find((entry) => entry.event === "job.check_http.infrastructure_error"),
+			ctx.logger.events.find((entry) => entry.event === "job.check_http.infrastructure_error"),
 		).toBeDefined();
 	});
 
@@ -705,7 +693,7 @@ function toBinding(value: unknown): unknown {
 	throw new TypeError(`Unsupported SQL binding of type ${typeof value}`);
 }
 
-describe("CheckHttpJob Durable Object wall time", () => {
+describe("checkHttp Durable Object wall time", () => {
 	test("logs the object's reported wall time alongside the probe's response time", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -761,7 +749,7 @@ describe("CheckHttpJob Durable Object wall time", () => {
  * ADR-002 traced the platform's worst cost regression to a table-scanning query, so
  * catching one here turns it into a CI failure long before it becomes a bill.
  */
-describe("CheckHttpJob cost model", () => {
+describe("checkHttp cost model", () => {
 	/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
 	const MAX_STATEMENTS = 6;
 	/** Row budget for one healthy HTTP check: at most one row per statement. */
@@ -841,7 +829,7 @@ describe("CheckHttpJob cost model", () => {
 	});
 });
 
-describe("CheckHttpJob alerting", () => {
+describe("checkHttp alerting", () => {
 	test("alerts a recovery when the previous check was down and this one is up", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { last_status: "down" });
@@ -891,7 +879,7 @@ describe("CheckHttpJob alerting", () => {
 	});
 });
 
-describe("CheckHttpJob cached status", () => {
+describe("checkHttp cached status", () => {
 	test("caches the check's status and time on the monitor row", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { degraded_after_ms: 10 });
@@ -911,7 +899,7 @@ describe("CheckHttpJob cached status", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.Retry);
 
 		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
 		expect(updated?.last_status).toBeNull();
@@ -925,7 +913,7 @@ describe("CheckHttpJob cached status", () => {
  * so a redelivery is deduplicated on Polar's side as well as short-circuited on ours, with
  * billing happening only once a result has actually committed.
  */
-describe("CheckHttpJob metering", () => {
+describe("checkHttp metering", () => {
 	/** Every event the job handed Polar, flattened across the calls it made. */
 	function ingestedEvents(): IngestEvent[] {
 		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
@@ -1009,7 +997,7 @@ describe("CheckHttpJob metering", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.Retry);
 
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});

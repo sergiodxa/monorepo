@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckFlowsJob.perform()`: what a run records, what it bills, and which
+ * Unit tests for the `checkFlows` job: what a run records, what it bills, and which
  * transitions it hands to the `notify` queue.
  *
  * An `error` result is this app failing to find out rather than the customer's flow
@@ -12,6 +12,7 @@
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -79,20 +80,29 @@ vi.doMock("~/app/services/flow-check", () => ({
 	runFlowCheck: runFlowCheckMock,
 }));
 
-let { CheckFlowsJob } = await import("./check-flows");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkFlows = (await import("./check-flows")).default;
 
 /** Every `notify` message body the sweep put on the queue, in order. */
 function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(PolarClient, () => polar);
-	let job = new CheckFlowsJob({ logger: new BatchedLogger("test") }, {});
-	await container.scope(() => job.perform());
-	return job;
+
+	let ctx = createJobContext(jobs.checkFlows, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => checkFlows(ctx));
+	return ctx;
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertFlowMonitor> = {}) {
@@ -113,7 +123,7 @@ beforeEach(() => {
 	ingestEventsSafeMock.mockImplementation(async () => true);
 });
 
-describe("CheckFlowsJob", () => {
+describe("checkFlows", () => {
 	test("enqueues a notification for a failed assertion and counts it as notified", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { last_status: "up" });

@@ -10,12 +10,11 @@
  */
 
 import { toDayKey, subDays } from "@pkg/dates";
-import { Job } from "@pkg/jobs";
+import { createJobHandler } from "@pkg/jobs-next";
 import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
-import { Database } from "remix/data-table";
 
 import type { TrialDailyCounters } from "~/app/data/trial-daily-stats";
 import type { SelectTrialConversion } from "~/database/schema";
@@ -26,6 +25,7 @@ import TrialConversion, { trialConversionUrls } from "~/app/data/trial-conversio
 import TrialDailyStats, { isEmptyDay } from "~/app/data/trial-daily-stats";
 import TrialWatch from "~/app/data/trial-watch";
 import { FunnelReportEmail } from "~/app/emails/funnel-report";
+import jobs from "~/app/jobs";
 import { recordCost } from "~/app/services/cost";
 
 /**
@@ -48,87 +48,80 @@ function funnelReportRecipient(): string | null {
 	return candidate;
 }
 
-export class SendFunnelReportJob extends Job {
-	/** The "Trial Funnel Report" cron monitor this job reports itself to when it completes. */
-	static override monitorId = "b6f2e0a4-9c31-4d58-a0e7-5f8c1b2d47a9";
+/**
+ * Records the send's cost before attempting delivery, since a rejected send is still
+ * billed.
+ */
+export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
+	let mailer = getServiceContainer().get(Mailer);
+	let date = getYesterdayDateUtc();
+	let { start, end } = utcDayBounds(date);
 
 	/**
-	 * Records the send's cost before attempting delivery, since a rejected send is still
-	 * billed.
+	 * A lead belongs to no team, so with no weights recorded for it, the ledger attributes
+	 * this run's cost to the platform, which is the accurate owner.
 	 */
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-		let mailer = getServiceContainer().get(Mailer);
-		let date = getYesterdayDateUtc();
-		let { start, end } = utcDayBounds(date);
 
+	let [leads, watches, paid, signups] = await Promise.all([
+		Lead.countFunnelActivity(ctx.database, start, end),
+		TrialWatch.countFunnelActivity(ctx.database, start, end),
+		TrialConversion.listPaidBetween(ctx.database, start, end),
+		TrialConversion.listSignedUpBetween(ctx.database, start, end),
+	]);
+
+	let counters: TrialDailyCounters = {
+		newLeads: leads.created,
+		urlsChecked: watches.created,
 		/**
-		 * A lead belongs to no team, so with no weights recorded for it, the ledger attributes
-		 * this run's cost to the platform, which is the accurate owner.
+		 * Derived from the four stamps sends leave — confirmation, digest, change email,
+		 * wrap-up — since nothing else records a send count; the confirmation figure is
+		 * approximate because a rejected send still counts.
 		 */
+		emailsSent: watches.created + watches.changeEmails + watches.summaryEmails + leads.digestsSent,
+		freeSignups: signups.length,
+		paidConversions: paid.length,
+	};
 
-		let [leads, watches, paid, signups] = await Promise.all([
-			Lead.countFunnelActivity(db, start, end),
-			TrialWatch.countFunnelActivity(db, start, end),
-			TrialConversion.listPaidBetween(db, start, end),
-			TrialConversion.listSignedUpBetween(db, start, end),
-		]);
+	/** Written first and unconditionally: the row outlives every table it was counted from. */
+	await TrialDailyStats.upsertDay(ctx.database, { date, ...counters });
 
-		let counters: TrialDailyCounters = {
-			newLeads: leads.created,
-			urlsChecked: watches.created,
-			/**
-			 * Derived from the four stamps sends leave — confirmation, digest, change email,
-			 * wrap-up — since nothing else records a send count; the confirmation figure is
-			 * approximate because a rejected send still counts.
-			 */
-			emailsSent:
-				watches.created + watches.changeEmails + watches.summaryEmails + leads.digestsSent,
-			freeSignups: signups.length,
-			paidConversions: paid.length,
-		};
-
-		/** Written first and unconditionally: the row outlives every table it was counted from. */
-		await TrialDailyStats.upsertDay(db, { date, ...counters });
-
-		let to = funnelReportRecipient();
-		if (to === null) {
-			this.logger.info("job.send_funnel_report.no_recipient", { date });
-			return;
-		}
-
-		if (isEmptyDay(counters)) {
-			this.logger.info("job.send_funnel_report.nothing_to_report", { date });
-			return;
-		}
-
-		let totals = await TrialDailyStats.totalsBetween(db, startOfTotals(date), date);
-
-		recordCost("emailSent");
-		let sent = await mailer.send(
-			new FunnelReportEmail({
-				to,
-				date,
-				counters,
-				totals,
-				totalDays: FUNNEL_TOTALS_DAYS,
-				paid: paid.map(toConversion),
-				/**
-				 * Only the ones still free, so an account that signed up and paid on the same day is
-				 * itemised once, under the outcome that matters.
-				 */
-				signups: signups.filter((row) => row.paid_at === null).map(toConversion),
-			}),
-		);
-
-		if (isFailure(sent)) {
-			this.logger.error("job.send_funnel_report.email_failed", { date, error: sent.error.message });
-			return;
-		}
-
-		this.logger.info("job.send_funnel_report.completed", { date, ...counters });
+	let to = funnelReportRecipient();
+	if (to === null) {
+		ctx.logger.info("job.send_funnel_report.no_recipient", { date });
+		return;
 	}
-}
+
+	if (isEmptyDay(counters)) {
+		ctx.logger.info("job.send_funnel_report.nothing_to_report", { date });
+		return;
+	}
+
+	let totals = await TrialDailyStats.totalsBetween(ctx.database, startOfTotals(date), date);
+
+	recordCost("emailSent");
+	let sent = await mailer.send(
+		new FunnelReportEmail({
+			to,
+			date,
+			counters,
+			totals,
+			totalDays: FUNNEL_TOTALS_DAYS,
+			paid: paid.map(toConversion),
+			/**
+			 * Only the ones still free, so an account that signed up and paid on the same day is
+			 * itemised once, under the outcome that matters.
+			 */
+			signups: signups.filter((row) => row.paid_at === null).map(toConversion),
+		}),
+	);
+
+	if (isFailure(sent)) {
+		ctx.logger.error("job.send_funnel_report.email_failed", { date, error: sent.error.message });
+		return;
+	}
+
+	ctx.logger.info("job.send_funnel_report.completed", { date, ...counters });
+});
 
 /** The first day of the trailing window, as the `YYYY-MM-DD` key the totals range over. */
 function startOfTotals(date: string): string {

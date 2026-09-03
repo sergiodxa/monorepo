@@ -432,7 +432,7 @@ describe("playMonitor", () => {
 });
 
 /**
- * `playMonitor` only enqueues; `CheckHttpJob` bills the check later, keyed on
+ * `playMonitor` only enqueues; the `checkHttp` job bills the check later, keyed on
  * the job id. Billing here too would double-charge, or bill a message the job
  * may legitimately drop — so this pins that the request ingests nothing.
  */

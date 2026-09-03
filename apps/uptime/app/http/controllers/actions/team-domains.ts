@@ -23,7 +23,8 @@ import {
 	RemoveDomainSchema,
 	RetryDomainVerificationSchema,
 } from "~/app/http/validators/team-domain";
-import { sendQueueMessage } from "~/app/lib/queue";
+import jobs from "~/app/jobs";
+import { enqueue } from "~/app/lib/queue";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/add-domain */
@@ -47,7 +48,7 @@ export const addDomain = createAction(routes.teamAdminActions.domain.add, async 
 	}
 
 	let domain = existing ?? (await TeamDomain.create(db, ctx.team.id, hostname));
-	waitUntil(sendQueueMessage({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
+	waitUntil(enqueue(jobs.verifyDomainOwnership, { teamDomainId: domain.id }));
 
 	session?.flash("toast", {
 		intent: "success",
@@ -99,7 +100,7 @@ export const retryDomainVerification = createAction(
 		if (!domain) return notFound("Not Found");
 
 		if (domain.verified_at === null) {
-			waitUntil(sendQueueMessage({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
+			waitUntil(enqueue(jobs.verifyDomainOwnership, { teamDomainId: domain.id }));
 		}
 
 		session?.flash("toast", { intent: "success", message: "Verification retried." });

@@ -1,8 +1,8 @@
 /**
- * Unit tests for `VerifyDomainOwnershipJob.perform`: invalid input is rejected
- * non-retriably, a missing or already-verified domain is a silent no-op, a matching
- * DNS-over-HTTPS TXT record marks the domain verified, a miss leaves it pending, and a
- * lookup failure is swallowed (the next `EnqueuePendingDomainsJob` sweep retries it).
+ * Unit tests for the `verifyDomainOwnership` job: a missing or already-verified domain is
+ * a silent no-op, a matching DNS-over-HTTPS TXT record marks the domain verified, a miss
+ * leaves it pending, and a lookup failure is swallowed (the next pending-domains sweep
+ * retries it).
  * The DNS-over-HTTPS resolver is served by MSW, so a lookup the job should skip has no
  * route to the network at all.
  *
@@ -10,15 +10,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import TeamDomain from "~/app/data/team-domain";
-import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
+import jobs from "~/app/jobs";
+import { Database } from "~/app/jobs/middleware/database";
+import verifyDomainOwnership from "~/app/jobs/verify-domain-ownership";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 /** The DNS-over-HTTPS resolver the job queries for the TXT record. */
@@ -57,33 +58,29 @@ function serveDnsAnswers(answers: Array<{ data: string }> | undefined) {
 	);
 }
 
-describe("VerifyDomainOwnershipJob.perform", () => {
+describe("verifyDomainOwnership", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
-	let container: ServiceContainer;
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
-		container = new ServiceContainer();
-		container.singleton(Database, () => db);
 	});
 
-	test("throws Job.NonRetriableError on invalid input", async () => {
-		let { Job } = await import("@pkg/jobs");
-		let job = new VerifyDomainOwnershipJob({ logger: new BatchedLogger("test") }, {});
-
-		await expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
-	});
+	/** Runs the handler over a context carrying the test's database, as the chain would. */
+	function run(teamDomainId: string, logger = new BatchedLogger("test")) {
+		let ctx = createJobContext(jobs.verifyDomainOwnership, {
+			id: "message-1",
+			attempts: 1,
+			input: { teamDomainId },
+			logger,
+		});
+		ctx.set(Database, db, { property: "database" });
+		return verifyDomainOwnership(ctx);
+	}
 
 	test("does nothing when the domain does not exist", async () => {
 		serveDnsAnswers([]);
 
-		await container.scope(async () => {
-			let job = new VerifyDomainOwnershipJob(
-				{ logger: new BatchedLogger("test") },
-				{ teamDomainId: "missing-domain" },
-			);
-			await job.perform();
-		});
+		await run("missing-domain");
 
 		expect(lookups).toHaveLength(0);
 	});
@@ -93,13 +90,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		await TeamDomain.markVerified(db, domain.id);
 		serveDnsAnswers([]);
 
-		await container.scope(async () => {
-			let job = new VerifyDomainOwnershipJob(
-				{ logger: new BatchedLogger("test") },
-				{ teamDomainId: domain.id },
-			);
-			await job.perform();
-		});
+		await run(domain.id);
 
 		expect(lookups).toHaveLength(0);
 	});
@@ -109,10 +100,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		serveDnsAnswers([{ data: JSON.stringify(`ping_${domain.id}`) }]);
 		let logger = new BatchedLogger("test");
 
-		await container.scope(async () => {
-			let job = new VerifyDomainOwnershipJob({ logger }, { teamDomainId: domain.id });
-			await job.perform();
-		});
+		await run(domain.id, logger);
 
 		let query = new URL(lookups[0]?.url ?? "");
 		expect(query.searchParams.get("name")).toBe("_ping-verification.example.com");
@@ -133,10 +121,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		serveDnsAnswers([{ data: JSON.stringify("some_other_value") }]);
 		let logger = new BatchedLogger("test");
 
-		await container.scope(async () => {
-			let job = new VerifyDomainOwnershipJob({ logger }, { teamDomainId: domain.id });
-			await job.perform();
-		});
+		await run(domain.id, logger);
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
@@ -152,10 +137,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		serveDnsAnswers(undefined);
 		let logger = new BatchedLogger("test");
 
-		await container.scope(async () => {
-			let job = new VerifyDomainOwnershipJob({ logger }, { teamDomainId: domain.id });
-			await job.perform();
-		});
+		await run(domain.id, logger);
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
@@ -171,10 +153,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		server.use(http.get(DNS_URL, () => HttpResponse.error()));
 		let logger = new BatchedLogger("test");
 
-		await container.scope(async () => {
-			let job = new VerifyDomainOwnershipJob({ logger }, { teamDomainId: domain.id });
-			await expect(job.perform()).resolves.toBeUndefined();
-		});
+		await expect(run(domain.id, logger)).resolves.toBeUndefined();
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();

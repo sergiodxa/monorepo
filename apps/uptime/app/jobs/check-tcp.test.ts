@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckTcpJob.perform()`: which due monitors a run claims,
+ * Unit tests for the `checkTcp` job: which due monitors a run claims,
  * result recording via `TcpMonitor.recordCheckResult`, the `notify` message
  * an alert-worthy transition enqueues, and that one monitor's failure doesn't
  * stop the sweep. Also covers per-check Analytics Engine points and billing.
@@ -13,6 +13,7 @@ import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -63,28 +64,32 @@ vi.doMock("~/app/services/tcp-check", () => ({
 let polar = new PolarClient({ accessToken: "polar_at_test" });
 let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
-let { CheckTcpJob } = await import("./check-tcp");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkTcp = (await import("./check-tcp")).default;
 
 /** Every `notify` message body the sweep put on the queue, in order. */
 function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-function makeJob() {
-	return new CheckTcpJob({ logger: new BatchedLogger("test") }, {});
-}
-
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
 	container.singleton(PolarClient, () => polar);
-	let job = makeJob();
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.checkTcp, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => checkTcp(ctx));
+	return ctx;
 }
 
 async function seedMonitor(
@@ -125,7 +130,7 @@ beforeEach(() => {
 	ingestEventsSafeMock.mockImplementation(async () => true);
 });
 
-describe("CheckTcpJob", () => {
+describe("checkTcp", () => {
 	test("checks an enabled monitor, records the result, and enqueues a notification with no previous status", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -265,7 +270,7 @@ describe("CheckTcpJob", () => {
  * one billable ping folded into the sweep's single ingestion call. Both are keyed on a
  * check that finished, which is what keeps a failed connection attempt off the bill.
  */
-describe("CheckTcpJob ping reporting", () => {
+describe("checkTcp ping reporting", () => {
 	/** Every event the sweep handed Polar, flattened across the calls it made. */
 	function ingestedEvents(): IngestEvent[] {
 		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);

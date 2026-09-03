@@ -648,7 +648,7 @@ describe("Monitor.updateById scheduling", () => {
 /**
  * Every case below reads the month as of 2026-07-15, which puts the raw-counting window
  * at July 14–15 and the rollup window at July 1–13. The rollup stands in for anything
- * older, since `CleanJob`'s retention removes those raw rows.
+ * older, since the `clean` job's retention removes those raw rows.
  */
 describe("Monitor.countConsumedPingsByTeam", () => {
 	let date = new Date("2026-07-15T12:00:00.000Z");

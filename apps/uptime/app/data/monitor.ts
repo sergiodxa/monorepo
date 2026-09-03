@@ -20,7 +20,8 @@ import type { HttpP99Scope } from "~/app/services/analytics";
 import type { InsertMonitor, MonitorStatus } from "~/database/schema";
 
 import Subscription from "~/app/data/subscription";
-import { sendQueueMessage } from "~/app/lib/queue";
+import jobs from "~/app/jobs";
+import { enqueue } from "~/app/lib/queue";
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
 import { getHttpP99ResponseTime } from "~/app/services/analytics";
 import {
@@ -38,7 +39,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * Today plus yesterday, so the monthly ping counts hold whether or not the 01:00 UTC
- * aggregation job has run. Must stay well below `CleanJob`'s 7-day `monitor_results`
+ * aggregation job has run. Must stay well below the `clean` job's 7-day `monitor_results`
  * retention, which is what keeps those rows around to be counted.
  */
 const RAW_PING_WINDOW_DAYS = 2;
@@ -152,8 +153,7 @@ export default class Monitor {
 	static async ping(db: Database, monitorId: string, ownerId: string): Promise<boolean> {
 		if ((await Subscription.stateFor(db, ownerId)) === "inactive") return false;
 
-		await sendQueueMessage({
-			type: "checkHttp",
+		await enqueue(jobs.checkHttp, {
 			id: `${monitorId}:manual:${generateUUID()}`,
 			monitorId,
 			scheduledAt: Date.now(),

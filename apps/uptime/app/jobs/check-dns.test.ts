@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckDnsJob.perform()`: which monitors a run claims, the domain sweep's
+ * Unit tests for the `checkDns` job: which monitors a run claims, the domain sweep's
  * diff and counters, and the `notify` message an alert-worthy transition enqueues.
  *
  * A failed query is left out of the diff, keeping a resolver's bad minute from reading
@@ -13,6 +13,7 @@ import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -108,7 +109,9 @@ vi.doMock("~/app/services/dns-check", () => ({
 	sweepDnsName: sweepDnsNameMock,
 }));
 
-let { CheckDnsJob } = await import("./check-dns");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkDns = (await import("./check-dns")).default;
 let { QUERIES_PER_NAME } = realDnsCheckModule;
 let { MAX_NAMES_PER_CHECK } = await import("~/app/services/dns-discovery");
 
@@ -117,21 +120,23 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-function makeJob() {
-	return new CheckDnsJob({ logger: new BatchedLogger("test") }, {});
-}
-
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
 	container.singleton(PolarClient, () => polar);
-	let job = makeJob();
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.checkDns, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => checkDns(ctx));
+	return ctx;
 }
 
 async function seedMonitor(
@@ -210,7 +215,7 @@ beforeEach(() => {
 	ingestEventsSafeMock.mockImplementation(async () => true);
 });
 
-describe("CheckDnsJob", () => {
+describe("checkDns", () => {
 	test("sweeps a monitor's tracked names, records the diff's counters, and enqueues a notification with no previous status", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -386,7 +391,7 @@ describe("CheckDnsJob", () => {
  * customer their records vanished because our resolver had a bad minute is the one failure
  * mode this sweep must not have.
  */
-describe("CheckDnsJob failed queries", () => {
+describe("checkDns failed queries", () => {
 	test("omits a failed query from the diff instead of passing it as an empty answer", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -494,7 +499,7 @@ describe("CheckDnsJob failed queries", () => {
  * The per-invocation subrequest ceiling is a hard failure, so the sweep bounds itself
  * against it. What matters is that neither bound can ever read as "these records are gone".
  */
-describe("CheckDnsJob query budget", () => {
+describe("checkDns query budget", () => {
 	test("sweeps at most the per-check name cap and records the rest as unanswered queries", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
@@ -565,7 +570,7 @@ describe("CheckDnsJob query budget", () => {
  * one billable ping folded into the sweep's single ingestion call. Both are keyed on a
  * check that finished, which is what keeps a failed lookup off the bill.
  */
-describe("CheckDnsJob ping reporting", () => {
+describe("checkDns ping reporting", () => {
 	/** Every event the sweep handed Polar, flattened across the calls it made. */
 	function ingestedEvents(): IngestEvent[] {
 		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);

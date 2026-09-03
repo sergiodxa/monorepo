@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Job } from "@pkg/jobs";
+import type { CurrentJobContext } from "@pkg/jobs-next";
+
+import { createJobHandler } from "@pkg/jobs-next";
 import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
 
 import type { TrialWatchDigestEntry } from "~/app/data/trial-watch";
 import type { TrialStats } from "~/app/emails/shared/trial";
@@ -21,6 +22,7 @@ import Lead from "~/app/data/lead";
 import TrialWatch, { isHealthyTrialStatus } from "~/app/data/trial-watch";
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
+import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { segmentsOver } from "~/app/lib/trial-report";
 import { formatUptime } from "~/app/lib/uptime-report";
@@ -36,117 +38,112 @@ const MS_PER_HOUR = 60 * 60 * 1000;
  */
 const DIGEST_WINDOW_HOURS = 24;
 
-export class SendTrialDigestsJob extends Job {
-	async perform(): Promise<void> {
-		let db = getServiceContainer().get(Database);
-		let mailer = getServiceContainer().get(Mailer);
-		/**
-		 * One instant for the whole run, so the window every digest reports and the stamp every
-		 * lead receives agree with the query that selected them.
-		 */
-		let now = Date.now();
+export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
+	let mailer = getServiceContainer().get(Mailer);
+	/**
+	 * One instant for the whole run, so the window every digest reports and the stamp every
+	 * lead receives agree with the query that selected them.
+	 */
+	let now = Date.now();
 
-		let leads = await Lead.listDueForDigest(db, now);
-
-		/**
-		 * A lead belongs to no team, so this cost is recorded with no weights: the ledger
-		 * attributes it to `PLATFORM_TEAM_ID` under a `platform` attribution, the accurate
-		 * account, since naming a team id here would misattribute it as `direct` spend.
-		 */
-
-		let settled = await mapWithConcurrency(leads, (lead) => this.digest(db, mailer, lead, now));
-
-		let sent = 0;
-		let skipped = 0;
-		let errorCount = 0;
-
-		for (let outcome of settled) {
-			if (!outcome.ok) {
-				errorCount++;
-				this.logger.error("job.send_trial_digests.lead_failed", {
-					leadId: outcome.item.id,
-					error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
-				});
-				continue;
-			}
-
-			if (outcome.value) sent++;
-			else skipped++;
-		}
-
-		this.logger.info("job.send_trial_digests.completed", {
-			total: leads.length,
-			sent,
-			skipped,
-			errorCount,
-		});
-	}
+	let leads = await Lead.listDueForDigest(ctx.database, now);
 
 	/**
-	 * Sends one lead their whole day: every target they are still watching, in the language
-	 * they were browsing in when they handed the address over. Cost is recorded before the
-	 * send attempt, since a rejected send is still billed.
-	 *
-	 * @returns Whether a digest went out, which is what the stamp and the counters key on.
+	 * A lead belongs to no team, so this cost is recorded with no weights: the ledger
+	 * attributes it to `PLATFORM_TEAM_ID` under a `platform` attribution, the accurate
+	 * account, since naming a team id here would misattribute it as `direct` spend.
 	 */
-	private async digest(
-		db: Database,
-		mailer: Mailer,
-		lead: SelectLead,
-		now: number,
-	): Promise<boolean> {
-		let since = now - DIGEST_WINDOW_HOURS * MS_PER_HOUR;
-		let entries = await TrialWatch.listDigestForLead(db, lead.id, since);
 
-		let targets = entries
-			.map((entry) => toTarget(entry, since))
-			.filter((target) => target !== null);
+	let settled = await mapWithConcurrency(leads, (lead) => digest(ctx, mailer, lead, now));
 
-		if (targets.length === 0) {
-			this.logger.info("job.send_trial_digests.nothing_to_report", { leadId: lead.id });
-			return false;
-		}
+	let sent = 0;
+	let skipped = 0;
+	let errorCount = 0;
 
-		let { locale, t } = await emailTranslator(lead.locale);
-
-		recordCost("emailSent");
-		let result = await mailer.send(
-			new TrialDailyDigestEmail({
-				to: lead.email,
-				targets,
-				unsubscribeToken: lead.unsubscribe_token,
-				locale,
-				t,
-			}),
-		);
-
-		if (isFailure(result)) {
-			this.logger.error("job.send_trial_digests.email_failed", {
-				leadId: lead.id,
-				error: result.error.message,
+	for (let outcome of settled) {
+		if (!outcome.ok) {
+			errorCount++;
+			ctx.logger.error("job.send_trial_digests.lead_failed", {
+				leadId: outcome.item.id,
+				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 			});
-			return false;
+			continue;
 		}
 
-		/** Only now: the stamp is what moves this lead's next digest to tomorrow. */
-		await Lead.markDigestSent(db, lead.id, now);
-		/** And on the same condition, since the funnel counts sends that landed. */
-		await Lead.recordEmailSent(db, lead.id, now);
-
-		/**
-		 * On the same condition again, and with no URL in it: how many targets the email covered
-		 * and whether any of them was unhealthy is the whole of what makes one of these worth
-		 * having opened, and it is the part that cannot be recovered once the lead is deleted.
-		 */
-		trackTrialProgressEmailSent(this.logger, {
-			leadId: lead.id,
-			period: "daily",
-			targets: targets.length,
-			hadIncident: targets.some((target) => !isHealthyTrialStatus(target.status)),
-		});
-
-		return true;
+		if (outcome.value) sent++;
+		else skipped++;
 	}
+
+	ctx.logger.info("job.send_trial_digests.completed", {
+		total: leads.length,
+		sent,
+		skipped,
+		errorCount,
+	});
+});
+
+/**
+ * Sends one lead their whole day: every target they are still watching, in the language
+ * they were browsing in when they handed the address over. Cost is recorded before the
+ * send attempt, since a rejected send is still billed.
+ *
+ * @returns Whether a digest went out, which is what the stamp and the counters key on.
+ */
+async function digest(
+	ctx: CurrentJobContext,
+	mailer: Mailer,
+	lead: SelectLead,
+	now: number,
+): Promise<boolean> {
+	let since = now - DIGEST_WINDOW_HOURS * MS_PER_HOUR;
+	let entries = await TrialWatch.listDigestForLead(ctx.database, lead.id, since);
+
+	let targets = entries.map((entry) => toTarget(entry, since)).filter((target) => target !== null);
+
+	if (targets.length === 0) {
+		ctx.logger.info("job.send_trial_digests.nothing_to_report", { leadId: lead.id });
+		return false;
+	}
+
+	let { locale, t } = await emailTranslator(lead.locale);
+
+	recordCost("emailSent");
+	let result = await mailer.send(
+		new TrialDailyDigestEmail({
+			to: lead.email,
+			targets,
+			unsubscribeToken: lead.unsubscribe_token,
+			locale,
+			t,
+		}),
+	);
+
+	if (isFailure(result)) {
+		ctx.logger.error("job.send_trial_digests.email_failed", {
+			leadId: lead.id,
+			error: result.error.message,
+		});
+		return false;
+	}
+
+	/** Only now: the stamp is what moves this lead's next digest to tomorrow. */
+	await Lead.markDigestSent(ctx.database, lead.id, now);
+	/** And on the same condition, since the funnel counts sends that landed. */
+	await Lead.recordEmailSent(ctx.database, lead.id, now);
+
+	/**
+	 * On the same condition again, and with no URL in it: how many targets the email covered
+	 * and whether any of them was unhealthy is the whole of what makes one of these worth
+	 * having opened, and it is the part that cannot be recovered once the lead is deleted.
+	 */
+	trackTrialProgressEmailSent(ctx.logger, {
+		leadId: lead.id,
+		period: "daily",
+		targets: targets.length,
+		hadIncident: targets.some((target) => !isHealthyTrialStatus(target.status)),
+	});
+
+	return true;
 }
 
 /**

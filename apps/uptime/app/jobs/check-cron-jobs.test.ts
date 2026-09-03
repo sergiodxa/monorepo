@@ -1,5 +1,5 @@
 /**
- * Unit tests for `CheckCronJobsJob.perform()`, covering the healthy → late → missed
+ * Unit tests for the `checkCronJobs` job, covering the healthy → late → missed
  * status-transition sweep: the grace-period arithmetic behind each transition, which
  * monitors `CronJobMonitor.listActionable` excludes entirely, and that a `notify` message
  * carries the status held before `updateStatus` overwrote it, which is what makes the
@@ -7,7 +7,7 @@
  *
  * The `QUEUE` binding is an in-memory queue installed through `cloudflare:workers`, so the
  * assertions are about the messages that really landed on it; alert delivery itself now
- * happens in `NotifyJob` and has its own tests.
+ * happens in the `notify` job and has its own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +16,7 @@
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -42,27 +43,31 @@ let sendBatch = vi.spyOn(queue, "sendBatch");
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
-let { CheckCronJobsJob } = await import("./check-cron-jobs");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkCronJobs = (await import("./check-cron-jobs")).default;
 
 /** Every `notify` message body the sweep put on the queue, in order. */
 function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-function makeJob() {
-	return new CheckCronJobsJob({ logger: new BatchedLogger("test") }, {});
-}
-
+/** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	let job = makeJob();
-	await container.scope(() => job.perform());
-	return job;
+	let ctx = createJobContext(jobs.checkCronJobs, {
+		id: "message-1",
+		attempts: 1,
+		logger: new BatchedLogger("test"),
+	});
+	ctx.set(JobDatabase, db, { property: "database" });
+
+	await container.scope(() => checkCronJobs(ctx));
+	return ctx;
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertCronJobMonitor> = {}) {
@@ -87,7 +92,7 @@ beforeEach(() => {
 	sendBatch.mockClear();
 });
 
-describe("CheckCronJobsJob", () => {
+describe("checkCronJobs", () => {
 	test("repairs an enabled monitor that has no expected-arrival time", async () => {
 		/**
 		 * The hole this closes: such a row used to be filtered out of the sweep entirely, so

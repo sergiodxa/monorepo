@@ -14,6 +14,7 @@
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createJobContext } from "@pkg/jobs-next";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -100,7 +101,9 @@ let {
 	runDnsCheck,
 	sweepNames,
 } = await import("./dns-discovery");
-let { CheckDnsJob } = await import("~/app/jobs/check-dns");
+let jobs = (await import("~/app/jobs")).default;
+let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let checkDns = (await import("~/app/jobs/check-dns")).default;
 
 async function seedMonitor(db: Database, domain: string, teamId = "team-1") {
 	return await DnsMonitor.create(db, teamId, { name: domain, domain, is_enabled: true });
@@ -404,15 +407,19 @@ describe("scheduled and on-demand checks", () => {
 		);
 
 		let container = new ServiceContainer();
-		container.singleton(Database, () => db);
 		container.singleton(
 			Mailer,
 			() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		);
 		container.singleton(PolarClient, () => new PolarClient({ accessToken: "polar_at_test" }));
-		await container.scope(() =>
-			new CheckDnsJob({ logger: new BatchedLogger("test") }, {}).perform(),
-		);
+
+		let ctx = createJobContext(jobs.checkDns, {
+			id: "message-1",
+			attempts: 1,
+			logger: new BatchedLogger("test"),
+		});
+		ctx.set(JobDatabase, db, { property: "database" });
+		await container.scope(() => checkDns(ctx));
 
 		let run = await runDnsCheck(db, onDemand.id, onDemand.domain);
 
