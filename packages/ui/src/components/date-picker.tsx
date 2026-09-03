@@ -14,7 +14,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { CalendarIcon } from "@pkg/lucide-remix";
+import { CalendarIcon } from "@pkg/icons";
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";

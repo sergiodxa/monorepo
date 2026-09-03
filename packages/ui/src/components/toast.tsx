@@ -10,7 +10,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { XIcon } from "@pkg/lucide-remix";
+import { XIcon } from "@pkg/icons";
 import { bg, border, colorMix, fg } from "@pkg/u/color";
 import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@pkg/u/effects";
 import { pointerEvents, raw } from "@pkg/u/general";

@@ -21,7 +21,7 @@ import {
 	ShieldAlertIcon,
 	ShieldCheckIcon,
 	ShieldXIcon,
-} from "@pkg/lucide-remix";
+} from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";

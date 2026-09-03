@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ZapIcon } from "@pkg/lucide-remix";
+import { ZapIcon } from "@pkg/icons";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { cursor } from "@pkg/u/general";

@@ -11,7 +11,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { ArrowRightIcon } from "@pkg/lucide-remix";
+import { ArrowRightIcon } from "@pkg/icons";
 import { bg, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { block, flex, gap, inlineFlex, items, justify, vstack } from "@pkg/u/layout";

@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { LoaderCircleIcon } from "@pkg/lucide-remix";
+import { LoaderCircleIcon } from "@pkg/icons";
 import { bs, fg, inlineFlex, is, items, justify, when } from "@pkg/u";
 
 import type { SemanticColor } from "../utils/semantic-color";

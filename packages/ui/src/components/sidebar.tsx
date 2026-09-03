@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { PanelLeftIcon } from "@pkg/lucide-remix";
+import { PanelLeftIcon } from "@pkg/icons";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, colorMix, fg, outline, outlineStyle } from "@pkg/u/color";
 import {

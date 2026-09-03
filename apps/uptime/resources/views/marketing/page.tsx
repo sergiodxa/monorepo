@@ -13,7 +13,7 @@
 import type { TFunction } from "@pkg/i18n";
 import type { Handle } from "remix/ui";
 
-import { ArrowRightIcon, CheckIcon, Icon } from "@pkg/lucide-remix";
+import { ArrowRightIcon, CheckIcon, Icon } from "@pkg/icons";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { opacity, rounded, shadow } from "@pkg/u/effects";
 import { counterReset } from "@pkg/u/general";

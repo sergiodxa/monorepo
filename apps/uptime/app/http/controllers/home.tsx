@@ -34,7 +34,7 @@ import {
 	TimerIcon,
 	UsersIcon,
 	WorkflowIcon,
-} from "@pkg/lucide-remix";
+} from "@pkg/icons";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import {

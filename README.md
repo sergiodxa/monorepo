@@ -109,13 +109,13 @@ Run from the repository root:
 | [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                      |
 | [http](packages/http)                                           | HTTP helper utilities                                                          |
 | [i18n](packages/i18n)                                           | Internationalization utilities                                                 |
+| [icons](packages/icons)                                         | Lucide icons for Remix UI                                                      |
 | [iife](packages/iife)                                           | Immediately invoked function helper                                            |
 | [jobs](packages/jobs)                                           | Job queue utilities                                                            |
 | [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                |
 | [kv-cache](packages/kv-cache)                                   | Read-through cache store over Cloudflare KV                                    |
 | [location](packages/location)                                   | URL-like path Location class                                                   |
 | [logger](packages/logger)                                       | Request-scoped logging                                                         |
-| [lucide-remix](packages/lucide-remix)                           | Lucide icons for Remix UI                                                      |
 | [mail](packages/mail)                                           | Transactional email with pluggable transports                                  |
 | [markdown](packages/markdown)                                   | Markdown parsing and Remix UI rendering                                        |
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                     |
@@ -166,7 +166,7 @@ repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#package
 | `@total-typescript/tsconfig`      | Root                                                                                                                       | The base tsconfig every workspace extends.                            |
 | `@total-typescript/ts-reset`      | Root                                                                                                                       | Tightens the built-in library types.                                  |
 | `@types/bun`                      | Root                                                                                                                       | Bun globals, and it supplies `@types/node` in turn.                   |
-| `@types/node`                     | `pkmn`, `cloudflare-mocks`, `lucide-remix`, `service-container`, `uuid`                                                    | Declared where a tsconfig names `node` in its `types`.                |
+| `@types/node`                     | `pkmn`, `cloudflare-mocks`, `icons`, `service-container`, `uuid`                                                           | Declared where a tsconfig names `node` in its `types`.                |
 | `jose`                            | `jwt`                                                                                                                      | Signs and verifies JWTs and JWKS.                                     |
 | `@simplewebauthn/server`          | `oidc-provider`                                                                                                            | Passkey registration and authentication.                              |
 | `@polar-sh/sdk`                   | `polar`                                                                                                                    | Client for the Polar billing API.                                     |
@@ -174,7 +174,7 @@ repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#package
 | `@standard-schema/spec`           | `markdown`, `validate`, `webhooks`                                                                                         | The `StandardSchemaV1` interface, as types only.                      |
 | `i18next`                         | `i18n`                                                                                                                     | Translation lookup and interpolation.                                 |
 | `html-parse-stringify`            | `i18n`                                                                                                                     | Parses the tag AST inside a translation string.                       |
-| `lucide-static`                   | `lucide-remix`                                                                                                             | Icon source data for the icon codegen script.                         |
+| `lucide-static`                   | `icons`                                                                                                                    | Icon source data for the icon codegen script.                         |
 | `cron-parser`                     | `cron`                                                                                                                     | Test-only oracle the package's own schedule maths is checked against. |
 
 The root `vite` is an alias to `@voidzero-dev/vite-plus-core`, the engine `vp` runs on.

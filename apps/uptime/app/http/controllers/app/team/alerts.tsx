@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@pkg/lucide-remix";
+import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hstack } from "@pkg/u/layout";

@@ -17,7 +17,7 @@ import type { TFunction } from "@pkg/i18n";
 import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
-import { PlayIcon } from "@pkg/lucide-remix";
+import { PlayIcon } from "@pkg/icons";
 import { m } from "@pkg/u/size";
 import { Button } from "@pkg/ui";
 import * as s from "remix/data-schema";

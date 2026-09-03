@@ -16,7 +16,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { RefreshCwIcon } from "@pkg/lucide-remix";
+import { RefreshCwIcon } from "@pkg/icons";
 import { LinkButton } from "@pkg/ui";
 import { spin } from "@pkg/ui/animations";
 import { clientEntry, link, on } from "remix/ui";

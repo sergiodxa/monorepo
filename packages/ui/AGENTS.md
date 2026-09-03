@@ -7,7 +7,7 @@ Guidance for implementing and updating components, mixins, behaviors, and animat
 ## Core Principles
 
 - Every component is a `remix/ui` component using the Handle pattern — `function Name(handle: Handle<Props>) { return () => <... /> }` — and is always rendered through JSX (`<Name />`), never called as a plain function.
-- The only dependencies are `remix` and `@pkg/lucide-remix`.
+- The only dependencies are `remix` and `@pkg/icons`.
 - Components style themselves via a `css()` object on the host element, keyed off a `data-*` attribute contract (`data-color`, `data-variant`, `data-size`, `data-placement`, …) and `--ui-*` semantic color variables.
 - Components are markup plus styling only — they never carry behavior and the library never hydrates them. Anything that needs JavaScript ships as an opt-in mixin (from `mixins/`) or behavior class (from `behaviors/`) that the consumer applies explicitly, in their own hydrated island.
 - The library ships no copy. Every user-facing and accessibility string is a required prop from the consumer — no built-in English defaults.
@@ -183,7 +183,7 @@ Where the type system can't enforce a required a11y wiring (children shapes, id 
 
 ## Tooling
 
-- The only allowed dependencies are `remix`, `@pkg/lucide-remix`, and `@pkg/u`.
+- The only allowed dependencies are `remix`, `@pkg/icons`, and `@pkg/u`.
 - Reach for a `@pkg/u` utility mixin instead of hand-rolling a recipe it already covers exactly (a parameter-free clipping or layout recipe, for instance). Where a recipe depends on this package's own semantic color or spacing vocabulary — `--ui-primary-ring` rather than `@pkg/u`'s own token names, or a runtime `data-color` switch a build-time utility call can't express — keep it a local `src/styles/` factory instead of forcing a mismatched abstraction.
 - Use `remix/ui`'s first-party behavior primitives (`remix/ui/popover`, `menu`, `listbox`, `select`, `combobox`, `accordion`, `tabs`, `checkbox`, `radio`, `toggle`, `input`, `anchor`, `breadcrumbs`, `button`) from inside mixins instead of hand-rolling keyboard/selection behavior that already exists.
 - Use `bun:test` for everything under this package, not `remix/test` — it's the repo's runner, and it's also what exercises the component-purity import check.

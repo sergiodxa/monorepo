@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IconName } from "@pkg/lucide-remix";
+import type { IconName } from "@pkg/icons";
 
 import type { Usage } from "~/app/lib/pricing";
 
@@ -36,7 +36,7 @@ export namespace MarketingContent {
 		description: string;
 		/**
 		 * Lucide icon name (kebab-case, e.g. `"globe"`), rendered through
-		 * `@pkg/lucide-remix`'s `<Icon name>` — a name keeps this file plain data
+		 * `@pkg/icons`'s `<Icon name>` — a name keeps this file plain data
 		 * with no JSX. A grid whose bullets have no icons renders without the tiles.
 		 */
 		icon?: IconName;

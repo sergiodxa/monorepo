@@ -9,7 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { PlusIcon } from "@pkg/lucide-remix";
+import { PlusIcon } from "@pkg/icons";
 import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { basis, flex, gap, grow, inlineFlex, items, justify, shrink } from "@pkg/u/layout";

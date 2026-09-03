@@ -12,7 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/lucide-remix": "workspace:*",
+		"@pkg/icons": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/u": "workspace:*",
 		"@pkg/ui": "workspace:*",

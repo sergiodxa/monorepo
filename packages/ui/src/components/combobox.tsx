@@ -14,7 +14,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { ChevronDownIcon } from "@pkg/lucide-remix";
+import { ChevronDownIcon } from "@pkg/icons";
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { center, hstack, spacer, vstack } from "@pkg/u/layout";

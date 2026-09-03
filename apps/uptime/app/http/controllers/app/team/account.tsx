@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@pkg/lucide-remix";
+import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";

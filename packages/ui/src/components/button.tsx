@@ -10,7 +10,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { LoaderCircleIcon } from "@pkg/lucide-remix";
+import { LoaderCircleIcon } from "@pkg/icons";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded, visibility } from "@pkg/u/effects";
 import { cursor, userSelect } from "@pkg/u/general";

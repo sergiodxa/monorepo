@@ -8,14 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	EyeIcon,
-	MonitorIcon,
-	PencilIcon,
-	PlusIcon,
-	TrashIcon,
-	UploadIcon,
-} from "@pkg/lucide-remix";
+import { EyeIcon, MonitorIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";

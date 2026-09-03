@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { XIcon } from "@pkg/lucide-remix";
+import { XIcon } from "@pkg/icons";
 import { bg, fg, outline } from "@pkg/u/color";
 import {
 	backdropBlur,

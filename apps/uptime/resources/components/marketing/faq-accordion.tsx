@@ -11,7 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { ChevronDownIcon } from "@pkg/lucide-remix";
+import { ChevronDownIcon } from "@pkg/icons";
 import { Accordion } from "@pkg/ui";
 
 namespace FaqAccordion {

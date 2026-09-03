@@ -13,7 +13,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { ChevronRightIcon } from "@pkg/lucide-remix";
+import { ChevronRightIcon } from "@pkg/icons";
 import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
 import { cursor, listStyle, raw } from "@pkg/u/general";

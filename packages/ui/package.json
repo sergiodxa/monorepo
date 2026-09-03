@@ -19,7 +19,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/lucide-remix": "workspace:*",
+		"@pkg/icons": "workspace:*",
 		"@pkg/u": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}

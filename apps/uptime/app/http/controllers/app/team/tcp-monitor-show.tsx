@@ -14,7 +14,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
-import { PencilIcon } from "@pkg/lucide-remix";
+import { PencilIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, items } from "@pkg/u/layout";
 import { m, mbe, mbs } from "@pkg/u/size";

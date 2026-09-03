@@ -13,7 +13,7 @@ import type { Handle, RemixNode } from "remix/ui";
 import { formatDateTime, formatDuration, formatRelative } from "@pkg/dates";
 import { notFound } from "@pkg/http/response/html";
 import { IntlProvider } from "@pkg/i18n/ui";
-import { PencilIcon } from "@pkg/lucide-remix";
+import { PencilIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";

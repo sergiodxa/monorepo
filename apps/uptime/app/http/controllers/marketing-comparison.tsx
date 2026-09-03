@@ -11,7 +11,7 @@
 
 import type { TFunction } from "@pkg/i18n";
 
-import { CheckIcon, TriangleAlertIcon } from "@pkg/lucide-remix";
+import { CheckIcon, TriangleAlertIcon } from "@pkg/icons";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import { counterReset } from "@pkg/u/general";

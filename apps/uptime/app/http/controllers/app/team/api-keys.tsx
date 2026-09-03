@@ -11,7 +11,7 @@
  */
 
 import { IntlProvider } from "@pkg/i18n/ui";
-import { KeyIcon, PlusIcon } from "@pkg/lucide-remix";
+import { KeyIcon, PlusIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";

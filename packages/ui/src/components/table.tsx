@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@pkg/lucide-remix";
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@pkg/icons";
 import {
 	bg,
 	borderEdge,

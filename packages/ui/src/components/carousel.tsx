@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
+import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/icons";
 import { outline } from "@pkg/u/color";
 import { raw, vars } from "@pkg/u/general";
 import { flex, flexCol, gap, grow, items, justify, shrink } from "@pkg/u/layout";

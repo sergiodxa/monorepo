@@ -28,7 +28,7 @@ import {
 	SettingsIcon,
 	WorkflowIcon,
 	WrenchIcon,
-} from "@pkg/lucide-remix";
+} from "@pkg/icons";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import { combine, cursor, listStyle, raw } from "@pkg/u/general";

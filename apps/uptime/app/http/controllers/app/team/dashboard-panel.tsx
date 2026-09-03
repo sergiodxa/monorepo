@@ -11,7 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
+import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/icons";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";

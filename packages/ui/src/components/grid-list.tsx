@@ -14,7 +14,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { GripVerticalIcon } from "@pkg/lucide-remix";
+import { GripVerticalIcon } from "@pkg/icons";
 import { bg, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor } from "@pkg/u/general";

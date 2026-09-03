@@ -16,7 +16,7 @@
 import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
-import { PlusIcon, XIcon } from "@pkg/lucide-remix";
+import { PlusIcon, XIcon } from "@pkg/icons";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";

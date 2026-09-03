@@ -11,7 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
+import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/icons";
 import { bg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";

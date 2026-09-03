@@ -15,7 +15,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { EllipsisVerticalIcon } from "@pkg/lucide-remix";
+import { EllipsisVerticalIcon } from "@pkg/icons";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";

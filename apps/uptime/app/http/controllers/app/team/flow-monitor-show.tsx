@@ -16,7 +16,7 @@
 import { formatDateTime, formatRelative } from "@pkg/dates";
 import { notFound } from "@pkg/http/response/html";
 import { IntlProvider } from "@pkg/i18n/ui";
-import { PencilIcon } from "@pkg/lucide-remix";
+import { PencilIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, hidden, items } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";

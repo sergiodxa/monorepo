@@ -20,7 +20,7 @@ import {
 	CircleXIcon,
 	ClockIcon,
 	TriangleAlertIcon,
-} from "@pkg/lucide-remix";
+} from "@pkg/icons";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";

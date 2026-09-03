@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { SearchIcon } from "@pkg/lucide-remix";
+import { SearchIcon } from "@pkg/icons";
 import { fg } from "@pkg/u/color";
 import { pointerEvents } from "@pkg/u/general";
 import { absolute, flex, insIs, items, relative } from "@pkg/u/layout";

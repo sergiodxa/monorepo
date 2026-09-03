@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { MinusIcon, PlusIcon } from "@pkg/lucide-remix";
+import { MinusIcon, PlusIcon } from "@pkg/icons";
 import { bg, border, borderEdge, fg, outline, outlineWidth } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";

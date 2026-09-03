@@ -11,7 +11,6 @@
 import type { TFunction } from "@pkg/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
-import { logger } from "@pkg/logger";
 import {
 	ActivityIcon,
 	ArrowRightIcon,
@@ -22,7 +21,8 @@ import {
 	GlobeIcon,
 	MailIcon,
 	NetworkIcon,
-} from "@pkg/lucide-remix";
+} from "@pkg/icons";
+import { logger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { bg, fg, linearGradient } from "@pkg/u/color";

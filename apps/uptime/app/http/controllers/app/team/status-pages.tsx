@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { FileTextIcon, PlusIcon } from "@pkg/lucide-remix";
+import { FileTextIcon, PlusIcon } from "@pkg/icons";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";

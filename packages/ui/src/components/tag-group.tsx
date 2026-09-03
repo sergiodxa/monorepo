@@ -13,7 +13,7 @@
 
 import type { Handle, Props as ElementProps } from "remix/ui";
 
-import { XIcon } from "@pkg/lucide-remix";
+import { XIcon } from "@pkg/icons";
 import { bg, fg, outline, outlineColor } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, listStyle } from "@pkg/u/general";

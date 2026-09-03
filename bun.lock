@@ -174,7 +174,7 @@
     "apps/r3-gallery": {
       "name": "@apps/r3-gallery",
       "dependencies": {
-        "@pkg/lucide-remix": "workspace:*",
+        "@pkg/icons": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/u": "workspace:*",
         "@pkg/ui": "workspace:*",
@@ -198,11 +198,11 @@
         "@pkg/highlight": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/i18n": "workspace:*",
+        "@pkg/icons": "workspace:*",
         "@pkg/jobs": "workspace:*",
         "@pkg/kv-cache": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
-        "@pkg/lucide-remix": "workspace:*",
         "@pkg/mail": "workspace:*",
         "@pkg/markdown": "workspace:*",
         "@pkg/rate-limit": "workspace:*",
@@ -401,6 +401,17 @@
         "remix": "3.0.0-rc.1",
       },
     },
+    "packages/icons": {
+      "name": "@pkg/icons",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-rc.1",
+      },
+      "devDependencies": {
+        "@types/node": "^26.4.0",
+        "lucide-static": "^1.38.0",
+      },
+    },
     "packages/iife": {
       "name": "@pkg/iife",
       "version": "0.0.1",
@@ -453,17 +464,6 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
-      },
-    },
-    "packages/lucide-remix": {
-      "name": "@pkg/lucide-remix",
-      "version": "0.0.1",
-      "dependencies": {
-        "remix": "3.0.0-rc.1",
-      },
-      "devDependencies": {
-        "@types/node": "^26.4.0",
-        "lucide-static": "^1.38.0",
       },
     },
     "packages/mail": {
@@ -640,7 +640,7 @@
       "name": "@pkg/ui",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/lucide-remix": "workspace:*",
+        "@pkg/icons": "workspace:*",
         "@pkg/u": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
@@ -1216,6 +1216,8 @@
 
     "@pkg/i18n": ["@pkg/i18n@workspace:packages/i18n"],
 
+    "@pkg/icons": ["@pkg/icons@workspace:packages/icons"],
+
     "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
 
     "@pkg/jobs": ["@pkg/jobs@workspace:packages/jobs"],
@@ -1227,8 +1229,6 @@
     "@pkg/location": ["@pkg/location@workspace:packages/location"],
 
     "@pkg/logger": ["@pkg/logger@workspace:packages/logger"],
-
-    "@pkg/lucide-remix": ["@pkg/lucide-remix@workspace:packages/lucide-remix"],
 
     "@pkg/mail": ["@pkg/mail@workspace:packages/mail"],
 

@@ -10,7 +10,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { CheckIcon, MinusIcon } from "@pkg/lucide-remix";
+import { CheckIcon, MinusIcon } from "@pkg/icons";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
