@@ -10,9 +10,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg } from "@pkg/u/color";
-import { bs, is, minBs } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { bg } from "@sdxc/u/color";
+import { bs, is, minBs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 /**

@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies the learn system's move-window math and moveset mutation rules:
  * `movesLearnedBetween`'s exclusive-lower/inclusive-upper window with

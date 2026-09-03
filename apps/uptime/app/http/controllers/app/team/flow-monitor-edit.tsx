@@ -6,7 +6,7 @@
  * The last result renders on this page beside the source it explains: a flow's outcome is
  * the assertion that broke and the line it broke on, clearest read right beside that line.
  *
- * The delete confirmation composes `@pkg/ui`'s `AlertDialog` directly: confirming submits a
+ * The delete confirmation composes `@sdxc/ui`'s `AlertDialog` directly: confirming submits a
  * real `<form method="post">` button, matching the composition the other monitor types use
  * for their own delete flow.
  *
@@ -14,13 +14,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, LinkButton } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

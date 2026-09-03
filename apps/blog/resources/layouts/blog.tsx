@@ -10,13 +10,13 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, border, fg, radialGradient } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flexWrap, hstack } from "@pkg/u/layout";
-import { m, maxIs, mbe, mbs, mi, minBs, pb, pbe, pbs, pi } from "@pkg/u/size";
-import { color } from "@pkg/u/tokens";
-import { font, text, textTransform, tracking } from "@pkg/u/typography";
-import { NavLink } from "@pkg/ui";
+import { bg, border, fg, radialGradient } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flexWrap, hstack } from "@sdxc/u/layout";
+import { m, maxIs, mbe, mbs, mi, minBs, pb, pbe, pbs, pi } from "@sdxc/u/size";
+import { color } from "@sdxc/u/tokens";
+import { font, text, textTransform, tracking } from "@sdxc/u/typography";
+import { NavLink } from "@sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";

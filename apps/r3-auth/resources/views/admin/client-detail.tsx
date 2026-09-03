@@ -10,12 +10,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { flex, flexCol, gap, grid, gridTemplate } from "@pkg/u/layout";
-import { at } from "@pkg/u/responsive";
-import { font, overflowWrap } from "@pkg/u/typography";
-import { Badge, Card, Label, LinkButton, Text } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { flex, flexCol, gap, grid, gridTemplate } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
+import { font, overflowWrap } from "@sdxc/u/typography";
+import { Badge, Card, Label, LinkButton, Text } from "@sdxc/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

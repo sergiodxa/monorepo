@@ -11,9 +11,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flexRow, gap, vstack } from "@pkg/u/layout";
-import { when } from "@pkg/u/state";
+import { fg } from "@sdxc/u/color";
+import { flexRow, gap, vstack } from "@sdxc/u/layout";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";

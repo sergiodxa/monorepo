@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Logger } from "@pkg/logger/request";
+import type { Logger } from "@sdxc/logger/request";
 import type { Middleware, RequestHandler } from "remix/router";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";

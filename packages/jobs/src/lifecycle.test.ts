@@ -8,10 +8,10 @@
  */
 
 import type { MessageBatch } from "@cloudflare/workers-types";
-import type { QueueMock } from "@pkg/cloudflare-mocks";
-import type { JSONValue } from "@pkg/types";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { JSONValue } from "@sdxc/types";
 
-import { createQueue } from "@pkg/cloudflare-mocks";
+import { createQueue } from "@sdxc/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";

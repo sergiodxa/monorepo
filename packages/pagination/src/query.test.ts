@@ -12,7 +12,7 @@
 
 import { DatabaseSync as Sqlite } from "node:sqlite";
 
-import { isFailure, unwrap } from "@pkg/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { column as c, Database, table } from "remix/data-table";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
 import { beforeEach, describe, expect, test } from "vitest";

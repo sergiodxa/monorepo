@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createHandler } from "@pkg/mcp";
+import { createHandler } from "@sdxc/mcp";
 
 import { cacheToolResults } from "~/app/mcp/cache";
 import bookmarks from "~/app/mcp/controllers/bookmarks";

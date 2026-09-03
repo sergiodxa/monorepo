@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 
-import { CheckIcon, TriangleAlertIcon } from "@pkg/icons";
-import { bg, border, fg, linearGradient } from "@pkg/u/color";
-import { rounded, shadow } from "@pkg/u/effects";
-import { counterReset } from "@pkg/u/general";
+import { CheckIcon, TriangleAlertIcon } from "@sdxc/icons";
+import { bg, border, fg, linearGradient } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { counterReset } from "@sdxc/u/general";
 import {
 	flex,
 	flexRow,
@@ -27,12 +27,12 @@ import {
 	justify,
 	shrink,
 	vstack,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { dark, media } from "@pkg/u/responsive";
-import { m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
-import { font, fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
-import { Heading, Table } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { dark, media } from "@sdxc/u/responsive";
+import { m, maxIs, mbe, mbs, mi, p, pb, pi } from "@sdxc/u/size";
+import { font, fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
+import { Heading, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

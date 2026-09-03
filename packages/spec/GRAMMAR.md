@@ -1,7 +1,7 @@
 # The `.spec` v1 Grammar
 
 This document is the normative reference for the v1 notation implemented by
-`@pkg/spec`. It concretizes the canonical teaching notation of the design
+`@sdxc/spec`. It concretizes the canonical teaching notation of the design
 suite (`docs/adr/spec/ADR-001…008`) as recorded in ADR-009. Everything here is
 **v1 provisional** in the design suite's sense: binding on this
 implementation, open at the design level.
@@ -17,16 +17,16 @@ implementation, open at the design level.
 
 ### Tokens
 
-| Token            | Form                                                                                                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| identifier       | `[A-Za-z_][A-Za-z0-9_]*`, optionally joined into a _path_ by `.` with no surrounding whitespace: `run`, `http.post`, `user.email`                                        |
-| keyword          | `use test given when then command fixture let return expect eventually within true false` — reserved; never valid as identifiers                                         |
-| string           | `"…"` on one line; escapes: `\"` `\\` `\n` `\t` `\r`                                                                                                                     |
-| multiline string | `"""` … `"""`; see below                                                                                                                                                 |
-| number           | `-?[0-9]+(\.[0-9]+)?`                                                                                                                                                    |
-| duration         | an integer immediately followed by a unit alias accepted by `@pkg/duration` (`ms`, `s`, `m`, `h`, `d`, …): `10s`, `500ms`. Lexes as one token; its value is milliseconds |
-| punctuation      | `{` `}` `(` `)` `,` `:` `=`                                                                                                                                              |
-| newline          | statement terminator (see "Newline rules")                                                                                                                               |
+| Token            | Form                                                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| identifier       | `[A-Za-z_][A-Za-z0-9_]*`, optionally joined into a _path_ by `.` with no surrounding whitespace: `run`, `http.post`, `user.email`                                         |
+| keyword          | `use test given when then command fixture let return expect eventually within true false` — reserved; never valid as identifiers                                          |
+| string           | `"…"` on one line; escapes: `\"` `\\` `\n` `\t` `\r`                                                                                                                      |
+| multiline string | `"""` … `"""`; see below                                                                                                                                                  |
+| number           | `-?[0-9]+(\.[0-9]+)?`                                                                                                                                                     |
+| duration         | an integer immediately followed by a unit alias accepted by `@sdxc/duration` (`ms`, `s`, `m`, `h`, `d`, …): `10s`, `500ms`. Lexes as one token; its value is milliseconds |
+| punctuation      | `{` `}` `(` `)` `,` `:` `=`                                                                                                                                               |
+| newline          | statement terminator (see "Newline rules")                                                                                                                                |
 
 ### Multiline strings
 

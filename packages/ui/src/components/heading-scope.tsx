@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { contents } from "@pkg/u/layout";
+import { contents } from "@sdxc/u/layout";
 
 /**
  * Semantic depth, from `1` (`<h1>`) through `6` (`<h6>`), shared by every

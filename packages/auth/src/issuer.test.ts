@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Cache } from "@pkg/kv-cache";
+import type { Cache } from "@sdxc/kv-cache";
 
-import { JWK, JWT } from "@pkg/jwt";
+import { JWK, JWT } from "@sdxc/jwt";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";

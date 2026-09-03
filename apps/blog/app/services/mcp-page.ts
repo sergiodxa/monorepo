@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Markdown as MarkdownType } from "@pkg/markdown/server";
-import type { Result } from "@pkg/result";
+import type { Markdown as MarkdownType } from "@sdxc/markdown/server";
+import type { Result } from "@sdxc/result";
 
-import { Markdown } from "@pkg/markdown/server";
-import { failure, isFailure, success } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 /**

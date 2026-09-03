@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@pkg/crypto";
-import { elapsed } from "@pkg/dates";
-import { JWK, JWT } from "@pkg/jwt";
-import { failure, isFailure, success, wrap } from "@pkg/result";
+import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@sdxc/crypto";
+import { elapsed } from "@sdxc/dates";
+import { JWK, JWT } from "@sdxc/jwt";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import AccessToken from "~/app/auth/values/access-token";
 import IdToken from "~/app/auth/values/id-token";

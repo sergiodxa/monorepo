@@ -11,10 +11,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, gap, justify, vstack } from "@pkg/u/layout";
-import { maxIs, mbs } from "@pkg/u/size";
-import { text, weight } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { flex, gap, justify, vstack } from "@sdxc/u/layout";
+import { maxIs, mbs } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
 
 import { Button } from "./button";
 import { Dialog } from "./dialog";

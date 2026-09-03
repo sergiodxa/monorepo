@@ -10,14 +10,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
-import { is, m, mbe, mbs } from "@pkg/u/size";
-import { fontSize, nowrap, overflowWrap } from "@pkg/u/typography";
-import { Badge, Button, Empty, LinkButton, Table } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { PencilIcon, PlayIcon, RefreshCwIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
+import { is, m, mbe, mbs } from "@sdxc/u/size";
+import { fontSize, nowrap, overflowWrap } from "@sdxc/u/typography";
+import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

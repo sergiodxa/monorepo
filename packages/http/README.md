@@ -1,4 +1,4 @@
-# @pkg/http
+# @sdxc/http
 
 HTTP utilities for building Request and Response objects with proper Content-Type headers and status codes.
 
@@ -8,21 +8,21 @@ This package provides type-safe helpers for working with the Fetch API's Request
 
 The package is organized into modules that can be imported independently:
 
-- `@pkg/http/content-type` - Content-Type string constants
-- `@pkg/http/status-code` - HTTP status code constants
-- `@pkg/http/request` - Request factory functions
-- `@pkg/http/response` - Response factory functions
-- `@pkg/http/response/json` - JSON responses with status codes
-- `@pkg/http/response/html` - HTML responses with status codes
-- `@pkg/http/negotiate` - Content negotiation utilities
-- `@pkg/http/cache` - Cache policies, validators, and conditional responses
+- `@sdxc/http/content-type` - Content-Type string constants
+- `@sdxc/http/status-code` - HTTP status code constants
+- `@sdxc/http/request` - Request factory functions
+- `@sdxc/http/response` - Response factory functions
+- `@sdxc/http/response/json` - JSON responses with status codes
+- `@sdxc/http/response/html` - HTML responses with status codes
+- `@sdxc/http/negotiate` - Content negotiation utilities
+- `@sdxc/http/cache` - Cache policies, validators, and conditional responses
 
 ## Usage
 
 ### JSON API Responses
 
 ```typescript
-import { ok, badRequest, notFound } from "@pkg/http/response/json";
+import { ok, badRequest, notFound } from "@sdxc/http/response/json";
 
 export async function handler(request: Request): Promise<Response> {
 	let userId = new URL(request.url).searchParams.get("id");
@@ -38,7 +38,7 @@ export async function handler(request: Request): Promise<Response> {
 ### HTML Responses
 
 ```typescript
-import { ok, notFound } from "@pkg/http/response/html";
+import { ok, notFound } from "@sdxc/http/response/html";
 
 export async function handler(request: Request): Promise<Response> {
 	let page = await getPage(request.url);
@@ -50,8 +50,8 @@ export async function handler(request: Request): Promise<Response> {
 ### Content Negotiation
 
 ```typescript
-import { respond } from "@pkg/http/negotiate";
-import { json, html } from "@pkg/http/response";
+import { respond } from "@sdxc/http/negotiate";
+import { json, html } from "@sdxc/http/response";
 
 export async function handler(request: Request): Promise<Response> {
 	let data = await getData();
@@ -67,9 +67,9 @@ export async function handler(request: Request): Promise<Response> {
 ### Cache Policies and Conditional Responses
 
 ```typescript
-import { conditional, etag, Policies, vary } from "@pkg/http/cache";
-import { html } from "@pkg/http/response";
-import { isSuccess } from "@pkg/result";
+import { conditional, etag, Policies, vary } from "@sdxc/http/cache";
+import { html } from "@sdxc/http/response";
+import { isSuccess } from "@sdxc/result";
 
 export async function handler(request: Request): Promise<Response> {
 	let body = await renderPage();
@@ -87,7 +87,7 @@ export async function handler(request: Request): Promise<Response> {
 ### Creating Requests
 
 ```typescript
-import { json, formURLEncoded } from "@pkg/http/request";
+import { json, formURLEncoded } from "@sdxc/http/request";
 
 // JSON POST request
 let req = json("https://api.example.com/users", { name: "John" });
@@ -104,7 +104,7 @@ let req = formURLEncoded("https://api.example.com/login", {
 
 ## API
 
-### `@pkg/http/content-type`
+### `@sdxc/http/content-type`
 
 Content-Type string constants for common MIME types.
 
@@ -146,13 +146,13 @@ Content-Type string constants for common MIME types.
 **Example:**
 
 ```typescript
-import { Json, HTML } from "@pkg/http/content-type";
+import { Json, HTML } from "@sdxc/http/content-type";
 
 let headers = new Headers();
 headers.set("Content-Type", Json);
 ```
 
-### `@pkg/http/status-code`
+### `@sdxc/http/status-code`
 
 HTTP status code constants with `status` and `statusText` properties.
 
@@ -161,7 +161,7 @@ HTTP status code constants with `status` and `statusText` properties.
 HTTP 200 OK status.
 
 ```typescript
-import { Ok } from "@pkg/http/status-code";
+import { Ok } from "@sdxc/http/status-code";
 
 return Response.json(data, Ok); // { status: 200, statusText: "OK" }
 ```
@@ -171,7 +171,7 @@ return Response.json(data, Ok); // { status: 200, statusText: "OK" }
 HTTP 404 Not Found status.
 
 ```typescript
-import { NotFound } from "@pkg/http/status-code";
+import { NotFound } from "@sdxc/http/status-code";
 
 return Response.json({ error: "Not found" }, NotFound);
 ```
@@ -186,7 +186,7 @@ return Response.json({ error: "Not found" }, NotFound);
 
 **5xx:** `InternalServerError`, `NotImplemented`, `BadGateway`, `ServiceUnavailable`, `GatewayTimeout`
 
-### `@pkg/http/request`
+### `@sdxc/http/request`
 
 Request factory functions that set Content-Type headers automatically.
 
@@ -195,7 +195,7 @@ Request factory functions that set Content-Type headers automatically.
 Creates a Request with JSON body. Defaults to POST method.
 
 ```typescript
-import { json } from "@pkg/http/request";
+import { json } from "@sdxc/http/request";
 
 let req = json("https://api.example.com/users", { name: "John" });
 let req = json("https://api.example.com/users/1", data, { method: "PUT" });
@@ -214,7 +214,7 @@ Creates a Request with XML body.
 Creates a Request with FormData body. Does not set Content-Type (browser sets it with boundary). Accepts `FormData` or `Record<string, string | Blob>`.
 
 ```typescript
-import { formData } from "@pkg/http/request";
+import { formData } from "@sdxc/http/request";
 
 let req = formData("https://api.example.com/upload", { name: "photo", file: imageBlob });
 ```
@@ -224,7 +224,7 @@ let req = formData("https://api.example.com/upload", { name: "photo", file: imag
 Creates a Request with URL-encoded form body. Accepts `URLSearchParams` or `Record<string, string>`.
 
 ```typescript
-import { formURLEncoded } from "@pkg/http/request";
+import { formURLEncoded } from "@sdxc/http/request";
 
 let req = formURLEncoded("https://api.example.com/login", {
 	username: "john",
@@ -232,7 +232,7 @@ let req = formURLEncoded("https://api.example.com/login", {
 });
 ```
 
-### `@pkg/http/response`
+### `@sdxc/http/response`
 
 Base response factory functions.
 
@@ -241,7 +241,7 @@ Base response factory functions.
 Creates a JSON response using `Response.json()`.
 
 ```typescript
-import { json } from "@pkg/http/response";
+import { json } from "@sdxc/http/response";
 
 return json({ message: "Hello" });
 return json({ error: "Not found" }, { status: 404 });
@@ -252,7 +252,7 @@ return json({ error: "Not found" }, { status: 404 });
 Creates a plain text response.
 
 ```typescript
-import { text } from "@pkg/http/response";
+import { text } from "@sdxc/http/response";
 
 return text("Hello, World!");
 ```
@@ -262,7 +262,7 @@ return text("Hello, World!");
 Creates an HTML response.
 
 ```typescript
-import { html } from "@pkg/http/response";
+import { html } from "@sdxc/http/response";
 
 return html("<h1>Hello World</h1>");
 ```
@@ -272,7 +272,7 @@ return html("<h1>Hello World</h1>");
 Creates a CSS response.
 
 ```typescript
-import { css } from "@pkg/http/response";
+import { css } from "@sdxc/http/response";
 
 return css("body { color: red; }");
 ```
@@ -282,7 +282,7 @@ return css("body { color: red; }");
 Creates a JavaScript response.
 
 ```typescript
-import { javascript } from "@pkg/http/response";
+import { javascript } from "@sdxc/http/response";
 
 return javascript("console.log('Hello');");
 ```
@@ -292,7 +292,7 @@ return javascript("console.log('Hello');");
 Creates an XML response.
 
 ```typescript
-import { xml } from "@pkg/http/response";
+import { xml } from "@sdxc/http/response";
 
 return xml("<root><item>Hello</item></root>");
 ```
@@ -302,7 +302,7 @@ return xml("<root><item>Hello</item></root>");
 Creates a CSV response.
 
 ```typescript
-import { csv } from "@pkg/http/response";
+import { csv } from "@sdxc/http/response";
 
 return csv("name,age\nJohn,30\nJane,25");
 ```
@@ -312,7 +312,7 @@ return csv("name,age\nJohn,30\nJane,25");
 Creates a Markdown response.
 
 ```typescript
-import { markdown } from "@pkg/http/response";
+import { markdown } from "@sdxc/http/response";
 
 return markdown("# Hello World\n\nThis is **bold** text.");
 ```
@@ -322,7 +322,7 @@ return markdown("# Hello World\n\nThis is **bold** text.");
 Creates a PDF response. Body can be `Blob`, `ArrayBuffer`, or `ReadableStream`.
 
 ```typescript
-import { pdf } from "@pkg/http/response";
+import { pdf } from "@sdxc/http/response";
 
 return pdf(pdfBlob);
 ```
@@ -332,7 +332,7 @@ return pdf(pdfBlob);
 Creates a file download response with `Content-Disposition: attachment`.
 
 ```typescript
-import { file } from "@pkg/http/response";
+import { file } from "@sdxc/http/response";
 
 return file(zipBuffer, "archive.zip");
 ```
@@ -342,7 +342,7 @@ return file(zipBuffer, "archive.zip");
 Creates a Server-Sent Events stream response with appropriate headers.
 
 ```typescript
-import { stream } from "@pkg/http/response";
+import { stream } from "@sdxc/http/response";
 
 return stream(eventStream);
 ```
@@ -352,7 +352,7 @@ return stream(eventStream);
 Creates a 204 No Content response.
 
 ```typescript
-import { noContent } from "@pkg/http/response";
+import { noContent } from "@sdxc/http/response";
 
 return noContent();
 ```
@@ -362,7 +362,7 @@ return noContent();
 Creates a redirect response. Defaults to 307 Temporary Redirect.
 
 ```typescript
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 return redirect("/login");
 return redirect("/dashboard", { status: redirect.Status.Permanent });
@@ -374,7 +374,7 @@ return redirect("/dashboard", { status: redirect.Status.Permanent });
 - `redirect.Status.Temporary` (307) - Temporary redirect, preserves method
 - `redirect.Status.Permanent` (308) - Permanent redirect, preserves method
 
-### `@pkg/http/response/json`
+### `@sdxc/http/response/json`
 
 JSON response helpers with built-in status codes.
 
@@ -402,25 +402,25 @@ JSON response helpers with built-in status codes.
 **Example:**
 
 ```typescript
-import { ok, badRequest, notFound } from "@pkg/http/response/json";
+import { ok, badRequest, notFound } from "@sdxc/http/response/json";
 
 return ok({ user: { id: "123", name: "John" } });
 return badRequest({ error: "Invalid email format" });
 return notFound({ error: "User not found", id: userId });
 ```
 
-### `@pkg/http/response/html`
+### `@sdxc/http/response/html`
 
 HTML response helpers with built-in status codes. Same functions as `response/json` but for HTML content.
 
 ```typescript
-import { ok, notFound } from "@pkg/http/response/html";
+import { ok, notFound } from "@sdxc/http/response/html";
 
 return ok("<h1>Welcome</h1>");
 return notFound("<h1>Page Not Found</h1>");
 ```
 
-### `@pkg/http/negotiate`
+### `@sdxc/http/negotiate`
 
 Content negotiation utilities based on the `Accept` header.
 
@@ -429,7 +429,7 @@ Content negotiation utilities based on the `Accept` header.
 Parses the Accept header and returns an AcceptList for querying.
 
 ```typescript
-import { accepts } from "@pkg/http/negotiate";
+import { accepts } from "@sdxc/http/negotiate";
 
 let accept = accepts(request);
 
@@ -447,7 +447,7 @@ if (accept.includes("html")) {
 Represents a parsed Accept header. Can be instantiated directly or via `accepts()`.
 
 ```typescript
-import { AcceptList } from "@pkg/http/negotiate";
+import { AcceptList } from "@sdxc/http/negotiate";
 
 let list = new AcceptList("application/json, text/html;q=0.9");
 ```
@@ -497,8 +497,8 @@ list.toShortType("application/octet-stream"); // null
 Rails-style content negotiation. Calls the appropriate handler based on Accept header preference.
 
 ```typescript
-import { respond } from "@pkg/http/negotiate";
-import { json, html } from "@pkg/http/response";
+import { respond } from "@sdxc/http/negotiate";
+import { json, html } from "@sdxc/http/response";
 
 return respond(request, {
 	json: () => json(data),
@@ -514,7 +514,7 @@ Returns 406 Not Acceptable if no handler matches and no `default` is provided.
 Type for the handlers object passed to `respond()`.
 
 ```typescript
-import type { respond } from "@pkg/http/negotiate";
+import type { respond } from "@sdxc/http/negotiate";
 
 let handlers: respond.Handlers = {
 	json: () => json(data),
@@ -522,7 +522,7 @@ let handlers: respond.Handlers = {
 };
 ```
 
-### `@pkg/http/cache`
+### `@sdxc/http/cache`
 
 Standard HTTP caching: `Cache-Control` policies, validators, and conditional
 requests. It composes the typed header classes the framework already ships
@@ -530,7 +530,7 @@ requests. It composes the typed header classes the framework already ships
 only the layer above them. Vendor cache extensions such as cache tags and purge
 APIs are not part of this subpath.
 
-Every age is a `@pkg/duration` value, so `"1 hour"` reads as an hour at the call
+Every age is a `@sdxc/duration` value, so `"1 hour"` reads as an hour at the call
 site and is converted to whole seconds internally.
 
 #### `policy(options?): CacheControl`
@@ -540,7 +540,7 @@ framework's `CacheControl`, so the result composes with anything that accepts
 that type.
 
 ```typescript
-import { policy } from "@pkg/http/cache";
+import { policy } from "@sdxc/http/cache";
 
 let headers = new Headers({
 	"Cache-Control": policy({
@@ -567,7 +567,7 @@ always written out rather than inferred.
 The recurring policies, named after the outcome they produce.
 
 ```typescript
-import { Policies } from "@pkg/http/cache";
+import { Policies } from "@sdxc/http/cache";
 
 Policies.noStore(); // "no-store"
 Policies.private({ maxAge: "5 minutes" }); // "private, max-age=300"
@@ -587,13 +587,13 @@ Policies.revalidate(); // "private, no-cache"
 
 #### `etag(body, options?): Promise<Result<string, CryptoError>>`
 
-Derives a validator from the bytes of a payload: SHA-256 through `@pkg/crypto`,
+Derives a validator from the bytes of a payload: SHA-256 through `@sdxc/crypto`,
 base64url, quoted. Pass `{ weak: true }` for content that varies in
 insignificant ways between renders, such as server-rendered HTML.
 
 ```typescript
-import { etag } from "@pkg/http/cache";
-import { isSuccess } from "@pkg/result";
+import { etag } from "@sdxc/http/cache";
+import { isSuccess } from "@sdxc/result";
 
 let tag = await etag(body); // '"uU0nuZNNPgilLlLX2n2r-sSE7-N6U4DukIj3rOLvzek"'
 let weak = await etag(body, { weak: true }); // 'W/"uU0nuZNNPgilLlLX2n2r-…"'
@@ -635,7 +635,7 @@ Downgrades a response to a `304` when the request's validators still describe it
 present; `If-Modified-Since` is consulted only in its absence.
 
 ```typescript
-import { conditional } from "@pkg/http/cache";
+import { conditional } from "@sdxc/http/cache";
 
 let response = await conditional(request, html(body, { headers }));
 ```
@@ -656,9 +656,9 @@ a client cannot overwrite a change it never saw. A request with no `If-Match`
 passes, `*` passes, and everything else is compared strongly, so weak tags fail.
 
 ```typescript
-import { precondition } from "@pkg/http/cache";
-import { preconditionFailed } from "@pkg/http/response/html";
-import { isFailure } from "@pkg/result";
+import { precondition } from "@sdxc/http/cache";
+import { preconditionFailed } from "@sdxc/http/response/html";
+import { isFailure } from "@sdxc/result";
 
 let checked = precondition(request, { etag: current });
 if (isFailure(checked)) return preconditionFailed("<h1>Precondition Failed</h1>");
@@ -674,7 +674,7 @@ already there. The `Headers` object is mutated in place and returned, and names
 are normalized to lowercase.
 
 ```typescript
-import { vary } from "@pkg/http/cache";
+import { vary } from "@sdxc/http/cache";
 
 let headers = new Headers({ Vary: "Accept-Encoding" });
 vary(headers, ["Accept-Language", "Cookie"]);
@@ -689,8 +689,8 @@ that genuinely differs per user wants `Policies.private()` instead.
 ## Pattern: API Endpoint with Validation
 
 ```typescript
-import { ok, badRequest, notFound } from "@pkg/http/response/json";
-import { validate } from "@pkg/validate";
+import { ok, badRequest, notFound } from "@sdxc/http/response/json";
+import { validate } from "@sdxc/validate";
 import { z } from "zod";
 
 let schema = z.object({
@@ -713,8 +713,8 @@ export async function handler(request: Request): Promise<Response> {
 ## Pattern: Content Negotiation with Multiple Formats
 
 ```typescript
-import { accepts, respond } from "@pkg/http/negotiate";
-import { json, html, csv } from "@pkg/http/response";
+import { accepts, respond } from "@sdxc/http/negotiate";
+import { json, html, csv } from "@sdxc/http/response";
 
 export async function handler(request: Request): Promise<Response> {
 	let data = await getReport();
@@ -731,7 +731,7 @@ export async function handler(request: Request): Promise<Response> {
 ## Pattern: File Download
 
 ```typescript
-import { file } from "@pkg/http/response";
+import { file } from "@sdxc/http/response";
 
 export async function handler(request: Request): Promise<Response> {
 	let reportData = await generateReport();
@@ -743,16 +743,16 @@ export async function handler(request: Request): Promise<Response> {
 
 ## Related Packages
 
-- [`@pkg/response`](/packages/response) - React Router response helpers using `data()`
-- [`@pkg/validate`](/packages/validate) - Request validation with Zod schemas
-- [`@pkg/result`](/packages/result) - Result type for error handling
-- [`@pkg/crypto`](/packages/crypto) - WebCrypto primitives, used for `ETag` digests
-- [`@pkg/duration`](/packages/duration) - Duration values, used for every cache age
+- [`@sdxc/response`](/packages/response) - React Router response helpers using `data()`
+- [`@sdxc/validate`](/packages/validate) - Request validation with Zod schemas
+- [`@sdxc/result`](/packages/result) - Result type for error handling
+- [`@sdxc/crypto`](/packages/crypto) - WebCrypto primitives, used for `ETag` digests
+- [`@sdxc/duration`](/packages/duration) - Duration values, used for every cache age
 
 ## Tips
 
-1. **Use `@pkg/http/response/json` for API endpoints** - The status code helpers like `ok()`, `badRequest()`, `notFound()` make your intent clear.
-2. **Use `@pkg/http/response` for custom responses** - When you need a specific Content-Type or want to set the status manually.
+1. **Use `@sdxc/http/response/json` for API endpoints** - The status code helpers like `ok()`, `badRequest()`, `notFound()` make your intent clear.
+2. **Use `@sdxc/http/response` for custom responses** - When you need a specific Content-Type or want to set the status manually.
 3. **Use `respond()` for content negotiation** - It handles Accept header parsing and 406 responses automatically.
 4. **Request factories default to POST** - Override with `{ method: "PUT" }` for other methods.
 5. **Redirect defaults to 307** - Use `redirect.Status.SeeOther` (303) for POST-Redirect-GET pattern.

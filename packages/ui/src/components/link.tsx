@@ -9,11 +9,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { colorMix, fg, outline } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw, var as varUtility } from "@pkg/u/general";
-import { data, when } from "@pkg/u/state";
-import { textDecoration } from "@pkg/u/typography";
+import { colorMix, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, raw, var as varUtility } from "@sdxc/u/general";
+import { data, when } from "@sdxc/u/state";
+import { textDecoration } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 

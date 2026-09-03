@@ -1,6 +1,6 @@
 /*
- * Raw --ui-color-{scale}-{step} scales consumed by @pkg/u/theme.css's
- * (transitively imported through @pkg/ui/theme.css)
+ * Raw --ui-color-{scale}-{step} scales consumed by @sdxc/u/theme.css's
+ * (transitively imported through @sdxc/ui/theme.css)
  * --ui-{brand,neutral,danger,warning,success}-* semantic tokens — see that
  * file's own "Theme Contract" docblock; it declares no defaults, so an app
  * must define these itself.
@@ -94,7 +94,7 @@
 	--ui-color-success-950: oklch(0.16 0.053 142);
 
 	/*
-	 * Font overrides on top of @pkg/u's own --ui-font-{sans,serif,mono}
+	 * Font overrides on top of @sdxc/u's own --ui-font-{sans,serif,mono}
 	 * defaults: --ui-font-mono is the document's default body font (the
 	 * platform's own UI monospace, no self-hosted file); --ui-font-sans is
 	 * the self-hosted display font the marketing chrome opts into.

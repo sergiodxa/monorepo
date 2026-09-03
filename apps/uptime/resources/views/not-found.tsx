@@ -12,12 +12,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol } from "@pkg/u/layout";
-import { m, maxIs, minBs } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { textDecoration } from "@pkg/u/typography";
-import { Empty } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexCol } from "@sdxc/u/layout";
+import { m, maxIs, minBs } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { textDecoration } from "@sdxc/u/typography";
+import { Empty } from "@sdxc/ui";
 
 import routes from "~/routes/web";
 

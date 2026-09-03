@@ -2,7 +2,7 @@
  * Client island: a `NumberField` whose decrement/increment buttons actually
  * step the value, since `stepUp()`/`stepDown()` are script-only. The buttons
  * declare their step as an Invoker Command targeting the input, and
- * `@pkg/ui/mixins`' `stepper()` turns those into real steps once hydrated,
+ * `@sdxc/ui/mixins`' `stepper()` turns those into real steps once hydrated,
  * which is why this ships as a `clientEntry`.
  *
  * No-JS baseline: the field is a native `<input type="number">` carrying the
@@ -15,12 +15,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { Description, Label, NumberField } from "@pkg/ui";
+import { Description, Label, NumberField } from "@sdxc/ui";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
-} from "@pkg/ui/mixins";
+} from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/ui";
 
 /** Declared as a `type` alias so it satisfies `SerializableProps`. */

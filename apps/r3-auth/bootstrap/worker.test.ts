@@ -10,7 +10,7 @@
 
 import type { Database as DataTableDatabase } from "remix/data-table";
 
-import { createEnv, createExecutionContext, createQueue } from "@pkg/cloudflare-mocks";
+import { createEnv, createExecutionContext, createQueue } from "@sdxc/cloudflare-mocks";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -110,7 +110,7 @@ beforeEach(async () => {
 });
 
 async function createSession(expiresAt: number): Promise<string> {
-	let { generateUUID } = await import("@pkg/uuid");
+	let { generateUUID } = await import("@sdxc/uuid");
 	let { sessions } = await import("~/database/schema");
 
 	let session = await db.create(

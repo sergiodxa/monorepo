@@ -11,9 +11,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { PanelLeftIcon } from "@pkg/icons";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, borderEdge, colorMix, fg, outline, outlineStyle } from "@pkg/u/color";
+import { PanelLeftIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, borderEdge, colorMix, fg, outline, outlineStyle } from "@sdxc/u/color";
 import {
 	backdropBlur,
 	backdropSaturate,
@@ -24,9 +24,9 @@ import {
 	transitionBehavior,
 	transitionDuration,
 	transitionProperty,
-} from "@pkg/u/effects";
-import { cursor, pseudoContent, userSelect, willChange } from "@pkg/u/general";
-import { var as varUtility } from "@pkg/u/general/var";
+} from "@sdxc/u/effects";
+import { cursor, pseudoContent, userSelect, willChange } from "@sdxc/u/general";
+import { var as varUtility } from "@sdxc/u/general/var";
 import {
 	absolute,
 	container,
@@ -48,9 +48,9 @@ import {
 	relative,
 	shrink,
 	vstack,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media, supports } from "@pkg/u/responsive";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media, supports } from "@sdxc/u/responsive";
 import {
 	bs,
 	is,
@@ -69,10 +69,10 @@ import {
 	pi,
 	pis,
 	safeAreaPadding,
-} from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { after, data, focusVisible, hover, when } from "@pkg/u/state";
-import { scaleProperty, translateProperty, translateX } from "@pkg/u/transform";
+} from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { after, data, focusVisible, hover, when } from "@sdxc/u/state";
+import { scaleProperty, translateProperty, translateX } from "@sdxc/u/transform";
 import {
 	fontSize,
 	tabularNums,
@@ -82,7 +82,7 @@ import {
 	tracking,
 	truncate,
 	weight,
-} from "@pkg/u/typography";
+} from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -1181,7 +1181,7 @@ Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps
 };
 
 /**
- * Shared `@pkg/u` mixins for {@link Sidebar.MenuButton} and
+ * Shared `@sdxc/u` mixins for {@link Sidebar.MenuButton} and
  * {@link Sidebar.MenuLink}, factored out since the two differ only in host
  * element and how their current/active state is expressed.
  */
@@ -1514,7 +1514,7 @@ Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSub
 };
 
 /**
- * Shared `@pkg/u` mixins for {@link Sidebar.MenuSubButton} and
+ * Shared `@sdxc/u` mixins for {@link Sidebar.MenuSubButton} and
  * {@link Sidebar.MenuSubLink}.
  */
 function menuSubRowMixins() {

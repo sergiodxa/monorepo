@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { job, jobs } from "@pkg/jobs";
+import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 /**

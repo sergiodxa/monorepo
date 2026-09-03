@@ -13,9 +13,9 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { PermissionSet } from "./permissions";
 

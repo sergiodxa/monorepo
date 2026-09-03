@@ -10,15 +10,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { IntlProvider } from "@pkg/i18n/ui";
-import { KeyIcon, PlusIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { hstack, vstack } from "@pkg/u/layout";
-import { pb, pi } from "@pkg/u/size";
-import { textAlign } from "@pkg/u/typography";
-import { Badge, Button, Empty, LinkButton, Table } from "@pkg/ui";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { KeyIcon, PlusIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { pb, pi } from "@sdxc/u/size";
+import { textAlign } from "@sdxc/u/typography";
+import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

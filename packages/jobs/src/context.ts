@@ -10,7 +10,7 @@
 
 import type { ContextValue } from "remix/router";
 
-import { BatchedLogger } from "@pkg/logger";
+import { BatchedLogger } from "@sdxc/logger";
 
 import type { RetryOptions } from "./errors";
 import type { CronExpression } from "./job";

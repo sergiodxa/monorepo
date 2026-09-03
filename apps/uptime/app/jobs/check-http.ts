@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs";
+import type { CurrentJobContext } from "@sdxc/jobs";
 
-import { createJobHandler } from "@pkg/jobs";
-import { Mailer } from "@pkg/mail";
-import { getServiceContainer } from "@pkg/service-container";
+import { createJobHandler } from "@sdxc/jobs";
+import { Mailer } from "@sdxc/mail";
+import { getServiceContainer } from "@sdxc/service-container";
 
 import type { CheckHttpInput } from "~/app/jobs";
 import type { HttpProbeOutcome } from "~/app/services/http-check";

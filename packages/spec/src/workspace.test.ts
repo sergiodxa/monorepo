@@ -11,9 +11,9 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync }
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isSuccess, success, unwrap } from "@pkg/result";
+import { failure, isSuccess, success, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { PermissionSet } from "./permissions";

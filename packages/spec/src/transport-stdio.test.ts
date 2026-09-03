@@ -12,8 +12,8 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { isFailure, isSuccess, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { isFailure, isSuccess, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "./plugin";

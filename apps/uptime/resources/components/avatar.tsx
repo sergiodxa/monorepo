@@ -1,8 +1,8 @@
 /**
  * Client island per the approved-islands list: a circular user avatar,
- * composing `@pkg/ui`'s compound `Avatar` for its fallback/image layering.
+ * composing `@sdxc/ui`'s compound `Avatar` for its fallback/image layering.
  *
- * `@pkg/ui`'s own `size` prop only accepts `"sm"/"md"/"lg"` variants, so
+ * `@sdxc/ui`'s own `size` prop only accepts `"sm"/"md"/"lg"` variants, so
  * host dimensions and the fallback's font size are set directly through
  * `mix`, keeping this component's numeric `size` exact for any pixel value
  * callers pass (24, 40, 48, …).
@@ -13,9 +13,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { is, bs } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { Avatar as UIAvatar } from "@pkg/ui";
+import { is, bs } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { Avatar as UIAvatar } from "@sdxc/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** Props are declared as a `type` alias to satisfy `SerializableProps`. */

@@ -3,7 +3,7 @@
  * above a title and description, with a connector line toward the next
  * step. Both are pure CSS — a `counter()` in `::before`, a positioned
  * `::after` — so a row of steps needs no client script or index prop.
- * Reuses `@pkg/ui`'s `Card.Title`/`Card.Description` for typography.
+ * Reuses `@sdxc/ui`'s `Card.Title`/`Card.Description` for typography.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,9 +11,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { counterIncrement, pseudoContent } from "@pkg/u/general";
+import { bg, fg } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { counterIncrement, pseudoContent } from "@sdxc/u/general";
 import {
 	absolute,
 	block,
@@ -25,12 +25,12 @@ import {
 	justify,
 	relative,
 	vstack,
-} from "@pkg/u/layout";
-import { dark, media } from "@pkg/u/responsive";
-import { bs, is, mbe } from "@pkg/u/size";
-import { after, before, not } from "@pkg/u/state";
-import { fontSize, textAlign, weight } from "@pkg/u/typography";
-import { Card, HeadingScope } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { dark, media } from "@sdxc/u/responsive";
+import { bs, is, mbe } from "@sdxc/u/size";
+import { after, before, not } from "@sdxc/u/state";
+import { fontSize, textAlign, weight } from "@sdxc/u/typography";
+import { Card, HeadingScope } from "@sdxc/ui";
 
 namespace MarketingStep {
 	export interface Props {

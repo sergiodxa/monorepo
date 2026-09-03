@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
-import type { Address, EmailTableRow } from "@pkg/mail";
+import type { TFunction } from "@sdxc/i18n";
+import type { Address, EmailTableRow } from "@sdxc/mail";
 import type { Handle, RemixElement } from "remix/ui";
 
-import { formatDateTime } from "@pkg/dates";
-import { Email } from "@pkg/mail";
+import { formatDateTime } from "@sdxc/dates";
+import { Email } from "@sdxc/mail";
 
 import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/database/schema";
 

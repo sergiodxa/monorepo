@@ -11,8 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ok, serviceUnavailable } from "@pkg/http/response/json";
-import { isFailure } from "@pkg/result";
+import { ok, serviceUnavailable } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 

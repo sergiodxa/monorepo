@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { randomBytes } from "@pkg/crypto";
+import { randomBytes } from "@sdxc/crypto";
 
 /** A seed as a caller supplies it; text and numbers both name a stream. */
 export type Seed = number | string;

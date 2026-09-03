@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import type {
 	DataManipulationOperation,
 	DataManipulationRequest,
@@ -19,7 +19,7 @@ import type {
 	TransactionToken,
 } from "remix/data-table";
 
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database, getTableName, getTablePrimaryKey, type Predicate } from "remix/data-table";
 
 import { runMigrations } from "../../database/migrations";
@@ -33,7 +33,7 @@ interface SqliteAdapterOptions {
  * SqlStorage adapter, so models and controllers can be exercised against a real SQL
  * engine in tests.
  * @param db - The SQLite database to wrap, opened by any driver matching
- * `@pkg/cloudflare-mocks/sqlite`.
+ * `@sdxc/cloudflare-mocks/sqlite`.
  * @param options - Optional capability overrides.
  * @returns A data-table adapter backed by the given SQLite database.
  */

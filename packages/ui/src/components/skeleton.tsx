@@ -9,9 +9,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { bs, is } from "@pkg/u/size";
+import { bg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { bs, is } from "@sdxc/u/size";
 import { attrs } from "remix/ui";
 
 /**

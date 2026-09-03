@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
-import type { Result } from "@pkg/result";
+import type { DurationInput } from "@sdxc/duration";
+import type { Result } from "@sdxc/result";
 
-import { toMs } from "@pkg/duration";
-import { isFailure, success } from "@pkg/result";
+import { toMs } from "@sdxc/duration";
+import { isFailure, success } from "@sdxc/result";
 
 import type { ScheduleDescriptor } from "./describe";
 import type { CronFieldSet } from "./fields";

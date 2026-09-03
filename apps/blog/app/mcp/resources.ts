@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resource, resources } from "@pkg/mcp";
+import { resource, resources } from "@sdxc/mcp";
 
 /**
  * Origin the resource URIs are built against.

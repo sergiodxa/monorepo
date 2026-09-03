@@ -1,10 +1,10 @@
-# @pkg/uuid
+# @sdxc/uuid
 
 Type-safe UUID helpers for validation, assertion, and generation.
 
 ## Overview
 
-`@pkg/uuid` provides a small set of primitives for working with UUID values as domain identifiers. It includes a branded `UUID` type, a runtime guard (`isUUID`), an assertion helper (`assertUUID`), a generation helper (`generateUUID`), and dedicated error classes for invalid UUID input.
+`@sdxc/uuid` provides a small set of primitives for working with UUID values as domain identifiers. It includes a branded `UUID` type, a runtime guard (`isUUID`), an assertion helper (`assertUUID`), a generation helper (`generateUUID`), and dedicated error classes for invalid UUID input.
 
 The package is intentionally minimal so it can be used across loaders, actions, services, and shared libraries without pulling in extra dependencies. It relies on the platform `crypto.randomUUID()` API and the standard UUID string format.
 
@@ -13,7 +13,7 @@ The package is intentionally minimal so it can be used across loaders, actions, 
 ### Basic Example
 
 ```typescript
-import { assertUUID, generateUUID, isUUID } from "@pkg/uuid";
+import { assertUUID, generateUUID, isUUID } from "@sdxc/uuid";
 
 let id = generateUUID();
 
@@ -31,7 +31,7 @@ let userId = input;
 ### Validate Request Parameters
 
 ```typescript
-import { assertUUID } from "@pkg/uuid";
+import { assertUUID } from "@sdxc/uuid";
 import type { Route } from "./+types/users.$userId";
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -67,7 +67,7 @@ Checks whether a string matches the UUID format.
 **Example:**
 
 ```typescript
-import { isUUID } from "@pkg/uuid";
+import { isUUID } from "@sdxc/uuid";
 
 let value = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -93,7 +93,7 @@ Asserts that a string is a UUID and narrows its type.
 **Example:**
 
 ```typescript
-import { assertUUID } from "@pkg/uuid";
+import { assertUUID } from "@sdxc/uuid";
 
 let value = "550e8400-e29b-41d4-a716-446655440000";
 assertUUID(value);
@@ -121,7 +121,7 @@ import {
 	InvalidUUIDFormatError,
 	InvalidUUIDLengthError,
 	InvalidUUIDTypeError,
-} from "@pkg/uuid";
+} from "@sdxc/uuid";
 
 try {
 	assertUUID(input);
@@ -151,7 +151,7 @@ Generates a new UUID using `crypto.randomUUID()`.
 **Example:**
 
 ```typescript
-import { generateUUID } from "@pkg/uuid";
+import { generateUUID } from "@sdxc/uuid";
 
 let id = generateUUID();
 ```
@@ -163,7 +163,7 @@ let id = generateUUID();
 Validate route params, form values, or API inputs early so deeper layers receive typed IDs.
 
 ```typescript
-import { assertUUID } from "@pkg/uuid";
+import { assertUUID } from "@sdxc/uuid";
 
 interface UserInput {
 	userId: string;
@@ -183,8 +183,8 @@ function parseInput(input: UserInput) {
 Use `isUUID` when invalid values should be handled without exceptions.
 
 ```typescript
-import { isUUID } from "@pkg/uuid";
-import { err, ok, type Result } from "@pkg/result";
+import { isUUID } from "@sdxc/uuid";
+import { err, ok, type Result } from "@sdxc/result";
 
 function parseUserId(value: string): Result<{ userId: string }, { message: string }> {
 	if (!isUUID(value)) {
@@ -197,9 +197,9 @@ function parseUserId(value: string): Result<{ userId: string }, { message: strin
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Represent validation outcomes as explicit success and failure values
-- [`@pkg/validate`](/packages/validate) - Validate request payloads before narrowing IDs to UUID
-- [`@pkg/typeid`](/packages/typeid) - Build prefixed identifiers from UUID values
+- [`@sdxc/result`](/packages/result) - Represent validation outcomes as explicit success and failure values
+- [`@sdxc/validate`](/packages/validate) - Validate request payloads before narrowing IDs to UUID
+- [`@sdxc/typeid`](/packages/typeid) - Build prefixed identifiers from UUID values
 
 ## Tips
 

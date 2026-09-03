@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, success } from "@pkg/result";
+import { failure, success } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 

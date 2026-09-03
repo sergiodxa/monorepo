@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode, SpecFileNode, StatementNode } from "./ast";

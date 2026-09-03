@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ManagementClient } from "@pkg/auth/management-client";
+import type { ManagementClient } from "@sdxc/auth/management-client";
 
-import { SubjectNotFoundError } from "@pkg/auth/management-client";
-import { isFailure } from "@pkg/result";
+import { SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { isFailure } from "@sdxc/result";
 
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 

@@ -8,18 +8,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, borderEdge, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { boxSizing, hstack, shrink, vstack } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { is, m, maxIs, mi, p } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
-import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
-import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@pkg/ui";
+import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { boxSizing, hstack, shrink, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxIs, mi, p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { font, fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
+import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

@@ -3,7 +3,7 @@
  * filters every doc by title into a flat, section-labeled list; clearing it
  * restores the sections grouped by `frontmatter.section.title`.
  *
- * Composes `@pkg/ui`'s `SearchField`/`SearchField.Input` and `NavLink`, styled
+ * Composes `@sdxc/ui`'s `SearchField`/`SearchField.Input` and `NavLink`, styled
  * with the same tokens `Sidebar.Item` uses for its own rows, so the search box
  * and nav rows stay visually consistent with the rest of the sidebar.
  *
@@ -13,14 +13,14 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { listStyle, raw } from "@pkg/u/general";
-import { block } from "@pkg/u/layout";
-import { m, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, textTransform, tracking, weight } from "@pkg/u/typography";
-import { NavLink, SearchField } from "@pkg/ui";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { listStyle, raw } from "@sdxc/u/general";
+import { block } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, textTransform, tracking, weight } from "@sdxc/u/typography";
+import { NavLink, SearchField } from "@sdxc/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** One doc link, reduced to the fields the sidebar actually renders. */

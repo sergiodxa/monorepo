@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { xml } from "@pkg/http/response";
-import { RSS } from "@pkg/rss";
-import { inject } from "@pkg/service-container";
+import { xml } from "@sdxc/http/response";
+import { RSS } from "@sdxc/rss";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

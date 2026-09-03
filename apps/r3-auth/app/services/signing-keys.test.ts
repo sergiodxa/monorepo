@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { R2BucketMock } from "@pkg/cloudflare-mocks";
+import type { R2BucketMock } from "@sdxc/cloudflare-mocks";
 
-import { createR2Bucket } from "@pkg/cloudflare-mocks";
-import { JWK } from "@pkg/jwt";
+import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { JWK } from "@sdxc/jwt";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 let bucket: R2BucketMock;

@@ -12,9 +12,9 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { D1StatementObservation } from "@pkg/data-table-d1";
+import type { D1StatementObservation } from "@sdxc/data-table-d1";
 
-import { logger } from "@pkg/logger";
+import { logger } from "@sdxc/logger";
 import { env } from "cloudflare:workers";
 
 import type { CostQuantities, CostResource, WorkerHandler } from "~/app/lib/cost-rates";

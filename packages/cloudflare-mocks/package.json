@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/cloudflare-mocks",
+	"name": "@sdxc/cloudflare-mocks",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -16,8 +16,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
-		"@pkg/data-table-d1": "workspace:*",
-		"@pkg/data-table-sqlstorage": "workspace:*",
+		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@types/node": "^26.4.0",
 		"remix": "3.0.0-rc.1"
 	}

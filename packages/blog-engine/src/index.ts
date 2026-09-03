@@ -10,8 +10,8 @@
 import type { DatabaseDriver } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
 
-import { Logger } from "@pkg/logger/request";
-import { ServiceContainer } from "@pkg/service-container";
+import { Logger } from "@sdxc/logger/request";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import type { OIDCMetadata } from "./auth/oidc";
@@ -28,7 +28,7 @@ export type { Permission } from "./shared/permissions";
 
 /** Configuration for {@link createBlogEngine}. */
 export interface BlogEngineConfig {
-	/** SQL access. Self-hosted: `@pkg/data-table-d1`. DO host: `@pkg/data-table-sqlstorage`. */
+	/** SQL access. Self-hosted: `@sdxc/data-table-d1`. DO host: `@sdxc/data-table-sqlstorage`. */
 	database: DatabaseDriver;
 
 	/** OIDC relying-party configuration for the admin panel. */

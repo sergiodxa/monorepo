@@ -11,12 +11,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SizeValue, SpacingValue } from "@pkg/u/tokens";
+import type { SizeValue, SpacingValue } from "@sdxc/u/tokens";
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, borderEdge, fg, outline, outlineStyle } from "@pkg/u/color";
-import { opacity, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
+import { opacity, transition } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
 import {
 	absolute,
 	basis,
@@ -30,11 +30,11 @@ import {
 	relative,
 	shrink,
 	vstack,
-} from "@pkg/u/layout";
-import { bs, is, mbe, mie, pb, pi } from "@pkg/u/size";
-import { after, data, when } from "@pkg/u/state";
-import { boxLength, spacing } from "@pkg/u/tokens";
-import { text, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { bs, is, mbe, mie, pb, pi } from "@sdxc/u/size";
+import { after, data, when } from "@sdxc/u/state";
+import { boxLength, spacing } from "@sdxc/u/tokens";
+import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

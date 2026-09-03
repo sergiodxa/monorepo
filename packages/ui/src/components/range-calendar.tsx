@@ -13,10 +13,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { roundedCorner } from "@pkg/u/effects";
-import { flex, gap, items } from "@pkg/u/layout";
-import { data, when } from "@pkg/u/state";
+import { bg, fg } from "@sdxc/u/color";
+import { roundedCorner } from "@sdxc/u/effects";
+import { flex, gap, items } from "@sdxc/u/layout";
+import { data, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { Calendar } from "./calendar";

@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 import type { CacheControlInit } from "remix/headers";
 
-import { toSeconds } from "@pkg/duration";
+import { toSeconds } from "@sdxc/duration";
 import { CacheControl } from "remix/headers";
 
 /**

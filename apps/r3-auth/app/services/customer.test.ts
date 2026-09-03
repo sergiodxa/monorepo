@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { isFailure, unwrap } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { BillableSubject } from "~/app/services/customer";

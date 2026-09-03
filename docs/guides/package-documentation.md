@@ -21,7 +21,7 @@ Every package README should follow this structure:
 Use the package name as an H1 heading, followed by a one-line description.
 
 ```markdown
-# @pkg/package-name
+# @sdxc/package-name
 
 One-line description of what this package does.
 ```
@@ -99,8 +99,8 @@ Link to other packages that work well together or provide similar functionality.
 ```markdown
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Result type for explicit error handling
-- [`@pkg/validate`](/packages/validate) - Form validation with Standard Schema
+- [`@sdxc/result`](/packages/result) - Result type for explicit error handling
+- [`@sdxc/validate`](/packages/validate) - Form validation with Standard Schema
 ```
 
 ### Tips
@@ -110,7 +110,7 @@ Numbered list of best practices, gotchas, and recommendations. Keep each tip to 
 ## Template
 
 ```markdown
-# @pkg/package-name
+# @sdxc/package-name
 
 One-line description of what this package does.
 
@@ -128,7 +128,7 @@ dependencies were chosen.
 ### Basic Example
 
 \`\`\`typescript
-import { something } from "@pkg/package-name";
+import { something } from "@sdxc/package-name";
 
 let result = something();
 \`\`\`
@@ -207,7 +207,7 @@ field2: number;
 ### Loader Pattern
 
 \`\`\`typescript
-import { something } from "@pkg/package-name";
+import { something } from "@sdxc/package-name";
 import type { Route } from "./+types/route-name";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -245,7 +245,7 @@ Explain when to use this pattern.
 
 ## Related Packages
 
-- [`@pkg/related`](/packages/related) - Brief description of relationship
+- [`@sdxc/related`](/packages/related) - Brief description of relationship
 
 ## Tips
 

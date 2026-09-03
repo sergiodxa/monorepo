@@ -8,7 +8,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import routes from "~/routes/web";

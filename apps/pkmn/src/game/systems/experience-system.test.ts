@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies experience grants, battle-experience distribution across
  * survivors, and effort-value caps (255 per stat, 510 total) using a

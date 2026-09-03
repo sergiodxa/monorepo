@@ -1,10 +1,10 @@
-# @pkg/service-container
+# @sdxc/service-container
 
 Class-keyed service container for TypeScript applications.
 
 ## Overview
 
-`@pkg/service-container` centralizes application dependency construction while keeping scoped services isolated per child container. It uses runtime classes and abstract classes as type-safe keys, so `container.get(Database)` returns a `Database` without strings, symbols, decorators, or reflection.
+`@sdxc/service-container` centralizes application dependency construction while keeping scoped services isolated per child container. It uses runtime classes and abstract classes as type-safe keys, so `container.get(Database)` returns a `Database` without strings, symbols, decorators, or reflection.
 
 The package works with request handlers, jobs, tests, and any runtime that can wrap work in an active container scope. Application startup registers singleton and scoped factories once, scopes isolate scoped services, and handlers resolve dependencies explicitly or through `inject`.
 
@@ -13,7 +13,7 @@ The package works with request handlers, jobs, tests, and any runtime that can w
 ### Basic Example
 
 ```typescript
-import { ServiceContainer, type ServiceProvider } from "@pkg/service-container";
+import { ServiceContainer, type ServiceProvider } from "@sdxc/service-container";
 
 class Database {
 	findMany() {
@@ -39,7 +39,7 @@ database.findMany();
 ### Injected Handler
 
 ```typescript
-import { inject, ServiceContainer } from "@pkg/service-container";
+import { inject, ServiceContainer } from "@sdxc/service-container";
 
 let appContainer = new ServiceContainer();
 
@@ -55,7 +55,7 @@ let response = appContainer.scope(() => handler());
 ### Injected Handler With Forwarded Argument
 
 ```typescript
-import { inject, ServiceContainer } from "@pkg/service-container";
+import { inject, ServiceContainer } from "@sdxc/service-container";
 
 interface Job {
 	id: string;
@@ -250,7 +250,7 @@ let result = appContainer.scope(() => doWork());
 Register providers once at module startup, create a child scope in the runtime entrypoint, and call `router.fetch(request)` inside that active container scope. Keep request lifecycle values in Remix middleware or direct context entries instead of registering them as container services.
 
 ```typescript
-import { ServiceContainer, type ServiceProvider } from "@pkg/service-container";
+import { ServiceContainer, type ServiceProvider } from "@sdxc/service-container";
 
 let container = new ServiceContainer();
 let providers: ServiceProvider[] = [new DatabaseProvider(), new LoggerProvider()];
@@ -269,7 +269,7 @@ Use `inject` inside controllers. If the Remix `asyncContext()` middleware is ins
 ```typescript
 import { createController } from "remix/router";
 import { getContext } from "remix/middleware/async-context";
-import { inject } from "@pkg/service-container";
+import { inject } from "@sdxc/service-container";
 
 import { Database } from "~/services/database";
 import { Logger } from "~/services/logger";
@@ -311,7 +311,7 @@ export let loginController = createController(routes.something, {
 Wrap the queue handler in `container.scope(...)` so every message in the batch shares one scoped container. Keep queue metadata such as attempts, ack/retry decisions, and batch control in the queue handler.
 
 ```typescript
-import { inject, ServiceContainer, type ServiceProvider } from "@pkg/service-container";
+import { inject, ServiceContainer, type ServiceProvider } from "@sdxc/service-container";
 
 import { EmailService } from "~/services/email";
 import { Logger } from "~/services/logger";
@@ -346,9 +346,9 @@ export default {
 
 ## Related Packages
 
-- [`@pkg/logger`](/packages/logger) - Logging utilities that can be registered as services.
-- [`@pkg/jobs`](/packages/jobs) - Background job helpers that can be resolved from providers.
-- [`@pkg/validate`](/packages/validate) - Validation helpers commonly used by route handlers and services.
+- [`@sdxc/logger`](/packages/logger) - Logging utilities that can be registered as services.
+- [`@sdxc/jobs`](/packages/jobs) - Background job helpers that can be resolved from providers.
+- [`@sdxc/validate`](/packages/validate) - Validation helpers commonly used by route handlers and services.
 
 ## Tips
 

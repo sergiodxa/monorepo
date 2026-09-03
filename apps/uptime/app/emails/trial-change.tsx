@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
-import type { Address, EmailTableRow } from "@pkg/mail";
+import type { TFunction } from "@sdxc/i18n";
+import type { Address, EmailTableRow } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
-import { Email } from "@pkg/mail";
+import { Email } from "@sdxc/mail";
 
 import type { TrialStatus } from "~/app/emails/shared/trial";
 

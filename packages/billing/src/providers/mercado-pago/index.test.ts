@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";

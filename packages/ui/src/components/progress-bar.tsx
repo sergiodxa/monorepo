@@ -11,14 +11,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { appearance, block, flex, flexCol, gap } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, is, m, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text } from "@pkg/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { appearance, block, flex, flexCol, gap } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, m, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 
 import { Buttondown } from "~/app/services/buttondown";

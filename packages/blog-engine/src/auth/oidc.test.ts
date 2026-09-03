@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RelyingParty } from "@pkg/auth/relying-party";
+import type { RelyingParty } from "@sdxc/auth/relying-party";
 
 import { describe, expect, test } from "vitest";
 

@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JobDispatcherContext } from "@pkg/jobs";
+import type { JobDispatcherContext } from "@sdxc/jobs";
 
-import { createJobDispatcher } from "@pkg/jobs";
+import { createJobDispatcher } from "@sdxc/jobs";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
@@ -62,7 +62,7 @@ dispatcher.map(jobs.sendTeamDailyDigests, () => import("~/app/jobs/send-team-dai
 dispatcher.map(jobs.sendTeamWeeklyDigests, () => import("~/app/jobs/send-team-weekly-digests"));
 dispatcher.map(jobs.notify, () => import("~/app/jobs/notify"));
 
-declare module "@pkg/jobs" {
+declare module "@sdxc/jobs" {
 	interface JobTypes {
 		context: JobDispatcherContext<typeof dispatcher>;
 	}

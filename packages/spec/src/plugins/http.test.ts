@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, isSuccess, success, unwrap } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";

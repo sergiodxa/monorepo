@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url } from "@pkg/crypto";
-import { isFailure } from "@pkg/result";
+import { Base64Url } from "@sdxc/crypto";
+import { isFailure } from "@sdxc/result";
 
 /** How long before expiry a token counts as expiring soon, in milliseconds. */
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;

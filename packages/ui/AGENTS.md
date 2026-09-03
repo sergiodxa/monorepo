@@ -7,7 +7,7 @@ Guidance for implementing and updating components, mixins, behaviors, and animat
 ## Core Principles
 
 - Every component is a `remix/ui` component using the Handle pattern — `function Name(handle: Handle<Props>) { return () => <... /> }` — and is always rendered through JSX (`<Name />`), never called as a plain function.
-- The only dependencies are `remix` and `@pkg/icons`.
+- The only dependencies are `remix` and `@sdxc/icons`.
 - Components style themselves via a `css()` object on the host element, keyed off a `data-*` attribute contract (`data-color`, `data-variant`, `data-size`, `data-placement`, …) and `--ui-*` semantic color variables.
 - Components are markup plus styling only — they never carry behavior and the library never hydrates them. Anything that needs JavaScript ships as an opt-in mixin (from `mixins/`) or behavior class (from `behaviors/`) that the consumer applies explicitly, in their own hydrated island.
 - The library ships no copy. Every user-facing and accessibility string is a required prop from the consumer — no built-in English defaults.
@@ -179,12 +179,12 @@ Where the type system can't enforce a required a11y wiring (children shapes, id 
 ## Documentation Style
 
 - Describe every component, mixin, behavior class, and animation factory standalone, purely by what it is and does. Never name another monorepo app or package as a source/counterpart/comparison, never cite a design record (an ADR) by name, and never define something by what it _isn't_ (no "zero React", "no Tailwind needed", "unlike X") — state the affirmative fact instead ("styled through `css()` mixins", "a plain `:root` block is enough").
-- This applies to JSDoc, this file, the README, TODO.md, and code comments alike. The one place the package's own npm name (`@pkg/ui`) belongs in prose is the README's H1 — everywhere else, either omit it or refer to "this package"/"the component"/"the mixin" instead. Import paths inside actual code examples and API-reference tables are exempt (they're documenting real values, not descriptive prose).
+- This applies to JSDoc, this file, the README, TODO.md, and code comments alike. The one place the package's own npm name (`@sdxc/ui`) belongs in prose is the README's H1 — everywhere else, either omit it or refer to "this package"/"the component"/"the mixin" instead. Import paths inside actual code examples and API-reference tables are exempt (they're documenting real values, not descriptive prose).
 
 ## Tooling
 
-- The only allowed dependencies are `remix`, `@pkg/icons`, and `@pkg/u`.
-- Reach for a `@pkg/u` utility mixin instead of hand-rolling a recipe it already covers exactly (a parameter-free clipping or layout recipe, for instance). Where a recipe depends on this package's own semantic color or spacing vocabulary — `--ui-primary-ring` rather than `@pkg/u`'s own token names, or a runtime `data-color` switch a build-time utility call can't express — keep it a local `src/styles/` factory instead of forcing a mismatched abstraction.
+- The only allowed dependencies are `remix`, `@sdxc/icons`, and `@sdxc/u`.
+- Reach for a `@sdxc/u` utility mixin instead of hand-rolling a recipe it already covers exactly (a parameter-free clipping or layout recipe, for instance). Where a recipe depends on this package's own semantic color or spacing vocabulary — `--ui-primary-ring` rather than `@sdxc/u`'s own token names, or a runtime `data-color` switch a build-time utility call can't express — keep it a local `src/styles/` factory instead of forcing a mismatched abstraction.
 - Use `remix/ui`'s first-party behavior primitives (`remix/ui/popover`, `menu`, `listbox`, `select`, `combobox`, `accordion`, `tabs`, `checkbox`, `radio`, `toggle`, `input`, `anchor`, `breadcrumbs`, `button`) from inside mixins instead of hand-rolling keyboard/selection behavior that already exists.
 - Use `bun:test` for everything under this package, not `remix/test` — it's the repo's runner, and it's also what exercises the component-purity import check.
 - Use the `agent-browser` CLI for interaction, accessibility, and visual-parity verification against `apps/ui-docs` — never Playwright.

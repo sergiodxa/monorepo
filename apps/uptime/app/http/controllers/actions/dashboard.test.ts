@@ -9,7 +9,7 @@
 
 import type { RequestHandler } from "remix/router";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";

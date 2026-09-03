@@ -11,13 +11,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw, vars } from "@pkg/u/general";
-import { block, container, flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
-import { maxIs, mbs, mie, mis, pb, pi, width } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
-import { wordBreak } from "@pkg/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw, vars } from "@sdxc/u/general";
+import { block, container, flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
+import { maxIs, mbs, mie, mis, pb, pi, width } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
+import { wordBreak } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 /**

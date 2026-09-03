@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { unauthorized } from "@pkg/http/response/json";
-import { JWK } from "@pkg/jwt";
-import { getServiceContainer } from "@pkg/service-container";
+import { unauthorized } from "@sdxc/http/response/json";
+import { JWK } from "@sdxc/jwt";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import Client from "../../clients/models/client";

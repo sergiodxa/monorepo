@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";

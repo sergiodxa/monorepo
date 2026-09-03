@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol, gap } from "@pkg/u/layout";
-import { text } from "@pkg/u/typography";
-import { Button, Card, Form, LinkButton, Text, TextField } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexCol, gap } from "@sdxc/u/layout";
+import { text } from "@sdxc/u/typography";
+import { Button, Card, Form, LinkButton, Text, TextField } from "@sdxc/ui";
 
 import routes from "~/routes/web";
 

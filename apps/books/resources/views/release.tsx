@@ -10,13 +10,13 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { pseudoContent, raw } from "@pkg/u/general";
-import { gap, grid, gridTemplate, hstack, repeat, shrink, vstack } from "@pkg/u/layout";
-import { dark, media } from "@pkg/u/responsive";
-import { bs, is, maxIs, mi, p, pb, pi } from "@pkg/u/size";
-import { after, before } from "@pkg/u/state";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { pseudoContent, raw } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, hstack, repeat, shrink, vstack } from "@sdxc/u/layout";
+import { dark, media } from "@sdxc/u/responsive";
+import { bs, is, maxIs, mi, p, pb, pi } from "@sdxc/u/size";
+import { after, before } from "@sdxc/u/state";
 import {
 	balance,
 	font,
@@ -27,7 +27,7 @@ import {
 	textTransform,
 	weight,
 	whiteSpace,
-} from "@pkg/u/typography";
+} from "@sdxc/u/typography";
 import { css } from "remix/ui";
 
 import type { SubscribeForm } from "~/resources/components/subscribe-form";

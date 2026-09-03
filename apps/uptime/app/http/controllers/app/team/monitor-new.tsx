@@ -13,8 +13,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "@pkg/u/layout";
-import { Button } from "@pkg/ui";
+import { vstack } from "@sdxc/u/layout";
+import { Button } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

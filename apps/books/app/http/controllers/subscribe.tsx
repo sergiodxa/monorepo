@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { redirect } from "@pkg/http/response";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import { renderHome } from "~/app/http/controllers/home";

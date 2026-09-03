@@ -1,26 +1,26 @@
-# @pkg/markdown
+# @sdxc/markdown
 
 Markdown parsing, frontmatter validation, and rendering, from source text to Remix UI nodes.
 
 ## Overview
 
-`@pkg/markdown` parses markdown with [Markdoc](https://markdoc.dev), validates frontmatter with [Standard Schema](https://standardschema.dev), and highlights fenced code with [`@pkg/highlight`](/packages/highlight), whose Markdoc node it registers. Parsing returns a Markdoc render tree rather than markup, so the same parsed document can be rendered by different UI runtimes, cached, or handed to a client renderer untouched.
+`@sdxc/markdown` parses markdown with [Markdoc](https://markdoc.dev), validates frontmatter with [Standard Schema](https://standardschema.dev), and highlights fenced code with [`@sdxc/highlight`](/packages/highlight), whose Markdoc node it registers. Parsing returns a Markdoc render tree rather than markup, so the same parsed document can be rendered by different UI runtimes, cached, or handed to a client renderer untouched.
 
 The package has three entry points, split by what they need to run:
 
-- `@pkg/markdown` — markdown transformations that are neither parsing nor rendering, currently plain-text extraction. It carries no runtime beyond the parser, so an excerpt or a search index can use it without pulling in a highlighter or a renderer.
-- `@pkg/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, and the highlighter's fence node. Frontmatter is read by [`@pkg/yaml`](/packages/yaml), over [the subset it documents](#frontmatter-format).
-- `@pkg/markdown/client` — the renderer, which turns a Markdoc tree into `remix/ui` nodes instead of React DOM elements, including the code-fence UI.
+- `@sdxc/markdown` — markdown transformations that are neither parsing nor rendering, currently plain-text extraction. It carries no runtime beyond the parser, so an excerpt or a search index can use it without pulling in a highlighter or a renderer.
+- `@sdxc/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, and the highlighter's fence node. Frontmatter is read by [`@sdxc/yaml`](/packages/yaml), over [the subset it documents](#frontmatter-format).
+- `@sdxc/markdown/client` — the renderer, which turns a Markdoc tree into `remix/ui` nodes instead of React DOM elements, including the code-fence UI.
 
-Keeping the split at the entry-point level means the grammars stay out of client bundles and the renderer stays out of loaders and services. The token colors the rendered fences expect live with the tokens, in `@pkg/highlight/styles.css`.
+Keeping the split at the entry-point level means the grammars stay out of client bundles and the renderer stays out of loaders and services. The token colors the rendered fences expect live with the tokens, in `@sdxc/highlight/styles.css`.
 
 ## Usage
 
 ### Parse markdown on the server
 
 ```typescript
-import { Markdown } from "@pkg/markdown/server";
-import { isFailure } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
 
@@ -56,8 +56,8 @@ let frontmatter = result.data.frontmatter;
 ### Render the parsed tree on the client
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
-import type { Markdown } from "@pkg/markdown/server";
+import { MarkdownView } from "@sdxc/markdown/client";
+import type { Markdown } from "@sdxc/markdown/server";
 import type { Handle } from "remix/ui";
 
 type Props = { content: Markdown.Parsed<unknown>["content"] };
@@ -70,7 +70,7 @@ export function PostPage({ props }: Handle<Props>) {
 ### Extract plain text
 
 ```typescript
-import { toPlainText } from "@pkg/markdown";
+import { toPlainText } from "@sdxc/markdown";
 
 let text = toPlainText(`---
 title: Hello World
@@ -86,17 +86,17 @@ A [linked](https://example.com) paragraph with \`code\`.
 ### Load a code theme
 
 ```tsx
-import highlightStyles from "@pkg/highlight/styles.css?url";
+import highlightStyles from "@sdxc/highlight/styles.css?url";
 
 export let links = () => [{ rel: "stylesheet", href: highlightStyles }];
 ```
 
 Declare the `--highlight-*` properties afterwards to spend your own palette on
-the token types; [`@pkg/highlight`](/packages/highlight) lists them.
+the token types; [`@sdxc/highlight`](/packages/highlight) lists them.
 
 ## API
 
-### Root: `@pkg/markdown`
+### Root: `@sdxc/markdown`
 
 #### `toPlainText(markdown: string, options?: PlainTextOptions): string`
 
@@ -121,7 +121,7 @@ around it.
 **Example:**
 
 ```typescript
-import { toPlainText } from "@pkg/markdown";
+import { toPlainText } from "@sdxc/markdown";
 
 let text = toPlainText(body);
 let indexed = toPlainText(body, { fences: true });
@@ -136,11 +136,11 @@ interface PlainTextOptions {
 }
 ```
 
-`toPlainText` and `PlainTextOptions` are re-exported from `@pkg/markdown/server`
+`toPlainText` and `PlainTextOptions` are re-exported from `@sdxc/markdown/server`
 as well, so server code that already imports the parser does not need a second
 import path.
 
-### Server: `@pkg/markdown/server`
+### Server: `@sdxc/markdown/server`
 
 #### `Markdown<Schema>`
 
@@ -158,7 +158,7 @@ Creates a parser instance.
 **Example:**
 
 ```typescript
-import { Markdown } from "@pkg/markdown/server";
+import { Markdown } from "@sdxc/markdown/server";
 import * as s from "remix/data-schema";
 
 let markdown = new Markdown({ frontmatter: s.object({ title: s.string() }) });
@@ -181,7 +181,7 @@ Markdoc renderable content.
 **Example:**
 
 ```typescript
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 let result = markdown.parse(raw);
 if (isFailure(result)) return;
@@ -207,8 +207,8 @@ transform, and returns the markdown body that followed it.
 **Example:**
 
 ```typescript
-import { Markdown } from "@pkg/markdown/server";
-import { isFailure } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { isFailure } from "@sdxc/result";
 
 let result = Markdown.frontmatter(raw, schema);
 if (isFailure(result)) return;
@@ -229,7 +229,7 @@ validate, or when the schema validates asynchronously.
 #### Frontmatter format
 
 Frontmatter is the block between a leading `---` line and the next one, read by
-[`@pkg/yaml`](/packages/yaml) over the subset that package documents. Scalars resolve
+[`@sdxc/yaml`](/packages/yaml) over the subset that package documents. Scalars resolve
 by the YAML 1.2 core schema, so `2026-08-02` arrives as a string, `yes` stays `"yes"`,
 and only `true`/`false` become booleans. Anchors, aliases, merge keys, tags, explicit
 keys and multi-document sources are not part of the subset.
@@ -240,7 +240,7 @@ still renders when its body opens on two thematic breaks.
 
 #### Fenced code
 
-Fences are highlighted by [`@pkg/highlight`](/packages/highlight)'s Markdoc node,
+Fences are highlighted by [`@sdxc/highlight`](/packages/highlight)'s Markdoc node,
 which `Markdown` registers by default. It reads the fence's `language`, `path` and
 `title`, resolves the language through the highlighter's aliases, tokenizes the
 body, and emits a `Fence` tag the client renderer draws.
@@ -273,7 +273,7 @@ interface Options<Schema extends StandardSchemaV1> {
 }
 ```
 
-### Client: `@pkg/markdown/client`
+### Client: `@sdxc/markdown/client`
 
 #### `MarkdownView`
 
@@ -287,7 +287,7 @@ Renders a parsed Markdoc tree into the `remix/ui` runtime.
 **Example:**
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@sdxc/markdown/client";
 import type { Handle } from "remix/ui";
 
 export function DocPage({ props }: Handle<{ content: unknown }>) {
@@ -312,7 +312,7 @@ the output is composed into surrounding markup rather than rendered on its own.
 **Example:**
 
 ```tsx
-import { renderToRemix } from "@pkg/markdown/client";
+import { renderToRemix } from "@sdxc/markdown/client";
 
 return () => <article>{renderToRemix(content)}</article>;
 ```
@@ -351,7 +351,7 @@ Declare the tag on the server so the transform emits it:
 
 ```typescript
 import { Tag } from "@markdoc/markdoc";
-import { Markdown } from "@pkg/markdown/server";
+import { Markdown } from "@sdxc/markdown/server";
 
 let parser = new Markdown({
 	frontmatter: schema,
@@ -371,7 +371,7 @@ let parser = new Markdown({
 Then supply the component that renders it:
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@sdxc/markdown/client";
 import type { Handle, RemixNode } from "remix/ui";
 
 function Callout({ props }: Handle<{ type: string; children: RemixNode }>) {
@@ -389,8 +389,8 @@ Parsing is the server's job and the render tree is plain data, so it crosses the
 loader boundary without the client re-parsing anything.
 
 ```typescript
-import { Markdown } from "@pkg/markdown/server";
-import { isFailure } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { isFailure } from "@sdxc/result";
 
 let parser = new Markdown({ frontmatter: schema });
 
@@ -403,7 +403,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 ```
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@sdxc/markdown/client";
 
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return () => <MarkdownView content={loaderData.post.content} />;
@@ -416,8 +416,8 @@ An index page needs titles and dates, not rendered bodies. Skipping the transfor
 avoids highlighting every post to build a list.
 
 ```typescript
-import { Markdown } from "@pkg/markdown/server";
-import { isFailure } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { isFailure } from "@sdxc/result";
 
 let result = Markdown.frontmatter(rawMarkdown, schema);
 if (isFailure(result)) return null;
@@ -431,8 +431,8 @@ Plain-text extraction is the step before any text measurement; keep the text
 operations themselves in a string utility so this package stays about markdown.
 
 ```typescript
-import { toPlainText } from "@pkg/markdown";
-import { excerpt, wordCount } from "@pkg/strings";
+import { toPlainText } from "@sdxc/markdown";
+import { excerpt, wordCount } from "@sdxc/strings";
 
 let text = toPlainText(body);
 let summary = excerpt(text, { length: 200 });
@@ -441,17 +441,17 @@ let minutes = Math.ceil(wordCount(text) / 200);
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Explicit success/failure handling, used by every parse entry point
-- [`@pkg/yaml`](/packages/yaml) - Reads the frontmatter block, over a documented subset of YAML
-- [`@pkg/validate`](/packages/validate) - Validation helpers over Standard Schema
-- [`@pkg/strings`](/packages/strings) - Excerpts, word counts, and slugs over the text `toPlainText()` returns
+- [`@sdxc/result`](/packages/result) - Explicit success/failure handling, used by every parse entry point
+- [`@sdxc/yaml`](/packages/yaml) - Reads the frontmatter block, over a documented subset of YAML
+- [`@sdxc/validate`](/packages/validate) - Validation helpers over Standard Schema
+- [`@sdxc/strings`](/packages/strings) - Excerpts, word counts, and slugs over the text `toPlainText()` returns
 
 ## Tips
 
 1. **Import `/server` only from server code** - The server entry point pulls in the grammars; keeping it out of components keeps that weight out of client bundles.
 2. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests instead of building one per parse.
-3. **Always load the highlighter's stylesheet** - Without `@pkg/highlight/styles.css`, highlighted fences render as undifferentiated text.
-4. **Write frontmatter inside `@pkg/yaml`'s subset** - Anchors, aliases and tags are failures there, and a failed block reaches the schema as empty.
+3. **Always load the highlighter's stylesheet** - Without `@sdxc/highlight/styles.css`, highlighted fences render as undifferentiated text.
+4. **Write frontmatter inside `@sdxc/yaml`'s subset** - Anchors, aliases and tags are failures there, and a failed block reaches the schema as empty.
 5. **Keep frontmatter schemas synchronous** - An async validator returns a `MarkdownParseError` rather than awaiting; the parse path is deliberately sync.
 6. **Prefer `Markdown.frontmatter` for index pages** - It skips the Markdoc transform and the highlighting that comes with it.
 7. **Write fences with known aliases** - `tsx`, `sh`, `jsonc`, and friends resolve to a grammar; an unrecognized language renders as plain text.

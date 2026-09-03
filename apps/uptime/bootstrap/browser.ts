@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTranslator } from "@pkg/i18n";
-import { setIntl } from "@pkg/i18n/ui";
+import { createTranslator } from "@sdxc/i18n";
+import { setIntl } from "@sdxc/i18n/ui";
 import { run } from "remix/ui";
 
 const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"] as const;

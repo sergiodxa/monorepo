@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import type {
 	DataManipulationRequest,
 	DataManipulationResult,
@@ -20,10 +20,10 @@ import type {
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { createTranslator } from "@pkg/i18n";
-import { logger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { createTranslator } from "@sdxc/i18n";
+import { logger } from "@sdxc/logger";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";

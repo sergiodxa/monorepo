@@ -103,5 +103,5 @@ bun run --cwd apps/blog-saas cf:deploy
 
 ## Self-hosting a single blog (no platform)
 
-`@pkg/blog-engine` runs standalone on a plain Worker + D1 — no Durable Object or
+`@sdxc/blog-engine` runs standalone on a plain Worker + D1 — no Durable Object or
 control plane needed. See the engine's [README](../../packages/blog-engine/README.md).

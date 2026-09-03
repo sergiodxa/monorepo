@@ -13,10 +13,10 @@ import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { failure, isFailure, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";

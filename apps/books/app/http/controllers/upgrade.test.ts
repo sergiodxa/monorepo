@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MemoryBilling } from "@pkg/billing/providers/memory";
+import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";

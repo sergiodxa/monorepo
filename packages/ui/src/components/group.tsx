@@ -12,9 +12,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { outline, outlineColor } from "@pkg/u/color";
-import { flex, items } from "@pkg/u/layout";
-import { when } from "@pkg/u/state";
+import { outline, outlineColor } from "@sdxc/u/color";
+import { flex, items } from "@sdxc/u/layout";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 /**

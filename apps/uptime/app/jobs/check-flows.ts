@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { createJobHandler } from "@pkg/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import type { ClaimedFlowMonitor } from "~/app/data/flow-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";

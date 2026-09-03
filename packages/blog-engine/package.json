@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/blog-engine",
+	"name": "@sdxc/blog-engine",
 	"version": "0.0.0",
 	"private": true,
 	"license": "MIT",
@@ -13,22 +13,22 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/auth": "workspace:*",
-		"@pkg/highlight": "workspace:*",
-		"@pkg/http": "workspace:*",
-		"@pkg/location": "workspace:*",
-		"@pkg/logger": "workspace:*",
-		"@pkg/markdown": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/rss": "workspace:*",
-		"@pkg/service-container": "workspace:*",
-		"@pkg/sitemap": "workspace:*",
-		"@pkg/validate": "workspace:*",
+		"@sdxc/auth": "workspace:*",
+		"@sdxc/highlight": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/location": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/rss": "workspace:*",
+		"@sdxc/service-container": "workspace:*",
+		"@sdxc/sitemap": "workspace:*",
+		"@sdxc/validate": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
-		"@pkg/cloudflare-mocks": "workspace:*",
-		"@pkg/jwt": "workspace:*"
+		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/jwt": "workspace:*"
 	}
 }

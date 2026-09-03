@@ -9,7 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { describe, expect, test } from "vitest";
 
 import { createSqliteDatabaseAdapter } from "./shared/test/db";

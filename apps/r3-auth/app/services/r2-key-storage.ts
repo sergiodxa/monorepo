@@ -2,14 +2,14 @@
  * An R2-backed implementation of the `KeyStorage` contract `JWK.signingKeys`
  * reads signing keys through. R2 is the only place a key file can live and
  * still be visible to every worker issuing tokens for this issuer, and
- * `@pkg/jwt`'s three operations are generic across storage backends, so the
+ * `@sdxc/jwt`'s three operations are generic across storage backends, so the
  * mapping onto `R2Bucket` happens here — against this worker's own generated Workers types.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "@pkg/jwt";
+import type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "@sdxc/jwt";
 
 /**
  * Custom metadata written alongside every object, so a stored file can be
@@ -24,7 +24,7 @@ interface FileMetadata extends Record<string, string> {
 }
 
 /**
- * Adapts an R2 bucket binding to the key storage `@pkg/jwt` expects.
+ * Adapts an R2 bucket binding to the key storage `@sdxc/jwt` expects.
  *
  * Takes the bucket as an explicit parameter, so a test can drive it against
  * an in-memory bucket and the caller decides which bucket keys live in.

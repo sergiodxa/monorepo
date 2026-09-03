@@ -11,10 +11,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { var as varUtility, raw } from "@pkg/u/general";
-import { block } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { is } from "@pkg/u/size";
+import { var as varUtility, raw } from "@sdxc/u/general";
+import { block } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { is } from "@sdxc/u/size";
 
 import { mergeStyle } from "../utils/merge-style";
 

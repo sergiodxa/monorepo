@@ -9,11 +9,11 @@
  */
 
 import type { Message } from "@cloudflare/workers-types";
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { toMs, toSeconds } from "@pkg/duration";
-import { BatchedLogger } from "@pkg/logger";
-import { ValidationError } from "@pkg/validate";
+import { toMs, toSeconds } from "@sdxc/duration";
+import { BatchedLogger } from "@sdxc/logger";
+import { ValidationError } from "@sdxc/validate";
 
 import type { AnyJobContext } from "./context";
 import type { RunnableJobHandler } from "./handler";

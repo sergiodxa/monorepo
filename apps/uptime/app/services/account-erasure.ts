@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { Billing } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import Customer from "~/app/data/customer";
 import Lead from "~/app/data/lead";

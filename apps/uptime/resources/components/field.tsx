@@ -2,7 +2,7 @@
  * Shares one label/control/helper-text composition across every form so it isn't
  * repeated per input in each `form.tsx`. Wraps `children` directly rather than
  * pairing through `for`/`id`, since `children` can be a `<select>`, `<textarea>`,
- * or a custom slider that only a native `<label>` nesting handles — `@pkg/ui`'s
+ * or a custom slider that only a native `<label>` nesting handles — `@sdxc/ui`'s
  * `TextField` bundles its own `<input>` and doesn't fit here.
  *
  * Ends with no trailing margin: spacing to the next field comes from the
@@ -14,8 +14,8 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Description, Label } from "@pkg/ui";
-import { fieldStackLayout } from "@pkg/ui/styles";
+import { Description, Label } from "@sdxc/ui";
+import { fieldStackLayout } from "@sdxc/ui/styles";
 
 namespace Field {
 	export interface Props {

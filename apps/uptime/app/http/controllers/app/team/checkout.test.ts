@@ -11,16 +11,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, Checkout } from "@pkg/billing";
+import type { Billing, Checkout } from "@sdxc/billing";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import billing from "@pkg/billing/middleware";
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { createTranslator } from "@pkg/i18n";
-import logger from "@pkg/logger/middleware";
-import { unwrap } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import billing from "@sdxc/billing/middleware";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { createTranslator } from "@sdxc/i18n";
+import logger from "@sdxc/logger/middleware";
+import { unwrap } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";

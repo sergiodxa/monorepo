@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@pkg/uuid";
+import { generateUUID } from "@sdxc/uuid";
 import { and, eq, inList, isNull, notNull } from "remix/data-table";
 
 import { teamDomains } from "~/database/schema";

@@ -2,7 +2,7 @@
  * Server-rendered response-time sparkline: a plain inline `<svg>` polyline
  * computed from recent Analytics Engine points and rendered entirely on the
  * server. It hand-rolls the `<svg>` because a general-purpose component like
- * `@pkg/ui`'s `Chart.Line` — with its own axes and focusable point markers —
+ * `@sdxc/ui`'s `Chart.Line` — with its own axes and focusable point markers —
  * is disproportionate ceremony for a decorative 240×32 squiggle in a table
  * cell.
  *
@@ -12,8 +12,8 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { Text } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { Text } from "@sdxc/ui";
 
 import type { SparklinePoint } from "~/app/services/analytics";
 

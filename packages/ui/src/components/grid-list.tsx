@@ -14,10 +14,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { GripVerticalIcon } from "@pkg/icons";
-import { bg, borderEdge, fg, outline } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
+import { GripVerticalIcon } from "@sdxc/icons";
+import { bg, borderEdge, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
 import {
 	container,
 	flex,
@@ -27,11 +27,11 @@ import {
 	gridTemplate,
 	items,
 	virtualize,
-} from "@pkg/u/layout";
-import { at } from "@pkg/u/responsive";
-import { mbs, pb, pbs, pi } from "@pkg/u/size";
-import { active, data, hover, not, when } from "@pkg/u/state";
-import { text, textTransform, tracking, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
+import { mbs, pb, pbs, pi } from "@sdxc/u/size";
+import { active, data, hover, not, when } from "@sdxc/u/state";
+import { text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

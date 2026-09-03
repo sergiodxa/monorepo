@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobHandler } from "@pkg/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
 import Team from "~/app/data/team";

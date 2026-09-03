@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/http",
+	"name": "@sdxc/http",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -19,10 +19,10 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/crypto": "workspace:*",
-		"@pkg/duration": "workspace:*",
-		"@pkg/location": "workspace:*",
-		"@pkg/result": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/location": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

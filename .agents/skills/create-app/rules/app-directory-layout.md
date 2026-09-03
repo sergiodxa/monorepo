@@ -42,7 +42,7 @@ apps/<name>/
 │   │   └── view-models/  #   normalized payloads controllers hand to views
 │   ├── models/           # data + business-logic models over remix/data-table
 │   ├── services/         # service classes for external systems
-│   ├── jobs/             # background and scheduled work (@pkg/jobs)
+│   ├── jobs/             # background and scheduled work (@sdxc/jobs)
 │   ├── do/               # Durable Object classes, when they are not a bootstrap entry
 │   └── lib/              # app-internal helpers: container wiring, seo, test helpers
 ├── resources/            # everything that renders

@@ -11,8 +11,8 @@
 
 import type { Database } from "remix/data-table";
 
-import { IdToken } from "@pkg/auth/id-token";
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { IdToken } from "@sdxc/auth/id-token";
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";

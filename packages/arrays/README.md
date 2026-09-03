@@ -1,4 +1,4 @@
-# @pkg/arrays
+# @sdxc/arrays
 
 Utility functions for common array operations with TypeScript type safety.
 
@@ -11,7 +11,7 @@ All functions are pure (no side effects) and preserve TypeScript generics for ty
 ## Usage
 
 ```typescript
-import { hasAny, isEmpty, first, last, unique, toArray, skip } from "@pkg/arrays";
+import { hasAny, isEmpty, first, last, unique, toArray, skip } from "@sdxc/arrays";
 
 let items = [1, 2, 3, 4, 5];
 
@@ -194,7 +194,7 @@ skip([1, 2], 5); // [] (returns empty if limit exceeds length)
 Combine `first` and `skip` for manual pagination:
 
 ```typescript
-import { first, skip } from "@pkg/arrays";
+import { first, skip } from "@sdxc/arrays";
 
 function paginate<T>(items: T[], page: number, pageSize: number): T[] {
 	let offset = (page - 1) * pageSize;
@@ -212,7 +212,7 @@ paginate(items, 3, 3); // [7, 8, 9]
 Use `hasAny` and `hasMany` for conditional rendering:
 
 ```typescript
-import { hasAny, hasMany } from "@pkg/arrays";
+import { hasAny, hasMany } from "@sdxc/arrays";
 
 function ItemList({ items }: { items: string[] }) {
   if (!hasAny(items)) {
@@ -237,7 +237,7 @@ function ItemList({ items }: { items: string[] }) {
 Use `toArray` to handle APIs that accept single values or arrays:
 
 ```typescript
-import { toArray } from "@pkg/arrays";
+import { toArray } from "@sdxc/arrays";
 
 function processIds(ids: string | string[]) {
 	let idArray = toArray(ids);
@@ -251,7 +251,7 @@ processIds(["123", "456"]);
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Result type for operations that can fail
+- [`@sdxc/result`](/packages/result) - Result type for operations that can fail
 
 ## Tips
 

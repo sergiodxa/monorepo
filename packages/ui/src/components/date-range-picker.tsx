@@ -14,7 +14,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { attrs } from "remix/ui";
 
 import { DateField } from "./date-field";

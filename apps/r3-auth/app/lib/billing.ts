@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 /**

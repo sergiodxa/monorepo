@@ -1,6 +1,6 @@
 /**
  * {@link SqliteDatabase} over `node:sqlite`, the default export condition on
- * `@pkg/cloudflare-mocks/sqlite`.
+ * `@sdxc/cloudflare-mocks/sqlite`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

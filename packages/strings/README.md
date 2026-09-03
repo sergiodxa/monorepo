@@ -1,10 +1,10 @@
-# @pkg/strings
+# @sdxc/strings
 
 English inflection, Chicago-style title case, URL slugs, and grapheme-safe text operations.
 
 ## Overview
 
-`@pkg/strings` owns the text transformations that show up all over a product:
+`@sdxc/strings` owns the text transformations that show up all over a product:
 turning a class name into a job identifier, a title into a slug, a post body into
 an excerpt, a field name into a label. Each of those has exactly one
 implementation here, so a slug generated in a CMS form matches the slug a
@@ -29,7 +29,7 @@ cased correctly.
 ### Inflection
 
 ```typescript
-import { camelize, dasherize, humanize, ordinalize, pluralize, underscore } from "@pkg/strings";
+import { camelize, dasherize, humanize, ordinalize, pluralize, underscore } from "@sdxc/strings";
 
 pluralize("monitor"); // "monitors"
 pluralize("monitor", 1); // "monitor"
@@ -43,7 +43,7 @@ ordinalize(3); // "3rd"
 ### Domain vocabulary
 
 ```typescript
-import { createInflector } from "@pkg/strings";
+import { createInflector } from "@sdxc/strings";
 
 let inflector = createInflector({
 	irregular: [["status-page", "status-pages"]],
@@ -57,7 +57,7 @@ inflector.pluralize("uptime"); // "uptime"
 ### Titles, slugs, and excerpts
 
 ```typescript
-import { excerpt, slugify, titleize } from "@pkg/strings";
+import { excerpt, slugify, titleize } from "@sdxc/strings";
 
 titleize("the state of javascript in 2026"); // "The State of JavaScript in 2026"
 slugify("Cómo usar Remix v3"); // "como-usar-remix-v3"
@@ -392,7 +392,7 @@ stable across deploys, so derive them from a class name once instead of writing
 the string twice.
 
 ```typescript
-import { dasherize, underscore } from "@pkg/strings";
+import { dasherize, underscore } from "@sdxc/strings";
 
 function identifierFor(name: string) {
 	return dasherize(underscore(name));
@@ -408,7 +408,7 @@ published URL moves. Call the same function in both places and never normalize b
 hand.
 
 ```typescript
-import { slugify } from "@pkg/strings";
+import { slugify } from "@sdxc/strings";
 
 let slug = input.slug ? slugify(input.slug) : slugify(input.title);
 ```
@@ -423,8 +423,8 @@ Plain-text extraction is a markdown concern, so it lives with the parser; this
 package handles the text once it is plain.
 
 ```typescript
-import { toPlainText } from "@pkg/markdown";
-import { excerpt, wordCount } from "@pkg/strings";
+import { toPlainText } from "@sdxc/markdown";
+import { excerpt, wordCount } from "@sdxc/strings";
 
 let text = toPlainText(body);
 let summary = excerpt(text, { length: 200 });
@@ -438,7 +438,7 @@ so a heading is cased the same way on every page.
 
 ```typescript
 // app/utils/titles.ts
-import { createTitleizer } from "@pkg/strings";
+import { createTitleizer } from "@sdxc/strings";
 
 export let titleize = createTitleizer({
 	special: ["JavaScript", "TypeScript", "GitHub", "iOS", "npm", "Remix", "SQLite"],
@@ -447,8 +447,8 @@ export let titleize = createTitleizer({
 
 ## Related Packages
 
-- [`@pkg/markdown`](/packages/markdown) - `toPlainText()` for markdown bodies, which composes with `excerpt()` and `wordCount()`
-- [`@pkg/i18n`](/packages/i18n) - translated copy, which is already cased correctly and must not be run through `titleize()` or `humanize()`
+- [`@sdxc/markdown`](/packages/markdown) - `toPlainText()` for markdown bodies, which composes with `excerpt()` and `wordCount()`
+- [`@sdxc/i18n`](/packages/i18n) - translated copy, which is already cased correctly and must not be run through `titleize()` or `humanize()`
 
 ## Tips
 

@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BinaryLike, Bytes, InvalidEncodingError } from "@pkg/crypto";
-import type { Result } from "@pkg/result";
+import type { BinaryLike, Bytes, InvalidEncodingError } from "@sdxc/crypto";
+import type { Result } from "@sdxc/result";
 
-import { Base64Url } from "@pkg/crypto";
+import { Base64Url } from "@sdxc/crypto";
 
 /** Characters per base64 group; the remainder decides how much padding is added. */
 const GROUP_SIZE = 4;

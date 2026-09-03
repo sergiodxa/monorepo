@@ -6,10 +6,10 @@
  * Import the whole set as a namespace, or a single name on its own:
  *
  * @example
- * import * as Algorithm from "@pkg/jwt/algorithm";
+ * import * as Algorithm from "@sdxc/jwt/algorithm";
  * Object.values(Algorithm);
  * @example
- * import { ES256 } from "@pkg/jwt/algorithm";
+ * import { ES256 } from "@sdxc/jwt/algorithm";
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

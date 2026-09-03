@@ -15,7 +15,7 @@
 import type { getContext } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
-import { Select } from "@pkg/ui";
+import { Select } from "@sdxc/ui";
 
 import type { ScopeMonitorGroup } from "~/app/data/scope-monitors";
 import type { MonitorScope } from "~/app/lib/monitor-scope";

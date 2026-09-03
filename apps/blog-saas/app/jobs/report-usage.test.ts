@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createEnv } from "@pkg/cloudflare-mocks";
+import { createEnv } from "@sdxc/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -35,7 +35,7 @@ let Account = (await import("~/app/models/account")).default;
 let BillingCustomer = (await import("~/app/models/billing-customer")).default;
 let Blog = (await import("~/app/models/blog")).default;
 let UsageDaily = (await import("~/app/models/usage")).default;
-let { createJobContext } = await import("@pkg/jobs");
+let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database } = await import("~/app/jobs/middleware/database");
 let handler = (await import("./report-usage")).default;

@@ -11,8 +11,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { spacer, hstack } from "@pkg/u/layout";
-import { minIs } from "@pkg/u/size";
+import { spacer, hstack } from "@sdxc/u/layout";
+import { minIs } from "@sdxc/u/size";
 
 import type { FieldPartsProps } from "../utils/field-parts";
 

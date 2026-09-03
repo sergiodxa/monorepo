@@ -307,7 +307,7 @@ Capture additional context, gotchas, or implementation details:
 
 - All packages are `private: true` since they're workspace-only
 - Use Bun's test runner for consistency with the monorepo
-- The `@pkg/hooks` package has peer dependencies on React and React Router
+- The `@sdxc/hooks` package has peer dependencies on React and React Router
 - SSL monitoring relies on manually entered expiry dates (Workers can't read TLS certs)
 - Daily aggregation uses idempotent upserts - safe to run multiple times
 ```

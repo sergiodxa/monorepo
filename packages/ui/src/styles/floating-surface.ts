@@ -10,15 +10,15 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { bg, border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { combine, raw } from "@pkg/u/general";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { combine, raw } from "@sdxc/u/general";
 
 import type { CSSStyles } from "../utils/css-styles";
 
 /**
  * Composes the shared floating-surface border, tint, and elevation shadow as
- * a `css()` mixin. The shadow keeps a literal fallback shaped like `@pkg/u`'s
+ * a `css()` mixin. The shadow keeps a literal fallback shaped like `@sdxc/u`'s
  * `lg` step, under the `--ui-shadow-md` variable name.
  *
  * @returns A `css()` mixin ready for a host element's `mix` prop.

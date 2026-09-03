@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createSeo } from "@pkg/seo";
+import { createSeo } from "@sdxc/seo";
 
 /**
  * The canonical origin. Forced onto every canonical URL, so canonical links

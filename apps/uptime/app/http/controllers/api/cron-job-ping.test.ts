@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BillingError } from "@pkg/billing";
-import billing from "@pkg/billing/middleware";
-import { createAnalyticsEngine, createEnv, createRateLimit } from "@pkg/cloudflare-mocks";
-import { MemoryTransport } from "@pkg/mail/memory";
-import mail from "@pkg/mail/middleware";
-import { failure } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import { BillingError } from "@sdxc/billing";
+import billing from "@sdxc/billing/middleware";
+import { createAnalyticsEngine, createEnv, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import mail from "@sdxc/mail/middleware";
+import { failure } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";

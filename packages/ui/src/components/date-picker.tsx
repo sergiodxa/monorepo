@@ -14,12 +14,12 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { CalendarIcon } from "@pkg/icons";
-import { bg, fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
-import { bs, is, mis, p } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
+import { CalendarIcon } from "@sdxc/icons";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
+import { bs, is, mis, p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

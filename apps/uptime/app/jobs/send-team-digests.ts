@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
-import type { CurrentJobContext } from "@pkg/jobs";
+import type { TFunction } from "@sdxc/i18n";
+import type { CurrentJobContext } from "@sdxc/jobs";
 
-import { ManagementClient } from "@pkg/auth/management-client";
-import { subDays, toDayKey } from "@pkg/dates";
-import { Mailer } from "@pkg/mail";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
+import { ManagementClient } from "@sdxc/auth/management-client";
+import { subDays, toDayKey } from "@sdxc/dates";
+import { Mailer } from "@sdxc/mail";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
 
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
 import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";

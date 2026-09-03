@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { JWK, JWT } from "@pkg/jwt";
+import { JWK, JWT } from "@sdxc/jwt";
 import { env } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";

@@ -6,13 +6,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Config, RenderableTreeNodes } from "@markdoc/markdoc";
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import * as Markdoc from "@markdoc/markdoc";
-import { fence } from "@pkg/highlight/markdoc";
-import { failure, isFailure, success } from "@pkg/result";
-import { parse as parseYAML } from "@pkg/yaml";
+import { fence } from "@sdxc/highlight/markdoc";
+import { failure, isFailure, success } from "@sdxc/result";
+import { parse as parseYAML } from "@sdxc/yaml";
 
 export { toPlainText } from "./plain-text";
 export type { PlainTextOptions } from "./plain-text";

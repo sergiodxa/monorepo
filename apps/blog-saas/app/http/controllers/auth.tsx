@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
-import { isFailure, wrap } from "@pkg/result";
-import { inject } from "@pkg/service-container";
+import { redirect } from "@sdxc/http/response";
+import { isFailure, wrap } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction, createController } from "remix/router";

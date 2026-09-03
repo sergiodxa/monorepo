@@ -1,17 +1,17 @@
 /**
  * Entity tag generation: a validator derived from the bytes of a response, so a
  * client holding a current copy is answered with a `304` instead of the body.
- * The digest comes from `@pkg/crypto`, keeping the hash implementation shared.
+ * The digest comes from `@sdxc/crypto`, keeping the hash implementation shared.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BinaryLike, CryptoError } from "@pkg/crypto";
-import type { Result } from "@pkg/result";
+import type { BinaryLike, CryptoError } from "@sdxc/crypto";
+import type { Result } from "@sdxc/result";
 
-import { Base64Url, sha256 } from "@pkg/crypto";
-import { isFailure, success } from "@pkg/result";
+import { Base64Url, sha256 } from "@sdxc/crypto";
+import { isFailure, success } from "@sdxc/result";
 
 /**
  * How strictly the tag identifies the bytes it was built from.

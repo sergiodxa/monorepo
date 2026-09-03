@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { NormalizedMessage, Transport } from "@pkg/mail";
+import type { NormalizedMessage, Transport } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
 import {
@@ -17,13 +17,13 @@ import {
 	ManagementError,
 	ManagementErrorCode,
 	SubjectNotFoundError,
-} from "@pkg/auth/management-client";
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
-import { Mailer, MailError } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { failure, isFailure, success, unwrap } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/auth/management-client";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
+import { Mailer, MailError } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { failure, isFailure, success, unwrap } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";

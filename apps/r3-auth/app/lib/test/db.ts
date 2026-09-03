@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import type { SqliteDatabaseClient } from "remix/data-table/sqlite";
 
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 /**

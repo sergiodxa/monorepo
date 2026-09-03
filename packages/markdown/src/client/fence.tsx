@@ -8,7 +8,7 @@
 
 /* @jsxImportSource remix/ui */
 
-import type { Token } from "@pkg/highlight";
+import type { Token } from "@sdxc/highlight";
 import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";

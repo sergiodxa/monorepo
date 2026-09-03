@@ -10,18 +10,18 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { formatDateTime, formatDuration, formatRelative } from "@pkg/dates";
-import { notFound } from "@pkg/http/response/html";
-import { IntlProvider } from "@pkg/i18n/ui";
-import { PencilIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexWrap, gap, items, justify } from "@pkg/u/layout";
-import { overflowX } from "@pkg/u/overflow";
-import { m, mbe, p } from "@pkg/u/size";
-import { fontSize, leading, weight } from "@pkg/u/typography";
-import { Badge, Empty, Link, LinkButton, Table } from "@pkg/ui";
+import { formatDateTime, formatDuration, formatRelative } from "@sdxc/dates";
+import { notFound } from "@sdxc/http/response/html";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { PencilIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexWrap, gap, items, justify } from "@sdxc/u/layout";
+import { overflowX } from "@sdxc/u/overflow";
+import { m, mbe, p } from "@sdxc/u/size";
+import { fontSize, leading, weight } from "@sdxc/u/typography";
+import { Badge, Empty, Link, LinkButton, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

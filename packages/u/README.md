@@ -1,4 +1,4 @@
-# @pkg/u
+# @sdxc/u
 
 A utility-first styling layer for `remix/ui`, composed from small, terse mixins.
 
@@ -10,7 +10,7 @@ Every export is a `remix/ui` mixin factory: `u.p(4)`, `u.bg("brand.tint")`, `u.h
 <div mix={[u.p(4), u.bg(), u.at("md", [u.p(6), u.hover(u.border("brand"))])]} />
 ```
 
-Not every export is a mixin. A handful are plain string resolvers — `u.var()`, `u.calc()`, `u.env()`, the three gradient builders, and the token resolvers at the `@pkg/u/tokens` subpath — which return a CSS value string to hand to a utility rather than something that goes in a `mix` array. Each entry below says which it is.
+Not every export is a mixin. A handful are plain string resolvers — `u.var()`, `u.calc()`, `u.env()`, the three gradient builders, and the token resolvers at the `@sdxc/u/tokens` subpath — which return a CSS value string to hand to a utility rather than something that goes in a `mix` array. Each entry below says which it is.
 
 The package covers CSS primitives across thirteen families — layout, size, color, typography, effects, overflow, stacking, transform, animation, state, responsive, accessibility, and general escape hatches — plus a set of composed patterns that pick several declarations together: `u.surface()` chooses a background, foreground, and border as a matching set; `u.hstack()`/`u.vstack()`/`u.zstack()` build the three common stacks; `u.circle()`, `u.squircle()`, `u.truncate()`, and `u.translucent()` bundle the multi-declaration recipes worth having a name.
 
@@ -23,13 +23,13 @@ Three conventions are worth knowing up front. **Logical properties are the defau
 ### Install
 
 ```bash
-bun add @pkg/u
+bun add @sdxc/u
 ```
 
 ### Import
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div mix={[u.p(4), u.bg(), u.hover([u.bg("neutral.tint"), u.border("neutral")])]} />;
 ```
@@ -37,17 +37,17 @@ import * as u from "@pkg/u";
 Every utility is also a named export, and every family has its own subpath, so a call site can pick exactly how much it imports:
 
 ```tsx
-import { bg, p } from "@pkg/u";
-import { bg } from "@pkg/u/color";
-import { p } from "@pkg/u/size";
-import bg from "@pkg/u/color/bg";
-import p from "@pkg/u/size/p";
+import { bg, p } from "@sdxc/u";
+import { bg } from "@sdxc/u/color";
+import { p } from "@sdxc/u/size";
+import bg from "@sdxc/u/color/bg";
+import p from "@sdxc/u/size/p";
 ```
 
-The pure token resolvers live at their own `@pkg/u/tokens` subpath rather than the package root, because four of them share a name with a utility mixin (`font`, `text`, `shadow`, `blur`). Importing from `@pkg/u/tokens` always gets the resolver; importing from the root always gets the mixin:
+The pure token resolvers live at their own `@sdxc/u/tokens` subpath rather than the package root, because four of them share a name with a utility mixin (`font`, `text`, `shadow`, `blur`). Importing from `@sdxc/u/tokens` always gets the resolver; importing from the root always gets the mixin:
 
 ```ts
-import { blur, spacing } from "@pkg/u/tokens";
+import { blur, spacing } from "@sdxc/u/tokens";
 
 spacing(4); // "calc(var(--ui-spacing, 0.25rem) * 4)"
 blur("sm"); // "var(--ui-blur-sm, 4px)"
@@ -56,7 +56,7 @@ blur("sm"); // "var(--ui-blur-sm, 4px)"
 ### Import the theme
 
 ```css
-@import "@pkg/u/theme.css";
+@import "@sdxc/u/theme.css";
 
 /* your app's styles */
 ```
@@ -82,7 +82,7 @@ Add `.dark` to an ancestor (typically `<html>`) for forced dark mode, or `.syste
 Every named token family — color palettes, semantic tones, radii, text sizes, font families, container breakpoints, shadows, blurs — is a TypeScript interface an app extends through declaration merging, backed by nothing but the matching `--ui-*` variable:
 
 ```ts
-declare module "@pkg/u" {
+declare module "@sdxc/u" {
 	interface ColorPalettes {
 		info: true;
 	}
@@ -1699,7 +1699,7 @@ Prefer it over margins on children for layout spacing: a gap applies only _betwe
 
 **Parameters:**
 
-- `values`: One or two spacing values. Any other count **throws** `@pkg/u: gap() expects 1 or 2 values`.
+- `values`: One or two spacing values. Any other count **throws** `@sdxc/u: gap() expects 1 or 2 values`.
   - one value — applies to both the row and column gap
   - two values — read as `"{row} {column}"`, so the first is the gap between lines and the second between items within a line
 
@@ -2699,7 +2699,7 @@ Reach for the individual `u.ins*` utilities when only one or two edges are invol
 
 **Parameters:**
 
-- `values`: One, two, or four spacing values. Any other count **throws** `@pkg/u: expected 1, 2, or 4 values`. Each value is:
+- `values`: One, two, or four spacing values. Any other count **throws** `@sdxc/u: expected 1, 2, or 4 values`. Each value is:
   - a `number` — resolved against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`. Negative values place the edge outside the containing block.
   - `"auto"` — passed through, which leaves that edge to be determined by the element's size and the opposite inset
   - a raw CSS length (`"1rem"`, `"50%"`) — passed through unchanged
@@ -4305,7 +4305,7 @@ Prefer `gap` on the parent over margins on children for spacing within a layout:
 
 **Parameters:**
 
-- `values`: One, two, or four spacing values. Any other count **throws** `@pkg/u: expected 1, 2, or 4 values`. Each value is:
+- `values`: One, two, or four spacing values. Any other count **throws** `@sdxc/u: expected 1, 2, or 4 values`. Each value is:
   - a `number` — resolved against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`. Negative values are allowed and pull the element outward.
   - `"auto"` — passed through, which is how a block element centres itself on the inline axis
   - a raw CSS length — passed through unchanged
@@ -5182,7 +5182,7 @@ Note padding is added _outside_ the content box by default, so a fixed size plus
 
 **Parameters:**
 
-- `values`: One, two, or four spacing values. Any other count **throws** `@pkg/u: expected 1, 2, or 4 values`. Each value is:
+- `values`: One, two, or four spacing values. Any other count **throws** `@sdxc/u: expected 1, 2, or 4 values`. Each value is:
   - a `number` — resolved against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`, so `4` is `1rem` at the default scale
   - a raw CSS length (`"1.5rem"`, `"12px"`) — passed through unchanged
   - `"auto"` — accepted by the type since it shares `SpacingValue` with the margin family, but `padding: auto` is not valid CSS and is emitted unchallenged
@@ -6148,7 +6148,7 @@ let paletteResult = u.borderEdge("block-end", { color: "color.neutral.200", widt
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div mix={[u.hstack(), u.border({ color: "neutral", width: 1 }), u.rounded("md")]}>
 	<button mix={[u.p(2)]}>Decrement</button>
@@ -6215,7 +6215,7 @@ let tokenResult = u.colorMix(
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <blockquote
 	mix={[
@@ -6408,7 +6408,7 @@ let currentColorResult = u.fill("currentColor");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 24 24" mix={[u.is(4), u.bs(4)]}>
 	<circle cx="12" cy="12" r="10" mix={[u.fill("brand.tint")]} />
@@ -6461,7 +6461,7 @@ let variableResult = u.fillOpacity("var(--chart-fill-opacity)");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 120 40" mix={[u.is("full"), u.bs(10)]}>
 	<path
@@ -6653,7 +6653,7 @@ let mixedResult = u.outlineColor(
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <input
 	mix={[
@@ -6713,7 +6713,7 @@ let noneResult = u.outlineStyle("none");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div
 	mix={[
@@ -6768,7 +6768,7 @@ let variableResult = u.outlineWidth("var(--focus-width)");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <button
 	mix={[u.surface("brand"), u.p(2), u.rounded("md"), u.ring("brand"), u.active(u.outlineWidth(4))]}
@@ -6965,7 +6965,7 @@ let currentColorResult = u.stroke("currentColor");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 24 24" mix={[u.is(5), u.bs(5)]}>
 	<path
@@ -7020,7 +7020,7 @@ let squareResult = u.strokeLinecap("square");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg
 	viewBox="0 0 24 24"
@@ -7083,7 +7083,7 @@ let cutResult = u.strokeLinejoin("bevel");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 24 24" mix={[u.is(5), u.bs(5)]}>
 	<path
@@ -7133,7 +7133,7 @@ let pixelResult = u.strokeWidth("1px");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 24 24" mix={[u.is(6), u.bs(6), u.fill("none"), u.stroke("neutral")]}>
 	<path
@@ -7340,7 +7340,7 @@ let positionResult = u.vectorEffect("fixed-position");
 ```
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 100 40" preserveAspectRatio="none" mix={[u.is("full"), u.bs(20)]}>
 	<path
@@ -11532,7 +11532,7 @@ Follows the same 1/2/4-value logical mapping as `u.m()`, so it reads exactly lik
   - one value — applies to all four sides via the `scroll-margin` shorthand
   - two values — block then inline, via `scroll-margin-block` and `scroll-margin-inline`
   - four values — block-start, inline-end, block-end, inline-start, mapping onto the logical directions rather than the physical top/right/bottom/left
-- Any other count throws: `@pkg/u: expected 1, 2, or 4 values, got {n}`. Three values throw, and so does calling it with no arguments at all — there is no default.
+- Any other count throws: `@sdxc/u: expected 1, 2, or 4 values, got {n}`. Three values throw, and so does calling it with no arguments at all — there is no default.
 
 **Returns:**
 
@@ -11605,7 +11605,7 @@ Follows the same 1/2/4-value logical mapping as `u.p()`.
   - one value — applies to all four sides via the `scroll-padding` shorthand
   - two values — block then inline, via `scroll-padding-block` and `scroll-padding-inline`
   - four values — block-start, inline-end, block-end, inline-start, mapping onto the logical directions rather than the physical top/right/bottom/left
-- Any other count throws: `@pkg/u: expected 1, 2, or 4 values, got {n}`. Three values throw, and so does calling it with no arguments at all — there is no default.
+- Any other count throws: `@sdxc/u: expected 1, 2, or 4 values, got {n}`. Three values throw, and so does calling it with no arguments at all — there is no default.
 
 **Returns:**
 
@@ -15894,7 +15894,7 @@ Because both axes read separate custom properties, they compose — here a lift 
 
 ### Tokens
 
-Pure string resolvers from the `@pkg/u/tokens` subpath. None of these call `css()`, build a mixin, or register anything at runtime — they only stringify a token name into the `var(...)` reference a utility (or a component package building a larger CSS object by hand) should place in a declaration. Kept off the package root because four of them share a name with a utility mixin (`font`, `text`, `shadow`, `blur`) — importing from `@pkg/u/tokens` always gets the resolver, importing `u.font()` etc. from the root always gets the mixin.
+Pure string resolvers from the `@sdxc/u/tokens` subpath. None of these call `css()`, build a mixin, or register anything at runtime — they only stringify a token name into the `var(...)` reference a utility (or a component package building a larger CSS object by hand) should place in a declaration. Kept off the package root because four of them share a name with a utility mixin (`font`, `text`, `shadow`, `blur`) — importing from `@sdxc/u/tokens` always gets the resolver, importing `u.font()` etc. from the root always gets the mixin.
 
 #### `spacing(value: SpacingValue): string`
 
@@ -15994,7 +15994,7 @@ Resolves a color value to a `var(...)` reference. This is the resolver behind ev
   - a raw palette reference `` `color.${palette}.${shade}` `` — resolves to `var(--ui-color-{palette}-{shade})`. Shades are `50`, `100`, `200`, `300`, `400`, `500`, `600`, `700`, `800`, `900`, `950`.
   - a tone with an explicit suffix `` `${tone}.${suffix}` `` — resolves to `var(--ui-{tone}-{property})`, where the suffix is mapped through the friendly-name alias table: `tint`→`bg-tint`, `solid`→`bg-solid`, `muted`→`fg-muted`, `emphasis`→`fg-emphasis`, `onSolid`→`fg-on-solid`, `strong`→`border-strong`. An unaliased suffix is used as the property segment verbatim, so `"brand.border"` resolves to `var(--ui-brand-border)`.
   - a bare tone name — resolves using `defaultProperty` as the property segment
-- `defaultProperty`: The property segment to use when `value` names a bare tone with no suffix. **Throws** `@pkg/u: color("...") has no property and no default was given` if omitted in that case — which is why `u.bg("brand")` throws while `u.fg("brand")` (which passes `"fg"`) does not.
+- `defaultProperty`: The property segment to use when `value` names a bare tone with no suffix. **Throws** `@sdxc/u: color("...") has no property and no default was given` if omitted in that case — which is why `u.bg("brand")` throws while `u.fg("brand")` (which passes `"fg"`) does not.
 
 **Returns:**
 
@@ -16234,7 +16234,7 @@ Derived types built from these interfaces: `ColorPaletteName`, `SemanticToneName
 **Example:**
 
 ```typescript
-declare module "@pkg/u" {
+declare module "@sdxc/u" {
 	interface ColorPalettes {
 		info: true;
 	}
@@ -16251,7 +16251,7 @@ declare module "@pkg/u" {
 Compose spacing, a surface recipe, and a container-query breakpoint to build a card that grows more spacious at wider container widths, and swaps its border for a stronger one under forced or system dark mode:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <section
 	mix={[
@@ -16271,7 +16271,7 @@ import * as u from "@pkg/u";
 Wrapper utilities compose freely with atomic ones to express hover, focus, and disabled states without any JavaScript-managed state:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <button
 	mix={[
@@ -16293,7 +16293,7 @@ Add a new color everywhere the built-in tones already work — `u.bg()`, `u.fg()
 
 ```ts
 // app-wide ambient types
-declare module "@pkg/u" {
+declare module "@sdxc/u" {
 	interface ColorPalettes {
 		info: true;
 	}
@@ -16328,7 +16328,7 @@ declare module "@pkg/u" {
 `u.container()` is the declaring half of the container-query pair and `u.at()`/`u.atMax()` the querying half — naming the container on the root lets each part query that one row's width even once the component is nested inside another container that would otherwise be the nearest match:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 const ROW = "ui-row";
 const NARROW = "32rem";
@@ -16353,7 +16353,7 @@ const NARROW = "32rem";
 Declaring the grid's `areas` on the root and matching each part by its own `data-slot` lets a slot be optional, reordered, or aligned independently without the root tracking which parts are present — `u.self()` anchors one area's occupant against its neighbors:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <article
 	mix={[
@@ -16375,7 +16375,7 @@ import * as u from "@pkg/u";
 `u.repeat("auto-fit", ...)` lets the grid pick its own track count from the space it's given, so a row of readouts needs no breakpoints at all, and `u.tabularNums()` keeps each value's digits at a fixed width so a live number changing doesn't nudge its own label:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <dl
 	mix={[
@@ -16401,7 +16401,7 @@ import * as u from "@pkg/u";
 Mapping tone names through `u.data()` and folding the result with `u.combine()` produces every branch as a sibling in a single mixin, so a host picks its whole surface — border, background, and foreground together — by setting one attribute and never has to be re-rendered to change it:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 const TONES = ["brand", "neutral", "success", "warning", "danger"] as const;
 
@@ -16431,7 +16431,7 @@ const TONES = ["brand", "neutral", "success", "warning", "danger"] as const;
 The block edges stay logical (`u.insBs()`/`u.insBe()`) while the edge the panel slides from stays physical, because the platform's own safe-area geometry is physical and has to agree with it; `u.transitionBehavior("allow-discrete")` lets `display` and `overlay` participate, and `u.startingStyle()` supplies the off-screen values the entry animates from. `u.overscrollBehavior("contain")` stops a flick at the end of the panel's own scroll from carrying on into the page behind it, and `u.motionReduce()` drops the slide for anyone who asked for less motion:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <dialog
 	data-side={side}
@@ -16467,7 +16467,7 @@ import * as u from "@pkg/u";
 The resting values sit on the element itself, the shown values in an `u.open()` branch, and the same branch repeats inside `u.startingStyle()` to give the transition somewhere to start from — without which an element entering from `display: none` simply appears. The `u.motionReduce()` branch drops `scale` from both the property list and the element, leaving the fade:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div
 	popover="auto"
@@ -16498,7 +16498,7 @@ import * as u from "@pkg/u";
 `u.visuallyHidden()` keeps the real input focusable, operable, and submitted with the form while rendering none of its own pixels; a sibling element paints the visible indicator and reads every state off that input through `u.hasSibling()`, so checked, focused, and disabled all resolve in CSS with no state to track. Note the order: `u.hasSibling()` emits `:has(~ ...)`, which only matches a _following_ sibling, so the indicator has to come first and the input after it:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <label mix={[u.hstack({ gap: 2, align: "center" }), u.cursor("pointer")]}>
 	<span
@@ -16533,7 +16533,7 @@ import * as u from "@pkg/u";
 `u.before()`/`u.after()` paired with `u.pseudoContent('""')` gives a form control a thumb, track, or marker without a wrapper element, and because the part is positioned with the logical `ins*` family it travels along the inline axis in whichever direction the writing mode runs — the transition then names `inset-inline-start` directly:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <input
 	type="checkbox"
@@ -16577,7 +16577,7 @@ import * as u from "@pkg/u";
 A counter reset on the list and incremented per item, drawn through a `::before` pseudo-element, keeps the numbering correct when items are added, removed, or reordered — and keeps the number out of the accessible text, since it's decoration rather than content:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <ol mix={[u.vstack({ gap: 4 }), u.listStyle("none"), u.p(0), u.counterReset("step")]}>
 	{steps.map((step) => (
@@ -16614,7 +16614,7 @@ import * as u from "@pkg/u";
 `u.scroll()` only shows a scrollbar on the axis that actually overflows, `u.thinScrollbar()` reserves its gutter up front so its appearance never shifts content, `u.overscrollBehavior("contain")` keeps a flick at either end from scrolling the page instead, and a four-stop gradient through `u.mask()` feathers both edges — a standing hint that content continues past the visible box:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 const FADE = "1.5rem";
 
@@ -16646,7 +16646,7 @@ const FADE = "1.5rem";
 `u.fill()` and `u.stroke()` resolve the same semantic tones `u.fg()` does, so a plotted shape inherits its color from an ancestor's foreground rather than carrying a hardcoded one; `u.strokeWidth()` takes a unitless SVG user value and `u.vectorEffect("non-scaling-stroke")` keeps hairlines a hairline however the drawing is scaled:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <svg viewBox="0 0 320 120" mix={[u.block(), u.is("full"), u.fg("brand")]}>
 	<line
@@ -16674,7 +16674,7 @@ import * as u from "@pkg/u";
 `u.colorMix()` builds the partially transparent tint the bar sits behind, so `u.backdropBlur()` has something to blur through while the tint still tracks whatever the neutral surface token resolves to under either color scheme:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <header
 	mix={[
@@ -16697,7 +16697,7 @@ import * as u from "@pkg/u";
 `u.vars()` publishes a component's own tunable values on its root — with the leading `--` omitted — and `u.var()` reads them back with the same fallback at each use site, so every part agrees on one number and a single call in a consumer's `mix` retunes the whole component without touching its internals:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <section mix={[u.vstack({ gap: 3 }), u.vars({ "panel-is": "18rem", "panel-inset": "1rem" })]}>
 	<div mix={[u.is(u.var("panel-is", "18rem")), u.p(u.var("panel-inset", "1rem")), u.rounded("lg")]}>
@@ -16716,7 +16716,7 @@ import * as u from "@pkg/u";
 `u.scrollSnapType()` goes on the container and `u.scrollSnapAlign()` on each item — the split is the thing to get right, since setting either alone does nothing. `u.scrollSnapStop("always")` forbids a fast flick from skipping past items, so paging stays one-at-a-time. `u.scrollPadding()` keeps the snap position clear of the container's own inline padding, and `u.overscrollBehavior("contain")` stops a swipe that reaches the end from scrolling the page instead. Smooth scrolling is motion, so it goes behind `u.motionSafe()` rather than being applied unconditionally:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div
 	mix={[
@@ -16759,7 +16759,7 @@ Reach for `u.thinScrollbar()` over `u.noScrollbar()` unless another paging affor
 Anchor positioning replaces the measure-and-position pass a floating element used to need. `u.anchorName()` names the trigger, `u.positionAnchor()` points the tooltip at that name, and `u.positionArea()` places it relative to the anchor without any coordinates. `u.positionTryFallbacks()` supplies the flip order for when the preferred side would overflow the viewport — the part a hand-rolled implementation usually gets wrong:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <>
 	<button mix={[u.anchorName("tip"), u.rounded("md"), u.p(2)]} popoverTarget="tip-content">
@@ -16804,7 +16804,7 @@ Both halves are required: an `anchorName()` with no `positionAnchor()` referenci
 Three utilities have to agree for a 3D rotation to read as depth rather than a horizontal squash: `u.transformStyle()` keeps the subtree in 3D, `u.perspective()` gives it a vanishing point, and both belong on the **parent** of the rotating faces. `u.backfaceVisibility()` on each face hides it once it turns away. The back face starts pre-rotated so it is already facing away at rest:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div mix={[u.transformStyle(), u.perspective(800), u.zstack()]}>
 	<div
@@ -16846,7 +16846,7 @@ Note the radius and clipping sit on the **faces**, not on the `u.transformStyle(
 An underline at the browser's default offset cuts through the descenders of `g`, `p`, and `y`. `u.textDecoration()`'s options form fixes that in one call, and takes its colour from the tone layer — so the underline can sit a shade back from the text rather than matching it exactly, which reads as less heavy without losing the affordance:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <a
 	href={href}
@@ -16870,7 +16870,7 @@ import * as u from "@pkg/u";
 `u.shadow()` and `u.ringShadow()` write different slots of the same composite `box-shadow`, so they stack: the ring hugs the element's edge and the elevation shadow falls outside it. Before that composition existed this needed one hand-written `box-shadow` with both layers in it:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <label mix={[u.relative(), u.cursor("pointer")]}>
 	<span
@@ -16904,7 +16904,7 @@ import * as u from "@pkg/u";
 `u.gridTemplate()` establishes the tracks and `u.gridColumn()`/`u.gridRow()` place an individual item across them. A bare number means a grid _line_, so spanning is written `"span 2"` — that distinction is the one people trip over. `u.gridAutoRows()` sizes the implicit rows that appear beyond the declared template, so tiles added later keep the same height without touching the container:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div
 	mix={[
@@ -16940,7 +16940,7 @@ Avoid `u.gridAutoFlow("dense")` here if the tiles are interactive: backfilling h
 `u.fieldSizing("content")` is the native replacement for the resize-observer-and-scrollHeight dance: the control sizes itself to its own value. Bound it with `u.minBs()` and `u.maxBs()` so it starts at a sensible height and stops before it takes over the page, then let `u.scroll("y")` handle anything past the ceiling:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <textarea
 	rows={2}
@@ -16972,7 +16972,7 @@ import * as u from "@pkg/u";
 `u.placeholderShown()` matches an input only while it is empty, and `u.has()` lets the _wrapper_ read that state — so a label can sit inside an empty field and lift above it the moment the user types, with no JavaScript and no state to track. The input keeps a real `<label>` throughout, because a placeholder is not a label:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div
 	mix={[
@@ -17024,7 +17024,7 @@ Two details make it work. Give the input `placeholder=" "` — a single space �
 `filter` is one CSS property, but each filter utility writes its own variable into a shared composite — so `u.grayscale()`, `u.brightness()`, and `u.blur()` combine instead of overwriting each other. Order in the composite is fixed, so the result does not depend on the order of the calls:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <article
 	aria-disabled="true"
@@ -17053,7 +17053,7 @@ The visible dimming carries no meaning on its own — a filter is invisible to a
 `u.backdrop()` styles the layer the browser paints behind a top-layer element, which is the correct way to dim the page rather than rendering an overlay `<div>` and managing its stacking. It transitions on the same `u.transitionBehavior("allow-discrete")` and `u.startingStyle()` contract the dialog itself uses, and `u.overscrollBehavior("contain")` keeps a scroll inside the dialog from leaking to the page:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <dialog
 	mix={[
@@ -17094,7 +17094,7 @@ The blur goes behind `u.transparencySafe()` because `u.backdropBlur()` is an ung
 `u.bg({ clip: "text" })` clips a background to the glyphs, and a transparent foreground lets it show through. The text stays real, selectable, searchable text — which is the whole reason to do it this way rather than shipping an image:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <h1
 	mix={[
@@ -17120,7 +17120,7 @@ Two cautions. Only the unprefixed `background-clip` is emitted, so an engine tha
 `u.virtualize()` is the pattern to reach for: it pairs `content-visibility: auto` with a `contain-intrinsic-size` placeholder, so the browser skips layout and paint for rows outside the viewport _and_ still reserves their space, which keeps the scrollbar stable. `u.contentVisibility()` is the bare primitive underneath, for when the size is already known. `u.scrollMargin()` on each row keeps a scrolled-to row clear of the sticky header:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <div mix={[u.scroll("y"), u.overscrollBehavior("contain"), u.maxBs("32rem"), u.scrollPadding(12)]}>
 	<div mix={[u.sticky(), u.insBs(0), u.layer(1), u.translucent(), u.pb(2), u.pi(3)]}>{header}</div>
@@ -17152,7 +17152,7 @@ Get the `contain-intrinsic-size` estimate roughly right — too small and the sc
 `u.overflowWrap()` breaks a word only when it would otherwise overflow, leaving ordinary prose alone — which is why it, and not `u.wordBreak("break-all")`, is the right tool for a URL, hash, or generated ID. It needs something to overflow _against_, so the bounded size is part of the pattern: in a table that means `u.maxIs()`, and in a flex row it means `u.minIs(0)`:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <table mix={[u.is("full"), u.borderCollapse()]}>
 	<tbody>
@@ -17186,7 +17186,7 @@ Reach for `"anywhere"` instead of `"break-word"` when the cell also has to _shri
 `u.aria()` styles straight from the attribute a component already sets for accessibility, so there is no parallel `data-` flag or class to keep in sync — the accessible state _is_ the styling state. (For a native `<details>` instead of a button, the equivalents are `u.open()` for the state, `u.marker()` for the disclosure triangle, and `u.detailsContent()` for the collapsible region.)
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <button
 	aria-expanded={open}
@@ -17224,7 +17224,7 @@ Note the two-argument form, `u.aria("expanded", ...)`, matches the attribute bei
 `u.print()` is the one wrapper in its family that is not about a user preference. Printing is where a screen layout quietly fails: interactive chrome wastes paper, a dark surface burns ink, and anything truncated or clamped loses content that has no second page to continue onto:
 
 ```tsx
-import * as u from "@pkg/u";
+import * as u from "@sdxc/u";
 
 <>
 	<nav mix={[u.hstack({ gap: 3 }), u.print(u.hidden())]}>{links}</nav>
@@ -17252,11 +17252,11 @@ Undoing a clamp is one of the few genuine `u.raw()` cases left: `u.lineClamp()` 
 
 ## Related Packages
 
-- [`@pkg/ui`](/packages/ui) - A component library built on `remix/ui` that styles its components through `css()` mixins and pairs naturally with these lower-level utilities.
+- [`@sdxc/ui`](/packages/ui) - A component library built on `remix/ui` that styles its components through `css()` mixins and pairs naturally with these lower-level utilities.
 
 ## Tips
 
-1. **Prefer the namespace import for application code** - `import * as u from "@pkg/u"` reads clearly at call sites (`u.p(4)`, `u.hover(...)`) and still tree-shakes down to only the utilities actually referenced.
+1. **Prefer the namespace import for application code** - `import * as u from "@sdxc/u"` reads clearly at call sites (`u.p(4)`, `u.hover(...)`) and still tree-shakes down to only the utilities actually referenced.
 2. **Reach for a wrapper before hand-rolling a selector or at-rule** - `u.when()`, `u.not()`, `u.hover()` and friends, `u.at()`, `u.media()`, and `u.supports()` all compose with any other utility; there's rarely a reason to write a raw nested selector by hand.
 3. **`u.at()` is for layout, `u.media()` is the escape hatch** - default to container queries for responsive layout so a component adapts to the space it's actually given; reach for `u.media()` only for real viewport or user-preference queries like `prefers-contrast`.
 4. **Token extension is additive only** - declaration merging can add a new name to `ColorPalettes`, `Radii`, and the rest, but it can't remove or override a built-in one — there's no way to "disable" a default token name through the type system.

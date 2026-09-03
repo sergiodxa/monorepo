@@ -8,9 +8,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { combine } from "@pkg/u/general";
-import { text } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { combine } from "@sdxc/u/general";
+import { text } from "@sdxc/u/typography";
 
 import type { CSSStyles } from "../utils/css-styles";
 

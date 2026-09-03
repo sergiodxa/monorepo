@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AuthSession } from "@pkg/auth/auth-session";
+import type { AuthSession } from "@sdxc/auth/auth-session";
 import type { Middleware } from "remix/router";
 
 import { getContext } from "remix/middleware/async-context";

@@ -11,15 +11,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Bytes } from "@pkg/crypto";
-import type { DurationInput } from "@pkg/duration";
-import type { Failure, Result } from "@pkg/result";
+import type { Bytes } from "@sdxc/crypto";
+import type { DurationInput } from "@sdxc/duration";
+import type { Failure, Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { timingSafeEqual } from "@pkg/crypto";
-import { toMs } from "@pkg/duration";
-import { failure, isFailure, success } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { timingSafeEqual } from "@sdxc/crypto";
+import { toMs } from "@sdxc/duration";
+import { failure, isFailure, success } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 
 import type { WebhookError } from "./errors";
 import type { ReplayStore } from "./replay-store";

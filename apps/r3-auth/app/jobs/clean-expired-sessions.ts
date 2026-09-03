@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobHandler } from "@pkg/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import Session from "~/app/data/session";
 import jobs from "~/app/jobs";

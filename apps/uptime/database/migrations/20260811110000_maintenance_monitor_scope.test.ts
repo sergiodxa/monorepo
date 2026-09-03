@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { applyMigration, applyMigrations } from "~/app/lib/test/db";

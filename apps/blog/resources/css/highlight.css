@@ -63,7 +63,7 @@
  */
 /*
  * The tiers above are this app's; the selectors that spend them ship with
- * `@pkg/highlight`, which paints each token type from a `--highlight-*`
+ * `@sdxc/highlight`, which paints each token type from a `--highlight-*`
  * property. The block at the end of this file maps one onto the other, so a
  * role and the tier it takes are stated once and in one place.
  */
@@ -190,7 +190,7 @@ pre[class*="language-"] > code[class*="language-"] {
 }
 
 /*
- * Each token type, and the tier it spends. `@pkg/highlight/styles.css` holds the
+ * Each token type, and the tier it spends. `@sdxc/highlight/styles.css` holds the
  * selectors that read these.
  */
 :root {

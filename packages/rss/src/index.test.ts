@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";

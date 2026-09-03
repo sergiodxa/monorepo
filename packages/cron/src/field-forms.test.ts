@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isSuccess, unwrap } from "@pkg/result";
+import { isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { FieldSpec } from "./test/corpus";

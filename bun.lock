@@ -6,7 +6,7 @@
       "name": "monorepo",
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.21.3",
-        "@pkg/spec": "workspace:*",
+        "@sdxc/spec": "workspace:*",
         "@total-typescript/ts-reset": "^0.6.1",
         "@total-typescript/tsconfig": "^1.0.4",
         "@types/bun": "^1.4.0",
@@ -20,27 +20,27 @@
     "apps/auth-saas": {
       "name": "@apps/auth-saas",
       "dependencies": {
-        "@pkg/auth": "workspace:*",
-        "@pkg/billing": "workspace:*",
-        "@pkg/data-table-d1": "workspace:*",
-        "@pkg/data-table-sqlstorage": "workspace:*",
-        "@pkg/get-client-ip": "workspace:*",
-        "@pkg/hostname": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/jwt": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/oidc-provider": "workspace:*",
-        "@pkg/response": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/types": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/auth": "workspace:*",
+        "@sdxc/billing": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/hostname": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/oidc-provider": "workspace:*",
+        "@sdxc/response": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
-        "@pkg/cloudflare-mocks": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
         "vite": "^8.2.2",
         "wrangler": "^4.127.1",
       },
@@ -48,31 +48,31 @@
     "apps/blog": {
       "name": "@apps/blog",
       "dependencies": {
-        "@pkg/auth": "workspace:*",
-        "@pkg/crypto": "workspace:*",
-        "@pkg/data-table-d1": "workspace:*",
-        "@pkg/highlight": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/jwt": "workspace:*",
-        "@pkg/kv-cache": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/markdown": "workspace:*",
-        "@pkg/mcp": "workspace:*",
-        "@pkg/rate-limit": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/rss": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/sitemap": "workspace:*",
-        "@pkg/strings": "workspace:*",
-        "@pkg/u": "workspace:*",
-        "@pkg/ui": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/auth": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/highlight": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/kv-cache": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/mcp": "workspace:*",
+        "@sdxc/rate-limit": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/rss": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/sitemap": "workspace:*",
+        "@sdxc/strings": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
-        "@pkg/cloudflare-mocks": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
         "vite": "^8.2.2",
         "wrangler": "^4.127.1",
       },
@@ -80,24 +80,24 @@
     "apps/blog-saas": {
       "name": "@apps/blog-saas",
       "dependencies": {
-        "@pkg/auth": "workspace:*",
-        "@pkg/billing": "workspace:*",
-        "@pkg/blog-engine": "workspace:*",
-        "@pkg/data-table-d1": "workspace:*",
-        "@pkg/data-table-sqlstorage": "workspace:*",
-        "@pkg/hostname": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/jobs": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/types": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/auth": "workspace:*",
+        "@sdxc/billing": "workspace:*",
+        "@sdxc/blog-engine": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/hostname": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
-        "@pkg/cloudflare-mocks": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
         "vite": "^8.2.2",
         "wrangler": "^4.127.1",
       },
@@ -105,20 +105,20 @@
     "apps/books": {
       "name": "@apps/books",
       "dependencies": {
-        "@pkg/billing": "workspace:*",
-        "@pkg/get-client-ip": "workspace:*",
-        "@pkg/highlight": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/markdown": "workspace:*",
-        "@pkg/response": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/seo": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/u": "workspace:*",
-        "@pkg/ui": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/billing": "workspace:*",
+        "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/highlight": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/response": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/seo": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
@@ -130,7 +130,7 @@
     "apps/pkmn": {
       "name": "@apps/pkmn",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
@@ -140,33 +140,33 @@
     "apps/r3-auth": {
       "name": "@apps/r3-auth",
       "dependencies": {
-        "@pkg/billing": "workspace:*",
-        "@pkg/crypto": "workspace:*",
-        "@pkg/data-table-d1": "workspace:*",
-        "@pkg/dates": "workspace:*",
-        "@pkg/duration": "workspace:*",
-        "@pkg/get-client-ip": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/i18n": "workspace:*",
-        "@pkg/jobs": "workspace:*",
-        "@pkg/jwt": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/mail": "workspace:*",
-        "@pkg/rate-limit": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/server-timing": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/session-storage-kv": "workspace:*",
-        "@pkg/u": "workspace:*",
-        "@pkg/ui": "workspace:*",
-        "@pkg/uuid": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/billing": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/dates": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/i18n": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/mail": "workspace:*",
+        "@sdxc/rate-limit": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/server-timing": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/session-storage-kv": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
-        "@pkg/auth": "workspace:*",
-        "@pkg/cloudflare-mocks": "workspace:*",
+        "@sdxc/auth": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
         "vite": "^8.2.2",
         "wrangler": "^4.127.1",
       },
@@ -174,11 +174,11 @@
     "apps/r3-gallery": {
       "name": "@apps/r3-gallery",
       "dependencies": {
-        "@pkg/icons": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/u": "workspace:*",
-        "@pkg/ui": "workspace:*",
-        "@pkg/ui-router": "workspace:*",
+        "@sdxc/icons": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
+        "@sdxc/ui-router": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
@@ -189,146 +189,146 @@
     "apps/uptime": {
       "name": "@apps/uptime",
       "dependencies": {
-        "@pkg/auth": "workspace:*",
-        "@pkg/billing": "workspace:*",
-        "@pkg/cron": "workspace:*",
-        "@pkg/crypto": "workspace:*",
-        "@pkg/data-table-d1": "workspace:*",
-        "@pkg/dates": "workspace:*",
-        "@pkg/highlight": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/i18n": "workspace:*",
-        "@pkg/icons": "workspace:*",
-        "@pkg/jobs": "workspace:*",
-        "@pkg/kv-cache": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/mail": "workspace:*",
-        "@pkg/markdown": "workspace:*",
-        "@pkg/rate-limit": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/seo": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/session-storage-kv": "workspace:*",
-        "@pkg/sitemap": "workspace:*",
-        "@pkg/spec": "workspace:*",
-        "@pkg/strings": "workspace:*",
-        "@pkg/u": "workspace:*",
-        "@pkg/ui": "workspace:*",
-        "@pkg/uuid": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/auth": "workspace:*",
+        "@sdxc/billing": "workspace:*",
+        "@sdxc/cron": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/dates": "workspace:*",
+        "@sdxc/highlight": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/i18n": "workspace:*",
+        "@sdxc/icons": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
+        "@sdxc/kv-cache": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/mail": "workspace:*",
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/rate-limit": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/seo": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/session-storage-kv": "workspace:*",
+        "@sdxc/sitemap": "workspace:*",
+        "@sdxc/spec": "workspace:*",
+        "@sdxc/strings": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
-        "@pkg/cloudflare-mocks": "workspace:*",
-        "@pkg/jwt": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
         "vite": "^8.2.2",
         "wrangler": "^4.127.1",
       },
     },
     "packages/api-client": {
-      "name": "@pkg/api-client",
+      "name": "@sdxc/api-client",
       "version": "0.0.1",
     },
     "packages/arrays": {
-      "name": "@pkg/arrays",
+      "name": "@sdxc/arrays",
       "version": "0.0.0",
     },
     "packages/auth": {
-      "name": "@pkg/auth",
+      "name": "@sdxc/auth",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/catch-response-middleware": "workspace:*",
-        "@pkg/crypto": "workspace:*",
-        "@pkg/duration": "workspace:*",
-        "@pkg/get-client-ip": "workspace:*",
-        "@pkg/jwt": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/rate-limit": "workspace:*",
-        "@pkg/result": "workspace:*",
+        "@sdxc/catch-response-middleware": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/rate-limit": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
-        "@pkg/kv-cache": "workspace:*",
+        "@sdxc/kv-cache": "workspace:*",
       },
     },
     "packages/billing": {
-      "name": "@pkg/billing",
+      "name": "@sdxc/billing",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/api-client": "workspace:*",
-        "@pkg/crypto": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/validate": "workspace:*",
-        "@pkg/webhooks": "workspace:*",
+        "@sdxc/api-client": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@sdxc/webhooks": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/blog-engine": {
-      "name": "@pkg/blog-engine",
+      "name": "@sdxc/blog-engine",
       "version": "0.0.0",
       "dependencies": {
-        "@pkg/auth": "workspace:*",
-        "@pkg/highlight": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/markdown": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/rss": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/sitemap": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/auth": "workspace:*",
+        "@sdxc/highlight": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/rss": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/sitemap": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
-        "@pkg/cloudflare-mocks": "workspace:*",
-        "@pkg/jwt": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
       },
     },
     "packages/catch-response-middleware": {
-      "name": "@pkg/catch-response-middleware",
+      "name": "@sdxc/catch-response-middleware",
       "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
-        "@pkg/response": "workspace:*",
+        "@sdxc/response": "workspace:*",
       },
     },
     "packages/cloudflare-mocks": {
-      "name": "@pkg/cloudflare-mocks",
+      "name": "@sdxc/cloudflare-mocks",
       "version": "0.0.1",
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
-        "@pkg/data-table-d1": "workspace:*",
-        "@pkg/data-table-sqlstorage": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/data-table-sqlstorage": "workspace:*",
         "@types/node": "^26.4.0",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/cron": {
-      "name": "@pkg/cron",
+      "name": "@sdxc/cron",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/duration": "workspace:*",
-        "@pkg/result": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
       "devDependencies": {
         "cron-parser": "^5.10.0",
       },
     },
     "packages/crypto": {
-      "name": "@pkg/crypto",
+      "name": "@sdxc/crypto",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/data-table-d1": {
-      "name": "@pkg/data-table-d1",
+      "name": "@sdxc/data-table-d1",
       "version": "0.0.0",
       "dependencies": {
         "remix": "3.0.0-rc.1",
@@ -338,7 +338,7 @@
       },
     },
     "packages/data-table-sqlstorage": {
-      "name": "@pkg/data-table-sqlstorage",
+      "name": "@sdxc/data-table-sqlstorage",
       "version": "0.0.0",
       "dependencies": {
         "remix": "3.0.0-rc.1",
@@ -348,26 +348,26 @@
       },
     },
     "packages/dates": {
-      "name": "@pkg/dates",
+      "name": "@sdxc/dates",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/duration": "workspace:*",
-        "@pkg/result": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/duration": {
-      "name": "@pkg/duration",
+      "name": "@sdxc/duration",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/get-client-ip": {
-      "name": "@pkg/get-client-ip",
+      "name": "@sdxc/get-client-ip",
       "version": "0.0.1",
     },
     "packages/highlight": {
-      "name": "@pkg/highlight",
+      "name": "@sdxc/highlight",
       "version": "0.0.1",
       "dependencies": {
         "@markdoc/markdoc": "^0.5.9",
@@ -375,25 +375,25 @@
       },
     },
     "packages/hostname": {
-      "name": "@pkg/hostname",
+      "name": "@sdxc/hostname",
       "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/http": {
-      "name": "@pkg/http",
+      "name": "@sdxc/http",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/crypto": "workspace:*",
-        "@pkg/duration": "workspace:*",
-        "@pkg/location": "workspace:*",
-        "@pkg/result": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/location": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/i18n": {
-      "name": "@pkg/i18n",
+      "name": "@sdxc/i18n",
       "version": "0.0.1",
       "dependencies": {
         "html-parse-stringify": "^4.0.1",
@@ -402,7 +402,7 @@
       },
     },
     "packages/icons": {
-      "name": "@pkg/icons",
+      "name": "@sdxc/icons",
       "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-rc.1",
@@ -413,51 +413,51 @@
       },
     },
     "packages/iife": {
-      "name": "@pkg/iife",
+      "name": "@sdxc/iife",
       "version": "0.0.1",
     },
     "packages/jobs": {
-      "name": "@pkg/jobs",
+      "name": "@sdxc/jobs",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/cron": "workspace:*",
-        "@pkg/duration": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/types": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/cron": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
-        "@pkg/cloudflare-mocks": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/jwt": {
-      "name": "@pkg/jwt",
+      "name": "@sdxc/jwt",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/duration": "workspace:*",
+        "@sdxc/duration": "workspace:*",
         "jose": "^6.2.10",
       },
     },
     "packages/kv-cache": {
-      "name": "@pkg/kv-cache",
+      "name": "@sdxc/kv-cache",
       "version": "0.0.0",
       "dependencies": {
-        "@pkg/duration": "workspace:*",
+        "@sdxc/duration": "workspace:*",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
       },
     },
     "packages/location": {
-      "name": "@pkg/location",
+      "name": "@sdxc/location",
       "version": "0.0.1",
     },
     "packages/logger": {
-      "name": "@pkg/logger",
+      "name": "@sdxc/logger",
       "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-rc.1",
@@ -467,121 +467,121 @@
       },
     },
     "packages/mail": {
-      "name": "@pkg/mail",
+      "name": "@sdxc/mail",
       "version": "0.0.1",
       "dependencies": {
         "@markdoc/markdoc": "^0.5.9",
-        "@pkg/highlight": "workspace:*",
-        "@pkg/result": "workspace:*",
+        "@sdxc/highlight": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/markdown": {
-      "name": "@pkg/markdown",
+      "name": "@sdxc/markdown",
       "version": "0.0.1",
       "dependencies": {
         "@markdoc/markdoc": "^0.5.9",
-        "@pkg/highlight": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/yaml": "workspace:*",
+        "@sdxc/highlight": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/yaml": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/mcp": {
-      "name": "@pkg/mcp",
+      "name": "@sdxc/mcp",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/oidc-provider": {
-      "name": "@pkg/oidc-provider",
+      "name": "@sdxc/oidc-provider",
       "version": "0.0.0",
       "dependencies": {
-        "@pkg/crypto": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/jwt": "workspace:*",
-        "@pkg/logger": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/service-container": "workspace:*",
-        "@pkg/types": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/service-container": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "@simplewebauthn/server": "^13.3.3",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
-        "@pkg/cloudflare-mocks": "workspace:*",
+        "@sdxc/cloudflare-mocks": "workspace:*",
       },
     },
     "packages/pagination": {
-      "name": "@pkg/pagination",
+      "name": "@sdxc/pagination",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/crypto": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/rate-limit": {
-      "name": "@pkg/rate-limit",
+      "name": "@sdxc/rate-limit",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/duration": "workspace:*",
-        "@pkg/get-client-ip": "workspace:*",
-        "@pkg/http": "workspace:*",
-        "@pkg/result": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/response": {
-      "name": "@pkg/response",
+      "name": "@sdxc/response",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/location": "workspace:*",
+        "@sdxc/location": "workspace:*",
       },
     },
     "packages/result": {
-      "name": "@pkg/result",
+      "name": "@sdxc/result",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/types": "workspace:*",
+        "@sdxc/types": "workspace:*",
       },
     },
     "packages/rss": {
-      "name": "@pkg/rss",
+      "name": "@sdxc/rss",
       "version": "0.0.0",
       "dependencies": {
-        "@pkg/result": "workspace:*",
-        "@pkg/xml": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/xml": "workspace:*",
       },
     },
     "packages/sample": {
-      "name": "@pkg/sample",
+      "name": "@sdxc/sample",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/crypto": "workspace:*",
-        "@pkg/dates": "workspace:*",
-        "@pkg/duration": "workspace:*",
-        "@pkg/jwt": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/dates": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
       },
     },
     "packages/seo": {
-      "name": "@pkg/seo",
+      "name": "@sdxc/seo",
       "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/server-timing": {
-      "name": "@pkg/server-timing",
+      "name": "@sdxc/server-timing",
       "version": "0.0.1",
     },
     "packages/service-container": {
-      "name": "@pkg/service-container",
+      "name": "@sdxc/service-container",
       "version": "0.0.1",
       "devDependencies": {
         "@types/node": "^26.4.0",
@@ -589,83 +589,83 @@
       },
     },
     "packages/session-storage-kv": {
-      "name": "@pkg/session-storage-kv",
+      "name": "@sdxc/session-storage-kv",
       "version": "0.0.0",
       "dependencies": {
-        "@pkg/duration": "workspace:*",
+        "@sdxc/duration": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/sitemap": {
-      "name": "@pkg/sitemap",
+      "name": "@sdxc/sitemap",
       "version": "0.0.0",
       "dependencies": {
-        "@pkg/xml": "workspace:*",
+        "@sdxc/xml": "workspace:*",
       },
     },
     "packages/spec": {
-      "name": "@pkg/spec",
+      "name": "@sdxc/spec",
       "version": "0.0.1",
       "bin": {
         "spec": "./src/cli.ts",
       },
       "dependencies": {
-        "@pkg/duration": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/sample": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/sample": "workspace:*",
       },
     },
     "packages/strings": {
-      "name": "@pkg/strings",
+      "name": "@sdxc/strings",
       "version": "0.0.1",
     },
     "packages/typeid": {
-      "name": "@pkg/typeid",
+      "name": "@sdxc/typeid",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/uuid": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
       },
     },
     "packages/types": {
-      "name": "@pkg/types",
+      "name": "@sdxc/types",
       "version": "0.0.1",
     },
     "packages/u": {
-      "name": "@pkg/u",
+      "name": "@sdxc/u",
       "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/ui": {
-      "name": "@pkg/ui",
+      "name": "@sdxc/ui",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/icons": "workspace:*",
-        "@pkg/u": "workspace:*",
+        "@sdxc/icons": "workspace:*",
+        "@sdxc/u": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/ui-router": {
-      "name": "@pkg/ui-router",
+      "name": "@sdxc/ui-router",
       "version": "0.0.0",
       "dependencies": {
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/uuid": {
-      "name": "@pkg/uuid",
+      "name": "@sdxc/uuid",
       "version": "0.0.1",
       "devDependencies": {
         "@types/node": "^26.4.0",
       },
     },
     "packages/validate": {
-      "name": "@pkg/validate",
+      "name": "@sdxc/validate",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
-        "@pkg/types": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/types": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
       "devDependencies": {
@@ -673,13 +673,13 @@
       },
     },
     "packages/webhooks": {
-      "name": "@pkg/webhooks",
+      "name": "@sdxc/webhooks",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/crypto": "workspace:*",
-        "@pkg/duration": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/validate": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
       "devDependencies": {
@@ -687,25 +687,25 @@
       },
     },
     "packages/workers-cache": {
-      "name": "@pkg/workers-cache",
+      "name": "@sdxc/workers-cache",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
     },
     "packages/xml": {
-      "name": "@pkg/xml",
+      "name": "@sdxc/xml",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/yaml": {
-      "name": "@pkg/yaml",
+      "name": "@sdxc/yaml",
       "version": "0.0.1",
       "dependencies": {
-        "@pkg/result": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
     },
   },
@@ -1181,112 +1181,6 @@
 
     "@peculiar/x509": ["@peculiar/x509@1.14.3", "", { "dependencies": { "@peculiar/asn1-cms": "^2.6.0", "@peculiar/asn1-csr": "^2.6.0", "@peculiar/asn1-ecc": "^2.6.0", "@peculiar/asn1-pkcs9": "^2.6.0", "@peculiar/asn1-rsa": "^2.6.0", "@peculiar/asn1-schema": "^2.6.0", "@peculiar/asn1-x509": "^2.6.0", "pvtsutils": "^1.3.6", "reflect-metadata": "^0.2.2", "tslib": "^2.8.1", "tsyringe": "^4.10.0" } }, "sha512-C2Xj8FZ0uHWeCXXqX5B4/gVFQmtSkiuOolzAgutjTfseNOHT3pUjljDZsTSxXFGgio54bCzVFqmEOUrIVk8RDA=="],
 
-    "@pkg/api-client": ["@pkg/api-client@workspace:packages/api-client"],
-
-    "@pkg/arrays": ["@pkg/arrays@workspace:packages/arrays"],
-
-    "@pkg/auth": ["@pkg/auth@workspace:packages/auth"],
-
-    "@pkg/billing": ["@pkg/billing@workspace:packages/billing"],
-
-    "@pkg/blog-engine": ["@pkg/blog-engine@workspace:packages/blog-engine"],
-
-    "@pkg/catch-response-middleware": ["@pkg/catch-response-middleware@workspace:packages/catch-response-middleware"],
-
-    "@pkg/cloudflare-mocks": ["@pkg/cloudflare-mocks@workspace:packages/cloudflare-mocks"],
-
-    "@pkg/cron": ["@pkg/cron@workspace:packages/cron"],
-
-    "@pkg/crypto": ["@pkg/crypto@workspace:packages/crypto"],
-
-    "@pkg/data-table-d1": ["@pkg/data-table-d1@workspace:packages/data-table-d1"],
-
-    "@pkg/data-table-sqlstorage": ["@pkg/data-table-sqlstorage@workspace:packages/data-table-sqlstorage"],
-
-    "@pkg/dates": ["@pkg/dates@workspace:packages/dates"],
-
-    "@pkg/duration": ["@pkg/duration@workspace:packages/duration"],
-
-    "@pkg/get-client-ip": ["@pkg/get-client-ip@workspace:packages/get-client-ip"],
-
-    "@pkg/highlight": ["@pkg/highlight@workspace:packages/highlight"],
-
-    "@pkg/hostname": ["@pkg/hostname@workspace:packages/hostname"],
-
-    "@pkg/http": ["@pkg/http@workspace:packages/http"],
-
-    "@pkg/i18n": ["@pkg/i18n@workspace:packages/i18n"],
-
-    "@pkg/icons": ["@pkg/icons@workspace:packages/icons"],
-
-    "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
-
-    "@pkg/jobs": ["@pkg/jobs@workspace:packages/jobs"],
-
-    "@pkg/jwt": ["@pkg/jwt@workspace:packages/jwt"],
-
-    "@pkg/kv-cache": ["@pkg/kv-cache@workspace:packages/kv-cache"],
-
-    "@pkg/location": ["@pkg/location@workspace:packages/location"],
-
-    "@pkg/logger": ["@pkg/logger@workspace:packages/logger"],
-
-    "@pkg/mail": ["@pkg/mail@workspace:packages/mail"],
-
-    "@pkg/markdown": ["@pkg/markdown@workspace:packages/markdown"],
-
-    "@pkg/mcp": ["@pkg/mcp@workspace:packages/mcp"],
-
-    "@pkg/oidc-provider": ["@pkg/oidc-provider@workspace:packages/oidc-provider"],
-
-    "@pkg/pagination": ["@pkg/pagination@workspace:packages/pagination"],
-
-    "@pkg/rate-limit": ["@pkg/rate-limit@workspace:packages/rate-limit"],
-
-    "@pkg/response": ["@pkg/response@workspace:packages/response"],
-
-    "@pkg/result": ["@pkg/result@workspace:packages/result"],
-
-    "@pkg/rss": ["@pkg/rss@workspace:packages/rss"],
-
-    "@pkg/sample": ["@pkg/sample@workspace:packages/sample"],
-
-    "@pkg/seo": ["@pkg/seo@workspace:packages/seo"],
-
-    "@pkg/server-timing": ["@pkg/server-timing@workspace:packages/server-timing"],
-
-    "@pkg/service-container": ["@pkg/service-container@workspace:packages/service-container"],
-
-    "@pkg/session-storage-kv": ["@pkg/session-storage-kv@workspace:packages/session-storage-kv"],
-
-    "@pkg/sitemap": ["@pkg/sitemap@workspace:packages/sitemap"],
-
-    "@pkg/spec": ["@pkg/spec@workspace:packages/spec"],
-
-    "@pkg/strings": ["@pkg/strings@workspace:packages/strings"],
-
-    "@pkg/typeid": ["@pkg/typeid@workspace:packages/typeid"],
-
-    "@pkg/types": ["@pkg/types@workspace:packages/types"],
-
-    "@pkg/u": ["@pkg/u@workspace:packages/u"],
-
-    "@pkg/ui": ["@pkg/ui@workspace:packages/ui"],
-
-    "@pkg/ui-router": ["@pkg/ui-router@workspace:packages/ui-router"],
-
-    "@pkg/uuid": ["@pkg/uuid@workspace:packages/uuid"],
-
-    "@pkg/validate": ["@pkg/validate@workspace:packages/validate"],
-
-    "@pkg/webhooks": ["@pkg/webhooks@workspace:packages/webhooks"],
-
-    "@pkg/workers-cache": ["@pkg/workers-cache@workspace:packages/workers-cache"],
-
-    "@pkg/xml": ["@pkg/xml@workspace:packages/xml"],
-
-    "@pkg/yaml": ["@pkg/yaml@workspace:packages/yaml"],
-
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
     "@poppinss/colors": ["@poppinss/colors@4.1.6", "", { "dependencies": { "kleur": "^4.1.5" } }, "sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg=="],
@@ -1418,6 +1312,112 @@
     "@rolldown/binding-win32-x64-msvc": ["@rolldown/binding-win32-x64-msvc@1.2.4", "", { "os": "win32", "cpu": "x64" }, "sha512-UwSDJOg3dqCAejWdxclJjCsh3Qq4vLYMDxmyHqo1btz3stK2VqgwNd3mm5tuIwzSlGIQ/1H9Hr+Zn09mrezNqQ=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
+
+    "@sdxc/api-client": ["@sdxc/api-client@workspace:packages/api-client"],
+
+    "@sdxc/arrays": ["@sdxc/arrays@workspace:packages/arrays"],
+
+    "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
+
+    "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
+
+    "@sdxc/blog-engine": ["@sdxc/blog-engine@workspace:packages/blog-engine"],
+
+    "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
+
+    "@sdxc/cloudflare-mocks": ["@sdxc/cloudflare-mocks@workspace:packages/cloudflare-mocks"],
+
+    "@sdxc/cron": ["@sdxc/cron@workspace:packages/cron"],
+
+    "@sdxc/crypto": ["@sdxc/crypto@workspace:packages/crypto"],
+
+    "@sdxc/data-table-d1": ["@sdxc/data-table-d1@workspace:packages/data-table-d1"],
+
+    "@sdxc/data-table-sqlstorage": ["@sdxc/data-table-sqlstorage@workspace:packages/data-table-sqlstorage"],
+
+    "@sdxc/dates": ["@sdxc/dates@workspace:packages/dates"],
+
+    "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
+
+    "@sdxc/get-client-ip": ["@sdxc/get-client-ip@workspace:packages/get-client-ip"],
+
+    "@sdxc/highlight": ["@sdxc/highlight@workspace:packages/highlight"],
+
+    "@sdxc/hostname": ["@sdxc/hostname@workspace:packages/hostname"],
+
+    "@sdxc/http": ["@sdxc/http@workspace:packages/http"],
+
+    "@sdxc/i18n": ["@sdxc/i18n@workspace:packages/i18n"],
+
+    "@sdxc/icons": ["@sdxc/icons@workspace:packages/icons"],
+
+    "@sdxc/iife": ["@sdxc/iife@workspace:packages/iife"],
+
+    "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
+
+    "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
+
+    "@sdxc/kv-cache": ["@sdxc/kv-cache@workspace:packages/kv-cache"],
+
+    "@sdxc/location": ["@sdxc/location@workspace:packages/location"],
+
+    "@sdxc/logger": ["@sdxc/logger@workspace:packages/logger"],
+
+    "@sdxc/mail": ["@sdxc/mail@workspace:packages/mail"],
+
+    "@sdxc/markdown": ["@sdxc/markdown@workspace:packages/markdown"],
+
+    "@sdxc/mcp": ["@sdxc/mcp@workspace:packages/mcp"],
+
+    "@sdxc/oidc-provider": ["@sdxc/oidc-provider@workspace:packages/oidc-provider"],
+
+    "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
+
+    "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
+
+    "@sdxc/response": ["@sdxc/response@workspace:packages/response"],
+
+    "@sdxc/result": ["@sdxc/result@workspace:packages/result"],
+
+    "@sdxc/rss": ["@sdxc/rss@workspace:packages/rss"],
+
+    "@sdxc/sample": ["@sdxc/sample@workspace:packages/sample"],
+
+    "@sdxc/seo": ["@sdxc/seo@workspace:packages/seo"],
+
+    "@sdxc/server-timing": ["@sdxc/server-timing@workspace:packages/server-timing"],
+
+    "@sdxc/service-container": ["@sdxc/service-container@workspace:packages/service-container"],
+
+    "@sdxc/session-storage-kv": ["@sdxc/session-storage-kv@workspace:packages/session-storage-kv"],
+
+    "@sdxc/sitemap": ["@sdxc/sitemap@workspace:packages/sitemap"],
+
+    "@sdxc/spec": ["@sdxc/spec@workspace:packages/spec"],
+
+    "@sdxc/strings": ["@sdxc/strings@workspace:packages/strings"],
+
+    "@sdxc/typeid": ["@sdxc/typeid@workspace:packages/typeid"],
+
+    "@sdxc/types": ["@sdxc/types@workspace:packages/types"],
+
+    "@sdxc/u": ["@sdxc/u@workspace:packages/u"],
+
+    "@sdxc/ui": ["@sdxc/ui@workspace:packages/ui"],
+
+    "@sdxc/ui-router": ["@sdxc/ui-router@workspace:packages/ui-router"],
+
+    "@sdxc/uuid": ["@sdxc/uuid@workspace:packages/uuid"],
+
+    "@sdxc/validate": ["@sdxc/validate@workspace:packages/validate"],
+
+    "@sdxc/webhooks": ["@sdxc/webhooks@workspace:packages/webhooks"],
+
+    "@sdxc/workers-cache": ["@sdxc/workers-cache@workspace:packages/workers-cache"],
+
+    "@sdxc/xml": ["@sdxc/xml@workspace:packages/xml"],
+
+    "@sdxc/yaml": ["@sdxc/yaml@workspace:packages/yaml"],
 
     "@simplewebauthn/server": ["@simplewebauthn/server@13.3.3", "", { "dependencies": { "@hexagon/base64": "^1.1.27", "@levischuck/tiny-cbor": "^0.2.2", "@peculiar/asn1-android": "^2.6.0", "@peculiar/asn1-ecc": "^2.6.1", "@peculiar/asn1-rsa": "^2.6.1", "@peculiar/asn1-schema": "^2.6.0", "@peculiar/asn1-x509": "^2.6.1", "@peculiar/x509": "^1.14.3" } }, "sha512-LelX/lcy5cjc15A86i/aNxHhB5eU7dd20QsbP0VLAf9e38+SLlsnqCCyecx3xqfGofhmX05h1J9fKRYWxw+luA=="],
 

@@ -83,5 +83,5 @@ OIDC client, and an M2M management client, then hand those credentials to
 
 ## Self-hosting the provider (no platform)
 
-`@pkg/oidc-provider` runs standalone on a plain Worker + D1. See the provider's
+`@sdxc/oidc-provider` runs standalone on a plain Worker + D1. See the provider's
 [README](../../packages/oidc-provider/README.md).

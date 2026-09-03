@@ -7,8 +7,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { BillingWebhook } from "@pkg/billing";
-import { getServiceContainer } from "@pkg/service-container";
+import { BillingWebhook } from "@sdxc/billing";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import { polar } from "~/app/lib/billing";

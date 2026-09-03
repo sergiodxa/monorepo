@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@pkg/u/color";
-import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
-import { m, p } from "@pkg/u/size";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
 import {
 	Button,
 	Card,
@@ -22,7 +22,7 @@ import {
 	Modal,
 	Table,
 	TextArea,
-} from "@pkg/ui";
+} from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Trans } from "@pkg/i18n/ui";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { Empty } from "@pkg/ui";
+import { Trans } from "@sdxc/i18n/ui";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { Empty } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

@@ -11,8 +11,8 @@
 
 import type { Database } from "remix/data-table";
 
-import { toDayKey } from "@pkg/dates";
-import { generateUUID } from "@pkg/uuid";
+import { toDayKey } from "@sdxc/dates";
+import { generateUUID } from "@sdxc/uuid";
 import { getTableName } from "remix/data-table";
 
 import type { BatchedSweepResult } from "~/app/lib/retention";

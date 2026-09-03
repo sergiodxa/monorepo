@@ -42,7 +42,7 @@ const markup: Grammar = {
 	 * a name may be spelled with rather than a member of a list.
 	 */
 	tag: [
-		{ type: "tag", match: /(?<=[<\/])[A-Za-z_][\w:.-]*/y },
+		{ type: "tag", match: /(?<=[</])[A-Za-z_][\w:.-]*/y },
 		/**
 		 * The bracket that opens a body written in another language. Reaching back
 		 * over the attributes is safe because a bracket is exactly what they cannot
@@ -56,7 +56,7 @@ const markup: Grammar = {
 		/** A value written bare, which the `=` before it is what marks. */
 		{ type: "attr-value", match: /(?<==\s*)[^\s"'=<>`]+/y },
 		{ type: "operator", match: /=/y },
-		{ type: "attr-name", match: /[^\s"'=<>\/]+/y },
+		{ type: "attr-name", match: /[^\s"'=<>/]+/y },
 	],
 
 	/**

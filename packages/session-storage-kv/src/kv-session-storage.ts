@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 import type { Session, SessionStorage } from "remix/session";
 
-import { toSeconds } from "@pkg/duration";
+import { toSeconds } from "@sdxc/duration";
 import { createSession } from "remix/session";
 
 import type { KVStore } from "./kv-store";

@@ -9,12 +9,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { rounded } from "@pkg/u/effects";
-import { basis, flex, flexCol, gap, grow, items, shrink } from "@pkg/u/layout";
-import { bs } from "@pkg/u/size";
-import { fontSize, leading, text } from "@pkg/u/typography";
-import { Card, Skeleton } from "@pkg/ui";
-import { pulse } from "@pkg/ui/animations";
+import { rounded } from "@sdxc/u/effects";
+import { basis, flex, flexCol, gap, grow, items, shrink } from "@sdxc/u/layout";
+import { bs } from "@sdxc/u/size";
+import { fontSize, leading, text } from "@sdxc/u/typography";
+import { Card, Skeleton } from "@sdxc/ui";
+import { pulse } from "@sdxc/ui/animations";
 
 namespace SkeletonLine {
 	export interface Props {

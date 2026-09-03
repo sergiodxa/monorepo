@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
-import type { Adapter } from "@pkg/rate-limit";
+import type { DurationInput } from "@sdxc/duration";
+import type { Adapter } from "@sdxc/rate-limit";
 
-import { Base64 } from "@pkg/crypto";
-import { toSeconds } from "@pkg/duration";
-import { isFailure, wrap } from "@pkg/result";
+import { Base64 } from "@sdxc/crypto";
+import { toSeconds } from "@sdxc/duration";
+import { isFailure, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 import type { Issuer } from "./issuer";

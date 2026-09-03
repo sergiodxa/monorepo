@@ -13,7 +13,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { block } from "@pkg/u/layout";
+import { block } from "@sdxc/u/layout";
 
 import { mergeStyle } from "../utils/merge-style";
 

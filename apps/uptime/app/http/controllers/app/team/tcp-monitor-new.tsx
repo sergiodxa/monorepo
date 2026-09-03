@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button } from "@pkg/ui";
+import { Button } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

@@ -1,4 +1,4 @@
-# @pkg/crypto
+# @sdxc/crypto
 
 WebCrypto primitives — encoding, digests, HMAC, tokens, password hashing, TOTP, and authenticated encryption — with `Result`-based errors.
 
@@ -6,7 +6,7 @@ WebCrypto primitives — encoding, digests, HMAC, tokens, password hashing, TOTP
 
 Cryptographic code goes wrong in small, repeatable ways: hex encoders that differ in letter case, base64 that breaks in a URL, comparisons that leak how many bytes matched, hashes stored without the parameters they were made with. This package implements each of those pieces once so no call site has to re-derive them.
 
-Everything runs on the [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API), through `crypto.subtle` and `crypto.getRandomValues` only. There is **no `node:crypto` import** anywhere in the package and **no third-party crypto dependency** — the only runtime dependency is [`@pkg/result`](/packages/result). That keeps it usable on any WebCrypto runtime without a Node compatibility layer, and keeps the most security-sensitive code path free of supply-chain surface.
+Everything runs on the [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API), through `crypto.subtle` and `crypto.getRandomValues` only. There is **no `node:crypto` import** anywhere in the package and **no third-party crypto dependency** — the only runtime dependency is [`@sdxc/result`](/packages/result). That keeps it usable on any WebCrypto runtime without a Node compatibility layer, and keeps the most security-sensitive code path free of supply-chain surface.
 
 Every asynchronous operation, and every decode that can fail, returns a `Result` instead of throwing: a failed decryption, a malformed stored hash, and an unsupported algorithm are values you handle, not exceptions you remember to catch. Error messages carry only the shape of the problem — never a secret, a hash, or ciphertext.
 
@@ -15,8 +15,8 @@ Every asynchronous operation, and every decode that can fail, returns a `Result`
 ### Encoding And Digests
 
 ```typescript
-import { Hex, Base64, Base64Url, sha256 } from "@pkg/crypto";
-import { isSuccess } from "@pkg/result";
+import { Hex, Base64, Base64Url, sha256 } from "@sdxc/crypto";
+import { isSuccess } from "@sdxc/result";
 
 let digest = await sha256(apiKey);
 if (isSuccess(digest)) {
@@ -31,8 +31,8 @@ Hex.decode("zz"); // failure(InvalidEncodingError)
 ### Signing And Verifying A Payload
 
 ```typescript
-import { hmac } from "@pkg/crypto";
-import { unwrap } from "@pkg/result";
+import { hmac } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 
 let signature = await hmac.sign(secret, body);
 let valid = unwrap(await hmac.verify(secret, body, request.headers.get("x-signature") ?? ""));
@@ -41,7 +41,7 @@ let valid = unwrap(await hmac.verify(secret, body, request.headers.get("x-signat
 ### Tokens
 
 ```typescript
-import { randomBytes, randomToken } from "@pkg/crypto";
+import { randomBytes, randomToken } from "@sdxc/crypto";
 
 randomBytes(12); // Uint8Array(12)
 randomToken(); // 43 base64url characters, 256 bits of entropy
@@ -51,8 +51,8 @@ randomToken({ bytes: 32, prefix: "sk" }); // "sk_9f1..." — greppable and revoc
 ### Passwords
 
 ```typescript
-import { password } from "@pkg/crypto";
-import { unwrap } from "@pkg/result";
+import { password } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 
 let stored = unwrap(await password.hash(form.password));
 // "$pbkdf2-sha256$i=600000$<salt>$<key>"
@@ -66,8 +66,8 @@ if (valid && password.needsRehash(stored)) {
 ### Second Factor
 
 ```typescript
-import { totp } from "@pkg/crypto";
-import { unwrap } from "@pkg/result";
+import { totp } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 
 let secret = totp.generateSecret();
 let uri = totp.uri(secret, { issuer: "Acme", account: "ada@example.com" });
@@ -77,8 +77,8 @@ let valid = unwrap(await totp.verify(secret, form.code, { window: 1 }));
 ### Encryption At Rest
 
 ```typescript
-import { importKey, seal, open } from "@pkg/crypto";
-import { unwrap } from "@pkg/result";
+import { importKey, seal, open } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 
 let key = unwrap(await importKey(env.SEAL_KEY));
 let sealed = unwrap(await seal(key, refreshToken)); // "v1.<iv>.<ciphertext>"
@@ -472,8 +472,8 @@ if (isSuccess(confirmed) && confirmed.data) await enableSecondFactor(user.id, se
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - `Result` type every operation here returns, with `unwrap`, `isSuccess`, and `match`
-- [`@pkg/typeid`](/packages/typeid) - Prefixed, sortable identifiers for records, where `randomToken` covers secrets
+- [`@sdxc/result`](/packages/result) - `Result` type every operation here returns, with `unwrap`, `isSuccess`, and `match`
+- [`@sdxc/typeid`](/packages/typeid) - Prefixed, sortable identifiers for records, where `randomToken` covers secrets
 
 ## Tips
 

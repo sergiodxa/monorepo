@@ -12,10 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
+import type { Billing } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
-import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";

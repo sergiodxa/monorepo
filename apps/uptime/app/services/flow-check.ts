@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 import type {
 	ArgumentNode,
 	BlockNode,
@@ -23,10 +23,10 @@ import type {
 	Seed,
 	ToolContext,
 	Value,
-} from "@pkg/spec/workers";
+} from "@sdxc/spec/workers";
 
-import { randomToken } from "@pkg/crypto";
-import { failure, isFailure } from "@pkg/result";
+import { randomToken } from "@sdxc/crypto";
+import { failure, isFailure } from "@sdxc/result";
 import {
 	createHttpPlugin,
 	createJwtPlugin,
@@ -38,7 +38,7 @@ import {
 	positionAt,
 	runTests,
 	ToolError,
-} from "@pkg/spec/workers";
+} from "@sdxc/spec/workers";
 
 import type { FlowStatus } from "~/database/schema";
 

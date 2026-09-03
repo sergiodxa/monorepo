@@ -12,7 +12,7 @@ import {
 	createEnv,
 	createKVNamespace,
 	createSendEmail,
-} from "@pkg/cloudflare-mocks";
+} from "@sdxc/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
 vi.doMock("cloudflare:workers", () => ({
@@ -26,9 +26,9 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
-let { ManagementClient } = await import("@pkg/auth/management-client");
-let { Mailer } = await import("@pkg/mail");
-let { ServiceContainer } = await import("@pkg/service-container");
+let { ManagementClient } = await import("@sdxc/auth/management-client");
+let { Mailer } = await import("@sdxc/mail");
+let { ServiceContainer } = await import("@sdxc/service-container");
 let { Database } = await import("remix/data-table");
 let { container } = await import("./container");
 

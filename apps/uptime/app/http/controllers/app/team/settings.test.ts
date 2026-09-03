@@ -12,10 +12,10 @@
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ManagementClient, SubjectNotFoundError } from "@pkg/auth/management-client";
-import { createTranslator } from "@pkg/i18n";
-import { failure } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import { ManagementClient, SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { createTranslator } from "@sdxc/i18n";
+import { failure } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";

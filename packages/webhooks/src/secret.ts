@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Bytes } from "@pkg/crypto";
-import type { Result } from "@pkg/result";
+import type { Bytes } from "@sdxc/crypto";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import { InvalidSecretError } from "./errors";
 import { decodeBase64 } from "./lib/base64";

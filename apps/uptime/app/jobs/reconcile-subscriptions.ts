@@ -18,10 +18,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CustomerRef } from "@pkg/billing";
+import type { CustomerRef } from "@sdxc/billing";
 
-import { createJobHandler } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import Subscription from "~/app/data/subscription";
 import TrialConversion from "~/app/data/trial-conversion";

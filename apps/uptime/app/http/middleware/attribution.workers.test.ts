@@ -14,7 +14,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { headRequests } from "@pkg/http/middleware/head-requests";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { env } from "cloudflare:test";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";

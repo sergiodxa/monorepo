@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@pkg/uuid";
+import { generateUUID } from "@sdxc/uuid";
 import { getTableName } from "remix/data-table";
 
 import type { SelectTrialDailyStats } from "~/database/schema";

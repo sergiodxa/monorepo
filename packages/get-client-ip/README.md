@@ -1,4 +1,4 @@
-# @pkg/get-client-ip
+# @sdxc/get-client-ip
 
 Utility to get the client's IP address from a Cloudflare Workers request.
 
@@ -13,7 +13,7 @@ This package provides a simple utility to extract that header value in Cloudflar
 ## Usage
 
 ```typescript
-import { getClientIP } from "@pkg/get-client-ip";
+import { getClientIP } from "@sdxc/get-client-ip";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let ipAddress = getClientIP(request);
@@ -50,7 +50,7 @@ This is the recommended way to get client IP addresses in Cloudflare Workers app
 Use the client IP to implement rate limiting:
 
 ```typescript
-import { getClientIP } from "@pkg/get-client-ip";
+import { getClientIP } from "@sdxc/get-client-ip";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let ipAddress = getClientIP(request);
@@ -77,8 +77,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 Log client IP alongside geolocation data for analytics:
 
 ```typescript
-import { getClientIP } from "@pkg/get-client-ip";
-import { getLoggerFromContext } from "@pkg/logger";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { getLoggerFromContext } from "@sdxc/logger";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let logger = getLoggerFromContext(context);
@@ -98,7 +98,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 ## Related Packages
 
-- [`@pkg/logger`](../logger/README.md) - For logging client IP with requests
+- [`@sdxc/logger`](../logger/README.md) - For logging client IP with requests
 
 ## Tips
 

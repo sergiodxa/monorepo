@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { add, elapsed, subtract } from "@pkg/dates";
-import { toMs } from "@pkg/duration";
+import { add, elapsed, subtract } from "@sdxc/dates";
+import { toMs } from "@sdxc/duration";
 
 import type { Dataset } from "../dataset";
 import type { Random } from "../random";

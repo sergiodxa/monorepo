@@ -10,7 +10,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { Button } from "@pkg/ui";
+import { Button } from "@sdxc/ui";
 import { on } from "remix/ui";
 
 import type { Photo } from "../data/types";

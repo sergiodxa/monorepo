@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isSuccess, unwrap } from "@pkg/result";
+import { isSuccess, unwrap } from "@sdxc/result";
 import { expect } from "vitest";
 
 import type { ScheduleDescriptor } from "../describe";

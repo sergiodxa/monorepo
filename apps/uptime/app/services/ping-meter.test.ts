@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, UsageEvent } from "@pkg/billing";
+import type { Billing, UsageEvent } from "@sdxc/billing";
 
 import { describe, expect, test, vi } from "vitest";
 

@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { MarkdownView } from "@pkg/markdown/client";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@pkg/u/layout";
-import { bleed, is, m, mbs, mi, minIs, p } from "@pkg/u/size";
-import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@pkg/u/typography";
-import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@pkg/ui";
+import { MarkdownView } from "@sdxc/markdown/client";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdxc/u/layout";
+import { bleed, is, m, mbs, mi, minIs, p } from "@sdxc/u/size";
+import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@sdxc/u/typography";
+import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@sdxc/ui";
 import { Frame } from "remix/ui";
 
 import type { PostViewModel } from "~/app/http/view-models/post";

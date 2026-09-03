@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { toMs } from "@pkg/duration";
+import { toMs } from "@sdxc/duration";
 
 import { DAY_MS } from "./zone";
 

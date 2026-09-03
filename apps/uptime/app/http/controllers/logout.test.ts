@@ -11,9 +11,9 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
-import logger from "@pkg/logger/middleware";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import logger from "@sdxc/logger/middleware";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -54,7 +54,7 @@ const AUTH_ORIGIN = "https://auth.sergiodxa.com";
  */
 const AUTH_IDENTIFIER = "auth.sergiodxa.com";
 
-/** The session key `@pkg/auth` holds the signed-in token set under. */
+/** The session key `@sdxc/auth` holds the signed-in token set under. */
 const TOKENS_SESSION_KEY = "auth";
 
 /** A stored token set, read for the `id_token_hint` the provider is handed. */

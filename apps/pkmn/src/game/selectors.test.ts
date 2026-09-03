@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Tests for the creature summary and species-detail selectors.
  *

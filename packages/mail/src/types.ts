@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 import type { RemixElement } from "remix/ui";
 
 import type { MailError } from "./errors";

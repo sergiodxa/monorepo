@@ -1,5 +1,5 @@
 /**
- * `@pkg/u` sizes elements with logical properties by default; this utility
+ * `@sdxc/u` sizes elements with logical properties by default; this utility
  * applies the physical `min-height` instead, for elements whose shape must
  * stay fixed regardless of writing-mode or direction (e.g. a chat bubble's
  * height relative to the screen). Prefer `u.minBs()` for the logical

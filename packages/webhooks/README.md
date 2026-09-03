@@ -1,10 +1,10 @@
-# @pkg/webhooks
+# @sdxc/webhooks
 
 [Standard Webhooks](https://www.standardwebhooks.com/) signing and verification, with `Result`-based failures.
 
 ## Overview
 
-Inbound webhook verification is request authentication: if it is wrong, anyone can post an event. This package implements the Standard Webhooks specification directly on [`@pkg/crypto`](/packages/crypto) — `HMAC-SHA256` over `id.timestamp.body`, compared in constant time — so the authentication path is a few reviewed functions with no vendor SDK and no third-party crypto in it.
+Inbound webhook verification is request authentication: if it is wrong, anyone can post an event. This package implements the Standard Webhooks specification directly on [`@sdxc/crypto`](/packages/crypto) — `HMAC-SHA256` over `id.timestamp.body`, compared in constant time — so the authentication path is a few reviewed functions with no vendor SDK and no third-party crypto in it.
 
 The same scheme covers both directions. `verify()` reads the `webhook-id`, `webhook-timestamp`, and `webhook-signature` headers of an inbound request; `sign()` produces those three headers for an outbound delivery, so receivers can verify it with any off-the-shelf Standard Webhooks library. Signatures are pinned against the specification's published test vector in both directions.
 
@@ -17,8 +17,8 @@ The package exports plain functions and is meant to be imported as a namespace, 
 ### Verifying An Inbound Request
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
-import { isFailure } from "@pkg/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { isFailure } from "@sdxc/result";
 
 let result = await Webhooks.verify(request, { secret: env.WEBHOOK_SECRET });
 if (isFailure(result)) return new Response(null, { status: 401 });
@@ -31,8 +31,8 @@ The body is read once, as text, and verified exactly as received. It comes back 
 ### Typing The Payload
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
-import { isFailure } from "@pkg/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 let SubscriptionEvent = s.object({ type: s.string(), amount: s.number() });
@@ -48,7 +48,7 @@ Any [Standard Schema](https://standardschema.dev) works, so a sender-provided sc
 ### Rotating Secrets
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
+import * as Webhooks from "@sdxc/webhooks";
 
 await Webhooks.verify(request, { secrets: [env.WEBHOOK_SECRET, env.WEBHOOK_SECRET_PREVIOUS] });
 ```
@@ -58,8 +58,8 @@ A delivery is accepted when any configured secret matches, which is what makes a
 ### Signing An Outbound Delivery
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
-import { unwrap } from "@pkg/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { unwrap } from "@sdxc/result";
 
 let signed = unwrap(await Webhooks.sign(event, { secret, id: deliveryId, timestamp: new Date() }));
 
@@ -73,7 +73,7 @@ Send `signed.body`: it is the exact text the signature covers.
 ### Rejecting Replays
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
+import * as Webhooks from "@sdxc/webhooks";
 
 let store = new Webhooks.KVReplayStore(env.WEBHOOKS);
 
@@ -260,8 +260,8 @@ Every failure extends `WebhookError`, so one `instanceof` covers the package. Re
 Distinguish "not authentic" from "authentic but unmodelled", so an unknown event type is not treated as an attack and the sender is not told to retry forever.
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
-import { isFailure } from "@pkg/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { isFailure } from "@sdxc/result";
 
 async function handleWebhook(request: Request): Promise<Response> {
 	let result = await Webhooks.verify(request, {
@@ -297,8 +297,8 @@ async function handleWebhook(request: Request): Promise<Response> {
 Sign once per attempt, reusing the delivery id so the receiver can de-duplicate the retries of one event, and refreshing the timestamp so a slow retry does not arrive stale.
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
-import { unwrap } from "@pkg/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { unwrap } from "@sdxc/result";
 
 async function deliver(endpoint: string, event: unknown, deliveryId: string): Promise<Response> {
 	let signed = unwrap(
@@ -317,8 +317,8 @@ async function deliver(endpoint: string, event: unknown, deliveryId: string): Pr
 Because the id and the timestamp are parameters rather than generated inside `sign()`, a delivery can be re-signed byte for byte.
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
-import { unwrap } from "@pkg/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { unwrap } from "@sdxc/result";
 
 let signed = unwrap(await Webhooks.sign(body, { secret, id: "msg_1", timestamp: 1614265330 }));
 
@@ -336,7 +336,7 @@ let result = await Webhooks.verify(request, { secret, tolerance: "3650 days" });
 Add the new secret to the front of the list, wait for the sender's queue to drain, then drop the old one.
 
 ```typescript
-import * as Webhooks from "@pkg/webhooks";
+import * as Webhooks from "@sdxc/webhooks";
 
 let secrets = [env.WEBHOOK_SECRET, env.WEBHOOK_SECRET_PREVIOUS].filter(Boolean);
 
@@ -347,11 +347,11 @@ Every configured secret must decode: one unusable entry fails the call, because 
 
 ## Related Packages
 
-- [`@pkg/crypto`](/packages/crypto) - HMAC, base64url, and the constant-time comparison this package is built on
-- [`@pkg/duration`](/packages/duration) - the `DurationInput` used by `tolerance` and `ttl`
-- [`@pkg/validate`](/packages/validate) - Standard Schema parsing behind the `schema` option
-- [`@pkg/result`](/packages/result) - the `Result` every function here returns
-- [`@pkg/rate-limit`](/packages/rate-limit) - webhook endpoints should be rate limited too; both apply to the same route
+- [`@sdxc/crypto`](/packages/crypto) - HMAC, base64url, and the constant-time comparison this package is built on
+- [`@sdxc/duration`](/packages/duration) - the `DurationInput` used by `tolerance` and `ttl`
+- [`@sdxc/validate`](/packages/validate) - Standard Schema parsing behind the `schema` option
+- [`@sdxc/result`](/packages/result) - the `Result` every function here returns
+- [`@sdxc/rate-limit`](/packages/rate-limit) - webhook endpoints should be rate limited too; both apply to the same route
 
 ## Tips
 

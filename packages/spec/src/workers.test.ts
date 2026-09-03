@@ -10,7 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { Grants } from "./permissions";

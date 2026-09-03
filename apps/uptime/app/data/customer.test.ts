@@ -18,11 +18,11 @@ import type {
 	CreatePortalInput,
 	Customer as BillingCustomer,
 	CustomerApi,
-} from "@pkg/billing";
+} from "@sdxc/billing";
 
-import { IdToken } from "@pkg/auth/id-token";
-import { BillingError } from "@pkg/billing";
-import { failure, isFailure, success, unwrap } from "@pkg/result";
+import { IdToken } from "@sdxc/auth/id-token";
+import { BillingError } from "@sdxc/billing";
+import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import Customer from "~/app/data/customer";

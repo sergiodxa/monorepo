@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Container, ServiceProvider } from "@pkg/service-container";
+import type { Container, ServiceProvider } from "@sdxc/service-container";
 
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 

@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { unwrap } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { rawSql } from "remix/data-table";

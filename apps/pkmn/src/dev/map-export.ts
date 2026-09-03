@@ -11,7 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { failure, isFailure, type Result, success } from "@pkg/result";
+import { failure, isFailure, type Result, success } from "@sdxc/result";
 
 import type { MapData } from "~/presentation/render/map-schema";
 

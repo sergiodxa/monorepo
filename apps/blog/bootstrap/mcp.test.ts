@@ -8,13 +8,13 @@
  * missing from `bootstrap/mcp.ts`.
  *
  * The handlers themselves reach a database this app covers at the repository layer, so
- * their behaviour is asserted there and by `@pkg/mcp`'s own tests.
+ * their behaviour is asserted there and by `@sdxc/mcp`'s own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@pkg/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { describe, expect, test } from "vitest";
 
 import resourceset from "~/app/mcp/resources";

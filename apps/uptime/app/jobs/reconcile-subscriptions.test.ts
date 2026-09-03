@@ -13,12 +13,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, CustomerRef, EntitlementState } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { Billing, CustomerRef, EntitlementState } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
-import { success, unwrap } from "@pkg/result";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
+import { success, unwrap } from "@sdxc/result";
 import { getTableName } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Issuer } from "@pkg/auth/issuer";
-import type { RelyingParty } from "@pkg/auth/relying-party";
+import type { Issuer } from "@sdxc/auth/issuer";
+import type { RelyingParty } from "@sdxc/auth/relying-party";
 
 import type { EngineAuthConfig } from "../../auth/oidc";
 

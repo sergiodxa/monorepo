@@ -9,7 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { inject } from "@pkg/service-container";
+import { inject } from "@sdxc/service-container";
 
 import { RedirectsService } from "~/app/services/redirects";
 

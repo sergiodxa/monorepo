@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, unwrap } from "@pkg/result";
-import { ValidationError } from "@pkg/validate";
+import { isFailure, unwrap } from "@sdxc/result";
+import { ValidationError } from "@sdxc/validate";
 import { describe, expect, test } from "vitest";
 
 import { paginate } from "./headers";

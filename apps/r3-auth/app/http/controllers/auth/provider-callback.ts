@@ -11,10 +11,10 @@
 
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { badRequest } from "@pkg/http/response/json";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { badRequest } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

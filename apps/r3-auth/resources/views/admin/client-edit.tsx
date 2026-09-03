@@ -10,9 +10,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { flex, flexCol, gap } from "@pkg/u/layout";
-import { mbs, p } from "@pkg/u/size";
-import { font } from "@pkg/u/typography";
+import { flex, flexCol, gap } from "@sdxc/u/layout";
+import { mbs, p } from "@sdxc/u/size";
+import { font } from "@sdxc/u/typography";
 import {
 	Alert,
 	Button,
@@ -24,7 +24,7 @@ import {
 	Text,
 	TextArea,
 	TextField,
-} from "@pkg/ui";
+} from "@sdxc/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

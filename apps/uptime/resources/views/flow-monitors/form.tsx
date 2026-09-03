@@ -12,10 +12,10 @@
 import type { getContext } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { m } from "@pkg/u/size";
-import { font, fontSize } from "@pkg/u/typography";
-import { Select, Switch, TextArea, TextField } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { m } from "@sdxc/u/size";
+import { font, fontSize } from "@sdxc/u/typography";
+import { Select, Switch, TextArea, TextField } from "@sdxc/ui";
 
 import type { SelectFlowMonitor } from "~/database/schema";
 

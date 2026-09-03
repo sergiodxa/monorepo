@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
-import { notFound } from "@pkg/http/response/html";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { redirect } from "@sdxc/http/response";
+import { notFound } from "@sdxc/http/response/html";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";

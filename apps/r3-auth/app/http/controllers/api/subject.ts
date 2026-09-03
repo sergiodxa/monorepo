@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound, ok } from "@pkg/http/response/json";
-import { inject } from "@pkg/service-container";
+import { notFound, ok } from "@sdxc/http/response/json";
+import { inject } from "@sdxc/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Issuer } from "@pkg/auth/issuer";
-import { Cache } from "@pkg/kv-cache";
+import { Issuer } from "@sdxc/auth/issuer";
+import { Cache } from "@sdxc/kv-cache";
 
 import { getEnv } from "~/app/http/middleware/env";
 

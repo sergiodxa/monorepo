@@ -20,7 +20,7 @@ import { JobContext as Context } from "./context";
  * `RouterTypes` does for routes.
  *
  * @example
- * declare module "@pkg/jobs" {
+ * declare module "@sdxc/jobs" {
  * 	interface JobTypes {
  * 		context: JobDispatcherContext<typeof dispatcher>;
  * 	}

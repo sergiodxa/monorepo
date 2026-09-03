@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Email } from "@pkg/mail";
+import type { Email } from "@sdxc/mail";
 
-import { render } from "@pkg/mail";
+import { render } from "@sdxc/mail";
 import { describe, expect, test } from "vitest";
 
 import { FunnelReportEmail } from "~/app/emails/funnel-report";

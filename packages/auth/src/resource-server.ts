@@ -10,7 +10,7 @@
 import type { AuthScheme, AuthSchemeFailure } from "remix/middleware/auth";
 import type { RequestContext } from "remix/router";
 
-import { isFailure, wrap } from "@pkg/result";
+import { isFailure, wrap } from "@sdxc/result";
 
 import type { Issuer } from "./issuer";
 

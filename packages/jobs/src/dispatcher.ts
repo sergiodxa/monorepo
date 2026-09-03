@@ -9,13 +9,13 @@
  */
 
 import type { Message, MessageBatch, ScheduledController } from "@cloudflare/workers-types";
-import type { DurationInput } from "@pkg/duration";
-import type { JSONValue } from "@pkg/types";
+import type { DurationInput } from "@sdxc/duration";
+import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { BatchedLogger } from "@pkg/logger";
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { BatchedLogger } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 
 import type { JobContext } from "./context";
 import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler";

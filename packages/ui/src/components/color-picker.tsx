@@ -9,13 +9,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
-import { hstack, inlineFlex, relative, shrink, vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { outline } from "@sdxc/u/color";
+import { opacity, rounded, transition } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
+import { hstack, inlineFlex, relative, shrink, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";

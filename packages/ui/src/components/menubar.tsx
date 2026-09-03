@@ -9,13 +9,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, userSelect } from "@pkg/u/general";
-import { flex, gap, inlineFlex, items } from "@pkg/u/layout";
-import { pb, pi } from "@pkg/u/size";
-import { active, disabled, hover, when } from "@pkg/u/state";
-import { text, weight } from "@pkg/u/typography";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, userSelect } from "@sdxc/u/general";
+import { flex, gap, inlineFlex, items } from "@sdxc/u/layout";
+import { pb, pi } from "@sdxc/u/size";
+import { active, disabled, hover, when } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
+import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 
-import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
+import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 

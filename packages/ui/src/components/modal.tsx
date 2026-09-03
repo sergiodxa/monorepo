@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { opacity, transition, transitionBehavior, transitionProperty } from "@pkg/u/effects";
-import { media, startingStyle } from "@pkg/u/responsive";
-import { when } from "@pkg/u/state";
-import { scaleProperty } from "@pkg/u/transform";
+import { opacity, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
+import { media, startingStyle } from "@sdxc/u/responsive";
+import { when } from "@sdxc/u/state";
+import { scaleProperty } from "@sdxc/u/transform";
 
 import { durations, easings } from "../animations/tokens";
 

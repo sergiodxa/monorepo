@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, BillingError, Customer as BillingCustomer } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { Billing, BillingError, Customer as BillingCustomer } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import type { SelectSubject } from "~/database/schema";
 

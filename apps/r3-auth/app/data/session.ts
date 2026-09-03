@@ -10,8 +10,8 @@
 
 import type { Database } from "remix/data-table";
 
-import { toMs } from "@pkg/duration";
-import { generateUUID } from "@pkg/uuid";
+import { toMs } from "@sdxc/duration";
+import { generateUUID } from "@sdxc/uuid";
 import { gt, lte } from "remix/data-table";
 
 import type { SelectClient, SelectSession } from "~/database/schema";

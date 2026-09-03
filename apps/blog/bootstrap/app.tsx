@@ -10,8 +10,8 @@
 import type { Middleware, RequestContext } from "remix/router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
-import { headRequests } from "@pkg/http/middleware/head-requests";
-import { redirect } from "@pkg/http/response";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { redirect } from "@sdxc/http/response";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";

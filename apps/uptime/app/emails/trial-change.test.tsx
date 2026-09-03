@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { render } from "@pkg/mail";
+import { render } from "@sdxc/mail";
 import { describe, expect, test } from "vitest";
 
 import { emailTranslator } from "~/app/emails/locale";

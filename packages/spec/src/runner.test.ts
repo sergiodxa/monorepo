@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { SuiteResult } from "./diagnostics";

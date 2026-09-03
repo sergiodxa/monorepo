@@ -15,7 +15,7 @@
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@pkg/get-client-ip";
+import { getClientIP } from "@sdxc/get-client-ip";
 
 import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";

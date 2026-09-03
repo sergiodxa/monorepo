@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import { JWK, JWT } from "@pkg/jwt";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import { JWK, JWT } from "@sdxc/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";

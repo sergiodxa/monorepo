@@ -1,4 +1,4 @@
-# @pkg/kv-cache
+# @sdxc/kv-cache
 
 Cache store abstraction for Cloudflare KV with a simple, consistent API.
 
@@ -16,7 +16,7 @@ The cache supports:
 ## Usage
 
 ```typescript
-import { Cache } from "@pkg/kv-cache";
+import { Cache } from "@sdxc/kv-cache";
 
 // Create a KV store instance
 let cache = new Cache.KVStore(env.KV, ctx.waitUntil.bind(ctx));
@@ -86,7 +86,7 @@ Write a value to the cache. Uses `waitUntil` for non-blocking writes.
 
 - `key`: The cache key
 - `value`: The string value to cache
-- `options.ttl`: Optional TTL, either a number of seconds or a `@pkg/duration` string such as `"1 hour"`
+- `options.ttl`: Optional TTL, either a number of seconds or a `@sdxc/duration` string such as `"1 hour"`
 - `options.metadata`: Optional KV metadata
 
 **Example:**
@@ -137,7 +137,7 @@ Fetch-through pattern: read from cache, or compute and cache if missing.
 
 - `key`: The cache key
 - `fn`: Function to compute the value if not cached
-- `options.ttl`: Optional TTL, either a number of seconds or a `@pkg/duration` string such as `"1 hour"`
+- `options.ttl`: Optional TTL, either a number of seconds or a `@sdxc/duration` string such as `"1 hour"`
 
 **Returns:**
 
@@ -217,7 +217,7 @@ Create a cache middleware for React Router:
 
 ```typescript
 // app/middleware/cache.ts
-import { Cache } from "@pkg/kv-cache";
+import { Cache } from "@sdxc/kv-cache";
 import { getContext } from "./context-storage";
 
 export function getCache(): Cache.KVStore {
@@ -230,7 +230,7 @@ export function getCache(): Cache.KVStore {
 
 ```typescript
 import { getCache } from "~/middleware/cache";
-import { ok } from "@pkg/response";
+import { ok } from "@sdxc/response";
 import type { Route } from "./+types/route";
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -255,7 +255,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 ```typescript
 import { getCache } from "~/middleware/cache";
-import { ok } from "@pkg/response";
+import { ok } from "@sdxc/response";
 
 export async function action({ params, request }: Route.ActionArgs) {
   let cache = getCache();
@@ -326,8 +326,8 @@ async function warmCache(cache: Cache.KVStore) {
 
 ## Related Packages
 
-- [`@pkg/logger`](/packages/logger) - Logging for cache operations
-- [`@pkg/result`](/packages/result) - Result pattern for cache operations that can fail
+- [`@sdxc/logger`](/packages/logger) - Logging for cache operations
+- [`@sdxc/result`](/packages/result) - Result pattern for cache operations that can fail
 
 ## Tips
 

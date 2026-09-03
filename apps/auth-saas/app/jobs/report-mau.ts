@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
+import type { UsageEvent } from "@sdxc/billing";
 
-import { Logger } from "@pkg/logger";
-import { isFailure } from "@pkg/result";
+import { Logger } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import { CONNECTION, failureFields, MAU_METER, polar } from "~/app/lib/billing";

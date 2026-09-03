@@ -15,10 +15,10 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, isSuccess, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 
 import type { DiagnosticCode } from "./errors";
 import type { PermissionSet } from "./permissions";

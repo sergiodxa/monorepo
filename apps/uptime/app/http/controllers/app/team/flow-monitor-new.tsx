@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@pkg/service-container";
-import { Button } from "@pkg/ui";
+import { inject } from "@sdxc/service-container";
+import { Button } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

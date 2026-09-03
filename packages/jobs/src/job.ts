@@ -10,8 +10,8 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
 
 /**
  * The five fields a cron trigger is written in. Catches an expression with too few of

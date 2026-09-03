@@ -1,7 +1,7 @@
 /**
  * `remix/ui` context provider that publishes a live i18next instance to
  * descendants, the render-tree counterpart to `context.i18next` from
- * `@pkg/i18n/middleware`. Re-renders its subtree client-side when the
+ * `@sdxc/i18n/middleware`. Re-renders its subtree client-side when the
  * instance's language changes or a namespace loads, and stays inert
  * server-side so `context.locale` stays fixed for a request's lifetime.
  *
@@ -71,7 +71,7 @@ let defaultI18n: I18n | undefined;
 export function setIntl(i18n: I18n): void {
 	if (typeof document === "undefined") {
 		throw new Error(
-			"setIntl() is browser-only. A module-scoped instance would be shared by every concurrent request in a Workers isolate, exactly what @pkg/i18n/middleware's per-request instance exists to avoid.",
+			"setIntl() is browser-only. A module-scoped instance would be shared by every concurrent request in a Workers isolate, exactly what @sdxc/i18n/middleware's per-request instance exists to avoid.",
 		);
 	}
 

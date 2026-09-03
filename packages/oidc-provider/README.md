@@ -1,4 +1,4 @@
-# @pkg/oidc-provider
+# @sdxc/oidc-provider
 
 A host-agnostic OAuth 2.0 / OpenID Connect provider with passkey authentication.
 
@@ -26,8 +26,8 @@ platform↔tenant management-API contract. See
 ### Self-hosted (Cloudflare Worker + D1)
 
 ```typescript
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createOidcProvider, type OidcProvider } from "@pkg/oidc-provider";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import { createOidcProvider, type OidcProvider } from "@sdxc/oidc-provider";
 
 let provider: OidcProvider | null = null;
 
@@ -46,8 +46,8 @@ export default {
 ### Platform tenant (Durable Object)
 
 ```typescript
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
-import { createOidcProvider, type OidcProvider } from "@pkg/oidc-provider";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { createOidcProvider, type OidcProvider } from "@sdxc/oidc-provider";
 import { DurableObject } from "cloudflare:workers";
 
 export class Tenant extends DurableObject<Env> {
@@ -89,8 +89,8 @@ Creates a provider instance bound to injected storage and secrets.
 **Parameters:**
 
 - `config.database`: A `remix/data-table` `DatabaseDriver`. Use
-  [`@pkg/data-table-d1`](/packages/data-table-d1) for a self-hosted Worker or
-  [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) for a Durable Object.
+  [`@sdxc/data-table-d1`](/packages/data-table-d1) for a self-hosted Worker or
+  [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) for a Durable Object.
 - `config.internalSecret`: HMAC secret shared with the control plane; used to verify
   internal tokens on the management API.
 - `config.analytics`: Optional `AnalyticsSink` for authentication/registration
@@ -235,9 +235,9 @@ so a corrupt row denies access instead of reaching the caller as a failure to cl
 
 ## Related Packages
 
-- [`@pkg/crypto`](/packages/crypto) - Password hashing, digests, and random tokens used throughout the provider
-- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - Adapter to run the provider in a Durable Object
-- [`@pkg/data-table-d1`](/packages/data-table-d1) - Adapter to run the provider on a self-hosted Worker with D1
+- [`@sdxc/crypto`](/packages/crypto) - Password hashing, digests, and random tokens used throughout the provider
+- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - Adapter to run the provider in a Durable Object
+- [`@sdxc/data-table-d1`](/packages/data-table-d1) - Adapter to run the provider on a self-hosted Worker with D1
 
 ## Tips
 

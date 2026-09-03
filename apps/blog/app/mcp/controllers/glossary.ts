@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { createToolController, ToolError } from "@pkg/mcp";
+import { createToolController, ToolError } from "@sdxc/mcp";
 
 import { getDatabase } from "~/app/http/middleware/database";
 import toolset from "~/app/mcp/tools";

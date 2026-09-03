@@ -13,19 +13,19 @@ This document defines app-specific rules for `apps/blog`.
   - `published_at` in the future => preview
 - MUST only support `articles` and `tutorials` in `app/http/controllers/post.tsx`; unsupported `postType` must return 404.
 - MUST keep DB-facing fields in `snake_case` (`author_id`, `published_at`, `created_at`, etc.).
-- MUST style every component and view with `@pkg/u` utility mixins in a `mix` array, not `css({ ... })` objects; `u.raw({ ... })` is the only escape hatch, for properties the package has no utility for.
+- MUST style every component and view with `@sdxc/u` utility mixins in a `mix` array, not `css({ ... })` objects; `u.raw({ ... })` is the only escape hatch, for properties the package has no utility for.
 - MUST express every length through the shared scales: spacing as a scale multiple (`u.p(4)`, `u.gap(2)`), radius as a named token (`u.rounded("lg")`), and font size as a named step (`u.text("sm")`). Off-scale one-off values (`0.45rem`, `0.7rem`, `1.05rem`, `borderRadius: "clamp(...)"`) are not acceptable, even to preserve an existing look.
-- MUST express color through the `@pkg/u` color utilities against the five semantic tones — `neutral`, `brand`, `success`, `warning`, `danger` — as in `u.bg("brand.tint")` / `u.fg("neutral.emphasis")` / `u.border({ width: 1, color: "neutral" })`. Never hand-write a `var(--ui-*)` string in a component.
-- MUST reach for a `@pkg/ui` component before hand-styling markup that the catalog already covers (`Button`, `LinkButton`, `Input`, `Select`, `TextArea`, `Label`, `Form`, `Card`, `Badge`, `Heading`, `Link`, `NavLink`, `Table`, `Modal`, `Typeset`, …), and MUST render every one as JSX, never call it as a plain function.
-- MUST keep `resources/css/colors.css` limited to the raw `--ui-color-{tone}-{50..950}` palette scales and the `--ui-font-*` overrides; the semantic `--ui-{tone}-*` layer comes from `@pkg/ui/theme.css` and MUST NOT be redeclared here.
+- MUST express color through the `@sdxc/u` color utilities against the five semantic tones — `neutral`, `brand`, `success`, `warning`, `danger` — as in `u.bg("brand.tint")` / `u.fg("neutral.emphasis")` / `u.border({ width: 1, color: "neutral" })`. Never hand-write a `var(--ui-*)` string in a component.
+- MUST reach for a `@sdxc/ui` component before hand-styling markup that the catalog already covers (`Button`, `LinkButton`, `Input`, `Select`, `TextArea`, `Label`, `Form`, `Card`, `Badge`, `Heading`, `Link`, `NavLink`, `Table`, `Modal`, `Typeset`, …), and MUST render every one as JSX, never call it as a plain function.
+- MUST keep `resources/css/colors.css` limited to the raw `--ui-color-{tone}-{50..950}` palette scales and the `--ui-font-*` overrides; the semantic `--ui-{tone}-*` layer comes from `@sdxc/ui/theme.css` and MUST NOT be redeclared here.
 - MUST assemble the `<html>`/`<head>`/`<body>` shell only in `resources/layouts/document.tsx`; page shells (`blog.tsx`, `cms.tsx`) compose it and contribute their own chrome. The stylesheet order (reset, app palette, theme, then page stylesheets), the `<title>`/meta tags, and the client entry script live there and nowhere else, so a change lands once.
 - MUST NOT load the `bootstrap/browser.ts` client entry from the document shell without re-testing navigation on Safari. Loading it buys SPA-style navigation, and on Safari it also made navigating out of a post flash unstyled: the runtime keeps every generated atomic rule in one constructed `adoptedStyleSheets` entry and releases the rules the incoming page doesn't use (57 of 145 leaving a post), which Safari repaints during. Keying the head children, serving every stylesheet on every page, and wrapping the swap in a view transition all failed to fix it. If it is re-enabled, `<script type="module" async>` plus a matching `modulepreload` is the right shape — `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
 - SHOULD keep the build and document setup conventional: the `vite.config.ts` shape, the `resources/layouts/document.tsx` role, and the `CLIENT_ENTRY_SRC` constant are the shared vocabulary every Remix v3 app in this repo uses, so a change here should be expressible the same way anywhere else.
-- MUST keep code-block syntax colors in `resources/css/highlight.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales. The file declares the `--highlight-*` properties that `@pkg/highlight/styles.css` paints each token type from; the selectors themselves belong to the package.
+- MUST keep code-block syntax colors in `resources/css/highlight.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales. The file declares the `--highlight-*` properties that `@sdxc/highlight/styles.css` paints each token type from; the selectors themselves belong to the package.
 - MUST ensure changes pass `bunx tsc -p apps/blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 - MUST receive `ctx` as a handler argument in `app/http/controllers/**/*` (actions, handlers, and inline middleware callbacks) and use that value directly.
-- MUST read database access in HTTP handlers from `@pkg/service-container` using `inject([Database] as const, ...)`, while keeping `ctx` as the forwarded handler argument.
+- MUST read database access in HTTP handlers from `@sdxc/service-container` using `inject([Database] as const, ...)`, while keeping `ctx` as the forwarded handler argument.
 - MUST keep Cloudflare/environment typing declarations in `config/*.d.ts` (outside `app/`) and include them in app TS config.
 - MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
@@ -49,7 +49,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST NOT use direct `#hex` colors, or any raw color literal, in `resources/**/*.tsx`.
 - MUST NOT hoist a `mix` array or a style object to a module-level constant; write `mix` inline at the call site and accept the repetition, extracting a Handle-pattern component instead when markup genuinely repeats.
 - MUST NOT reintroduce app-local copies of components the design system already ships (button, input, select, modal).
-- MUST NOT bypass `@pkg/markdown/server` for markdown parsing.
+- MUST NOT bypass `@sdxc/markdown/server` for markdown parsing.
 - MUST NOT use `as any` anywhere in this app (`apps/blog/**/*`), including tests, scripts, controllers, middleware, repositories, views, and config files.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
 - MUST NOT read database access from request context with `ctx.get(Database)` in HTTP handlers.

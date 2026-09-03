@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { XML } from "./index";

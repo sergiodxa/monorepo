@@ -1,6 +1,6 @@
 /**
  * A per-row kebab-icon actions menu, generic over its items, built on
- * `@pkg/ui`'s `Menu`/`Popover` compound. Anchoring reuses the Popover API's
+ * `@sdxc/ui`'s `Menu`/`Popover` compound. Anchoring reuses the Popover API's
  * implicit-anchor behavior — the `commandfor` invoker relationship doubles as
  * the CSS anchor — so each row's independently positioned trigger gets a
  * correctly placed panel with no manual anchor-name wiring.
@@ -15,17 +15,17 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { EllipsisVerticalIcon } from "@pkg/icons";
-import { bg, border, borderEdge, fg } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
-import { flex, gap, inlineFlex, items, justify } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { height, is, m, p, width } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { font, fontSize, textAlign, textDecoration } from "@pkg/u/typography";
-import { Menu } from "@pkg/ui";
-import { menuKeys } from "@pkg/ui/mixins";
+import { EllipsisVerticalIcon } from "@sdxc/icons";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
+import { flex, gap, inlineFlex, items, justify } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { height, is, m, p, width } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { font, fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
+import { Menu } from "@sdxc/ui";
+import { menuKeys } from "@sdxc/ui/mixins";
 
 namespace RowMenu {
 	export interface Props {

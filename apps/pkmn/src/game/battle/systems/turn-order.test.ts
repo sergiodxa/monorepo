@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies deterministic turn action ordering when priority and effective speed
  * are tied. These tests focus on the turn-order system directly and add one

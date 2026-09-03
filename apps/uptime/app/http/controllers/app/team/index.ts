@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";

@@ -6,15 +6,15 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
 import {
 	ManagementClient,
 	ManagementError,
 	ManagementErrorCode,
 	SubjectNotFoundError,
-} from "@pkg/auth/management-client";
-import { failure, success } from "@pkg/result";
+} from "@sdxc/auth/management-client";
+import { failure, success } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { resolveSubjects } from "~/app/services/subjects";

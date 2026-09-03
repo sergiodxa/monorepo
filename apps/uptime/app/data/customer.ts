@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IdToken } from "@pkg/auth/id-token";
-import type { Billing, BillingError, Customer as BillingCustomer } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { IdToken } from "@sdxc/auth/id-token";
+import type { Billing, BillingError, Customer as BillingCustomer } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 
-import { BillingError as BillingFailure, supports } from "@pkg/billing";
-import { failure, isFailure, success } from "@pkg/result";
+import { BillingError as BillingFailure, supports } from "@sdxc/billing";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import routes from "~/routes/web";

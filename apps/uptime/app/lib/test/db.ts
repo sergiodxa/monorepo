@@ -12,7 +12,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import type {
 	DatabaseCapabilities,
 	DataManipulationOperation,
@@ -24,7 +24,7 @@ import type {
 	TransactionToken,
 } from "remix/data-table";
 
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import {
 	Database,
 	getTableColumnDefinitions,
@@ -41,7 +41,7 @@ interface SqliteAdapterOptions {
  * Creates a `DatabaseDriver` for Bun's SQLite, compiling the same data-table
  * operations production runs so models, jobs, and controllers execute against
  * a real SQL engine in tests.
- * @param db - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
+ * @param db - An open SQLite database from `@sdxc/cloudflare-mocks/sqlite`.
  * @param options - Optional capability overrides for the adapter.
  * @returns A `DatabaseDriver` backed by the given SQLite database.
  * @example
@@ -1015,7 +1015,7 @@ function isInsertOperation(
  * given in-memory database. `before` stops short of one file so a test can seed
  * data against the prior schema, then apply that file alone via {@link applyMigration}.
  *
- * @param sqliteDb - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
+ * @param sqliteDb - An open SQLite database from `@sdxc/cloudflare-mocks/sqlite`.
  * @param before - Filename to stop before, exclusive. Applies everything when omitted.
  */
 export function applyMigrations(sqliteDb: SqliteDatabase, before?: string): void {
@@ -1029,7 +1029,7 @@ export function applyMigrations(sqliteDb: SqliteDatabase, before?: string): void
 
 /**
  * Applies one named migration, for the test that seeded the rows it is meant to convert.
- * @param sqliteDb - An open SQLite database from `@pkg/cloudflare-mocks/sqlite`.
+ * @param sqliteDb - An open SQLite database from `@sdxc/cloudflare-mocks/sqlite`.
  * @param file - Filename inside `database/migrations/`, extension included.
  */
 export function applyMigration(sqliteDb: SqliteDatabase, file: string): void {

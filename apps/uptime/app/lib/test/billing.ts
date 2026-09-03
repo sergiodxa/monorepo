@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { EntitlementState, SubscriptionStatus, UsageRecord } from "@pkg/billing";
+import type { EntitlementState, SubscriptionStatus, UsageRecord } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { unwrap } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { unwrap } from "@sdxc/result";
 
 import Subscription from "~/app/data/subscription";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";

@@ -9,17 +9,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
-import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
+import type { UsageEvent } from "@sdxc/billing";
+import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 
-import { BillingError } from "@pkg/billing";
-import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
-import { Mailer } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { failure } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import { BillingError } from "@sdxc/billing";
+import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { failure } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 

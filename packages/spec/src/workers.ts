@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { Random, Seed } from "@pkg/sample";
+export type { Random, Seed } from "@sdxc/sample";
 
 export type * from "./ast";
 export type { Sink, SuiteResult, TestResult, TestStatus } from "./diagnostics";

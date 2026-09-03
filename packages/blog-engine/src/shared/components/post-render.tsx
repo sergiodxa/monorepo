@@ -8,7 +8,7 @@
  */
 import type { Handle } from "remix/ui";
 
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@sdxc/markdown/client";
 
 import type { PostTypeDefinition } from "../../post-types/models/post-type";
 import type { PostMetaValues } from "../../posts/models/meta-codec";

@@ -6,10 +6,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UsageEvent } from "@pkg/billing";
+import type { UsageEvent } from "@sdxc/billing";
 
-import { createJobHandler } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
 import { PAGE_VIEWS_METER, polar } from "~/app/lib/billing";

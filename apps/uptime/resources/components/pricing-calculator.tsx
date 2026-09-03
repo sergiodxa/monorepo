@@ -6,7 +6,7 @@
  *
  * Renders server-side with the initial frequencies so sliders work as native
  * controls before hydration, totals settling in once the island's module
- * lands. Copy reads through `@pkg/i18n/ui`'s `intl(handle)`, since the totals
+ * lands. Copy reads through `@sdxc/i18n/ui`'s `intl(handle)`, since the totals
  * need the active language for `Intl.NumberFormat` too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -15,12 +15,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { intl } from "@pkg/i18n/ui";
-import { PlusIcon, XIcon } from "@pkg/icons";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, fg, linearGradient } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { counterIncrement, counterReset, listStyle, pseudoContent } from "@pkg/u/general";
+import { intl } from "@sdxc/i18n/ui";
+import { PlusIcon, XIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, linearGradient } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { counterIncrement, counterReset, listStyle, pseudoContent } from "@sdxc/u/general";
 import {
 	absolute,
 	flex,
@@ -34,12 +34,12 @@ import {
 	justify,
 	relative,
 	vstack,
-} from "@pkg/u/layout";
-import { dark, media } from "@pkg/u/responsive";
-import { bs, is, m, mbs, p, pis } from "@pkg/u/size";
-import { before } from "@pkg/u/state";
-import { fontSize, tabularNums, weight } from "@pkg/u/typography";
-import { Button, Card, Heading, HeadingScope, Label, Separator, Slider } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { dark, media } from "@sdxc/u/responsive";
+import { bs, is, m, mbs, p, pis } from "@sdxc/u/size";
+import { before } from "@sdxc/u/state";
+import { fontSize, tabularNums, weight } from "@sdxc/u/typography";
+import { Button, Card, Heading, HeadingScope, Label, Separator, Slider } from "@sdxc/ui";
 import { clientEntry, on } from "remix/ui";
 
 import {

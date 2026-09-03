@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { password } from "@pkg/crypto";
-import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { password } from "@sdxc/crypto";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { underpoweredHash } from "../test/hashes";

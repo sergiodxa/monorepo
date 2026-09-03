@@ -57,21 +57,21 @@ breaks something you cannot see from here:
   the typed `routes.x.href()` — never a hand-written path string.
 - **Views** are `remix/ui` components under `resources/`. Every component takes a
   `Handle` and returns a render function, and is used as JSX — never called as a plain
-  function. No `key=` on `remix/ui` or `@pkg/ui` components.
-- **Styling** is `@pkg/u` mixins in a `mix` array, with anything bespoke written as an
+  function. No `key=` on `remix/ui` or `@sdxc/ui` components.
+- **Styling** is `@sdxc/u` mixins in a `mix` array, with anything bespoke written as an
   inline `css({...})` or `u.raw({...})` at the use site rather than as a module-level
   constant. Wrapper utilities (`u.dark()`, `u.focusVisible()`, `u.when()`) only accept
-  `@pkg/u` mixins, so reach for `u.raw()` inside them, not `css()`.
-- **Validation** is `remix/data-schema` through `@pkg/validate`. Never Zod.
-- **Errors** are `@pkg/result`: services return a `Result`, and controllers decide what a
+  `@sdxc/u` mixins, so reach for `u.raw()` inside them, not `css()`.
+- **Validation** is `remix/data-schema` through `@sdxc/validate`. Never Zod.
+- **Errors** are `@sdxc/result`: services return a `Result`, and controllers decide what a
   visitor sees. Never surface an upstream provider's error text to a visitor.
-- **Billing** is `@pkg/billing`: the Polar connection is built once in `app/lib/billing.ts`
+- **Billing** is `@sdxc/billing`: the Polar connection is built once in `app/lib/billing.ts`
   and published as `ctx.billing` by the middleware, and every call answers a `Result`
   rather than throwing. Address a package by its slug, never by a product id.
 - **The newsletter client** comes from the service container (`app/lib/container.ts`),
   resolved per request. It calls the global `fetch` directly — never add an injectable
   `fetch` parameter.
-- **Logging** is `@pkg/logger`. Keep the existing event names (`user_subscribed`,
+- **Logging** is `@sdxc/logger`. Keep the existing event names (`user_subscribed`,
   `order_paid`, `checkout_started`, `discount_applied`, …): dashboards read them. Never
   log the Buttondown API key or the webhook secret.
 

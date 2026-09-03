@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { forbidden } from "@pkg/http/response/html";
+import { forbidden } from "@sdxc/http/response/html";
 
 import type { TenantMemberRole } from "~/app/models/tenant-member";
 

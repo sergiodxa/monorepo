@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JSONValue } from "@pkg/types";
+import type { JSONValue } from "@sdxc/types";
 
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 
 import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils";

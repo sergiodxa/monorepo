@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@pkg/jwt";
+import { JWT } from "@sdxc/jwt";
 
 /** ID token time-to-live in milliseconds (1 hour). */
 const ID_TOKEN_TTL = 60 * 60 * 1000;

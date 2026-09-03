@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { RelyingParty } from "@pkg/auth/relying-party";
-import { JWK } from "@pkg/jwt";
+import { RelyingParty } from "@sdxc/auth/relying-party";
+import { JWK } from "@sdxc/jwt";
 import * as s from "remix/data-schema";
 
 import type { User } from "~/app/repositories/user";

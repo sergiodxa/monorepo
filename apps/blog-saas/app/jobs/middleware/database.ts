@@ -5,9 +5,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { JobMiddleware } from "@pkg/jobs";
+import type { JobMiddleware } from "@sdxc/jobs";
 
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { env } from "cloudflare:workers";
 import { Database as DataTable } from "remix/data-table";
 import { createContextKey } from "remix/router";

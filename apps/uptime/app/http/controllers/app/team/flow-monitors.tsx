@@ -4,7 +4,7 @@
  * `requireUser` + `requireTeam`.
  *
  * Each row's kebab-icon actions menu is the shared `RowMenu` — view, edit, delete — and its delete
- * confirmation is `@pkg/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
+ * confirmation is `@sdxc/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
  * wrapper, since the confirming control is a real `<form method="post">` submit button rather than
  * a `command="close"` action. The same composition the HTTP monitors' list uses, so the two tables
  * draw the same row.
@@ -13,15 +13,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime, formatRelative } from "@pkg/dates";
-import { EyeIcon, PencilIcon, PlusIcon, TrashIcon, WorkflowIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { fg } from "@pkg/u/color";
-import { flex, items } from "@pkg/u/layout";
-import { hover } from "@pkg/u/state";
-import { nowrap, textDecoration } from "@pkg/u/typography";
-import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
+import { formatDateTime, formatRelative } from "@sdxc/dates";
+import { EyeIcon, PencilIcon, PlusIcon, TrashIcon, WorkflowIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { fg } from "@sdxc/u/color";
+import { flex, items } from "@sdxc/u/layout";
+import { hover } from "@sdxc/u/state";
+import { nowrap, textDecoration } from "@sdxc/u/typography";
+import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

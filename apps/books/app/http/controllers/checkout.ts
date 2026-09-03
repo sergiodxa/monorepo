@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Discount } from "@pkg/billing";
+import type { Discount } from "@sdxc/billing";
 
-import { redirect } from "@pkg/http/response";
-import { isFailure, isSuccess } from "@pkg/result";
+import { redirect } from "@sdxc/http/response";
+import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { email } from "remix/data-schema/checks";
 import { createAction } from "remix/router";

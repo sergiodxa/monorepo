@@ -9,7 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 /**
  * Permanently redirects a `www.` hostname to the apex domain.

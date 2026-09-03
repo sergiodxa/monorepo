@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { toMs } from "@pkg/duration";
-import { JWK } from "@pkg/jwt";
+import { toMs } from "@sdxc/duration";
+import { JWK } from "@sdxc/jwt";
 
 /** Display name of the authorization server's own OAuth client registration. */
 export const AUTH_SERVER_NAME = "Auth by Sergio Xalambrí";

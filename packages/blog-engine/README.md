@@ -1,4 +1,4 @@
-# @pkg/blog-engine
+# @sdxc/blog-engine
 
 A complete, host-agnostic blog application — public site, admin CMS, schema, and theming — packaged so it runs on a plain Worker or per-tenant inside a Durable Object.
 
@@ -23,8 +23,8 @@ are stored there too, so no KV is required.
 ### Self-hosted (Cloudflare Worker + D1)
 
 ```typescript
-import { createBlogEngine, type BlogEngine } from "@pkg/blog-engine";
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createBlogEngine, type BlogEngine } from "@sdxc/blog-engine";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 
 let engine: BlogEngine | null = null;
 
@@ -51,8 +51,8 @@ The DO host differs only in the adapter and `migrations: "manual"` (run inside
 `blockConcurrencyWhile` on boot):
 
 ```typescript
-import { createBlogEngine } from "@pkg/blog-engine";
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { createBlogEngine } from "@sdxc/blog-engine";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 
 this.app = createBlogEngine({
 	database: createSQLStorageDatabaseAdapter(this.ctx.storage.sql),
@@ -113,10 +113,10 @@ let response = await engine.fetch(request);
 
 ### Subpath exports
 
-- `@pkg/blog-engine/migrations` — the journaled `runMigrations(adapter)` runner and
+- `@sdxc/blog-engine/migrations` — the journaled `runMigrations(adapter)` runner and
   the ordered `MIGRATIONS` list (also usable to emit `.sql` files for
   `wrangler d1 migrations apply`).
-- `@pkg/blog-engine/schema` — the `remix/data-table` `table()` definitions.
+- `@sdxc/blog-engine/schema` — the `remix/data-table` `table()` definitions.
 
 ## Pattern: Custom post types without schema changes
 
@@ -136,11 +136,11 @@ the last admin cannot be demoted or deleted.
 
 ## Related Packages
 
-- [`@pkg/data-table-d1`](/packages/data-table-d1) — D1 adapter for self-hosting
-- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) — Durable Object adapter
-- [`@pkg/auth`](/packages/auth) — the OIDC client behind the admin panel's login
-- [`@pkg/markdown/server`](/packages/markdown) — markdown parsing for post content
-- [`@pkg/oidc-provider`](/packages/oidc-provider) — the OIDC provider the SaaS authenticates against
+- [`@sdxc/data-table-d1`](/packages/data-table-d1) — D1 adapter for self-hosting
+- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) — Durable Object adapter
+- [`@sdxc/auth`](/packages/auth) — the OIDC client behind the admin panel's login
+- [`@sdxc/markdown/server`](/packages/markdown) — markdown parsing for post content
+- [`@sdxc/oidc-provider`](/packages/oidc-provider) — the OIDC provider the SaaS authenticates against
 
 ## Tips
 

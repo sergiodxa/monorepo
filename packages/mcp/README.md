@@ -1,4 +1,4 @@
-# @pkg/mcp
+# @sdxc/mcp
 
 Model Context Protocol servers as `remix/router` actions: tools and resources are declared like routes, handled like controllers, and served over stateless Streamable HTTP.
 
@@ -25,7 +25,7 @@ anyway; the handler's argument type is derived from it rather than declared besi
 
 ```typescript
 // app/mcp/tools.ts
-import { tool, tools } from "@pkg/mcp";
+import { tool, tools } from "@sdxc/mcp";
 
 export default tools({
 	searchPosts: tool("search_posts", {
@@ -53,7 +53,7 @@ export default tools({
 
 ```typescript
 // bootstrap/mcp.ts
-import { createHandler, ToolError } from "@pkg/mcp";
+import { createHandler, ToolError } from "@sdxc/mcp";
 import toolset from "~/app/mcp/tools";
 
 let mcp = createHandler({
@@ -112,7 +112,7 @@ from the `map()` call and still receive a fully typed context.
 
 ```typescript
 // app/mcp/controllers/posts.ts
-import { createToolController } from "@pkg/mcp";
+import { createToolController } from "@sdxc/mcp";
 import toolset from "~/app/mcp/tools";
 
 export default createToolController(toolset.posts, {

@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { noContent } from "@pkg/http/response";
-import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
-import { inject } from "@pkg/service-container";
+import { noContent } from "@sdxc/http/response";
+import { badRequest, created, notFound, ok } from "@sdxc/http/response/json";
+import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

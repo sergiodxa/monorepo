@@ -11,12 +11,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fill } from "@pkg/u/color";
-import { calc, pointerEvents, var as varUtility } from "@pkg/u/general";
-import { absolute, insBe, insBs, insIe, insIs, insLeft, insRight } from "@pkg/u/layout";
-import { mb, mi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { rotate } from "@pkg/u/transform";
+import { fill } from "@sdxc/u/color";
+import { calc, pointerEvents, var as varUtility } from "@sdxc/u/general";
+import { absolute, insBe, insBs, insIe, insIs, insLeft, insRight } from "@sdxc/u/layout";
+import { mb, mi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { rotate } from "@sdxc/u/transform";
 import { attrs } from "remix/ui";
 
 /**

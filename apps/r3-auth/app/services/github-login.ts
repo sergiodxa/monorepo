@@ -13,14 +13,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { Billing } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 import type { GitHubAuthProfile } from "remix/auth";
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import { failure, isFailure, success } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { failure, isFailure, success } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import { createGitHubAuthProvider, finishExternalAuth, startExternalAuth } from "remix/auth";
 import * as s from "remix/data-schema";

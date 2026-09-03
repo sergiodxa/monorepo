@@ -11,12 +11,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
-import type { Result } from "@pkg/result";
+import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
+import type { Result } from "@sdxc/result";
 
-import { logger } from "@pkg/logger";
-import { CloudflareAdapter, MemoryAdapter } from "@pkg/rate-limit";
-import { failure, isFailure, success } from "@pkg/result";
+import { logger } from "@sdxc/logger";
+import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
+import { failure, isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 

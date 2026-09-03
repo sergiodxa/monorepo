@@ -10,12 +10,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { border, outline } from "@pkg/u/color";
-import { opacity, ringShadow, transition } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { flexWrap, hstack, inlineFlex } from "@pkg/u/layout";
-import { precededBy, when } from "@pkg/u/state";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { border, outline } from "@sdxc/u/color";
+import { opacity, ringShadow, transition } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { flexWrap, hstack, inlineFlex } from "@sdxc/u/layout";
+import { precededBy, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { ColorSwatch } from "./color-swatch";

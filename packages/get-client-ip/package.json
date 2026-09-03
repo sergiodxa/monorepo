@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/get-client-ip",
+	"name": "@sdxc/get-client-ip",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",

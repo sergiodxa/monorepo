@@ -10,10 +10,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { LoaderCircleIcon } from "@pkg/icons";
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, visibility } from "@pkg/u/effects";
-import { cursor, userSelect } from "@pkg/u/general";
+import { LoaderCircleIcon } from "@sdxc/icons";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded, visibility } from "@sdxc/u/effects";
+import { cursor, userSelect } from "@sdxc/u/general";
 import {
 	absolute,
 	flex,
@@ -24,10 +24,10 @@ import {
 	justify,
 	relative,
 	shrink,
-} from "@pkg/u/layout";
-import { bs, is, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { bs, is, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 

@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { logger } from "@pkg/logger";
-import { failure, success } from "@pkg/result";
+import { logger } from "@sdxc/logger";
+import { failure, success } from "@sdxc/result";
 
 import type { SubscribeInput } from "~/app/http/validators/subscribe";
 import type { Buttondown } from "~/app/services/buttondown";

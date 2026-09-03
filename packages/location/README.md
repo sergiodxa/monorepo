@@ -1,4 +1,4 @@
-# @pkg/location
+# @sdxc/location
 
 A URL-like Location class for building and manipulating URL paths without a full URL.
 
@@ -15,7 +15,7 @@ This is particularly useful for:
 ## Usage
 
 ```typescript
-import { Location } from "@pkg/location";
+import { Location } from "@sdxc/location";
 
 // Create a location
 let location = new Location({
@@ -204,11 +204,11 @@ return redirect(returnTo);
 
 ### Integration with redirect()
 
-Use Location with `redirect()` from `@pkg/response` to build type-safe redirects:
+Use Location with `redirect()` from `@sdxc/response` to build type-safe redirects:
 
 ```typescript
-import { redirect } from "@pkg/response";
-import { Location } from "@pkg/location";
+import { redirect } from "@sdxc/response";
+import { Location } from "@sdxc/location";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let session = await getSession(request);
@@ -232,7 +232,7 @@ Combine Location with `href()` from react-router for type-safe dynamic route bui
 
 ```typescript
 import { href } from "react-router";
-import { Location } from "@pkg/location";
+import { Location } from "@sdxc/location";
 
 // Build a location with a dynamic route path
 let location = new Location({
@@ -256,4 +256,4 @@ return redirect(location);
 
 ## Related Packages
 
-- [`@pkg/response`](../response/README.md) - Uses Location for redirect targets with the `redirect()` function
+- [`@sdxc/response`](../response/README.md) - Uses Location for redirect targets with the `redirect()` function

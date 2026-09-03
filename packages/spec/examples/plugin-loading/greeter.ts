@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * A self-contained example of what a third-party plugin looks like: a Bun
- * script that calls `servePlugin` from `@pkg/spec` to speak the
+ * script that calls `servePlugin` from `@sdxc/spec` to speak the
  * NDJSON-over-stdio line protocol, exposing namespace "greet" with two
  * permissionless observable tools. It ships with the config file that loads
  * it (`config.jsonc`), the spec that uses it (`greet.spec`), and the
@@ -11,11 +11,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
-import type { Plugin, ToolArg, ToolDescriptor, Value } from "@pkg/spec";
+import type { Result } from "@sdxc/result";
+import type { Plugin, ToolArg, ToolDescriptor, Value } from "@sdxc/spec";
 
-import { failure, success } from "@pkg/result";
-import { servePlugin, ToolError } from "@pkg/spec";
+import { failure, success } from "@sdxc/result";
+import { servePlugin, ToolError } from "@sdxc/spec";
 
 const GREET_TOOLS: ToolDescriptor[] = [
 	{

@@ -7,11 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BillingError, CustomerRef, EntitlementState, SubscriptionStatus } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type {
+	BillingError,
+	CustomerRef,
+	EntitlementState,
+	SubscriptionStatus,
+} from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 import type { Database, TableRow } from "remix/data-table";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
 
 import { CONNECTION, PLAN, polar } from "~/app/lib/billing";

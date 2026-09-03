@@ -1,10 +1,10 @@
-# @pkg/sample
+# @sdxc/sample
 
 Seeded generation of believable people, places, prose, numbers, and identifiers.
 
 ## Overview
 
-`@pkg/sample` fills in the data a test, a demo tenant, or a local database needs
+`@sdxc/sample` fills in the data a test, a demo tenant, or a local database needs
 when the exact values do not matter but their shape does. A generator opens on a
 seed and draws every value from it, so the same seed and the same sequence of
 calls produce the same values on any machine, on any day. A run that used
@@ -33,7 +33,7 @@ generators in one process can draw from different lists.
 ### Basic Example
 
 ```typescript
-import { createSample } from "@pkg/sample";
+import { createSample } from "@sdxc/sample";
 
 let sample = createSample({ seed: "signup-suite" });
 
@@ -48,7 +48,7 @@ sample.helpers.multiple(() => sample.person.record(), { count: 50 });
 ### Fresh Values Each Run
 
 ```typescript
-import { createSample, systemSeed } from "@pkg/sample";
+import { createSample, systemSeed } from "@sdxc/sample";
 
 let seed = systemSeed();
 console.log(`sample seed ${seed}`);
@@ -72,10 +72,10 @@ sample.date.past({ days: 30 }); // always the same instant for this seed
 ### Your Own Vocabulary
 
 ```typescript
-import type { Dataset } from "@pkg/sample";
+import type { Dataset } from "@sdxc/sample";
 
-import { createSample } from "@pkg/sample";
-import { en } from "@pkg/sample/data/en";
+import { createSample } from "@sdxc/sample";
+import { en } from "@sdxc/sample/data/en";
 
 let data: Dataset = { ...en, companySuffixes: [...en.companySuffixes, "Cooperative"] };
 
@@ -123,7 +123,7 @@ vocabulary.
 **Example:**
 
 ```typescript
-import { createRandom } from "@pkg/sample";
+import { createRandom } from "@sdxc/sample";
 
 let random = createRandom("rollout");
 random.pick(["control", "variant"]);
@@ -483,13 +483,13 @@ let profile = {
 
 ## Related Packages
 
-- [`@pkg/crypto`](/packages/crypto) - Cryptographically strong random bytes, which
+- [`@sdxc/crypto`](/packages/crypto) - Cryptographically strong random bytes, which
   `systemSeed()` draws from
-- [`@pkg/dates`](/packages/dates) - Instant arithmetic, which the `date` module
+- [`@sdxc/dates`](/packages/dates) - Instant arithmetic, which the `date` module
   places its values with
-- [`@pkg/duration`](/packages/duration) - Durations written as text, which spell
+- [`@sdxc/duration`](/packages/duration) - Durations written as text, which spell
   the day a date window is measured in
-- [`@pkg/jwt`](/packages/jwt) - The signature algorithms a generated token names
+- [`@sdxc/jwt`](/packages/jwt) - The signature algorithms a generated token names
 
 ## Tips
 

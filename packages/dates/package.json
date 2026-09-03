@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/dates",
+	"name": "@sdxc/dates",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/duration": "workspace:*",
-		"@pkg/result": "workspace:*"
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/result": "workspace:*"
 	}
 }

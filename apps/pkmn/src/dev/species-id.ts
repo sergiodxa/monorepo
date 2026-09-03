@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, success, type Result } from "@pkg/result";
+import { failure, success, type Result } from "@sdxc/result";
 
 /**
  * Allowed shape for a species id: uppercase letters, digits, and single

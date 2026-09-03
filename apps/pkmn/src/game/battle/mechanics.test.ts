@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import type { NatureId } from "~/game/data/nature";

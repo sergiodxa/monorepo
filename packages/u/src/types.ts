@@ -5,7 +5,7 @@
  * it resolve.
  *
  * @example
- * declare module "@pkg/u" { interface ColorPalettes { info: true } }
+ * declare module "@sdxc/u" { interface ColorPalettes { info: true } }
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

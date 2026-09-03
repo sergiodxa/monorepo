@@ -1,10 +1,10 @@
-# @pkg/typeid
+# @sdxc/typeid
 
 Type-safe TypeID helpers for working with prefixed UUID strings.
 
 ## Overview
 
-`@pkg/typeid` wraps UUIDs in a small `TypeID` class so application code can keep the resource type close to the identifier itself. A `user` UUID becomes a string like `user_01h455vb4pex5vsknk084sn02q`, which is easier to route, log, and validate than a bare UUID.
+`@sdxc/typeid` wraps UUIDs in a small `TypeID` class so application code can keep the resource type close to the identifier itself. A `user` UUID becomes a string like `user_01h455vb4pex5vsknk084sn02q`, which is easier to route, log, and validate than a bare UUID.
 
 The package follows the [TypeID specification](https://github.com/jetify-com/typeid/tree/main/spec) for prefix validation and Base32 suffix encoding. It supports parsing existing TypeID strings, generating new values from UUIDs, and converting a TypeID back to its UUID form.
 
@@ -13,8 +13,8 @@ The package follows the [TypeID specification](https://github.com/jetify-com/typ
 ### Basic Example
 
 ```typescript
-import { TypeID, typeid } from "@pkg/typeid";
-import { generateUUID } from "@pkg/uuid";
+import { TypeID, typeid } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid";
 
 let uuid = generateUUID();
 
@@ -36,7 +36,7 @@ let postId = createPostId(generateUUID());
 ### Parse an Existing TypeID
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 
 let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
 
@@ -86,7 +86,7 @@ Decodes the suffix back to a UUID string.
 **Example:**
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 
 let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q");
 let uuid = value.toUUID();
@@ -103,7 +103,7 @@ Serializes the TypeID back into its string form.
 **Example:**
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 
 let value = TypeID.fromUUID("user", crypto.randomUUID());
 let stringValue = value.toString();
@@ -125,7 +125,7 @@ Parses a TypeID string and optionally enforces the expected prefix.
 **Example:**
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 
 let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
 ```
@@ -146,8 +146,8 @@ Builds a TypeID from an existing UUID.
 **Example:**
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
-import { generateUUID } from "@pkg/uuid";
+import { TypeID } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid";
 
 let value = TypeID.fromUUID("org", generateUUID());
 ```
@@ -168,7 +168,7 @@ Checks whether a string is a valid TypeID and optionally enforces a specific pre
 **Example:**
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 
 TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "user");
 // true
@@ -192,21 +192,21 @@ Creates a small factory for a single prefix.
 **Example:**
 
 ```typescript
-import { typeid } from "@pkg/typeid";
-import { generateUUID } from "@pkg/uuid";
+import { typeid } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid";
 
 let createInvoiceId = typeid("invoice");
 let invoiceId = createInvoiceId(generateUUID());
 ```
 
-### `@pkg/typeid/errors`
+### `@sdxc/typeid/errors`
 
 The package also exports its TypeID-specific error classes from a dedicated entrypoint.
 
 **Example:**
 
 ```typescript
-import { InvalidPrefixError, TypeIdError } from "@pkg/typeid/errors";
+import { InvalidPrefixError, TypeIdError } from "@sdxc/typeid/errors";
 
 try {
 	// ...parse or create TypeIDs
@@ -228,7 +228,7 @@ try {
 Use `TypeID.fromString` near the edge of the application so the rest of the code receives a validated identifier.
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 import type { Route } from "./+types/users.$userId";
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -245,8 +245,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 Use `typeid()` when one module creates many identifiers of the same type.
 
 ```typescript
-import { typeid } from "@pkg/typeid";
-import { generateUUID } from "@pkg/uuid";
+import { typeid } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid";
 
 let createUserId = typeid("user");
 let createSessionId = typeid("session");
@@ -260,7 +260,7 @@ let sessionId = createSessionId(generateUUID());
 Use TypeIDs at the boundaries of the system and plain UUIDs internally when your database already stores UUID columns.
 
 ```typescript
-import { TypeID } from "@pkg/typeid";
+import { TypeID } from "@sdxc/typeid";
 
 interface UserRecord {
 	id: string;
@@ -277,10 +277,10 @@ function serializeUser(user: UserRecord) {
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Wrap TypeID parsing in explicit success and failure values
-- [`@pkg/validate`](/packages/validate) - Validate request payloads before converting IDs into domain values
-- [`@pkg/response`](/packages/response) - Return parsed IDs from loaders and actions with typed response helpers
-- [`@pkg/uuid`](/packages/uuid) - Generate UUID values before converting them into TypeIDs
+- [`@sdxc/result`](/packages/result) - Wrap TypeID parsing in explicit success and failure values
+- [`@sdxc/validate`](/packages/validate) - Validate request payloads before converting IDs into domain values
+- [`@sdxc/response`](/packages/response) - Return parsed IDs from loaders and actions with typed response helpers
+- [`@sdxc/uuid`](/packages/uuid) - Generate UUID values before converting them into TypeIDs
 
 ## Tips
 

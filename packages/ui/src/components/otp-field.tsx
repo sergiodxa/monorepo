@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { tabularNums, text, textAlign, weight } from "@pkg/u/typography";
+import { tabularNums, text, textAlign, weight } from "@sdxc/u/typography";
 
 import { Input } from "./input";
 

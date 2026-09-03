@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CryptoError } from "@pkg/crypto";
-import type { Result } from "@pkg/result";
+import type { CryptoError } from "@sdxc/crypto";
+import type { Result } from "@sdxc/result";
 
-import { MalformedHashError, password, UnsupportedAlgorithmError } from "@pkg/crypto";
-import { isFailure, success } from "@pkg/result";
+import { MalformedHashError, password, UnsupportedAlgorithmError } from "@sdxc/crypto";
+import { isFailure, success } from "@sdxc/result";
 
 /**
  * Outcome of checking a plaintext against a stored hash; `rehashed` is set

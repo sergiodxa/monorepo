@@ -12,9 +12,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { borderEdge, fg } from "@pkg/u/color";
-import { rounded, transition, transitionBehavior, transitionProperty } from "@pkg/u/effects";
-import { willChange } from "@pkg/u/general";
+import { borderEdge, fg } from "@sdxc/u/color";
+import { rounded, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
+import { willChange } from "@sdxc/u/general";
 import {
 	fixed,
 	flex,
@@ -26,12 +26,12 @@ import {
 	items,
 	justify,
 	vstack,
-} from "@pkg/u/layout";
-import { media, startingStyle } from "@pkg/u/responsive";
-import { is, m, maxBs, maxIs, mbs, paddingLeft, paddingRight, pbe, pbs } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
-import { translateX } from "@pkg/u/transform";
-import { fontSize } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { media, startingStyle } from "@sdxc/u/responsive";
+import { is, m, maxBs, maxIs, mbs, paddingLeft, paddingRight, pbe, pbs } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
+import { translateX } from "@sdxc/u/transform";
+import { fontSize } from "@sdxc/u/typography";
 
 import { durations, easings } from "../animations/tokens";
 

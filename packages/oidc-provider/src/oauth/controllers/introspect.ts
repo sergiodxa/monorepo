@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ok } from "@pkg/http/response/json";
-import { JWK } from "@pkg/jwt";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { ok } from "@sdxc/http/response/json";
+import { JWK } from "@sdxc/jwt";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

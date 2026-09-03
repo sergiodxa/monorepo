@@ -10,11 +10,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flexCol, hstack, items } from "@pkg/u/layout";
-import { pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flexCol, hstack, items } from "@sdxc/u/layout";
+import { pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 /**

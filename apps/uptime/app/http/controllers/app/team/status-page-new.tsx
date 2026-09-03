@@ -14,10 +14,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { IntlProvider } from "@pkg/i18n/ui";
-import { inject } from "@pkg/service-container";
-import { vstack } from "@pkg/u/layout";
-import { fontSize, weight } from "@pkg/u/typography";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { inject } from "@sdxc/service-container";
+import { vstack } from "@sdxc/u/layout";
+import { fontSize, weight } from "@sdxc/u/typography";
 import {
 	Button,
 	Checkbox,
@@ -27,8 +27,8 @@ import {
 	Switch,
 	TextArea,
 	TextField,
-} from "@pkg/ui";
-import { fieldStackLayout } from "@pkg/ui/styles";
+} from "@sdxc/ui";
+import { fieldStackLayout } from "@sdxc/ui/styles";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

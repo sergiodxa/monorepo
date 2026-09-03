@@ -5,13 +5,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { hstack } from "@pkg/u/layout";
-import { hover } from "@pkg/u/state";
-import { fontSize, textDecoration } from "@pkg/u/typography";
-import { Empty, LinkButton, Table } from "@pkg/ui";
+import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { hstack } from "@sdxc/u/layout";
+import { hover } from "@sdxc/u/state";
+import { fontSize, textDecoration } from "@sdxc/u/typography";
+import { Empty, LinkButton, Table } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

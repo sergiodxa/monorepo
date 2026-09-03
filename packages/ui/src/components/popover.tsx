@@ -13,9 +13,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { inset, positionArea, positionTryFallbacks } from "@pkg/u/layout";
-import { m, marginLeft, marginRight, mbe, mbs } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
+import { inset, positionArea, positionTryFallbacks } from "@sdxc/u/layout";
+import { m, marginLeft, marginRight, mbe, mbs } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
 
 import type { AnchorPlacement } from "../utils/placement";
 

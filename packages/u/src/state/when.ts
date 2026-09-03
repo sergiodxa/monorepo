@@ -50,7 +50,7 @@ export function when<Node extends Element = Element>(
 function checkNestedSelector(selector: string): void {
 	if (NESTED_SELECTOR_PREFIXES.some((prefix) => selector.startsWith(prefix))) return;
 
-	let message = `@pkg/u: when("${selector}") would be emitted as a declaration, not a rule, and dropped by the browser. Selectors must start with "&", "@", ":", "[" or "."; wrap a leading element or sibling in :is(), e.g. ":is(input:checked) ~ &".`;
+	let message = `@sdxc/u: when("${selector}") would be emitted as a declaration, not a rule, and dropped by the browser. Selectors must start with "&", "@", ":", "[" or "."; wrap a leading element or sibling in :is(), e.g. ":is(input:checked) ~ &".`;
 
 	if (import.meta.env.DEV) throw new Error(message);
 

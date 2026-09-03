@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Base64Url } from "@pkg/crypto";
-import * as Algorithm from "@pkg/jwt/algorithm";
+import { Base64Url } from "@sdxc/crypto";
+import * as Algorithm from "@sdxc/jwt/algorithm";
 
 import type { Dataset } from "../dataset";
 import type { Random } from "../random";

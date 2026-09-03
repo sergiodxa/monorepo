@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies the end-of-turn residual pipeline's held-item passive heal using a
  * minimal battle state with one active combatant, wired with the same HP

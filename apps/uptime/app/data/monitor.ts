@@ -11,9 +11,9 @@
 
 import type { Database } from "remix/data-table";
 
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
-import { generateUUID } from "@pkg/uuid";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid";
 import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";

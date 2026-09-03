@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { listStyle } from "@pkg/u/general";
-import { gap, grid, gridTemplate, hstack, items } from "@pkg/u/layout";
-import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
-import { leading, nowrap, tabularNums, text, textDecoration } from "@pkg/u/typography";
-import { Badge, Heading, Link } from "@pkg/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, hstack, items } from "@sdxc/u/layout";
+import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
+import { leading, nowrap, tabularNums, text, textDecoration } from "@sdxc/u/typography";
+import { Badge, Heading, Link } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -73,7 +73,7 @@ function formatDate(value: string) {
 
 /**
  * Creates the bookmarks page renderer. The archive suffix is a native anchor
- * so the lone glyph renders free of the underline `@pkg/ui`'s Link always
+ * so the lone glyph renders free of the underline `@sdxc/ui`'s Link always
  * applies.
  */
 export function BookmarksView() {

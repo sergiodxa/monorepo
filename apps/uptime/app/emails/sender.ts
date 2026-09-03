@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Address } from "@pkg/mail";
+import type { Address } from "@sdxc/mail";
 
 /** Mailbox every message is sent from; the domain has to stay a verified sender. */
 export const MAIL_FROM: Address = { email: "no-reply@uptime.sergiodxa.com", name: "Uptime" };

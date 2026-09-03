@@ -10,12 +10,12 @@
 
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { renderToRemix } from "@pkg/markdown/client";
-import { Markdown } from "@pkg/markdown/server";
-import { isFailure, isSuccess } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { renderToRemix } from "@sdxc/markdown/client";
+import { Markdown } from "@sdxc/markdown/server";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

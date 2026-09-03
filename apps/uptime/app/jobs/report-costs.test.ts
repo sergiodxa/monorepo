@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+import type { UsageEvent } from "@sdxc/billing";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
-import { BillingError } from "@pkg/billing";
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
-import { BatchedLogger } from "@pkg/logger";
-import { failure } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import { BillingError } from "@sdxc/billing";
+import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { BatchedLogger } from "@sdxc/logger";
+import { failure } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -55,7 +55,7 @@ let realBillingModule = await import("~/app/lib/billing");
 
 vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
 
-let { Job, createJobContext } = await import("@pkg/jobs");
+let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let reportCosts = (await import("./report-costs")).default;

@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@pkg/result";
+import { failure, success } from "@sdxc/result";
 
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
 

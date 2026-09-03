@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Location } from "@pkg/location";
+import { Location } from "@sdxc/location";
 
 type Init = Omit<ResponseInit, "status" | "statusText">;
 

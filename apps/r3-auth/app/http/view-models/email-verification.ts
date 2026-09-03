@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@pkg/i18n";
+import type { i18n } from "@sdxc/i18n";
 
 import type { VerificationSendOutcome } from "~/app/services/email-verification";
 

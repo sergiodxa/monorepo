@@ -11,12 +11,12 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { border, colorMix, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { absolute, basis, gap, grow, inset, relative, self, shrink, vstack } from "@pkg/u/layout";
-import { bs, is, mbe, minIs, p, pis } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
+import { border, colorMix, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { absolute, basis, gap, grow, inset, relative, self, shrink, vstack } from "@sdxc/u/layout";
+import { bs, is, mbe, minIs, p, pis } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";

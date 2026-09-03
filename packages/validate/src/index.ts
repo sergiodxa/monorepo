@@ -6,11 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@pkg/result";
-import type { JSONValue } from "@pkg/types";
+import type { Result } from "@sdxc/result";
+import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { success, failure, isFailure } from "@pkg/result";
+import { success, failure, isFailure } from "@sdxc/result";
 
 import { ValidationError } from "./validation-error";
 

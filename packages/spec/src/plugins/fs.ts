@@ -11,9 +11,9 @@
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { SpecError } from "../errors";
 import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";

@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
-import type { Address } from "@pkg/mail";
+import type { TFunction } from "@sdxc/i18n";
+import type { Address } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
-import { Email } from "@pkg/mail";
+import { Email } from "@sdxc/mail";
 
 export namespace TeamInviteEmail {
 	/** Everything the invite email needs, already loaded by whoever sends it. */

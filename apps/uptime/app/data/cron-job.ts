@@ -1,7 +1,7 @@
 /**
  * Data-access model for cron-job monitors (dead man's switch monitoring): CRUD over
  * `cron_job_monitors`, its `cron_job_pings` history, cron-expression scheduling with
- * `@pkg/cron`, and the single `recordPing` write path the public ping endpoint uses.
+ * `@sdxc/cron`, and the single `recordPing` write path the public ping endpoint uses.
  * The monitor's own `id` doubles as its public ping-URL identifier — see
  * `docs/cron-job-monitoring.md`.
  *
@@ -11,9 +11,9 @@
 
 import type { Database } from "remix/data-table";
 
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
-import { generateUUID } from "@pkg/uuid";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid";
 import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { CronJobStatus, InsertCronJobMonitor } from "~/database/schema";

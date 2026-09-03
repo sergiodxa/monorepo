@@ -1,5 +1,5 @@
 /**
- * `remix/ui` integration for `@pkg/i18n`: a context provider and accessor for
+ * `remix/ui` integration for `@sdxc/i18n`: a context provider and accessor for
  * a live i18next instance, and a `Trans` component for rich-text translations.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

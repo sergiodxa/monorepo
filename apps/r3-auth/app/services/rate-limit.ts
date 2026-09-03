@@ -1,6 +1,6 @@
 /**
  * Spending a rate limiter's budget and turning a refusal into the published
- * `429`. Wraps `@pkg/rate-limit`'s adapters so every protected endpoint
+ * `429`. Wraps `@sdxc/rate-limit`'s adapters so every protected endpoint
  * answers with the same body and headers, and a limiter outage still lets
  * token issuance proceed.
  *
@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Adapter } from "@pkg/rate-limit";
+import type { Adapter } from "@sdxc/rate-limit";
 
-import { toSeconds } from "@pkg/duration";
-import { tooManyRequests } from "@pkg/http/response/json";
-import { applyRateLimitHeaders } from "@pkg/rate-limit";
-import { isFailure } from "@pkg/result";
+import { toSeconds } from "@sdxc/duration";
+import { tooManyRequests } from "@sdxc/http/response/json";
+import { applyRateLimitHeaders } from "@sdxc/rate-limit";
+import { isFailure } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 
 /** Error code a refused request carries. Relying parties may match on it. */

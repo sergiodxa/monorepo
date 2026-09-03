@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/pagination",
+	"name": "@sdxc/pagination",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -11,9 +11,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/crypto": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/validate": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MemoryBilling, MemoryDelivery } from "@pkg/billing/providers/memory";
+import type { MemoryBilling, MemoryDelivery } from "@sdxc/billing/providers/memory";
 
-import { BillingWebhook, MemoryWebhookStore } from "@pkg/billing";
-import { Logger } from "@pkg/logger/request";
-import { unwrap } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
+import { BillingWebhook, MemoryWebhookStore } from "@sdxc/billing";
+import { Logger } from "@sdxc/logger/request";
+import { unwrap } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 

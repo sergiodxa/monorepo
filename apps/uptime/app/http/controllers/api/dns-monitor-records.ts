@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@pkg/http/status-code";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { and, Database, eq } from "remix/data-table";
 import { createController } from "remix/router";

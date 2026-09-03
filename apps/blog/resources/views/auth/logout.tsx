@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@pkg/u/color";
-import { contents, gap, grid, place } from "@pkg/u/layout";
-import { m, maxIs } from "@pkg/u/size";
-import { text, textAlign } from "@pkg/u/typography";
-import { Button, Form, Heading } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { contents, gap, grid, place } from "@sdxc/u/layout";
+import { m, maxIs } from "@sdxc/u/size";
+import { text, textAlign } from "@sdxc/u/typography";
+import { Button, Form, Heading } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";

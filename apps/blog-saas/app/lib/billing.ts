@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 /** Our own name for the platform subscription every account buys. */

@@ -59,7 +59,7 @@ send is a **real** send, which bills and delivers like production.
 Mail is sent through two mailers over the same transport, registered once as
 `MailTransport` in `app/lib/container.ts`:
 
-- **request-scoped** — `ctx.email`, published by `@pkg/mail`'s middleware in
+- **request-scoped** — `ctx.email`, published by `@sdxc/mail`'s middleware in
   `bootstrap/app.tsx`. Its `later()` queue is flushed after the response, so a failed send
   is logged and cannot change what the person sees.
 - **background** — the `Mailer` registered in `app/lib/container.ts`, for a queue message or
@@ -89,7 +89,7 @@ written inside the shared card in `app/emails/layout.tsx`.
   `query`, `fragment` and `form_post` response modes.
 - **Two authentication methods, and only two:** a GitHub account (`remix/auth`'s GitHub
   provider) and email/password credentials hashed with PBKDF2-HMAC-SHA256 through
-  `@pkg/crypto`. There is no Google provider, no passkey, no magic link, and no other
+  `@sdxc/crypto`. There is no Google provider, no passkey, no magic link, and no other
   social provider — `/auth/:provider` accepts `github` and redirects anything else back to
   `/authorize`.
 - **PKCE enforced**: a `code_challenge` on the authorization request is carried through the
@@ -115,7 +115,7 @@ written inside the shared card in `app/emails/layout.tsx`.
 - **Server-rendered HTML.** The only first-party JavaScript is the copy-to-clipboard button
   on the client-create page; dialogs are native `<dialog>` elements driven by command
   invokers.
-- **Localized copy** through `@pkg/i18n`; English is the only catalog today
+- **Localized copy** through `@sdxc/i18n`; English is the only catalog today
   (`app/locales/en.ts`).
 
 ## Integrations
@@ -202,7 +202,7 @@ Anything unmatched renders the localized 404 page.
 ## Rate Limiting
 
 Implemented with [Cloudflare rate limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
-through `@pkg/rate-limit`. Limits are per Cloudflare location (edge-local).
+through `@sdxc/rate-limit`. Limits are per Cloudflare location (edge-local).
 
 | Endpoint                          | Limit       | Key                                         |
 | --------------------------------- | ----------- | ------------------------------------------- |

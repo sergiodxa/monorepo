@@ -14,9 +14,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { opacity, transition, transitionDuration, visibility } from "@pkg/u/effects";
-import { pointerEvents, raw } from "@pkg/u/general";
+import { fg } from "@sdxc/u/color";
+import { opacity, transition, transitionDuration, visibility } from "@sdxc/u/effects";
+import { pointerEvents, raw } from "@sdxc/u/general";
 import {
 	absolute,
 	contents,
@@ -26,11 +26,11 @@ import {
 	insIe,
 	insIs,
 	relative,
-} from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { is, mb, mbe, mbs, marginLeft, marginRight, mi, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, mb, mbe, mbs, marginLeft, marginRight, mi, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 
 import type { AnchorPlacement } from "../utils/placement";
 

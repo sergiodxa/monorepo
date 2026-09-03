@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -35,7 +35,7 @@ const AUTH_ORIGIN = "https://auth.sergiodxa.com";
 /** The client the blog is registered as at the provider. */
 const CLIENT_ID = "blog-client";
 
-/** The session key `@pkg/auth` holds the signed-in token set under. */
+/** The session key `@sdxc/auth` holds the signed-in token set under. */
 const TOKENS_SESSION_KEY = "auth";
 
 /** The token set a completed login leaves behind, read for the `id_token_hint`. */

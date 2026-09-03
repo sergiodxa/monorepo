@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/oidc-provider",
+	"name": "@sdxc/oidc-provider",
 	"version": "0.0.0",
 	"private": true,
 	"license": "MIT",
@@ -11,19 +11,19 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/crypto": "workspace:*",
-		"@pkg/http": "workspace:*",
-		"@pkg/jwt": "workspace:*",
-		"@pkg/logger": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/service-container": "workspace:*",
-		"@pkg/types": "workspace:*",
-		"@pkg/validate": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/jwt": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/service-container": "workspace:*",
+		"@sdxc/types": "workspace:*",
+		"@sdxc/validate": "workspace:*",
 		"@simplewebauthn/server": "^13.3.3",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
-		"@pkg/cloudflare-mocks": "workspace:*"
+		"@sdxc/cloudflare-mocks": "workspace:*"
 	}
 }

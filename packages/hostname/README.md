@@ -1,4 +1,4 @@
-# @pkg/hostname
+# @sdxc/hostname
 
 Cloudflare for SaaS custom-hostname client for the platform apps.
 
@@ -13,7 +13,7 @@ Every API response is validated with [`remix/data-schema`](https://remix.run)
 before it is returned, so a malformed or unexpected Cloudflare payload throws a
 typed `HostnameApiError` instead of silently producing `undefined` fields. The
 client is an instance class configured through its constructor, which keeps it
-constructor-injectable via [`@pkg/service-container`](/packages/service-container)
+constructor-injectable via [`@sdxc/service-container`](/packages/service-container)
 (ADR-008) and free of any `cloudflare:workers` `env` coupling — callers pass the
 zone id, API token, and platform domain in explicitly.
 
@@ -28,7 +28,7 @@ data stored on Cloudflare changes when an app adopts this package.
 ### Basic Example
 
 ```typescript
-import { HostnameClient } from "@pkg/hostname";
+import { HostnameClient } from "@sdxc/hostname";
 import { env } from "cloudflare:workers";
 
 let client = new HostnameClient({
@@ -249,8 +249,8 @@ Register the client as a singleton constructed from `env`, then resolve it in jo
 and controllers instead of constructing it ad hoc.
 
 ```typescript
-import { HostnameClient } from "@pkg/hostname";
-import { ServiceContainer } from "@pkg/service-container";
+import { HostnameClient } from "@sdxc/hostname";
+import { ServiceContainer } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 
 container.singleton(
@@ -293,7 +293,7 @@ await db.create(Hostname.table, {
 
 ## Related Packages
 
-- [`@pkg/service-container`](/packages/service-container) - DI container the client is registered with (ADR-008)
+- [`@sdxc/service-container`](/packages/service-container) - DI container the client is registered with (ADR-008)
 
 ## Tips
 

@@ -9,15 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import billing from "@pkg/billing/middleware";
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
-import { MemoryTransport } from "@pkg/mail/memory";
-import mail from "@pkg/mail/middleware";
-import { ServiceContainer } from "@pkg/service-container";
+import billing from "@sdxc/billing/middleware";
+import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import mail from "@sdxc/mail/middleware";
+import { ServiceContainer } from "@sdxc/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";

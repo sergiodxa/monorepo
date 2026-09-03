@@ -14,8 +14,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { m, maxIs, pbe, pbs, pi } from "@pkg/u/size";
-import { Typeset } from "@pkg/ui";
+import { m, maxIs, pbe, pbs, pi } from "@sdxc/u/size";
+import { Typeset } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";

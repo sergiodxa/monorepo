@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { flex, flexCol, gap } from "@pkg/u/layout";
+import { flex, flexCol, gap } from "@sdxc/u/layout";
 
 import type { Button } from "./button";
 

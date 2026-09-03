@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url } from "@pkg/crypto";
-import { isFailure, unwrap } from "@pkg/result";
+import { Base64Url } from "@sdxc/crypto";
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { decodeCursor, encodeCursor } from "./cursor";

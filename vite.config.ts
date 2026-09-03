@@ -126,7 +126,7 @@ export default defineConfig({
 				/**
 				 * One project covers every package: none of them uses a `~/*` alias or ships a
 				 * Vite config, so the root tsconfig resolves them all. `.spec` files belong to
-				 * `@pkg/spec`'s own runner and never match this glob.
+				 * `@sdxc/spec`'s own runner and never match this glob.
 				 */
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },

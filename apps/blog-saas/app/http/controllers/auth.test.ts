@@ -8,7 +8,7 @@
  */
 import type { Middleware } from "remix/router";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
+import { createEnv } from "@sdxc/cloudflare-mocks";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";

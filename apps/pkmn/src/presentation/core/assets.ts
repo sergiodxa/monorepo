@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import type { AtlasAnimation, Rect } from "../render/atlas";
 import type { TileMap } from "../render/tilemap";

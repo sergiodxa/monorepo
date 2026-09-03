@@ -1,4 +1,4 @@
-# @pkg/api-client
+# @sdxc/api-client
 
 Base class for clients of a remote HTTP API.
 
@@ -25,7 +25,7 @@ outbound call.
 ### A Client For One Service
 
 ```typescript
-import { APIClient } from "@pkg/api-client";
+import { APIClient } from "@sdxc/api-client";
 
 class GitHub extends APIClient {
 	constructor(private token: string) {

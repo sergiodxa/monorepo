@@ -1,4 +1,4 @@
-# @pkg/workers-cache
+# @sdxc/workers-cache
 
 Cache tags, purging, and cache-status reading for responses served through Cloudflare's Workers Cache.
 
@@ -20,10 +20,10 @@ unchanged, so there is no dependency in either direction between the two.
 
 Two entry points, for two kinds of caller:
 
-- `@pkg/workers-cache` — tags, `cacheTag()`, `purge()`, `cacheStatus()`, and a
+- `@sdxc/workers-cache` — tags, `cacheTag()`, `purge()`, `cacheStatus()`, and a
   recording cache double. Request handlers, queue consumers, scheduled handlers,
   and anything assembling headers by hand can use these.
-- `@pkg/workers-cache/middleware` — the middleware that publishes a callable
+- `@sdxc/workers-cache/middleware` — the middleware that publishes a callable
   `context.cache`. This is how request handlers should declare caching; the
   standalone functions above are how jobs invalidate, since they have no request.
 
@@ -40,7 +40,7 @@ Declare the tags an app's content model needs once, as functions rather than
 strings, so the response header and the later purge cannot drift apart:
 
 ```typescript
-import { createTags } from "@pkg/workers-cache";
+import { createTags } from "@sdxc/workers-cache";
 
 export const TAGS = createTags({
 	post: (id: string) => `post:${id}`,
@@ -57,7 +57,7 @@ instead of being dropped silently at the edge.
 ### Caching A Response From A Handler
 
 ```typescript
-import cache from "@pkg/workers-cache/middleware";
+import cache from "@sdxc/workers-cache/middleware";
 
 let router = createRouter({
 	middleware: [cache({ cache: (ctx) => ctx.cacheBinding })],
@@ -93,7 +93,7 @@ Outside a request — a queue consumer, a scheduled handler — pass the cache
 interface directly:
 
 ```typescript
-import { purge } from "@pkg/workers-cache";
+import { purge } from "@sdxc/workers-cache";
 
 let result = await purge(cache, { tags: [TAGS.post(postId), TAGS.postList()] });
 if (isFailure(result)) logger.error("cache.purge_failed", { error: result.error.message });
@@ -102,7 +102,7 @@ if (isFailure(result)) logger.error("cache.purge_failed", { error: result.error.
 ### Building Headers By Hand
 
 ```typescript
-import { cacheTag } from "@pkg/workers-cache";
+import { cacheTag } from "@sdxc/workers-cache";
 
 let headers = new Headers({
 	"Cache-Control": PUBLIC_PAGE,
@@ -244,7 +244,7 @@ cache.purgedTags; // ["posts"]
 
 ### `cache(options: WorkersCacheMiddlewareOptions): Middleware`
 
-Default export of `@pkg/workers-cache/middleware`. Publishes a callable
+Default export of `@sdxc/workers-cache/middleware`. Publishes a callable
 `context.cache` that also carries `purge` and `purgeLater`.
 
 **Parameters:**
@@ -303,7 +303,7 @@ the declaration and the response — and only then writes `Cache-Control` and
 
 Downgrades log at error level and throw `UnsafeCachePolicyError` in development,
 since a downgrade means a route asked for something unsafe. That error and its
-`CacheRefusalReason` are exported from `@pkg/workers-cache/middleware`. The "emit
+`CacheRefusalReason` are exported from `@sdxc/workers-cache/middleware`. The "emit
 nothing" rows are checked first: they leave the response untouched, so there is
 nothing to refuse.
 
@@ -438,7 +438,7 @@ middleware chain and within a handler, never up a route tree.
 ## Pattern: Testing A Cached Route
 
 ```typescript
-import { cacheStatus, createRecordingCache } from "@pkg/workers-cache";
+import { cacheStatus, createRecordingCache } from "@sdxc/workers-cache";
 
 let cache = createRecordingCache();
 let response = await router.fetch(new Request("https://example.com/posts/1"));
@@ -460,9 +460,9 @@ expect(isFailure(result)).toBe(true);
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - The `Result` every purge returns, so a
+- [`@sdxc/result`](/packages/result) - The `Result` every purge returns, so a
   failed invalidation is a value the caller has to handle
-- [`@pkg/http`](/packages/http) - Specification-level HTTP helpers, including the
+- [`@sdxc/http`](/packages/http) - Specification-level HTTP helpers, including the
   `Cache-Control` policies passed into a declaration; it has no dependency on
   this package and this package has none on it
 

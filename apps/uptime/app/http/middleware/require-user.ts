@@ -11,7 +11,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 import { returnTo } from "~/app/http/cookies";
 import { isAuthenticated } from "~/app/http/middleware/auth";

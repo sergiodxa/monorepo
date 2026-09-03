@@ -10,7 +10,7 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { ManagementClient } from "@pkg/auth/management-client";
+import { ManagementClient } from "@sdxc/auth/management-client";
 import {
 	BadgeMinusIcon,
 	ExternalLinkIcon,
@@ -19,12 +19,12 @@ import {
 	UserCogIcon,
 	UserMinusIcon,
 	UserPlusIcon,
-} from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, borderEdge, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { pointerEvents, pseudoContent, raw } from "@pkg/u/general";
+} from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { pointerEvents, pseudoContent, raw } from "@sdxc/u/general";
 import {
 	absolute,
 	basis,
@@ -36,11 +36,11 @@ import {
 	insTop,
 	shrink,
 	vstack,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { is, maxIs, mi, minIs, p, m, width } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { is, maxIs, mi, minIs, p, m, width } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
 import {
 	font,
 	fontSize,
@@ -49,8 +49,8 @@ import {
 	textDecoration,
 	weight,
 	wordBreak,
-} from "@pkg/u/typography";
-import { AlertDialog, Button, Empty, LinkButton, Table } from "@pkg/ui";
+} from "@sdxc/u/typography";
+import { AlertDialog, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

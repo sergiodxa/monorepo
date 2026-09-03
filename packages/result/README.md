@@ -1,4 +1,4 @@
-# @pkg/result
+# @sdxc/result
 
 Type-safe Result pattern for handling success and failure cases without exceptions.
 
@@ -22,7 +22,7 @@ import {
 	retry,
 	partition,
 	type Result,
-} from "@pkg/result";
+} from "@sdxc/result";
 
 function divide(a: number, b: number): Result<number, Error> {
 	if (b === 0) {
@@ -531,11 +531,11 @@ if (isFailure(result)) {
 
 ## Integration with React Router
 
-Use with `@pkg/response` for type-safe actions:
+Use with `@sdxc/response` for type-safe actions:
 
 ```typescript
-import { success, failure, isFailure } from "@pkg/result";
-import { ok, badRequest } from "@pkg/response";
+import { success, failure, isFailure } from "@sdxc/result";
+import { ok, badRequest } from "@sdxc/response";
 
 export async function action({ request }: Route.ActionArgs) {
 	let validation = await validateForm(request);

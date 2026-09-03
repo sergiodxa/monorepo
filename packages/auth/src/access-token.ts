@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@pkg/jwt";
+import { JWT } from "@sdxc/jwt";
 
 /**
  * A JWT access token, per RFC 9068. `audience` reads either shape of `aud`: the client

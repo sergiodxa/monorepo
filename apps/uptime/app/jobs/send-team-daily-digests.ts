@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobHandler } from "@pkg/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 import { sendTeamDigests } from "~/app/jobs/send-team-digests";

@@ -65,7 +65,7 @@ export interface ToolDescriptor {
 }
 
 /** Brands a declared tool so a group can tell one from a nested group. */
-const TOOL = Symbol.for("@pkg/mcp.tool");
+const TOOL = Symbol.for("@sdxc/mcp.tool");
 
 /** A declared tool; `map()` binds its handler separately. */
 export interface Tool<Schema extends ObjectSchema = ObjectSchema> {

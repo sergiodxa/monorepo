@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";

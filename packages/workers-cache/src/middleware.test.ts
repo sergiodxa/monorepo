@@ -10,7 +10,7 @@
 
 import type { RequestContext as Context } from "remix/router";
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";

@@ -1,15 +1,15 @@
 /**
  * The per-tenant Blog Durable Object: a thin host that stores control-plane-pushed
- * config in its own SQLite, boots `@pkg/blog-engine` over a SqlStorage adapter,
+ * config in its own SQLite, boots `@sdxc/blog-engine` over a SqlStorage adapter,
  * enforces lifecycle state (suspended/deleted/custom-domain), and forwards requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { BlogEngine } from "@pkg/blog-engine";
+import type { BlogEngine } from "@sdxc/blog-engine";
 
-import { createBlogEngine } from "@pkg/blog-engine";
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { createBlogEngine } from "@sdxc/blog-engine";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 
 /** Control-plane-pushed tenant configuration, stored in the DO's own SQLite. */
@@ -49,7 +49,7 @@ function suspendedPage(): Response {
 
 /**
  * Per-tenant Durable Object hosting a blog: stores control-plane-pushed config
- * in its own SQLite, boots `@pkg/blog-engine` over a SqlStorage adapter,
+ * in its own SQLite, boots `@sdxc/blog-engine` over a SqlStorage adapter,
  * enforces lifecycle state, and forwards requests.
  */
 export default class Blog extends DurableObject<Cloudflare.Env> {
@@ -116,7 +116,7 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Constructs and migrates the `@pkg/blog-engine` instance for this tenant, wiring
+	 * Constructs and migrates the `@sdxc/blog-engine` instance for this tenant, wiring
 	 * it to the DO's own SqlStorage and the per-blog session/OIDC config. Migrations
 	 * run here (inside the boot's `blockConcurrencyWhile`) since the engine owns them.
 	 *

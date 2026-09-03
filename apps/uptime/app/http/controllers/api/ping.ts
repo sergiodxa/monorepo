@@ -7,16 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
+import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
-import { BadRequest, PaymentRequired } from "@pkg/http/status-code";
-import { CloudflareAdapter, MemoryAdapter } from "@pkg/rate-limit";
-import { rateLimit } from "@pkg/rate-limit/middleware";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import { generateUUID } from "@pkg/uuid";
-import { validate } from "@pkg/validate";
+import { BadRequest, PaymentRequired } from "@sdxc/http/status-code";
+import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
+import { generateUUID } from "@sdxc/uuid";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";

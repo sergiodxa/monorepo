@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { HostnameClient } from "@pkg/hostname";
-import { createJobHandler } from "@pkg/jobs";
+import { HostnameClient } from "@sdxc/hostname";
+import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 import Hostname from "~/app/models/hostname";

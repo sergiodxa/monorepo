@@ -10,7 +10,7 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { vstack } from "@pkg/u/layout";
+import { vstack } from "@sdxc/u/layout";
 
 import type { CSSStyles } from "../utils/css-styles";
 

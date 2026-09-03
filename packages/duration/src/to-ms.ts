@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isSuccess } from "@pkg/result";
+import { isSuccess } from "@sdxc/result";
 
 import type { DurationInput } from "./types";
 

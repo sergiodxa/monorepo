@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, unwrap } from "@pkg/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { RateLimiterBinding } from "./cloudflare";

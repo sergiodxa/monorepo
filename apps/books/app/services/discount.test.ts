@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Discount } from "@pkg/billing";
+import type { Discount } from "@sdxc/billing";
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";

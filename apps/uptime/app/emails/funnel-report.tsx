@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Address, EmailTableRow } from "@pkg/mail";
+import type { Address, EmailTableRow } from "@sdxc/mail";
 import type { Handle, RemixElement } from "remix/ui";
 
-import { diffInDays, formatDate, formatDateTime } from "@pkg/dates";
-import { Email } from "@pkg/mail";
+import { diffInDays, formatDate, formatDateTime } from "@sdxc/dates";
+import { Email } from "@sdxc/mail";
 
 import type { TrialDailyCounters } from "~/app/data/trial-daily-stats";
 

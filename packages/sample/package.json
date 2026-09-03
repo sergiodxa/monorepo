@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/sample",
+	"name": "@sdxc/sample",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -12,9 +12,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/crypto": "workspace:*",
-		"@pkg/dates": "workspace:*",
-		"@pkg/duration": "workspace:*",
-		"@pkg/jwt": "workspace:*"
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/dates": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/jwt": "workspace:*"
 	}
 }

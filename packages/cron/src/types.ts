@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
 /**
  * One of the five fields of a standard cron expression, named in the order they

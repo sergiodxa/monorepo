@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
-import { sign, verify } from "@pkg/webhooks";
+import { failure, isFailure, success } from "@sdxc/result";
+import { sign, verify } from "@sdxc/webhooks";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
 

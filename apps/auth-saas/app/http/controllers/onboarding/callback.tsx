@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JSONValue } from "@pkg/types";
+import type { JSONValue } from "@sdxc/types";
 
-import { isFailure, wrap } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { isFailure, wrap } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

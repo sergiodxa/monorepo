@@ -1,5 +1,5 @@
 /**
- * Vite build for the tenant OIDC client bundles. Globs the `@pkg/oidc-provider`
+ * Vite build for the tenant OIDC client bundles. Globs the `@sdxc/oidc-provider`
  * client entries (e.g. WebAuthn flows) and builds them as an ES library into
  * `assets/tenant/`, preserving named exports so the tenant Durable Object can
  * hydrate each component from its `clientEntry()` URL.

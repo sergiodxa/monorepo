@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ok } from "@pkg/http/response/json";
+import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";

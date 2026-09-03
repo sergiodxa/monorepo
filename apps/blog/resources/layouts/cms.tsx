@@ -10,12 +10,12 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
-import { m, maxIs, mbe, mi, pb, pbe, pbs, pi } from "@pkg/u/size";
-import { font, text } from "@pkg/u/typography";
-import { Heading, NavLink } from "@pkg/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
+import { m, maxIs, mbe, mi, pb, pbe, pbs, pi } from "@sdxc/u/size";
+import { font, text } from "@sdxc/u/typography";
+import { Heading, NavLink } from "@sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";

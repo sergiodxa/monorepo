@@ -9,20 +9,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { UsageEvent } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import billing from "@pkg/billing/middleware";
+import billing from "@sdxc/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
-} from "@pkg/cloudflare-mocks";
-import { failure, success } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/cloudflare-mocks";
+import { failure, success } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -113,7 +113,7 @@ let trialTurnstileSiteKey = vi.fn((): string | null => null);
 vi.doMock("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
 
 /** The guard's own logging is noise here; the assertions read the rendered page. */
-vi.doMock("@pkg/logger", () => ({
+vi.doMock("@sdxc/logger", () => ({
 	logger: { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} },
 }));
 

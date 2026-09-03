@@ -19,11 +19,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
-import type { Sample } from "@pkg/sample";
+import type { Result } from "@sdxc/result";
+import type { Sample } from "@sdxc/sample";
 
-import { failure, success } from "@pkg/result";
-import { createSample } from "@pkg/sample";
+import { failure, success } from "@sdxc/result";
+import { createSample } from "@sdxc/sample";
 
 import type { SpecError } from "../errors";
 import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";

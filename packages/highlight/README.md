@@ -1,4 +1,4 @@
-# @pkg/highlight
+# @sdxc/highlight
 
 Syntax highlighting as tokens, with a Markdoc node for fenced code and a stylesheet keyed to the tokens it produces.
 
@@ -8,14 +8,14 @@ A highlighter's real output is not markup — it is a sequence of runs, each lab
 
 There is no global registry and no import order to get right. A grammar is a value that a module exports, and a grammar built on another imports it and merges with [`compose`](#composeparts-arrayrecordstring-rule-grammar). `Token.Type` is a closed union of twenty members, small enough that one stylesheet paints all of it and a palette can map over it exhaustively; a grammar picks the nearest member rather than introducing its own. A language with no grammar is not a failure — it comes back as a single `plain` token holding the whole input, the same shape every other language produces.
 
-The package splits by dependency. The root entry has none: it is the scanner, the grammars, and the token model. `@pkg/highlight/markdoc` adds the fence node and depends on [Markdoc](https://markdoc.dev), so a caller that only tokenizes never resolves it. `@pkg/highlight/styles.css` is the selector layer, one rule per token type, each reading a custom property so a consumer restyles by declaring properties rather than by restating selectors.
+The package splits by dependency. The root entry has none: it is the scanner, the grammars, and the token model. `@sdxc/highlight/markdoc` adds the fence node and depends on [Markdoc](https://markdoc.dev), so a caller that only tokenizes never resolves it. `@sdxc/highlight/styles.css` is the selector layer, one rule per token type, each reading a custom property so a consumer restyles by declaring properties rather than by restating selectors.
 
 ## Usage
 
 ### Basic Example
 
 ```typescript
-import { tokenize } from "@pkg/highlight";
+import { tokenize } from "@sdxc/highlight";
 
 let tokens = tokenize("let x = 1;", "ts");
 // [
@@ -53,7 +53,7 @@ Map them. Nothing about a token needs interpreting:
 When a caller needs a string rather than elements:
 
 ```typescript
-import { highlight } from "@pkg/highlight";
+import { highlight } from "@sdxc/highlight";
 
 let markup = highlight('let name = "x";', "ts");
 // '<span class="token keyword">let</span> name <span class="token operator">=</span> …'
@@ -62,7 +62,7 @@ let markup = highlight('let name = "x";', "ts");
 ### Highlighting Markdown Fences
 
 ```typescript
-import { fence } from "@pkg/highlight/markdoc";
+import { fence } from "@sdxc/highlight/markdoc";
 import Markdoc from "@markdoc/markdoc";
 
 let tree = Markdoc.transform(Markdoc.parse(source), { nodes: { fence } });
@@ -157,7 +157,7 @@ Scans source with a grammar directly, skipping the registry and the alias table.
 **Example:**
 
 ```typescript
-import { scan } from "@pkg/highlight";
+import { scan } from "@sdxc/highlight";
 import { ini } from "./ini";
 
 let tokens = scan("[server]\nport = 8080\n", ini);
@@ -178,14 +178,14 @@ Merges grammars into one, mode by mode, so a language built on another states th
 **Example:**
 
 ```typescript
-import { compose } from "@pkg/highlight";
+import { compose } from "@sdxc/highlight";
 
 export const tsx: Grammar = compose(elements, typescript);
 ```
 
 ### `fence`
 
-Markdoc node definition for fenced code blocks, exported from `@pkg/highlight/markdoc`. Register it as `nodes.fence` and fences highlight during `Markdoc.transform`: it reads the fence's `language`, `path` and `title`, resolves the language, tokenizes the body, and emits a `Fence` tag for a renderer to draw. This package draws nothing — the renderer decides whether a path gets a header, a block gets a copy button, or lines get numbers.
+Markdoc node definition for fenced code blocks, exported from `@sdxc/highlight/markdoc`. Register it as `nodes.fence` and fences highlight during `Markdoc.transform`: it reads the fence's `language`, `path` and `title`, resolves the language, tokenizes the body, and emits a `Fence` tag for a renderer to draw. This package draws nothing — the renderer decides whether a path gets a header, a block gets a copy button, or lines get numbers.
 
 **Example:**
 
@@ -256,7 +256,7 @@ What a `Fence` tag carries. Tokens rather than markup, so a renderer emits its o
 An email has no stylesheet to load, so the colour has to be inline. Key the palette by the type union and the compiler checks it covers every member, which is what keeps a type added upstream from silently rendering unpainted:
 
 ```typescript
-import type { Token } from "@pkg/highlight";
+import type { Token } from "@sdxc/highlight";
 
 const COLORS: Record<Token.Type, string | undefined> = {
 	comment: "#6a737d",
@@ -279,7 +279,7 @@ function paint(tokens: Token[]) {
 Load the selector layer, then declare the properties for the roles you have an opinion about. The rest keep the defaults:
 
 ```tsx
-import highlightStyles from "@pkg/highlight/styles.css?url";
+import highlightStyles from "@sdxc/highlight/styles.css?url";
 
 export let links = () => [{ rel: "stylesheet", href: highlightStyles }];
 ```
@@ -299,7 +299,7 @@ The stylesheet sets colour and nothing else. A block's padding, border and radiu
 A grammar is a record of modes, each a list of rules tried in order at the cursor:
 
 ```typescript
-import type { Grammar } from "@pkg/highlight";
+import type { Grammar } from "@sdxc/highlight";
 
 export const ini: Grammar = {
 	main: [
@@ -328,8 +328,8 @@ Four properties are checked for every rule of every registered grammar by `src/l
 
 ## Related Packages
 
-- [`@pkg/markdown`](/packages/markdown) - Registers the fence node, and renders its `Fence` tag into Remix UI nodes
-- [`@pkg/mail`](/packages/mail) - Registers the same node, and paints its tokens inline for an inbox
+- [`@sdxc/markdown`](/packages/markdown) - Registers the fence node, and renders its `Fence` tag into Remix UI nodes
+- [`@sdxc/mail`](/packages/mail) - Registers the same node, and paints its tokens inline for an inbox
 
 ## Tips
 

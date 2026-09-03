@@ -4,7 +4,7 @@
  * and final-CTA section repeats this exact `isSignedIn` branch, so it's centralized
  * here instead of duplicating the link/form pair per section. Renders through the
  * shared `Button`/`LinkButton` components (themselves thin wrappers over
- * `@pkg/ui`'s own) instead of a hand-rolled "solid primary" style, so this CTA
+ * `@sdxc/ui`'s own) instead of a hand-rolled "solid primary" style, so this CTA
  * never drifts from every other button in the app.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -13,7 +13,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Button, LinkButton } from "@pkg/ui";
+import { Button, LinkButton } from "@sdxc/ui";
 
 import routes from "~/routes/web";
 

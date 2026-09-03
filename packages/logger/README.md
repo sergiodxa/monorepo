@@ -1,4 +1,4 @@
-# @pkg/logger
+# @sdxc/logger
 
 Structured logging for Cloudflare Workers and other runtimes.
 
@@ -16,12 +16,12 @@ Request logging builds on batched logging: each scope is its own batched logger,
 
 ### Entry points
 
-| Import                   | Exports                                                                           |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| `@pkg/logger`            | `Logger` (immediate), `logger` singleton, `BatchedLogger`, `RequestLogger`, `Log` |
-| `@pkg/logger/middleware` | `logger`, the request-logging middleware (also the default export)                |
-| `@pkg/logger/batched`    | `Logger` (batched)                                                                |
-| `@pkg/logger/request`    | `Logger` (request-scoped)                                                         |
+| Import                    | Exports                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| `@sdxc/logger`            | `Logger` (immediate), `logger` singleton, `BatchedLogger`, `RequestLogger`, `Log` |
+| `@sdxc/logger/middleware` | `logger`, the request-logging middleware (also the default export)                |
+| `@sdxc/logger/batched`    | `Logger` (batched)                                                                |
+| `@sdxc/logger/request`    | `Logger` (request-scoped)                                                         |
 
 `BatchedLogger` and `RequestLogger` from the root are aliases of the `Logger` classes exported by the `/batched` and `/request` subpaths. Import from the root when you need more than one of them in the same file.
 
@@ -34,7 +34,7 @@ The package has no runtime dependencies. `remix` is a devDependency only: the mi
 For anything outside a request or job — service modules, bootstrap code, one-off scripts — use the exported singleton:
 
 ```typescript
-import { logger } from "@pkg/logger";
+import { logger } from "@sdxc/logger";
 
 logger.info("app.started");
 logger.error("startup.failed", { reason: "missing config" });
@@ -45,7 +45,7 @@ logger.error("startup.failed", { reason: "missing config" });
 For a self-contained unit of work with a known identifier — a queue message, a cron run, a workflow step:
 
 ```typescript
-import { BatchedLogger } from "@pkg/logger";
+import { BatchedLogger } from "@sdxc/logger";
 
 let log = new BatchedLogger("cron:daily-cleanup");
 
@@ -64,12 +64,12 @@ Add the middleware to your router and every handler logs through `ctx.logger` in
 
 ```typescript
 // bootstrap/worker.ts
-import { logger } from "@pkg/logger/middleware";
+import { logger } from "@sdxc/logger/middleware";
 
 let router = createRouter({ middleware: [logger] });
 ```
 
-Register it as the outermost middleware so every later middleware and handler can reach it. It is also the module's default export, if you prefer `import logger from "@pkg/logger/middleware"`.
+Register it as the outermost middleware so every later middleware and handler can reach it. It is also the module's default export, if you prefer `import logger from "@sdxc/logger/middleware"`.
 
 Importing the middleware is also what gives you the type. The `declare module "remix/router"` augmentation that adds `logger` to `RequestContext` ships from the middleware module itself rather than an ambient `.d.ts`, because ambient declarations are not pulled in transitively — a consumer only picks up the type by importing the module it comes with.
 
@@ -110,7 +110,7 @@ ctx.logger.billing = { polarId: customer.polarId, plan: subscription.plan };
 Singleton instance of `Logger` for immediate logging outside of request contexts.
 
 ```typescript
-import { logger } from "@pkg/logger";
+import { logger } from "@sdxc/logger";
 
 logger.info("app.started");
 ```
@@ -120,7 +120,7 @@ logger.info("app.started");
 Immediate logger that outputs each log call directly to the console. Each call emits `{ ...payload, event, timestamp }`.
 
 ```typescript
-import { Logger } from "@pkg/logger";
+import { Logger } from "@sdxc/logger";
 
 let log = new Logger();
 
@@ -130,10 +130,10 @@ log.error(event: string, payload?: Log.Payload): void
 
 ### `Logger` (batched)
 
-Available as `BatchedLogger` from `@pkg/logger` or `Logger` from `@pkg/logger/batched`. Accumulates log entries and outputs them all at once when flushed.
+Available as `BatchedLogger` from `@sdxc/logger` or `Logger` from `@sdxc/logger/batched`. Accumulates log entries and outputs them all at once when flushed.
 
 ```typescript
-import { Logger } from "@pkg/logger/batched";
+import { Logger } from "@sdxc/logger/batched";
 
 // Factory method for HTTP requests
 let log = Logger.fromRequest(request);
@@ -192,7 +192,7 @@ type Event = {
 
 ### `Logger` (request)
 
-Available as `RequestLogger` from `@pkg/logger` or `Logger` from `@pkg/logger/request`.
+Available as `RequestLogger` from `@sdxc/logger` or `Logger` from `@sdxc/logger/request`.
 
 ```typescript
 class Logger {
@@ -295,17 +295,17 @@ namespace Logger {
 
 ### `logger` (middleware)
 
-The request-logging middleware, from `@pkg/logger/middleware` as either a named or a default export. It is a `Middleware` from `remix/router`.
+The request-logging middleware, from `@sdxc/logger/middleware` as either a named or a default export. It is a `Middleware` from `remix/router`.
 
 ```typescript
-import { logger } from "@pkg/logger/middleware";
+import { logger } from "@sdxc/logger/middleware";
 
 let router = createRouter({ middleware: [logger] });
 ```
 
 For each request it:
 
-- Constructs `new Logger(ctx.request)` from `@pkg/logger/request` and assigns it to `ctx.logger`
+- Constructs `new Logger(ctx.request)` from `@sdxc/logger/request` and assigns it to `ctx.logger`
 - On success, assigns the downstream response to `ctx.logger.response` and returns it
 - On a throw, logs `unhandled_error` with `error` (the message, or `String(error)` for non-`Error` throws) and `stack`, then re-throws
 - Calls `ctx.logger.flush()` in a `finally` block, so both paths flush exactly once
@@ -372,7 +372,7 @@ Empty scopes are omitted, and `request.cf` is dropped when the request has no Cl
 
 ### Request middleware
 
-Apps that serve HTTP put `logger` from `@pkg/logger/middleware` at the head of the router's middleware stack and log through `ctx.logger` from there on. Construct a `Logger` from `@pkg/logger/request` directly only when you are outside a router — a Durable Object, a custom `fetch` handler — and then you own the `response` assignment and the `flush()` in a `finally` yourself.
+Apps that serve HTTP put `logger` from `@sdxc/logger/middleware` at the head of the router's middleware stack and log through `ctx.logger` from there on. Construct a `Logger` from `@sdxc/logger/request` directly only when you are outside a router — a Durable Object, a custom `fetch` handler — and then you own the `response` assignment and the `flush()` in a `finally` yourself.
 
 ### Handler logging
 
@@ -425,7 +425,7 @@ async function handler(ctx: RequestContext) {
 
 ### Background jobs
 
-`@pkg/jobs` constructs a `BatchedLogger` per job, named after the job id, and flushes it when the job settles. Inside a job, log through `this.logger`:
+`@sdxc/jobs` constructs a `BatchedLogger` per job, named after the job id, and flushes it when the job settles. Inside a job, log through `this.logger`:
 
 ```typescript
 export class CleanupJob extends Job {
@@ -442,7 +442,7 @@ export class CleanupJob extends Job {
 Handlers and jobs that take a logger can be tested with a real `BatchedLogger` — nothing is written to the console until `flush()` is called, and `events` exposes what was recorded:
 
 ```typescript
-import { BatchedLogger } from "@pkg/logger";
+import { BatchedLogger } from "@sdxc/logger";
 
 let logger = new BatchedLogger("test");
 
@@ -465,14 +465,14 @@ The request logger records only non-sensitive headers.
 
 ## Related Packages
 
-- [`@pkg/jobs`](/packages/jobs) - Constructs a `BatchedLogger` per job execution
-- [`@pkg/result`](/packages/result) - Result type commonly paired with the logger for error tracking and control flow
+- [`@sdxc/jobs`](/packages/jobs) - Constructs a `BatchedLogger` per job execution
+- [`@sdxc/result`](/packages/result) - Result type commonly paired with the logger for error tracking and control flow
 
 ## Tips
 
-1. **Use the middleware in HTTP contexts** - `@pkg/logger/middleware` consolidates every scope of a request into one entry, making it easy to trace a request in Cloudflare's logging dashboard.
+1. **Use the middleware in HTTP contexts** - `@sdxc/logger/middleware` consolidates every scope of a request into one entry, making it easy to trace a request in Cloudflare's logging dashboard.
 
-2. **Use the singleton logger for module-level code** - Service modules and bootstrap code have no request or job context to log through; import `logger` from `@pkg/logger` there.
+2. **Use the singleton logger for module-level code** - Service modules and bootstrap code have no request or job context to log through; import `logger` from `@sdxc/logger` there.
 
 3. **Name scopes after the thing doing the work** - A middleware name or a route path makes the flushed entry readable; a generic name makes every request look the same.
 

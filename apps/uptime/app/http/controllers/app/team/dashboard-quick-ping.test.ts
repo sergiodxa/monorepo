@@ -12,9 +12,9 @@
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { createTranslator } from "@pkg/i18n";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { createTranslator } from "@sdxc/i18n";
+import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";

@@ -11,7 +11,7 @@
 
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { transition } from "@pkg/u/effects";
+import { transition } from "@sdxc/u/effects";
 
 import type { CSSStyles } from "../utils/css-styles";
 

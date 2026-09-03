@@ -13,11 +13,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { EntitlementState } from "@pkg/billing";
+import type { EntitlementState } from "@sdxc/billing";
 import type { AnyTable, Database } from "remix/data-table";
 
-import { logger } from "@pkg/logger";
-import { generateUUID } from "@pkg/uuid";
+import { logger } from "@sdxc/logger";
+import { generateUUID } from "@sdxc/uuid";
 import { getTableName } from "remix/data-table";
 
 import type { SelectSubscription } from "~/database/schema";

@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/ui",
+	"name": "@sdxc/ui",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -19,8 +19,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/icons": "workspace:*",
-		"@pkg/u": "workspace:*",
+		"@sdxc/icons": "workspace:*",
+		"@sdxc/u": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

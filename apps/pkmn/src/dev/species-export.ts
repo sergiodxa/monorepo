@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { failure, isFailure, type Result, success } from "@pkg/result";
+import { failure, isFailure, type Result, success } from "@sdxc/result";
 
 import type { Species, SpeciesId } from "~/game/data/species";
 

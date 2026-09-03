@@ -18,7 +18,7 @@ write. Everything under `src/` that is not named in the map is internal.
 - **An `exports` map with one entry per file is not a surface, it is a directory
   listing.** Deliberate entries are what let a package reorganize `src/` without breaking
   a consumer.
-- **Subpath entries carry meaning.** `@pkg/logger/middleware` says "this is the middleware
+- **Subpath entries carry meaning.** `@sdxc/logger/middleware` says "this is the middleware
   form" at the import site, which a named export off the root does not.
 
 ## Pattern
@@ -76,7 +76,7 @@ A package that is only ever imported by subpath has no `"."` at all:
 ```
 
 A `.css` file is exported the same way and imported by consumers as
-`@pkg/ui/theme.css?url`.
+`@sdxc/ui/theme.css?url`.
 
 ### `src/` layout
 

@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Mailer, SentMessage } from "@pkg/mail";
-import type { Result } from "@pkg/result";
+import type { Mailer, SentMessage } from "@sdxc/mail";
+import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { isFailure, wrap } from "@pkg/result";
+import { isFailure, wrap } from "@sdxc/result";
 
 import type { DnsRecordDiff } from "~/app/data/dns-monitor-record";
 import type { MonitorScopeType } from "~/app/lib/monitor-scope";

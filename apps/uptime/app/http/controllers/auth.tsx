@@ -7,22 +7,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IdToken } from "@pkg/auth/id-token";
-import type { i18n } from "@pkg/i18n";
+import type { IdToken } from "@sdxc/auth/id-token";
+import type { i18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
-import { AuthError, AuthErrorCode } from "@pkg/auth/auth-error";
-import { redirect } from "@pkg/http/response";
-import { Location } from "@pkg/location";
-import { isFailure, wrap } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { m, minBs, p } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { fontSize, textAlign, textDecoration } from "@pkg/u/typography";
+import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
+import { redirect } from "@sdxc/http/response";
+import { Location } from "@sdxc/location";
+import { isFailure, wrap } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { m, minBs, p } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";

@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { WebhookDelivery as Delivery } from "@pkg/billing";
+import type { WebhookDelivery as Delivery } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

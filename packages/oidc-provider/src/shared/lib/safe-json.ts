@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { badRequest } from "@pkg/http/response/json";
+import { badRequest } from "@sdxc/http/response/json";
 
 /**
  * Safely parses a JSON object from a request body, resolving to either the

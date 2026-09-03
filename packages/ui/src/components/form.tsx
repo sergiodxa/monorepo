@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { flex, flexCol, gap } from "@pkg/u/layout";
+import { flex, flexCol, gap } from "@sdxc/u/layout";
 
 /** {@link Form.Props.issues} fallback for a first, not-yet-submitted render. */
 const DEFAULT_ISSUES: ReadonlyArray<Form.Issue> = [];

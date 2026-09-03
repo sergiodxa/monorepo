@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/icons";
-import { bg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
+import { bg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import {
 	absolute,
 	block,
@@ -28,11 +28,11 @@ import {
 	insIs,
 	inset,
 	place,
-} from "@pkg/u/layout";
-import { bs, is, mbe, p, width } from "@pkg/u/size";
-import { translateY } from "@pkg/u/transform";
-import { Button, LinkButton, Text } from "@pkg/ui";
-import { RouterProvider } from "@pkg/ui-router";
+} from "@sdxc/u/layout";
+import { bs, is, mbe, p, width } from "@sdxc/u/size";
+import { translateY } from "@sdxc/u/transform";
+import { Button, LinkButton, Text } from "@sdxc/ui";
+import { RouterProvider } from "@sdxc/ui-router";
 import { Frame, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
@@ -57,7 +57,7 @@ export interface AlbumPageProps {
  * vertically centered, shaped into a circle.
  *
  * @param side Which inline edge the button is pinned to.
- * @returns A `@pkg/u` mixin array ready for the button's `mix` prop.
+ * @returns A `@sdxc/u` mixin array ready for the button's `mix` prop.
  */
 function overlayArrowMix(side: "start" | "end") {
 	return [

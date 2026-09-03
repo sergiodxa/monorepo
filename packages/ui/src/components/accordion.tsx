@@ -11,14 +11,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, fg } from "@pkg/u/color";
-import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { justify, shrink } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, pb, pbe, pi } from "@pkg/u/size";
-import { hover, open, when } from "@pkg/u/state";
-import { rotate } from "@pkg/u/transform";
-import { text, textDecoration } from "@pkg/u/typography";
+import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { justify, shrink } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, pb, pbe, pi } from "@sdxc/u/size";
+import { hover, open, when } from "@sdxc/u/state";
+import { rotate } from "@sdxc/u/transform";
+import { text, textDecoration } from "@sdxc/u/typography";
 
 import { Disclosure } from "./disclosure";
 

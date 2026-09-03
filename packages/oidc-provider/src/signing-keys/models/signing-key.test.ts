@@ -7,10 +7,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import { JWK, JWT } from "@pkg/jwt";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import { JWK, JWT } from "@sdxc/jwt";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 

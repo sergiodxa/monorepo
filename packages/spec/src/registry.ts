@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isSuccess, success } from "@pkg/result";
+import { failure, isSuccess, success } from "@sdxc/result";
 
 import type { CommandNode, FixtureNode } from "./ast";
 import type { Plugin, ToolDescriptor } from "./plugin";

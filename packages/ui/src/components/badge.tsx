@@ -10,13 +10,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { userSelect } from "@pkg/u/general";
-import { gap, inlineFlex, items, shrink } from "@pkg/u/layout";
-import { bs, is, pb, pi } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
-import { fontSize, leading, nowrap, weight } from "@pkg/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { userSelect } from "@sdxc/u/general";
+import { gap, inlineFlex, items, shrink } from "@sdxc/u/layout";
+import { bs, is, pb, pi } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
+import { fontSize, leading, nowrap, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";

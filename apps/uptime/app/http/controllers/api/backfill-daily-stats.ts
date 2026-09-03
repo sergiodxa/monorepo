@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Accepted } from "@pkg/http/status-code";
+import { Accepted } from "@sdxc/http/status-code";
 import { createAction } from "remix/router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";

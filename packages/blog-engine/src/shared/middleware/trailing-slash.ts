@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 import middleware from "../lib/middleware";
 

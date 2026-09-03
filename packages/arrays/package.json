@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/arrays",
+	"name": "@sdxc/arrays",
 	"version": "0.0.0",
 	"private": true,
 	"license": "MIT",

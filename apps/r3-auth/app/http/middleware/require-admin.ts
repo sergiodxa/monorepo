@@ -9,7 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 import requireSubject from "~/app/http/middleware/require-subject";
 import routes from "~/routes/web";

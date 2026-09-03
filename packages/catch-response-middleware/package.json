@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/catch-response-middleware",
+	"name": "@sdxc/catch-response-middleware",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -14,6 +14,6 @@
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@pkg/response": "workspace:*"
+		"@sdxc/response": "workspace:*"
 	}
 }

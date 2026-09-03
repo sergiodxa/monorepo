@@ -1,5 +1,5 @@
 /**
- * `@pkg/u` is logical-property-first elsewhere in `size/`, but a docked
+ * `@sdxc/u` is logical-property-first elsewhere in `size/`, but a docked
  * panel pinned to a physical, fixed viewport edge — often with a
  * safe-area-inset offset — needs the physical property itself. This
  * utility is that narrow exception: it sets `padding-right` directly.

@@ -11,8 +11,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { XIcon } from "@pkg/icons";
-import { bg, fg, outline } from "@pkg/u/color";
+import { XIcon } from "@sdxc/icons";
+import { bg, fg, outline } from "@sdxc/u/color";
 import {
 	backdropBlur,
 	backdropSaturate,
@@ -20,8 +20,8 @@ import {
 	rounded,
 	transition,
 	transitionBehavior,
-} from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+} from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import {
 	absolute,
 	container,
@@ -33,12 +33,12 @@ import {
 	inset,
 	justify,
 	relative,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { at, media, startingStyle, supports } from "@pkg/u/responsive";
-import { is, maxBs, maxIs, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { at, media, startingStyle, supports } from "@sdxc/u/responsive";
+import { is, maxBs, maxIs, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
 
 import { durations, easings } from "../animations/tokens";
 

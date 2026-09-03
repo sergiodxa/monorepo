@@ -4,7 +4,7 @@
  * schema's extra `monitor_id` field.
  *
  * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
- * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
+ * `FormData`, not `@sdxc/validate`'s `validate()`: `validate()` normalizes `FormData`
  * into a plain object before handing it to the schema, but these are `f.object(...)`
  * form-data schemas that only accept the raw `FormData`/`URLSearchParams` instance, so
  * every call through `validate()` fails before the field-level rules ever run.

@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
-import { Empty } from "@pkg/ui";
+import { isFailure } from "@sdxc/result";
+import { Empty } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

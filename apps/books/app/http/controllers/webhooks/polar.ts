@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BillingWebhookHandlers } from "@pkg/billing";
+import type { BillingWebhookHandlers } from "@sdxc/billing";
 import type { RequestContext } from "remix/router";
 
-import { BillingWebhook } from "@pkg/billing";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
+import { BillingWebhook } from "@sdxc/billing";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
 
 import { Product } from "~/app/data/product";
 import { polar } from "~/app/lib/billing";

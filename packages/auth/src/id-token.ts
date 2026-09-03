@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@pkg/jwt";
+import { JWT } from "@sdxc/jwt";
 
 /** Milliseconds in a second, the factor between an `auth_time` claim and a `Date`. */
 const MS_PER_SECOND = 1000;

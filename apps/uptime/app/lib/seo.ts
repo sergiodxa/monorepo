@@ -1,5 +1,5 @@
 /**
- * The product's own SEO instance: one `@pkg/seo` configuration holding the canonical
+ * The product's own SEO instance: one `@sdxc/seo` configuration holding the canonical
  * origin, site name, and default description every `<head>` URL and schema.org node is
  * built from, plus the one builder whose defaults are product facts rather than page
  * input. Controllers and the document layout read their metadata through it, so the
@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SchemaOrg } from "@pkg/seo";
+import type { SchemaOrg } from "@sdxc/seo";
 
-import { createSeo } from "@pkg/seo";
+import { createSeo } from "@sdxc/seo";
 
 /**
  * The site's one configured SEO instance: resolves canonical URLs onto the product's

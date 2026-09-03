@@ -1,4 +1,4 @@
-# @pkg/auth
+# @sdxc/auth
 
 OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers.
 
@@ -23,28 +23,28 @@ value instead.
 
 The package is organized into modules that can be imported independently:
 
-- `@pkg/auth/issuer` - The discovery document and JWKS every role shares
-- `@pkg/auth/relying-party` - Signing a person in through the browser
-- `@pkg/auth/service-client` - Acting as the app itself, with no person present
-- `@pkg/auth/resource-server` - Verifying a bearer token an incoming request carries
-- `@pkg/auth/management-client` - Reading the provider's own records
-- `@pkg/auth/auth-session` - The token set a login leaves in the session
-- `@pkg/auth/id-token` - The verified ID token and its claims
-- `@pkg/auth/access-token` - The verified access token and its claims
-- `@pkg/auth/authorization` - The helpers a route states its authorization decision in
-- `@pkg/auth/auth-error` - The error every protocol violation arrives as
+- `@sdxc/auth/issuer` - The discovery document and JWKS every role shares
+- `@sdxc/auth/relying-party` - Signing a person in through the browser
+- `@sdxc/auth/service-client` - Acting as the app itself, with no person present
+- `@sdxc/auth/resource-server` - Verifying a bearer token an incoming request carries
+- `@sdxc/auth/management-client` - Reading the provider's own records
+- `@sdxc/auth/auth-session` - The token set a login leaves in the session
+- `@sdxc/auth/id-token` - The verified ID token and its claims
+- `@sdxc/auth/access-token` - The verified access token and its claims
+- `@sdxc/auth/authorization` - The helpers a route states its authorization decision in
+- `@sdxc/auth/auth-error` - The error every protocol violation arrives as
 
 ## Usage
 
 ### The Four Roles
 
 ```typescript
-import { Issuer } from "@pkg/auth/issuer";
-import { ManagementClient } from "@pkg/auth/management-client";
-import { RelyingParty } from "@pkg/auth/relying-party";
-import { ResourceServer } from "@pkg/auth/resource-server";
-import { ServiceClient } from "@pkg/auth/service-client";
-import { Cache } from "@pkg/kv-cache";
+import { Issuer } from "@sdxc/auth/issuer";
+import { ManagementClient } from "@sdxc/auth/management-client";
+import { RelyingParty } from "@sdxc/auth/relying-party";
+import { ResourceServer } from "@sdxc/auth/resource-server";
+import { ServiceClient } from "@sdxc/auth/service-client";
+import { Cache } from "@sdxc/kv-cache";
 import { env } from "cloudflare:workers";
 
 /** The server every other class talks to. One per issuer, `for` handing it out. */
@@ -75,7 +75,7 @@ let admin = new ManagementClient(service);
 ### The Browser Flow Is Three Methods
 
 ```tsx
-import { AuthSession } from "@pkg/auth/auth-session";
+import { AuthSession } from "@sdxc/auth/auth-session";
 import { redirect } from "remix/response/redirect";
 import { form, get, post, route } from "remix/routes";
 
@@ -522,8 +522,8 @@ holds no record under is an answer, and a refusal, a throttle, a provider fault,
 unreadable payload is a condition that may succeed later.
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { SubjectNotFoundError } from "@pkg/auth/management-client";
+import { isFailure } from "@sdxc/result";
+import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 
 let result = await admin.fetchSubjectById(subjectId);
 if (isFailure(result)) {
@@ -605,7 +605,7 @@ those plus any other string, because the registry stays open under Expert Review
 providers use that room.
 
 ```typescript
-import { AUTHENTICATION_METHODS } from "@pkg/auth/id-token";
+import { AUTHENTICATION_METHODS } from "@sdxc/auth/id-token";
 
 let rp = new RelyingParty(issuer, {
 	clientId,
@@ -707,7 +707,7 @@ to stop, which is why throwing is what makes ignoring one impossible.
 - `AuthError.is(error, code)`: A single narrowing test for a catch block
 
 ```typescript
-import { AuthError, AuthErrorCode } from "@pkg/auth/auth-error";
+import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
 
 try {
 	let grant = await rp.callback(ctx);
@@ -847,7 +847,7 @@ load-bearing and covered again under Behavior.
 import { asyncContext } from "remix/middleware/async-context";
 import { auth } from "remix/middleware/auth";
 import { session } from "remix/middleware/session";
-import { catchResponse } from "@pkg/catch-response-middleware";
+import { catchResponse } from "@sdxc/catch-response-middleware";
 import { createRouter } from "remix/router";
 
 let router = createRouter({
@@ -877,7 +877,7 @@ Create the helpers once and re-export them, so every route states its decision i
 and the login route is named in one place.
 
 ```typescript
-import { createAuthorization } from "@pkg/auth/authorization";
+import { createAuthorization } from "@sdxc/auth/authorization";
 
 import { relyingParty } from "~/auth/relying-party";
 
@@ -928,8 +928,8 @@ A cold isolate is the normal case on Workers, so both caches have a shared tier 
 in-isolate memo, and both client classes count their outbound work against a budget.
 
 ```typescript
-import { CloudflareAdapter } from "@pkg/rate-limit";
-import { Cache } from "@pkg/kv-cache";
+import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { Cache } from "@sdxc/kv-cache";
 
 let cache = new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise));
 
@@ -1113,22 +1113,22 @@ Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv
 
 ## Related Packages
 
-- [`@pkg/jwt`](/packages/jwt) - The `JWT` base class both token classes extend, and the
+- [`@sdxc/jwt`](/packages/jwt) - The `JWT` base class both token classes extend, and the
   `JWK` key resolver `Issuer.keys()` answers with
-- [`@pkg/crypto`](/packages/crypto) - The digests, random tokens, and base64url encoding
+- [`@sdxc/crypto`](/packages/crypto) - The digests, random tokens, and base64url encoding
   behind PKCE, the correlation values, and `at_hash`
-- [`@pkg/kv-cache`](/packages/kv-cache) - `Cache.KVStore` satisfies `Issuer.CacheStore`,
+- [`@sdxc/kv-cache`](/packages/kv-cache) - `Cache.KVStore` satisfies `Issuer.CacheStore`,
   so an app supplies the shared tier and this package depends on the shape alone
-- [`@pkg/rate-limit`](/packages/rate-limit) - The `Adapter` both client classes count
+- [`@sdxc/rate-limit`](/packages/rate-limit) - The `Adapter` both client classes count
   against
-- [`@pkg/location`](/packages/location) - `Location.safe`, which sanitizes every
+- [`@sdxc/location`](/packages/location) - `Location.safe`, which sanitizes every
   `returnTo`
-- [`@pkg/catch-response-middleware`](/packages/catch-response-middleware) - Turns the
+- [`@sdxc/catch-response-middleware`](/packages/catch-response-middleware) - Turns the
   identity helpers' thrown redirect into the reply
-- [`@pkg/get-client-ip`](/packages/get-client-ip) - Derives the key the login budget is
+- [`@sdxc/get-client-ip`](/packages/get-client-ip) - Derives the key the login budget is
   counted under
-- [`@pkg/result`](/packages/result) - The `Result` management reads answer with
-- [`@pkg/duration`](/packages/duration) - The `DurationInput` every TTL, window, and
+- [`@sdxc/result`](/packages/result) - The `Result` management reads answer with
+- [`@sdxc/duration`](/packages/duration) - The `DurationInput` every TTL, window, and
   `maxAge` is expressed in
 
 ## Tips

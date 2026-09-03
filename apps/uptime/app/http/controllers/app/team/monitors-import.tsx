@@ -13,9 +13,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { Button, Table, TextArea } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { Button, Table, TextArea } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@pkg/jwt";
-import { isFailure, wrap } from "@pkg/result";
+import { JWT } from "@sdxc/jwt";
+import { isFailure, wrap } from "@sdxc/result";
 
 /** Milliseconds in a second, the unit every claim here is counted in. */
 const MS_PER_SECOND = 1000;

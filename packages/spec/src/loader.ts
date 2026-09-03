@@ -12,9 +12,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure } from "@pkg/result";
+import { failure } from "@sdxc/result";
 
 import type { SpecError } from "./errors";
 import type { LoadedSuite, SpecSource } from "./sources";

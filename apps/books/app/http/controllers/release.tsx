@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BillingError, Product as CatalogProduct } from "@pkg/billing";
-import type { Logger } from "@pkg/logger/request";
+import type { BillingError, Product as CatalogProduct } from "@sdxc/billing";
+import type { Logger } from "@sdxc/logger/request";
 
-import { ServiceUnavailable } from "@pkg/http/status-code";
-import { isFailure, isSuccess } from "@pkg/result";
+import { ServiceUnavailable } from "@sdxc/http/status-code";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { PriceView, ReleaseView as ReleaseViewTypes } from "~/resources/views/release";

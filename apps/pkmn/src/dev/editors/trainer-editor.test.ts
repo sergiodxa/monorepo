@@ -1,4 +1,4 @@
-import { isSuccess } from "@pkg/result";
+import { isSuccess } from "@sdxc/result";
 /**
  * Exercises the {@link TrainerEditor} as pure logic: setters, party mutations
  * and the {@link MAX_PARTY_SIZE} cap. Snapshots are checked against the trainer

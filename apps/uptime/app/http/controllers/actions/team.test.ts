@@ -12,14 +12,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MemoryBilling } from "@pkg/billing/providers/memory";
+import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import billing from "@pkg/billing/middleware";
-import logger from "@pkg/logger/middleware";
-import { unwrap } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import billing from "@sdxc/billing/middleware";
+import logger from "@sdxc/logger/middleware";
+import { unwrap } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -39,7 +39,7 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 vi.spyOn(console, "info").mockImplementation(() => {});
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
+ * `@sdxc/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
  * object, but this app's schemas validate raw form data directly and reject a
  * flattened one — a known bug this mock works around so tests exercise real branching.
  */

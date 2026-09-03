@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { isFailure, unwrap } from "@pkg/result";
-import { sign } from "@pkg/webhooks";
+import { isFailure, unwrap } from "@sdxc/result";
+import { sign } from "@sdxc/webhooks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";

@@ -12,7 +12,7 @@ import { existsSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { AtlasExportError, type ManifestAtlases } from "./atlas-export";

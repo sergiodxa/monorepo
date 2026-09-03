@@ -1,4 +1,4 @@
-# @pkg/data-table-sqlstorage
+# @sdxc/data-table-sqlstorage
 
 A `remix/data-table` `DatabaseDriver` backed by a Cloudflare Durable Object `SqlStorage`.
 
@@ -23,7 +23,7 @@ Object and any other DO-backed app can share one adapter (see
 ### Basic Example
 
 ```typescript
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
@@ -72,14 +72,14 @@ let adapter = createSQLStorageDatabaseAdapter(ctx.storage.sql);
 await adapter.executeScript("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY);");
 ```
 
-## Pattern: Hosting `@pkg/oidc-provider` in a tenant Durable Object
+## Pattern: Hosting `@sdxc/oidc-provider` in a tenant Durable Object
 
 The adapter is what lets the host-agnostic provider run inside a DO — the host
 injects it and the provider only ever sees the `DatabaseDriver` interface:
 
 ```typescript
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
-import { createOidcProvider } from "@pkg/oidc-provider";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { createOidcProvider } from "@sdxc/oidc-provider";
 
 let provider = createOidcProvider({
 	database: createSQLStorageDatabaseAdapter(ctx.storage.sql),
@@ -89,8 +89,8 @@ let provider = createOidcProvider({
 
 ## Related Packages
 
-- [`@pkg/data-table-d1`](/packages/data-table-d1) - The same adapter for Cloudflare D1 (self-hosted / non-DO apps)
-- [`@pkg/oidc-provider`](/packages/oidc-provider) - Host-agnostic OIDC provider that consumes this adapter
+- [`@sdxc/data-table-d1`](/packages/data-table-d1) - The same adapter for Cloudflare D1 (self-hosted / non-DO apps)
+- [`@sdxc/oidc-provider`](/packages/oidc-provider) - Host-agnostic OIDC provider that consumes this adapter
 
 ## Tips
 

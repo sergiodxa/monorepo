@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Markdown as MarkdownType } from "@pkg/markdown/server";
+import type { Markdown as MarkdownType } from "@sdxc/markdown/server";
 
-import { Markdown } from "@pkg/markdown/server";
-import { succeeded } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { succeeded } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 type MarkdownContent = MarkdownType.Parsed<Record<string, never>>["content"];

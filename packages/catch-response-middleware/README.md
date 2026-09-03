@@ -1,4 +1,4 @@
-# @pkg/catch-response-middleware
+# @sdxc/catch-response-middleware
 
 Router middleware that turns a thrown `Response` into the request's response.
 
@@ -26,7 +26,7 @@ Every caller — a handler, or a helper five frames deeper — can now write `le
 Install it on the router's global middleware chain:
 
 ```typescript
-import { catchResponse } from "@pkg/catch-response-middleware";
+import { catchResponse } from "@sdxc/catch-response-middleware";
 import { createRouter } from "remix/router";
 
 let router = createRouter({
@@ -88,6 +88,6 @@ The same reasoning applies to anything that decorates or measures the response a
 
 ## Related Packages
 
-- [`@pkg/response`](../response/README.md) - The `redirect()`, `forbidden()`, `notFound()` and other helpers whose results are worth throwing
-- [`@pkg/location`](../location/README.md) - Builds the path a `redirect()` points at
-- [`@pkg/http`](../http/README.md) - Ships `headRequests()`, one of the response-observing middleware that belongs above this one
+- [`@sdxc/response`](../response/README.md) - The `redirect()`, `forbidden()`, `notFound()` and other helpers whose results are worth throwing
+- [`@sdxc/location`](../location/README.md) - Builds the path a `redirect()` points at
+- [`@sdxc/http`](../http/README.md) - Ships `headRequests()`, one of the response-observing middleware that belongs above this one

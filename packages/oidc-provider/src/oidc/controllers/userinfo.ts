@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { json } from "@pkg/http/response";
-import { JWK } from "@pkg/jwt";
-import { inject } from "@pkg/service-container";
+import { json } from "@sdxc/http/response";
+import { JWK } from "@sdxc/jwt";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

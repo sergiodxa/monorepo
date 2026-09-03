@@ -27,14 +27,14 @@ that. Name the app in the commit or the ADR, not in the new app's own comments.
 | --- | --- | --- |
 | A whole small server-rendered app | `apps/books` | The smallest complete Worker app: router, controllers, views, layout, container, router-level tests, no storage at all |
 | Routing and controllers | `apps/books` (`routes/web.ts`, `app/http/controllers/`) | Shows `route()`/`get()`/`post()`/`form()` nesting and one-leaf-at-a-time `router.map` |
-| D1 binding, schema, migrations | `apps/r3-auth` | D1 through `@pkg/data-table-d1`, `migrations_dir`, and the `db:local:migrate` / `db:remote:migrate` scripts with the binding name |
+| D1 binding, schema, migrations | `apps/r3-auth` | D1 through `@sdxc/data-table-d1`, `migrations_dir`, and the `db:local:migrate` / `db:remote:migrate` scripts with the binding name |
 | Durable Object | `apps/uptime` (`app/do/geo-fetch.ts` plus its `wrangler.jsonc` `migrations` tags) | A plain DO bound into a worker, with the migration history that a rename actually needs |
 | Per-tenant Durable Object as a host | `apps/auth-saas` (`bootstrap/tenant.ts`) | The DO-as-the-whole-application shape, where the worker resolves identity and the DO owns state |
 | Queues, cron triggers, Analytics Engine, rate limiters, email | `apps/uptime` (`wrangler.jsonc`) | The one app with every binding kind, each with the reasoning for its settings written next to it |
 | Service container wiring | `apps/books` (`app/lib/container.ts`) | Scoped vs singleton registration, and reading secrets inside the factory so a missing one fails the request, not module load |
 | Router-level tests | `apps/books` (`app/lib/test/router.ts`) | Fetches the real router inside a container scope, overriding services rather than the network |
 | Client-only SPA, no worker SSR | `apps/r3-gallery` | A `src/`-based static build with `not_found_handling: single-page-application` and no `main` — the deliberate exception to the layout rule |
-| i18n | `apps/uptime` (`app/locales/`, `@pkg/i18n` middleware) | Locale files plus the middleware that puts `ctx.i18next.t` on the context |
+| i18n | `apps/uptime` (`app/locales/`, `@sdxc/i18n` middleware) | Locale files plus the middleware that puts `ctx.i18next.t` on the context |
 | Server-rendered document shell and styling | `apps/blog` (`resources/layouts/document.tsx`, `resources/css/colors.css`) | Stylesheet ordering, head keying, and an sRGB-checked palette |
 
 An HTTP client for an external API is a package, not app code — see the `create-package`

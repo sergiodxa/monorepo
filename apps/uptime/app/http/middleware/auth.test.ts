@@ -184,7 +184,7 @@ describe("auth middleware", () => {
 
 	test("throws a clear error when the session middleware has not run", async () => {
 		await expect(run([asyncContext(), auth, () => new Response("unreachable")])).rejects.toThrow(
-			"@pkg/auth needs remix/middleware/session installed on the router",
+			"@sdxc/auth needs remix/middleware/session installed on the router",
 		);
 	});
 });

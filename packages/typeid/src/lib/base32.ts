@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { assertUUID } from "@pkg/uuid";
+import { assertUUID } from "@sdxc/uuid";
 
 import { InvalidBase32CharacterError, InvalidBase32StringError } from "./errors";
 

@@ -8,9 +8,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { HostnameClient } from "@pkg/hostname";
+import type { HostnameClient } from "@sdxc/hostname";
 
-import { createDurableObjectNamespace, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createDurableObjectNamespace, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";

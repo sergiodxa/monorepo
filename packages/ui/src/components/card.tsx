@@ -11,11 +11,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { border } from "@pkg/u/color";
-import { opacity, rounded, shadow } from "@pkg/u/effects";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { p, pbe, pbs, pi } from "@pkg/u/size";
-import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
+import { border } from "@sdxc/u/color";
+import { opacity, rounded, shadow } from "@sdxc/u/effects";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { p, pbe, pbs, pi } from "@sdxc/u/size";
+import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 

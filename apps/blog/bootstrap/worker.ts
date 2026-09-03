@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ServiceProvider } from "@pkg/service-container";
+import type { ServiceProvider } from "@sdxc/service-container";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 
 import { DatabaseService } from "~/app/services/database";
 import { LoggerServiceProvider } from "~/app/services/logger";

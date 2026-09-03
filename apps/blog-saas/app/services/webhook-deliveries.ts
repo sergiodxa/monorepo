@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { WebhookDelivery as Delivery, WebhookStore } from "@pkg/billing";
+import type { WebhookDelivery as Delivery, WebhookStore } from "@sdxc/billing";
 
-import { getServiceContainer } from "@pkg/service-container";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import WebhookDelivery from "~/app/models/webhook-delivery";

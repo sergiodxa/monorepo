@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { gap, grid, gridTemplate } from "@pkg/u/layout";
-import { at } from "@pkg/u/responsive";
-import { m } from "@pkg/u/size";
-import { Card, Text } from "@pkg/ui";
+import { gap, grid, gridTemplate } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
+import { m } from "@sdxc/u/size";
+import { Card, Text } from "@sdxc/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

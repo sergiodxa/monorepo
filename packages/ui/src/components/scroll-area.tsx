@@ -11,14 +11,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { relative } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, is } from "@pkg/u/size";
-import { data, hover, when } from "@pkg/u/state";
+import { bg, border, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { relative } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is } from "@sdxc/u/size";
+import { data, hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { panelChrome } from "../styles/panel-chrome";

@@ -5,10 +5,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { failure, isFailure, success } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 import type { RSS } from "../index";
 

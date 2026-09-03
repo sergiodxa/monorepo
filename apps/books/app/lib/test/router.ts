@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
-import type { ServiceKey } from "@pkg/service-container";
+import type { Billing } from "@sdxc/billing";
+import type { ServiceKey } from "@sdxc/service-container";
 
-import { getServiceContainer } from "@pkg/service-container";
+import { getServiceContainer } from "@sdxc/service-container";
 
 import { container } from "~/app/lib/container";
 import application from "~/bootstrap/app";

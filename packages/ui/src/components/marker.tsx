@@ -11,13 +11,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { pseudoContent } from "@pkg/u/general";
-import { basis, center, gap, grow, inlineFlex, items, shrink } from "@pkg/u/layout";
-import { bs, is, minIs, pb, pi } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
-import { fontSize, leading, weight } from "@pkg/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { pseudoContent } from "@sdxc/u/general";
+import { basis, center, gap, grow, inlineFlex, items, shrink } from "@sdxc/u/layout";
+import { bs, is, minIs, pb, pi } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
+import { fontSize, leading, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 /** Visual shape {@link Marker} falls back to when `variant` is omitted. */

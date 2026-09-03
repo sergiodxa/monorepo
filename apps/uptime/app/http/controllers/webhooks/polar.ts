@@ -17,12 +17,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CustomerRef } from "@pkg/billing";
+import type { CustomerRef } from "@sdxc/billing";
 import type { RequestContext } from "remix/router";
 
-import { BillingWebhook } from "@pkg/billing";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
+import { BillingWebhook } from "@sdxc/billing";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import TrialConversion from "~/app/data/trial-conversion";

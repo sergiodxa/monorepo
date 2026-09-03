@@ -1,4 +1,4 @@
-# Writing plugins for `@pkg/spec`
+# Writing plugins for `@sdxc/spec`
 
 Every capability the runtime has — `fs`, `cli`, `http`, `browser`, `db` — is a
 plugin: one namespace exposing typed tools behind a single interface. Nothing
@@ -18,7 +18,7 @@ trust model that governs launching it.
 
 A plugin is an object with a namespace, a `describe()` that lists its tools, and
 a `call()` that runs one. It never throws — every outcome is a
-[`@pkg/result`](../../result) `Result`.
+[`@sdxc/result`](../../result) `Result`.
 
 ```ts
 interface Plugin {
@@ -47,10 +47,10 @@ If you drive the runtime yourself through `runSuite`, the cheapest plugin is a
 plain object passed in `plugins`:
 
 ```ts
-import type { Plugin } from "@pkg/spec";
+import type { Plugin } from "@sdxc/spec";
 
-import { failure, success } from "@pkg/result";
-import { runSuite, ToolError } from "@pkg/spec";
+import { failure, success } from "@sdxc/result";
+import { runSuite, ToolError } from "@sdxc/spec";
 
 function createMathPlugin(): Plugin {
 	return {
@@ -93,10 +93,10 @@ implement the same `Plugin` interface and hand it over:
 
 ```ts
 #!/usr/bin/env bun
-import type { Plugin } from "@pkg/spec";
+import type { Plugin } from "@sdxc/spec";
 
-import { failure, success } from "@pkg/result";
-import { servePlugin, ToolError } from "@pkg/spec";
+import { failure, success } from "@sdxc/result";
+import { servePlugin, ToolError } from "@sdxc/spec";
 
 function createGreetPlugin(): Plugin {
 	return {

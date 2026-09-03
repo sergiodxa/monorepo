@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as ct from "@pkg/http/content-type";
-import { accepts } from "@pkg/http/negotiate";
-import { inject } from "@pkg/service-container";
+import * as ct from "@sdxc/http/content-type";
+import { accepts } from "@sdxc/http/negotiate";
+import { inject } from "@sdxc/service-container";
 import { enum_, optional, parse } from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

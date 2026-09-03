@@ -1,9 +1,9 @@
 /**
- * Public surface of `@pkg/spec`, the executable specification runtime
+ * Public surface of `@sdxc/spec`, the executable specification runtime
  * consumed by the `spec` CLI and available to programmatic embedders. This
  * entry point assumes a Bun or Node process because it reaches the
  * filesystem and spawns processes; a runtime without those imports
- * `@pkg/spec/workers` for the same language core with a smaller capability set.
+ * `@sdxc/spec/workers` for the same language core with a smaller capability set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

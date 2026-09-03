@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@pkg/service-container";
-import { vstack } from "@pkg/u/layout";
-import { Button, Input, Label, Switch, TextField } from "@pkg/ui";
-import { fieldStackLayout } from "@pkg/ui/styles";
+import { inject } from "@sdxc/service-container";
+import { vstack } from "@sdxc/u/layout";
+import { Button, Input, Label, Switch, TextField } from "@sdxc/ui";
+import { fieldStackLayout } from "@sdxc/ui/styles";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

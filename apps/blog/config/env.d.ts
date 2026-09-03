@@ -20,7 +20,7 @@ declare global {
 			REDIRECTS: KVStore;
 			/**
 			 * Typed as the raw platform binding because its only consumer,
-			 * `@pkg/kv-cache`, needs the real namespace; `AUTH` and `REDIRECTS`
+			 * `@sdxc/kv-cache`, needs the real namespace; `AUTH` and `REDIRECTS`
 			 * keep the narrower `KVStore` contract for repositories and services.
 			 */
 			CACHE: KVNamespace;

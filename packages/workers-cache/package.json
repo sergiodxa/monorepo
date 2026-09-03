@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/workers-cache",
+	"name": "@sdxc/workers-cache",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -12,7 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/result": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

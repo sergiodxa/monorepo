@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, type Result, success } from "@pkg/result";
+import { failure, type Result, success } from "@sdxc/result";
 
 /**
  * Directory prefixes (relative to the app root) that an export is allowed to

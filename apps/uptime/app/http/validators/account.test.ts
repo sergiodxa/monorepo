@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { describe, expect, test } from "vitest";
 
 import { RequestAccountDeletionSchema } from "~/app/http/validators/account";

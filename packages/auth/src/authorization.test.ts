@@ -9,7 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { catchResponse } from "@pkg/catch-response-middleware";
+import { catchResponse } from "@sdxc/catch-response-middleware";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { getContext } from "remix/middleware/async-context";

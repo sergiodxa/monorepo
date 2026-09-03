@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CallToolResult, ToolContext } from "@pkg/mcp";
+import type { CallToolResult, ToolContext } from "@sdxc/mcp";
 
 import { env } from "cloudflare:test";
 import { asyncContext } from "remix/middleware/async-context";

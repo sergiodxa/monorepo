@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { fontSize } from "@pkg/u/typography";
-import { Badge, Empty, Table } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { fontSize } from "@sdxc/u/typography";
+import { Badge, Empty, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

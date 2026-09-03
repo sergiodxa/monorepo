@@ -14,11 +14,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CallToolResult, ToolMiddleware } from "@pkg/mcp";
+import type { CallToolResult, ToolMiddleware } from "@sdxc/mcp";
 
-import { Hex, sha256 } from "@pkg/crypto";
-import { Cache } from "@pkg/kv-cache";
-import { isFailure } from "@pkg/result";
+import { Hex, sha256 } from "@sdxc/crypto";
+import { Cache } from "@sdxc/kv-cache";
+import { isFailure } from "@sdxc/result";
 
 import { getEnv } from "~/app/http/middleware/env";
 

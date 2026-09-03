@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createAction } from "@pkg/ui-router";
+import { createAction } from "@sdxc/ui-router";
 
 import { routes } from "../routes";
 

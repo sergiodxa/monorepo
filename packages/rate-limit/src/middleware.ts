@@ -9,9 +9,9 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { tooManyRequests } from "@pkg/http/response/json";
-import { isFailure } from "@pkg/result";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { tooManyRequests } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
 
 import type { RateLimitError } from "./rate-limit-error";
 import type { Adapter, RateLimitDecision } from "./types";

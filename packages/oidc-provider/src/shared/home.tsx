@@ -10,8 +10,8 @@
 
 import type { Handle } from "remix/ui";
 
-import { ok } from "@pkg/http/response/html";
-import { getServiceContainer } from "@pkg/service-container";
+import { ok } from "@sdxc/http/response/html";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { css } from "remix/ui";

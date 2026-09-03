@@ -11,11 +11,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BillingError, CustomerRef } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { BillingError, CustomerRef } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { isFailure, success } from "@pkg/result";
+import { isFailure, success } from "@sdxc/result";
 
 import Subscription from "~/app/data/subscription";
 import { polar } from "~/app/lib/billing";

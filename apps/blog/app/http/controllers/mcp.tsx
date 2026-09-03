@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as ct from "@pkg/http/content-type";
-import { accepts } from "@pkg/http/negotiate";
-import { isFailure } from "@pkg/result";
+import * as ct from "@sdxc/http/content-type";
+import { accepts } from "@sdxc/http/negotiate";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { McpPage } from "~/app/services/mcp-page";

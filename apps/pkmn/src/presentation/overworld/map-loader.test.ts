@@ -1,4 +1,4 @@
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 /**
  * Tests for the map loader, the map wrapper, and the built-in sample map.
  *

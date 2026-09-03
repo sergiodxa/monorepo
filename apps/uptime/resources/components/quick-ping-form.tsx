@@ -15,10 +15,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded, shadow } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import {
 	boxSizing,
 	fixed,
@@ -32,12 +32,12 @@ import {
 	insIs,
 	items,
 	shrink,
-} from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { is, m, maxIs, minIs, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text } from "@pkg/u/typography";
-import { Button, Input, Label } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxIs, minIs, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
+import { Button, Input, Label } from "@sdxc/ui";
 import { clientEntry, on } from "remix/ui";
 
 /**

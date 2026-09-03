@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
 import {
@@ -21,13 +21,13 @@ import {
 	GlobeIcon,
 	MailIcon,
 	NetworkIcon,
-} from "@pkg/icons";
-import { logger } from "@pkg/logger";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
-import { bg, fg, linearGradient } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { listStyle } from "@pkg/u/general";
+} from "@sdxc/icons";
+import { logger } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
+import { bg, fg, linearGradient } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
 import {
 	flex,
 	flexWrap,
@@ -38,10 +38,10 @@ import {
 	items,
 	justify,
 	vstack,
-} from "@pkg/u/layout";
-import { dark, media } from "@pkg/u/responsive";
-import { bs, is, m, maxIs, mbs, mi, minBs, p, pb, pbe, pbs, pi, pis } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
+} from "@sdxc/u/layout";
+import { dark, media } from "@sdxc/u/responsive";
+import { bs, is, m, maxIs, mbs, mi, minBs, p, pb, pbe, pbs, pi, pis } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
 import {
 	fontSize,
 	leading,
@@ -51,7 +51,7 @@ import {
 	tracking,
 	weight,
 	wordBreak,
-} from "@pkg/u/typography";
+} from "@sdxc/u/typography";
 import {
 	Alert,
 	Badge,
@@ -65,8 +65,8 @@ import {
 	LinkButton,
 	Text,
 	TextField,
-} from "@pkg/ui";
-import { generateUUID } from "@pkg/uuid";
+} from "@sdxc/ui";
+import { generateUUID } from "@sdxc/uuid";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";

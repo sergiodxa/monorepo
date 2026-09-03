@@ -13,13 +13,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
-import { intl } from "@pkg/i18n/ui";
-import { PlayIcon } from "@pkg/icons";
-import { m } from "@pkg/u/size";
-import { Button } from "@pkg/ui";
+import { intl } from "@sdxc/i18n/ui";
+import { PlayIcon } from "@sdxc/icons";
+import { m } from "@sdxc/u/size";
+import { Button } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { clientEntry, on } from "remix/ui";
 

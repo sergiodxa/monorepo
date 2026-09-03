@@ -14,14 +14,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw, userSelect } from "@pkg/u/general";
-import { absolute, inlineFlex, inset, items, justify, relative, shrink } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { bs, is } from "@pkg/u/size";
-import { after, before, data } from "@pkg/u/state";
-import { verticalAlign } from "@pkg/u/typography";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw, userSelect } from "@sdxc/u/general";
+import { absolute, inlineFlex, inset, items, justify, relative, shrink } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is } from "@sdxc/u/size";
+import { after, before, data } from "@sdxc/u/state";
+import { verticalAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { mergeStyle } from "../utils/merge-style";

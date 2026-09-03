@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/auth",
+	"name": "@sdxc/auth",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -20,17 +20,17 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/catch-response-middleware": "workspace:*",
-		"@pkg/crypto": "workspace:*",
-		"@pkg/duration": "workspace:*",
-		"@pkg/get-client-ip": "workspace:*",
-		"@pkg/jwt": "workspace:*",
-		"@pkg/location": "workspace:*",
-		"@pkg/rate-limit": "workspace:*",
-		"@pkg/result": "workspace:*",
+		"@sdxc/catch-response-middleware": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/jwt": "workspace:*",
+		"@sdxc/location": "workspace:*",
+		"@sdxc/rate-limit": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
-		"@pkg/kv-cache": "workspace:*"
+		"@sdxc/kv-cache": "workspace:*"
 	}
 }

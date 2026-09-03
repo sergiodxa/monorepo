@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 import type { Middleware, RequestContext } from "remix/router";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { Session } from "remix/session";
 
 import type { PurgeError } from "./purge-error";

@@ -62,7 +62,7 @@ Run from the repository root:
 
 ## Workspace Imports
 
-- `@pkg/*` - Package imports (e.g., `import { success } from "@pkg/result"`)
+- `@sdxc/*` - Package imports (e.g., `import { success } from "@sdxc/result"`)
 - `~/` - App-relative imports (e.g., `import { Button } from "~/components/button"`)
 
 ## Documentation
@@ -149,7 +149,7 @@ Run from the repository root:
 
 Every external dependency in the repo, and the workspace that declares it. Shared
 tooling is declared once at the root and resolves from there, so no app or package
-repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#packages).
+repeats it. `@sdxc/*` workspace dependencies are listed under [Packages](#packages).
 
 | Dependency                        | Where                                                                                                                      | Why                                                                   |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |

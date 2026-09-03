@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
-import type { MemoryDiscountSeed } from "@pkg/billing/providers/memory";
+import type { Billing } from "@sdxc/billing";
+import type { MemoryDiscountSeed } from "@sdxc/billing/providers/memory";
 
 import { describe, expect, test } from "vitest";
 

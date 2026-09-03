@@ -8,7 +8,7 @@
  */
 import type { Handle } from "remix/ui";
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 import { css } from "remix/ui";
 
 import type { Permission } from "../../shared/permissions";

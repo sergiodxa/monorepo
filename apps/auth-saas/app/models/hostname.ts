@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { HostnameApiError, HostnameClient } from "@pkg/hostname";
+import { HostnameApiError, HostnameClient } from "@sdxc/hostname";
 import { env } from "cloudflare:workers";
 import { column as c, table } from "remix/data-table";
 

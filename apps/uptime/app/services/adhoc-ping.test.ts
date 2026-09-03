@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+import type { UsageEvent } from "@sdxc/billing";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
-import { BillingError } from "@pkg/billing";
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
-import { failure } from "@pkg/result";
+import { BillingError } from "@sdxc/billing";
+import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { failure } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { createTestBilling } from "~/app/lib/test/billing";

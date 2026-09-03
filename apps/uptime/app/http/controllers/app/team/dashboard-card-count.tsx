@@ -10,11 +10,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { flex, flexWrap, gap, items } from "@pkg/u/layout";
-import { mbs } from "@pkg/u/size";
-import { Badge } from "@pkg/ui";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
+import { mbs } from "@sdxc/u/size";
+import { Badge } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

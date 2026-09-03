@@ -15,9 +15,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { intl } from "@pkg/i18n/ui";
-import { Toast } from "@pkg/ui";
-import { Toaster } from "@pkg/ui/behaviors";
+import { intl } from "@sdxc/i18n/ui";
+import { Toast } from "@sdxc/ui";
+import { Toaster } from "@sdxc/ui/behaviors";
 import { clientEntry, on } from "remix/ui";
 
 /**

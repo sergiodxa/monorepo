@@ -16,17 +16,17 @@
 
 import type { Handle } from "remix/ui";
 
-import { formatDateTime, formatRelative } from "@pkg/dates";
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { bg, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { flex, flexWrap, gap, grid, gridTemplate, sticky } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { m, mbe, p, pb, pie, pis } from "@pkg/u/size";
-import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@pkg/u/typography";
-import { Badge, Empty, Table } from "@pkg/ui";
+import { formatDateTime, formatRelative } from "@sdxc/dates";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { flex, flexWrap, gap, grid, gridTemplate, sticky } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { m, mbe, p, pb, pie, pis } from "@sdxc/u/size";
+import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@sdxc/u/typography";
+import { Badge, Empty, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

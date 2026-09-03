@@ -1,7 +1,7 @@
 # r3-auth executable specification
 
 An executable specification of this authorization server, written in the
-[`@pkg/spec`](../../../packages/spec) language. It has two halves that share one
+[`@sdxc/spec`](../../../packages/spec) language. It has two halves that share one
 set of building blocks:
 
 - **The URL contract.** One `test` per URL — and per method for every route that

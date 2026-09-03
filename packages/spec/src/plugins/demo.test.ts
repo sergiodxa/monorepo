@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { isFailure, isSuccess, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "../plugin";

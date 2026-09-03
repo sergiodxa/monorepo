@@ -10,7 +10,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { Species, SpeciesId } from "~/game/data/species";

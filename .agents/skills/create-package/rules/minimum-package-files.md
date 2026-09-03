@@ -20,7 +20,7 @@ Substitute `slugify` for the package name throughout.
   `typecheck` script, the `license` field, and had `version: 0.0.0` where every real
   package has `0.0.1`; and its README was a fill-in-the-blank sheet with React Router
   loader and action examples from a framework this repo left behind.
-- **Six files is the floor and, for a pure package, often the ceiling.** `@pkg/hostname`
+- **Six files is the floor and, for a pure package, often the ceiling.** `@sdxc/hostname`
   is a full Cloudflare API client in exactly this shape.
 
 ## Pattern
@@ -29,7 +29,7 @@ Substitute `slugify` for the package name throughout.
 
 ```json
 {
-	"name": "@pkg/slugify",
+	"name": "@sdxc/slugify",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -61,7 +61,7 @@ Notes on each field, because every one of them is load-bearing:
 - **`@types/bun`** as the only devDependency a pure package needs; add `msw` when the
   package makes outbound HTTP calls and its tests intercept them.
 
-Take `@pkg/*` dependencies as `workspace:*`. Read every version pin off a sibling package
+Take `@sdxc/*` dependencies as `workspace:*`. Read every version pin off a sibling package
 rather than off this rule; `bun run upgrade` moves them across the repo at once.
 
 ### `tsconfig.json`
@@ -74,7 +74,7 @@ rather than off this rule; `bun run upgrade` moves them across the repo at once.
 ```
 
 That is the whole file for a pure package. `compilerOptions` appear only to override
-something specific — `@pkg/cloudflare-mocks` adds
+something specific — `@sdxc/cloudflare-mocks` adds
 `"types": ["@cloudflare/workers-types", "bun"]` because it builds Workers test doubles,
 and the few React-only packages set `"jsxImportSource": "react"` back.
 

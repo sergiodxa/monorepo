@@ -10,9 +10,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { vstack } from "@pkg/u/layout";
-import { is, maxIs, p, pbs } from "@pkg/u/size";
-import { text, weight } from "@pkg/u/typography";
+import { vstack } from "@sdxc/u/layout";
+import { is, maxIs, p, pbs } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
 
 namespace NotFoundView {
 	export interface Props {

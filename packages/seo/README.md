@@ -1,4 +1,4 @@
-# @pkg/seo
+# @sdxc/seo
 
 Canonical URLs, typed schema.org structured data, and head metadata for a site.
 
@@ -26,7 +26,7 @@ object literal.
 ### Configure Once
 
 ```typescript
-import { createSeo } from "@pkg/seo";
+import { createSeo } from "@sdxc/seo";
 
 let seo = createSeo({
 	baseUrl: "https://example.com",
@@ -65,7 +65,7 @@ seo.jsonLdString([organization, breadcrumbs]);
 ### Head Elements
 
 ```tsx
-import { Seo } from "@pkg/seo";
+import { Seo } from "@sdxc/seo";
 
 <head>
 	<Seo.Meta
@@ -394,7 +394,7 @@ The configuration is read once at boot, so build the instance once and share it 
 than calling the factory per request.
 
 ```typescript
-import { createSeo } from "@pkg/seo";
+import { createSeo } from "@sdxc/seo";
 import { env } from "cloudflare:workers";
 
 /** The site's one SEO instance, shared by every controller and layout. */
@@ -415,7 +415,7 @@ Let the layout accept the metadata input and pass it straight through, so each p
 decides its own copy and structured data while the tag set stays identical everywhere.
 
 ```tsx
-import { Seo } from "@pkg/seo";
+import { Seo } from "@sdxc/seo";
 
 interface Props {
 	children: RemixNode;
@@ -460,9 +460,9 @@ belongs in `robots.txt`, not here.
 
 ## Related Packages
 
-- [`@pkg/sitemap`](/packages/sitemap) - XML sitemaps, the crawl-side sibling of this metadata
-- [`@pkg/rss`](/packages/rss) - RSS feeds, built from the same absolute URLs
-- [`@pkg/service-container`](/packages/service-container) - Registration for the one configured instance
+- [`@sdxc/sitemap`](/packages/sitemap) - XML sitemaps, the crawl-side sibling of this metadata
+- [`@sdxc/rss`](/packages/rss) - RSS feeds, built from the same absolute URLs
+- [`@sdxc/service-container`](/packages/service-container) - Registration for the one configured instance
 
 ## Tips
 

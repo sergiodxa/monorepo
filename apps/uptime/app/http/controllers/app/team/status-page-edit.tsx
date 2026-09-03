@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { IntlProvider } from "@pkg/i18n/ui";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
-import { fontSize, weight } from "@pkg/u/typography";
+import { notFound } from "@sdxc/http/response/html";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { fontSize, weight } from "@sdxc/u/typography";
 import {
 	AlertDialog,
 	Button,
@@ -26,8 +26,8 @@ import {
 	Switch,
 	TextArea,
 	TextField,
-} from "@pkg/ui";
-import { fieldStackLayout } from "@pkg/ui/styles";
+} from "@sdxc/ui";
+import { fieldStackLayout } from "@sdxc/ui/styles";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

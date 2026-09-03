@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@pkg/i18n";
+import type { i18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 
 import type { ResponseMode } from "~/app/http/middleware/session";
 

@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { Mailer } from "@pkg/mail";
-import { CloudflareTransport } from "@pkg/mail/cloudflare";
-import { ServiceContainer } from "@pkg/service-container";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import { Mailer } from "@sdxc/mail";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
+import { ServiceContainer } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 

@@ -1,10 +1,10 @@
-# @pkg/iife
+# @sdxc/iife
 
 Small helper to evaluate inline logic and immediately get its result back as an expression.
 
 ## Overview
 
-`@pkg/iife` wraps a callback and returns whatever that callback returns. It is useful when you want block-style logic in places where JavaScript expects a single expression, such as variable initialization, object properties, function arguments, or JSX.
+`@sdxc/iife` wraps a callback and returns whatever that callback returns. It is useful when you want block-style logic in places where JavaScript expects a single expression, such as variable initialization, object properties, function arguments, or JSX.
 
 This gives you a lightweight `do`-expression-like pattern without new syntax. Because the callback can return any value, it also works with promises when used with `await`.
 
@@ -13,7 +13,7 @@ This gives you a lightweight `do`-expression-like pattern without new syntax. Be
 ### Basic Example
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let message = iife(() => {
 	if (Math.random() > 0.5) return "heads";
@@ -26,7 +26,7 @@ let message = iife(() => {
 Use `iife` when a variable needs multi-step logic but you still want a single expression.
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let total = iife(() => {
 	let subtotal = 120;
@@ -42,7 +42,7 @@ let total = iife(() => {
 Use `iife` inside JSX when inline branching needs more than a ternary.
 
 ```tsx
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 function StatusMessage({ error, isLoading }: { error: Error | null; isLoading: boolean }) {
 	return (
@@ -62,7 +62,7 @@ function StatusMessage({ error, isLoading }: { error: Error | null; isLoading: b
 `iife` does not need a separate async API. If the callback is async, it returns a promise.
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let user = await iife(async () => {
 	let response = await fetch("/api/user");
@@ -88,7 +88,7 @@ try {
 With `iife`, the whole flow stays inline and returns the final value directly.
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let result = iife(() => {
 	try {
@@ -117,7 +117,7 @@ Runs the callback immediately and returns its result unchanged.
 **Example:**
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let variant = iife(() => {
 	if (size > 10) return "large";
@@ -132,7 +132,7 @@ let variant = iife(() => {
 Use `iife` when one property needs local branching or setup without extracting a helper.
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let payload = {
 	title: "Invoice",
@@ -149,7 +149,7 @@ let payload = {
 Use `iife` to avoid leaking temporary variables into the surrounding scope.
 
 ```typescript
-import { iife } from "@pkg/iife";
+import { iife } from "@sdxc/iife";
 
 let slug = iife(() => {
 	let normalized = title.trim().toLowerCase();

@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CloudflareAdapterOptions } from "@pkg/rate-limit";
+import type { CloudflareAdapterOptions } from "@sdxc/rate-limit";
 
-import { CloudflareAdapter } from "@pkg/rate-limit";
+import { CloudflareAdapter } from "@sdxc/rate-limit";
 
 /**
  * Limit and window of every binding, mirroring the `simple: { limit, period }`

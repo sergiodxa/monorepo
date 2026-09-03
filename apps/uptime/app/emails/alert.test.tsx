@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 
-import { render } from "@pkg/mail";
+import { render } from "@sdxc/mail";
 import { describe, expect, test } from "vitest";
 
 import type { AlertEventSnapshot } from "~/database/schema";

@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies the evolution system's species swap and level-up evolution lookup.
  *

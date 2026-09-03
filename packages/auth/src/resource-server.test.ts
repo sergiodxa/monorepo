@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JWT } from "@pkg/jwt";
+import type { JWT } from "@sdxc/jwt";
 import type { AuthScheme } from "remix/middleware/auth";
 
-import { JWK } from "@pkg/jwt";
+import { JWK } from "@sdxc/jwt";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { Auth, auth } from "remix/middleware/auth";

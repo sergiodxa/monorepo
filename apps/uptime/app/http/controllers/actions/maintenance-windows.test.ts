@@ -11,7 +11,7 @@
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -25,7 +25,7 @@ import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData` before validation, but every schema
+ * `@sdxc/validate`'s `validate()` flattens `FormData` before validation, but every schema
  * in this app validates raw `FormData`/`URLSearchParams` directly, so
  * `validate(ctx.formData, ...)` always fails until that upstream bug is fixed.
  */

@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Order } from "@pkg/billing";
-import type { MemoryBillingOptions } from "@pkg/billing/providers/memory";
+import type { Order } from "@sdxc/billing";
+import type { MemoryBillingOptions } from "@sdxc/billing/providers/memory";
 
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { unwrap } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { unwrap } from "@sdxc/result";
 
 import { Product } from "~/app/data/product";
 

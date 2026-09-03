@@ -10,10 +10,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import highlightStyles from "@pkg/highlight/styles.css?url";
-import { colorScheme } from "@pkg/u/color";
-import resetStyles from "@pkg/ui/reset.css?url";
-import themeStyles from "@pkg/ui/theme.css?url";
+import highlightStyles from "@sdxc/highlight/styles.css?url";
+import { colorScheme } from "@sdxc/u/color";
+import resetStyles from "@sdxc/ui/reset.css?url";
+import themeStyles from "@sdxc/ui/theme.css?url";
 
 import colorStyles from "~/resources/css/colors.css?url";
 import codeStyles from "~/resources/css/highlight.css?url";

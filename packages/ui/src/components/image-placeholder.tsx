@@ -11,9 +11,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { ringShadow, rounded } from "@pkg/u/effects";
-import { userSelect } from "@pkg/u/general";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { ringShadow, rounded } from "@sdxc/u/effects";
+import { userSelect } from "@sdxc/u/general";
 import {
 	absolute,
 	center,
@@ -26,11 +26,11 @@ import {
 	justify,
 	relative,
 	shrink,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { bs, fit, is, mis } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
-import { text, textTransform, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, fit, is, mis } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
+import { text, textTransform, weight } from "@sdxc/u/typography";
 
 /** Size variant {@link ImagePlaceholder} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: ImagePlaceholder.Size = "md";

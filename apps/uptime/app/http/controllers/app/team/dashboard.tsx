@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { flex, flexWrap, gap, hidden, items } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { mbe } from "@pkg/u/size";
-import { Empty, Skeleton } from "@pkg/ui";
-import { pulse } from "@pkg/ui/animations";
+import { flex, flexWrap, gap, hidden, items } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { mbe } from "@sdxc/u/size";
+import { Empty, Skeleton } from "@sdxc/ui";
+import { pulse } from "@sdxc/ui/animations";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";

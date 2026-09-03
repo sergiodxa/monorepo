@@ -13,17 +13,17 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { ChevronRightIcon } from "@pkg/icons";
-import { bg, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, listStyle, raw } from "@pkg/u/general";
-import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@pkg/u/layout";
-import { clip } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, is, pb, pie, pi } from "@pkg/u/size";
-import { detailsContent, when } from "@pkg/u/state";
-import { rotate } from "@pkg/u/transform";
-import { text } from "@pkg/u/typography";
+import { ChevronRightIcon } from "@sdxc/icons";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, listStyle, raw } from "@sdxc/u/general";
+import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@sdxc/u/layout";
+import { clip } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, pb, pie, pi } from "@sdxc/u/size";
+import { detailsContent, when } from "@sdxc/u/state";
+import { rotate } from "@sdxc/u/transform";
+import { text } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

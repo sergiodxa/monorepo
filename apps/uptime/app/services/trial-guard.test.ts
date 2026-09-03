@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RateLimitMock } from "@pkg/cloudflare-mocks";
+import type { RateLimitMock } from "@sdxc/cloudflare-mocks";
 
-import { createEnv, createKVNamespace, createRateLimit } from "@pkg/cloudflare-mocks";
-import { logger } from "@pkg/logger";
-import { isFailure } from "@pkg/result";
+import { createEnv, createKVNamespace, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { logger } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";

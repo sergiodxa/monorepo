@@ -76,13 +76,13 @@ vp test run --project team-ops
 
 ```json
 "dependencies": {
-	"@pkg/result": "workspace:*",
-	"@pkg/logger": "workspace:*",
+	"@sdxc/result": "workspace:*",
+	"@sdxc/logger": "workspace:*",
 	"remix": "3.0.0-rc.1"
 }
 ```
 
-Never a version range for a `@pkg/*`, and never an import of a package the manifest does
+Never a version range for a `@sdxc/*`, and never an import of a package the manifest does
 not list — it resolves through the root `node_modules` today and breaks the moment the
 other app drops it.
 
@@ -124,7 +124,7 @@ run while iterating without changing directory.
 
 1. Extend `../../tsconfig.json`; never write a standalone compiler config
 2. Add the app to `test.projects` in the root `vite.config.ts`, and verify with `vp test run --project <name>`
-3. Declare every `@pkg/*` the app imports, as `workspace:*`
+3. Declare every `@sdxc/*` the app imports, as `workspace:*`
 4. Keep `*.test.ts` inside the tsconfig `include` — no test exclude
 5. Add lint or format exceptions to `lint.overrides` / `fmt.overrides` in the root `vite.config.ts`, never as a file in the app
 6. Run `vp check` and `bun run test` from the repo root

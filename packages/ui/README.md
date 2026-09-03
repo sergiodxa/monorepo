@@ -1,10 +1,10 @@
-# @pkg/ui
+# @sdxc/ui
 
 A styled, accessible component library for `remix/ui`, rendered as server HTML and styled entirely through `css()` mixins.
 
 ## Overview
 
-This package is a component catalog built on the Handle pattern: every component — with no exceptions — is a plain function that takes a `Handle<Props>` and returns a render closure, rendered only through JSX (`<Button />`), never called directly. Every variant, state, and color combination is driven by a `data-*` attribute contract (`data-color`, `data-variant`, `data-size`, `data-slot`, …) plus a set of `--ui-*` semantic color variables, styled through `css()` mixins applied to each component's host element. Baseline behavior comes from the platform itself — `<dialog>`, the Popover API, Invoker Commands (`commandfor`/`command`), `<details>`, and native form controls — so a page that renders only these components works correctly before, and without, any client JavaScript. The only two runtime dependencies are `remix` and `@pkg/icons`, which supplies every built-in icon.
+This package is a component catalog built on the Handle pattern: every component — with no exceptions — is a plain function that takes a `Handle<Props>` and returns a render closure, rendered only through JSX (`<Button />`), never called directly. Every variant, state, and color combination is driven by a `data-*` attribute contract (`data-color`, `data-variant`, `data-size`, `data-slot`, …) plus a set of `--ui-*` semantic color variables, styled through `css()` mixins applied to each component's host element. Baseline behavior comes from the platform itself — `<dialog>`, the Popover API, Invoker Commands (`commandfor`/`command`), `<details>`, and native form controls — so a page that renders only these components works correctly before, and without, any client JavaScript. The only two runtime dependencies are `remix` and `@sdxc/icons`, which supplies every built-in icon.
 
 Theming reads entirely from `--ui-*` semantic variables, which `theme.css` derives from five `--color-*` scales a consuming app defines once. Light mode is the bare `:root` block; a `.dark` class forces dark mode and a `.system` class follows the OS preference. Three accessibility media features get baseline handling rather than per-component discretion: `prefers-reduced-motion: reduce` collapses every animation-layer factory to an opacity-only fade, `prefers-contrast: more` promotes every color role's border to its stronger value centrally in `theme.css`, and `prefers-reduced-transparency: reduce` keeps `backdrop-filter` blur strictly additive over an already-opaque background wherever a floating surface uses it.
 
@@ -13,7 +13,7 @@ Theming reads entirely from `--ui-*` semantic variables, which `theme.css` deriv
 ### Install
 
 ```bash
-bun add @pkg/ui
+bun add @sdxc/ui
 ```
 
 ### Import order: reset, theme, then your styles
@@ -21,8 +21,8 @@ bun add @pkg/ui
 Two CSS files must be imported in this order, before your app's own styles:
 
 ```css
-@import "@pkg/ui/reset.css";
-@import "@pkg/ui/theme.css";
+@import "@sdxc/ui/reset.css";
+@import "@sdxc/ui/theme.css";
 
 /* your app's styles */
 ```
@@ -98,7 +98,7 @@ Every component follows the Handle pattern and is rendered as JSX, never called 
 ```tsx
 import type { Handle } from "remix/ui";
 
-import { Badge } from "@pkg/ui";
+import { Badge } from "@sdxc/ui";
 
 export function OrderStatus(handle: Handle<{ paid: boolean }>) {
 	return () => (
@@ -116,12 +116,12 @@ This renders as static server HTML — no hydration, no client JavaScript — wi
 Every non-CSS entry point is a plain barrel import:
 
 ```tsx
-import { Button, Dialog } from "@pkg/ui";
-import { fade, spin } from "@pkg/ui/animations";
-import { SelectionModel, Toaster } from "@pkg/ui/behaviors";
-import { menuKeys, validate } from "@pkg/ui/mixins";
-import { floatingSurface, focusRingPrimary } from "@pkg/ui/styles";
-import { parseColor } from "@pkg/ui/utils";
+import { Button, Dialog } from "@sdxc/ui";
+import { fade, spin } from "@sdxc/ui/animations";
+import { SelectionModel, Toaster } from "@sdxc/ui/behaviors";
+import { menuKeys, validate } from "@sdxc/ui/mixins";
+import { floatingSurface, focusRingPrimary } from "@sdxc/ui/styles";
+import { parseColor } from "@sdxc/ui/utils";
 ```
 
 Every example below that requires an accessibility string or visible copy uses a placeholder `t(key)` call standing in for whatever localization function a consuming app already wires up — the library ships no copy of its own, so every user-facing or accessible string is a required prop the consumer supplies.
@@ -132,16 +132,16 @@ Every public export — every component and its props, every mixin, every behavi
 
 ### Entry points
 
-| Export               | Source                    | Contains                                                                                                                                                                                                                                                                                                                                   |
-| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@pkg/ui`            | `src/index.ts`            | Every component and its compound subcomponents, re-exported from the package root.                                                                                                                                                                                                                                                         |
-| `@pkg/ui/animations` | `src/animations/index.ts` | CSS-only motion factories (`fade`, `zoom`, `slide`, `enterExit`, `spin`, `pulse`, `shimmer`, `textShimmer`, `scrollShadow`, `scrollProgress`, `viewReveal`, `scrollFade`) plus the shared `durations`/`easings` tokens.                                                                                                                    |
-| `@pkg/ui/behaviors`  | `src/behaviors/index.ts`  | Headless, DOM-free `TypedEventTarget` classes (`Announcer`, `CalendarModel`, `DragSession`, `FilterModel`, `ResizeSession`, `ScrollFollowModel`, `SelectionModel`, `Toaster`).                                                                                                                                                             |
-| `@pkg/ui/mixins`     | `src/mixins/index.ts`     | Opt-in `createMixin`-based DOM adapters (`menuKeys`, `validate`, `dismiss`, `dropZone`, `themeToggle`, and the rest of the 38-module mixin catalog) applied through a component's `mix` prop.                                                                                                                                              |
-| `@pkg/ui/styles`     | `src/styles/index.ts`     | Shared style-recipe factories (`focusRingPrimary`, `floatingSurface`, `panelChrome`, `semanticColorPanel`, and 10 more) composed directly inside a `mix` array.                                                                                                                                                                            |
-| `@pkg/ui/utils`      | `src/utils/index.ts`      | Framework-free helper logic with no `remix/ui` dependency — color parsing and conversion (`parseColor`, `formatHex`/`formatRgb`/`formatHsl`, RGB/HSL/HSV conversions), scale and geometry math, the shared `SemanticColor` type, the `mergeStyle` inline-`style` prop merge, and the dev-mode accessible-name checks components call into. |
-| `@pkg/ui/reset.css`  | `src/reset.css`           | The base CSS reset (zeroed margins, border-box sizing, form-control inheritance, …), opened with `@layer base, rmx;`.                                                                                                                                                                                                                      |
-| `@pkg/ui/theme.css`  | `src/theme.css`           | The `--ui-*` semantic variable layer (`:root`, `.dark`, `.system`).                                                                                                                                                                                                                                                                        |
+| Export                | Source                    | Contains                                                                                                                                                                                                                                                                                                                                   |
+| --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@sdxc/ui`            | `src/index.ts`            | Every component and its compound subcomponents, re-exported from the package root.                                                                                                                                                                                                                                                         |
+| `@sdxc/ui/animations` | `src/animations/index.ts` | CSS-only motion factories (`fade`, `zoom`, `slide`, `enterExit`, `spin`, `pulse`, `shimmer`, `textShimmer`, `scrollShadow`, `scrollProgress`, `viewReveal`, `scrollFade`) plus the shared `durations`/`easings` tokens.                                                                                                                    |
+| `@sdxc/ui/behaviors`  | `src/behaviors/index.ts`  | Headless, DOM-free `TypedEventTarget` classes (`Announcer`, `CalendarModel`, `DragSession`, `FilterModel`, `ResizeSession`, `ScrollFollowModel`, `SelectionModel`, `Toaster`).                                                                                                                                                             |
+| `@sdxc/ui/mixins`     | `src/mixins/index.ts`     | Opt-in `createMixin`-based DOM adapters (`menuKeys`, `validate`, `dismiss`, `dropZone`, `themeToggle`, and the rest of the 38-module mixin catalog) applied through a component's `mix` prop.                                                                                                                                              |
+| `@sdxc/ui/styles`     | `src/styles/index.ts`     | Shared style-recipe factories (`focusRingPrimary`, `floatingSurface`, `panelChrome`, `semanticColorPanel`, and 10 more) composed directly inside a `mix` array.                                                                                                                                                                            |
+| `@sdxc/ui/utils`      | `src/utils/index.ts`      | Framework-free helper logic with no `remix/ui` dependency — color parsing and conversion (`parseColor`, `formatHex`/`formatRgb`/`formatHsl`, RGB/HSL/HSV conversions), scale and geometry math, the shared `SemanticColor` type, the `mergeStyle` inline-`style` prop merge, and the dev-mode accessible-name checks components call into. |
+| `@sdxc/ui/reset.css`  | `src/reset.css`           | The base CSS reset (zeroed margins, border-box sizing, form-control inheritance, …), opened with `@layer base, rmx;`.                                                                                                                                                                                                                      |
+| `@sdxc/ui/theme.css`  | `src/theme.css`           | The `--ui-*` semantic variable layer (`:root`, `.dark`, `.system`).                                                                                                                                                                                                                                                                        |
 
 ### Catalog areas
 
@@ -409,9 +409,9 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry } from "remix/ui";
 
-import { Command } from "@pkg/ui";
-import { FilterModel } from "@pkg/ui/behaviors";
-import { commandFilter } from "@pkg/ui/mixins";
+import { Command } from "@sdxc/ui";
+import { FilterModel } from "@sdxc/ui/behaviors";
+import { commandFilter } from "@sdxc/ui/mixins";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type SearchPaletteProps = { pages: Array<Page> };
@@ -452,8 +452,8 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry } from "remix/ui";
 
-import { Toast } from "@pkg/ui";
-import { Toaster } from "@pkg/ui/behaviors";
+import { Toast } from "@sdxc/ui";
+import { Toaster } from "@sdxc/ui/behaviors";
 
 export const AppToaster = clientEntry(
 	"/app/components/app-toaster.tsx#AppToaster",
@@ -520,8 +520,8 @@ import type { Handle, HeadingLevel } from "remix/ui";
 
 import { clientEntry } from "remix/ui";
 
-import { Heading, HeadingScope } from "@pkg/ui";
-import { headingLevelFallback } from "@pkg/ui/mixins";
+import { Heading, HeadingScope } from "@sdxc/ui";
+import { headingLevelFallback } from "@sdxc/ui/mixins";
 
 export const CommentsIsland = clientEntry(
 	"/app/components/comments-island.tsx#CommentsIsland",
@@ -585,8 +585,8 @@ The same shape recurs across the catalog wherever markup alone can't guarantee t
 A style-mixin factory, an animation factory, and a component's own local `css()` call compose as disjoint siblings in one `mix` array — never merged into a single object:
 
 ```tsx
-import { zoom } from "@pkg/ui/animations";
-import { floatingSurface, interactiveTransition } from "@pkg/ui/styles";
+import { zoom } from "@sdxc/ui/animations";
+import { floatingSurface, interactiveTransition } from "@sdxc/ui/styles";
 import { css } from "remix/ui";
 
 <div
@@ -675,7 +675,7 @@ import { parseSafe } from "remix/data-schema";
 import { createAction } from "remix/router";
 import type { Handle } from "remix/ui";
 
-import { Button, Form, TextField } from "@pkg/ui";
+import { Button, Form, TextField } from "@sdxc/ui";
 import routes from "~/routes/web";
 
 let ContactSchema = f.object({
@@ -716,7 +716,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import { Chart } from "@pkg/ui";
+import { Chart } from "@sdxc/ui";
 
 type RevenueChartProps = { months: Array<{ index: number; revenue: number; refunds: number }> };
 
@@ -772,9 +772,9 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry, css } from "remix/ui";
 
-import { Bubble, Marker, Message, MessageScroller } from "@pkg/ui";
-import { ScrollFollowModel } from "@pkg/ui/behaviors";
-import { messageFollow } from "@pkg/ui/mixins";
+import { Bubble, Marker, Message, MessageScroller } from "@sdxc/ui";
+import { ScrollFollowModel } from "@sdxc/ui/behaviors";
+import { messageFollow } from "@sdxc/ui/mixins";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type ChatThreadProps = { turns: Array<Turn> };
@@ -852,8 +852,8 @@ import {
 	ColorWheel,
 	Input,
 	Label,
-} from "@pkg/ui";
-import { colorAreaDrag, colorPreview, colorWheelDrag } from "@pkg/ui/mixins";
+} from "@sdxc/ui";
+import { colorAreaDrag, colorPreview, colorWheelDrag } from "@sdxc/ui/mixins";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type BrandColorPickerProps = { hue: number; saturation: number; brightness: number; alpha: number };
@@ -938,5 +938,5 @@ export default BrandColorPicker;
 1. **Unlayered CSS beats every layer, including `rmx`** - `remix/ui` emits component styles under the `rmx` cascade layer, so `reset.css` → `theme.css` → component styles naturally stack in the right order. But an app's own _unlayered_ global rule (a bare `button { ... }` outside any `@layer` block) still outranks all of it. Keep app-level element globals inside a layer ordered before `rmx`, and reserve unlayered rules for overrides you actually intend to win.
 2. **Non-color design tokens are overridable too** - see [Overridable component tokens](#overridable-component-tokens): the shared radius scale plus well over a hundred per-component size/spacing/timing tokens all follow the same `var(--ui-x, default)` pattern, so denser tables or a slower hover-card delay is a handful of variable overrides, not per-component style overrides.
 3. **Reach for `parts` before reaching into internals** - Convenience wrappers like `TextField` and `Confirm` accept a `parts` prop for per-part styling; if that isn't enough, compose the underlying compound components directly rather than fighting the wrapper.
-4. **`mix` does not override by array position** - Each `css()`/`@pkg/u` mixin compiles to one hashed class emitted in its own cascade sublayer (`@layer rmx.rmxc-…`), byte-identical style objects dedupe to a single shared class, and a class's layer position is fixed the first time that exact declaration set appears anywhere on the page. So when a mixin passed through `mix` collides with one of the component's own declarations, the winner is whichever class was registered _earlier in the document_ — not whichever came later in the array. That is why `Card.Title mix={[text("sm")]}` keeps the component's 24px (dozens of components already emit `text("sm")`, so its layer is registered early), while `rounded("md")` over `NavLink`'s `rounded("sm")` happened to win: same rule, different page contents. Every generated class carries the same specificity and sits in its own sublayer, so specificity tricks cannot fix it. To _guarantee_ an override, use the `style` prop, override the component's own `--ui-*` token inline (`style={{ "--ui-text-2xl": "0.875rem" }}`), mark the declaration `!important` through `raw()`, or put the rule in an app cascade layer declared after `rmx`. Use `mix` for declarations the component doesn't already set.
+4. **`mix` does not override by array position** - Each `css()`/`@sdxc/u` mixin compiles to one hashed class emitted in its own cascade sublayer (`@layer rmx.rmxc-…`), byte-identical style objects dedupe to a single shared class, and a class's layer position is fixed the first time that exact declaration set appears anywhere on the page. So when a mixin passed through `mix` collides with one of the component's own declarations, the winner is whichever class was registered _earlier in the document_ — not whichever came later in the array. That is why `Card.Title mix={[text("sm")]}` keeps the component's 24px (dozens of components already emit `text("sm")`, so its layer is registered early), while `rounded("md")` over `NavLink`'s `rounded("sm")` happened to win: same rule, different page contents. Every generated class carries the same specificity and sits in its own sublayer, so specificity tricks cannot fix it. To _guarantee_ an override, use the `style` prop, override the component's own `--ui-*` token inline (`style={{ "--ui-text-2xl": "0.875rem" }}`), mark the declaration `!important` through `raw()`, or put the rule in an app cascade layer declared after `rmx`. Use `mix` for declarations the component doesn't already set.
 5. **A command invoker is never a submit button** - `Button` renders `type="button"` on its own whenever it carries `command`/`commandfor`, and `Dialog.Close`, `AlertDialog.Cancel`, and the other invoker parts do the same, because a button inside a `<form>` otherwise defaults to `"submit"` and the platform then refuses to run the command at all — it calls the pairing ambiguous and takes no action, so the control looks wired up and does nothing. A hand-rolled `<button commandfor …>` inside a form still needs the attribute spelled out — and needs it written _before_ `command`/`commandfor`, since the platform judges the pairing while it parses those attributes and never revisits the decision when a later `type` arrives.

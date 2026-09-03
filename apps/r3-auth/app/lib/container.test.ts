@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { Mailer } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";

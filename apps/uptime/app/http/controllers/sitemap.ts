@@ -3,15 +3,15 @@
  * `/use-cases`, and `/vs` marketing page (derived from
  * `resources/content/marketing.ts`'s content records, so a new content entry
  * is picked up automatically), the legal pages, and every documentation page,
- * then serializes them with `@pkg/sitemap`. It exists so search engines can
+ * then serializes them with `@sdxc/sitemap`. It exists so search engines can
  * discover the full public site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { xml } from "@pkg/http/response";
-import { Sitemap } from "@pkg/sitemap";
+import { xml } from "@sdxc/http/response";
+import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 
 import { listDocs } from "~/app/services/docs";

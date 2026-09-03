@@ -13,7 +13,7 @@ import {
 	createEnv,
 	createFetcher,
 	createKVNamespace,
-} from "@pkg/cloudflare-mocks";
+} from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /** Analytics Engine binding recording the data points this run reported. */

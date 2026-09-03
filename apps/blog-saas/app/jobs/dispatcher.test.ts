@@ -11,9 +11,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import type { AnyJobDefinition } from "@pkg/jobs";
+import type { AnyJobDefinition } from "@sdxc/jobs";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
+import { createEnv } from "@sdxc/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
 /**

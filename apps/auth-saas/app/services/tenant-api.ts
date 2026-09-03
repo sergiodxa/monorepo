@@ -10,7 +10,7 @@
 
 import type { Schema } from "remix/data-schema";
 
-import { createInternalToken } from "@pkg/oidc-provider";
+import { createInternalToken } from "@sdxc/oidc-provider";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 

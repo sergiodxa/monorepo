@@ -13,9 +13,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { border } from "@pkg/u/color";
-import { rounded, shadow } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { border } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import {
 	absolute,
 	container,
@@ -27,11 +27,11 @@ import {
 	inset,
 	justify,
 	relative,
-} from "@pkg/u/layout";
-import { pb, pi } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { when } from "@pkg/u/state";
-import { translateProperty } from "@pkg/u/transform";
+} from "@sdxc/u/layout";
+import { pb, pi } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { when } from "@sdxc/u/state";
+import { translateProperty } from "@sdxc/u/transform";
 import { attrs } from "remix/ui";
 
 import { Button } from "./button";

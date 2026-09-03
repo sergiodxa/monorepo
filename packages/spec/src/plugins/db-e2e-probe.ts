@@ -12,10 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { isFailure, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { isFailure, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 
 import type { SpecError } from "../errors";
 import type { PermissionSet } from "../permissions";

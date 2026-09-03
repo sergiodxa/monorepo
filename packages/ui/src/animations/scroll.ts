@@ -10,13 +10,13 @@
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
-import { animation, keyframes } from "@pkg/u/animation";
-import { mask } from "@pkg/u/effects";
-import { combine, raw } from "@pkg/u/general";
-import { media, supports } from "@pkg/u/responsive";
-import { is } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { translateProperty } from "@pkg/u/transform";
+import { animation, keyframes } from "@sdxc/u/animation";
+import { mask } from "@sdxc/u/effects";
+import { combine, raw } from "@sdxc/u/general";
+import { media, supports } from "@sdxc/u/responsive";
+import { is } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { translateProperty } from "@sdxc/u/transform";
 
 import type { CSSStyles } from "../utils/css-styles";
 

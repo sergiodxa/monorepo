@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/markdown",
+	"name": "@sdxc/markdown",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -14,9 +14,9 @@
 	},
 	"dependencies": {
 		"@markdoc/markdoc": "^0.5.9",
-		"@pkg/highlight": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/yaml": "workspace:*",
+		"@sdxc/highlight": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/yaml": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
 		"remix": "3.0.0-rc.1"
 	}

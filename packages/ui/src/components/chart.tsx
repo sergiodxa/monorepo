@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
+import { visuallyHidden } from "@sdxc/u/a11y";
 import {
 	bg,
 	fg,
@@ -23,9 +23,9 @@ import {
 	strokeLinejoin,
 	strokeWidth,
 	vectorEffect,
-} from "@pkg/u/color";
-import { opacity, rounded, shadow, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, pointerEvents, raw, userSelect } from "@pkg/u/general";
+} from "@sdxc/u/color";
+import { opacity, rounded, shadow, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, pointerEvents, raw, userSelect } from "@sdxc/u/general";
 import {
 	absolute,
 	block,
@@ -37,13 +37,13 @@ import {
 	items,
 	relative,
 	shrink,
-} from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, pb, pi } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { focusVisible, hover, when } from "@pkg/u/state";
-import { scaleProperty, translateProperty } from "@pkg/u/transform";
-import { fontSize, leading, nowrap, textDecoration, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, pb, pi } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { focusVisible, hover, when } from "@sdxc/u/state";
+import { scaleProperty, translateProperty } from "@sdxc/u/transform";
+import { fontSize, leading, nowrap, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import type { Point } from "../utils/chart-path";

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@pkg/mcp";
+import { createTool } from "@sdxc/mcp";
 
 import { getDatabase } from "~/app/http/middleware/database";
 import toolset from "~/app/mcp/tools";

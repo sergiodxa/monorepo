@@ -10,11 +10,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol, items, justify } from "@pkg/u/layout";
-import { is, maxIs, minBs, p } from "@pkg/u/size";
-import { textAlign } from "@pkg/u/typography";
-import { Card, LinkButton, Text } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexCol, items, justify } from "@sdxc/u/layout";
+import { is, maxIs, minBs, p } from "@sdxc/u/size";
+import { textAlign } from "@sdxc/u/typography";
+import { Card, LinkButton, Text } from "@sdxc/ui";
 
 namespace PasswordNoticeView {
 	export interface Props {

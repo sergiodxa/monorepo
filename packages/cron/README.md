@@ -1,4 +1,4 @@
-# @pkg/cron
+# @sdxc/cron
 
 Cron expression parsing and time-zone-aware occurrence computation, with `Result`
 failures and descriptions an app can translate.
@@ -28,8 +28,8 @@ rather than half-implemented.
 ### Validating input
 
 ```typescript
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
 
 let result = Schedule.parse("*/15 * * * *");
 if (isFailure(result)) {
@@ -56,7 +56,7 @@ schedule.matches(from, { timeZone: "America/New_York" }); // boolean
 ### Describing a schedule
 
 ```typescript
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 
 let descriptor = unwrap(Schedule.parse("0 9 * * 1-5")).describe();
 // { kind: "weekly", weekdays: [1, 2, 3, 4, 5], at: [{ hour: 9, minute: 0 }] }
@@ -436,8 +436,8 @@ CRON_FUZZ_ITERATIONS=60000 vp test run packages/cron/src/ --testTimeout=60000
 ## Pattern: Validating a submitted expression
 
 ```typescript
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
 
 let result = Schedule.parse(input.expression);
 if (isFailure(result)) {
@@ -492,8 +492,8 @@ Recording a signal and deciding whether the next one is overdue are the same two
 from opposite ends:
 
 ```typescript
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
 
 let result = Schedule.parse(monitor.expression);
 if (isFailure(result)) return; // A stored expression that no longer parses cannot be judged.
@@ -526,8 +526,8 @@ runs in a month, and each one costs a walk of the calendar.
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - the `Result` type parsing returns
-- [`@pkg/duration`](/packages/duration) - the `DurationInput` the `grace` option takes
+- [`@sdxc/result`](/packages/result) - the `Result` type parsing returns
+- [`@sdxc/duration`](/packages/duration) - the `DurationInput` the `grace` option takes
 
 ## Tips
 

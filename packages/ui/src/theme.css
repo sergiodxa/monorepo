@@ -1,18 +1,18 @@
 /*
  * Theme Contract
  *
- * `@pkg/u` defines the base theme contract every consumer follows — this
+ * `@sdxc/u` defines the base theme contract every consumer follows — this
  * file imports it rather than re-deriving the same semantic-tone structure
  * independently, so `brand`/`neutral`/`success`/`warning`/`danger`, the
  * system defaults, and the spacing/container-breakpoint/font/text-size scale
  * variables all come from one source. Consuming apps must define the
  * `--ui-color-{brand,neutral,danger,warning,success}-{50..950}` palette
- * scales themselves (see `@pkg/u`'s own theme contract) — there is no
+ * scales themselves (see `@sdxc/u`'s own theme contract) — there is no
  * default here.
  *
  * This file adds only what's genuinely specific to this package on top of that base:
  * - Interaction-state variants (`-bg-tint-hover`, `-bg-tint-pressed`,
- *   `-bg-solid-hover`, `-bg-solid-pressed`) that `@pkg/u`'s own theme
+ *   `-bg-solid-hover`, `-bg-solid-pressed`) that `@sdxc/u`'s own theme
  *   contract doesn't define, since how much a color shifts on hover/press
  *   is a component-library design decision, not a lower-level primitive.
  * - A `--ui-chart-{1..8}` categorical color sequence for multi-series
@@ -23,7 +23,7 @@
  * - Add .system class to <html> for system preference (prefers-color-scheme)
  */
 
-@import "@pkg/u/theme.css";
+@import "@sdxc/u/theme.css";
 
 :root {
 	/* Brand */

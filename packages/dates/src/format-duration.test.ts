@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationString } from "@pkg/duration";
+import type { DurationString } from "@sdxc/duration";
 
 import { describe, expect, test } from "vitest";
 

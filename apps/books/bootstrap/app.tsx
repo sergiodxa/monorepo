@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
+import type { Billing } from "@sdxc/billing";
 import type { Middleware, RequestContext } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import billing from "@pkg/billing/middleware";
-import { headRequests } from "@pkg/http/middleware/head-requests";
-import logger from "@pkg/logger/middleware";
+import billing from "@sdxc/billing/middleware";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import logger from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";

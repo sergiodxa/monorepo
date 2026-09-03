@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { job, jobs } from "@pkg/jobs";
+import { job, jobs } from "@sdxc/jobs";
 
 export default jobs({
 	/**

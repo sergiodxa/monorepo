@@ -11,7 +11,7 @@
 
 import type { DatabaseDriver } from "remix/data-table";
 
-import { Logger } from "@pkg/logger/request";
+import { Logger } from "@sdxc/logger/request";
 import { Database } from "remix/data-table";
 
 import { runMigrations } from "./database/migrations";
@@ -31,7 +31,7 @@ export interface AnalyticsSink {
 
 /** Configuration for {@link createOidcProvider}. */
 export interface OidcProviderConfig {
-	/** SQL access. DO host: @pkg/data-table-sqlstorage. Self-hosted: @pkg/data-table-d1. */
+	/** SQL access. DO host: @sdxc/data-table-sqlstorage. Self-hosted: @sdxc/data-table-d1. */
 	database: DatabaseDriver;
 	/** HMAC secret shared with the control plane for Management API internal tokens. */
 	internalSecret: string;

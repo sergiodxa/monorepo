@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { OidcProvider } from "@pkg/oidc-provider";
+import type { OidcProvider } from "@sdxc/oidc-provider";
 
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
-import { createOidcProvider, verifyInternalToken } from "@pkg/oidc-provider";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { createOidcProvider, verifyInternalToken } from "@sdxc/oidc-provider";
 import { DurableObject } from "cloudflare:workers";
 
 import { shouldBlockWhileSuspended, suspendedResponse } from "~/app/lib/entitlement";
@@ -29,7 +29,7 @@ const SUSPENDED_STORAGE_KEY = "entitlement:suspended";
 const SUSPEND_CONTROL_PATH = "/__control/suspend";
 
 /**
- * Wraps `@pkg/oidc-provider` over the DO's SqlStorage, injecting the
+ * Wraps `@sdxc/oidc-provider` over the DO's SqlStorage, injecting the
  * internal-token secret and an analytics sink for the platform's Analytics
  * Engine.
  */

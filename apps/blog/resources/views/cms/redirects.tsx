@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
-import { m, p } from "@pkg/u/size";
-import { textAlign } from "@pkg/u/typography";
-import { Button, Heading, Input, LinkButton, Modal, Select, Table, Text } from "@pkg/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { textAlign } from "@sdxc/u/typography";
+import { Button, Heading, Input, LinkButton, Modal, Select, Table, Text } from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

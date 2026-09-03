@@ -10,9 +10,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
-import { combine } from "@pkg/u/general";
-import { when } from "@pkg/u/state";
+import { bg, border, fg } from "@sdxc/u/color";
+import { combine } from "@sdxc/u/general";
+import { when } from "@sdxc/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 import type { SemanticColor } from "../utils/semantic-color";
@@ -32,7 +32,7 @@ const SEMANTIC_COLORS: readonly SemanticColor[] = [
 /**
  * Composes every `&[data-color="..."]` branch a tinted panel keys its
  * border, background, and foreground on, one branch per {@link SemanticColor},
- * built from `@pkg/u`'s `border()`/`bg()`/`fg()` utilities nested under `when()`.
+ * built from `@sdxc/u`'s `border()`/`bg()`/`fg()` utilities nested under `when()`.
  *
  * @returns A `css()` mixin ready for a host element's `mix` prop.
  * @example

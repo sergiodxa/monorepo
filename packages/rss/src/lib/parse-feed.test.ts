@@ -5,8 +5,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 import { describe, expect, test } from "vitest";
 
 import { parseFeed } from "./parse-feed";

@@ -11,15 +11,15 @@
 
 import type { Handle } from "remix/ui";
 
-import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/icons";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { absolute, flex, insBe, insBs, insIe, items, justify, relative } from "@pkg/u/layout";
-import { is, mbe } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { textDecoration } from "@pkg/u/typography";
-import { Badge, Empty, LinkButton, Table, Tabs } from "@pkg/ui";
+import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@sdxc/icons";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { absolute, flex, insBe, insBs, insIe, items, justify, relative } from "@sdxc/u/layout";
+import { is, mbe } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { textDecoration } from "@sdxc/u/typography";
+import { Badge, Empty, LinkButton, Table, Tabs } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

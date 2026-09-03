@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { RelyingParty } from "@pkg/auth/relying-party";
+import { RelyingParty } from "@sdxc/auth/relying-party";
 import { env } from "cloudflare:workers";
 
 import { issuer } from "~/app/auth/issuer";

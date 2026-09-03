@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 import { CronExpressionParser } from "cron-parser";
 import { describe, expect, test } from "vitest";
 

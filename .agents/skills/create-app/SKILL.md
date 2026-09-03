@@ -93,7 +93,7 @@ Client-only SPA (no SSR)  -> apps/r3-gallery
 #### wire-into-the-monorepo - @rules/wire-into-the-monorepo.md
 
 A new app is a Bun workspace: extend the root `tsconfig.json`, register the app as a Vitest
-project, take `@pkg/*` as `workspace:*`, keep test files inside the tsconfig `include`, and
+project, take `@sdxc/*` as `workspace:*`, keep test files inside the tsconfig `include`, and
 put lint or format exceptions in the root `vite.config.ts` rather than a config file in the app.
 
 ```jsonc

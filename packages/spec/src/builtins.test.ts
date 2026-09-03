@@ -12,7 +12,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { Grants } from "./permissions";

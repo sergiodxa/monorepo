@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
-import type { Random } from "@pkg/sample";
+import type { Result } from "@sdxc/result";
+import type { Random } from "@sdxc/sample";
 
 import type { SpecError } from "./errors";
 import type { PermissionKind, PermissionSet } from "./permissions";

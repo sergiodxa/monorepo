@@ -39,9 +39,9 @@ A test that would otherwise stand in for a Cloudflare binding belongs in the Wor
 instead: name it `*.workers.test.ts` and it runs inside workerd with real bindings, taken from
 the app's own `wrangler.jsonc` (or, for a package, declared inline in the `packages-workers`
 project). That is how a KV, D1 or R2 assertion gets checked against Cloudflare's implementation
-rather than a hand-written stub — which is what caught `@pkg/kv-cache` asserting a 30-second KV
+rather than a hand-written stub — which is what caught `@sdxc/kv-cache` asserting a 30-second KV
 TTL that a real binding rejects. `node:sqlite` does not exist in workerd, so a test whose
-database comes from `@pkg/cloudflare-mocks/sqlite` stays on the threads pool.
+database comes from `@sdxc/cloudflare-mocks/sqlite` stays on the threads pool.
 
 Nothing runs under `bun test` any more. Where a test needs a Bun-only API — `packages/spec`'s
 `db` plugin connects through Bun's built-in SQL client, which has no Node equivalent — the
@@ -72,7 +72,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits)
 - MUST run `bun check` at the repo root before every commit, and `bun check:fix` to apply formatting and autofixes
 - MUST preserve every individual commit when merging into `main` — use a fast-forward merge (`git merge --ff-only`), never squash and never create a merge commit
-- MUST use `@pkg/result` for error handling instead of throwing exceptions
+- MUST use `@sdxc/result` for error handling instead of throwing exceptions
 - MUST write tests with Vitest, never Jest, Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories — `vp test run <path>` scopes a run without changing directory
 - MUST use Vite+ (`vp check`) for formatting, linting and type checking, never other tools like Prettier, ESLint or a direct `tsc` run in CI
@@ -86,10 +86,10 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST deploy after migration, to ensure the latest code is running with the new database schema
 - MUST NOT deploy before migration, to avoid running old code with an incompatible database schema
 - MUST use `bunx wrangler` when running commands, never use `wrangler` directly
-- MUST use `@pkg/logger`, never `console.log`
+- MUST use `@sdxc/logger`, never `console.log`
 - MUST use RequestLogger for logging inside worker fetch handlers
-- MUST use `@pkg/jobs` for background jobs
-- MUST validate external/untrusted data (loaders, actions, webhooks, env-derived input) with `remix/data-schema` via `@pkg/validate`; do not add Zod to new code
+- MUST use `@sdxc/jobs` for background jobs
+- MUST validate external/untrusted data (loaders, actions, webhooks, env-derived input) with `remix/data-schema` via `@sdxc/validate`; do not add Zod to new code
 - MUST use `const` only for module-level variables, and `let` for everything else, never use `const` for local variables inside functions or blocks
 - MUST name module-level constant values in `ALL_UPPER_SNAKE_CASE` (e.g. `FIXED_STEP_MS`, `TYPE_MATCHUPS`, `PERSISTENT_WORLD_STORE_KEYS`); module-level functions stay `camelCase` and classes/namespaces/enums stay `PascalCase`
 - MUST use `interface` when possible, and `type` only when necessary (e.g. for union types)
@@ -102,14 +102,14 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST use `bunx` instead of `npx`, or any other package runner, to ensure consistent behavior across environments
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 - MUST check what Remix v3 provides before hand-rolling middleware/helpers — prefer `remix/cop-middleware`, `remix/session-middleware`, `createAction`/`createController`, `remix/data-schema`, `remix/auth`, and `remix/ui` over custom equivalents
-- MUST resolve app services (Database, API clients) through `@pkg/service-container` (ADR-008) via `inject([...])` / `getServiceContainer()`; keep request-lifecycle values (session, current user, tenant, request logger) in middleware/context, never in the container
+- MUST resolve app services (Database, API clients) through `@sdxc/service-container` (ADR-008) via `inject([...])` / `getServiceContainer()`; keep request-lifecycle values (session, current user, tenant, request logger) in middleware/context, never in the container
 - MUST render server HTML as `remix/ui` JSX with `css()` mixins; never build HTML from strings (`remix/html-template` or inline HTML template literals)
 - MUST build application UI with `remix/ui`, not React components/hooks or Tailwind utility classes; style with `css()` mixins through `mix`, and attach behavior with Remix UI mixins or native HTML platform features
 - MUST build dialogs, popovers, menus, tooltips, and disclosure UI with native HTML platform features instead of JavaScript: `<dialog>` (with `.showModal()`/`::backdrop`) for modals, the Popover API (`popover` + `popovertarget` attributes) for popovers/menus/tooltips, the Command Invoker API (`<button commandfor command>` with `command="show-modal"`/`"close"`/`"toggle-popover"`/`"show-popover"`/`"hide-popover"` or `command="--custom"` handled via the `command` event) to wire buttons to targets declaratively, and `<details>`/`<summary>` for disclosures — reach for JS only for behavior the platform genuinely cannot express, and prefer progressive enhancement over JS-driven open/close state
 - MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`)
 - MUST describe code on its own terms in comments; never name another app or package as the source of a pattern (e.g. "mirrors the blog app")
 - MUST keep `packages/*` app-agnostic: no imports from, or references to, `apps/*` in code or comments
-- MUST keep public blog content package-agnostic: articles and tutorials must not mention internal package names, `@pkg/*` imports, or `packages/*` paths; use public APIs or local example modules instead
+- MUST keep public blog content package-agnostic: articles and tutorials must not mention internal package names, `@sdxc/*` imports, or `packages/*` paths; use public APIs or local example modules instead
 - MUST write Remix tutorials with Remix v3 route contracts, controllers, middleware context, `remix/data-schema`, and `remix/ui`; do not use React Router route-module exports, `Route.*` types, `useLoaderData`, `useActionData`, React hooks, or top-level `remix` imports unless the post is explicitly about React or legacy React Router
 
 ### Documentation
@@ -161,7 +161,7 @@ edge case. If the answer is nothing, write nothing.
 
 ### Testing
 
-- MUST back database tests with an in-memory adapter from `@pkg/cloudflare-mocks/sqlite` that mirrors the production adapter, rather than mocking the query layer; that module absorbs the four ways `node:sqlite` diverges from `bun:sqlite`, so never re-fix those in app code
+- MUST back database tests with an in-memory adapter from `@sdxc/cloudflare-mocks/sqlite` that mirrors the production adapter, rather than mocking the query layer; that module absorbs the four ways `node:sqlite` diverges from `bun:sqlite`, so never re-fix those in app code
 - MUST mock outbound HTTP with MSW (`setupServer` from `msw/node`) in tests; never stub `globalThis.fetch` or inject a fake
 - MUST NOT hand-write a fake for a Cloudflare binding (`as unknown as KVNamespace` and the like). Name the file `*.workers.test.ts` and use the real binding from `cloudflare:test`; a fake diverges silently, and every one this repo had stubbed `list()` to an empty result
 - MUST let the `cloudflareWorkersStub()` plugin supply `env`/bindings — it is on every project whose workspace uses Cloudflare bindings, so a test importing `cloudflare:workers` needs no mock of its own; reach for `vi.doMock` + `await import(...)` only to replace a module before the subject loads
@@ -170,7 +170,7 @@ edge case. If the answer is nothing, write nothing.
 
 ### Data & transactions
 
-- `db.transaction()` is atomic only on `@pkg/data-table-sqlstorage` (Durable Object SQLite). `@pkg/data-table-d1` has no interactive transactions, so any multi-step mutation that may run on D1 MUST be written D1-safe (single-statement/upsert or compensating operations)
+- `db.transaction()` is atomic only on `@sdxc/data-table-sqlstorage` (Durable Object SQLite). `@sdxc/data-table-d1` has no interactive transactions, so any multi-step mutation that may run on D1 MUST be written D1-safe (single-statement/upsert or compensating operations)
 - MUST isolate per-tenant caches by keying them on the tenant's `Database` instance, so one tenant's data can never leak to another
 - MUST keep every migration chain applicable to an empty database, since that is how a new tenant is provisioned — `test/migration-replay.test.ts` replays each chain with SQLite's double-quoted string literals disabled and fails on anything new. Never `ALTER TABLE ADD COLUMN` for a column an earlier migration already creates, and when a table rebuild renames a column, the `SELECT` must read the **old** name: with DQS on, as the adapters run, `"new_name"` silently evaluates to the string `'new_name'` for every row instead of failing
 

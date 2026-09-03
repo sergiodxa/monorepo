@@ -10,14 +10,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { CheckIcon, MinusIcon } from "@pkg/icons";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { block, center, hidden, hstack, relative, shrink } from "@pkg/u/layout";
-import { bs, is } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { CheckIcon, MinusIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { block, center, hidden, hstack, relative, shrink } from "@sdxc/u/layout";
+import { bs, is } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";

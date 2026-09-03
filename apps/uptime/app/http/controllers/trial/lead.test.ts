@@ -12,11 +12,11 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { BatchedLogger } from "@pkg/logger";
-import { MemoryTransport } from "@pkg/mail/memory";
-import mail from "@pkg/mail/middleware";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { BatchedLogger } from "@sdxc/logger";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import mail from "@sdxc/mail/middleware";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";

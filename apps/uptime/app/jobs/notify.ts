@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs";
+import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Database } from "remix/data-table";
 
-import { createJobHandler, Job } from "@pkg/jobs";
-import { Mailer } from "@pkg/mail";
-import { getServiceContainer } from "@pkg/service-container";
+import { createJobHandler, Job } from "@sdxc/jobs";
+import { Mailer } from "@sdxc/mail";
+import { getServiceContainer } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 
 import type { NotifyInput } from "~/app/jobs";

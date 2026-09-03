@@ -1,5 +1,5 @@
 /**
- * Public entry point for `@pkg/icons` — Lucide icons
+ * Public entry point for `@sdxc/icons` — Lucide icons
  * (https://lucide.dev) as `remix/ui` components, one module per icon so
  * bundlers can tree-shake unused ones, matching `lucide-react`'s package
  * shape.

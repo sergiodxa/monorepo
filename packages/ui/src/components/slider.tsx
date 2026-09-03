@@ -45,7 +45,7 @@ import {
 	vstack,
 	when,
 	z,
-} from "@pkg/u";
+} from "@sdxc/u";
 
 import { outputCaptionText } from "../styles/output-caption-text";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";

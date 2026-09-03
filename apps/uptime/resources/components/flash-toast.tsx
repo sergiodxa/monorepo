@@ -14,9 +14,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { animation } from "@pkg/u/animation";
-import { Toast } from "@pkg/ui";
-import { easings } from "@pkg/ui/animations";
+import { animation } from "@sdxc/u/animation";
+import { Toast } from "@sdxc/ui";
+import { easings } from "@sdxc/ui/animations";
 
 /**
  * Total time, in ms, the toast stays visible before it fades, long enough for

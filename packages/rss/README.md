@@ -1,10 +1,10 @@
-# @pkg/rss
+# @sdxc/rss
 
 RSS 2.0 feed builder and parser.
 
 ## Overview
 
-`@pkg/rss` helps you generate RSS 2.0 feeds for publishing and consume existing feeds from other sites.
+`@sdxc/rss` helps you generate RSS 2.0 feeds for publishing and consume existing feeds from other sites.
 
 It supports the complete set of standard channel and item fields, plus common namespaced extensions such as `atom:link`, `content:encoded`, `dc:creator`, and `slash:comments`. It is a good fit for blog feeds, podcasts, bookmarking feeds, aggregators, and any workflow that needs to create, fetch, or transform RSS data.
 
@@ -15,7 +15,7 @@ It supports the complete set of standard channel and item fields, plus common na
 Create a new feed by defining the channel metadata first, then append items before serializing the final XML.
 
 ```typescript
-import { RSS } from "@pkg/rss";
+import { RSS } from "@sdxc/rss";
 
 let feed = new RSS({
 	title: "My Blog",
@@ -46,7 +46,7 @@ let xml = feed.toString();
 When you already have RSS XML as a string, parse it into an `RSS` instance to inspect the channel metadata and items.
 
 ```typescript
-import { RSS } from "@pkg/rss";
+import { RSS } from "@sdxc/rss";
 
 let feed = RSS.parse(xml);
 
@@ -61,7 +61,7 @@ for (let item of feed.items) {
 Use `RSS.fetch` to download a remote feed and parse it in one step.
 
 ```typescript
-import { RSS } from "@pkg/rss";
+import { RSS } from "@sdxc/rss";
 
 let feed = await RSS.fetch(new URL("https://example.com/feed.xml"));
 ```

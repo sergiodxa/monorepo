@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UUID } from "@pkg/uuid";
+import type { UUID } from "@sdxc/uuid";
 
-import { assertUUID } from "@pkg/uuid";
+import { assertUUID } from "@sdxc/uuid";
 
 import type { Base32 } from "./lib/base32";
 

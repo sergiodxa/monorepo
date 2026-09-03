@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
-import type { D1StatementObservation } from "@pkg/data-table-d1";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
+import type { D1StatementObservation } from "@sdxc/data-table-d1";
 
-import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**

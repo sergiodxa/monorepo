@@ -14,12 +14,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { ChevronDownIcon } from "@pkg/icons";
-import { bg, fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { center, hstack, spacer, vstack } from "@pkg/u/layout";
-import { bs, is, mis, pie } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { ChevronDownIcon } from "@sdxc/icons";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { center, hstack, spacer, vstack } from "@sdxc/u/layout";
+import { bs, is, mis, pie } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";

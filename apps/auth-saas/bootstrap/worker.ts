@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JSONValue } from "@pkg/types";
+import type { JSONValue } from "@sdxc/types";
 
-import { isSuccess } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { isSuccess } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
 import { reportMAU } from "~/app/jobs/report-mau";

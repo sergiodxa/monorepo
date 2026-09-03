@@ -11,8 +11,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { text } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { text } from "@sdxc/u/typography";
 
 /**
  * Prop types for {@link Text}.

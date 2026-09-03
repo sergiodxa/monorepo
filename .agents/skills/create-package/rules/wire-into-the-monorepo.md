@@ -54,12 +54,12 @@ Add `compilerOptions` only to override something specific:
 
 ```json
 "dependencies": {
-	"@pkg/result": "workspace:*",
+	"@sdxc/result": "workspace:*",
 	"remix": "3.0.0-rc.1"
 }
 ```
 
-Never a version range for a `@pkg/*`, and never an import of a package the manifest does
+Never a version range for a `@sdxc/*`, and never an import of a package the manifest does
 not list — it resolves through the root `node_modules` today and breaks the moment its
 real dependent drops it. A package used only by the tests goes in `devDependencies`.
 
@@ -96,7 +96,7 @@ their own project entry.
 
 1. Extend `../../tsconfig.json`; never write a standalone compiler config
 2. Never add an `exclude` for test files
-3. Declare every dependency the package imports; `@pkg/*` as `workspace:*`, test-only ones under `devDependencies`
+3. Declare every dependency the package imports; `@sdxc/*` as `workspace:*`, test-only ones under `devDependencies`
 4. Add lint or format exceptions to `lint.overrides` / `fmt.overrides` in the root `vite.config.ts`, never as a file in the package
 5. Keep tests under `src/`, so the packages Vitest project collects them
 6. Run `vp check` and `bun run test` from the repo root

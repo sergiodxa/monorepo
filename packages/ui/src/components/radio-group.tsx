@@ -13,15 +13,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, pseudoContent } from "@pkg/u/general";
-import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@pkg/u/layout";
-import { bs, is } from "@pkg/u/size";
-import { after, precededBy, when } from "@pkg/u/state";
-import { scale } from "@pkg/u/transform";
-import { text } from "@pkg/u/typography";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded, transition } from "@sdxc/u/effects";
+import { cursor, pseudoContent } from "@sdxc/u/general";
+import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@sdxc/u/layout";
+import { bs, is } from "@sdxc/u/size";
+import { after, precededBy, when } from "@sdxc/u/state";
+import { scale } from "@sdxc/u/transform";
+import { text } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 /**

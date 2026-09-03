@@ -12,8 +12,8 @@
 
 import type { Middleware } from "remix/router";
 
-import { Forbidden, Unauthorized } from "@pkg/http/status-code";
-import { getServiceContainer } from "@pkg/service-container";
+import { Forbidden, Unauthorized } from "@sdxc/http/status-code";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";

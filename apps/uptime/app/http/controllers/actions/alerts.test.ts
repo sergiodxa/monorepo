@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
+import { BatchedLogger } from "@sdxc/logger";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";

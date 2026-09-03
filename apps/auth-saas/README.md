@@ -1,7 +1,7 @@
 # Auth SaaS
 
 A multi-tenant identity platform: each tenant is an OIDC/OAuth2 provider running
-isolated in its own Cloudflare Durable Object over [`@pkg/oidc-provider`](../../packages/oidc-provider).
+isolated in its own Cloudflare Durable Object over [`@sdxc/oidc-provider`](../../packages/oidc-provider).
 
 Production URL: https://auth.sergiodxa.com
 
@@ -13,15 +13,15 @@ Production URL: https://auth.sergiodxa.com
 
 ## Cloudflare Services
 
-| Service          | Binding                    | Purpose                                                        |
-| ---------------- | -------------------------- | -------------------------------------------------------------- |
-| Durable Objects  | `TENANT`                   | One per tenant; runs `@pkg/oidc-provider` over embedded SQLite |
-| D1 Database      | `PLATFORM_DB`              | Control plane: tenants, members, hostnames, subscriptions      |
-| KV               | `HOSTNAMES_KV`             | Same-zone hostname → tenant resolution cache                   |
-| Analytics Engine | `ANALYTICS`                | Monthly-active-user usage tracking                             |
-| Email            | `SEND_EMAIL`               | Cloudflare Email Sending (verification, magic links)           |
-| Rate Limiting    | `AUTH_RATE_LIMITER` et al. | Per-IP limits on auth, sensitive, and management routes        |
-| Static Assets    | `ASSETS`                   | Dashboard + tenant client bundles                              |
+| Service          | Binding                    | Purpose                                                         |
+| ---------------- | -------------------------- | --------------------------------------------------------------- |
+| Durable Objects  | `TENANT`                   | One per tenant; runs `@sdxc/oidc-provider` over embedded SQLite |
+| D1 Database      | `PLATFORM_DB`              | Control plane: tenants, members, hostnames, subscriptions       |
+| KV               | `HOSTNAMES_KV`             | Same-zone hostname → tenant resolution cache                    |
+| Analytics Engine | `ANALYTICS`                | Monthly-active-user usage tracking                              |
+| Email            | `SEND_EMAIL`               | Cloudflare Email Sending (verification, magic links)            |
+| Rate Limiting    | `AUTH_RATE_LIMITER` et al. | Per-IP limits on auth, sensitive, and management routes         |
+| Static Assets    | `ASSETS`                   | Dashboard + tenant client bundles                               |
 
 Observability is enabled.
 
@@ -66,7 +66,7 @@ bun run db:local:migrate  # Apply migrations locally
 bun run db:remote:migrate # Apply migrations to production
 ```
 
-Each tenant's own OIDC schema is owned and migrated by `@pkg/oidc-provider` inside its DO.
+Each tenant's own OIDC schema is owned and migrated by `@sdxc/oidc-provider` inside its DO.
 
 ## Scripts
 

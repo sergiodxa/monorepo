@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@pkg/jwt";
+import { JWT } from "@sdxc/jwt";
 
 import { ISSUER } from "~/app/config";
 

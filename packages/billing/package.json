@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/billing",
+	"name": "@sdxc/billing",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -17,11 +17,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/api-client": "workspace:*",
-		"@pkg/crypto": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/validate": "workspace:*",
-		"@pkg/webhooks": "workspace:*",
+		"@sdxc/api-client": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@sdxc/webhooks": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

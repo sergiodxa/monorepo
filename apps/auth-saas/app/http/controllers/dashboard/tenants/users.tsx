@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Location } from "@pkg/location";
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { Location } from "@sdxc/location";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as ds from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

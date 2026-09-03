@@ -12,12 +12,12 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
-import { minBs, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { textAlign } from "@pkg/u/typography";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
+import { minBs, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { textAlign } from "@sdxc/u/typography";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";

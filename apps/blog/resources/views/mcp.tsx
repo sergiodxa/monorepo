@@ -8,15 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Markdown as MarkdownType } from "@pkg/markdown/server";
+import type { Markdown as MarkdownType } from "@sdxc/markdown/server";
 
-import { MarkdownView } from "@pkg/markdown/client";
-import { bg, border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { contents, flexWrap, gap, grid, hstack, shrink } from "@pkg/u/layout";
-import { bleed, m, mi, minIs, p } from "@pkg/u/size";
-import { overflowWrap, tabSize, text } from "@pkg/u/typography";
-import { Heading, Link, Typeset } from "@pkg/ui";
+import { MarkdownView } from "@sdxc/markdown/client";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { contents, flexWrap, gap, grid, hstack, shrink } from "@sdxc/u/layout";
+import { bleed, m, mi, minIs, p } from "@sdxc/u/size";
+import { overflowWrap, tabSize, text } from "@sdxc/u/typography";
+import { Heading, Link, Typeset } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 

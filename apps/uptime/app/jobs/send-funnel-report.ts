@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { toDayKey, subDays } from "@pkg/dates";
-import { createJobHandler } from "@pkg/jobs";
-import { Mailer } from "@pkg/mail";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
+import { toDayKey, subDays } from "@sdxc/dates";
+import { createJobHandler } from "@sdxc/jobs";
+import { Mailer } from "@sdxc/mail";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 
 import type { TrialDailyCounters } from "~/app/data/trial-daily-stats";

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { AuthSession } from "@pkg/auth/auth-session";
-import { createEnv } from "@pkg/cloudflare-mocks";
+import { AuthSession } from "@sdxc/auth/auth-session";
+import { createEnv } from "@sdxc/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createCookie } from "remix/cookie";

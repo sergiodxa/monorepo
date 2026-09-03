@@ -1,7 +1,7 @@
 # Blog SaaS
 
 A multi-tenant blog platform: an account creates blogs, each running isolated in its
-own Cloudflare Durable Object over the host-agnostic [`@pkg/blog-engine`](../../packages/blog-engine).
+own Cloudflare Durable Object over the host-agnostic [`@sdxc/blog-engine`](../../packages/blog-engine).
 
 Production URL: https://blog.sergiodxa.com
 
@@ -15,7 +15,7 @@ Production URL: https://blog.sergiodxa.com
 
 | Service          | Binding       | Purpose                                                         |
 | ---------------- | ------------- | --------------------------------------------------------------- |
-| Durable Objects  | `BLOG`        | One per blog; runs `@pkg/blog-engine` over embedded SQLite      |
+| Durable Objects  | `BLOG`        | One per blog; runs `@sdxc/blog-engine` over embedded SQLite     |
 | D1 Database      | `PLATFORM_DB` | Control plane: accounts, blogs, hostnames, subscriptions, usage |
 | KV               | `SLUG_CACHE`  | Subdomain slug → blog id resolution (write-through)             |
 | Analytics Engine | `ANALYTICS`   | Billable page-view metering                                     |
@@ -74,7 +74,7 @@ bun run db:local:migrate  # Apply migrations locally
 bun run db:remote:migrate # Apply migrations to production
 ```
 
-Each blog's own content schema is owned and migrated by `@pkg/blog-engine` inside its DO.
+Each blog's own content schema is owned and migrated by `@sdxc/blog-engine` inside its DO.
 
 ## Scripts
 

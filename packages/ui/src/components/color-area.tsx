@@ -10,16 +10,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, linearGradient, outline, outlineStyle } from "@pkg/u/color";
-import { opacity, ringShadow, rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, pointerEvents, raw } from "@pkg/u/general";
-import { absolute, appearance, inlineBlock, inset, relative } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, is, m } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { when } from "@pkg/u/state";
-import { scaleProperty } from "@pkg/u/transform";
+import { bg, border, linearGradient, outline, outlineStyle } from "@sdxc/u/color";
+import { opacity, ringShadow, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, pointerEvents, raw } from "@sdxc/u/general";
+import { absolute, appearance, inlineBlock, inset, relative } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, m } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { when } from "@sdxc/u/state";
+import { scaleProperty } from "@sdxc/u/transform";
 import { attrs } from "remix/ui";
 
 import { mergeStyle } from "../utils/merge-style";

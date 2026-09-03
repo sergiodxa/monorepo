@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { overflowX } from "@pkg/u/overflow";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { overflowX } from "@sdxc/u/overflow";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

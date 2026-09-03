@@ -12,7 +12,7 @@
 import type { getContext } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
-import { Select, TextField } from "@pkg/ui";
+import { Select, TextField } from "@sdxc/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 

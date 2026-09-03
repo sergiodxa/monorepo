@@ -49,7 +49,7 @@ const TOKENS_SCHEMA = s.object({
 function readSession(ctx: AuthSession.Context): Session {
 	let session = ctx.get(Session);
 	if (!session) {
-		throw new Error("@pkg/auth needs remix/middleware/session installed on the router");
+		throw new Error("@sdxc/auth needs remix/middleware/session installed on the router");
 	}
 	return session;
 }

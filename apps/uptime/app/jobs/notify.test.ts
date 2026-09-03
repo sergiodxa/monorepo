@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { BatchedLogger } from "@pkg/logger";
-import { Mailer } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { BatchedLogger } from "@sdxc/logger";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -78,7 +78,7 @@ vi.doMock("~/app/services/alerts", () => ({
 	notifySslResult: notifySslResultMock,
 }));
 
-let { Job, createJobContext } = await import("@pkg/jobs");
+let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let notify = (await import("./notify")).default;

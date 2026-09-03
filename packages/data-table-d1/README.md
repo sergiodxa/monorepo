@@ -1,4 +1,4 @@
-# @pkg/data-table-d1
+# @sdxc/data-table-d1
 
 A `remix/data-table` `DatabaseDriver` backed by Cloudflare D1.
 
@@ -29,7 +29,7 @@ and other D1-backed apps can share one adapter (see
 > `createMany()` (a single multi-row `INSERT`), one `UPDATE`/`DELETE`, or
 > `INSERT ... ON CONFLICT` (upsert). If you need real cross-statement atomicity,
 > run inside a Durable Object with
-> [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage), whose SQLite
+> [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage), whose SQLite
 > backend does support atomic transactions.
 
 ## Usage
@@ -37,7 +37,7 @@ and other D1-backed apps can share one adapter (see
 ### Basic Example
 
 ```typescript
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { Database } from "remix/data-table";
 
 export default {
@@ -114,7 +114,7 @@ D1 omits the corresponding `meta` field rather than being estimated.
 adapter once and reuse it across requests:
 
 ```typescript
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { Database } from "remix/data-table";
 
 let db: Database | null = null;
@@ -127,14 +127,14 @@ export default {
 } satisfies ExportedHandler<Env>;
 ```
 
-## Pattern: Self-hosting `@pkg/oidc-provider` on D1
+## Pattern: Self-hosting `@sdxc/oidc-provider` on D1
 
 The adapter is what lets the host-agnostic provider run on a plain Worker; the host
 injects it and the provider only ever sees the `DatabaseDriver` interface:
 
 ```typescript
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createOidcProvider } from "@pkg/oidc-provider";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import { createOidcProvider } from "@sdxc/oidc-provider";
 
 let provider = createOidcProvider({
 	database: createD1DatabaseAdapter(env.DB),
@@ -144,8 +144,8 @@ let provider = createOidcProvider({
 
 ## Related Packages
 
-- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - The same adapter for a Durable Object `SqlStorage`
-- [`@pkg/oidc-provider`](/packages/oidc-provider) - Host-agnostic OIDC provider that consumes this adapter
+- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - The same adapter for a Durable Object `SqlStorage`
+- [`@sdxc/oidc-provider`](/packages/oidc-provider) - Host-agnostic OIDC provider that consumes this adapter
 
 ## Tips
 

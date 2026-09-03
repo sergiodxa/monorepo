@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Issuer } from "@pkg/auth/issuer";
-import { RelyingParty } from "@pkg/auth/relying-party";
+import { Issuer } from "@sdxc/auth/issuer";
+import { RelyingParty } from "@sdxc/auth/relying-party";
 
 import type { AuthProfile } from "../users/models/user";
 

@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Address } from "@pkg/mail";
+import type { Address } from "@sdxc/mail";
 
 /**
  * Mailbox every message is sent from, on the issuer's own hostname so it matches the name

@@ -13,14 +13,14 @@
 
 import type { Handle, Props as ElementProps } from "remix/ui";
 
-import { XIcon } from "@pkg/icons";
-import { bg, fg, outline, outlineColor } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, listStyle } from "@pkg/u/general";
-import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@pkg/u/layout";
-import { bs, is, m, mie, p, pb, pi } from "@pkg/u/size";
-import { active, data, hover, when } from "@pkg/u/state";
-import { text, weight } from "@pkg/u/typography";
+import { XIcon } from "@sdxc/icons";
+import { bg, fg, outline, outlineColor } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, listStyle } from "@sdxc/u/general";
+import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
+import { bs, is, m, mie, p, pb, pi } from "@sdxc/u/size";
+import { active, data, hover, when } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";

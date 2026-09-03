@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
-import type { Adapter, RateLimitDecision } from "@pkg/rate-limit";
-import type { Result } from "@pkg/result";
+import type { DurationInput } from "@sdxc/duration";
+import type { Adapter, RateLimitDecision } from "@sdxc/rate-limit";
+import type { Result } from "@sdxc/result";
 
-import { MemoryAdapter, RateLimitError } from "@pkg/rate-limit";
-import { failure } from "@pkg/result";
+import { MemoryAdapter, RateLimitError } from "@sdxc/rate-limit";
+import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";

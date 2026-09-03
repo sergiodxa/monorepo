@@ -10,7 +10,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { pb } from "@pkg/u/size";
+import { pb } from "@sdxc/u/size";
 
 /**
  * Props accepted by {@link Section}.

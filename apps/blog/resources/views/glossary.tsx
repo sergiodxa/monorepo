@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@pkg/u/color";
-import { ringShadow, rounded, transition } from "@pkg/u/effects";
-import { gap, grid } from "@pkg/u/layout";
-import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text, textDecoration, weight } from "@pkg/u/typography";
-import { Heading } from "@pkg/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { ringShadow, rounded, transition } from "@sdxc/u/effects";
+import { gap, grid } from "@sdxc/u/layout";
+import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text, textDecoration, weight } from "@sdxc/u/typography";
+import { Heading } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";

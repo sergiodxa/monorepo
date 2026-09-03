@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { HostnameClient } from "@pkg/hostname";
+import type { HostnameClient } from "@sdxc/hostname";
 import type { Database } from "remix/data-table";
 
 import { env } from "cloudflare:workers";

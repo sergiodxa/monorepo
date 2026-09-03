@@ -9,7 +9,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/result": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {

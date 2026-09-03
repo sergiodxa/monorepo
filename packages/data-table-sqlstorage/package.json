@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/data-table-sqlstorage",
+	"name": "@sdxc/data-table-sqlstorage",
 	"version": "0.0.0",
 	"private": true,
 	"license": "MIT",

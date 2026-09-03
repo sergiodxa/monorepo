@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { badRequest, ok, tooManyRequests } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import {
 	generateAuthenticationOptions,
 	type GenerateAuthenticationOptionsOpts,

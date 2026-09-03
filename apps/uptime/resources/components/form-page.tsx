@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SizeValue } from "@pkg/u/tokens";
+import type { SizeValue } from "@sdxc/u/tokens";
 import type { Handle, RemixNode } from "remix/ui";
 
-import { is, maxIs, mi } from "@pkg/u/size";
+import { is, maxIs, mi } from "@sdxc/u/size";
 
 /** Column width used when a page doesn't ask for a wider one. */
 const DEFAULT_MAX_WIDTH: SizeValue = "640px";

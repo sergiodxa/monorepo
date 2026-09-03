@@ -30,7 +30,7 @@ packages/hostname/src/index.ts  ->  export function doTheThing() { … }
                                     (twelve exports later, nobody knows what it is)
 
 # Good: decide first
-name:        hostname                       -> @pkg/hostname
+name:        hostname                       -> @sdxc/hostname
 description: Cloudflare for SaaS custom-hostname client.
 surface:     one class HostnameClient, HostnameApiError, and the option/result types
              -> one entry point: "." -> ./src/index.ts
@@ -41,7 +41,7 @@ Ask two more questions while you are asking:
 - **Does this need to be a package?** It does when two workspaces need it, or when the
   logic is worth testing away from a request. A helper one app uses stays in that app's
   `app/lib/`.
-- **What does it depend on?** Every `@pkg/*` it uses is a `workspace:*` dependency, and a
+- **What does it depend on?** Every `@sdxc/*` it uses is a `workspace:*` dependency, and a
   package depending on an app is not a package.
 
 ## Rules
@@ -49,4 +49,4 @@ Ask two more questions while you are asking:
 1. Require the package name, the one-line description, and the intended public surface before creating the directory
 2. Turn the surface into the `exports` map before writing `src/`
 3. Reject the package if the honest one-line description names an app — that is app code
-4. List the `@pkg/*` dependencies up front, as `workspace:*`
+4. List the `@sdxc/*` dependencies up front, as `workspace:*`

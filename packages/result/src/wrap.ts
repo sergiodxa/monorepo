@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IsAny } from "@pkg/types";
+import type { IsAny } from "@sdxc/types";
 
 import type { Result } from "./types.js";
 

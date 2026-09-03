@@ -2,7 +2,7 @@
  * `/docs/*slug` controller. Resolves the wildcard slug to a doc file, parses
  * its Markdoc content and frontmatter, and renders the frontmatter title,
  * description, and last-updated date above the content from
- * `@pkg/markdown/client`'s `renderToRemix`, composed directly into the
+ * `@sdxc/markdown/client`'s `renderToRemix`, composed directly into the
  * shared `DocsLayout` sidebar chrome. The frontmatter description doubles as
  * the page's `<head>` meta/Open Graph description.
  *
@@ -10,12 +10,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToRemix } from "@pkg/markdown/client";
-import { isFailure } from "@pkg/result";
-import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { m, mbe } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
+import { renderToRemix } from "@sdxc/markdown/client";
+import { isFailure } from "@sdxc/result";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m, mbe } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

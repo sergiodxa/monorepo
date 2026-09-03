@@ -13,15 +13,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, fg, outline } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { flex, gap, items } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { maxBs, p, pb, pi } from "@pkg/u/size";
-import { active, hover, when } from "@pkg/u/state";
-import { text } from "@pkg/u/typography";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { flex, gap, items } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { maxBs, p, pb, pi } from "@sdxc/u/size";
+import { active, hover, when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

@@ -9,19 +9,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 
-import { formatDate, formatDateTime } from "@pkg/dates";
-import { notFound } from "@pkg/http/response/html";
-import { getServiceContainer } from "@pkg/service-container";
-import { bg, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { grid, gridTemplate, hstack, vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, m, maxIs, mi, minIs, p, pbe, pbs, pi } from "@pkg/u/size";
-import { fontSize, leading, textAlign, weight, wordBreak } from "@pkg/u/typography";
-import { Card, Heading, HeadingScope, LinkButton, Text } from "@pkg/ui";
+import { formatDate, formatDateTime } from "@sdxc/dates";
+import { notFound } from "@sdxc/http/response/html";
+import { getServiceContainer } from "@sdxc/service-container";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, m, maxIs, mi, minIs, p, pbe, pbs, pi } from "@sdxc/u/size";
+import { fontSize, leading, textAlign, weight, wordBreak } from "@sdxc/u/typography";
+import { Card, Heading, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";

@@ -7,11 +7,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { MemoryBilling as MemoryBillingType } from "@pkg/billing/providers/memory";
+import type { MemoryBilling as MemoryBillingType } from "@sdxc/billing/providers/memory";
 
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { unwrap } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { BlogFanOut } from "~/app/services/entitlements";

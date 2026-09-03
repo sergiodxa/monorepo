@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/typeid",
+	"name": "@sdxc/typeid",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -12,6 +12,6 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/uuid": "workspace:*"
+		"@sdxc/uuid": "workspace:*"
 	}
 }

@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { isFailure, unwrap } from "@pkg/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
 
 import { hashSecret, verifySecret } from "../../shared/lib/password-hash";

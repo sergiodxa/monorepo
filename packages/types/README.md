@@ -1,4 +1,4 @@
-# @pkg/types
+# @sdxc/types
 
 Shared TypeScript utility types for the monorepo.
 
@@ -11,7 +11,7 @@ This package provides reusable TypeScript utility types that are useful across m
 ### Extracting Resolved Types from Async Functions
 
 ```typescript
-import type { ResolvedType } from "@pkg/types";
+import type { ResolvedType } from "@sdxc/types";
 
 async function fetchUser(id: string): Promise<{ name: string; email: string }> {
 	// ...
@@ -24,7 +24,7 @@ type User = ResolvedType<typeof fetchUser>; // { name: string; email: string }
 ### Typing Component Props from Loader Data
 
 ```typescript
-import type { ResolvedType } from "@pkg/types";
+import type { ResolvedType } from "@sdxc/types";
 
 import type { getHttpMonitorsData } from "./query.server";
 
@@ -56,7 +56,7 @@ Useful for handling functions like `JSON.parse` that return `any`, allowing cond
 **Example:**
 
 ```typescript
-import type { IsAny } from "@pkg/types";
+import type { IsAny } from "@sdxc/types";
 
 type A = IsAny<any>; // true
 type B = IsAny<unknown>; // false
@@ -73,7 +73,7 @@ Represents any JSON-serializable value. This includes primitives (`string`, `num
 **Example:**
 
 ```typescript
-import type { JSONValue } from "@pkg/types";
+import type { JSONValue } from "@sdxc/types";
 
 let obj: JSONValue = { name: "John", age: 30 };
 let arr: JSONValue = [1, "two", { three: 3 }];
@@ -98,7 +98,7 @@ Extracts the resolved type from an async function's return type. Combines `Await
 **Example:**
 
 ```typescript
-import type { ResolvedType } from "@pkg/types";
+import type { ResolvedType } from "@sdxc/types";
 
 async function getData(): Promise<{ items: string[] }> {
 	return { items: [] };
@@ -113,7 +113,7 @@ type Data = ResolvedType<typeof getData>;
 When using React Router's streaming with `<Await>`, use `ResolvedType` to type the resolved data in child components.
 
 ```typescript
-import type { ResolvedType } from "@pkg/types";
+import type { ResolvedType } from "@sdxc/types";
 
 import type { getMonitorsData } from "./query.server";
 
@@ -139,7 +139,7 @@ export function MonitorsTable(props: MonitorsTableProps) {
 Access nested types from query results using indexed access.
 
 ```typescript
-import type { ResolvedType } from "@pkg/types";
+import type { ResolvedType } from "@sdxc/types";
 
 import type { getHttpMonitorsData } from "./query.server";
 
@@ -153,8 +153,8 @@ interface MonitorRowProps {
 
 ## Related Packages
 
-- [`@pkg/jobs`](../jobs/README.md) - Uses JSONValue for job message payloads
-- [`@pkg/validate`](../validate/README.md) - Works with JSONValue for validation input
+- [`@sdxc/jobs`](../jobs/README.md) - Uses JSONValue for job message payloads
+- [`@sdxc/validate`](../validate/README.md) - Works with JSONValue for validation input
 
 ## Tips
 

@@ -10,8 +10,8 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { combine, raw, var as varUtility } from "@pkg/u/general";
-import { when } from "@pkg/u/state";
+import { combine, raw, var as varUtility } from "@sdxc/u/general";
+import { when } from "@sdxc/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 

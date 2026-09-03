@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import billing from "@pkg/billing/middleware";
+import billing from "@sdxc/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
 	createRateLimit,
-} from "@pkg/cloudflare-mocks";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/cloudflare-mocks";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";

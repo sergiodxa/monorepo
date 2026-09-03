@@ -9,7 +9,7 @@
 
 import type { RequestContext, RequestHandler } from "remix/router";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import type { Billing } from "../core/contract";
 import type { BillingEvent } from "../core/types";

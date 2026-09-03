@@ -11,11 +11,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
-import { is, maxIs, minBs, p } from "@pkg/u/size";
-import { text, textAlign } from "@pkg/u/typography";
-import { Button, Card, Form, Text, TextField } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
+import { is, maxIs, minBs, p } from "@sdxc/u/size";
+import { text, textAlign } from "@sdxc/u/typography";
+import { Button, Card, Form, Text, TextField } from "@sdxc/ui";
 
 import routes from "~/routes/web";
 

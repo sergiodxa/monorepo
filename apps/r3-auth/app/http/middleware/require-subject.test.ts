@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ok } from "@pkg/http/response/json";
+import { ok } from "@sdxc/http/response/json";
 import { getContext } from "remix/middleware/async-context";
 import { get, route } from "remix/routes";
 import { beforeEach, describe, expect, test } from "vitest";

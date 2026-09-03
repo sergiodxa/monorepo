@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Exercises end-to-end turn resolution, action ordering, and combat-state
  * transitions through the public battle API. Assertions protect the

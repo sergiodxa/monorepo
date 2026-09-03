@@ -13,14 +13,14 @@ import type { Middleware, RequestContext, RequestHandler, Router } from "remix/r
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
-import billing from "@pkg/billing/middleware";
+import billing from "@sdxc/billing/middleware";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
-} from "@pkg/cloudflare-mocks";
-import { createTranslator } from "@pkg/i18n";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/cloudflare-mocks";
+import { createTranslator } from "@sdxc/i18n";
+import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";

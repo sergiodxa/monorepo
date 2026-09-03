@@ -11,10 +11,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, items, justify } from "@pkg/u/layout";
-import { pb } from "@pkg/u/size";
-import { text } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { flex, items, justify } from "@sdxc/u/layout";
+import { pb } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
 
 /**
  * Renders a decorative sentinel row: a `<div>` styled as centered, muted

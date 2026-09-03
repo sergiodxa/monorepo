@@ -9,7 +9,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { ZoneFileImport, ZoneFileRejectionReason } from "~/app/services/zone-file";

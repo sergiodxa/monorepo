@@ -1,4 +1,4 @@
-# @pkg/sitemap
+# @sdxc/sitemap
 
 XML sitemap generator for SEO optimization.
 
@@ -11,7 +11,7 @@ The `Sitemap` class collects URLs and outputs valid XML that can be served as a 
 ## Usage
 
 ```typescript
-import { Sitemap } from "@pkg/sitemap";
+import { Sitemap } from "@sdxc/sitemap";
 
 let sitemap = new Sitemap();
 
@@ -97,7 +97,7 @@ let xml = sitemap.toString();
 Types are exported via the `Sitemap` namespace:
 
 ```typescript
-import { Sitemap } from "@pkg/sitemap";
+import { Sitemap } from "@sdxc/sitemap";
 
 // Access types via namespace
 type URL = Sitemap.URL;
@@ -141,7 +141,7 @@ Create a route that generates a sitemap dynamically:
 
 ```typescript
 // app/routes/sitemap[.]xml.ts
-import { Sitemap } from "@pkg/sitemap";
+import { Sitemap } from "@sdxc/sitemap";
 import type { Route } from "./+types/sitemap[.]xml";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -176,7 +176,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 For large sites, create a sitemap index:
 
 ```typescript
-import { Sitemap } from "@pkg/sitemap";
+import { Sitemap } from "@sdxc/sitemap";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let baseUrl = new URL(request.url).origin;
@@ -200,8 +200,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 Cache the sitemap to avoid regenerating on every request:
 
 ```typescript
-import { Sitemap } from "@pkg/sitemap";
-import { Cache } from "@pkg/kv-cache";
+import { Sitemap } from "@sdxc/sitemap";
+import { Cache } from "@sdxc/kv-cache";
 
 export async function loader({ context }: Route.LoaderArgs) {
 	let cache = new Cache.KVStore(context.env.KV, context.waitUntil);
@@ -227,7 +227,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 Generate sitemaps for multi-language sites:
 
 ```typescript
-import { Sitemap } from "@pkg/sitemap";
+import { Sitemap } from "@sdxc/sitemap";
 
 let locales = ["en", "es", "fr"];
 
@@ -243,8 +243,8 @@ function generateLocalizedSitemap(locale: string, baseUrl: string) {
 
 ## Related Packages
 
-- [`@pkg/rss`](/packages/rss) - RSS feed generation
-- [`@pkg/kv-cache`](/packages/kv-cache) - KV cache for sitemap caching
+- [`@sdxc/rss`](/packages/rss) - RSS feed generation
+- [`@sdxc/kv-cache`](/packages/kv-cache) - KV cache for sitemap caching
 
 ## Tips
 

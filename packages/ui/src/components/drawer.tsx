@@ -12,13 +12,13 @@
 
 import type { Handle } from "remix/ui";
 
-import { rounded, transition, transitionBehavior, transitionProperty } from "@pkg/u/effects";
-import { willChange } from "@pkg/u/general";
-import { fixed, insBe, insBs, insIe, insIs, insLeft, insRight } from "@pkg/u/layout";
-import { media, startingStyle } from "@pkg/u/responsive";
-import { bs, is, m, maxBs, maxIs } from "@pkg/u/size";
-import { data, when } from "@pkg/u/state";
-import { translateX, translateY } from "@pkg/u/transform";
+import { rounded, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
+import { willChange } from "@sdxc/u/general";
+import { fixed, insBe, insBs, insIe, insIs, insLeft, insRight } from "@sdxc/u/layout";
+import { media, startingStyle } from "@sdxc/u/responsive";
+import { bs, is, m, maxBs, maxIs } from "@sdxc/u/size";
+import { data, when } from "@sdxc/u/state";
+import { translateX, translateY } from "@sdxc/u/transform";
 
 import { durations, easings } from "../animations/tokens";
 

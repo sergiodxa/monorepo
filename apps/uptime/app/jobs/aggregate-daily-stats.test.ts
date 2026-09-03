@@ -12,11 +12,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
-import { failure, success } from "@pkg/result";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
+import { failure, success } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 

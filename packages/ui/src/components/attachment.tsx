@@ -10,9 +10,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import {
 	basis,
 	block,
@@ -27,12 +27,12 @@ import {
 	relative,
 	shrink,
 	vstack,
-} from "@pkg/u/layout";
-import { overflow, overflowX } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { aspect, bs, fit, is, minIs, p } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text, textAlign, truncate, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { overflow, overflowX } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { aspect, bs, fit, is, minIs, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text, textAlign, truncate, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { shimmer } from "../animations/keyframes";

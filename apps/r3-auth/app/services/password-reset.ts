@@ -12,10 +12,10 @@
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import { Hex, randomToken, sha256 } from "@pkg/crypto";
-import { toMs, toSeconds } from "@pkg/duration";
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { toMs, toSeconds } from "@sdxc/duration";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
 import { ISSUER_HOST } from "~/app/config";

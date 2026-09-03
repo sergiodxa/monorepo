@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { Base64, Base64Url, Hex } from "./encoding";

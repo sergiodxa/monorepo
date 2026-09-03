@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
-import { inject } from "@pkg/service-container";
-import { border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { m, minBs, p } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { fontSize, textAlign, textDecoration } from "@pkg/u/typography";
+import { redirect } from "@sdxc/http/response";
+import { inject } from "@sdxc/service-container";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { m, minBs, p } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

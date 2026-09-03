@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Logger } from "@pkg/logger/request";
+import { Logger } from "@sdxc/logger/request";
 import { describe, expect, test } from "vitest";
 
 import { createProviderRouter } from "./provider";

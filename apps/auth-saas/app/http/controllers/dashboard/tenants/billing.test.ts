@@ -8,9 +8,9 @@
  */
 import type { Middleware } from "remix/router";
 
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { logger } from "@pkg/logger/middleware";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { logger } from "@sdxc/logger/middleware";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";

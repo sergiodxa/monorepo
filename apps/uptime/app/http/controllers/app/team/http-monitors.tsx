@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { EyeIcon, MonitorIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { fg } from "@pkg/u/color";
-import { hover } from "@pkg/u/state";
-import { textDecoration, weight } from "@pkg/u/typography";
-import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
+import { EyeIcon, MonitorIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { fg } from "@sdxc/u/color";
+import { hover } from "@sdxc/u/state";
+import { textDecoration, weight } from "@sdxc/u/typography";
+import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@sdxc/ui";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

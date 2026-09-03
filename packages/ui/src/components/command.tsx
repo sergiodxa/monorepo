@@ -13,14 +13,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, fg, outline, outlineStyle } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { hstack, vstack } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { bs, is, maxBs, p, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { text, textAlign } from "@pkg/u/typography";
+import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is, maxBs, p, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text, textAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { floatingSurface } from "../styles/floating-surface";

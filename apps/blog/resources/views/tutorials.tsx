@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { listStyle } from "@pkg/u/general";
-import { gap, grid, gridTemplate, items } from "@pkg/u/layout";
-import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
-import { nowrap, tabularNums, text } from "@pkg/u/typography";
-import { Badge, Heading, Link } from "@pkg/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, items } from "@sdxc/u/layout";
+import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
+import { nowrap, tabularNums, text } from "@sdxc/u/typography";
+import { Badge, Heading, Link } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";

@@ -11,10 +11,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Email } from "@pkg/mail";
+import { Email } from "@sdxc/mail";
 
 /**
  * Fill behind an action button, as the literal a mail client keeps: the web pages'

@@ -1,18 +1,18 @@
 /**
  * The one place cron vocabulary becomes text a person reads: a parsed schedule's
  * descriptor into a sentence in the viewer's language, and a rejected expression into
- * a validation message. `@pkg/cron` returns structured descriptors, so every view and
+ * a validation message. `@sdxc/cron` returns structured descriptors, so every view and
  * action sources its copy from here, keeping locale text centralized.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { InvalidCronExpression, TimeOfDay } from "@pkg/cron";
-import type { TFunction } from "@pkg/i18n";
+import type { InvalidCronExpression, TimeOfDay } from "@sdxc/cron";
+import type { TFunction } from "@sdxc/i18n";
 
-import { Schedule } from "@pkg/cron";
-import { isFailure } from "@pkg/result";
+import { Schedule } from "@sdxc/cron";
+import { isFailure } from "@sdxc/result";
 
 /** The translator and locale a schedule sentence is built from. */
 export interface ScheduleTextOptions {

@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { StatusCode } from "@pkg/http/status-code";
+import type { StatusCode } from "@sdxc/http/status-code";
 
-import { json } from "@pkg/http/response";
-import { Ok } from "@pkg/http/status-code";
-import { generateUUID } from "@pkg/uuid";
+import { json } from "@sdxc/http/response";
+import { Ok } from "@sdxc/http/status-code";
+import { generateUUID } from "@sdxc/uuid";
 
 /** Envelope for a successful API response. */
 export interface ApiSuccessBody<T> {

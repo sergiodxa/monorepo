@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
-import type { Result } from "@pkg/result";
+import type { DurationInput } from "@sdxc/duration";
+import type { Result } from "@sdxc/result";
 
-import { success } from "@pkg/result";
+import { success } from "@sdxc/result";
 
 import type { RateLimitError } from "./rate-limit-error";
 import type { Adapter, RateLimitDecision } from "./types";

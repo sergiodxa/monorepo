@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@pkg/icons";
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@sdxc/icons";
 import {
 	bg,
 	borderEdge,
@@ -39,7 +39,7 @@ import {
 	virtualize,
 	weight,
 	when,
-} from "@pkg/u";
+} from "@sdxc/u";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";

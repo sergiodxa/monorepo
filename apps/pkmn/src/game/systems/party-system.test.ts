@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies the party system's full-restoration behavior: `healParty` clears
  * damage and status, refills PP from authored move maxima, treats an empty

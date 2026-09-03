@@ -1,4 +1,4 @@
-# @pkg/session-storage-kv
+# @sdxc/session-storage-kv
 
 A `remix/session` `SessionStorage` implementation backed by a Cloudflare Workers KV-like store.
 
@@ -19,7 +19,7 @@ production and against an in-memory fake in tests without any Workers runtime.
 ### Basic Example
 
 ```typescript
-import { KVSessionStorage } from "@pkg/session-storage-kv";
+import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { session } from "remix/middleware/session";
 
 let storage = new KVSessionStorage(env.KV, { prefix: "session:" });
@@ -50,7 +50,7 @@ Creates a KV-backed session storage adapter.
 
 - `kv`: The `KVStore` to persist sessions in (a Cloudflare `KVNamespace` satisfies this).
 - `options.prefix?`: Prefix prepended to every KV key (default `"session:"`).
-- `options.ttlSeconds?`: KV expiration, either a number of seconds or a `@pkg/duration` string such as `"30 days"` (default one year).
+- `options.ttlSeconds?`: KV expiration, either a number of seconds or a `@sdxc/duration` string such as `"30 days"` (default one year).
 
 #### `storage.read(cookie: string | null): Promise<Session>`
 
@@ -82,8 +82,8 @@ interface KVStore {
 
 ## Related Packages
 
-- [`@pkg/data-table-d1`](/packages/data-table-d1) - `remix/data-table` adapter for Cloudflare D1
-- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `remix/data-table` adapter for Durable Object SQLite
+- [`@sdxc/data-table-d1`](/packages/data-table-d1) - `remix/data-table` adapter for Cloudflare D1
+- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `remix/data-table` adapter for Durable Object SQLite
 
 ## Tips
 

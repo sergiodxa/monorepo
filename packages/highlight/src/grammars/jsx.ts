@@ -17,7 +17,7 @@ import { javascript } from "./javascript";
  * after an opening bracket, a comma, an operator, or `return` — and only when a
  * tag name and the character that ends it follow. Against a name it compares.
  */
-const OPEN = /(?<=(?:^|[\n(\[{,;:=?>&|]|\breturn)[^\S\n]*)<(?=[A-Za-z][\w$.:-]*[\s>/{])/y;
+const OPEN = /(?<=(?:^|[\n([{,;:=?>&|]|\breturn)[^\S\n]*)<(?=[A-Za-z][\w$.:-]*[\s>/{])/y;
 
 /**
  * Between tags every `<` opens one, so an inline `<em>` is recognized right

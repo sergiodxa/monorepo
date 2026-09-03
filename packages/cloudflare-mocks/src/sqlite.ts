@@ -4,7 +4,7 @@
  * Bun and Node ship different built-in SQLite modules and neither can resolve the other's:
  * `bun:sqlite` does not exist under Node, and Bun 1.3.14 cannot resolve `node:sqlite`. The
  * two implementations behind this interface are selected by the `bun` export condition on
- * `@pkg/cloudflare-mocks/sqlite`, so each runtime only ever loads the module it can resolve
+ * `@sdxc/cloudflare-mocks/sqlite`, so each runtime only ever loads the module it can resolve
  * and neither is reachable from a static import in the other's graph.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

@@ -12,12 +12,12 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { bg, border, outline } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { combine, raw } from "@pkg/u/general";
-import { media } from "@pkg/u/responsive";
-import { bs, is } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { bg, border, outline } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { combine, raw } from "@sdxc/u/general";
+import { media } from "@sdxc/u/responsive";
+import { bs, is } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 

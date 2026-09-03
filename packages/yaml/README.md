@@ -1,18 +1,18 @@
-# @pkg/yaml
+# @sdxc/yaml
 
 YAML reading and writing over a documented subset, shaped after the built-in `JSON` object.
 
 ## Overview
 
-`@pkg/yaml` parses YAML text into JavaScript values and writes JavaScript values back
+`@sdxc/yaml` parses YAML text into JavaScript values and writes JavaScript values back
 out as YAML. The two functions are named after their `JSON` counterparts and exported
-one by one, so `import * as YAML from "@pkg/yaml"` gives you the familiar `YAML.parse`
-and `YAML.stringify`, while `import { parse } from "@pkg/yaml"` gives you the reader
+one by one, so `import * as YAML from "@sdxc/yaml"` gives you the familiar `YAML.parse`
+and `YAML.stringify`, while `import { parse } from "@sdxc/yaml"` gives you the reader
 alone. Where `JSON` throws, this returns a [`Result`](/packages/result), the way every
 other parser in this repository reports failure.
 
 Exporting them separately is what keeps the writer out of a bundle that only reads:
-`@pkg/markdown` imports `parse` for frontmatter, and the serializer — a third of the
+`@sdxc/markdown` imports `parse` for frontmatter, and the serializer — a third of the
 package — is dropped from every Worker that ships it. Both import forms shake the same,
 so reaching for the namespace costs nothing.
 
@@ -35,8 +35,8 @@ for text spanning lines, and double quotes otherwise.
 ### Parse YAML text
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { parse } from "@pkg/yaml";
+import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/yaml";
 
 let result = parse(`
 title: API Keys
@@ -55,8 +55,8 @@ let data = result.data;
 ### Write a value as YAML
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { stringify } from "@pkg/yaml";
+import { isFailure } from "@sdxc/result";
+import { stringify } from "@sdxc/yaml";
 
 let result = stringify({
 	title: "API Keys",
@@ -79,7 +79,7 @@ console.log(result.data);
 ### Reach for both under one name
 
 ```typescript
-import * as YAML from "@pkg/yaml";
+import * as YAML from "@sdxc/yaml";
 
 let written = YAML.stringify({ title: "Hello" });
 let read = YAML.parse("title: Hello\n");
@@ -193,8 +193,8 @@ indentation. A plain scalar opening on a character YAML reserves — `@`, `` ` `
 schema to get a typed value and one failure branch for both steps.
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { parse } from "@pkg/yaml";
+import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/yaml";
 import * as s from "remix/data-schema";
 
 let schema = s.object({ title: s.string(), order: s.number() });
@@ -214,8 +214,8 @@ the subset covers. Comments and the original formatting are not part of the valu
 they do not survive the trip.
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import * as YAML from "@pkg/yaml";
+import { isFailure } from "@sdxc/result";
+import * as YAML from "@sdxc/yaml";
 
 export function bumpOrder(source: string) {
 	let parsed = YAML.parse(source);
@@ -228,10 +228,10 @@ export function bumpOrder(source: string) {
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - The success/failure type both halves return
-- [`@pkg/xml`](/packages/xml) - The same parse/serialize split for XML
-- [`@pkg/markdown`](/packages/markdown) - Reads document frontmatter through this package
-- [`@pkg/highlight`](/packages/highlight) - Tokenizes YAML for display, which is a separate job from reading it
+- [`@sdxc/result`](/packages/result) - The success/failure type both halves return
+- [`@sdxc/xml`](/packages/xml) - The same parse/serialize split for XML
+- [`@sdxc/markdown`](/packages/markdown) - Reads document frontmatter through this package
+- [`@sdxc/highlight`](/packages/highlight) - Tokenizes YAML for display, which is a separate job from reading it
 
 ## Tips
 

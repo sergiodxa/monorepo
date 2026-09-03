@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { APIClient } from "@pkg/api-client";
-import { failure, isFailure, success } from "@pkg/result";
-import * as Webhooks from "@pkg/webhooks";
+import { APIClient } from "@sdxc/api-client";
+import { failure, isFailure, success } from "@sdxc/result";
+import * as Webhooks from "@sdxc/webhooks";
 import * as s from "remix/data-schema";
 
 import type {

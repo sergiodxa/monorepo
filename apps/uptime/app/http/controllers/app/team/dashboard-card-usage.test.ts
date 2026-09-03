@@ -19,9 +19,9 @@ import {
 	createEnv,
 	createKVNamespace,
 	createQueue,
-} from "@pkg/cloudflare-mocks";
-import { createTranslator } from "@pkg/i18n";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/cloudflare-mocks";
+import { createTranslator } from "@sdxc/i18n";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";

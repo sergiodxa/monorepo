@@ -15,13 +15,13 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { border, borderEdge, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { hstack, vstack } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { m, mi, p } from "@pkg/u/size";
-import { fontSize, weight } from "@pkg/u/typography";
+import { border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { m, mi, p } from "@sdxc/u/size";
+import { fontSize, weight } from "@sdxc/u/typography";
 
 /**
  * Viewport from which a card may bleed past its column. Below this width the

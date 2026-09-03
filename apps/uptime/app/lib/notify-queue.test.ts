@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { QueueMock } from "@pkg/cloudflare-mocks";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";

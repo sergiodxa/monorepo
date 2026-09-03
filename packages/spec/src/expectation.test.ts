@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, isSuccess, success } from "@pkg/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type {

@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { text } from "@pkg/http/response";
-import { InternalServerError, Ok } from "@pkg/http/status-code";
-import { inject } from "@pkg/service-container";
+import { text } from "@sdxc/http/response";
+import { InternalServerError, Ok } from "@sdxc/http/status-code";
+import { inject } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";

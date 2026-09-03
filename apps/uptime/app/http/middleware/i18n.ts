@@ -1,5 +1,5 @@
 /**
- * Language-resolution middleware layered over `@pkg/i18n/middleware`:
+ * Language-resolution middleware layered over `@sdxc/i18n/middleware`:
  * resolves the `language` cookie, then a signed-in viewer's stored
  * preference, then `Accept-Language`, falling back to English, and
  * initializes a per-request i18next instance over the app's locale files.
@@ -11,8 +11,8 @@
 
 import type { Middleware } from "remix/router";
 
-import i18next from "@pkg/i18n/middleware";
-import { getServiceContainer } from "@pkg/service-container";
+import i18next from "@sdxc/i18n/middleware";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";

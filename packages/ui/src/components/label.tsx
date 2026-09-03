@@ -10,8 +10,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { fontSize, leading, weight } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { fontSize, leading, weight } from "@sdxc/u/typography";
 
 /**
  * Prop types for {@link Label}.

@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IdToken } from "@pkg/auth/id-token";
+import type { IdToken } from "@sdxc/auth/id-token";
 
-import { Issuer } from "@pkg/auth/issuer";
-import { JWK } from "@pkg/jwt";
-import { isFailure, wrap } from "@pkg/result";
+import { Issuer } from "@sdxc/auth/issuer";
+import { JWK } from "@sdxc/jwt";
+import { isFailure, wrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 /**

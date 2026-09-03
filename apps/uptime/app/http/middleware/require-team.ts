@@ -10,8 +10,8 @@
 
 import type { Middleware } from "remix/router";
 
-import { notFound } from "@pkg/http/response/html";
-import { getServiceContainer } from "@pkg/service-container";
+import { notFound } from "@sdxc/http/response/html";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";

@@ -14,8 +14,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "@pkg/u/layout";
-import { Alert, Button, Description, Select, Switch, TextArea, TextField } from "@pkg/ui";
+import { vstack } from "@sdxc/u/layout";
+import { Alert, Button, Description, Select, Switch, TextArea, TextField } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

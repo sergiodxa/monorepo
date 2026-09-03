@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BinaryLike, Bytes } from "@pkg/crypto";
-import type { Result } from "@pkg/result";
+import type { BinaryLike, Bytes } from "@sdxc/crypto";
+import type { Result } from "@sdxc/result";
 
-import { hmac } from "@pkg/crypto";
-import { failure, isFailure, success } from "@pkg/result";
+import { hmac } from "@sdxc/crypto";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import { MalformedSignatureError, SignatureComputationError } from "./errors";
 import { decodeBase64, encodeBase64 } from "./lib/base64";

@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@pkg/uuid";
+import { generateUUID } from "@sdxc/uuid";
 import { and, eq, gt, gte, inList, ne } from "remix/data-table";
 
 import type { AlertEventSnapshot, InsertAlertEvent, SelectAlertEvent } from "~/database/schema";

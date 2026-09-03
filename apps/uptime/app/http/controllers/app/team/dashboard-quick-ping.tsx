@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ZapIcon } from "@pkg/icons";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { hidden, inlineFlex, items, justify, shrink } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, p } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
+import { ZapIcon } from "@sdxc/icons";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { hidden, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, p } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";

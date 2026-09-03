@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success, wrap } from "@pkg/result";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { NormalizedMessage, SentMessage, Transport } from "./types";
 

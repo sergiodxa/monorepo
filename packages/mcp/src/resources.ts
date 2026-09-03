@@ -43,7 +43,7 @@ export interface ResourceDescriptor extends ResourceDeclaration {
 }
 
 /** Brands a declared resource so a group can tell one from a nested group. */
-const RESOURCE = Symbol.for("@pkg/mcp.resource");
+const RESOURCE = Symbol.for("@sdxc/mcp.resource");
 
 /** A declared resource. Its handler is bound separately, by `map()`. */
 export interface Resource<Pattern extends string = string> {

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { text } from "@pkg/http/response";
-import { Ok } from "@pkg/http/status-code";
+import { text } from "@sdxc/http/response";
+import { Ok } from "@sdxc/http/status-code";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";

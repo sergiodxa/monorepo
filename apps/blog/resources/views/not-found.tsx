@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { maxIs, pbs } from "@pkg/u/size";
-import { text } from "@pkg/u/typography";
-import { Empty } from "@pkg/ui";
+import { maxIs, pbs } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Empty } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 

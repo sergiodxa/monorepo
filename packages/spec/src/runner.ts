@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
-import type { Seed } from "@pkg/sample";
+import type { Result } from "@sdxc/result";
+import type { Seed } from "@sdxc/sample";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import type { BuiltinNamespace } from "./builtins";
 import type { SuiteResult } from "./diagnostics";

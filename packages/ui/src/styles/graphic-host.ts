@@ -9,17 +9,17 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { combine } from "@pkg/u/general";
-import { shrink } from "@pkg/u/layout";
-import { mbs } from "@pkg/u/size";
+import { fg } from "@sdxc/u/color";
+import { combine } from "@sdxc/u/general";
+import { shrink } from "@sdxc/u/layout";
+import { mbs } from "@sdxc/u/size";
 
 import type { CSSStyles } from "../utils/css-styles";
 
 /**
  * A shrink-resistant, nudged-down, current-colored mixin for a leading
  * graphic slot, keeping an icon and a loading graphic laid out identically.
- * `fg("currentcolor")` matches `@pkg/u`'s case-normalized token lookup.
+ * `fg("currentcolor")` matches `@sdxc/u`'s case-normalized token lookup.
  *
  * @returns A `css()` mixin ready for a host element's `mix` prop.
  * @example

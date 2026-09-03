@@ -9,12 +9,12 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { block, boxSizing, gap, grid } from "@pkg/u/layout";
-import { m, maxWidth, minHeight, minWidth, p } from "@pkg/u/size";
-import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
-import { Header, Heading, HeadingScope, Text } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { block, boxSizing, gap, grid } from "@sdxc/u/layout";
+import { m, maxWidth, minHeight, minWidth, p } from "@sdxc/u/size";
+import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
+import { Header, Heading, HeadingScope, Text } from "@sdxc/ui";
 
 /**
  * Props for the shared document shell.

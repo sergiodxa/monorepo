@@ -19,7 +19,7 @@ import { utility } from "../internal/descriptor";
  */
 export function gap<Node extends Element = Element>(...values: SpacingValue[]) {
 	if (values.length !== 1 && values.length !== 2) {
-		throw new Error(`@pkg/u: gap() expects 1 or 2 values, got ${values.length}`);
+		throw new Error(`@sdxc/u: gap() expects 1 or 2 values, got ${values.length}`);
 	}
 	return utility<Node>(() => ({ gap: resolveEdge(values) }));
 }

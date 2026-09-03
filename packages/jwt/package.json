@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/jwt",
+	"name": "@sdxc/jwt",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -12,7 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/duration": "workspace:*",
+		"@sdxc/duration": "workspace:*",
 		"jose": "^6.2.10"
 	}
 }

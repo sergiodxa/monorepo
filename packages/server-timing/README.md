@@ -1,4 +1,4 @@
-# @pkg/server-timing
+# @sdxc/server-timing
 
 Server-Timing measurements collected per request and written to a response header.
 
@@ -25,7 +25,7 @@ and no runtime dependency of any kind.
 ### Measure And Report
 
 ```typescript
-import { TimingCollector } from "@pkg/server-timing";
+import { TimingCollector } from "@sdxc/server-timing";
 
 let collector = new TimingCollector();
 
@@ -168,7 +168,7 @@ it in a new `Response` first if that is a possibility.
 
 ## Related Packages
 
-- [`@pkg/logger`](/packages/logger) - Request-scoped logging, which also reports `server-timing` when it is present on a response
+- [`@sdxc/logger`](/packages/logger) - Request-scoped logging, which also reports `server-timing` when it is present on a response
 
 ## Tips
 

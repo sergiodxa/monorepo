@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { isFailure, success, unwrap } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { isFailure, success, unwrap } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";

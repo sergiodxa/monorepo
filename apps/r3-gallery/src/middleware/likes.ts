@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Context, Middleware } from "@pkg/ui-router";
+import type { Context, Middleware } from "@sdxc/ui-router";
 
-import { createContextKey } from "@pkg/ui-router";
+import { createContextKey } from "@sdxc/ui-router";
 
 const LIKES_STORAGE_KEY = "r3-gallery:liked-photos";
 

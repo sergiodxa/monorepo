@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Forbidden, Ok, Unauthorized } from "@pkg/http/status-code";
+import { Forbidden, Ok, Unauthorized } from "@sdxc/http/status-code";
 import { describe, expect, test } from "vitest";
 
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";

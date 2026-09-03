@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, colorMix, fg } from "@pkg/u/color";
-import { backdropBlur } from "@pkg/u/effects";
+import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
+import { backdropBlur } from "@sdxc/u/effects";
 import {
 	block,
 	gap,
@@ -24,13 +24,13 @@ import {
 	shrink,
 	sticky,
 	vstack,
-} from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, m, maxIs, mbe, minBs, p } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { hover } from "@pkg/u/state";
-import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
-import { NavLink } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, m, maxIs, mbe, minBs, p } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { hover } from "@sdxc/u/state";
+import { font, fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
+import { NavLink } from "@sdxc/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import routes from "~/routes/web";

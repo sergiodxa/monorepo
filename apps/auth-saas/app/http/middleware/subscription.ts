@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Location } from "@pkg/location";
-import { getServiceContainer } from "@pkg/service-container";
+import { Location } from "@sdxc/location";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import middleware from "~/app/lib/middleware";

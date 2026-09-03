@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**

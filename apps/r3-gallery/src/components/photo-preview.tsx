@@ -11,15 +11,15 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { block, container, flex, flexCol, grid } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { at } from "@pkg/u/responsive";
-import { aspect, fit, height, mbs, p, width } from "@pkg/u/size";
-import { leading, tracking, weight } from "@pkg/u/typography";
-import { Card, Header, LinkButton } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { block, container, flex, flexCol, grid } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { at } from "@sdxc/u/responsive";
+import { aspect, fit, height, mbs, p, width } from "@sdxc/u/size";
+import { leading, tracking, weight } from "@sdxc/u/typography";
+import { Card, Header, LinkButton } from "@sdxc/ui";
 
 import type { Photo } from "../data/types";
 

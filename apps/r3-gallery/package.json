@@ -12,11 +12,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/icons": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/u": "workspace:*",
-		"@pkg/ui": "workspace:*",
-		"@pkg/ui-router": "workspace:*",
+		"@sdxc/icons": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/u": "workspace:*",
+		"@sdxc/ui": "workspace:*",
+		"@sdxc/ui-router": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {

@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { JWK } from "@pkg/jwt";
-import { isFailure, wrap } from "@pkg/result";
+import { JWK } from "@sdxc/jwt";
+import { isFailure, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { minLength, url } from "remix/data-schema/checks";
 

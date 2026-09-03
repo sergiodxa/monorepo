@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { AuthSession } from "@pkg/auth/auth-session";
+import { AuthSession } from "@sdxc/auth/auth-session";
 import { getContext } from "remix/middleware/async-context";
 
 import type { Viewer } from "~/app/http/middleware/auth";

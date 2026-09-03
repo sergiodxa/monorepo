@@ -4,7 +4,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { XML } from "@pkg/xml";
+import { XML } from "@sdxc/xml";
 
 import { createURLChildren } from "./lib/create-url-children";
 
@@ -62,7 +62,7 @@ export class Sitemap {
 	}
 
 	/**
-	 * Serializes the current entries into sitemap XML using `@pkg/xml`.
+	 * Serializes the current entries into sitemap XML using `@sdxc/xml`.
 	 */
 	toString() {
 		let xml = new XML({

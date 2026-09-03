@@ -11,14 +11,14 @@
 
 import type { Handle } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { hstack, shrink, vstack } from "@pkg/u/layout";
-import { dark, media } from "@pkg/u/responsive";
-import { is, maxIs, pb, pi } from "@pkg/u/size";
-import { focusVisible, placeholder, when } from "@pkg/u/state";
-import { pretty, text, textTransform, weight, whiteSpace } from "@pkg/u/typography";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { hstack, shrink, vstack } from "@sdxc/u/layout";
+import { dark, media } from "@sdxc/u/responsive";
+import { is, maxIs, pb, pi } from "@sdxc/u/size";
+import { focusVisible, placeholder, when } from "@sdxc/u/state";
+import { pretty, text, textTransform, weight, whiteSpace } from "@sdxc/u/typography";
 import { css } from "remix/ui";
 
 /** The viewport width the field and button stop stacking at, matching the site's `lg`. */

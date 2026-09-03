@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationString } from "@pkg/duration";
+import type { DurationString } from "@sdxc/duration";
 
-import { toSeconds } from "@pkg/duration";
+import { toSeconds } from "@sdxc/duration";
 import * as jose from "jose";
 
 import type { JWK } from "./jwk";

@@ -15,11 +15,11 @@
 
 import { relative, sep } from "node:path";
 
-import type { Result } from "@pkg/result";
-import type { Random, Seed } from "@pkg/sample";
+import type { Result } from "@sdxc/result";
+import type { Random, Seed } from "@sdxc/sample";
 
-import { isFailure, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { isFailure, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 
 import type { DefinitionNode, TestNode } from "./ast";
 import type { SuiteResult, TestResult } from "./diagnostics";

@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
-import { weight } from "@pkg/u/typography";
-import { Avatar, Badge, Description, Empty, Link, LinkButton, Table, Text } from "@pkg/ui";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { mbe } from "@sdxc/u/size";
+import { weight } from "@sdxc/u/typography";
+import { Avatar, Badge, Description, Empty, Link, LinkButton, Table, Text } from "@sdxc/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

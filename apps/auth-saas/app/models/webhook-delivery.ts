@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { WebhookDelivery, WebhookStore } from "@pkg/billing";
+import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
 
 import { env } from "cloudflare:workers";
 

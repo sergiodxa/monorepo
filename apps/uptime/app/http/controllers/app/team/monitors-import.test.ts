@@ -12,7 +12,7 @@
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";

@@ -28,10 +28,10 @@ import {
 	SettingsIcon,
 	WorkflowIcon,
 	WrenchIcon,
-} from "@pkg/icons";
-import { bg, border, borderEdge, fg } from "@pkg/u/color";
-import { rounded, shadow } from "@pkg/u/effects";
-import { combine, cursor, listStyle, raw } from "@pkg/u/general";
+} from "@sdxc/icons";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { combine, cursor, listStyle, raw } from "@sdxc/u/general";
 import {
 	basis,
 	fixed,
@@ -49,15 +49,15 @@ import {
 	items,
 	justify,
 	shrink,
-} from "@pkg/u/layout";
-import { boxSizing } from "@pkg/u/layout";
-import { overflow, overflowY } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
-import { fontSize, textAlign, truncate, weight } from "@pkg/u/typography";
-import { Breadcrumbs, Menu, Sidebar } from "@pkg/ui";
-import { menuKeys } from "@pkg/ui/mixins";
+} from "@sdxc/u/layout";
+import { boxSizing } from "@sdxc/u/layout";
+import { overflow, overflowY } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { fontSize, textAlign, truncate, weight } from "@sdxc/u/typography";
+import { Breadcrumbs, Menu, Sidebar } from "@sdxc/ui";
+import { menuKeys } from "@sdxc/ui/mixins";
 
 import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";

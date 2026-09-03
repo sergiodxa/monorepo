@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Checkout } from "@pkg/billing";
-import type { MemoryBilling } from "@pkg/billing/providers/memory";
+import type { Checkout } from "@sdxc/billing";
+import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 
-import { isFailure, unwrap } from "@pkg/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";

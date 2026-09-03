@@ -7,18 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MemoryBilling } from "@pkg/billing/providers/memory";
+import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { BillingError } from "@pkg/billing";
-import billing from "@pkg/billing/middleware";
-import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
-import { JWK, JWT } from "@pkg/jwt";
-import logger from "@pkg/logger/middleware";
-import { failure, unwrap } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import { BillingError } from "@sdxc/billing";
+import billing from "@sdxc/billing/middleware";
+import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { JWK, JWT } from "@sdxc/jwt";
+import logger from "@sdxc/logger/middleware";
+import { failure, unwrap } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -55,10 +55,10 @@ const CLIENT_ID = "client-id";
 /** Seconds in an hour, the lifetime every fixture token carries. */
 const ONE_HOUR = 3600;
 
-/** The session key `@pkg/auth` holds the login transaction under. */
+/** The session key `@sdxc/auth` holds the login transaction under. */
 const TRANSACTION_SESSION_KEY = "auth:transaction";
 
-/** The session key `@pkg/auth` holds the signed-in token set under. */
+/** The session key `@sdxc/auth` holds the signed-in token set under. */
 const TOKENS_SESSION_KEY = "auth";
 
 /**

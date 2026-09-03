@@ -10,13 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
-import { ArrowRightIcon, CheckIcon, Icon } from "@pkg/icons";
-import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
-import { opacity, rounded, shadow } from "@pkg/u/effects";
-import { counterReset } from "@pkg/u/general";
+import { ArrowRightIcon, CheckIcon, Icon } from "@sdxc/icons";
+import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";
+import { opacity, rounded, shadow } from "@sdxc/u/effects";
+import { counterReset } from "@sdxc/u/general";
 import {
 	absolute,
 	block,
@@ -34,13 +34,13 @@ import {
 	justify,
 	relative,
 	vstack,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { dark, media } from "@pkg/u/responsive";
-import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
-import { translateX, translateY } from "@pkg/u/transform";
-import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
-import { Heading, LinkButton } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { dark, media } from "@sdxc/u/responsive";
+import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pi } from "@sdxc/u/size";
+import { translateX, translateY } from "@sdxc/u/transform";
+import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
+import { Heading, LinkButton } from "@sdxc/ui";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 

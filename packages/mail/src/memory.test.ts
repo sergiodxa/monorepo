@@ -9,7 +9,7 @@
 
 import type { RemixElement } from "remix/ui";
 
-import { isSuccess } from "@pkg/result";
+import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { MemoryTransport } from "./memory";

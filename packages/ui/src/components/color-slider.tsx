@@ -10,13 +10,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, outlineStyle } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { cursor, pseudoContent } from "@pkg/u/general";
-import { absolute, appearance, inset, relative, vstack } from "@pkg/u/layout";
-import { bs, is, m, minIs } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { when } from "@pkg/u/state";
+import { bg, border, outlineStyle } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor, pseudoContent } from "@sdxc/u/general";
+import { absolute, appearance, inset, relative, vstack } from "@sdxc/u/layout";
+import { bs, is, m, minIs } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { when } from "@sdxc/u/state";
 
 import { outputCaptionText } from "../styles/output-caption-text";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";

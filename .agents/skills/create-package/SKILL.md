@@ -1,13 +1,13 @@
 ---
 name: create-package
-description: Create a new shared package under `packages/` in this monorepo. Use when adding a `@pkg/*` workspace from scratch — asking for the package name and description, writing the `src/` layout and `exports` map, keeping it app-agnostic, and pointing at the living package that already solves each concern.
+description: Create a new shared package under `packages/` in this monorepo. Use when adding a `@sdxc/*` workspace from scratch — asking for the package name and description, writing the `src/` layout and `exports` map, keeping it app-agnostic, and pointing at the living package that already solves each concern.
 ---
 
 # Create Package
 
 Patterns for adding a shared package to `packages/`. There is no template directory to
 copy; a package is written from the structure described here and from whichever of the
-existing `@pkg/*` packages already solves the concern being added. Contains 8 rules across
+existing `@sdxc/*` packages already solves the concern being added. Contains 8 rules across
 5 categories: required inputs, structure, reuse, wiring, and boundaries.
 
 ## When to Apply
@@ -30,18 +30,18 @@ file, because the surface is what decides the `exports` map and the `src/` shape
 
 ```text
 Required inputs:
-- package name: "hostname"        -> @pkg/hostname
+- package name: "hostname"        -> @sdxc/hostname
 - description:  "Cloudflare for SaaS custom-hostname client."
 - surface:      one class, HostnameClient, plus its error and option types
 ```
 
 #### use-kebab-case-name - @rules/use-kebab-case-name.md
 
-The directory name and the part after `@pkg/` are the same kebab-case string.
+The directory name and the part after `@sdxc/` are the same kebab-case string.
 
 ```text
-packages/data-table-d1/     package.json -> "@pkg/data-table-d1"
-README.md                   -> "# @pkg/data-table-d1"
+packages/data-table-d1/     package.json -> "@sdxc/data-table-d1"
+README.md                   -> "# @sdxc/data-table-d1"
 ```
 
 ### Structure (HIGH)

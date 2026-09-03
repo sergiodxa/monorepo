@@ -1,6 +1,6 @@
 /**
  * Design tokens for the gallery, defining the five `--ui-color-*` scales
- * @pkg/u's theme layer (imported transitively through @pkg/ui's) derives
+ * @sdxc/u's theme layer (imported transitively through @sdxc/ui's) derives
  * its semantic `--ui-*` variables from, so every catalog component picks up
  * the app's warm amber palette automatically.
  *
@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-@import "@pkg/ui/reset.css";
-@import "@pkg/ui/theme.css";
+@import "@sdxc/ui/reset.css";
+@import "@sdxc/ui/theme.css";
 
 :root {
 	--ui-color-brand-50: oklch(0.98 0.016 73.684);

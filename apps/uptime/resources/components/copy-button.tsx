@@ -4,7 +4,7 @@
  * keys) and copyable snippets (cron-job ping URLs), per the approved-islands list.
  *
  * Renders {@link CopyButtonProps.value} into a visually-hidden carrier `<span>`
- * inside its own host and points `commandfor` at it, so `@pkg/ui/mixins`'
+ * inside its own host and points `commandfor` at it, so `@sdxc/ui/mixins`'
  * `copyToClipboard()` — built to copy whatever element its button's `commandfor`
  * targets — always has a same-instance target to read from, regardless of
  * whether `value` also happens to be visible in a sibling element.
@@ -15,16 +15,16 @@
 
 import type { Handle } from "remix/ui";
 
-import { intl } from "@pkg/i18n/ui";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { border, bg, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { inlineFlex, items } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
-import { p } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { COPY_COMMAND, copyToClipboard } from "@pkg/ui/mixins";
+import { intl } from "@sdxc/i18n/ui";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { border, bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { inlineFlex, items } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { p } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

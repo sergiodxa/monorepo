@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JobMiddleware } from "@pkg/jobs";
+import type { JobMiddleware } from "@sdxc/jobs";
 
 import { CostLedger, trackCost } from "~/app/services/cost";
 

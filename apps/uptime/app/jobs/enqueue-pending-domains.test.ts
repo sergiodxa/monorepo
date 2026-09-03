@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { QueueMock } from "@pkg/cloudflare-mocks";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**

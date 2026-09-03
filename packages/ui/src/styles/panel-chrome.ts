@@ -9,9 +9,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { combine } from "@pkg/u/general";
+import { border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { combine } from "@sdxc/u/general";
 
 import type { CSSStyles } from "../utils/css-styles";
 

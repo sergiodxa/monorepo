@@ -11,14 +11,14 @@
 
 import type { Handle } from "remix/ui";
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { bg, border, borderEdge, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, gap, items, vstack } from "@pkg/u/layout";
-import { m, p } from "@pkg/u/size";
-import { font, fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, LinkButton, Select, Table } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, gap, items, vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { font, fontSize } from "@sdxc/u/typography";
+import { AlertDialog, Button, LinkButton, Select, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

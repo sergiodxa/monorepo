@@ -12,26 +12,26 @@
 
 import type { Handle } from "remix/ui";
 
-import { conditional, etag, policy, vary } from "@pkg/http/cache";
-import { notFound } from "@pkg/http/response/html";
+import { conditional, etag, policy, vary } from "@sdxc/http/cache";
+import { notFound } from "@sdxc/http/response/html";
 import {
 	CircleCheckBigIcon,
 	CircleMinusIcon,
 	CircleXIcon,
 	ClockIcon,
 	TriangleAlertIcon,
-} from "@pkg/icons";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { combine, raw } from "@pkg/u/general";
-import { hstack, vstack } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
-import { m, maxIs, mbe, p } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
-import { Badge, Empty } from "@pkg/ui";
+} from "@sdxc/icons";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { combine, raw } from "@sdxc/u/general";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { m, maxIs, mbe, p } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
+import { Badge, Empty } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

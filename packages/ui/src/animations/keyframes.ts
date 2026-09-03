@@ -11,18 +11,18 @@
 
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { animationHost, keyframes } from "@pkg/u/animation";
-import { colorMix, linearGradient } from "@pkg/u/color";
-import { opacity, transitionBehavior } from "@pkg/u/effects";
-import { calc, combine, raw, var as varUtility } from "@pkg/u/general";
-import { media, startingStyle, supports } from "@pkg/u/responsive";
-import { when } from "@pkg/u/state";
+import { animationHost, keyframes } from "@sdxc/u/animation";
+import { colorMix, linearGradient } from "@sdxc/u/color";
+import { opacity, transitionBehavior } from "@sdxc/u/effects";
+import { calc, combine, raw, var as varUtility } from "@sdxc/u/general";
+import { media, startingStyle, supports } from "@sdxc/u/responsive";
+import { when } from "@sdxc/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
 import { easings } from "./tokens";
 
-/** The `@pkg/u` mixin type every factory in this file returns. */
+/** The `@sdxc/u` mixin type every factory in this file returns. */
 type Mixin<Node extends Element> = MixinDescriptor<Node, [styles: CSSStyles], ElementProps>;
 
 /** Resting opacity a loop's mount-in transition fades up from and its exit fades down to. */
@@ -177,7 +177,7 @@ export namespace Spin {
  * `prefers-reduced-motion: reduce`, a gentle opacity breathe carries it.
  *
  * @param options Timing and gating for the loop.
- * @returns A `@pkg/u` mixin ready for a spinner's host element.
+ * @returns A `@sdxc/u` mixin ready for a spinner's host element.
  * @example
  * <Spinner mix={[spin()]} aria-label={t("status.loading")} />
  */
@@ -251,7 +251,7 @@ export namespace Pulse {
  * the swing by overriding duration and the min-opacity token alone.
  *
  * @param options Timing, opacity range, and gating for the loop.
- * @returns A `@pkg/u` mixin ready for a skeleton placeholder's host element.
+ * @returns A `@sdxc/u` mixin ready for a skeleton placeholder's host element.
  * @example
  * <Skeleton mix={[pulse()]} aria-hidden="true" />
  */
@@ -321,7 +321,7 @@ export namespace Shimmer {
  * once the gate clears; reduced motion breathes the fill's opacity instead.
  *
  * @param options Timing, band width, and gating for the loop.
- * @returns A `@pkg/u` mixin ready for a progress indicator's fill element.
+ * @returns A `@sdxc/u` mixin ready for a progress indicator's fill element.
  * @example
  * <ProgressBar.Indicator mix={[shimmer()]} />
  */
@@ -416,7 +416,7 @@ export namespace TextShimmer {
  * an `@supports` guard; reduced motion breathes the caption's opacity.
  *
  * @param options Timing, band width, angle, color, and gating for the loop.
- * @returns A `@pkg/u` mixin ready for a caption's host text element.
+ * @returns A `@sdxc/u` mixin ready for a caption's host text element.
  * @example
  * <Text mix={[textShimmer()]}>{t("chat.generating")}</Text>
  * @example

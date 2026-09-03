@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, BillingError, Discount } from "@pkg/billing";
-import type { Result } from "@pkg/result";
+import type { Billing, BillingError, Discount } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 
-import { supports } from "@pkg/billing";
-import { logger } from "@pkg/logger";
-import { isFailure, success } from "@pkg/result";
+import { supports } from "@sdxc/billing";
+import { logger } from "@sdxc/logger";
+import { isFailure, success } from "@sdxc/result";
 
 import { Discounts, Product } from "~/app/data/product";
 

@@ -13,13 +13,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import { Hex, randomToken, sha256 } from "@pkg/crypto";
-import { failure, isFailure, success } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { failure, isFailure, success } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 

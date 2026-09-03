@@ -1,6 +1,6 @@
 # Blog SaaS Platform
 
-The multi-tenant platform for `@pkg/blog-engine`: an account creates blogs, each
+The multi-tenant platform for `@sdxc/blog-engine`: an account creates blogs, each
 running isolated in its own Cloudflare Durable Object; the platform owns routing,
 provisioning, custom domains, and billing. See
 [ADR-009](../../docs/adr/ADR-009-blog-saas-platform.md).
@@ -22,7 +22,7 @@ bun run typecheck         # Type-check
 - MUST use Bun for installs, scripts, and tests; run linters/formatters/typecheck from the repo root.
 - MUST use `bunx wrangler` for Cloudflare commands, never `wrangler` directly.
 - MUST use `remix/*` packages, not React or React Router.
-- MUST keep the blog application logic in `@pkg/blog-engine`; this app is a thin host.
+- MUST keep the blog application logic in `@sdxc/blog-engine`; this app is a thin host.
 
 ## Structure
 
@@ -34,7 +34,7 @@ a relative path is only for a sibling inside the same directory.
 
 - `bootstrap/` — `worker.ts` (fetch/scheduled/queue entry: hostname routing, page-view
   metering, job dispatch), `app.ts` (dashboard router), `tenant.ts` (the Blog Durable
-  Object — a thin wrapper over `@pkg/blog-engine`).
+  Object — a thin wrapper over `@sdxc/blog-engine`).
 - `routes/web.ts` — dashboard + marketing routes.
 - `app/http/controllers/` — marketing, health, auth (OIDC vs the sso tenant),
   `dashboard/*`, and the billing webhook endpoint.

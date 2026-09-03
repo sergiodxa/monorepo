@@ -151,7 +151,7 @@ describe("typescript", () => {
 	});
 
 	test("covers a module exactly", () => {
-		let code = `import type { ResolvedType } from "@pkg/types";
+		let code = `import type { ResolvedType } from "@sdxc/types";
 
 async function fetchUser(id: string): Promise<{ name: string; email: string }> {
 	// ...

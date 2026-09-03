@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { toSeconds } from "@pkg/duration";
+import { toSeconds } from "@sdxc/duration";
 
 /** Key prefix used when a caller leaves the option unset. */
 const DEFAULT_PREFIX = "webhook-replay:";

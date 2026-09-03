@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/rss",
+	"name": "@sdxc/rss",
 	"version": "0.0.0",
 	"private": true,
 	"license": "MIT",
@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/result": "workspace:*",
-		"@pkg/xml": "workspace:*"
+		"@sdxc/result": "workspace:*",
+		"@sdxc/xml": "workspace:*"
 	}
 }

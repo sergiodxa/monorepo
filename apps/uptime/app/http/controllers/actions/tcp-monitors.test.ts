@@ -9,15 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import billing from "@pkg/billing/middleware";
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
-import { MemoryTransport } from "@pkg/mail/memory";
-import mail from "@pkg/mail/middleware";
-import { ServiceContainer } from "@pkg/service-container";
+import billing from "@sdxc/billing/middleware";
+import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import mail from "@sdxc/mail/middleware";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -96,7 +96,7 @@ async function ingestedEvents() {
 }
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData` into a plain object, which
+ * `@sdxc/validate`'s `validate()` flattens `FormData` into a plain object, which
  * `remix/data-schema/form-data`'s `f.object()` rejects — a real bug that fails every
  * call. This mock forwards the form container to the schema unflattened, exercising real branching.
  */

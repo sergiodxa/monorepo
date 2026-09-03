@@ -13,24 +13,24 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/auth": "workspace:*",
-		"@pkg/billing": "workspace:*",
-		"@pkg/blog-engine": "workspace:*",
-		"@pkg/data-table-d1": "workspace:*",
-		"@pkg/data-table-sqlstorage": "workspace:*",
-		"@pkg/hostname": "workspace:*",
-		"@pkg/http": "workspace:*",
-		"@pkg/jobs": "workspace:*",
-		"@pkg/logger": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/service-container": "workspace:*",
-		"@pkg/types": "workspace:*",
-		"@pkg/validate": "workspace:*",
+		"@sdxc/auth": "workspace:*",
+		"@sdxc/billing": "workspace:*",
+		"@sdxc/blog-engine": "workspace:*",
+		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/data-table-sqlstorage": "workspace:*",
+		"@sdxc/hostname": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/service-container": "workspace:*",
+		"@sdxc/types": "workspace:*",
+		"@sdxc/validate": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.54.2",
-		"@pkg/cloudflare-mocks": "workspace:*",
+		"@sdxc/cloudflare-mocks": "workspace:*",
 		"vite": "^8.2.2",
 		"wrangler": "^4.127.1"
 	}

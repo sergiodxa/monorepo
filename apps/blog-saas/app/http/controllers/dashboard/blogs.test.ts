@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createEnv } from "@pkg/cloudflare-mocks";
+import { createEnv } from "@sdxc/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
 
 import type { Region } from "~/app/models/blog";

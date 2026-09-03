@@ -1,4 +1,4 @@
-# @pkg/pagination
+# @sdxc/pagination
 
 Page arithmetic, offset and keyset query strategies, request parameter parsing, and response header annotation.
 
@@ -24,8 +24,8 @@ middleware to register.
 ### Offset paging, with a numbered pager
 
 ```typescript
-import { createPaging, Pagination } from "@pkg/pagination";
-import { isFailure } from "@pkg/result";
+import { createPaging, Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 
 /** Query parameter names and page-size limits, shared by parsing and `Link` generation. */
 const PAGING = createPaging({
@@ -53,8 +53,8 @@ headers.get("X-Total-Count"); // "892"
 ### Keyset paging, for a long feed
 
 ```typescript
-import { Pagination } from "@pkg/pagination";
-import { isFailure } from "@pkg/result";
+import { Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 
 let page = await Pagination.byKeyset(db.query(events).where({ team_id: teamId }), {
 	orderBy: [
@@ -73,7 +73,7 @@ page.data.cursors; // { next: string | null, prev: string | null }
 ### The value object on its own
 
 ```typescript
-import { Pagination } from "@pkg/pagination";
+import { Pagination } from "@sdxc/pagination";
 
 let pagination = new Pagination({ page: 3, perPage: 25, total: 892 });
 
@@ -290,7 +290,7 @@ the total to know where the end is.
 **Returns:**
 
 - `PageParams`: `{ page, perPage, cursor }`, with `cursor` `null` when absent
-- `ValidationError` from `@pkg/validate`, carrying the issues
+- `ValidationError` from `@sdxc/validate`, carrying the issues
 
 **Example:**
 
@@ -403,7 +403,7 @@ look for, which is worth the `X-` prefix that RFC 6648 otherwise discourages.
 Encodes a page boundary as an opaque, URL-safe cursor. `byKeyset()` calls this for
 you; it is exported for tests and for a store that pages itself.
 
-Cursors are base64url from `@pkg/crypto`: **opaque but not secret**, so they must
+Cursors are base64url from `@sdxc/crypto`: **opaque but not secret**, so they must
 only ever carry ordering keys the client is already allowed to see.
 
 ### `decodeCursor(cursor): Result<DecodedCursor, InvalidCursorError>`
@@ -472,8 +472,8 @@ The parameter names are bound once at the top, so both handlers spell the page s
 the same way in the query string they read and in the `Link` URLs they emit.
 
 ```typescript
-import { createPaging, Pagination } from "@pkg/pagination";
-import { isFailure } from "@pkg/result";
+import { createPaging, Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 
 const PAGING = createPaging({
 	names: { page: "page", perPage: "per_page", cursor: "cursor" },
@@ -564,9 +564,9 @@ return json({ data: page.data.items, meta: page.data.pagination });
 
 ## Related Packages
 
-- [`@pkg/crypto`](/packages/crypto) - Base64url encoding for cursors
-- [`@pkg/result`](/packages/result) - `Result` type both strategies and both parsers return
-- [`@pkg/validate`](/packages/validate) - `ValidationError` returned for bad page parameters
+- [`@sdxc/crypto`](/packages/crypto) - Base64url encoding for cursors
+- [`@sdxc/result`](/packages/result) - `Result` type both strategies and both parsers return
+- [`@sdxc/validate`](/packages/validate) - `ValidationError` returned for bad page parameters
 
 ## Tips
 

@@ -13,10 +13,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs";
+import type { CurrentJobContext } from "@sdxc/jobs";
 
-import { createJobHandler } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import MonitorDailyStats, {
 	calculateDailyStatus,

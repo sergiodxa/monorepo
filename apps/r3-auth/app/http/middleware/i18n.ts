@@ -1,5 +1,5 @@
 /**
- * Language-resolution middleware over `@pkg/i18n/middleware`: reads the language from
+ * Language-resolution middleware over `@sdxc/i18n/middleware`: reads the language from
  * the `sdx:i18n` cookie, then `Accept-Language`, falling back to English, and publishes
  * `ctx.locale` and `ctx.i18next` for the rendered HTML pages.
  *
@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import i18next from "@pkg/i18n/middleware";
+import i18next from "@sdxc/i18n/middleware";
 import { createCookie } from "remix/cookie";
 
 import en from "~/app/locales/en";

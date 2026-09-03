@@ -11,8 +11,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { LoaderCircleIcon } from "@pkg/icons";
-import { bs, fg, inlineFlex, is, items, justify, when } from "@pkg/u";
+import { LoaderCircleIcon } from "@sdxc/icons";
+import { bs, fg, inlineFlex, is, items, justify, when } from "@sdxc/u";
 
 import type { SemanticColor } from "../utils/semantic-color";
 

@@ -16,11 +16,11 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { getServiceContainer } from "@pkg/service-container";
-import { vstack } from "@pkg/u/layout";
-import { m, maxIs, mi, minBs, p } from "@pkg/u/size";
-import { textAlign } from "@pkg/u/typography";
-import { Button, Card, Heading, LinkButton, Text } from "@pkg/ui";
+import { getServiceContainer } from "@sdxc/service-container";
+import { vstack } from "@sdxc/u/layout";
+import { m, maxIs, mi, minBs, p } from "@sdxc/u/size";
+import { textAlign } from "@sdxc/u/typography";
+import { Button, Card, Heading, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

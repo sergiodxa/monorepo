@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { unwrap } from "@pkg/result";
-import { sign } from "@pkg/webhooks";
+import { unwrap } from "@sdxc/result";
+import { sign } from "@sdxc/webhooks";
 import { createRouter, RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 

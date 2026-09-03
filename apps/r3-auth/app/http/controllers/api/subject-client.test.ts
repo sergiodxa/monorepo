@@ -9,11 +9,11 @@
 
 import type { DefaultBodyType, StrictRequest } from "msw";
 
-import { AuthError } from "@pkg/auth/auth-error";
-import { Issuer } from "@pkg/auth/issuer";
-import { ManagementClient, SubjectNotFoundError } from "@pkg/auth/management-client";
-import { ServiceClient } from "@pkg/auth/service-client";
-import { isFailure } from "@pkg/result";
+import { AuthError } from "@sdxc/auth/auth-error";
+import { Issuer } from "@sdxc/auth/issuer";
+import { ManagementClient, SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { ServiceClient } from "@sdxc/auth/service-client";
+import { isFailure } from "@sdxc/result";
 import { http, passthrough } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";

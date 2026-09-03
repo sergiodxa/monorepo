@@ -12,14 +12,14 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg, fill } from "@pkg/u/color";
-import { opacity, rounded, shadow, transition, transitionBehavior } from "@pkg/u/effects";
-import { block } from "@pkg/u/layout";
-import { media, startingStyle } from "@pkg/u/responsive";
-import { pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { scaleProperty } from "@pkg/u/transform";
-import { text } from "@pkg/u/typography";
+import { bg, fg, fill } from "@sdxc/u/color";
+import { opacity, rounded, shadow, transition, transitionBehavior } from "@sdxc/u/effects";
+import { block } from "@sdxc/u/layout";
+import { media, startingStyle } from "@sdxc/u/responsive";
+import { pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { scaleProperty } from "@sdxc/u/transform";
+import { text } from "@sdxc/u/typography";
 
 import { durations, easings } from "../animations/tokens";
 

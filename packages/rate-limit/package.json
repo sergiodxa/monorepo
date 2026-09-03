@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/rate-limit",
+	"name": "@sdxc/rate-limit",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",
@@ -12,10 +12,10 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/duration": "workspace:*",
-		"@pkg/get-client-ip": "workspace:*",
-		"@pkg/http": "workspace:*",
-		"@pkg/result": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

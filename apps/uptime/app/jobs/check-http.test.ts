@@ -9,24 +9,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
-import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import type { UsageEvent } from "@sdxc/billing";
+import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
-import { BillingError } from "@pkg/billing";
+import { BillingError } from "@sdxc/billing";
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
 	createQueue,
-} from "@pkg/cloudflare-mocks";
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import { BatchedLogger } from "@pkg/logger";
-import { Mailer } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { failure } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/cloudflare-mocks";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import { BatchedLogger } from "@sdxc/logger";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { failure } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -101,7 +101,7 @@ let realBillingModule = await import("~/app/lib/billing");
 
 vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
 
-let { Job, createJobContext } = await import("@pkg/jobs");
+let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let checkHttp = (await import("./check-http")).default;

@@ -13,8 +13,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import {
 	basis,
 	center,
@@ -26,11 +26,11 @@ import {
 	grow,
 	items,
 	shrink,
-} from "@pkg/u/layout";
-import { atMax } from "@pkg/u/responsive";
-import { bs, is, mis, minIs, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, leading, text, truncate, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { atMax } from "@sdxc/u/responsive";
+import { bs, is, mis, minIs, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, leading, text, truncate, weight } from "@sdxc/u/typography";
 
 /**
  * Named container {@link Item} declares on its own host, so

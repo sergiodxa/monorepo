@@ -4,20 +4,20 @@
  * the current team. Settings and the destructive action each sit in their own
  * bordered card, the destructive one danger-toned, each posting through its own
  * `<form>`. The TCP fields render as a single block shared with the create page,
- * so both pages draw the same form. The delete confirmation composes `@pkg/ui`'s
+ * so both pages draw the same form. The delete confirmation composes `@sdxc/ui`'s
  * `AlertDialog` directly because confirming submits a real `<form method="post">`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, LinkButton } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

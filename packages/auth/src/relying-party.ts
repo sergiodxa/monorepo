@@ -7,21 +7,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationString } from "@pkg/duration";
-import type { JWK, JWT } from "@pkg/jwt";
-import type { Adapter } from "@pkg/rate-limit";
+import type { DurationString } from "@sdxc/duration";
+import type { JWK, JWT } from "@sdxc/jwt";
+import type { Adapter } from "@sdxc/rate-limit";
 import type {
 	AuthScheme,
 	AuthSchemeAuthenticateResult,
 	AuthSchemeFailure,
 } from "remix/middleware/auth";
 
-import { Base64, Base64Url, randomToken, sha256, sha384, sha512 } from "@pkg/crypto";
-import { toSeconds } from "@pkg/duration";
-import { getClientIP } from "@pkg/get-client-ip";
-import { Location } from "@pkg/location";
-import { applyRateLimitHeaders } from "@pkg/rate-limit";
-import { isFailure, wrap } from "@pkg/result";
+import { Base64, Base64Url, randomToken, sha256, sha384, sha512 } from "@sdxc/crypto";
+import { toSeconds } from "@sdxc/duration";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { Location } from "@sdxc/location";
+import { applyRateLimitHeaders } from "@sdxc/rate-limit";
+import { isFailure, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { redirect } from "remix/response/redirect";
 import { Session } from "remix/session";
@@ -186,7 +186,7 @@ const USER_INFO_SCHEMA = s.object({ sub: s.string() }, { unknownKeys: "passthrou
 function readSession(ctx: AuthSession.Context): Session {
 	let session = ctx.get(Session);
 	if (!session) {
-		throw new Error("@pkg/auth needs remix/middleware/session installed on the router");
+		throw new Error("@sdxc/auth needs remix/middleware/session installed on the router");
 	}
 	return session;
 }
@@ -209,7 +209,7 @@ async function deriveChallenge(verifier: string): Promise<string> {
 	let digest = await sha256(verifier);
 
 	if (isFailure(digest)) {
-		throw new Error("@pkg/auth needs a runtime whose WebCrypto computes SHA-256", {
+		throw new Error("@sdxc/auth needs a runtime whose WebCrypto computes SHA-256", {
 			cause: digest.error,
 		});
 	}
@@ -253,7 +253,7 @@ async function computeAtHash(accessToken: string, digest: typeof sha256): Promis
 	let hash = await digest(accessToken);
 
 	if (isFailure(hash)) {
-		throw new Error("@pkg/auth needs a runtime whose WebCrypto computes the ID token's digest", {
+		throw new Error("@sdxc/auth needs a runtime whose WebCrypto computes the ID token's digest", {
 			cause: hash.error,
 		});
 	}
@@ -379,7 +379,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * @param options - Where to return to, and what to ask the issuer for.
 	 * @returns The `303` redirect to the authorization endpoint.
 	 * @throws {Response} `429` with `Retry-After` when the calling browser's login
-	 *   budget is spent, which `catchResponse()` from `@pkg/catch-response-middleware`
+	 *   budget is spent, which `catchResponse()` from `@sdxc/catch-response-middleware`
 	 *   delivers as the reply.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
 	 *   authorization endpoint, `reserved_parameter` for an extra parameter the flow

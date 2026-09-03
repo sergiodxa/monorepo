@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { tool, tools } from "@pkg/mcp";
+import { tool, tools } from "@sdxc/mcp";
 
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 

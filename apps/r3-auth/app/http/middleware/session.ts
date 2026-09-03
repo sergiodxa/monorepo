@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { KVSessionStorage } from "@pkg/session-storage-kv";
+import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { getContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";

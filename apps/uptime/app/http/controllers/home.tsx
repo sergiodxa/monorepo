@@ -12,7 +12,7 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { IntlProvider, Trans } from "@pkg/i18n/ui";
+import { IntlProvider, Trans } from "@sdxc/i18n/ui";
 import {
 	ActivityIcon,
 	ArrowRightIcon,
@@ -34,9 +34,9 @@ import {
 	TimerIcon,
 	UsersIcon,
 	WorkflowIcon,
-} from "@pkg/icons";
-import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
-import { rounded, shadow } from "@pkg/u/effects";
+} from "@sdxc/icons";
+import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
 import {
 	absolute,
 	block,
@@ -55,12 +55,12 @@ import {
 	relative,
 	shrink,
 	vstack,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { dark, media } from "@pkg/u/responsive";
-import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pbe, pbs, pi } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { translateX, translateY } from "@pkg/u/transform";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { dark, media } from "@sdxc/u/responsive";
+import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pbe, pbs, pi } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { translateX, translateY } from "@sdxc/u/transform";
 import {
 	fontSize,
 	leading,
@@ -69,8 +69,8 @@ import {
 	textDecoration,
 	tracking,
 	weight,
-} from "@pkg/u/typography";
-import { Button, Heading, LinkButton, TextField } from "@pkg/ui";
+} from "@sdxc/u/typography";
+import { Button, Heading, LinkButton, TextField } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";

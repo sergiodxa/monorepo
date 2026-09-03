@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getServiceContainer } from "@pkg/service-container";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 

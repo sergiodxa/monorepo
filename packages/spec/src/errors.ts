@@ -1,6 +1,6 @@
 /**
  * The error taxonomy every fallible function in this package returns through
- * `@pkg/result`. Each class carries the structured fields diagnostics need —
+ * `@sdxc/result`. Each class carries the structured fields diagnostics need —
  * spans, expected/observed values, denial remedies — so the reporter formats
  * errors without string-parsing them.
  *

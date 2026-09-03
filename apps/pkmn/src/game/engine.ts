@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 
 import type { BattleEvent, ReplacementCommand, TurnCommand } from "./battle/battle";
 import type { BattlePosition, BattleSideState } from "./battle/battle";

@@ -12,8 +12,8 @@
 
 import type { Database } from "remix/data-table";
 
-import { randomToken } from "@pkg/crypto";
-import { isFailure, unwrap } from "@pkg/result";
+import { randomToken } from "@sdxc/crypto";
+import { isFailure, unwrap } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";

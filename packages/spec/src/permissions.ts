@@ -11,9 +11,9 @@
 import { lstatSync, realpathSync } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isSuccess, success } from "@pkg/result";
+import { failure, isSuccess, success } from "@sdxc/result";
 
 import { PermissionDeniedError, SpecError } from "./errors";
 

@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url, password, sha256 } from "@pkg/crypto";
-import { isFailure } from "@pkg/result";
+import { Base64Url, password, sha256 } from "@sdxc/crypto";
+import { isFailure } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";

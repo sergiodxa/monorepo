@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
-import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
-import { isFailure } from "@pkg/result";
+import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";

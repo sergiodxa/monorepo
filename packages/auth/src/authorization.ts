@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
-import type { Result } from "@pkg/result";
+import type { DurationInput } from "@sdxc/duration";
+import type { Result } from "@sdxc/result";
 
-import { toMs } from "@pkg/duration";
-import { Location } from "@pkg/location";
-import { isFailure, wrap } from "@pkg/result";
+import { toMs } from "@sdxc/duration";
+import { Location } from "@sdxc/location";
+import { isFailure, wrap } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 import { redirect } from "remix/response/redirect";
 
@@ -198,7 +198,7 @@ export namespace Authorization {
 		 * @returns The token set a completed login left behind.
 		 * @throws {Response} A redirect to the login route, carrying where to come
 		 *   back to, for a request nobody has signed in on. It reaches the browser
-		 *   through `@pkg/catch-response-middleware`.
+		 *   through `@sdxc/catch-response-middleware`.
 		 * @example
 		 * let session = currentSession();
 		 */

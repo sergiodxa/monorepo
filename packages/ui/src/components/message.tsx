@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
+import { fg } from "@sdxc/u/color";
 import {
 	container,
 	flex,
@@ -27,11 +27,11 @@ import {
 	relative,
 	self,
 	vstack,
-} from "@pkg/u/layout";
-import { at } from "@pkg/u/responsive";
-import { maxIs, minIs } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
+import { maxIs, minIs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, weight } from "@sdxc/u/typography";
 
 /**
  * Named container {@link Message} declares on its own host, so

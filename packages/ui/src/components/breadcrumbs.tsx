@@ -13,12 +13,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { listStyle, raw } from "@pkg/u/general";
-import { flex, gap, items } from "@pkg/u/layout";
-import { m, mi, p } from "@pkg/u/size";
-import { data, hover, when } from "@pkg/u/state";
-import { fontSize, textDecoration, weight } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { listStyle, raw } from "@sdxc/u/general";
+import { flex, gap, items } from "@sdxc/u/layout";
+import { m, mi, p } from "@sdxc/u/size";
+import { data, hover, when } from "@sdxc/u/state";
+import { fontSize, textDecoration, weight } from "@sdxc/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 

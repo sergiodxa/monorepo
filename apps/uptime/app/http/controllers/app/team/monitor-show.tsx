@@ -11,9 +11,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { formatDateTime, formatRelative } from "@pkg/dates";
-import { notFound } from "@pkg/http/response/html";
-import { IntlProvider } from "@pkg/i18n/ui";
+import { formatDateTime, formatRelative } from "@sdxc/dates";
+import { notFound } from "@sdxc/http/response/html";
+import { IntlProvider } from "@sdxc/i18n/ui";
 import {
 	LockIcon,
 	PencilIcon,
@@ -21,14 +21,14 @@ import {
 	ShieldAlertIcon,
 	ShieldCheckIcon,
 	ShieldXIcon,
-} from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexWrap, gap, grid, gridTemplate, items, justify } from "@pkg/u/layout";
-import { m, mbe, mbs, p } from "@pkg/u/size";
-import { fontSize, weight } from "@pkg/u/typography";
-import { Badge, LinkButton } from "@pkg/ui";
+} from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexWrap, gap, grid, gridTemplate, items, justify } from "@sdxc/u/layout";
+import { m, mbe, mbs, p } from "@sdxc/u/size";
+import { fontSize, weight } from "@sdxc/u/typography";
+import { Badge, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

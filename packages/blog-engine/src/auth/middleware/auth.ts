@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { AuthSession } from "@pkg/auth/auth-session";
-import { getServiceContainer } from "@pkg/service-container";
+import { AuthSession } from "@sdxc/auth/auth-session";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { auth, Auth, createSessionAuthScheme } from "remix/middleware/auth";

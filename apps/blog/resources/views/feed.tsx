@@ -8,15 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ColorValue } from "@pkg/u";
+import type { ColorValue } from "@sdxc/u";
 
-import { fg } from "@pkg/u/color";
-import { listStyle } from "@pkg/u/general";
-import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@pkg/u/layout";
-import { bs, is, m, maxIs, mbs, mis, p } from "@pkg/u/size";
-import { spacing } from "@pkg/u/tokens";
-import { nowrap, text } from "@pkg/u/typography";
-import { Badge, Heading, Link } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@sdxc/u/layout";
+import { bs, is, m, maxIs, mbs, mis, p } from "@sdxc/u/size";
+import { spacing } from "@sdxc/u/tokens";
+import { nowrap, text } from "@sdxc/u/typography";
+import { Badge, Heading, Link } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";

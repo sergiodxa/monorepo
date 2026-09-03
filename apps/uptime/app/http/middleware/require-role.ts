@@ -10,7 +10,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { forbidden } from "@pkg/http/response/html";
+import { forbidden } from "@sdxc/http/response/html";
 
 /**
  * Requires the current viewer to be the team owner or hold one of `roles`.

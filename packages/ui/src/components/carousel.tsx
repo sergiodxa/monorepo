@@ -12,13 +12,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/icons";
-import { outline } from "@pkg/u/color";
-import { raw, vars } from "@pkg/u/general";
-import { flex, flexCol, gap, grow, items, justify, shrink } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, minIs, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
+import { outline } from "@sdxc/u/color";
+import { raw, vars } from "@sdxc/u/general";
+import { flex, flexCol, gap, grow, items, justify, shrink } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, minIs, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { Button } from "./button";

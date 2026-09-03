@@ -9,15 +9,15 @@
 
 import type { Handle } from "remix/ui";
 
-import { redirect } from "@pkg/http/response";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { pb, pi } from "@pkg/u/size";
-import { fontSize, textAlign } from "@pkg/u/typography";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { pb, pi } from "@sdxc/u/size";
+import { fontSize, textAlign } from "@sdxc/u/typography";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

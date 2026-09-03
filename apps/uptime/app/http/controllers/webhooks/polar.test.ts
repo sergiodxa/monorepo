@@ -12,9 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import logger from "@pkg/logger/middleware";
-import { unwrap } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import logger from "@sdxc/logger/middleware";
+import { unwrap } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";

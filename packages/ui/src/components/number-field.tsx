@@ -11,14 +11,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { MinusIcon, PlusIcon } from "@pkg/icons";
-import { bg, border, borderEdge, fg, outline, outlineWidth } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
-import { basis, flex, grow, inlineFlex, items, justify, shrink } from "@pkg/u/layout";
-import { bs, is } from "@pkg/u/size";
-import { active, focusVisible, hover, invalid, when } from "@pkg/u/state";
-import { textAlign } from "@pkg/u/typography";
+import { MinusIcon, PlusIcon } from "@sdxc/icons";
+import { bg, border, borderEdge, fg, outline, outlineWidth } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
+import { basis, flex, grow, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
+import { bs, is } from "@sdxc/u/size";
+import { active, focusVisible, hover, invalid, when } from "@sdxc/u/state";
+import { textAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { fieldStackLayout } from "../styles/field-stack-layout";

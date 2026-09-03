@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { createMultiMatcher } from "remix/route-pattern/match";
 
 import type { AnyRequestContext, ResourceContext, ToolContext } from "./context";

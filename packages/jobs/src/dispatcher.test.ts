@@ -8,10 +8,10 @@
  */
 
 import type { MessageBatch } from "@cloudflare/workers-types";
-import type { QueueMock } from "@pkg/cloudflare-mocks";
-import type { JSONValue } from "@pkg/types";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { JSONValue } from "@sdxc/types";
 
-import { createQueue } from "@pkg/cloudflare-mocks";
+import { createQueue } from "@sdxc/cloudflare-mocks";
 import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";

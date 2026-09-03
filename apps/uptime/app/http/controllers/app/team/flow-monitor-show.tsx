@@ -13,16 +13,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime, formatRelative } from "@pkg/dates";
-import { notFound } from "@pkg/http/response/html";
-import { IntlProvider } from "@pkg/i18n/ui";
-import { PencilIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { flex, flexWrap, gap, hidden, items } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { mbe } from "@pkg/u/size";
-import { nowrap } from "@pkg/u/typography";
-import { Badge, LinkButton } from "@pkg/ui";
+import { formatDateTime, formatRelative } from "@sdxc/dates";
+import { notFound } from "@sdxc/http/response/html";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { PencilIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { flex, flexWrap, gap, hidden, items } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { mbe } from "@sdxc/u/size";
+import { nowrap } from "@sdxc/u/typography";
+import { Badge, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

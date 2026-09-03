@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 

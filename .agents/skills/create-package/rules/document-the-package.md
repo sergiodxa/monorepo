@@ -30,7 +30,7 @@ Tips — and what each one has to contain. Read it rather than working from the 
 another README, which may predate the guide.
 
 ```markdown
-# @pkg/slugify
+# @sdxc/slugify
 
 Converts arbitrary text into URL-safe slugs.
 

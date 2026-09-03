@@ -12,12 +12,12 @@
 import type { getContext } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { hidden, vstack } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
-import { has, when } from "@pkg/u/state";
-import { fontSize } from "@pkg/u/typography";
-import { Select, TextField } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { hidden, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { has, when } from "@sdxc/u/state";
+import { fontSize } from "@sdxc/u/typography";
+import { Select, TextField } from "@sdxc/ui";
 
 import type { AlertConfig } from "~/database/schema";
 

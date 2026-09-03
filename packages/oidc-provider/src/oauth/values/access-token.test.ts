@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK, JWT } from "@pkg/jwt";
+import { JWK, JWT } from "@sdxc/jwt";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import AccessToken from "./access-token";

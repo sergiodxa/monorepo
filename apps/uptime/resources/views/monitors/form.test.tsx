@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTranslator } from "@pkg/i18n";
+import { createTranslator } from "@sdxc/i18n";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 

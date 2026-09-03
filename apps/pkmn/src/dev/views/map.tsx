@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { css, on, ref } from "remix/ui";
 
 import manifest from "~/content/manifest.json";

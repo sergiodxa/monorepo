@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import * as mocks from "./index";
 
-describe("@pkg/cloudflare-mocks", () => {
+describe("@sdxc/cloudflare-mocks", () => {
 	test("exports every binding factory", () => {
 		expect(Object.keys(mocks).sort()).toEqual(
 			[

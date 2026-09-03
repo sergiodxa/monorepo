@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@pkg/uuid";
+import { generateUUID } from "@sdxc/uuid";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";

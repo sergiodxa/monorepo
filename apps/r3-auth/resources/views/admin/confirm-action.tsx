@@ -15,7 +15,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { AlertDialog, Button } from "@pkg/ui";
+import { AlertDialog, Button } from "@sdxc/ui";
 
 namespace ConfirmAction {
 	/** Trigger button sizes, matching the component library's own scale. */

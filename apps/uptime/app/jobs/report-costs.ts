@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UsageEvent } from "@pkg/billing";
-import type { CurrentJobContext } from "@pkg/jobs";
+import type { UsageEvent } from "@sdxc/billing";
+import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Database } from "remix/data-table";
 
-import { supports } from "@pkg/billing";
-import { createJobHandler } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
-import { underscore } from "@pkg/strings";
+import { supports } from "@sdxc/billing";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+import { underscore } from "@sdxc/strings";
 import { inList } from "remix/data-table";
 
 import type { CostQuantities } from "~/app/lib/cost-rates";

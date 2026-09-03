@@ -14,9 +14,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg, outline, outlineStyle } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw, touchAction, userSelect } from "@pkg/u/general";
+import { bg, border, fg, outline, outlineStyle } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, raw, touchAction, userSelect } from "@sdxc/u/general";
 import {
 	basis,
 	flex,
@@ -27,10 +27,10 @@ import {
 	justify,
 	relative,
 	shrink,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { bs, is, maxBs, maxIs, minBs, minIs } from "@pkg/u/size";
-import { before, data, focusVisible, hover, when } from "@pkg/u/state";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is, maxBs, maxIs, minBs, minIs } from "@sdxc/u/size";
+import { before, data, focusVisible, hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 import { mergeStyle } from "../utils/merge-style";

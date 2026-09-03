@@ -10,8 +10,8 @@
 
 import type { Middleware, RequestHandler } from "remix/router";
 
-import { headRequests } from "@pkg/http/middleware/head-requests";
-import logger from "@pkg/logger/middleware";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import logger from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";

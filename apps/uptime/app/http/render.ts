@@ -16,7 +16,7 @@ import type { RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
-import { logger } from "@pkg/logger";
+import { logger } from "@sdxc/logger";
 import { createHtmlResponse } from "remix/response/html";
 import { renderToStream } from "remix/ui/server";
 

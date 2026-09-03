@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, type Result, success } from "@pkg/result";
+import { failure, type Result, success } from "@sdxc/result";
 import {
 	array,
 	type InferOutput,

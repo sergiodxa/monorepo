@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { column as c, Database, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 

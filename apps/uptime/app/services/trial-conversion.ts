@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { logger } from "@pkg/logger";
+import { logger } from "@sdxc/logger";
 
 import type { TrialSignupAttribution } from "~/app/data/trial-conversion";
 import type { SelectLead, SelectTrialWatch } from "~/database/schema";

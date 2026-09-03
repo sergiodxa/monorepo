@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Logger } from "@pkg/logger/request";
+import type { Logger } from "@sdxc/logger/request";
 
 import middleware from "../lib/middleware";
 

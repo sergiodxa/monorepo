@@ -14,8 +14,8 @@
 
 import type { Handle } from "remix/ui";
 
-import { intl } from "@pkg/i18n/ui";
-import { Checkbox } from "@pkg/ui";
+import { intl } from "@sdxc/i18n/ui";
+import { Checkbox } from "@sdxc/ui";
 import { clientEntry, on, ref } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

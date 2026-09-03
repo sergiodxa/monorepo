@@ -7,15 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
-import { isFailure, wrap } from "@pkg/result";
-import { border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
-import { m, minBs, p } from "@pkg/u/size";
-import { textAlign } from "@pkg/u/typography";
-import { Button } from "@pkg/ui";
+import { redirect } from "@sdxc/http/response";
+import { isFailure, wrap } from "@sdxc/result";
+import { border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { m, minBs, p } from "@sdxc/u/size";
+import { textAlign } from "@sdxc/u/typography";
+import { Button } from "@sdxc/ui";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
 

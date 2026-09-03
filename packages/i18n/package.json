@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/i18n",
+	"name": "@sdxc/i18n",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",

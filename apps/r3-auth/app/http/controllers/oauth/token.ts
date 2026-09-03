@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { badRequest, internalServerError, ok, unauthorized } from "@pkg/http/response/json";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { badRequest, internalServerError, ok, unauthorized } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { validate } from "@sdxc/validate";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

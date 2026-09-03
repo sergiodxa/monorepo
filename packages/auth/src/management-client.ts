@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success, wrap } from "@pkg/result";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { url } from "remix/data-schema/checks";
 

@@ -11,7 +11,7 @@
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import { ServiceContainer } from "@pkg/service-container";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -33,7 +33,7 @@ import {
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`, but this app's schemas
+ * `@sdxc/validate`'s `validate()` flattens `FormData`, but this app's schemas
  * (`remix/data-schema/form-data`'s `f.object()`) require the raw container — a
  * bug in the shared package. This mock forwards it unflattened until that's fixed.
  */

@@ -1,4 +1,4 @@
-# @pkg/duration
+# @sdxc/duration
 
 Compile-time-checked duration strings, and the conversions from them to milliseconds and seconds.
 
@@ -8,14 +8,14 @@ Lengths of time show up everywhere as bare numbers whose unit is only knowable f
 
 This package fixes both with a template literal type. A duration is written as text — `"5 minutes"`, `"30s"` — and a misspelled unit is a compile error rather than a runtime surprise, so no string parsing library is needed. `toMs()` and `toSeconds()` convert, and `parse()` handles text that only exists at runtime, returning a [`Result`](/packages/result) instead of throwing. A bare `number` is always milliseconds, matching JavaScript time arithmetic, so a seconds-based API cannot silently receive milliseconds.
 
-The scope is deliberately small: a unit table, two conversions, and a parser, with no dependency beyond `@pkg/result` and no platform API at all — not even `Intl`. Nothing here takes a `Date` or produces text for a reader; date arithmetic and human-readable formatting belong to date-aware APIs, which can depend on this package to accept a `DurationInput` of their own.
+The scope is deliberately small: a unit table, two conversions, and a parser, with no dependency beyond `@sdxc/result` and no platform API at all — not even `Intl`. Nothing here takes a `Date` or produces text for a reader; date arithmetic and human-readable formatting belong to date-aware APIs, which can depend on this package to accept a `DurationInput` of their own.
 
 ## Usage
 
 ### Basic Example
 
 ```typescript
-import { toMs, toSeconds } from "@pkg/duration";
+import { toMs, toSeconds } from "@sdxc/duration";
 
 toMs("5 minutes"); // 300000
 toMs("30s"); // 30000
@@ -32,9 +32,9 @@ toMs("5 minuts"); // Type error: "minuts" is not a unit
 Declare the parameter as `DurationInput` and normalize once, so callers may pass either form and your function states its own unit exactly once.
 
 ```typescript
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { toSeconds } from "@pkg/duration";
+import { toSeconds } from "@sdxc/duration";
 
 interface CacheOptions {
 	ttl: DurationInput;
@@ -53,8 +53,8 @@ write("session", value, { ttl: 2_592_000_000 }); // still valid
 Configuration values and form fields are plain strings, where the compile-time type cannot help. `parse()` checks them and reports a failure.
 
 ```typescript
-import { parse } from "@pkg/duration";
-import { isFailure } from "@pkg/result";
+import { parse } from "@sdxc/duration";
+import { isFailure } from "@sdxc/result";
 
 let result = parse(env.SESSION_LIFETIME);
 
@@ -182,9 +182,9 @@ Rejected at compile time, and by `parse()` at runtime: fractional and exponent a
 Convert at the boundary that consumes the value, not at the call site that writes it. The caller writes the duration once, in units a reader understands, and each boundary converts to the unit it needs.
 
 ```typescript
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { toMs, toSeconds } from "@pkg/duration";
+import { toMs, toSeconds } from "@sdxc/duration";
 
 interface SessionOptions {
 	lifetime: DurationInput;
@@ -207,10 +207,10 @@ createSession({ lifetime: "30 days" });
 Parse duration configuration where it is read, so a typo in an environment variable is reported by name instead of becoming a `NaN` timer far away.
 
 ```typescript
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { parse } from "@pkg/duration";
-import { failure, isFailure } from "@pkg/result";
+import { parse } from "@sdxc/duration";
+import { failure, isFailure } from "@sdxc/result";
 
 function readDuration(name: string, value: string): Result<number, Error> {
 	let result = parse(value);
@@ -224,9 +224,9 @@ function readDuration(name: string, value: string): Result<number, Error> {
 Duration strings are for code and configuration. Keep storage and wire formats numeric, converting on the way in and reading the number back out, so a stored value never depends on this package's grammar.
 
 ```typescript
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
-import { toMs } from "@pkg/duration";
+import { toMs } from "@sdxc/duration";
 
 async function schedule(job: string, delay: DurationInput) {
 	// the column stores milliseconds, not "5 minutes"
@@ -236,7 +236,7 @@ async function schedule(job: string, delay: DurationInput) {
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - The `Result` type `parse()` returns, and the `isFailure`/`isSuccess`/`unwrap` helpers for reading it
+- [`@sdxc/result`](/packages/result) - The `Result` type `parse()` returns, and the `isFailure`/`isSuccess`/`unwrap` helpers for reading it
 
 ## Tips
 

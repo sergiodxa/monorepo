@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess, success } from "@pkg/result";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode, CommandNode, FixtureNode } from "./ast";

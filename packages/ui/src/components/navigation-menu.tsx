@@ -12,15 +12,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg, outline, outlineStyle } from "@pkg/u/color";
+import { bg, fg, outline, outlineStyle } from "@sdxc/u/color";
 import {
 	opacity,
 	rounded,
 	transition,
 	transitionBehavior,
 	transitionProperty,
-} from "@pkg/u/effects";
-import { cursor, userSelect } from "@pkg/u/general";
+} from "@sdxc/u/effects";
+import { cursor, userSelect } from "@sdxc/u/general";
 import {
 	container,
 	flex,
@@ -32,14 +32,14 @@ import {
 	items,
 	justify,
 	relative,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { at, media, startingStyle } from "@pkg/u/responsive";
-import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { data, disabled, hover, when } from "@pkg/u/state";
-import { scaleProperty } from "@pkg/u/transform";
-import { fontSize, leading, text, textDecoration, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { at, media, startingStyle } from "@sdxc/u/responsive";
+import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { data, disabled, hover, when } from "@sdxc/u/state";
+import { scaleProperty } from "@sdxc/u/transform";
+import { fontSize, leading, text, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";

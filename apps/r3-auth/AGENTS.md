@@ -59,22 +59,22 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST use `remix/router` (`createAction` / `createController`) for HTTP actions, and
   MUST declare every URL in `routes/web.ts` and link through `routes.<name>.href(...)`
   rather than writing a path string.
-- MUST render pages as `remix/ui` JSX through `ctx.render(...)`, built from `@pkg/ui`
-  components with inline `css()` mixins from `@pkg/u` for the gaps. No React, no Tailwind,
+- MUST render pages as `remix/ui` JSX through `ctx.render(...)`, built from `@sdxc/ui`
+  components with inline `css()` mixins from `@sdxc/u` for the gaps. No React, no Tailwind,
   no HTML strings. The one documented exception is `/oidc/check-session`, whose body is a
   script page defined by OIDC Session Management 1.0.
 - MUST use the Handle pattern for components and MUST NOT call a component as a plain
-  function; MUST NOT pass `key=` to a `remix/ui` or `@pkg/ui` component.
-- MUST validate every external input with `remix/data-schema` through `@pkg/validate`, in a
+  function; MUST NOT pass `key=` to a `remix/ui` or `@sdxc/ui` component.
+- MUST validate every external input with `remix/data-schema` through `@sdxc/validate`, in a
   validator module under `app/http/validators/`. Zod MUST NOT be added back.
-- MUST persist through `remix/data-table` (`@pkg/data-table-d1` in production) from
+- MUST persist through `remix/data-table` (`@sdxc/data-table-d1` in production) from
   `app/data/`; no ORM, no raw SQL in controllers. DB-facing field names stay `snake_case`.
-- MUST resolve services (`Database`, `RateLimiters`) through `@pkg/service-container`
+- MUST resolve services (`Database`, `RateLimiters`) through `@sdxc/service-container`
   with `inject([...])`, and MUST keep request-lifetime values (session, current subject,
   request logger, locale) in middleware and request context instead.
-- MUST bill through `@pkg/billing`: the provider is constructed once in `app/lib/billing.ts`,
+- MUST bill through `@sdxc/billing`: the provider is constructed once in `app/lib/billing.ts`,
   a route reaches it as `ctx.billing`, and anything outside a request imports the instance.
-  Every call answers a `@pkg/result` `Result`, so a caller branches on `isFailure` and logs
+  Every call answers a `@sdxc/result` `Result`, so a caller branches on `isFailure` and logs
   the error's `code` and `providerCode`. A product is named by our own slug, never by a
   platform id at the call site.
 - MUST keep Cloudflare-specific code in `bootstrap/worker.ts` and the router wiring in
@@ -83,7 +83,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   `remix/middleware/form-data`, `remix/middleware/method-override`,
   `remix/middleware/render`, `remix/auth`) over hand-rolled equivalents, and MUST check
   `docs/vendor/@remix-run/<package>/README.md` first.
-- MUST use `@pkg/result` for expected failures. The engine's `throw`-based token path stays
+- MUST use `@sdxc/result` for expected failures. The engine's `throw`-based token path stays
   as it is — it is part of its tested contract — and controllers MUST catch and map to OAuth
   error envelopes.
 - MUST keep the app server-rendered: native `<dialog>` with command invokers for
@@ -120,7 +120,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 ### Tokens and sessions
 
 - MUST generate every token, code, salt and secret from a cryptographically secure random
-  source (`@pkg/crypto`'s `randomBytes`), never `Math.random`.
+  source (`@sdxc/crypto`'s `randomBytes`), never `Math.random`.
 - MUST keep the token lifetimes: access token 1 hour, ID token 1 hour, authorization code 10
   minutes, session/refresh token 30 days (`app/config.ts`, `database/schema.ts`).
 - MUST treat an authorization code as single-use: consuming it deletes it, and a replay MUST
@@ -128,11 +128,11 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST delete the session row on logout, so the refresh token dies with it, and MUST send
   back-channel logout tokens to every other client with a registered URI.
 - MUST compare secrets and hashes with a timing-safe comparison (`timingSafeEqual` from
-  `@pkg/crypto`).
+  `@sdxc/crypto`).
 
 ### Passwords and client credentials
 
-- MUST hash passwords with PBKDF2-HMAC-SHA256 through `@pkg/crypto`'s `password` module, and
+- MUST hash passwords with PBKDF2-HMAC-SHA256 through `@sdxc/crypto`'s `password` module, and
   MUST use `needsRehash` to upgrade a stored hash on a successful sign-in. `bcryptjs` is
   gone and MUST NOT come back: the production `credentials` table holds no rows, so no
   legacy hash exists to verify.
@@ -160,7 +160,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   the validated `redirect_uri` with `error`, `error_description`, `state` and `iss`.
 - MUST keep refusals indistinguishable where distinguishing them helps an attacker (missing
   vs. malformed vs. expired token, wrong password vs. unknown address).
-- MUST use `@pkg/logger` (`ctx.logger` in HTTP handlers and in job handlers alike), never
+- MUST use `@sdxc/logger` (`ctx.logger` in HTTP handlers and in job handlers alike), never
   `console.log`, and MUST log event names plus ids only — never token, code, secret or
   password material.
 - MUST send `Cache-Control: no-store` (and `Pragma: no-cache`) on token responses and on the

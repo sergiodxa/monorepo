@@ -9,15 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
+import type { Billing } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { createKVNamespace, createR2Bucket, createRateLimit } from "@pkg/cloudflare-mocks";
-import { Mailer } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { ServiceContainer } from "@pkg/service-container";
-import { KVSessionStorage } from "@pkg/session-storage-kv";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { createKVNamespace, createR2Bucket, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { ServiceContainer } from "@sdxc/service-container";
+import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { vi } from "vitest";
 

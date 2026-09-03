@@ -118,12 +118,12 @@ export function createExecutionContext<Props = unknown>(
 
 		/** Rejects access to the RPC entrypoints, which have no in-memory equivalent. */
 		get exports(): Cloudflare.Exports {
-			throw new Error("ExecutionContext.exports is not implemented by @pkg/cloudflare-mocks");
+			throw new Error("ExecutionContext.exports is not implemented by @sdxc/cloudflare-mocks");
 		},
 
 		/** Rejects access to tracing, which has no in-memory equivalent. */
 		get tracing(): Tracing {
-			throw new Error("ExecutionContext.tracing is not implemented by @pkg/cloudflare-mocks");
+			throw new Error("ExecutionContext.tracing is not implemented by @sdxc/cloudflare-mocks");
 		},
 	};
 }

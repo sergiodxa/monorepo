@@ -12,8 +12,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Markdown } from "@pkg/markdown/server";
-import { isSuccess } from "@pkg/result";
+import { Markdown } from "@sdxc/markdown/server";
+import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 const frontmatterSchema = s.object({

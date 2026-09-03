@@ -1,4 +1,4 @@
-# @pkg/i18n
+# @sdxc/i18n
 
 Server-side internationalization for Remix fetch-router apps: language detection plus a middleware that publishes a per-request [i18next](https://www.i18next.com) instance on the request context.
 
@@ -6,20 +6,20 @@ Server-side internationalization for Remix fetch-router apps: language detection
 
 Every request needs an answer to "which language does this user want?" before any translated content can render. This package ports the server-side language detector from [remix-i18next](https://github.com/sergiodxa/remix-i18next) to the Remix v3 primitives: it probes search params, a cookie, the session, the `Accept-Language` header, and optional custom logic in a configurable order, validates every candidate against the languages the app actually supports, and always falls back to a guaranteed language.
 
-Translation itself is delegated to i18next. The middleware in `@pkg/i18n/middleware` creates and initializes a dedicated i18next instance per request — registered plugins (such as a backend that loads translation files) run before handlers do — and exposes it as `context.i18next` alongside `context.locale`. A per-request instance means concurrent requests in different languages never share mutable language state, which matters in a Workers runtime where one isolate serves many requests.
+Translation itself is delegated to i18next. The middleware in `@sdxc/i18n/middleware` creates and initializes a dedicated i18next instance per request — registered plugins (such as a backend that loads translation files) run before handlers do — and exposes it as `context.i18next` alongside `context.locale`. A per-request instance means concurrent requests in different languages never share mutable language state, which matters in a Workers runtime where one isolate serves many requests.
 
 Because the language is resolved before the instance is built, that instance is only ever given the bundles the request can resolve through: the detected language's and the fallback language's. An app that supports six languages therefore attaches two bundles per request instead of six, without giving up the per-request instance that keeps the languages isolated.
 
-The root entry (`@pkg/i18n`) has no router dependency, so the detector and locale helpers can also be used outside middleware (e.g. in background jobs or non-router handlers). Code that runs with no request at all — a scheduled job, a queue consumer, a test, a client bootstrap — has no `context.i18next` to translate through either, so the root entry also ships `createTranslator`: the same idea as the middleware (resolve a language, then build an instance for it) without a `Request` to resolve it from, and caching one instance per language because the bundles are static.
+The root entry (`@sdxc/i18n`) has no router dependency, so the detector and locale helpers can also be used outside middleware (e.g. in background jobs or non-router handlers). Code that runs with no request at all — a scheduled job, a queue consumer, a test, a client bootstrap — has no `context.i18next` to translate through either, so the root entry also ships `createTranslator`: the same idea as the middleware (resolve a language, then build an instance for it) without a `Request` to resolve it from, and caching one instance per language because the bundles are static.
 
-Rendering translations through `remix/ui` is a separate concern from detecting and loading them, so it lives at its own entry point, `@pkg/i18n/ui`: an `IntlProvider` that publishes a live i18next instance through context, and a `Trans` component for translations containing markup.
+Rendering translations through `remix/ui` is a separate concern from detecting and loading them, so it lives at its own entry point, `@sdxc/i18n/ui`: an `IntlProvider` that publishes a live i18next instance through context, and a `Trans` component for translations containing markup.
 
 ## Usage
 
 ### Middleware
 
 ```typescript
-import i18next from "@pkg/i18n/middleware";
+import i18next from "@sdxc/i18n/middleware";
 import { createRouter } from "remix/router";
 
 let router = createRouter({
@@ -49,7 +49,7 @@ router.get("/", (context) => {
 ### Standalone detection
 
 ```typescript
-import { LanguageDetector } from "@pkg/i18n";
+import { LanguageDetector } from "@sdxc/i18n";
 
 let detector = new LanguageDetector({
 	supportedLanguages: ["en", "es"],
@@ -62,7 +62,7 @@ let locale = await detector.detect(request); // always a supported language
 ### Translating without a request
 
 ```typescript
-import { createTranslator } from "@pkg/i18n";
+import { createTranslator } from "@sdxc/i18n";
 
 let translate = createTranslator({
 	resources: { en: { translation: en }, es: { translation: es } },
@@ -82,7 +82,7 @@ await send({ subject: t("digest.subject"), locale });
 Wrap a server-rendered page in `IntlProvider` with the per-request instance the middleware already initialized, and read it back anywhere below through `intl`:
 
 ```tsx
-import { IntlProvider, intl } from "@pkg/i18n/ui";
+import { IntlProvider, intl } from "@sdxc/i18n/ui";
 import type { Handle } from "remix/ui";
 
 router.get("/", (context) => {
@@ -102,7 +102,7 @@ function Greeting(handle: Handle) {
 A translation containing markup renders through `Trans` instead of `t()`, splicing a `RemixElement` in for each `<tagName>` marker and keeping that tag's own text as the element's children. `Trans` reads its `i18n` from the nearest ancestor `IntlProvider` when the prop isn't given:
 
 ```tsx
-import { Trans } from "@pkg/i18n/ui";
+import { Trans } from "@sdxc/i18n/ui";
 
 // en.json: { "feed.article": "Read <articleLink>{{title}}</articleLink>" }
 function ArticleTeaser(handle: Handle<{ title: string; href: string }>) {
@@ -122,8 +122,8 @@ Wrapping every island in its own `IntlProvider` would work, but it's repetitive.
 
 ```tsx
 // bootstrap/browser.ts, before run() mounts anything
-import { createTranslator } from "@pkg/i18n";
-import { setIntl } from "@pkg/i18n/ui";
+import { createTranslator } from "@sdxc/i18n";
+import { setIntl } from "@sdxc/i18n/ui";
 import { run } from "remix/ui";
 
 let { i18n } = await createTranslator({
@@ -141,7 +141,7 @@ Now an island just calls `intl(handle)` directly, with no `IntlProvider` of its 
 
 ```tsx
 // resources/islands/comment-form.tsx
-import { intl } from "@pkg/i18n/ui";
+import { intl } from "@sdxc/i18n/ui";
 import { clientEntry, type Handle } from "remix/ui";
 
 export let CommentForm = clientEntry(
@@ -161,7 +161,7 @@ A page rendered entirely client-side (no server round trip, so no `run()`/`clien
 
 ### `i18next(options: I18nextMiddlewareOptions): Middleware`
 
-Default export of `@pkg/i18n/middleware`. Creates a middleware that detects the request language, initializes a dedicated i18next instance for the request over that language's bundle and the fallback's, and sets both on the request context as `context.locale` and `context.i18next`. Initialization awaits the instance's initial namespace load, so translations loaded by a backend plugin are ready by the time handlers run.
+Default export of `@sdxc/i18n/middleware`. Creates a middleware that detects the request language, initializes a dedicated i18next instance for the request over that language's bundle and the fallback's, and sets both on the request context as `context.locale` and `context.i18next`. Initialization awaits the instance's initial namespace load, so translations loaded by a backend plugin are ready by the time handlers run.
 
 **Parameters:**
 
@@ -176,7 +176,7 @@ Default export of `@pkg/i18n/middleware`. Creates a middleware that detects the 
 **Example:**
 
 ```typescript
-import i18next from "@pkg/i18n/middleware";
+import i18next from "@sdxc/i18n/middleware";
 
 let middleware = i18next({
 	detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
@@ -224,7 +224,7 @@ Gets the client's best-quality locale from the `Accept-Language` header, filtere
 **Example:**
 
 ```typescript
-import { getClientLocales } from "@pkg/i18n";
+import { getClientLocales } from "@sdxc/i18n";
 
 let date = new Date().toLocaleDateString(getClientLocales(request));
 ```
@@ -261,7 +261,7 @@ let { locale, t } = await translate("es");
 
 ### `IntlProvider`
 
-`remix/ui` context provider, from `@pkg/i18n/ui`. Publishes an i18next instance to every descendant through context and renders `children` unchanged.
+`remix/ui` context provider, from `@sdxc/i18n/ui`. Publishes an i18next instance to every descendant through context and renders `children` unchanged.
 
 Client-side, it also re-renders its whole subtree on its own whenever the instance's language changes or a namespace finishes loading, so every descendant's `i18n.t()`/`Trans` call reflects it without subscribing to anything itself. Server-side, it subscribes to nothing at all — the request's language is meant to stay fixed for the whole render, and the subscription is wired through `handle.queueTask`, which the server renderer never runs.
 
@@ -280,9 +280,9 @@ Client-side, it also re-renders its whole subtree on its own whenever the instan
 
 ### `setIntl(i18n: i18n): void`
 
-From `@pkg/i18n/ui`. Registers a module-scoped default instance for `intl` to fall back to when there's no ancestor `IntlProvider` — every independently hydrated island's own case. Call this once, before mounting or hydrating anything, from the client bootstrap.
+From `@sdxc/i18n/ui`. Registers a module-scoped default instance for `intl` to fall back to when there's no ancestor `IntlProvider` — every independently hydrated island's own case. Call this once, before mounting or hydrating anything, from the client bootstrap.
 
-Browser-only — **throws** when called from server code, since a module-scoped instance would be shared by every concurrent request in a Workers isolate, exactly what `@pkg/i18n/middleware`'s per-request instance exists to avoid.
+Browser-only — **throws** when called from server code, since a module-scoped instance would be shared by every concurrent request in a Workers isolate, exactly what `@sdxc/i18n/middleware`'s per-request instance exists to avoid.
 
 **Example:**
 
@@ -293,7 +293,7 @@ run({ loadModule, resolveFrame });
 
 ### `intl(handle: Handle<unknown, any>): i18n`
 
-A `handle.context.get(IntlProvider)` wrapper, from `@pkg/i18n/ui`, so call sites don't need to import `IntlProvider` just to look it up. Falls back to the `setIntl` default when there's no ancestor `IntlProvider`, and throws when neither exists.
+A `handle.context.get(IntlProvider)` wrapper, from `@sdxc/i18n/ui`, so call sites don't need to import `IntlProvider` just to look it up. Falls back to the `setIntl` default when there's no ancestor `IntlProvider`, and throws when neither exists.
 
 **Example:**
 
@@ -304,7 +304,7 @@ let message = i18n.t("greeting");
 
 ### `Trans`
 
-`remix/ui` component, from `@pkg/i18n/ui`, for a translation containing markup. Splices the `RemixElement` from `components` whose key matches each `<tagName>...</tagName>` marker in the translation in, keeping that tag's own text/nesting as the spliced element's children. Plain `{{variable}}` interpolation happens through `i18n.t()` itself, same as calling it directly.
+`remix/ui` component, from `@sdxc/i18n/ui`, for a translation containing markup. Splices the `RemixElement` from `components` whose key matches each `<tagName>...</tagName>` marker in the translation in, keeping that tag's own text/nesting as the spliced element's children. Plain `{{variable}}` interpolation happens through `i18n.t()` itself, same as calling it directly.
 
 **Props:**
 
@@ -396,7 +396,7 @@ interface Translator {
 i18next's own types, re-exported from the root entry. Type a translator or an instance (`ctx.i18next`, an `IntlProvider` prop, a function taking a `t`) through these, so translation stays this package's contract and consuming apps never depend on i18next directly.
 
 ```typescript
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 
 export function greet(t: TFunction): string {
 	return t("greeting");
@@ -409,7 +409,7 @@ Register an i18next backend as a plugin and the middleware awaits the initial na
 
 ```typescript
 import type { BackendModule } from "i18next";
-import i18next from "@pkg/i18n/middleware";
+import i18next from "@sdxc/i18n/middleware";
 
 import en from "~/locales/en";
 import es from "~/locales/es";
@@ -435,7 +435,7 @@ let middleware = i18next({
 When `remix/middleware/session` runs earlier in the chain, the detector reads the language from the live request session — no second storage read, and no `sessionCookie`/`sessionStorage` configuration needed.
 
 ```typescript
-import i18next from "@pkg/i18n/middleware";
+import i18next from "@sdxc/i18n/middleware";
 import { createCookie } from "remix/cookie";
 import { createRouter } from "remix/router";
 import { session } from "remix/middleware/session";
@@ -456,7 +456,7 @@ let router = createRouter({
 Store the choice in a dedicated cookie and give that cookie to the detector; the query string can override it for one-off links.
 
 ```typescript
-import i18next from "@pkg/i18n/middleware";
+import i18next from "@sdxc/i18n/middleware";
 import { createCookie } from "remix/cookie";
 
 let localeCookie = createCookie("lng", { maxAge: 60 * 60 * 24 * 365 });
@@ -488,7 +488,7 @@ router.post("/language", async (context) => {
 Use `findLocale` for path-based locales like `/es/dashboard`; it runs before every other method by default.
 
 ```typescript
-import { LanguageDetector } from "@pkg/i18n";
+import { LanguageDetector } from "@sdxc/i18n";
 
 let detector = new LanguageDetector({
 	supportedLanguages: ["en", "es"],
@@ -501,7 +501,7 @@ let detector = new LanguageDetector({
 
 ## Related Packages
 
-- [`@pkg/http`](../http/README.md) - `Accept` header content negotiation, the sibling concern to `Accept-Language` detection
+- [`@sdxc/http`](../http/README.md) - `Accept` header content negotiation, the sibling concern to `Accept-Language` detection
 
 ## Tips
 

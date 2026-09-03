@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { IdToken } from "@pkg/auth/id-token";
+import type { IdToken } from "@sdxc/auth/id-token";
 import type { Database } from "remix/data-table";
 
-import { generateUUID, isUUID } from "@pkg/uuid";
+import { generateUUID, isUUID } from "@sdxc/uuid";
 import { inList } from "remix/data-table";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";

@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
-import { m, mbs, p } from "@pkg/u/size";
-import { text, weight } from "@pkg/u/typography";
-import { Heading, Link } from "@pkg/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { gap, grid, gridTemplate, repeat } from "@sdxc/u/layout";
+import { m, mbs, p } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Heading, Link } from "@sdxc/ui";
 
 /**
  * Groups the data shapes used to render related post cards.

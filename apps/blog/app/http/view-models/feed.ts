@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ColorValue } from "@pkg/u";
+import type { ColorValue } from "@sdxc/u";
 
 import type { Feed } from "~/app/repositories/feed";
 

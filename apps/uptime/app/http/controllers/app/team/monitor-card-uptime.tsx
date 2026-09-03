@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

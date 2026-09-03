@@ -15,8 +15,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { isFailure, isSuccess, success } from "@pkg/result";
-import { createRandom } from "@pkg/sample";
+import { isFailure, isSuccess, success } from "@sdxc/result";
+import { createRandom } from "@sdxc/sample";
 import { expect, test } from "vitest";
 
 import type { PermissionSet } from "./permissions";

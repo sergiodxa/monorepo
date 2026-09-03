@@ -490,12 +490,12 @@ export function createDurableObjectState<Props = unknown>(
 
 		/** Rejects access to the RPC entrypoints, which have no in-memory equivalent. */
 		get exports(): Cloudflare.Exports {
-			throw new Error("DurableObjectState.exports is not implemented by @pkg/cloudflare-mocks");
+			throw new Error("DurableObjectState.exports is not implemented by @sdxc/cloudflare-mocks");
 		},
 
 		/** Rejects access to facets, which require a live Durable Object runtime. */
 		get facets(): DurableObjectFacets {
-			throw new Error("DurableObjectState.facets is not implemented by @pkg/cloudflare-mocks");
+			throw new Error("DurableObjectState.facets is not implemented by @sdxc/cloudflare-mocks");
 		},
 	};
 }

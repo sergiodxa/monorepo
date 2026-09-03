@@ -2,7 +2,7 @@
  * Shared chrome for the `/docs` site: a searchable sidebar grouping every
  * doc by section, a topbar with a breadcrumb trail and a dashboard CTA,
  * and the article content column that every doc page composes into. The
- * sidebar stays a custom `<aside popover>` since `@pkg/ui`'s own `Sidebar`
+ * sidebar stays a custom `<aside popover>` since `@sdxc/ui`'s own `Sidebar`
  * assumes a persistent `<aside>`, not a single slide-in drawer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,10 +11,10 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { ArrowRightIcon, MenuIcon } from "@pkg/icons";
-import { bg, border, borderEdge, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { ArrowRightIcon, MenuIcon } from "@sdxc/icons";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
 import {
 	basis,
 	fixed,
@@ -30,13 +30,13 @@ import {
 	items,
 	justify,
 	shrink,
-} from "@pkg/u/layout";
-import { overflowY } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, height, m, maxHeight, maxIs, minBs, minIs, p, pb, width } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, weight } from "@pkg/u/typography";
-import { Breadcrumbs, Sidebar, Typeset } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { overflowY } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, height, m, maxHeight, maxIs, minBs, minIs, p, pb, width } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, weight } from "@sdxc/u/typography";
+import { Breadcrumbs, Sidebar, Typeset } from "@sdxc/ui";
 
 import type { DocSection } from "~/app/services/docs";
 
@@ -72,7 +72,7 @@ const sidebarDescriptionCss = [
 	fontSize("0.8125rem"),
 	/**
 	 * Physical 3-value margin shorthand (top / left+right / bottom) —
-	 * `@pkg/u`'s `m()` only covers the 1/2/4-value logical form, not a
+	 * `@sdxc/u`'s `m()` only covers the 1/2/4-value logical form, not a
 	 * 3-value one.
 	 */
 	raw({ margin: "4px 0 0" }),
@@ -249,7 +249,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								overflowY("auto"),
 								/**
 								 * Physical 3-value padding shorthand (top / left+right /
-								 * bottom) — `@pkg/u`'s `p()` only covers the 1/2/4-value
+								 * bottom) — `@sdxc/u`'s `p()` only covers the 1/2/4-value
 								 * logical form.
 								 */
 								raw({ padding: "32px 24px 80px" }),

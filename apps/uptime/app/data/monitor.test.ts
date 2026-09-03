@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { QueueMock } from "@pkg/cloudflare-mocks";
-import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import type { Result } from "@pkg/result";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import type { Result } from "@sdxc/result";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
-import { failure, success } from "@pkg/result";
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import { failure, success } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 

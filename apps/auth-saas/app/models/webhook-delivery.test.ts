@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createD1Database, createEnv } from "@pkg/cloudflare-mocks";
+import { createD1Database, createEnv } from "@sdxc/cloudflare-mocks";
 import { beforeAll, expect, test, vi } from "vitest";
 
 let database = createD1Database();

@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, UsageEvent } from "@pkg/billing";
+import type { Billing, UsageEvent } from "@sdxc/billing";
 
-import { supports } from "@pkg/billing";
-import { logger } from "@pkg/logger";
-import { isFailure } from "@pkg/result";
+import { supports } from "@sdxc/billing";
+import { logger } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 
 import type { PingType } from "~/app/services/analytics";
 

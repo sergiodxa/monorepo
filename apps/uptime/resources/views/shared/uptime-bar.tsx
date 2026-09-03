@@ -13,12 +13,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { hstack } from "@pkg/u/layout";
-import { bs, is, mbe, mbs, minIs } from "@pkg/u/size";
-import { fontSize, nowrap } from "@pkg/u/typography";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { hstack } from "@sdxc/u/layout";
+import { bs, is, mbe, mbs, minIs } from "@sdxc/u/size";
+import { fontSize, nowrap } from "@sdxc/u/typography";
 
 import type { SelectMonitorDailyStats } from "~/database/schema";
 

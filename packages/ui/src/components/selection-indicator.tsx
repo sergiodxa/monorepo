@@ -11,10 +11,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { visibility } from "@pkg/u/effects";
-import { bs, is } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { fg } from "@sdxc/u/color";
+import { visibility } from "@sdxc/u/effects";
+import { bs, is } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 /**

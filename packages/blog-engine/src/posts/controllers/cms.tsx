@@ -8,9 +8,9 @@
  */
 import type { Handle, RemixNode } from "remix/ui";
 
-import { redirect } from "@pkg/http/response";
-import { badRequest, forbidden, notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
+import { redirect } from "@sdxc/http/response";
+import { badRequest, forbidden, notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
 import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

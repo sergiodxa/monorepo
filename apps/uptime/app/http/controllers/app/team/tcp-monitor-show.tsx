@@ -13,12 +13,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { PencilIcon } from "@pkg/icons";
-import { inject } from "@pkg/service-container";
-import { flex, flexWrap, gap, items } from "@pkg/u/layout";
-import { m, mbe, mbs } from "@pkg/u/size";
-import { Badge, Button, LinkButton } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { PencilIcon } from "@sdxc/icons";
+import { inject } from "@sdxc/service-container";
+import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
+import { m, mbe, mbs } from "@sdxc/u/size";
+import { Badge, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

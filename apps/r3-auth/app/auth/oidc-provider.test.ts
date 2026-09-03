@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url, Hex, password, randomBytes, sha256 } from "@pkg/crypto";
-import { JWK } from "@pkg/jwt";
-import { unwrap } from "@pkg/result";
+import { Base64Url, Hex, password, randomBytes, sha256 } from "@sdxc/crypto";
+import { JWK } from "@sdxc/jwt";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";

@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { json } from "@pkg/http/response";
+import { json } from "@sdxc/http/response";
 
 /**
  * Builds a JSON OAuth 2.0 error response with the standard `error`/`error_description`

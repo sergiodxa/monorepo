@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { toDayKey } from "@pkg/dates";
+import { toDayKey } from "@sdxc/dates";
 
 import type { DailyStatsInput } from "~/app/data/monitor-daily-stats";
 import type { MonitorStatus } from "~/database/schema";

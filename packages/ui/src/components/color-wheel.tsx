@@ -11,9 +11,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, outline, outlineStyle } from "@pkg/u/color";
-import { mask, opacity, rounded, shadow, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, pointerEvents, pseudoContent, raw } from "@pkg/u/general";
+import { bg, border, outline, outlineStyle } from "@sdxc/u/color";
+import { mask, opacity, rounded, shadow, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, pointerEvents, pseudoContent, raw } from "@sdxc/u/general";
 import {
 	absolute,
 	appearance,
@@ -23,10 +23,10 @@ import {
 	insIs,
 	inset,
 	relative,
-} from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, m, mbs, minIs, mis } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, m, mbs, minIs, mis } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
 import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction";

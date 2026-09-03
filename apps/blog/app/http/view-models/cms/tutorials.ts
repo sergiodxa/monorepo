@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { slugify } from "@pkg/strings";
+import { slugify } from "@sdxc/strings";
 
 import routes from "~/routes/web";
 

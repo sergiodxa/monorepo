@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { RSS } from "@pkg/rss";
-import { inject } from "@pkg/service-container";
+import { RSS } from "@sdxc/rss";
+import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

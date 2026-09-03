@@ -14,11 +14,11 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, fg } from "@pkg/u/color";
-import { gap, grid, gridTemplate, inlineFlex, items, vstack } from "@pkg/u/layout";
-import { dark, media } from "@pkg/u/responsive";
-import { m, maxIs, mi, pb, pi } from "@pkg/u/size";
-import { font, fontSize, leading, textAlign, weight } from "@pkg/u/typography";
+import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { gap, grid, gridTemplate, inlineFlex, items, vstack } from "@sdxc/u/layout";
+import { dark, media } from "@sdxc/u/responsive";
+import { m, maxIs, mi, pb, pi } from "@sdxc/u/size";
+import { font, fontSize, leading, textAlign, weight } from "@sdxc/u/typography";
 
 namespace MarketingTrustIndicators {
 	/** One headline figure: its icon, the figure itself, and what the figure measures. */

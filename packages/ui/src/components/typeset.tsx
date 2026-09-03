@@ -11,16 +11,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { keyframes } from "@pkg/u/animation";
-import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { block, container } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { at } from "@pkg/u/responsive";
-import { is, maxIs, pb, pi, pis } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
+import { keyframes } from "@sdxc/u/animation";
+import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { block, container } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { at } from "@sdxc/u/responsive";
+import { is, maxIs, pb, pi, pis } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { leading, textAlign, textDecoration, tracking, weight } from "@sdxc/u/typography";
 import { css } from "remix/ui";
 
 import { easings } from "../animations/tokens";

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
+import { redirect } from "@sdxc/http/response";
 import { env } from "cloudflare:workers";
 
 import middleware from "~/app/lib/middleware";

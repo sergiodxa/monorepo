@@ -11,14 +11,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { QueueMock } from "@pkg/cloudflare-mocks";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import billing from "@pkg/billing/middleware";
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
-import { BatchedLogger } from "@pkg/logger";
-import { ServiceContainer } from "@pkg/service-container";
+import billing from "@sdxc/billing/middleware";
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { BatchedLogger } from "@sdxc/logger";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -54,8 +54,8 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`, which `f.object()` rejects
- * as invalid — a real, separately-flagged bug in `@pkg/validate`. This mock
+ * `@sdxc/validate`'s `validate()` flattens `FormData`, which `f.object()` rejects
+ * as invalid — a real, separately-flagged bug in `@sdxc/validate`. This mock
  * forwards the form data unflattened so these tests exercise real branching.
  */
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");

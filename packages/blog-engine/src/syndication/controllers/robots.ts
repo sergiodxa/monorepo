@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { text } from "@pkg/http/response";
+import { text } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import routes from "../../routes";

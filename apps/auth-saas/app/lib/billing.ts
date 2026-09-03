@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BillingError } from "@pkg/billing";
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { BillingError } from "@sdxc/billing";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 /** Our own name for the plan every paying tenant is on, as each call site addresses it. */

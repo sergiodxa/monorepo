@@ -1,4 +1,4 @@
-# @pkg/dates
+# @sdxc/dates
 
 Calendar operations over the platform `Date`, with every human-facing string formatted by `Intl` and every time zone passed in explicitly.
 
@@ -8,14 +8,14 @@ Date code goes wrong in two places. The first is formatting: a library that ship
 
 The second is time zones. "Which day is this" has a different answer in every zone, and on two days a year it has a different answer than the day before in the same zone. Operations that answer a calendar question — `startOfDay`, `startOfWeek`, `diffInDays`, `isSameDay`, `eachDayOfInterval`, `toDayKey` — take the zone as a required argument, so omitting it is a type error rather than a silent assumption of UTC or of whatever zone the server happens to run in. Operations that only move an instant by a fixed length — `addDays`, `add`, `subtract`, `elapsed` — take no zone, because a length of time is the same length everywhere.
 
-Everything is a plain function over `Date`; there are no value types to convert to and from at boundaries. Durations are expressed with [`@pkg/duration`](/packages/duration), the one dependency, so `add(date, "1 hour")` reads as written. Parsing and construction return a [`Result`](/packages/result) rather than an `Invalid Date`. When `Temporal` is available everywhere these functions run, it can back them without any signature changing.
+Everything is a plain function over `Date`; there are no value types to convert to and from at boundaries. Durations are expressed with [`@sdxc/duration`](/packages/duration), the one dependency, so `add(date, "1 hour")` reads as written. Parsing and construction return a [`Result`](/packages/result) rather than an `Invalid Date`. When `Temporal` is available everywhere these functions run, it can back them without any signature changing.
 
 ## Usage
 
 ### Formatting For A Reader
 
 ```typescript
-import { formatDate, formatDateTime, formatRelative, formatTime } from "@pkg/dates";
+import { formatDate, formatDateTime, formatRelative, formatTime } from "@sdxc/dates";
 
 let locale = "en-US";
 let timeZone = "America/New_York";
@@ -29,7 +29,7 @@ formatRelative(publishedAt, { locale }); // "3 days ago"
 ### Calendar Operations
 
 ```typescript
-import { diffInDays, eachDayOfInterval, isSameDay, startOfDay, toDayKey } from "@pkg/dates";
+import { diffInDays, eachDayOfInterval, isSameDay, startOfDay, toDayKey } from "@sdxc/dates";
 
 let timeZone = "America/New_York";
 
@@ -45,7 +45,7 @@ startOfDay(new Date()); // Type error: the zone is not optional
 ### Instant Arithmetic
 
 ```typescript
-import { add, addDays, elapsed, subtract } from "@pkg/dates";
+import { add, addDays, elapsed, subtract } from "@sdxc/dates";
 
 let expiresAt = add(new Date(), "30 days");
 let retryAt = add(new Date(), "250ms");
@@ -60,7 +60,7 @@ logger.info("finished", { ms: elapsed(startedAt) });
 ### A Day Grid
 
 ```typescript
-import { daysOfYear, formatWeekday, groupByWeek, lastNDays } from "@pkg/dates";
+import { daysOfYear, formatWeekday, groupByWeek, lastNDays } from "@sdxc/dates";
 
 let timeZone = "America/New_York";
 
@@ -603,7 +603,7 @@ A closed range of instants. Both ends are inclusive for day enumeration.
 Resolve the reader's zone once, at the edge, and pass it down. Every call site then reads as a statement about that reader's calendar instead of the server's.
 
 ```typescript
-import { formatDate, lastNDays, toDayKey } from "@pkg/dates";
+import { formatDate, lastNDays, toDayKey } from "@sdxc/dates";
 
 function buildDashboard(preferences: { locale: string; timeZone: string }) {
 	let { locale, timeZone } = preferences;
@@ -621,7 +621,7 @@ function buildDashboard(preferences: { locale: string; timeZone: string }) {
 Group rows on the day key rather than on a truncated timestamp, so the aggregation is done in the reader's zone and the grid can look each day up in constant time.
 
 ```typescript
-import { lastNDays, toDayKey } from "@pkg/dates";
+import { lastNDays, toDayKey } from "@sdxc/dates";
 
 function summarize(events: { at: Date; ok: boolean }[], timeZone: string) {
 	let failures = new Map<string, number>();
@@ -645,8 +645,8 @@ function summarize(events: { at: Date; ok: boolean }[], timeZone: string) {
 Turn a day into the half-open instant range a query needs, so a row at 23:59 local is included and a row at the next midnight is not.
 
 ```typescript
-import { endOfDay, fromDayKey, startOfDay } from "@pkg/dates";
-import { isFailure } from "@pkg/result";
+import { endOfDay, fromDayKey, startOfDay } from "@sdxc/dates";
+import { isFailure } from "@sdxc/result";
 
 function dayRange(key: string, timeZone: string) {
 	let result = fromDayKey(key, timeZone);
@@ -664,7 +664,7 @@ function dayRange(key: string, timeZone: string) {
 When a design needs the pieces of a date in their own elements, compose `formatParts()` output instead of reaching for a pattern string. The order still comes from the locale, so it stays correct where the day precedes the month.
 
 ```typescript
-import { formatParts } from "@pkg/dates";
+import { formatParts } from "@sdxc/dates";
 
 function dateCell(date: Date, locale: string, timeZone: string) {
 	let parts = formatParts(date, { locale, timeZone, month: "short", day: "numeric" });
@@ -676,8 +676,8 @@ function dateCell(date: Date, locale: string, timeZone: string) {
 
 ## Related Packages
 
-- [`@pkg/duration`](/packages/duration) - The `DurationInput` type `add()`, `subtract()` and `formatDuration()` accept, and the conversion behind them
-- [`@pkg/result`](/packages/result) - The `Result` type the parsers return, and the `isFailure`/`unwrap` helpers for reading it
+- [`@sdxc/duration`](/packages/duration) - The `DurationInput` type `add()`, `subtract()` and `formatDuration()` accept, and the conversion behind them
+- [`@sdxc/result`](/packages/result) - The `Result` type the parsers return, and the `isFailure`/`unwrap` helpers for reading it
 
 ## Tips
 

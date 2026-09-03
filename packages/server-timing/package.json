@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/server-timing",
+	"name": "@sdxc/server-timing",
 	"version": "0.0.1",
 	"private": true,
 	"license": "MIT",

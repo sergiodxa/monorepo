@@ -11,8 +11,8 @@
 
 import type { Handle } from "remix/ui";
 
-import { ok } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
+import { ok } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";

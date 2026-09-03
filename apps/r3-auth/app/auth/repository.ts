@@ -10,8 +10,8 @@
 
 import type { Database } from "remix/data-table";
 
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";

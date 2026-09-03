@@ -10,16 +10,16 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { block, self } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { fit, height, minHeight, p, width } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, leading, lineClamp, textDecoration } from "@pkg/u/typography";
-import { AspectRatio, Badge, Button, Card, Form } from "@pkg/ui";
-import { RouterProvider } from "@pkg/ui-router";
+import { fg, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { block, self } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { fit, height, minHeight, p, width } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { fontSize, leading, lineClamp, textDecoration } from "@sdxc/u/typography";
+import { AspectRatio, Badge, Button, Card, Form } from "@sdxc/ui";
+import { RouterProvider } from "@sdxc/ui-router";
 import { on } from "remix/ui";
 
 import type { Photo } from "../data/types";

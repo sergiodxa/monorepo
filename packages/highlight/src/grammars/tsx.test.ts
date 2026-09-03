@@ -66,7 +66,7 @@ describe("tsx", () => {
 	});
 
 	test("covers a component exactly", () => {
-		let code = `import { Trans } from "@pkg/i18n/ui";
+		let code = `import { Trans } from "@sdxc/i18n/ui";
 
 // en.json: { "feed.article": "Read <articleLink>{{title}}</articleLink>" }
 function ArticleTeaser(handle: Handle<{ title: string; href: string }>) {

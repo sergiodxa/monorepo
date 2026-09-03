@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { createResource, createToolController, ToolError } from "@pkg/mcp";
+import { createResource, createToolController, ToolError } from "@sdxc/mcp";
 
 import type { Post as PostTypes } from "~/app/repositories/post";
 

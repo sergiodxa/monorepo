@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
-import type { Logger } from "@pkg/logger/request";
+import type { Billing } from "@sdxc/billing";
+import type { Logger } from "@sdxc/logger/request";
 import type { RequestContext } from "remix/router";
 
-import { redirect } from "@pkg/http/response";
-import { Location } from "@pkg/location";
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { redirect } from "@sdxc/http/response";
+import { Location } from "@sdxc/location";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import { Discounts, Product } from "~/app/data/product";

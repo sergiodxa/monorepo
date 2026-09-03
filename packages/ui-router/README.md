@@ -1,10 +1,10 @@
-# @pkg/ui-router
+# @sdxc/ui-router
 
 Client-side routing for Remix UI components using route contracts from `remix/routes`.
 
 ## Overview
 
-`@pkg/ui-router` experiments with the `remix/router` shape on the client. It maps route actions to Remix UI renderers and browser-side submissions while preserving `Request`, URL, params, and method context.
+`@sdxc/ui-router` experiments with the `remix/router` shape on the client. It maps route actions to Remix UI renderers and browser-side submissions while preserving `Request`, URL, params, and method context.
 
 The package reuses `remix/routes` as the source of truth for URL patterns and `remix/route-pattern` for matching. Rendering is delegated to `remix/ui` through `createRoot`, so route handlers can return normal Remix UI JSX.
 
@@ -18,7 +18,7 @@ Route actions may be async. This lets a handler load the data needed to render t
 import type { Handle } from "remix/ui";
 import { route } from "remix/routes";
 
-import { createAction, createRouter } from "@pkg/ui-router";
+import { createAction, createRouter } from "@sdxc/ui-router";
 
 const routes = route({
 	home: "/",
@@ -60,7 +60,7 @@ const mounted = router.mount(document.body);
 ```tsx
 import { route } from "remix/routes";
 
-import { createController, createRouter } from "@pkg/ui-router";
+import { createController, createRouter } from "@sdxc/ui-router";
 
 const routes = route({
 	posts: {
@@ -95,7 +95,7 @@ import type { Handle } from "remix/ui";
 import { addEventListeners, on } from "remix/ui";
 import { form, route } from "remix/routes";
 
-import { RouterProvider, createContextKey, createController, createRouter } from "@pkg/ui-router";
+import { RouterProvider, createContextKey, createController, createRouter } from "@sdxc/ui-router";
 
 const routes = route({
 	contact: form("contact"),
@@ -153,7 +153,7 @@ router.map(
 Middleware can run globally on the router, on every direct action in a controller, or on a single action object. Middleware receives the same mutable context as actions and can either return a result to short-circuit or call `next()`.
 
 ```tsx
-import { createAction, createContextKey, createController, createRouter } from "@pkg/ui-router";
+import { createAction, createContextKey, createController, createRouter } from "@sdxc/ui-router";
 
 const CurrentUser = createContextKey<{ id: string }>();
 
@@ -206,7 +206,7 @@ Every rendered route is wrapped in `RouterProvider`, a Remix UI component that e
 ```tsx
 import type { Handle } from "remix/ui";
 
-import { RouterProvider } from "@pkg/ui-router";
+import { RouterProvider } from "@sdxc/ui-router";
 
 function BackButton(handle: Handle) {
 	let router = handle.context.get(RouterProvider);
@@ -594,7 +594,7 @@ export const routes = route({
 });
 ```
 
-Server code can still use `remix/router` to return `Response` objects, while browser-only entry points can use `@pkg/ui-router` to render Remix UI components for the same URL patterns.
+Server code can still use `remix/router` to return `Response` objects, while browser-only entry points can use `@sdxc/ui-router` to render Remix UI components for the same URL patterns.
 
 ## Tips
 

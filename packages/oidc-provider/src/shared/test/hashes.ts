@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url, randomBytes } from "@pkg/crypto";
+import { Base64Url, randomBytes } from "@sdxc/crypto";
 
 /** Iteration count standing in for one an earlier policy would have recorded. */
 const UNDERPOWERED_ITERATIONS = 1_000;

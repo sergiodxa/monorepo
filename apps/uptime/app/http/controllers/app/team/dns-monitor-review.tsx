@@ -11,16 +11,16 @@
 import type { getContext as getContextType } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
-import { notFound } from "@pkg/http/response/html";
-import { IntlProvider } from "@pkg/i18n/ui";
-import { inject } from "@pkg/service-container";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { fg } from "@pkg/u/color";
-import { block, hstack, vstack } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { maxBs, maxIs } from "@pkg/u/size";
-import { fontSize, overflowWrap } from "@pkg/u/typography";
-import { Alert, Button, Checkbox, Description, LinkButton, Table } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { inject } from "@sdxc/service-container";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { fg } from "@sdxc/u/color";
+import { block, hstack, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { maxBs, maxIs } from "@sdxc/u/size";
+import { fontSize, overflowWrap } from "@sdxc/u/typography";
+import { Alert, Button, Checkbox, Description, LinkButton, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

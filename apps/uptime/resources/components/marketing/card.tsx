@@ -11,14 +11,14 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { ArrowRightIcon } from "@pkg/icons";
-import { bg, fg } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { block, flex, gap, inlineFlex, items, justify, vstack } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
-import { bs, is } from "@pkg/u/size";
-import { fontSize, textDecoration, weight } from "@pkg/u/typography";
-import { Card, HeadingScope } from "@pkg/ui";
+import { ArrowRightIcon } from "@sdxc/icons";
+import { bg, fg } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { block, flex, gap, inlineFlex, items, justify, vstack } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { bs, is } from "@sdxc/u/size";
+import { fontSize, textDecoration, weight } from "@sdxc/u/typography";
+import { Card, HeadingScope } from "@sdxc/ui";
 
 namespace MarketingCard {
 	export interface Props {

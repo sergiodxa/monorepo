@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import type { AnyJobDefinition } from "@pkg/jobs";
+import type { AnyJobDefinition } from "@sdxc/jobs";
 
 import { describe, expect, test } from "vitest";
 

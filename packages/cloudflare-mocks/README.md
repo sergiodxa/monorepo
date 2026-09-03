@@ -1,4 +1,4 @@
-# @pkg/cloudflare-mocks
+# @sdxc/cloudflare-mocks
 
 In-memory, behavior-accurate implementations of the Cloudflare bindings used across this monorepo, for tests and local tooling.
 
@@ -28,7 +28,7 @@ in `devDependencies`.
 ### Storage that really stores
 
 ```typescript
-import { createD1Database, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createD1Database, createKVNamespace } from "@sdxc/cloudflare-mocks";
 
 let kv = createKVNamespace();
 await kv.put("user:1", JSON.stringify({ name: "Ada" }), { metadata: { version: 2 } });
@@ -46,7 +46,7 @@ result.meta.changes; // 1, reported by SQLite
 ### Recording what a Worker sent
 
 ```typescript
-import { createQueue } from "@pkg/cloudflare-mocks";
+import { createQueue } from "@sdxc/cloudflare-mocks";
 
 let queue = createQueue<{ type: string; monitorId: string }>();
 await producer.send({ type: "check-http", monitorId: "abc" });
@@ -64,7 +64,12 @@ expect(queue.messages[0]?.attempts).toBe(1);
 ### Assembling an env
 
 ```typescript
-import { createD1Database, createEnv, createKVNamespace, createQueue } from "@pkg/cloudflare-mocks";
+import {
+	createD1Database,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@sdxc/cloudflare-mocks";
 
 let env = createEnv<Env>({
 	DB: createD1Database(),
@@ -82,7 +87,7 @@ is re-read on every access and a test can swap what it resolves to between cases
 ### Deferred work
 
 ```typescript
-import { createExecutionContext } from "@pkg/cloudflare-mocks";
+import { createExecutionContext } from "@sdxc/cloudflare-mocks";
 
 let ctx = createExecutionContext();
 await handler(request, env, ctx);
@@ -538,7 +543,7 @@ assert a cursor's identity if it needs to.
 engine — and Bun and Node ship different ones that cannot resolve each other: `bun:sqlite`
 does not exist under Node, and Bun cannot resolve `node:sqlite`.
 
-`@pkg/cloudflare-mocks/sqlite` resolves to whichever the current runtime has, through the
+`@sdxc/cloudflare-mocks/sqlite` resolves to whichever the current runtime has, through the
 `bun` export condition, so the same test file works under `bun test` and under Vitest without
 either module appearing in the other's module graph. Both implementations satisfy one narrow
 interface covering only what the mocks call; the Node one normalizes a missed `get()` to
@@ -650,7 +655,7 @@ are absent by design; add one when code starts needing it.
 The point of a SQL-backed mock is that generated SQL is covered by ordinary unit tests.
 
 ```typescript
-import { createD1Database } from "@pkg/cloudflare-mocks";
+import { createD1Database } from "@sdxc/cloudflare-mocks";
 import { expect, test } from "bun:test";
 
 test("finds a user by email", async () => {
@@ -668,7 +673,7 @@ test("finds a user by email", async () => {
 ## Pattern: testing a producer and its consumer together
 
 ```typescript
-import { createEnv, createKVNamespace, createQueue } from "@pkg/cloudflare-mocks";
+import { createEnv, createKVNamespace, createQueue } from "@sdxc/cloudflare-mocks";
 import { expect, test } from "bun:test";
 
 test("a failed check is retried", async () => {
@@ -688,7 +693,7 @@ test("a failed check is retried", async () => {
 ## Pattern: testing a Durable Object by construction
 
 ```typescript
-import { createDurableObjectState, createEnv } from "@pkg/cloudflare-mocks";
+import { createDurableObjectState, createEnv } from "@sdxc/cloudflare-mocks";
 import { expect, test } from "bun:test";
 
 test("counts within a window", async () => {
@@ -706,7 +711,7 @@ test("counts within a window", async () => {
 ## Pattern: asserting on background work
 
 ```typescript
-import { createExecutionContext, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createExecutionContext, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { expect, test } from "bun:test";
 
 test("caches the response after replying", async () => {
@@ -724,12 +729,12 @@ test("caches the response after replying", async () => {
 
 ## Related Packages
 
-- [`@pkg/data-table-d1`](/packages/data-table-d1) - `DatabaseDriver` over a `D1Database`;
+- [`@sdxc/data-table-d1`](/packages/data-table-d1) - `DatabaseDriver` over a `D1Database`;
   its generated SQL is covered by the parity tests in this package
-- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `DatabaseDriver` over a
+- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `DatabaseDriver` over a
   Durable Object `SqlStorage`, including real transaction atomicity
-- [`@pkg/kv-cache`](/packages/kv-cache) - Caching over a KV namespace
-- [`@pkg/session-storage-kv`](/packages/session-storage-kv) - Session storage over a KV
+- [`@sdxc/kv-cache`](/packages/kv-cache) - Caching over a KV namespace
+- [`@sdxc/session-storage-kv`](/packages/session-storage-kv) - Session storage over a KV
   namespace
 
 ## Tips

@@ -27,7 +27,7 @@
  */
 
 /*
- * The selectors that spend these tiers ship with `@pkg/highlight`, which paints each
+ * The selectors that spend these tiers ship with `@sdxc/highlight`, which paints each
  * token type from a `--highlight-*` property; the block at the end maps one onto the
  * other, so a role and its tier are stated once.
  */

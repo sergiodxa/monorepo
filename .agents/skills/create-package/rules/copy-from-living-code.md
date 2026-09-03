@@ -48,7 +48,7 @@ from-memory HTTP client gets wrong:
 
 - Call the global `fetch` directly. Never add an injectable fetch parameter such as
   `fetchImpl: typeof fetch = fetch`; tests intercept with MSW.
-- Validate untrusted data with `remix/data-schema` through `@pkg/validate`. Do not add Zod.
+- Validate untrusted data with `remix/data-schema` through `@sdxc/validate`. Do not add Zod.
 
 ## Rules
 

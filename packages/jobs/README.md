@@ -1,4 +1,4 @@
-# @pkg/jobs
+# @sdxc/jobs
 
 Background jobs for Cloudflare Queues, declared in one map and run by one dispatcher.
 
@@ -28,7 +28,7 @@ The key is the job's name, and the name is the message `type` — a wire contrac
 messages enqueued by one deploy are consumed by the next.
 
 ```typescript
-import { job, jobs } from "@pkg/jobs";
+import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -47,7 +47,7 @@ Nested keys are dot-joined, so `digests.daily` is that job's name.
 ### Writing a handler
 
 ```typescript
-import { createJobHandler } from "@pkg/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 
@@ -60,7 +60,7 @@ export default createJobHandler(jobs.checkHttp, async (ctx) => {
 ### Wiring the worker
 
 ```typescript
-import { createJobDispatcher } from "@pkg/jobs";
+import { createJobDispatcher } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 
@@ -404,7 +404,7 @@ ctx.set(Database, connect(), { property: "database" });
 ### Endings
 
 Each verb throws its own class. `Job` groups them for `instanceof`, and
-`@pkg/jobs/errors` exports each one individually, which is what a type position
+`@sdxc/jobs/errors` exports each one individually, which is what a type position
 needs.
 
 | Ending             | Thrown by       | What the dispatcher does                       |
@@ -417,8 +417,8 @@ needs.
 **Example:**
 
 ```typescript
-import { Job } from "@pkg/jobs";
-import type { Retry } from "@pkg/jobs/errors";
+import { Job } from "@sdxc/jobs";
+import type { Retry } from "@sdxc/jobs/errors";
 
 function holdFor(error: Retry) {
 	return error.delay;
@@ -451,7 +451,7 @@ what makes an installed property visible to handlers.
 Augmented by an app to name the context its handlers receive.
 
 ```typescript
-declare module "@pkg/jobs" {
+declare module "@sdxc/jobs" {
 	interface JobTypes {
 		context: JobDispatcherContext<typeof dispatcher>;
 	}
@@ -470,7 +470,7 @@ Middleware publishes what handlers read, so a handler names no container and a t
 provides its own.
 
 ```typescript
-import type { JobMiddleware } from "@pkg/jobs";
+import type { JobMiddleware } from "@sdxc/jobs";
 
 import { createContextKey } from "remix/router";
 
@@ -548,7 +548,7 @@ A handler is a function over a context, so a test builds the context and calls i
 queue, no worker, no container.
 
 ```typescript
-import { createJobContext, Job } from "@pkg/jobs";
+import { createJobContext, Job } from "@sdxc/jobs";
 
 import handler from "~/app/jobs/clean";
 import { Database } from "~/app/jobs/middleware/database";
@@ -574,11 +574,11 @@ dispatcher itself uses.
 
 ## Related Packages
 
-- [`@pkg/logger`](/packages/logger) - Batched logging, one entry per job
-- [`@pkg/duration`](/packages/duration) - The duration strings a retry delay and a timeout take
-- [`@pkg/validate`](/packages/validate) - Standard Schema validation, used to parse a payload
-- [`@pkg/cron`](/packages/cron) - Parses the cron a job declares, and rejects one the platform would not accept
-- [`@pkg/cloudflare-mocks`](/packages/cloudflare-mocks) - Queue binding that drives a consumer in tests
+- [`@sdxc/logger`](/packages/logger) - Batched logging, one entry per job
+- [`@sdxc/duration`](/packages/duration) - The duration strings a retry delay and a timeout take
+- [`@sdxc/validate`](/packages/validate) - Standard Schema validation, used to parse a payload
+- [`@sdxc/cron`](/packages/cron) - Parses the cron a job declares, and rejects one the platform would not accept
+- [`@sdxc/cloudflare-mocks`](/packages/cloudflare-mocks) - Queue binding that drives a consumer in tests
 
 ## Tips
 

@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
+import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
-import { conflict, created, notFound, tooManyRequests } from "@pkg/http/response/json";
-import { CloudflareAdapter, MemoryAdapter } from "@pkg/rate-limit";
-import { rateLimit } from "@pkg/rate-limit/middleware";
-import { getServiceContainer } from "@pkg/service-container";
+import { conflict, created, notFound, tooManyRequests } from "@sdxc/http/response/json";
+import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { getServiceContainer } from "@sdxc/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { Base64Url } from "@pkg/crypto";
-import { failure, isFailure, success } from "@pkg/result";
+import { Base64Url } from "@sdxc/crypto";
+import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 import { InvalidCursorError, UnencodableCursorValueError } from "./errors";

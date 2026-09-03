@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RelyingParty } from "@pkg/auth/relying-party";
+import type { RelyingParty } from "@sdxc/auth/relying-party";
 
-import { AuthError, AuthErrorCode } from "@pkg/auth/auth-error";
-import { createKVNamespace } from "@pkg/cloudflare-mocks";
-import { JWK, JWT } from "@pkg/jwt";
+import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
+import { createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { JWK, JWT } from "@sdxc/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createCookie } from "remix/cookie";

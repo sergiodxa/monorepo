@@ -4,7 +4,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { XML } from "@pkg/xml";
+import type { XML } from "@sdxc/xml";
 
 import type { Sitemap } from "../index";
 

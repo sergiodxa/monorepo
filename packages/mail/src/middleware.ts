@@ -11,7 +11,7 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import type { Address, Transport } from "./types";
 

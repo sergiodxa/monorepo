@@ -15,7 +15,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { forbidden, notFound, redirect } from "@pkg/response";
+import { forbidden, notFound, redirect } from "@sdxc/response";
 import { createCookie } from "remix/cookie";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";

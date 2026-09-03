@@ -3,14 +3,14 @@
  * timestamp and one HMAC-SHA256 per active secret, computed over the timestamp
  * and the exact body joined by a dot. Verification lives here so the endpoint
  * only asks whether a delivery is authentic; the primitives come from
- * `@pkg/crypto`, since this scheme is Stripe's own and not Standard Webhooks.
+ * `@sdxc/crypto`, since this scheme is Stripe's own and not Standard Webhooks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Hex, hmac, timingSafeEqual } from "@pkg/crypto";
-import { unwrap } from "@pkg/result";
+import { Hex, hmac, timingSafeEqual } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 
 /** Header a delivery carries its timestamp and MACs in. */
 export const SIGNATURE_HEADER = "stripe-signature";

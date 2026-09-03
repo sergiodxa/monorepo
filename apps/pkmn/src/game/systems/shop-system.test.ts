@@ -1,4 +1,4 @@
-import { unwrap } from "@pkg/result";
+import { unwrap } from "@sdxc/result";
 /**
  * Verifies the shop system's money and transaction behaviors: buying,
  * selling, and the generic money adjustment, using a tiny inline content

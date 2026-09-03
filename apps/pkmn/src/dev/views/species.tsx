@@ -11,7 +11,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import { css, on } from "remix/ui";
 
 import type { Species } from "~/game/data/species";

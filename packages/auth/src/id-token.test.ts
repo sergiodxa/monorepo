@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK } from "@pkg/jwt";
+import { JWK } from "@sdxc/jwt";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { AUTHENTICATION_METHODS, IdToken } from "./id-token";

@@ -9,7 +9,7 @@
 
 import { DatabaseSync as SqliteDatabase } from "node:sqlite";
 
-import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
 import { afterEach, describe, expect, test, vi } from "vitest";
 

@@ -42,7 +42,7 @@ export function resolveBox(
 		result[`${prefix}BlockEnd`] = spacing(blockEnd);
 		result[`${prefix}InlineStart`] = spacing(inlineStart);
 	} else {
-		throw new Error(`@pkg/u: expected 1, 2, or 4 values, got ${values.length}`);
+		throw new Error(`@sdxc/u: expected 1, 2, or 4 values, got ${values.length}`);
 	}
 	return result as CSSStyles;
 }

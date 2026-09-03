@@ -11,14 +11,14 @@
 
 import type { Handle } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { inlineFlex, items } from "@pkg/u/layout";
-import { p } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { COPY_COMMAND, copyToClipboard } from "@pkg/ui/mixins";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { inlineFlex, items } from "@sdxc/u/layout";
+import { p } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/ui";
 
 /** How long the confirmation label stays before the button reads as copyable again. */

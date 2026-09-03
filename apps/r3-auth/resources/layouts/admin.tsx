@@ -13,15 +13,15 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { flex, flexCol, flexWrap, grow, insBs, items, justify, sticky } from "@pkg/u/layout";
-import { at, dark } from "@pkg/u/responsive";
-import { is, m, maxIs, mbs, mis, p } from "@pkg/u/size";
-import { z } from "@pkg/u/stacking";
-import { when } from "@pkg/u/state";
-import { text } from "@pkg/u/typography";
-import { Breadcrumbs, Button, Form, Heading, LinkButton, NavLink, Toolbar } from "@pkg/ui";
+import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexCol, flexWrap, grow, insBs, items, justify, sticky } from "@sdxc/u/layout";
+import { at, dark } from "@sdxc/u/responsive";
+import { is, m, maxIs, mbs, mis, p } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
+import { Breadcrumbs, Button, Form, Heading, LinkButton, NavLink, Toolbar } from "@sdxc/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

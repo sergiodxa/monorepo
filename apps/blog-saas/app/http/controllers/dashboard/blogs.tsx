@@ -6,10 +6,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { HostnameClient } from "@pkg/hostname";
-import { redirect } from "@pkg/http/response";
-import { badRequest, notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
+import { HostnameClient } from "@sdxc/hostname";
+import { redirect } from "@sdxc/http/response";
+import { badRequest, notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Container, ServiceProvider } from "@pkg/service-container";
+import type { Container, ServiceProvider } from "@sdxc/service-container";
 
 import { env } from "cloudflare:workers";
 

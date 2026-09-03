@@ -12,14 +12,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Transport } from "@pkg/mail";
+import type { Transport } from "@sdxc/mail";
 
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
-import { Mailer, MailError } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { failure } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
+import { Mailer, MailError } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { failure } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 

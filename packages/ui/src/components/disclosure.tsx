@@ -12,15 +12,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, fg, outline } from "@pkg/u/color";
-import { opacity, roundedCorner, rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, listStyle, raw } from "@pkg/u/general";
-import { flex, flexCol, gap, hidden, interpolateSize, items } from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { bs, is, m, pb, pi } from "@pkg/u/size";
-import { detailsContent, hover, when } from "@pkg/u/state";
-import { textAlign, weight } from "@pkg/u/typography";
+import { bg, borderEdge, fg, outline } from "@sdxc/u/color";
+import { opacity, roundedCorner, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, listStyle, raw } from "@sdxc/u/general";
+import { flex, flexCol, gap, hidden, interpolateSize, items } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, m, pb, pi } from "@sdxc/u/size";
+import { detailsContent, hover, when } from "@sdxc/u/state";
+import { textAlign, weight } from "@sdxc/u/typography";
 
 import { panelChrome } from "../styles/panel-chrome";
 

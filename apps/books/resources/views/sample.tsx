@@ -10,8 +10,8 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { media } from "@pkg/u/responsive";
-import { maxIs, mi, pb, pi } from "@pkg/u/size";
+import { media } from "@sdxc/u/responsive";
+import { maxIs, mi, pb, pi } from "@sdxc/u/size";
 
 import type { SubscribeForm } from "~/resources/components/subscribe-form";
 

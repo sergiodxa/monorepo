@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { WebhookDelivery as BillingDelivery, WebhookStore } from "@pkg/billing";
+import type { WebhookDelivery as BillingDelivery, WebhookStore } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
 import { getTableName } from "remix/data-table";

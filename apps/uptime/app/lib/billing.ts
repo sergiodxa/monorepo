@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 /** Our own name for the subscription a paying team's owner holds, and the only thing sold. */

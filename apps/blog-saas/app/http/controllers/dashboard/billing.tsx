@@ -6,10 +6,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { supports } from "@pkg/billing";
-import { redirect } from "@pkg/http/response";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
+import { supports } from "@sdxc/billing";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";

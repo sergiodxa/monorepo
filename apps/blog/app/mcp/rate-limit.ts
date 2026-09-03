@@ -10,8 +10,8 @@
 
 import type { Middleware } from "remix/router";
 
-import { CloudflareAdapter } from "@pkg/rate-limit";
-import { rateLimit } from "@pkg/rate-limit/middleware";
+import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 /**
  * Requests one caller may spend per {@link WINDOW}.

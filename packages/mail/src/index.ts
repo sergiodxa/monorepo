@@ -43,6 +43,6 @@ export type Email = EmailContract;
 /**
  * Layout kit for email bodies, addressed as `Email.*` because this namespace
  * shares its identifier with the `Email` type contract above. `Markdown` and
- * `CodeBlock` live behind `@pkg/mail/markdown` instead, shipped only where imported.
+ * `CodeBlock` live behind `@sdxc/mail/markdown` instead, shipped only where imported.
  */
 export const Email = EmailComponents;

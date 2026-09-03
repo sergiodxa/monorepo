@@ -1,4 +1,4 @@
-# @pkg/icons
+# @sdxc/icons
 
 [Lucide](https://lucide.dev) icons as `remix/ui` components, mirroring how `lucide-react` exposes icons for React.
 
@@ -13,7 +13,7 @@ Icons are generated ahead of time by `scripts/generate-icons.ts` and checked int
 ### Basic Example
 
 ```tsx
-import { HeartIcon } from "@pkg/icons";
+import { HeartIcon } from "@sdxc/icons";
 
 function LikeButton() {
 	return () => (
@@ -28,7 +28,7 @@ function LikeButton() {
 ### Customizing color and stroke width
 
 ```tsx
-import { CircleAlertIcon } from "@pkg/icons";
+import { CircleAlertIcon } from "@sdxc/icons";
 
 function ErrorBanner() {
 	return () => <CircleAlertIcon color="crimson" strokeWidth={1.5} className="banner-icon" />;
@@ -40,7 +40,7 @@ function ErrorBanner() {
 By default, icons render with `aria-hidden="true"` since they're usually paired with visible text. Pass an accessible name to make one stand alone:
 
 ```tsx
-import { TrashIcon } from "@pkg/icons";
+import { TrashIcon } from "@sdxc/icons";
 
 function DeleteButton() {
 	return () => (
@@ -56,7 +56,7 @@ function DeleteButton() {
 When the icon isn't known until runtime — driven by a CMS field, a config value, or user data — use `<Icon name />` instead of importing a specific icon component. `name` is typechecked against every icon in the catalog:
 
 ```tsx
-import { Icon } from "@pkg/icons";
+import { Icon } from "@sdxc/icons";
 
 function NavLink({ props }: Handle<{ iconName: IconName; label: string }>) {
 	return () => (
@@ -125,7 +125,7 @@ Builds a `remix/ui` icon component from a Lucide icon name and its node data. Us
 **Example:**
 
 ```typescript
-import { createLucideIcon } from "@pkg/icons";
+import { createLucideIcon } from "@sdxc/icons";
 
 let CustomIcon = createLucideIcon("custom", [["path", { d: "M4 4h16v16H4z" }]]);
 ```
@@ -187,11 +187,11 @@ This clears and rewrites `src/icons/`, `src/registry.ts`, `src/icon-names.ts`, a
 
 ## Related Packages
 
-- [`@pkg/markdown/client`](/packages/markdown) - Renders Markdoc content as `remix/ui` components, the same component model icons use here.
+- [`@sdxc/markdown/client`](/packages/markdown) - Renders Markdoc content as `remix/ui` components, the same component model icons use here.
 
 ## Tips
 
-1. **Import only what you use** - Each icon is its own module (`sideEffects: false`), so bundlers tree-shake unused icons as long as you import by name from `@pkg/icons` rather than a wildcard.
+1. **Import only what you use** - Each icon is its own module (`sideEffects: false`), so bundlers tree-shake unused icons as long as you import by name from `@sdxc/icons` rather than a wildcard.
 2. **Icons are stateless** - `createLucideIcon` never calls `handle.update()`, so an icon's props are read fresh on every render; there's no internal state to worry about.
 3. **Don't edit generated files** - Everything under `src/icons/`, `src/registry.ts`, `src/icon-names.ts`, and `src/index.ts` is overwritten by `bun run generate`; add new/custom icons via `createLucideIcon` in your own app code instead.
 4. **Prefer a specific `<XyzIcon />` when you know the icon at code time** - `<Icon name />` is for genuinely dynamic, data-driven icon names; a direct import is simpler and reads better everywhere else.

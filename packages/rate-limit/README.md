@@ -1,4 +1,4 @@
-# @pkg/rate-limit
+# @sdxc/rate-limit
 
 Adapter-based rate limiting: four counting backends behind one contract, plus a middleware that emits the standard response headers.
 
@@ -6,7 +6,7 @@ Adapter-based rate limiting: four counting backends behind one contract, plus a 
 
 Rate limiting has two parts that get tangled together: deciding whether a request fits inside a limit, and telling the client what happened. This package separates them. An `Adapter` counts attempts against a key and answers a `RateLimitDecision`; a middleware spends that budget for a request and serializes the decision into the IETF draft `RateLimit` fields. Because the counting is behind an interface, the same limit can run on a Cloudflare rate limiter binding, on Workers KV, on a SQL table through `remix/data-table`, or in process — chosen per endpoint rather than once for the whole system.
 
-Windows are expressed with [`@pkg/duration`](/packages/duration), so `"10 seconds"` and `"1 minute"` are typed values instead of bare numbers whose unit you have to remember. Failures come back as a [`Result`](/packages/result) rather than an exception, because an unreachable counter store is an expected operational state, not a bug: the caller decides whether the request is allowed through (fail open, the default) or refused (fail closed).
+Windows are expressed with [`@sdxc/duration`](/packages/duration), so `"10 seconds"` and `"1 minute"` are typed values instead of bare numbers whose unit you have to remember. Failures come back as a [`Result`](/packages/result) rather than an exception, because an unreachable counter store is an expected operational state, not a bug: the caller decides whether the request is allowed through (fail open, the default) or refused (fail closed).
 
 The headers are only ever as truthful as the backend. A field the adapter cannot compute is left out entirely — a binding-backed limit advertises `limit` and `reset` and stays silent about `remaining`, rather than reporting a number nobody measured.
 
@@ -15,8 +15,8 @@ The headers are only ever as truthful as the backend. A field the adapter cannot
 ### Protecting Routes
 
 ```typescript
-import { CloudflareAdapter } from "@pkg/rate-limit";
-import { rateLimit } from "@pkg/rate-limit/middleware";
+import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 router.use(
 	rateLimit({
@@ -55,7 +55,7 @@ rateLimit({
 Not every protected path is a route. The adapter needs no request, so jobs, queue consumers, and outbound-call budgets use it unchanged:
 
 ```typescript
-import { isSuccess } from "@pkg/result";
+import { isSuccess } from "@sdxc/result";
 
 let result = await adapter.consume(`alerts:${teamId}`);
 if (isSuccess(result) && !result.data.allowed) return skipDelivery();
@@ -66,8 +66,8 @@ if (isSuccess(result) && !result.data.allowed) return skipDelivery();
 `MemoryAdapter` counts in process, so a test needs no binding, no namespace, and no database:
 
 ```typescript
-import { MemoryAdapter } from "@pkg/rate-limit";
-import { rateLimit } from "@pkg/rate-limit/middleware";
+import { MemoryAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 let middleware = rateLimit({ adapter, prefix: "test", key: () => "client" });
@@ -83,7 +83,7 @@ Pin the clock with `setSystemTime` from `bun:test` when a case asserts an exact 
 
 ### `rateLimit(options: RateLimitMiddlewareOptions): Middleware`
 
-Creates a middleware that counts the request, refuses it when the budget is gone, and annotates the response with the decision. Exported from `@pkg/rate-limit/middleware`.
+Creates a middleware that counts the request, refuses it when the budget is gone, and annotates the response with the decision. Exported from `@sdxc/rate-limit/middleware`.
 
 **Parameters:**
 
@@ -339,7 +339,7 @@ Either way the failure is logged — `rate_limit.unavailable`, with the backend 
 `DataTableAdapter` deletes a bucket's aged-out rows when that bucket is next consumed. A bucket that goes quiet keeps its last rows, so a table that accumulates many one-off keys wants a periodic sweep:
 
 ```typescript
-import { rateLimitHits } from "@pkg/rate-limit";
+import { rateLimitHits } from "@sdxc/rate-limit";
 import { lt } from "remix/data-table";
 
 await db.deleteMany(rateLimitHits, { where: lt("created_at", Date.now() - toMs("1 hour")) });
@@ -347,10 +347,10 @@ await db.deleteMany(rateLimitHits, { where: lt("created_at", Date.now() - toMs("
 
 ## Related Packages
 
-- [`@pkg/duration`](/packages/duration) - The `DurationInput` every window is expressed in
-- [`@pkg/result`](/packages/result) - The `Result` adapters report failures with, and the `isSuccess`/`isFailure`/`unwrap` helpers for reading them
-- [`@pkg/get-client-ip`](/packages/get-client-ip) - The default key derivation
-- [`@pkg/http`](/packages/http) - Builds the `429` JSON response
+- [`@sdxc/duration`](/packages/duration) - The `DurationInput` every window is expressed in
+- [`@sdxc/result`](/packages/result) - The `Result` adapters report failures with, and the `isSuccess`/`isFailure`/`unwrap` helpers for reading them
+- [`@sdxc/get-client-ip`](/packages/get-client-ip) - The default key derivation
+- [`@sdxc/http`](/packages/http) - Builds the `429` JSON response
 
 ## Tips
 

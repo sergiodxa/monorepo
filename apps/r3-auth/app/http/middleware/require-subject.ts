@@ -10,8 +10,8 @@
 
 import type { Middleware } from "remix/router";
 
-import { redirect } from "@pkg/http/response";
-import { getServiceContainer } from "@pkg/service-container";
+import { redirect } from "@sdxc/http/response";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import type { SelectSubject } from "~/database/schema";

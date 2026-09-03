@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, type Result } from "@pkg/result";
+import { isFailure, type Result } from "@sdxc/result";
 import { createRouter } from "remix/router";
 
 import { runAtlasExport } from "./atlas-export";

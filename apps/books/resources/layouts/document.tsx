@@ -8,19 +8,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SchemaOrg } from "@pkg/seo";
+import type { SchemaOrg } from "@sdxc/seo";
 import type { Handle, RemixNode } from "remix/ui";
 
-import highlightStyles from "@pkg/highlight/styles.css?url";
-import { Seo } from "@pkg/seo";
-import { bg, colorScheme, fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { vstack } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
-import { minBs } from "@pkg/u/size";
-import { font } from "@pkg/u/typography";
-import resetStyles from "@pkg/ui/reset.css?url";
-import themeStyles from "@pkg/ui/theme.css?url";
+import highlightStyles from "@sdxc/highlight/styles.css?url";
+import { Seo } from "@sdxc/seo";
+import { bg, colorScheme, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { minBs } from "@sdxc/u/size";
+import { font } from "@sdxc/u/typography";
+import resetStyles from "@sdxc/ui/reset.css?url";
+import themeStyles from "@sdxc/ui/theme.css?url";
 
 import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
 import colorStyles from "~/resources/css/colors.css?url";

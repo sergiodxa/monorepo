@@ -11,10 +11,10 @@
 
 import type { Middleware } from "remix/router";
 
-import { unauthorized } from "@pkg/http/response/json";
-import { JWK } from "@pkg/jwt";
-import { TimingCollector } from "@pkg/server-timing";
-import { getServiceContainer } from "@pkg/service-container";
+import { unauthorized } from "@sdxc/http/response/json";
+import { JWK } from "@sdxc/jwt";
+import { TimingCollector } from "@sdxc/server-timing";
+import { getServiceContainer } from "@sdxc/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

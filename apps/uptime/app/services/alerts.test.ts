@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Transport } from "@pkg/mail";
+import type { Transport } from "@sdxc/mail";
 
-import { Mailer, MailError } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
-import { failure } from "@pkg/result";
+import { Mailer, MailError } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";

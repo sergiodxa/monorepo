@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { redirect } from "@pkg/http/response";
-import { isFailure } from "@pkg/result";
-import { validate } from "@pkg/validate";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";

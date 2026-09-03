@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
-import type { Result } from "@pkg/result";
+import type { DurationInput } from "@sdxc/duration";
+import type { Result } from "@sdxc/result";
 import type { Database, TableRow } from "remix/data-table";
 
-import { failure, success } from "@pkg/result";
+import { failure, success } from "@sdxc/result";
 import { and, column as c, eq, gte, lt, table } from "remix/data-table";
 
 import type { Adapter, RateLimitDecision } from "./types";

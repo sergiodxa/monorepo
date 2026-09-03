@@ -1,4 +1,4 @@
-# @pkg/jwt
+# @sdxc/jwt
 
 JWT payload classes and the ES256, RS256 and EdDSA keys that sign them.
 
@@ -17,7 +17,7 @@ An object model over JWT claim sets and the keys that sign them, then, sitting o
 ### Describing A Kind Of Token
 
 ```typescript
-import { JWT } from "@pkg/jwt";
+import { JWT } from "@sdxc/jwt";
 
 export default class IdToken extends JWT {
 	// Narrowed: this token always carries `sub`, so the accessor is `string`, not
@@ -39,7 +39,7 @@ export default class IdToken extends JWT {
 ### Issuing A Token
 
 ```typescript
-import { JWK, JWT } from "@pkg/jwt";
+import { JWK, JWT } from "@sdxc/jwt";
 
 let keys = await JWK.signingKeys(storage);
 
@@ -57,7 +57,7 @@ let signed = await token.sign(JWK.Algorithm.ES256, keys);
 ### Verifying One
 
 ```typescript
-import { JWK } from "@pkg/jwt";
+import { JWK } from "@sdxc/jwt";
 
 // Hold this for the life of the isolate: it caches the fetched key set.
 let keys = JWK.importRemote(new URL(jwksUrl));
@@ -76,7 +76,7 @@ idToken.email; // "ada@example.com"
 ### Publishing The Key Set
 
 ```typescript
-import { JWK } from "@pkg/jwt";
+import { JWK } from "@sdxc/jwt";
 
 let keys = await JWK.signingKeys(storage);
 
@@ -233,13 +233,13 @@ JWK.Algorithm.EdDSA; // "EdDSA"
 The names are also importable on their own, for a caller that needs to read or list them without the key machinery behind them:
 
 ```typescript
-import * as Algorithm from "@pkg/jwt/algorithm";
+import * as Algorithm from "@sdxc/jwt/algorithm";
 
 Object.values(Algorithm); // ["ES256", "RS256", "EdDSA"]
 ```
 
 ```typescript
-import { ES256 } from "@pkg/jwt/algorithm";
+import { ES256 } from "@sdxc/jwt/algorithm";
 ```
 
 That entry point holds the three constants and nothing else, so importing it costs nothing beyond the names.
@@ -432,8 +432,8 @@ Importing is not free — cache the resulting `KeyPair[]` for the life of a requ
 
 ## Related Packages
 
-- [`@pkg/crypto`](/packages/crypto) - WebCrypto primitives for the secrets that are not tokens: password hashing, HMAC, sealed storage
-- [`@pkg/oidc-provider`](/packages/oidc-provider) - OIDC/OAuth2 provider engine, whose token value objects are built on `JWT`
+- [`@sdxc/crypto`](/packages/crypto) - WebCrypto primitives for the secrets that are not tokens: password hashing, HMAC, sealed storage
+- [`@sdxc/oidc-provider`](/packages/oidc-provider) - OIDC/OAuth2 provider engine, whose token value objects are built on `JWT`
 
 ## Tips
 

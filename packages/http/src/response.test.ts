@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Location } from "@pkg/location";
+import { Location } from "@sdxc/location";
 import { describe, expect, test } from "vitest";
 
 import * as ContentType from "./content-type";

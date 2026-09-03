@@ -1,6 +1,6 @@
 /**
  * Client island: a single-value range control matching `Field`'s visual
- * language, built on `@pkg/ui`'s `Slider`, a live readout, and range labels.
+ * language, built on `@sdxc/ui`'s `Slider`, a live readout, and range labels.
  *
  * `Slider` renders the value it's given, so a drag needs the island to hold
  * that value and re-render on each `input` event — that's what keeps the
@@ -15,10 +15,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
-import { fontSize, tabularNums, weight } from "@pkg/u/typography";
-import { Description, Label, Slider } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
+import { fontSize, tabularNums, weight } from "@sdxc/u/typography";
+import { Description, Label, Slider } from "@sdxc/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

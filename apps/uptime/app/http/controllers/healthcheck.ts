@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ok, serviceUnavailable } from "@pkg/http/response/json";
-import { inject } from "@pkg/service-container";
+import { ok, serviceUnavailable } from "@sdxc/http/response/json";
+import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 

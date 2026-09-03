@@ -12,11 +12,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { SearchIcon } from "@pkg/icons";
-import { fg } from "@pkg/u/color";
-import { pointerEvents } from "@pkg/u/general";
-import { absolute, flex, insIs, items, relative } from "@pkg/u/layout";
-import { pis } from "@pkg/u/size";
+import { SearchIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { pointerEvents } from "@sdxc/u/general";
+import { absolute, flex, insIs, items, relative } from "@sdxc/u/layout";
+import { pis } from "@sdxc/u/size";
 
 import { fieldStackLayout } from "../styles/field-stack-layout";
 

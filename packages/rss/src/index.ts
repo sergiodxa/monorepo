@@ -5,8 +5,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 import { buildDocument } from "./lib/build-document";
 import { cloneChannel, cloneItem } from "./lib/clone";

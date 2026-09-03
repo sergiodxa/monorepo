@@ -1,10 +1,10 @@
-# @pkg/xml
+# @sdxc/xml
 
 XML parser and serializer for RSS-style feeds.
 
 ## Overview
 
-`@pkg/xml` parses XML into an `XML` document instance and serializes that instance back into XML text. It is designed for the subset of XML commonly used by RSS and similar feeds: one root element, attributes, nested elements, text nodes, CDATA content, namespace-prefixed names, and XML declarations.
+`@sdxc/xml` parses XML into an `XML` document instance and serializes that instance back into XML text. It is designed for the subset of XML commonly used by RSS and similar feeds: one root element, attributes, nested elements, text nodes, CDATA content, namespace-prefixed names, and XML declarations.
 
 The parser resolves the five entities XML predefines (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`) and numeric character references such as `&#8217;`. A named entity from HTML, such as `&nbsp;`, is reported as a parse error, since a DTD is what declares it.
 
@@ -13,8 +13,8 @@ The parser resolves the five entities XML predefines (`&lt;`, `&gt;`, `&amp;`, `
 ### Parse RSS-Like XML
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse(
 	`<?xml version="1.0"?><rss version="2.0"><channel><title>Feed</title></channel></rss>`,
@@ -29,8 +29,8 @@ let title = xml.query("channel/title");
 ### Serialize XML
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.stringify({
 	declaration: { version: "1.0", encoding: "UTF-8" },
@@ -55,8 +55,8 @@ let xml = result.data;
 ### Serialize an XML Instance
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -68,8 +68,8 @@ let raw = xml.toString();
 ### Stringify an XML Instance
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let parsed = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(parsed)) throw parsed.error;
@@ -101,7 +101,7 @@ Parses XML into an `XML` instance. Whitespace-only text nodes used for indentati
 **Example:**
 
 ```typescript
-import { XML } from "@pkg/xml";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0" />');
 ```
@@ -121,7 +121,7 @@ Serializes an `XML` instance or a root `XML.Element` into XML text.
 **Example:**
 
 ```typescript
-import { XML } from "@pkg/xml";
+import { XML } from "@sdxc/xml";
 
 let result = XML.stringify({
 	name: "rss",
@@ -131,8 +131,8 @@ let result = XML.stringify({
 ```
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let parsed = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(parsed)) throw parsed.error;
@@ -153,8 +153,8 @@ Returns the root element.
 Returns the XML document as plain serializable data.
 
 ```ts
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -168,8 +168,8 @@ let xml = new XML(json);
 Serializes the current `XML` instance into XML text.
 
 ```ts
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -182,8 +182,8 @@ let raw = result.data.toString();
 Returns the first element that matches the predicate in depth-first order.
 
 ```ts
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -196,8 +196,8 @@ let title = result.data.find((element) => element.name === "title");
 Returns every element that matches the predicate in depth-first order.
 
 ```ts
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -210,8 +210,8 @@ let allTitles = result.data.findAll((element) => element.name === "title");
 Returns the first element matching a `/`-delimited path such as `channel/item/title`.
 
 ```ts
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -224,8 +224,8 @@ let title = result.data.query("channel/title");
 Returns all elements matching a `/`-delimited path such as `channel/item`.
 
 ```ts
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse('<rss version="2.0"><channel><item>1</item><item>2</item></channel></rss>');
 if (isFailure(result)) throw result.error;
@@ -280,8 +280,8 @@ type Predicate = XML.Predicate;
 ### Reading RSS Channel Data
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse(xml);
 if (isFailure(result)) throw result.error;
@@ -293,8 +293,8 @@ let items = result.data.queryAll("channel/item");
 ### Predicate-Based Traversal
 
 ```typescript
-import { isFailure } from "@pkg/result";
-import { XML } from "@pkg/xml";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
 
 let result = XML.parse(xml);
 if (isFailure(result)) throw result.error;
@@ -306,7 +306,7 @@ let allLinks = result.data.findAll((element) => element.name === "link");
 ### Preserving Namespaces During Serialization
 
 ```typescript
-import { XML } from "@pkg/xml";
+import { XML } from "@sdxc/xml";
 
 let result = XML.stringify({
 	name: "rss",
@@ -320,8 +320,8 @@ let result = XML.stringify({
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Result helpers used for parse and stringify failures.
-- [`@pkg/rss`](/packages/rss) - RSS builder/parser package that can consume XML feed structures.
+- [`@sdxc/result`](/packages/result) - Result helpers used for parse and stringify failures.
+- [`@sdxc/rss`](/packages/rss) - RSS builder/parser package that can consume XML feed structures.
 
 ## Tips
 

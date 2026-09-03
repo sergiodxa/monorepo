@@ -10,10 +10,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { XIcon } from "@pkg/icons";
-import { bg, border, colorMix, fg } from "@pkg/u/color";
-import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@pkg/u/effects";
-import { pointerEvents, raw } from "@pkg/u/general";
+import { XIcon } from "@sdxc/icons";
+import { bg, border, colorMix, fg } from "@sdxc/u/color";
+import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@sdxc/u/effects";
+import { pointerEvents, raw } from "@sdxc/u/general";
 import {
 	absolute,
 	basis,
@@ -31,12 +31,12 @@ import {
 	justify,
 	relative,
 	shrink,
-} from "@pkg/u/layout";
-import { media, supports } from "@pkg/u/responsive";
-import { is, bs, maxIs, minIs, pb, pi, pie } from "@pkg/u/size";
-import { active, data, hover, when } from "@pkg/u/state";
-import { translateX } from "@pkg/u/transform";
-import { fontSize, leading, weight } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { media, supports } from "@sdxc/u/responsive";
+import { is, bs, maxIs, minIs, pb, pi, pie } from "@sdxc/u/size";
+import { active, data, hover, when } from "@sdxc/u/state";
+import { translateX } from "@sdxc/u/transform";
+import { fontSize, leading, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 import { graphicHostStyle } from "../styles/graphic-host";

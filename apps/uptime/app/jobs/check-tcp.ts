@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { createJobHandler } from "@pkg/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import type { ClaimedTcpMonitor } from "~/app/data/tcp-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";

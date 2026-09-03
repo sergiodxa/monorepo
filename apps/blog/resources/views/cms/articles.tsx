@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@pkg/u/color";
-import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
-import { minBs, p } from "@pkg/u/size";
-import { font, textAlign } from "@pkg/u/typography";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
+import { minBs, p } from "@sdxc/u/size";
+import { font, textAlign } from "@sdxc/u/typography";
 import {
 	Badge,
 	Button,
@@ -25,7 +25,7 @@ import {
 	Modal,
 	Table,
 	TextArea,
-} from "@pkg/ui";
+} from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

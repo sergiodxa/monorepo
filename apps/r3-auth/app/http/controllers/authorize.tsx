@@ -12,13 +12,13 @@
 
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { redirect } from "@pkg/http/response";
-import { badRequest, notFound } from "@pkg/http/response/json";
-import { isFailure } from "@pkg/result";
-import { inject } from "@pkg/service-container";
-import { generateUUID } from "@pkg/uuid";
-import { validate } from "@pkg/validate";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { redirect } from "@sdxc/http/response";
+import { badRequest, notFound } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { inject } from "@sdxc/service-container";
+import { generateUUID } from "@sdxc/uuid";
+import { validate } from "@sdxc/validate";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";

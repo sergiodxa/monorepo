@@ -1,4 +1,4 @@
-import type { MemoryBilling as MemoryBillingType } from "@pkg/billing/providers/memory";
+import type { MemoryBilling as MemoryBillingType } from "@sdxc/billing/providers/memory";
 import type { Database as DatabaseType } from "remix/data-table";
 /**
  * Tests the billing page's markup and its one control: the form stays a document
@@ -11,11 +11,11 @@ import type { Database as DatabaseType } from "remix/data-table";
  */
 import type { Middleware } from "remix/router";
 
-import billingMiddleware from "@pkg/billing/middleware";
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { createEnv } from "@pkg/cloudflare-mocks";
-import { unwrap } from "@pkg/result";
-import { ServiceContainer } from "@pkg/service-container";
+import billingMiddleware from "@sdxc/billing/middleware";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -39,7 +39,7 @@ vi.doMock("cloudflare:workers", () => ({
 let { createTestDatabase } = await import("~/app/test/db");
 let Account = (await import("~/app/models/account")).default;
 let BillingCustomer = (await import("~/app/models/billing-customer")).default;
-let { logger } = await import("@pkg/logger/middleware");
+let { logger } = await import("@sdxc/logger/middleware");
 let { default: billing } = await import("./billing");
 
 let harness: TestDatabase;

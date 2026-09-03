@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@pkg/jwt";
+import { JWT } from "@sdxc/jwt";
 
 import { ACCESS_TOKEN_TTL, ISSUER } from "~/app/config";
 

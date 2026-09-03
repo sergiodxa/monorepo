@@ -67,7 +67,7 @@ export function createFetcher(handler: FetcherHandler): FetcherMock {
 
 		/** Rejects raw socket connections, which have no in-memory equivalent. */
 		connect(): Socket {
-			throw new Error("Fetcher.connect is not implemented by @pkg/cloudflare-mocks");
+			throw new Error("Fetcher.connect is not implemented by @sdxc/cloudflare-mocks");
 		},
 	};
 }

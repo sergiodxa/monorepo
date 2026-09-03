@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { InvalidCronReason } from "@pkg/cron";
-import type { TFunction } from "@pkg/i18n";
+import type { InvalidCronReason } from "@sdxc/cron";
+import type { TFunction } from "@sdxc/i18n";
 
-import { Schedule } from "@pkg/cron";
-import { createTranslator } from "@pkg/i18n";
-import { isFailure, unwrap } from "@pkg/result";
+import { Schedule } from "@sdxc/cron";
+import { createTranslator } from "@sdxc/i18n";
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import de from "~/app/locales/de";

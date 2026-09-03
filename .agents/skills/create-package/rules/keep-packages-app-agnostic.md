@@ -66,7 +66,7 @@ each hostname to the caller's own entity id through `custom_metadata`.
 ```
 
 The rule reaches one step further for public content: articles and tutorials in the blog
-must not mention `@pkg/*` imports or `packages/*` paths either — they use public APIs or
+must not mention `@sdxc/*` imports or `packages/*` paths either — they use public APIs or
 local example modules.
 
 ## Rules

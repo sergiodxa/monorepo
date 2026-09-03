@@ -9,10 +9,10 @@
  */
 import type { Middleware } from "remix/router";
 
-import billing from "@pkg/billing/middleware";
-import { headRequests } from "@pkg/http/middleware/head-requests";
-import { notFound } from "@pkg/http/response/html";
-import { logger } from "@pkg/logger/middleware";
+import billing from "@sdxc/billing/middleware";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { notFound } from "@sdxc/http/response/html";
+import { logger } from "@sdxc/logger/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";

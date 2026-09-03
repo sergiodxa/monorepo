@@ -10,10 +10,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { bs, is } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { Logo as UILogo } from "@pkg/ui";
+import { bg, fg } from "@sdxc/u/color";
+import { bs, is } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { Logo as UILogo } from "@sdxc/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

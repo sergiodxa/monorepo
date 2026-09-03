@@ -2,7 +2,7 @@
  * Pure token resolvers: given a typed token name, return the CSS string a
  * utility should place in a declaration. They only stringify, so component
  * packages needing the same resolution without a mixin can import them
- * directly (`import { spacing } from "@pkg/u"`).
+ * directly (`import { spacing } from "@sdxc/u"`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,7 +53,7 @@ export function color(value: ColorValue | (string & {}), defaultProperty?: strin
 	}
 	let [tone, suffix = defaultProperty] = value.split(".");
 	if (!suffix) {
-		throw new Error(`@pkg/u: color("${value}") has no property and no default was given`);
+		throw new Error(`@sdxc/u: color("${value}") has no property and no default was given`);
 	}
 	let property = COLOR_PROPERTY_ALIASES[suffix] ?? suffix;
 	return varUtility(`ui-${tone}-${property}`);

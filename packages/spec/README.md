@@ -1,4 +1,4 @@
-# @pkg/spec
+# @sdxc/spec
 
 Write down how your app should behave, then run it. `spec` is an **executable
 specification runner**: you describe behavior in `.spec` files — setup, action,
@@ -838,8 +838,8 @@ still need `--concurrency=1`.
 The CLI is the product surface, and its exit codes (0 pass, 1 test failure, 2
 usage/load error) are what you script against. For embedding the runner in
 another program, the package also exports a programmatic `runSuite` and the
-supporting types from `@pkg/spec`; every fallible export returns a
-[`@pkg/result`](/packages/result) `Result`, so parse errors, permission denials,
+supporting types from `@sdxc/spec`; every fallible export returns a
+[`@sdxc/result`](/packages/result) `Result`, so parse errors, permission denials,
 and tool failures are values you branch on, never thrown exceptions.
 
 ### Choosing which capabilities exist
@@ -848,7 +848,7 @@ and tool failures are values you branch on, never thrown exceptions.
 only some:
 
 ```ts
-import { runSuite } from "@pkg/spec";
+import { runSuite } from "@sdxc/spec";
 
 let run = await runSuite({ root: "spec", grants, builtins: ["http", "url", "jwt"] });
 ```
@@ -870,7 +870,7 @@ it is `runTests`, which assumes nothing — the suite, the plugin set, the grant
 and the workspace factory all arrive as arguments:
 
 ```ts
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 import {
 	createHttpPlugin,
 	createJwtPlugin,
@@ -879,7 +879,7 @@ import {
 	loadSources,
 	parseGrants,
 	runTests,
-} from "@pkg/spec/workers";
+} from "@sdxc/spec/workers";
 
 let loaded = loadSources([{ path: "flow.spec", text: source }]);
 if (isFailure(loaded)) return loaded;
@@ -901,7 +901,7 @@ body, a bundled string — and it parses and registers them exactly as
 `loadSuite` does after its directory walk. `createNoFilesystemWorkspace` refuses
 every path, which a run without `fs` and `cli` never asks it to resolve.
 
-The `@pkg/spec/workers` entry point exists because of what a module may
+The `@sdxc/spec/workers` entry point exists because of what a module may
 **import**, not what a run may do: `db` imports Bun's SQL client, and `cli`,
 `browser` and the stdio plugin transport reach for the `Bun` global, so a module
 importing them cannot load in a V8-isolate runtime however carefully the run is
@@ -918,7 +918,7 @@ belongs to the host, not to this package: implement the same tool surface as a
 
 ## Related packages
 
-- [`@pkg/result`](/packages/result) — the `Result` type every fallible export
+- [`@sdxc/result`](/packages/result) — the `Result` type every fallible export
   returns; errors are values, never throws.
-- [`@pkg/duration`](/packages/duration) — parses and validates the duration
+- [`@sdxc/duration`](/packages/duration) — parses and validates the duration
   literals (`10s`, `500ms`) the language accepts.

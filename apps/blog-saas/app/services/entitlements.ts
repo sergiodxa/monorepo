@@ -11,10 +11,10 @@ import type {
 	EntitlementState,
 	EntitlementSubscription,
 	SubscriptionStatus as PlatformStatus,
-} from "@pkg/billing";
+} from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import type { SubscriptionStatus } from "~/app/models/subscription";
 

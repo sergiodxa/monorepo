@@ -9,12 +9,12 @@
  */
 
 import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
-import type { Token } from "@pkg/highlight";
+import type { Token } from "@sdxc/highlight";
 import type { Handle, RemixNode } from "remix/ui";
 
 import Markdoc from "@markdoc/markdoc";
-import { tokenize } from "@pkg/highlight";
-import { fence } from "@pkg/highlight/markdoc";
+import { tokenize } from "@sdxc/highlight";
+import { fence } from "@sdxc/highlight/markdoc";
 
 import { CODE_COLOR, CodeInline, Heading, Hr, Img, Link, MONO_FAMILY, Text } from "./components";
 

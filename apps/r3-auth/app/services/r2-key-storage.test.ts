@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { R2BucketMock } from "@pkg/cloudflare-mocks";
-import type { KeyStorage } from "@pkg/jwt";
+import type { R2BucketMock } from "@sdxc/cloudflare-mocks";
+import type { KeyStorage } from "@sdxc/jwt";
 
-import { createR2Bucket } from "@pkg/cloudflare-mocks";
+import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { createR2KeyStorage } from "~/app/services/r2-key-storage";

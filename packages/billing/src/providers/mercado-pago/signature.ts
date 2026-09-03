@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hmac } from "@pkg/crypto";
-import { isFailure } from "@pkg/result";
+import { hmac } from "@sdxc/crypto";
+import { isFailure } from "@sdxc/result";
 
 /** Header carrying the timestamp and the digest, as `ts=<seconds>,v1=<hex>`. */
 export const SIGNATURE_HEADER = "x-signature";

@@ -10,10 +10,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, fg, outline } from "@pkg/u/color";
-import { rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { listStyle, raw } from "@pkg/u/general";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { listStyle, raw } from "@sdxc/u/general";
 import {
 	boxSizing,
 	flex,
@@ -26,21 +26,21 @@ import {
 	justify,
 	repeat,
 	self,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
-import { height, m, mbe, p } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
-import { translateY } from "@pkg/u/transform";
-import { fontSize, leading, lineClamp, textDecoration, tracking, weight } from "@pkg/u/typography";
-import { Button, Form, Header, Heading, Label, NumberField, Toolbar } from "@pkg/ui";
-import { RouterProvider } from "@pkg/ui-router";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { height, m, mbe, p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { translateY } from "@sdxc/u/transform";
+import { fontSize, leading, lineClamp, textDecoration, tracking, weight } from "@sdxc/u/typography";
+import { Button, Form, Header, Heading, Label, NumberField, Toolbar } from "@sdxc/ui";
+import { RouterProvider } from "@sdxc/ui-router";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
-} from "@pkg/ui/mixins";
-import { panelChrome } from "@pkg/ui/styles";
+} from "@sdxc/ui/mixins";
+import { panelChrome } from "@sdxc/ui/styles";
 import { on } from "remix/ui";
 
 import type { Album } from "../data/types";

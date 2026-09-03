@@ -1,4 +1,4 @@
-# @pkg/billing
+# @sdxc/billing
 
 Vendor-neutral billing: our own models, one provider contract every platform is reached through, a middleware that publishes `context.billing`, and a webhook endpoint that verifies, deduplicates and dispatches deliveries.
 
@@ -14,15 +14,15 @@ Capability groups vary by platform. `portal`, `discounts`, `usage` and `meters` 
 
 ### Entry points
 
-| Entry                                 | Contents                                                                           |
-| ------------------------------------- | ---------------------------------------------------------------------------------- |
-| `@pkg/billing`                        | The models, the `Billing` contract, `BillingError`, `supports()`, `BillingWebhook` |
-| `@pkg/billing/middleware`             | The router middleware publishing `context.billing`, plus `requireEntitlement()`    |
-| `@pkg/billing/providers/polar`        | `PolarBilling`, which answers every group                                          |
-| `@pkg/billing/providers/stripe`       | `StripeBilling`, a deliberately narrow provider                                    |
-| `@pkg/billing/providers/mercado-pago` | `MercadoPagoBilling`, a payment processor rather than a merchant of record         |
-| `@pkg/billing/providers/memory`       | `MemoryBilling`, a full in-memory platform for tests                               |
-| `@pkg/billing/conformance`            | The shared suite every provider must pass, plus one suite per optional capability  |
+| Entry                                  | Contents                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| `@sdxc/billing`                        | The models, the `Billing` contract, `BillingError`, `supports()`, `BillingWebhook` |
+| `@sdxc/billing/middleware`             | The router middleware publishing `context.billing`, plus `requireEntitlement()`    |
+| `@sdxc/billing/providers/polar`        | `PolarBilling`, which answers every group                                          |
+| `@sdxc/billing/providers/stripe`       | `StripeBilling`, a deliberately narrow provider                                    |
+| `@sdxc/billing/providers/mercado-pago` | `MercadoPagoBilling`, a payment processor rather than a merchant of record         |
+| `@sdxc/billing/providers/memory`       | `MemoryBilling`, a full in-memory platform for tests                               |
+| `@sdxc/billing/conformance`            | The shared suite every provider must pass, plus one suite per optional capability  |
 
 Providers live behind their own subpaths and are never re-exported from the root, so a bundle resolves only the provider an app imports. The conformance suite imports `vitest`, so it stays out of the root entry too.
 
@@ -33,9 +33,9 @@ Providers live behind their own subpaths and are never re-exported from the root
 A provider is a class, built once at module scope. Nothing reaches the network in the constructor, so an instance costs no startup work and can be imported anywhere:
 
 ```typescript
-import type { Billing } from "@pkg/billing";
+import type { Billing } from "@sdxc/billing";
 
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 export let billing: Billing = new PolarBilling({
@@ -62,7 +62,7 @@ export type Secret = string | (() => string | Promise<string>);
 The function form is what lets a credential live in a store that is only readable with an `await`, since the constructor runs at module scope where nothing can be awaited:
 
 ```typescript
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 export let polar = new PolarBilling({
@@ -81,7 +81,7 @@ While a signing secret is unset, empty, or unreadable, verification answers `fal
 The middleware is a default export, so the importing app names it. The convention is to name the middleware for the capability and the instance for the backend, which reads as the sentence it is:
 
 ```typescript
-import billing from "@pkg/billing/middleware";
+import billing from "@sdxc/billing/middleware";
 import { createRouter } from "remix/router";
 
 import { polar } from "~/app/services/billing";
@@ -94,7 +94,7 @@ let router = createRouter({
 Handlers then bill without knowing which platform is configured:
 
 ```typescript
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 router.get("/billing/subscription", async (context) => {
 	let state = await context.billing.entitlements.of({ id: customerId });
@@ -110,9 +110,9 @@ router.get("/billing/subscription", async (context) => {
 A job has no request context, so it imports the same instance the middleware publishes. There is no second construction and no second configuration:
 
 ```typescript
-import { supports } from "@pkg/billing";
-import { Job } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
+import { supports } from "@sdxc/billing";
+import { Job } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import { billing } from "~/app/services/billing";
 
@@ -136,8 +136,8 @@ export class IngestUsageJob extends Job {
 `portal`, `discounts`, `usage` and `meters` may be absent. `supports()` is a type guard, so the group is non-optional inside the branch:
 
 ```typescript
-import { supports } from "@pkg/billing";
-import { isFailure } from "@pkg/result";
+import { supports } from "@sdxc/billing";
+import { isFailure } from "@sdxc/result";
 
 if (!supports(context.billing, "meters")) return new Response(null, { status: 404 });
 
@@ -159,8 +159,8 @@ return Response.json({ quantity: reading.data.quantity });
 The package returns a link; the route redirects to it:
 
 ```typescript
-import { redirect } from "@pkg/http/response";
-import { isFailure } from "@pkg/result";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 
 let checkout = await context.billing.checkouts.create({
 	product: "pro",
@@ -182,7 +182,7 @@ return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
 `BillingWebhook` is constructed at module scope and mounted as a route. It reads the body once, verifies the signature, records the delivery with the verdict, skips a replay that already ran, and hands a narrowed event to the handler keyed by its type:
 
 ```typescript
-import { BillingWebhook } from "@pkg/billing";
+import { BillingWebhook } from "@sdxc/billing";
 
 import { polar } from "~/app/services/billing";
 import { syncEntitlements } from "~/app/services/entitlements";
@@ -209,8 +209,8 @@ An event names what changed, not what the new state is. A handler re-reads the e
 `MemoryBilling` is a full implementation of the contract, not a mock: it passes the same conformance suite the real providers do, so state a call writes is state the next call reads.
 
 ```typescript
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { unwrap } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { unwrap } from "@sdxc/result";
 
 let billing = new MemoryBilling({
 	catalog: {
@@ -232,7 +232,7 @@ expect(checkout.orderId).not.toBeNull();
 
 ## API
 
-### `@pkg/billing`
+### `@sdxc/billing`
 
 #### `Billing`
 
@@ -407,7 +407,7 @@ The single failure type inside every billing `Result`.
 Only `rate_limited` is retryable by default. A provider may override `retryable` when it knows better.
 
 ```typescript
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 let result = await billing.customers.create({ email, externalId });
 
@@ -608,7 +608,7 @@ type Secret = string | (() => string | Promise<string>);
 
 The type of every credential option on every provider: the value, or a function resolving it on first use. The function is called once and its answer remembered for the life of the instance, and a failed read is not remembered. See [Configuring a credential](#configuring-a-credential).
 
-### `@pkg/billing/middleware`
+### `@sdxc/billing/middleware`
 
 #### `billing(options: BillingMiddlewareOptions): Middleware` (default export)
 
@@ -622,7 +622,7 @@ Publishes the configured provider as `context.billing`. The module augments `Req
 **Example:**
 
 ```typescript
-import billing from "@pkg/billing/middleware";
+import billing from "@sdxc/billing/middleware";
 
 let router = createRouter({ middleware: [billing({ provider: polar })] });
 ```
@@ -651,7 +651,7 @@ Admits a request only when the projection grants `feature`. The decision comes f
 **Example:**
 
 ```typescript
-import { requireEntitlement } from "@pkg/billing/middleware";
+import { requireEntitlement } from "@sdxc/billing/middleware";
 
 let flowsAction = createAction(routes.flows, {
 	middleware: [requireEntitlement("flow_monitors")],
@@ -674,7 +674,7 @@ interface EntitlementSnapshot {
 
 An `EntitlementState` read back from a platform satisfies this as-is, which is what lets an app project the snapshot into its own tables and feed either shape to the guard.
 
-### `@pkg/billing/providers/polar`
+### `@sdxc/billing/providers/polar`
 
 #### `PolarBilling`
 
@@ -694,7 +694,7 @@ A configured Polar organization, answering every group in the contract — `port
 
 `native` is the client itself, so its verb methods reach any Polar endpoint the contract omits.
 
-### `@pkg/billing/providers/stripe`
+### `@sdxc/billing/providers/stripe`
 
 #### `StripeBilling`
 
@@ -715,7 +715,7 @@ Stripe over its REST API, pinned to a Stripe API version. It answers `customers`
 
 This provider is deliberately narrow. It exists to prove the contract is a shape a second platform fits rather than one platform's API, and `orders.find`, `orders.list` and `customers.list` answer `not_implemented` on purpose.
 
-### `@pkg/billing/providers/mercado-pago`
+### `@sdxc/billing/providers/mercado-pago`
 
 #### `MercadoPagoBilling`
 
@@ -735,7 +735,7 @@ One configured Mercado Pago account. It answers `customers`, `catalog`, `checkou
 A configured product is one of two shapes, because the platform stores no product object for a one-time sale:
 
 ```typescript
-import { MercadoPagoBilling } from "@pkg/billing/providers/mercado-pago";
+import { MercadoPagoBilling } from "@sdxc/billing/providers/mercado-pago";
 
 let mercadoPago = new MercadoPagoBilling({
 	accessToken: env.MERCADO_PAGO_ACCESS_TOKEN,
@@ -750,7 +750,7 @@ A recurring sale names a stored plan and reads its price back, so a price change
 
 Two contract answers are specific to this platform: `customers.find({ externalId })` reports `unsupported`, and `subscriptions.cancel(id, { atPeriodEnd: true })` reports `unsupported` because the platform ends an authorization at once.
 
-### `@pkg/billing/providers/memory`
+### `@sdxc/billing/providers/memory`
 
 #### `MemoryBilling`
 
@@ -824,7 +824,7 @@ let response = await endpoint.handler(new RequestContext(delivery.request));
 
 `native` on this provider is the maps it keeps its state in, for an assertion no contract method covers.
 
-### `@pkg/billing/conformance`
+### `@sdxc/billing/conformance`
 
 The suite that says what a provider is, registered as Vitest tests against whatever the caller constructs. The required core asserts only what every platform genuinely has — including in its fixtures, so nothing in it arranges state through an optional capability — and each optional group has its own function.
 
@@ -855,8 +855,8 @@ Asks the capability question in both directions: a declared group must answer a 
 **Example:**
 
 ```typescript
-import { capabilityConformance, conformance, portalConformance } from "@pkg/billing/conformance";
-import { MemoryBilling } from "@pkg/billing/providers/memory";
+import { capabilityConformance, conformance, portalConformance } from "@sdxc/billing/conformance";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
 
 let options = {
 	name: "MemoryBilling",
@@ -877,7 +877,7 @@ The instance is a module-scope export. A route reads it from the context and a j
 
 ```typescript
 // app/services/billing.ts
-import { PolarBilling } from "@pkg/billing/providers/polar";
+import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 export let polar = new PolarBilling({
@@ -890,7 +890,7 @@ export let polar = new PolarBilling({
 
 ```typescript
 // bootstrap/app.ts
-import billing from "@pkg/billing/middleware";
+import billing from "@sdxc/billing/middleware";
 import { createRouter } from "remix/router";
 
 import checkout from "~/app/http/controllers/billing/checkout";
@@ -913,8 +913,8 @@ The middleware is named for the capability and the instance for the backend, whi
 The package hands back a link and the route owns the redirect. A session with no `url` is no longer payable, so that is checked before redirecting rather than after:
 
 ```typescript
-import { redirect } from "@pkg/http/response";
-import { isFailure } from "@pkg/result";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -983,7 +983,7 @@ export default route({
 
 ```typescript
 // app/http/controllers/billing/webhook.ts
-import { BillingWebhook } from "@pkg/billing";
+import { BillingWebhook } from "@sdxc/billing";
 
 import { polar } from "~/app/services/billing";
 import { syncEntitlements } from "~/app/services/entitlements";
@@ -1017,7 +1017,7 @@ Every handler here does the same thing, and that is the point: it re-reads the e
 
 ```typescript
 // app/services/entitlements.ts
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import { polar } from "~/app/services/billing";
 
@@ -1041,9 +1041,9 @@ Registering handlers for only some event names is normal. An unhandled name and 
 Some billing happens with no request in sight. The job imports the provider, checks the capability, and branches on `retryable` rather than catching:
 
 ```typescript
-import { supports } from "@pkg/billing";
-import { Job } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
+import { supports } from "@sdxc/billing";
+import { Job } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import { polar } from "~/app/services/billing";
 
@@ -1085,8 +1085,8 @@ Chunking to the platform's per-request limit happens inside the provider, so the
 Deliveries get missed, so a periodic reconciliation is expected rather than optional. It is also the only recovery from an `unknown` failure, where an operation may or may not have taken effect:
 
 ```typescript
-import { Job } from "@pkg/jobs";
-import { isFailure } from "@pkg/result";
+import { Job } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import { polar } from "~/app/services/billing";
 
@@ -1119,9 +1119,9 @@ The same loop is what resolves a `usage.ingest` that answered `unknown`: `usage.
 A short page is not the last page. Follow the cursor until it is `null`, and cap the walk so a populated account cannot hang a job:
 
 ```typescript
-import type { Subscription } from "@pkg/billing";
+import type { Subscription } from "@sdxc/billing";
 
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 import { polar } from "~/app/services/billing";
 
@@ -1165,8 +1165,8 @@ let router = createRouter({
 
 ```typescript
 // app/http/controllers/flows.tsx
-import { requireEntitlement } from "@pkg/billing/middleware";
-import { redirect } from "@pkg/http/response";
+import { requireEntitlement } from "@sdxc/billing/middleware";
+import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
@@ -1199,9 +1199,9 @@ Without `onDenied` a denied request answers `403`. The guard publishes the snaps
 Drive `MemoryBilling` through the flow and assert on what it produced. Nothing is mocked, so a change to the contract shows up here rather than in a stale double:
 
 ```typescript
-import { BillingWebhook, MemoryWebhookStore } from "@pkg/billing";
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { unwrap } from "@pkg/result";
+import { BillingWebhook, MemoryWebhookStore } from "@sdxc/billing";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { unwrap } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { expect, test } from "vitest";
 
@@ -1252,8 +1252,8 @@ test("a paid order grants the feature it sells", async () => {
 A platform that is unreachable, rate-limited, or refusing one group is a path worth a test, and `MemoryBilling` arms it on the instance the test is already using. Nothing is wrapped, so the object under test stays the same object:
 
 ```typescript
-import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { isFailure } from "@pkg/result";
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { isFailure } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { syncEntitlements } from "~/app/services/entitlements";
@@ -1280,7 +1280,7 @@ Arm a whole group when the test is about an outage — `billing.fail("customers"
 Implement `Billing`, then register the conformance suites for the required core plus every group the platform actually has:
 
 ```typescript
-import { capabilityConformance, conformance, portalConformance } from "@pkg/billing/conformance";
+import { capabilityConformance, conformance, portalConformance } from "@sdxc/billing/conformance";
 
 import { AcmeBilling } from "./index";
 
@@ -1308,13 +1308,13 @@ Type every credential option as `Secret` and read it through `secretReader` from
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) — the `Result` every billing call reports through
-- [`@pkg/api-client`](/packages/api-client) — the HTTP client base class the network-backed providers extend
-- [`@pkg/webhooks`](/packages/webhooks) — Standard Webhooks signing and verification, used by the providers whose platform follows it
-- [`@pkg/crypto`](/packages/crypto) — the HMAC primitives behind a provider's own signature scheme
-- [`@pkg/validate`](/packages/validate) — validates a platform's response before any mapping runs
-- [`@pkg/jobs`](/packages/jobs) — the base class for the ingestion and reconciliation jobs that bill outside a request
-- [`@pkg/logger`](/packages/logger) — the request logger the webhook endpoint reports through when an app installs one
+- [`@sdxc/result`](/packages/result) — the `Result` every billing call reports through
+- [`@sdxc/api-client`](/packages/api-client) — the HTTP client base class the network-backed providers extend
+- [`@sdxc/webhooks`](/packages/webhooks) — Standard Webhooks signing and verification, used by the providers whose platform follows it
+- [`@sdxc/crypto`](/packages/crypto) — the HMAC primitives behind a provider's own signature scheme
+- [`@sdxc/validate`](/packages/validate) — validates a platform's response before any mapping runs
+- [`@sdxc/jobs`](/packages/jobs) — the base class for the ingestion and reconciliation jobs that bill outside a request
+- [`@sdxc/logger`](/packages/logger) — the request logger the webhook endpoint reports through when an app installs one
 
 ## Tips
 

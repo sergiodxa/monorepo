@@ -13,10 +13,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { ChevronDownIcon } from "@pkg/icons";
-import { bg, border, borderEdge, fg, outline, outlineStyle, outlineWidth } from "@pkg/u/color";
-import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { ChevronDownIcon } from "@sdxc/icons";
+import { bg, border, borderEdge, fg, outline, outlineStyle, outlineWidth } from "@sdxc/u/color";
+import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
 import {
 	appearance,
 	basis,
@@ -27,11 +27,11 @@ import {
 	items,
 	justify,
 	shrink,
-} from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { bs, is, m, p, pb, pi } from "@pkg/u/size";
-import { data, hover, when } from "@pkg/u/state";
-import { text, textAlign, truncate } from "@pkg/u/typography";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, m, p, pb, pi } from "@sdxc/u/size";
+import { data, hover, when } from "@sdxc/u/state";
+import { text, textAlign, truncate } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
 /**

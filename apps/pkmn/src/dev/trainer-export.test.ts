@@ -9,7 +9,7 @@
 import { readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { afterAll, describe, expect, test } from "vitest";
 
 import type { TrainerDefinition } from "~/content/trainers";

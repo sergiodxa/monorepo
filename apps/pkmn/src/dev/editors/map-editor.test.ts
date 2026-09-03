@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { isSuccess } from "@pkg/result";
+import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { loadMap } from "~/presentation/overworld/map-loader";

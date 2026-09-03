@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
-import { createAction } from "@pkg/ui-router";
+import { isFailure } from "@sdxc/result";
+import { createAction } from "@sdxc/ui-router";
 
 import { getAlbums } from "../data/jsonplaceholder";
 import { routes } from "../routes";

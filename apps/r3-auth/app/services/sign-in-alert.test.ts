@@ -12,11 +12,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SentMessage } from "@pkg/mail";
-import type { Result } from "@pkg/result";
+import type { SentMessage } from "@sdxc/mail";
+import type { Result } from "@sdxc/result";
 
-import { MailError } from "@pkg/mail";
-import { failure } from "@pkg/result";
+import { MailError } from "@sdxc/mail";
+import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";

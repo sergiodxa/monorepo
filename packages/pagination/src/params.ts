@@ -11,11 +11,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
-import type { ValidationError as ValidateError } from "@pkg/validate";
+import type { Result } from "@sdxc/result";
+import type { ValidationError as ValidateError } from "@sdxc/validate";
 
-import { failure, success } from "@pkg/result";
-import { ValidationError } from "@pkg/validate";
+import { failure, success } from "@sdxc/result";
+import { ValidationError } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";

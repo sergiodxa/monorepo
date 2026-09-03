@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@pkg/get-client-ip";
-import { redirect } from "@pkg/http/response";
-import { inject } from "@pkg/service-container";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { redirect } from "@sdxc/http/response";
+import { inject } from "@sdxc/service-container";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

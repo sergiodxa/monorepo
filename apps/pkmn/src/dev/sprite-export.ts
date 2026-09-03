@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, type Result, success } from "@pkg/result";
+import { failure, type Result, success } from "@sdxc/result";
 
 /**
  * Allowed shape for a sprite name: a lowercase slug of letters, digits, and

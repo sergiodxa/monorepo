@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { parse as parseDuration } from "@pkg/duration";
-import { failure, isFailure, success } from "@pkg/result";
+import { parse as parseDuration } from "@sdxc/duration";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { SourceFile } from "./source";
 import type { Keyword, Token, TokenKind } from "./tokens";

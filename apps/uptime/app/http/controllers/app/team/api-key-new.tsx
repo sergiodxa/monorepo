@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { gap, grid, gridTemplate, repeat, vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { pis } from "@pkg/u/size";
-import { Button, Checkbox, CheckboxGroup, DateField, Description, TextField } from "@pkg/ui";
+import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { pis } from "@sdxc/u/size";
+import { Button, Checkbox, CheckboxGroup, DateField, Description, TextField } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

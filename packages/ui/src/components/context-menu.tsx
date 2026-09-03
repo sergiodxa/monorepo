@@ -13,10 +13,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { borderEdge, fg, outline } from "@pkg/u/color";
-import { mis, pb, pi, pie } from "@pkg/u/size";
-import { not } from "@pkg/u/state";
-import { text, weight } from "@pkg/u/typography";
+import { borderEdge, fg, outline } from "@sdxc/u/color";
+import { mis, pb, pi, pie } from "@sdxc/u/size";
+import { not } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
 
 import { Menu } from "./menu";
 import { Section } from "./section";

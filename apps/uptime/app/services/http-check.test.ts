@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import {
 	createAnalyticsEngine,
 	createDurableObjectNamespace,
 	createEnv,
-} from "@pkg/cloudflare-mocks";
+} from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ContentCheckRule } from "~/app/data/content-check";

@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Issuer } from "@pkg/auth/issuer";
-import type { Logger } from "@pkg/logger/request";
+import type { Issuer } from "@sdxc/auth/issuer";
+import type { Logger } from "@sdxc/logger/request";
 import type { Middleware } from "remix/router";
 
 import { asyncContext } from "remix/middleware/async-context";

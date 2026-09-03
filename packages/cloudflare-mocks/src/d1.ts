@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
 import { splitSqlStatements } from "./sql-script";
 
@@ -198,7 +198,7 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMoc
 
 	/** Rejects the deprecated whole-database dump, which only ever worked on D1 alpha. */
 	async function dump(): Promise<ArrayBuffer> {
-		throw new Error("D1_ERROR: dump() is not supported by @pkg/cloudflare-mocks");
+		throw new Error("D1_ERROR: dump() is not supported by @sdxc/cloudflare-mocks");
 	}
 
 	/**

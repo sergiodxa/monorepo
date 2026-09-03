@@ -1,4 +1,4 @@
-import { isFailure, isSuccess } from "@pkg/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 /**
  * Covers the multi-map project lifecycle — create, select, rename, delete — and the
  * ordering and id rules each one enforces. The load-bearing guarantee is edit

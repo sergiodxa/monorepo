@@ -36,7 +36,7 @@ import {
 	transition,
 	transitionDuration,
 	when,
-} from "@pkg/u";
+} from "@sdxc/u";
 import { attrs } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";

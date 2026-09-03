@@ -9,9 +9,9 @@
 
 import type { RequestContext } from "remix/router";
 
-import { BillingWebhook } from "@pkg/billing";
-import { isFailure } from "@pkg/result";
-import { getServiceContainer } from "@pkg/service-container";
+import { BillingWebhook } from "@sdxc/billing";
+import { isFailure } from "@sdxc/result";
+import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import { failureFields, polar } from "~/app/lib/billing";

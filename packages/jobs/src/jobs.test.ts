@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { InvalidCronExpression } from "@pkg/cron";
+import { InvalidCronExpression } from "@sdxc/cron";
 import { describe, expect, test } from "vitest";
 
 import { job, jobs } from "./index";

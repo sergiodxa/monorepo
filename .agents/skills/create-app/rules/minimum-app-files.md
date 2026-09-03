@@ -16,7 +16,7 @@ Substitute `team-ops` for the app name and `3006` for the dev port throughout.
 
 - **The old `templates/app` directory rotted precisely because it was a copy**: it still
   pinned `remix@3.0.0-beta.5`, `wrangler@^4.81.1`, and a `/.react-router` ignore entry
-  from a framework the repo left behind, and it depended on no `@pkg/*` at all. Content
+  from a framework the repo left behind, and it depended on no `@sdxc/*` at all. Content
   that lives in a rule gets read and corrected; content that lives in a directory nobody
   runs does not.
 - **Fifteen files is the floor, not the target.** `database/`, `public/`, `app/services/`,
@@ -45,11 +45,11 @@ declares a D1 binding.
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/http": "workspace:*",
-		"@pkg/logger": "workspace:*",
-		"@pkg/result": "workspace:*",
-		"@pkg/u": "workspace:*",
-		"@pkg/ui": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/u": "workspace:*",
+		"@sdxc/ui": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
@@ -227,7 +227,7 @@ export default {
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```
 
-Once the app resolves services through `@pkg/service-container`, the body becomes
+Once the app resolves services through `@sdxc/service-container`, the body becomes
 `return await container.scope(async () => application().fetch(request))` so each request
 gets its own resolution scope.
 
@@ -251,7 +251,7 @@ and not a module-level singleton.
 import type { Middleware, RequestContext } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import logger from "@pkg/logger/middleware";
+import logger from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -405,12 +405,12 @@ and head values; they never build the shell themselves.
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { colorScheme } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { minBs } from "@pkg/u/size";
-import { font } from "@pkg/u/typography";
-import resetStyles from "@pkg/ui/reset.css?url";
-import themeStyles from "@pkg/ui/theme.css?url";
+import { colorScheme } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { minBs } from "@sdxc/u/size";
+import { font } from "@sdxc/u/typography";
+import resetStyles from "@sdxc/ui/reset.css?url";
+import themeStyles from "@sdxc/ui/theme.css?url";
 
 namespace DocumentLayout {
 	export interface Props {

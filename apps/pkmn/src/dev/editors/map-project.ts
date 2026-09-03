@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, isFailure, isSuccess, type Result, success } from "@pkg/result";
+import { failure, isFailure, isSuccess, type Result, success } from "@sdxc/result";
 
 import { MAP_ID_PATTERN, MAX_MAP_ID_LENGTH } from "../map-export";
 

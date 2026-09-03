@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Json } from "@pkg/http/content-type";
-import { logger } from "@pkg/logger";
+import { Json } from "@sdxc/http/content-type";
+import { logger } from "@sdxc/logger";
 import * as s from "remix/data-schema";
 
 const API_URL = "https://api.buttondown.com";

@@ -10,13 +10,13 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { flex, gap, items, justify, shrink } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
-import { bs, is, p } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
-import { Card, HeadingScope } from "@pkg/ui";
+import { bg, fg } from "@sdxc/u/color";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { flex, gap, items, justify, shrink } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { bs, is, p } from "@sdxc/u/size";
+import { fontSize } from "@sdxc/u/typography";
+import { Card, HeadingScope } from "@sdxc/ui";
 
 namespace MarketingFeatureRow {
 	export interface Props {

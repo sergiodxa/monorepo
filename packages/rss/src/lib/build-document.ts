@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { XML } from "@pkg/xml";
+import type { XML } from "@sdxc/xml";
 
 import type { RSS } from "../index";
 

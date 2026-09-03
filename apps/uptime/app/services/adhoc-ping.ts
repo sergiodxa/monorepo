@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "@pkg/billing";
+import type { Billing } from "@sdxc/billing";
 
 import { waitUntil } from "cloudflare:workers";
 

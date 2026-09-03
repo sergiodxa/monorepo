@@ -7,7 +7,7 @@ import { utility } from "../internal/descriptor";
 /**
  * Applies the CSS `content` property, almost always on a `::before`/`::after`
  * pseudo-element. The `pseudo` prefix keeps the name distinct from
- * `@pkg/u/layout`'s `content()`, which sets `align-content`.
+ * `@sdxc/u/layout`'s `content()`, which sets `align-content`.
  *
  * @example u.pseudoContent('""')
  * @example css({ content: '""' })

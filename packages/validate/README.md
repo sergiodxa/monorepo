@@ -1,4 +1,4 @@
-# @pkg/validate
+# @sdxc/validate
 
 Type-safe form and request validation using Standard Schema with Result types.
 
@@ -6,11 +6,11 @@ Type-safe form and request validation using Standard Schema with Result types.
 
 This package provides a unified validation function that works with FormData, Request objects (both form-encoded and JSON), and plain JavaScript objects. It uses the [Standard Schema](https://standardschema.dev) specification, which means it works with any schema validation library that implements the standard, including `remix/data-schema`, Valibot, ArkType, and more.
 
-The validation result is returned as a `Result<T, ValidationError>` type from `@pkg/result`, making error handling explicit and type-safe.
+The validation result is returned as a `Result<T, ValidationError>` type from `@sdxc/result`, making error handling explicit and type-safe.
 
 ## Installation
 
-This package requires `@pkg/result` and works with any Standard Schema-compliant validation library.
+This package requires `@sdxc/result` and works with any Standard Schema-compliant validation library.
 
 ```bash
 bun add remix  # or valibot, arktype, etc.
@@ -21,8 +21,8 @@ bun add remix  # or valibot, arktype, etc.
 ### Basic Example with `remix/data-schema`
 
 ```typescript
-import { validate } from "@pkg/validate";
-import { isSuccess, isFailure } from "@pkg/result";
+import { validate } from "@sdxc/validate";
+import { isSuccess, isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
 
@@ -266,9 +266,9 @@ if (isSuccess(result)) {
 ### Basic Action
 
 ```typescript
-import { validate } from "@pkg/validate";
-import { isFailure } from "@pkg/result";
-import { ok, badRequest } from "@pkg/response";
+import { validate } from "@sdxc/validate";
+import { isFailure } from "@sdxc/result";
+import { ok, badRequest } from "@sdxc/response";
 import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
 
@@ -469,7 +469,7 @@ export let updateUserSchema = s.object({
 
 ```typescript
 // routes/signup.ts
-import { validate } from "@pkg/validate";
+import { validate } from "@sdxc/validate";
 import { userSchema } from "~/schemas";
 
 export async function action({ request }: Route.ActionArgs) {
@@ -620,8 +620,8 @@ The Standard Schema specification allows this package to work with any compliant
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Result type for explicit error handling
-- [`@pkg/response`](/packages/response) - Type-safe response helpers for React Router
+- [`@sdxc/result`](/packages/result) - Result type for explicit error handling
+- [`@sdxc/response`](/packages/response) - Type-safe response helpers for React Router
 - [Standard Schema](https://standardschema.dev) - The specification this package implements
 
 ## Tips

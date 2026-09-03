@@ -11,7 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg } from "@sdxc/u/color";
 import {
 	block,
 	flex,
@@ -23,12 +23,12 @@ import {
 	items,
 	justify,
 	relative,
-} from "@pkg/u/layout";
-import { overflow } from "@pkg/u/overflow";
-import { at, dark } from "@pkg/u/responsive";
-import { is, m, maxIs, minBs, p, pbs } from "@pkg/u/size";
-import { text, textAlign, weight } from "@pkg/u/typography";
-import { Button, Card, Form, Heading, Link, Logo, Separator, Text, TextField } from "@pkg/ui";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { at, dark } from "@sdxc/u/responsive";
+import { is, m, maxIs, minBs, p, pbs } from "@sdxc/u/size";
+import { text, textAlign, weight } from "@sdxc/u/typography";
+import { Button, Card, Form, Heading, Link, Logo, Separator, Text, TextField } from "@sdxc/ui";
 import { css } from "remix/ui";
 
 import routes from "~/routes/web";

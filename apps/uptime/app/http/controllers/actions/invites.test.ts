@@ -10,10 +10,10 @@
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import { createTranslator } from "@pkg/i18n";
-import { MemoryTransport } from "@pkg/mail/memory";
-import mail from "@pkg/mail/middleware";
-import { ServiceContainer } from "@pkg/service-container";
+import { createTranslator } from "@sdxc/i18n";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import mail from "@sdxc/mail/middleware";
+import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -30,7 +30,7 @@ import { invites, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` rejects the flattened `FormData` these schemas expect, failing
+ * `@sdxc/validate`'s `validate()` rejects the flattened `FormData` these schemas expect, failing
  * every submission regardless of validity (a shared-package bug tracked separately). The import
  * below runs after the mock patches it, so tests exercise the actions' real branching.
  */

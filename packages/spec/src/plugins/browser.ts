@@ -12,9 +12,9 @@ import { spawn } from "node:child_process";
 import { accessSync, constants } from "node:fs";
 import { basename, delimiter, join, sep } from "node:path";
 
-import type { Result } from "@pkg/result";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { SpecError } from "../errors";
 import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";

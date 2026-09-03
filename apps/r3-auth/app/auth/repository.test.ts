@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 let kv = createKVNamespace();

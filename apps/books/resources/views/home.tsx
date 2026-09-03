@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { is, maxIs, pb, pi } from "@pkg/u/size";
-import { balance, font, leading, text, weight } from "@pkg/u/typography";
+import { vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, maxIs, pb, pi } from "@sdxc/u/size";
+import { balance, font, leading, text, weight } from "@sdxc/u/typography";
 
 import type { SubscribeForm } from "~/resources/components/subscribe-form";
 

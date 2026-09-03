@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@pkg/i18n";
+import type { TFunction } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
-import { formatDate } from "@pkg/dates";
+import { formatDate } from "@sdxc/dates";
 
 import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";

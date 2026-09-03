@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { password } from "@pkg/crypto";
+import { password } from "@sdxc/crypto";
 
 import type { TestApp } from "~/app/lib/test/http";
 

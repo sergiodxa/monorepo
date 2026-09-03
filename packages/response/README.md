@@ -1,4 +1,4 @@
-# @pkg/response
+# @sdxc/response
 
 Semantic helpers that build real `Response` objects for JSON APIs and redirects.
 
@@ -16,7 +16,7 @@ code first, and TypeScript narrows the parsed body from that same field.
 The return value is a plain `Response`. It can be returned straight out of a
 `remix/router` controller, handed to any fetch handler, or asserted on in a test
 with `response.status` and `await response.json()`. Nothing here is tied to a framework;
-the package's only dependency is [`@pkg/location`](/packages/location), which `redirect`
+the package's only dependency is [`@sdxc/location`](/packages/location), which `redirect`
 uses to accept path-only targets.
 
 ## Usage
@@ -24,8 +24,8 @@ uses to accept path-only targets.
 ### In a controller
 
 ```tsx
-import { conflict, created } from "@pkg/response";
-import { getServiceContainer } from "@pkg/service-container";
+import { conflict, created } from "@sdxc/response";
+import { getServiceContainer } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
@@ -393,10 +393,10 @@ return redirect(routes.monitors.index.href(), { status: redirect.Status.SeeOther
 
 ## Related Packages
 
-- [`@pkg/location`](/packages/location) - path-only URL builder accepted by `redirect`
-- [`@pkg/result`](/packages/result) - Result type for the error handling that precedes an
+- [`@sdxc/location`](/packages/location) - path-only URL builder accepted by `redirect`
+- [`@sdxc/result`](/packages/result) - Result type for the error handling that precedes an
   error response
-- [`@pkg/validate`](/packages/validate) - validation failures that map onto
+- [`@sdxc/validate`](/packages/validate) - validation failures that map onto
   `unprocessableEntity`
 
 ## Tips

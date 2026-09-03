@@ -1,4 +1,4 @@
-# @pkg/mail
+# @sdxc/mail
 
 Transport-agnostic transactional email: a mailer that normalizes messages, pluggable transports, a middleware that publishes `context.email`, and a `remix/ui` rendering layer that produces both body parts.
 
@@ -14,15 +14,15 @@ Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and
 
 ### Entry points
 
-| Entry                  | Contents                                                                            |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| `@pkg/mail`            | Contracts, `Mailer`, `render()`, `buildMimeMessage()`, the `Email` contract and kit |
-| `@pkg/mail/markdown`   | `Markdown` and `CodeBlock`, which carry a parser and a highlighter                  |
-| `@pkg/mail/memory`     | `MemoryTransport`, the recording fake for tests                                     |
-| `@pkg/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
-| `@pkg/mail/middleware` | The router middleware that publishes `context.email`                                |
+| Entry                   | Contents                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `@sdxc/mail`            | Contracts, `Mailer`, `render()`, `buildMimeMessage()`, the `Email` contract and kit |
+| `@sdxc/mail/markdown`   | `Markdown` and `CodeBlock`, which carry a parser and a highlighter                  |
+| `@sdxc/mail/memory`     | `MemoryTransport`, the recording fake for tests                                     |
+| `@sdxc/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
+| `@sdxc/mail/middleware` | The router middleware that publishes `context.email`                                |
 
-Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@pkg/mail/cloudflare` never resolves a platform type. `@pkg/mail/markdown` is split off for the same reason and a different cost: Markdoc and the highlighter are the only heavy dependencies here, and most mail is not markdown.
+Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@sdxc/mail/cloudflare` never resolves a platform type. `@sdxc/mail/markdown` is split off for the same reason and a different cost: Markdoc and the highlighter are the only heavy dependencies here, and most mail is not markdown.
 
 The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their destination, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
 
@@ -31,8 +31,8 @@ The MIME builder is the exception to that split: it ships from the root rather t
 ### Middleware
 
 ```typescript
-import { CloudflareTransport } from "@pkg/mail/cloudflare";
-import mail from "@pkg/mail/middleware";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
+import mail from "@sdxc/mail/middleware";
 import { env } from "cloudflare:workers";
 import { createRouter } from "remix/router";
 
@@ -50,7 +50,7 @@ let router = createRouter({
 Handlers then send without resolving a client or knowing the provider:
 
 ```typescript
-import { isFailure } from "@pkg/result";
+import { isFailure } from "@sdxc/result";
 
 router.post("/invites", async (context) => {
 	let result = await context.email.send({
@@ -70,8 +70,8 @@ router.post("/invites", async (context) => {
 Queue consumers and scheduled handlers have no request context, so they construct the mailer with the same configuration:
 
 ```typescript
-import { Mailer } from "@pkg/mail";
-import { CloudflareTransport } from "@pkg/mail/cloudflare";
+import { Mailer } from "@sdxc/mail";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { env } from "cloudflare:workers";
 
 let mailer = new Mailer({
@@ -88,7 +88,7 @@ let result = await mailer.send(new TeamInviteEmail(invite));
 The Cloudflare transport takes the binding and nothing else. The binding composes the message from structured fields, so the transport assembles no MIME and the app imports no platform class:
 
 ```typescript
-import { CloudflareTransport } from "@pkg/mail/cloudflare";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { env } from "cloudflare:workers";
 
 let transport = new CloudflareTransport(env.EMAIL);
@@ -109,7 +109,7 @@ The binding form decides what the transport may send: an entry with only a `name
 ### Authoring an email as a class
 
 ```tsx
-import type { Email } from "@pkg/mail";
+import type { Email } from "@sdxc/mail";
 
 export class TeamInviteEmail implements Email {
 	constructor(private invite: { team: string; email: string; url: string; t: TFunction }) {}
@@ -133,7 +133,7 @@ The subject is a plain string property and `body()` takes no arguments, because 
 ### Composing a body with the layout kit
 
 ```tsx
-import { Email } from "@pkg/mail";
+import { Email } from "@sdxc/mail";
 
 function TeamInviteBody(handle: Handle<{ team: string; url: string }>) {
 	return () => {
@@ -154,8 +154,8 @@ function TeamInviteBody(handle: Handle<{ team: string; url: string }>) {
 ### Testing without mocking a provider
 
 ```typescript
-import { Mailer } from "@pkg/mail";
-import { MemoryTransport } from "@pkg/mail/memory";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
 
 let transport = new MemoryTransport();
 let mailer = new Mailer({ transport, from: { email: "no-reply@example.com" } });
@@ -169,7 +169,7 @@ expect(transport.last?.text).toContain(invite.url);
 
 ## API
 
-### `@pkg/mail`
+### `@sdxc/mail`
 
 #### `Mailer`
 
@@ -424,11 +424,11 @@ interface SentMessage {
 }
 ```
 
-### `@pkg/mail/markdown`
+### `@sdxc/mail/markdown`
 
 Markdown as an email body, and the highlighted code block it renders fences with. Behind its own entry point because it carries the only heavy dependencies in the package — Markdoc and the highlighter — and most mail is not markdown.
 
-Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: Markdoc renders to HTML and `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The tree is walked here instead, and every node comes out as a component from the kit with its styles already inline. Fences are highlighted during the transform by [`@pkg/highlight`](/packages/highlight)'s Markdoc node, which hands this renderer tokens rather than markup for the same reason.
+Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: Markdoc renders to HTML and `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The tree is walked here instead, and every node comes out as a component from the kit with its styles already inline. Fences are highlighted during the transform by [`@sdxc/highlight`](/packages/highlight)'s Markdoc node, which hands this renderer tokens rather than markup for the same reason.
 
 #### `Markdown`
 
@@ -437,7 +437,7 @@ Renders markdown through the layout kit.
 **Props:** `children` (the markdown source)
 
 ```tsx
-import { Markdown } from "@pkg/mail/markdown";
+import { Markdown } from "@sdxc/mail/markdown";
 
 <Email.Layout title="Release notes">
 	<Markdown>{notes}</Markdown>
@@ -454,7 +454,7 @@ A fenced block of code, highlighted, inside a single-cell table — a `<pre>` wi
 
 The twenty token types collapse to six colours — comment, keyword, string, number, function, punctuation — which is enough for code to read as code in a notification, and few enough that the dark half stays six rules. The map is keyed by the type union, so a type added upstream is a compile error rather than an unpainted run. Rendered through `Markdown`, the fence node has already tokenized and the `tokens` prop carries its work; given `code` alone, the block tokenizes itself. An unknown language renders unpainted rather than failing.
 
-### `@pkg/mail/memory`
+### `@sdxc/mail/memory`
 
 #### `MemoryTransport`
 
@@ -492,7 +492,7 @@ expect(transport.lastMime).toContain("Content-Type: multipart/alternative;");
 
 It is off by default because most tests assert on the normalized message, and assembling MIME for a test that never reads it is wasted work.
 
-### `@pkg/mail/cloudflare`
+### `@sdxc/mail/cloudflare`
 
 #### `CloudflareTransport`
 
@@ -532,7 +532,7 @@ The binding surface is written from the platform's own generated types, not from
 
 `SendEmailBinding`, `SendEmailMessage`, and `SendEmailResult` in `src/cloudflare.ts` are the single seam those assumptions live behind, and they are declared locally rather than taken from an ambient global for exactly that reason: the platform's types only resolve inside a Workers project, so a bare import would fail this package's typecheck and make the transport's tests need a Workers environment. If the platform's surface turns out to differ, the correction is those three declarations and the one `send()` call that uses them.
 
-### `@pkg/mail/middleware`
+### `@sdxc/mail/middleware`
 
 #### `mail(options: MailMiddlewareOptions): Middleware`
 
@@ -593,10 +593,10 @@ Emails, services, and tests are untouched, which also makes a switch reversible.
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) — the `Result` type every send outcome is reported as
-- [`@pkg/service-container`](/packages/service-container) — where an app registers the provider client a transport is constructed with
-- [`@pkg/logger`](/packages/logger) — the request logger the middleware reports deferred-send failures through
-- [`@pkg/i18n`](/packages/i18n) — supplies the translator an email class uses for its subject; this package never depends on it
+- [`@sdxc/result`](/packages/result) — the `Result` type every send outcome is reported as
+- [`@sdxc/service-container`](/packages/service-container) — where an app registers the provider client a transport is constructed with
+- [`@sdxc/logger`](/packages/logger) — the request logger the middleware reports deferred-send failures through
+- [`@sdxc/i18n`](/packages/i18n) — supplies the translator an email class uses for its subject; this package never depends on it
 
 ## Tips
 

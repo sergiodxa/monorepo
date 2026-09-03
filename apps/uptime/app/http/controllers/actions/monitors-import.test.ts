@@ -10,11 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { QueueMock } from "@pkg/cloudflare-mocks";
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { Middleware } from "remix/router";
 
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
-import { ServiceContainer } from "@pkg/service-container";
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";

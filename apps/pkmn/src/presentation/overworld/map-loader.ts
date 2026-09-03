@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { failure, type Result, success } from "@pkg/result";
+import { failure, type Result, success } from "@sdxc/result";
 import { parseSafe } from "remix/data-schema";
 
 import { TILE_SIZE } from "../core/loop";

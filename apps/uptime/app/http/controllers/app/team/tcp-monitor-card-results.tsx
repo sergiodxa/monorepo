@@ -13,11 +13,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { notFound } from "@pkg/http/response/html";
-import { inject } from "@pkg/service-container";
-import { flex, flexWrap, gap } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
-import { Badge, Empty, Table } from "@pkg/ui";
+import { notFound } from "@sdxc/http/response/html";
+import { inject } from "@sdxc/service-container";
+import { flex, flexWrap, gap } from "@sdxc/u/layout";
+import { mbe } from "@sdxc/u/size";
+import { Badge, Empty, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";

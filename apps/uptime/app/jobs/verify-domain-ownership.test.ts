@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobContext } from "@pkg/jobs";
-import { BatchedLogger } from "@pkg/logger";
+import { createJobContext } from "@sdxc/jobs";
+import { BatchedLogger } from "@sdxc/logger";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";

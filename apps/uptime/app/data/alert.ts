@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@pkg/uuid";
+import { generateUUID } from "@sdxc/uuid";
 
 import type { MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { InsertAlert } from "~/database/schema";

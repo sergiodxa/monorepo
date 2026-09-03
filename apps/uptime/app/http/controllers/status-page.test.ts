@@ -17,9 +17,9 @@ import {
 	createEnv,
 	createKVNamespace,
 	createQueue,
-} from "@pkg/cloudflare-mocks";
-import { createTranslator } from "@pkg/i18n";
-import { ServiceContainer } from "@pkg/service-container";
+} from "@sdxc/cloudflare-mocks";
+import { createTranslator } from "@sdxc/i18n";
+import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";

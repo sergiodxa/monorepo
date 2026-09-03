@@ -2,13 +2,13 @@
  * Translator configuration for the send paths with no request behind them — a queue
  * message or a scheduled sweep — where `ctx.i18next` does not exist. It names the app's
  * locale bundle, the languages it ships and the language mail falls back to; building,
- * caching and resolving the translator itself is `@pkg/i18n`'s job.
+ * caching and resolving the translator itself is `@sdxc/i18n`'s job.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTranslator } from "@pkg/i18n";
+import { createTranslator } from "@sdxc/i18n";
 
 import en from "~/app/locales/en";
 

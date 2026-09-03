@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@pkg/duration";
+import type { DurationInput } from "@sdxc/duration";
 
 /** Options a retry accepts, adding a backoff to the standard `cause`. */
 export interface RetryOptions extends ErrorOptions {
@@ -100,7 +100,7 @@ export class Timeout extends Ending {
 }
 
 /**
- * The endings, under one name to catch and construct them by. `@pkg/jobs/errors`
+ * The endings, under one name to catch and construct them by. `@sdxc/jobs/errors`
  * exports each of them on its own, which is what a type position needs — `Job.Retry`
  * names a value.
  *

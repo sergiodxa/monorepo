@@ -8,12 +8,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
-import { is, m, p } from "@pkg/u/size";
-import { truncate } from "@pkg/u/typography";
-import { Button, Card, Form, Heading, Input, Label, Link, LinkButton, Modal, Table } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
+import { is, m, p } from "@sdxc/u/size";
+import { truncate } from "@sdxc/u/typography";
+import {
+	Button,
+	Card,
+	Form,
+	Heading,
+	Input,
+	Label,
+	Link,
+	LinkButton,
+	Modal,
+	Table,
+} from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

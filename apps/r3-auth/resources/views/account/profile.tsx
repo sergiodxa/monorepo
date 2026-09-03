@@ -11,11 +11,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { m, mis } from "@pkg/u/size";
-import { text, weight } from "@pkg/u/typography";
-import { Alert, Avatar, Badge, Button, Card, Form, Heading, LinkButton, Text } from "@pkg/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { m, mis } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Alert, Avatar, Badge, Button, Card, Form, Heading, LinkButton, Text } from "@sdxc/ui";
 
 import type { EmailVerificationViewModel } from "~/app/http/view-models/email-verification";
 
