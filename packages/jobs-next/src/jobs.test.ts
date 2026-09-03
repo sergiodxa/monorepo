@@ -7,7 +7,6 @@
  */
 
 import { InvalidCronExpression } from "@pkg/cron";
-import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
 import { job, jobs } from "./index";
