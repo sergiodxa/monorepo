@@ -322,6 +322,8 @@ There is no `create`: a subscription comes into existence when a checkout comple
 
 `cancel` is the one write every platform in scope offers, which is why it is a contract method rather than something only the hosted portal can do. `atPeriodEnd: true` on a platform that can only cancel immediately answers `unsupported` instead of pretending the paid period will be honoured.
 
+A row billing a product outside the configured `products` is skipped by `list` and logged, so one plan sold elsewhere in the organization costs that row rather than the whole page. `find` reports it as a failure, because a caller asking for one subscription by id is asking about exactly that record.
+
 #### `EntitlementApi`
 
 ```typescript
@@ -340,6 +342,8 @@ orders.list(query?: ListOrdersQuery): Promise<Result<Page<Order>, BillingError>>
 `ListOrdersQuery` is `{ customer?, product?, subscription?, limit?, cursor? }`.
 
 An `Order` names the buyer three ways — `customerId`, `customerEmail`, `customerExternalId` — because a paid record carries them and an `order.paid` handler that has to fulfil a sale would otherwise read the customer back to learn an address it was already sent.
+
+`list` and `find` split on an unconfigured product the same way subscriptions do: the page carries on past the row and logs it, while a read by id reports the failure.
 
 #### `DiscountApi` (optional)
 
@@ -1330,7 +1334,7 @@ Type every credential option as `Secret` and read it through `secretReader` from
 14. **Send an `externalId` with every usage event** — it is the idempotency key, so a resent batch is counted once and a failed ingest can be retried safely.
 15. **Arm a fault rather than hand-rolling a refusing provider** — `billing.fail("customers")` and `billing.heal()` make one group or one method fail on the instance a test already drives, so nothing has to spread a provider into a partial copy of it.
 16. **Read the buyer off the order** — an `order.paid` delivery already carries `customerEmail` and `customerExternalId`, so fulfilment needs no second read.
-17. **Watch for `billing.skipped_row` in the logs** — a snapshot or a discount list carries on past a product this connection is not configured with, so a projection that is missing a record has this line behind it.
+17. **Watch for `billing.skipped_row` in the logs** — a snapshot and every list carry on past a product this connection is not configured with, so a projection that is missing a record has this line behind it.
 18. **Use `MemoryBilling` rather than mocking an SDK** — it is a full implementation that passes the same conformance suite, so it fails when the contract changes instead of quietly drifting.
 19. **The Stripe provider is not adopted by anything** — it exists to prove the contract fits a second platform, and its `orders` group answers `not_implemented` on purpose, so treat it as a starting point rather than a supported backend.
 20. **No conformance suite has run against a real sandbox yet** — every remote suite is written and skipped pending credentials, so a provider's mapping of live payloads is unverified until that run happens.

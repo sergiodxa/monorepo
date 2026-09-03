@@ -19,7 +19,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import { refusingCustomers } from "~/app/lib/test/billing";
 import { createTestApp } from "~/app/lib/test/http";
 import { authorizeUrl, ORIGIN, REDIRECT_URI, seed } from "~/app/lib/test/seed";
 import { connections, subjects } from "~/database/schema";
@@ -74,7 +73,7 @@ function respondWithProfile(
 
 /** A billing platform that is down, for the tests about a sign-in outliving a billing outage. */
 function unavailableBilling() {
-	return refusingCustomers(new MemoryBilling(), "unknown");
+	return new MemoryBilling({ faults: { customers: "unknown" } });
 }
 
 /**

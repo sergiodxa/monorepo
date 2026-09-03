@@ -18,7 +18,6 @@ import {
 	ManagementErrorCode,
 	SubjectNotFoundError,
 } from "@pkg/auth/management-client";
-import { BillingError } from "@pkg/billing";
 import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
@@ -165,20 +164,6 @@ async function heldSubscriptions(subjectId: string): Promise<number> {
 	return listed.items.length;
 }
 
-/** A platform that cannot be reached, which must abort an erasure with nothing deleted. */
-function refuseBilling(unreachable: (subjectId: string | null) => boolean): void {
-	listMock.mockImplementation(async (query) => {
-		let customer = query?.customer;
-		let subjectId = customer !== undefined && "externalId" in customer ? customer.externalId : null;
-
-		if (!unreachable(subjectId)) return await realList(query);
-
-		return failure(
-			new BillingError("platform unavailable", { code: "unknown", connection: "memory" }),
-		);
-	});
-}
-
 async function runJob(db: Database, mailTransport: Transport = transport) {
 	let container = new ServiceContainer();
 	container.singleton(Mailer, () => new Mailer({ transport: mailTransport, from: MAIL_FROM }));
@@ -228,8 +213,8 @@ beforeEach(() => {
 	addresses = new Map();
 	authenticates = true;
 	listMock.mockClear();
-	listMock.mockImplementation(realList);
 	cancelMock.mockClear();
+	billing.heal();
 });
 
 describe("deleteAccounts", () => {
@@ -304,7 +289,7 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "subject-1");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		refuseBilling(() => true);
+		billing.fail("subscriptions.list");
 
 		await runJob(db);
 
@@ -481,8 +466,12 @@ describe("deleteAccounts", () => {
 		await AccountDeletion.enqueue(db, "subject-1", "one@example.com", 1_000);
 		await AccountDeletion.enqueue(db, "subject-2", "two@example.com", 2_000);
 
-		/** Fails for the first subject only, so the run has to carry on to the second. */
-		refuseBilling((subjectId) => subjectId === "subject-1");
+		/**
+		 * Only the first subject holds a subscription, so refusing cancellation fails that
+		 * request alone and the run has to carry on to the second.
+		 */
+		await sell("subject-1");
+		billing.fail("subscriptions.cancel");
 
 		await runJob(db);
 

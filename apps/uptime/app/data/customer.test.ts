@@ -67,14 +67,13 @@ function missing(what: string) {
  * A platform answering only the customer reads under test; every other call fails the test
  * loudly, so a branch that reaches further than it should is visible rather than silent.
  */
-function stubBilling(customers: Partial<CustomerApi>, native: unknown = null): Billing {
+function stubBilling(customers: Partial<CustomerApi>): Billing {
 	let unexpected = (name: string) => () => {
 		throw new Error(`unexpected call to ${name} in this test`);
 	};
 
 	return {
 		connection: "stub",
-		native,
 		customers: {
 			find: unexpected("customers.find"),
 			findByEmail: unexpected("customers.findByEmail"),
@@ -97,27 +96,35 @@ describe("Customer.provision", () => {
 	test("adopts a customer holding the address but none of our ids", async () => {
 		let unlinked = customer({ id: "cus-by-email", externalId: null });
 		let adopted = customer({ id: "cus-by-email", externalId: "user-1" });
-		let patched: { path: string; body: string }[] = [];
-		let reads = 0;
+		let updates: unknown[] = [];
 
-		let billing = stubBilling(
-			{
-				/** The second read is the one that runs after the link, and finds it took. */
-				find: async () => (reads++ === 0 ? missing("no such customer") : success(adopted)),
-				findByEmail: async () => success(unlinked),
+		let billing = stubBilling({
+			find: async () => missing("no such customer"),
+			findByEmail: async () => success(unlinked),
+			update: async (ref, input) => {
+				updates.push([ref, input]);
+				return success(adopted);
 			},
-			{
-				patch: async (path: string, init: { body: string }) => {
-					patched.push({ path, body: init.body });
-					return new Response(null, { status: 200 });
-				},
-			},
-		);
+		});
 
 		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(adopted);
-		expect(patched).toEqual([
-			{ path: "/v1/customers/cus-by-email", body: JSON.stringify({ external_id: "user-1" }) },
-		]);
+		expect(updates).toEqual([[{ id: "cus-by-email" }, { externalId: "user-1" }]]);
+	});
+
+	test("reports a subject the platform already holds against another customer", async () => {
+		let billing = stubBilling({
+			find: async () => missing("no such customer"),
+			findByEmail: async () => success(customer({ id: "cus-by-email" })),
+			update: async () =>
+				failure(
+					new BillingError("that external id is taken", { code: "conflict", connection: "stub" }),
+				),
+		});
+
+		let provisioned = await Customer.provision(billing, idToken);
+
+		expect(isFailure(provisioned)).toBe(true);
+		if (isFailure(provisioned)) expect(provisioned.error.code).toBe("conflict");
 	});
 
 	test("leaves a customer already linked to somebody else alone", async () => {

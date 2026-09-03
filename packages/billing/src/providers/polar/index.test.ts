@@ -169,6 +169,24 @@ function polarDiscount(overrides: Record<string, unknown> = {}) {
 	};
 }
 
+/** An order as Polar answers with one, paid for the configured product. */
+function polarOrder(overrides: Record<string, unknown> = {}) {
+	return {
+		id: "019order",
+		created_at: "2026-09-02T17:30:25Z",
+		customer_id: "019customer",
+		customer: { id: "019customer", email: "jane@example.com", external_id: "subject_1" },
+		product_id: PRODUCT_ID,
+		subscription_id: null,
+		discount_id: null,
+		paid: true,
+		currency: "usd",
+		subtotal_amount: 4900,
+		total_amount: 4900,
+		...overrides,
+	};
+}
+
 /** The offset envelope almost every Polar list answers with. */
 function offsetPage(items: unknown[], pagination: { total_count: number; max_page: number }) {
 	return { items, pagination };
@@ -507,6 +525,38 @@ describe("PolarBilling", () => {
 		expectFailure(await polar().subscriptions.find("019subscription"), "invalid_response");
 	});
 
+	test("keeps a subscription list a product configured elsewhere appears in", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		stub(
+			offsetPage(
+				[
+					polarSubscription({ id: "019elsewhere", product_id: "019unconfigured" }),
+					polarSubscription(),
+				],
+				{ total_count: 2, max_page: 1 },
+			),
+		);
+
+		let page = await unwrap(polar().subscriptions.list());
+
+		expect(page.items.map((subscription) => subscription.id)).toEqual(["019subscription"]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("019unconfigured");
+
+		warned.mockRestore();
+	});
+
+	test("reports a subscription read by id that names a product outside the catalog", async () => {
+		stub(polarSubscription({ product_id: "019unconfigured" }));
+
+		let error = expectFailure(
+			await polar().subscriptions.find("019subscription"),
+			"invalid_response",
+		);
+
+		expect(error.message).toContain("019unconfigured");
+	});
+
 	test("answers what a customer holds right now in one call", async () => {
 		let received = stub({
 			...polarCustomer(),
@@ -662,19 +712,7 @@ describe("PolarBilling", () => {
 	});
 
 	test("names the buyer an order was paid by without a second read", async () => {
-		let received = stub({
-			id: "019order",
-			created_at: "2026-09-02T17:30:25Z",
-			customer_id: "019customer",
-			customer: { id: "019customer", email: "jane@example.com", external_id: "subject_1" },
-			product_id: PRODUCT_ID,
-			subscription_id: null,
-			discount_id: null,
-			paid: true,
-			currency: "usd",
-			subtotal_amount: 4900,
-			total_amount: 4900,
-		});
+		let received = stub(polarOrder());
 
 		let order = await unwrap(polar().orders.find("019order"));
 
@@ -682,6 +720,35 @@ describe("PolarBilling", () => {
 		expect(order.customerId).toBe("019customer");
 		expect(order.customerEmail).toBe("jane@example.com");
 		expect(order.customerExternalId).toBe("subject_1");
+	});
+
+	test("keeps an order list a product configured elsewhere appears in", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		stub(
+			offsetPage(
+				[polarOrder({ id: "019elsewhere", product_id: "019unconfigured" }), polarOrder()],
+				{
+					total_count: 2,
+					max_page: 1,
+				},
+			),
+		);
+
+		let page = await unwrap(polar().orders.list());
+
+		expect(page.items.map((order) => order.id)).toEqual(["019order"]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("019unconfigured");
+
+		warned.mockRestore();
+	});
+
+	test("reports an order read by id that names a product outside the catalog", async () => {
+		stub(polarOrder({ product_id: "019unconfigured" }));
+
+		let error = expectFailure(await polar().orders.find("019order"), "invalid_response");
+
+		expect(error.message).toContain("019unconfigured");
 	});
 
 	test("adopts a platform customer that carries none of our own ids", async () => {

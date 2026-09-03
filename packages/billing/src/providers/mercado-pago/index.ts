@@ -47,7 +47,7 @@ import type {
 	Subscription,
 } from "../../core/types";
 
-import { BillingError } from "../../core/errors";
+import { BillingError, reportSkipped } from "../../core/errors";
 import { secretReader, verificationSecret } from "../../core/secret";
 import { DEFAULT_PAGE_SIZE } from "../../core/types";
 
@@ -845,6 +845,11 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 				);
 			},
 
+			/**
+			 * Reads one page. A row this connection cannot express costs that row
+			 * and is logged, since an account authorizes plans beyond the ones a
+			 * single connection was configured with.
+			 */
 			list: async (query?: ListSubscriptionsQuery) => {
 				let filter = await this.#subscriptionFilter(query?.customer);
 				if (isFailure(filter)) return filter;
@@ -854,16 +859,9 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 					{ ...filter.data, preapproval_plan_id: this.#catalog.planFor(query?.product) },
 					query,
 					(payload) => {
-						let parsed = this.#parse(PreapprovalBody, payload);
-						if (isFailure(parsed)) return parsed;
-
-						let mapped = subscriptionFrom(
-							parsed.data.value,
-							parsed.data.raw,
-							this.#catalog,
-							this.connection,
-						);
+						let mapped = this.#mapSearchedSubscription(payload);
 						if (isFailure(mapped)) return mapped;
+						if (mapped.data === null) return success(null);
 						if (query?.status !== undefined && !query.status.includes(mapped.data.status)) {
 							return success(null);
 						}
@@ -916,6 +914,30 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 		return success({ payer_email: record.data.value.email });
 	}
 
+	/**
+	 * Maps one authorization a search returned, answering `null` for a row this
+	 * connection cannot express and logging it, so a plan configured elsewhere in
+	 * the account costs the row it authorized rather than the whole page.
+	 */
+	#mapSearchedSubscription(payload: ProviderData): Result<Subscription | null, BillingError> {
+		let parsed = this.#parse(PreapprovalBody, payload);
+		if (isFailure(parsed)) return parsed;
+
+		let mapped = subscriptionFrom(
+			parsed.data.value,
+			parsed.data.raw,
+			this.#catalog,
+			this.connection,
+		);
+
+		if (isFailure(mapped)) {
+			reportSkipped(this.connection, mapped.error.message);
+			return success(null);
+		}
+
+		return success(mapped.data);
+	}
+
 	#buildEntitlementApi(): EntitlementApi {
 		return {
 			of: async (customer: CustomerRef) => {
@@ -929,16 +951,9 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 					{ payer_email: held.email ?? undefined },
 					{ limit: MAX_PAGE_SIZE },
 					(payload) => {
-						let parsed = this.#parse(PreapprovalBody, payload);
-						if (isFailure(parsed)) return parsed;
-
-						let mapped = subscriptionFrom(
-							parsed.data.value,
-							parsed.data.raw,
-							this.#catalog,
-							this.connection,
-						);
+						let mapped = this.#mapSearchedSubscription(payload);
 						if (isFailure(mapped)) return mapped;
+						if (mapped.data === null) return success(null);
 
 						return success({
 							subscriptionId: mapped.data.id,

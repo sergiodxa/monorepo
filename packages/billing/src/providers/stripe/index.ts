@@ -48,7 +48,7 @@ import type {
 	Subscription,
 } from "../../core/types";
 
-import { BillingError } from "../../core/errors";
+import { BillingError, reportSkipped } from "../../core/errors";
 import { secretReader, verificationSecret } from "../../core/secret";
 import { DEFAULT_PAGE_SIZE } from "../../core/types";
 
@@ -855,7 +855,9 @@ export class StripeBilling extends APIClient implements Billing {
 			/**
 			 * Reads one page. A status of ours that several Stripe statuses share is
 			 * narrowed after the read, and the cursor still follows the last record
-			 * Stripe returned, so paging stays continuous.
+			 * Stripe returned, so paging stays continuous. A row billing a price
+			 * this connection was not configured with costs that row and is
+			 * logged, since one account sells more than one connection maps.
 			 */
 			list: async (query?: ListSubscriptionsQuery) => {
 				let size = this.#pageSize(query?.limit);
@@ -910,7 +912,11 @@ export class StripeBilling extends APIClient implements Billing {
 					if (narrowLocally && statuses?.includes(payload.status) !== true) continue;
 
 					let mapped = this.#mapSubscription(payload);
-					if (isFailure(mapped)) return mapped;
+
+					if (isFailure(mapped)) {
+						reportSkipped(this.connection, mapped.error.message);
+						continue;
+					}
 
 					items.push(mapped.data);
 				}
@@ -946,8 +952,9 @@ export class StripeBilling extends APIClient implements Billing {
 		return {
 			/**
 			 * Composes the snapshot from the customer's subscriptions and the
-			 * features Stripe reports as active. A subscription to something this
-			 * connection does not sell grants nothing, so it is left out.
+			 * features Stripe reports as active. A subscription billing a price
+			 * outside the configured catalog is left out and logged, since this
+			 * connection has no slug to grant under.
 			 */
 			of: async (customer: CustomerRef) => {
 				let record = await this.#findCustomer(customer);
@@ -976,7 +983,15 @@ export class StripeBilling extends APIClient implements Billing {
 
 				for (let payload of subscriptions.data.data) {
 					let mapped = toSubscription(payload, this.#resolver);
-					if (mapped === null) continue;
+
+					if (mapped === null) {
+						reportSkipped(
+							this.connection,
+							`subscription ${payload.id} bills a price outside the configured catalog`,
+						);
+						continue;
+					}
+
 					if (!ENTITLED_STATUSES.has(mapped.status)) continue;
 
 					held.push(toEntitlementSubscription(mapped));

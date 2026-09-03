@@ -66,7 +66,7 @@ export default class Customer {
 
 		if (matched.data.externalId !== null) return matched;
 
-		return await link(billing, matched.data, idToken.subject);
+		return await billing.customers.update({ id: matched.data.id }, { externalId: idToken.subject });
 	}
 
 	/**
@@ -186,42 +186,4 @@ function noPortal(billing: Billing): Result<never, BillingError> {
 			connection: billing.connection,
 		}),
 	);
-}
-
-/** The one verb {@link link} needs, which a provider exposes as its own configured client. */
-interface Linkable {
-	patch(path: string, init: { headers: Record<string, string>; body: string }): Promise<Response>;
-}
-
-/**
- * Adopts a platform customer created before this subject signed in — by a hosted page that
- * collected only an address, say — so that customer's events arrive naming an owner.
- *
- * It goes through the provider's own client because the contract treats an external id as
- * immutable: `customers.update` has no field for one, which leaves an app no way to claim a
- * record it did not create.
- */
-async function link(
-	billing: Billing,
-	customer: BillingCustomer,
-	subject: string,
-): Promise<Result<BillingCustomer, BillingError>> {
-	let client = billing.native as Linkable;
-
-	let response = await client.patch(`/v1/customers/${encodeURIComponent(customer.id)}`, {
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ external_id: subject }),
-	});
-
-	if (!response.ok) {
-		return failure(
-			new BillingFailure(`the platform refused to link customer ${customer.id}`, {
-				code: "unknown",
-				connection: billing.connection,
-				providerCode: String(response.status),
-			}),
-		);
-	}
-
-	return await billing.customers.find({ externalId: subject });
 }

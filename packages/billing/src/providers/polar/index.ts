@@ -788,8 +788,11 @@ export class PolarBilling extends APIClient implements Billing {
 				let listed = await this.#json(`/v1/subscriptions/${search}`);
 				if (isFailure(listed)) return listed;
 
-				let mapped = this.#pageOf(listed.data, page.data, (item) =>
-					mapSubscription(item, this.#mapping),
+				let mapped = this.#pageOf(
+					listed.data,
+					page.data,
+					(item) => mapSubscription(item, this.#mapping),
+					{ skipUnmappable: true },
 				);
 
 				if (isFailure(mapped) || wanted === undefined) return mapped;
@@ -857,7 +860,9 @@ export class PolarBilling extends APIClient implements Billing {
 				let listed = await this.#json(`/v1/orders/${search}`);
 				if (isFailure(listed)) return listed;
 
-				return this.#pageOf(listed.data, page.data, (item) => mapOrder(item, this.#mapping));
+				return this.#pageOf(listed.data, page.data, (item) => mapOrder(item, this.#mapping), {
+					skipUnmappable: true,
+				});
 			},
 		};
 	}

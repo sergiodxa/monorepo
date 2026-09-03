@@ -13,7 +13,7 @@ import type { Result } from "@pkg/result";
 import { isFailure, isSuccess } from "@pkg/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Billing } from "../../core/contract";
 import type { BillingError } from "../../core/errors";
@@ -506,6 +506,32 @@ describe("MercadoPagoBilling", () => {
 		expect(subscription.error.message).toContain("plan_unknown");
 	});
 
+	test("keeps a subscription list a plan configured elsewhere appears in", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		server.use(
+			http.get(`${API}/preapproval/search`, () =>
+				HttpResponse.json({
+					paging: { total: 2, limit: 100, offset: 0 },
+					results: [
+						{ ...PREAPPROVAL, id: "2c938085", preapproval_plan_id: "plan_unknown" },
+						PREAPPROVAL,
+					],
+				}),
+			),
+		);
+
+		let page = await billing().subscriptions.list();
+
+		expect(isSuccess(page)).toBe(true);
+		if (!isSuccess(page)) return;
+
+		expect(page.data.items.map((subscription) => subscription.id)).toEqual(["2c938084"]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("plan_unknown");
+
+		warned.mockRestore();
+	});
+
 	test("hides offset paging behind an opaque cursor, and walks to the next page", async () => {
 		server.use(
 			http.get(`${API}/v1/payments/search`, ({ request }) => {
@@ -863,6 +889,37 @@ describe("MercadoPagoBilling", () => {
 			productSlug: "pro",
 			status: "active",
 		});
+	});
+
+	test("answers a snapshot a plan configured elsewhere authorized part of", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		server.use(
+			http.get(`${API}/v1/customers/:id`, () => HttpResponse.json(CUSTOMER)),
+			http.get(`${API}/preapproval/search`, () =>
+				HttpResponse.json({
+					paging: { total: 2, limit: 100, offset: 0 },
+					results: [
+						{ ...PREAPPROVAL, id: "2c938085", preapproval_plan_id: "plan_unknown" },
+						PREAPPROVAL,
+					],
+				}),
+			),
+			http.get(`${API}/v1/payments/search`, () =>
+				HttpResponse.json({ paging: { total: 1, limit: 100, offset: 0 }, results: [PAYMENT] }),
+			),
+		);
+
+		let state = await billing().entitlements.of({ id: "cus_1" });
+
+		expect(isSuccess(state)).toBe(true);
+		if (!isSuccess(state)) return;
+
+		expect([...state.data.products].sort()).toEqual(["book", "pro"]);
+		expect(state.data.subscriptions.map((entry) => entry.subscriptionId)).toEqual(["2c938084"]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("plan_unknown");
+
+		warned.mockRestore();
 	});
 
 	test("reports the platform's own refusal of a second payer for one address", async () => {

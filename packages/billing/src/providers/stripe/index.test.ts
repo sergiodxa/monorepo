@@ -12,7 +12,7 @@ import type { Result } from "@pkg/result";
 import { isFailure, isSuccess } from "@pkg/result";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { Billing } from "../../core/contract";
 import type { BillingError } from "../../core/errors";
@@ -626,6 +626,44 @@ describe("StripeBilling subscriptions", () => {
 		expect(result.data.cursor).toBe("sub_2");
 	});
 
+	test("keeps a subscription list a price configured elsewhere appears in", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		server.use(
+			http.get(`${ORIGIN}/subscriptions`, () =>
+				HttpResponse.json(
+					page([
+						{
+							...SUBSCRIPTION,
+							id: "sub_9",
+							items: {
+								object: "list",
+								data: [
+									{
+										id: "si_9",
+										object: "subscription_item",
+										quantity: 1,
+										price: { ...PRICE, id: "price_other", product: "prod_other" },
+									},
+								],
+							},
+						},
+						SUBSCRIPTION,
+					]),
+				),
+			),
+		);
+
+		let result = await create().subscriptions.list();
+
+		if (isFailure(result)) throw result.error;
+
+		expect(result.data.items.map((subscription) => subscription.id)).toEqual(["sub_1"]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("sub_9");
+
+		warned.mockRestore();
+	});
+
 	test("refuses a subscription billing a price outside the configured catalog", async () => {
 		server.use(
 			http.get(`${ORIGIN}/subscriptions/sub_9`, () =>
@@ -657,6 +695,8 @@ describe("StripeBilling subscriptions", () => {
 
 describe("StripeBilling entitlements", () => {
 	test("composes the snapshot from subscriptions and active entitlements", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
 		server.use(
 			http.get(`${ORIGIN}/customers/cus_1`, () => HttpResponse.json(CUSTOMER)),
 			http.get(`${ORIGIN}/subscriptions`, () =>
@@ -716,6 +756,9 @@ describe("StripeBilling entitlements", () => {
 			},
 		]);
 		expect(result.data.readAt).toBeInstanceOf(Date);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("sub_3");
+
+		warned.mockRestore();
 	});
 });
 

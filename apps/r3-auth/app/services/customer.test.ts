@@ -14,7 +14,6 @@ import { describe, expect, test } from "vitest";
 
 import type { BillableSubject } from "~/app/services/customer";
 
-import { refusingCustomers } from "~/app/lib/test/billing";
 import Customer from "~/app/services/customer";
 
 let subject: BillableSubject = {
@@ -60,13 +59,15 @@ describe("Customer.findOrCreateByEmail", () => {
 	test("reports a read that failed for any reason other than a miss", async () => {
 		let billing = new MemoryBilling();
 
-		let result = await Customer.findOrCreateByEmail(
-			refusingCustomers(billing, "rate_limited"),
-			subject,
-		);
+		billing.fail("customers", "rate_limited");
+
+		let result = await Customer.findOrCreateByEmail(billing, subject);
 
 		expect(isFailure(result)).toBe(true);
 		expect(isFailure(result) && result.error.code).toBe("rate_limited");
+
+		billing.heal("customers");
+
 		expect(await billing.customers.findByEmail("jane@example.com")).toMatchObject({
 			error: { code: "not_found" },
 		});
