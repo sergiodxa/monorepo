@@ -64,6 +64,7 @@ describe("POST /upgrade", () => {
 		expect(checkout.productSlug).toBe(Product.Complete);
 		expect(checkout.customerId).toBe(order.customerId);
 		expect(checkout.discountId).toBe(Discounts.UPGRADE);
+		expect(checkout.providerData.allowDiscountCodes).toBe(false);
 	});
 
 	test("sends a customer with no Essentials order to the ordinary checkout", async () => {

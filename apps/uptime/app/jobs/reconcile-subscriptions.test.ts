@@ -48,13 +48,12 @@ let billing = createTestBilling();
  */
 let snapshot: ((customer: CustomerRef) => Promise<Result<EntitlementState, never>>) | null = null;
 
-let provider: Billing = {
-	...billing,
+let provider: Billing = billing.with({
 	entitlements: {
 		of: async (customer) =>
 			snapshot === null ? await billing.entitlements.of(customer) : await snapshot(customer),
 	},
-};
+});
 
 vi.doMock("~/app/lib/billing", () => ({
 	polar: provider,

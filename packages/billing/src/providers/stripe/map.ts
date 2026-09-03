@@ -527,6 +527,7 @@ export function toEntitlementSubscription(subscription: Subscription): Entitleme
 		subscriptionId: subscription.id,
 		productSlug: subscription.productSlug,
 		status: subscription.status,
+		currentPeriodStart: subscription.currentPeriodStart,
 		currentPeriodEnd: subscription.currentPeriodEnd,
 		cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
 	};

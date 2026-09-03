@@ -51,7 +51,7 @@ import type {
 	UsageEvent,
 } from "../../core/types";
 
-import { BillingError } from "../../core/errors";
+import { BillingError, reportSkipped } from "../../core/errors";
 import { secretReader, verificationSecret } from "../../core/secret";
 
 import type { PolarErrorOptions } from "./errors";
@@ -115,6 +115,13 @@ const DELIVERY_ID_HEADER = "webhook-id";
 
 /** Quantity a checkout buys, since a Polar checkout sells one unit of its product. */
 const SINGLE_UNIT = 1;
+
+/**
+ * Checkout metadata key the caller's correlation key is recorded under. Polar's
+ * API reads no idempotency header, so the key travels with the session it
+ * opened and a second session a retry opens names the attempt behind it.
+ */
+const IDEMPOTENCY_METADATA_KEY = "idempotency_key";
 
 /** The states Polar counts as entitling, which is the only status narrowing its lists offer. */
 const SUBSCRIPTION_ENTITLING_STATUSES: readonly string[] = ["active", "trialing"];
@@ -187,12 +194,17 @@ export interface PolarBillingOptions {
 	 * Signing secret for this endpoint's deliveries, exactly as Polar issued it,
 	 * or a function resolving it. The function form is resolved once and
 	 * remembered, so a secret read from a store costs one await for the life of
-	 * the instance.
+	 * the instance. Deliveries fail closed while it is unset, which is what an
+	 * app that mounts no webhook route wants.
 	 */
-	webhookSecret: Secret;
+	webhookSecret?: Secret;
 
-	/** Polar product id for each of our own slugs, which is how a call site names a product. */
-	products: Record<string, string>;
+	/**
+	 * Polar product id for each of our own slugs, which is how a call site names
+	 * a product. An app that only mirrors customers configures none, and every
+	 * read addressing a product then reports that the slug is unknown.
+	 */
+	products?: Record<string, string>;
 
 	/** Polar meter id for each of our own meter slugs. */
 	meters?: Record<string, string>;
@@ -338,14 +350,14 @@ export class PolarBilling extends APIClient implements Billing {
 
 		this.connection = options.connection ?? DEFAULT_CONNECTION;
 		this.#accessToken = secretReader(options.accessToken);
-		this.#webhookSecret = secretReader(options.webhookSecret);
+		this.#webhookSecret = secretReader(options.webhookSecret ?? "");
 
-		this.#productIds = new Map(Object.entries(options.products));
+		this.#productIds = new Map(Object.entries(options.products ?? {}));
 		this.#meterIds = new Map(Object.entries(options.meters ?? {}));
 
 		this.#mapping = {
 			connection: this.connection,
-			products: byId(options.products),
+			products: byId(options.products ?? {}),
 			meters: byId(options.meters ?? {}),
 			features: byId(options.features ?? {}),
 		};
@@ -480,12 +492,16 @@ export class PolarBilling extends APIClient implements Billing {
 	/**
 	 * Normalizes either list envelope into one page: the offset one counts pages
 	 * and the cursor one only says whether another exists, and a caller reading
-	 * the result cannot tell which arrived.
+	 * the result cannot tell which arrived. `skipUnmappable` drops a row this
+	 * connection cannot express and logs it, which is what a read of a whole
+	 * collection wants: one record configured elsewhere in the organization
+	 * costs that row rather than the read.
 	 */
 	#pageOf<Item>(
 		raw: unknown,
 		page: number,
 		map: (item: unknown) => Result<Item, BillingError>,
+		options?: { skipUnmappable?: boolean },
 	): Result<Page<Item>, BillingError> {
 		let parsed = s.parseSafe(PAGE_ENVELOPE_SCHEMA, raw);
 		if (!parsed.success) {
@@ -495,7 +511,14 @@ export class PolarBilling extends APIClient implements Billing {
 		let items: Item[] = [];
 		for (let item of parsed.value.items) {
 			let mapped = map(item);
-			if (isFailure(mapped)) return mapped;
+
+			if (isFailure(mapped)) {
+				if (options?.skipUnmappable !== true) return mapped;
+
+				reportSkipped(this.connection, mapped.error.message);
+				continue;
+			}
+
 			items.push(mapped.data);
 		}
 
@@ -564,11 +587,17 @@ export class PolarBilling extends APIClient implements Billing {
 			},
 
 			update: async (customer: CustomerRef, input: UpdateCustomerInput) => {
-				let updated = await this.#send(this.#customerPath(customer), "PATCH", {
-					email: input.email,
-					name: input.name,
-					metadata: input.metadata,
-				});
+				let updated = await this.#send(
+					this.#customerPath(customer),
+					"PATCH",
+					{
+						email: input.email,
+						name: input.name,
+						external_id: input.externalId,
+						metadata: input.metadata,
+					},
+					{ conflictOn: "external_id" },
+				);
 
 				if (isFailure(updated)) return updated;
 
@@ -690,7 +719,11 @@ export class PolarBilling extends APIClient implements Billing {
 					customer_email: input.email,
 					success_url: input.returnTo,
 					discount_id: input.discount,
-					metadata: input.metadata,
+					allow_discount_codes: input.allowDiscountCodes,
+					metadata:
+						input.idempotencyKey === undefined
+							? input.metadata
+							: { ...input.metadata, [IDEMPOTENCY_METADATA_KEY]: input.idempotencyKey },
 				});
 
 				if (isFailure(created)) return created;
@@ -847,8 +880,11 @@ export class PolarBilling extends APIClient implements Billing {
 				let listed = await this.#json(`/v1/discounts/${search}`);
 				if (isFailure(listed)) return listed;
 
-				let page = this.#pageOf(listed.data, FIRST_PAGE, (item) =>
-					mapDiscount(item, this.#mapping),
+				let page = this.#pageOf(
+					listed.data,
+					FIRST_PAGE,
+					(item) => mapDiscount(item, this.#mapping),
+					{ skipUnmappable: true },
 				);
 
 				if (isFailure(page)) return page;
@@ -885,7 +921,9 @@ export class PolarBilling extends APIClient implements Billing {
 				let listed = await this.#json(`/v1/discounts/${search}`);
 				if (isFailure(listed)) return listed;
 
-				return this.#pageOf(listed.data, page.data, (item) => mapDiscount(item, this.#mapping));
+				return this.#pageOf(listed.data, page.data, (item) => mapDiscount(item, this.#mapping), {
+					skipUnmappable: true,
+				});
 			},
 		};
 	}

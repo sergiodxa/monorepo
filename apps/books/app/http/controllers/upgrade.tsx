@@ -144,6 +144,8 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 		product: Product.Complete,
 		customer: { id: customer.data.id },
 		discount: Discounts.UPGRADE,
+		/** The upgrade price is already a discount, so the hosted page collects no code on top. */
+		allowDiscountCodes: false,
 	});
 
 	if (isFailure(checkout) || checkout.data.url === null) {

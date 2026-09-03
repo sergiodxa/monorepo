@@ -13,7 +13,7 @@ import { isFailure, unwrap } from "@pkg/result";
 import { sign } from "@pkg/webhooks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { BillingErrorCode } from "../../core/errors";
 import type { Secret } from "../../core/secret";
@@ -145,6 +145,26 @@ function polarCheckout(overrides: Record<string, unknown> = {}) {
 		total_amount: 4900,
 		discount_id: null,
 		subscription_id: null,
+		...overrides,
+	};
+}
+
+/** A discount as Polar answers with one, scoped to the configured product. */
+function polarDiscount(overrides: Record<string, unknown> = {}) {
+	return {
+		id: "019discount",
+		created_at: "2026-09-02T17:30:25Z",
+		name: "Launch week",
+		code: "LAUNCH",
+		type: "fixed",
+		amount: 3000,
+		currency: "usd",
+		basis_points: null,
+		max_redemptions: null,
+		redemptions_count: 4,
+		starts_at: null,
+		ends_at: null,
+		products: [{ id: PRODUCT_ID }],
 		...overrides,
 	};
 }
@@ -422,6 +442,25 @@ describe("PolarBilling", () => {
 		expect(checkout.amount).toEqual({ amount: 4900, currency: "usd" });
 	});
 
+	test("opens a checkout whose page collects no typed code", async () => {
+		let received = stub(polarCheckout(), { status: 201 });
+
+		await unwrap(
+			polar().checkouts.create({
+				product: "pro",
+				discount: "019discount",
+				allowDiscountCodes: false,
+				idempotencyKey: "attempt_1",
+			}),
+		);
+
+		expect((await received.at(0)?.json()) as unknown).toMatchObject({
+			discount_id: "019discount",
+			allow_discount_codes: false,
+			metadata: { idempotency_key: "attempt_1" },
+		});
+	});
+
 	test("keeps what authorizes a checkout out of the stored payload", async () => {
 		stub(polarCheckout());
 
@@ -476,6 +515,7 @@ describe("PolarBilling", () => {
 					id: "019subscription",
 					product_id: PRODUCT_ID,
 					status: "trialing",
+					current_period_start: "2026-09-01T00:00:00Z",
 					current_period_end: "2026-10-01T00:00:00Z",
 					cancel_at_period_end: true,
 				},
@@ -502,6 +542,7 @@ describe("PolarBilling", () => {
 				subscriptionId: "019subscription",
 				productSlug: "pro",
 				status: "trialing",
+				currentPeriodStart: new Date("2026-09-01T00:00:00Z"),
 				currentPeriodEnd: new Date("2026-10-01T00:00:00Z"),
 				cancelAtPeriodEnd: true,
 			},
@@ -509,20 +550,81 @@ describe("PolarBilling", () => {
 		expect(state.readAt).toBeInstanceOf(Date);
 	});
 
-	test("reports a snapshot naming a product this connection has no slug for", async () => {
+	test("skips a snapshot row naming a product this connection has no slug for", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
 		stub({
 			...polarCustomer(),
 			active_subscriptions: [
-				{ id: "019subscription", product_id: "019unconfigured", status: "active" },
+				{ id: "019elsewhere", product_id: "019unconfigured", status: "active" },
+				{
+					id: "019subscription",
+					product_id: PRODUCT_ID,
+					status: "active",
+					current_period_start: "2026-09-01T00:00:00Z",
+					current_period_end: "2026-10-01T00:00:00Z",
+				},
 			],
 			granted_benefits: [],
 			active_meters: [],
 		});
 
-		let error = expectFailure(
-			await polar().entitlements.of({ externalId: "subject_1" }),
-			"invalid_response",
+		let state = await unwrap(polar().entitlements.of({ externalId: "subject_1" }));
+
+		expect(state.products).toEqual(["pro"]);
+		expect(state.subscriptions).toEqual([
+			{
+				subscriptionId: "019subscription",
+				productSlug: "pro",
+				status: "active",
+				currentPeriodStart: new Date("2026-09-01T00:00:00Z"),
+				currentPeriodEnd: new Date("2026-10-01T00:00:00Z"),
+				cancelAtPeriodEnd: false,
+			},
+		]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("019elsewhere");
+
+		warned.mockRestore();
+	});
+
+	test("keeps a discount list a campaign configured elsewhere appears in", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		stub(
+			offsetPage(
+				[
+					polarDiscount({ id: "019elsewhere", products: [{ id: "019unconfigured" }] }),
+					polarDiscount(),
+				],
+				{ total_count: 2, max_page: 1 },
+			),
 		);
+
+		let page = await unwrap(polar().discounts.list());
+
+		expect(page.items.map((discount) => discount.id)).toEqual(["019discount"]);
+		expect(warned.mock.calls.at(0)?.at(0)).toContain("019elsewhere");
+
+		warned.mockRestore();
+	});
+
+	test("scopes a discount to the products it names that this connection sells", async () => {
+		let warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		stub(polarDiscount({ products: [{ id: PRODUCT_ID }, { id: "019unconfigured" }] }));
+
+		let discount = await unwrap(polar().discounts.find("019discount"));
+
+		expect(discount.productSlugs).toEqual(["pro"]);
+		expect(warned).toHaveBeenCalled();
+
+		warned.mockRestore();
+	});
+
+	test("reports a discount read by id that applies to nothing this connection sells", async () => {
+		stub(polarDiscount({ products: [{ id: "019unconfigured" }] }));
+
+		let error = expectFailure(await polar().discounts.find("019discount"), "invalid_response");
 
 		expect(error.message).toContain("019unconfigured");
 	});
@@ -557,6 +659,48 @@ describe("PolarBilling", () => {
 			external_id: "use_0",
 			metadata: {},
 		});
+	});
+
+	test("names the buyer an order was paid by without a second read", async () => {
+		let received = stub({
+			id: "019order",
+			created_at: "2026-09-02T17:30:25Z",
+			customer_id: "019customer",
+			customer: { id: "019customer", email: "jane@example.com", external_id: "subject_1" },
+			product_id: PRODUCT_ID,
+			subscription_id: null,
+			discount_id: null,
+			paid: true,
+			currency: "usd",
+			subtotal_amount: 4900,
+			total_amount: 4900,
+		});
+
+		let order = await unwrap(polar().orders.find("019order"));
+
+		expect(received).toHaveLength(1);
+		expect(order.customerId).toBe("019customer");
+		expect(order.customerEmail).toBe("jane@example.com");
+		expect(order.customerExternalId).toBe("subject_1");
+	});
+
+	test("adopts a platform customer that carries none of our own ids", async () => {
+		let received = stub(polarCustomer());
+
+		await unwrap(polar().customers.update({ id: "019customer" }, { externalId: "subject_1" }));
+
+		expect(received.at(0)?.method).toBe("PATCH");
+		expect((await received.at(0)?.json()) as unknown).toMatchObject({
+			external_id: "subject_1",
+		});
+	});
+
+	test("bills without a signing secret and fails every delivery closed", async () => {
+		let billing = new PolarBilling({ accessToken: ACCESS_TOKEN, connection: "polar_test" });
+		let signed = await delivery(polarCustomer());
+
+		expect(await billing.webhooks.verify(signed.request, signed.body)).toBe(false);
+		expectFailure(await billing.catalog.find("pro"), "not_found");
 	});
 
 	test("reads a meter after resolving who it is being read for", async () => {

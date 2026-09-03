@@ -30,18 +30,17 @@ function createRecordingBilling(accepted = true) {
 	let billing = createTestBilling();
 	let calls: UsageEvent[][] = [];
 
-	let recording: Billing = {
-		...billing,
+	let recording: Billing = billing.with({
 		usage: {
-			...billing.usage,
 			async ingest(events: readonly UsageEvent[]) {
 				calls.push([...events]);
 				if (!accepted) return await billing.usage.ingest([{ name: "", customer: { id: "x" } }]);
 
 				return await billing.usage.ingest(events);
 			},
+			list: (query) => billing.usage.list(query),
 		},
-	};
+	});
 
 	return { billing: recording, calls };
 }

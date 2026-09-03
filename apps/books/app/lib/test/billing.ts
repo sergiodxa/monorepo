@@ -7,12 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing, Order } from "@pkg/billing";
+import type { Order } from "@pkg/billing";
 import type { MemoryBillingOptions } from "@pkg/billing/providers/memory";
 
-import { BillingError } from "@pkg/billing";
 import { MemoryBilling } from "@pkg/billing/providers/memory";
-import { failure, unwrap } from "@pkg/result";
+import { unwrap } from "@pkg/result";
 
 import { Product } from "~/app/data/product";
 
@@ -45,33 +44,10 @@ export function memoryBilling(options: MemoryBillingOptions = {}): MemoryBilling
  * @param billing - The platform to answer everything else.
  * @returns The same platform, reporting an unreadable campaign list.
  */
-export function withUnreadableDiscounts(billing: MemoryBilling): Billing {
-	return {
-		connection: billing.connection,
-		customers: billing.customers,
-		catalog: billing.catalog,
-		checkouts: billing.checkouts,
-		subscriptions: billing.subscriptions,
-		entitlements: billing.entitlements,
-		orders: billing.orders,
-		webhooks: billing.webhooks,
-		portal: billing.portal,
-		usage: billing.usage,
-		meters: billing.meters,
-		native: billing.native,
+export function withUnreadableDiscounts(billing: MemoryBilling): MemoryBilling {
+	billing.fail("discounts.list", "unknown");
 
-		discounts: {
-			find: (discount) => billing.discounts.find(discount),
-			findByCode: (code) => billing.discounts.findByCode(code),
-			list: async () =>
-				failure(
-					new BillingError("the campaign list is unavailable", {
-						code: "unknown",
-						connection: billing.connection,
-					}),
-				),
-		},
-	};
+	return billing;
 }
 
 /**

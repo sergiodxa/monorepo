@@ -606,16 +606,25 @@ export class StripeBilling extends APIClient implements Billing {
 				return success(toCustomer(created.data, this.#externalIdKey));
 			},
 
-			/** Changes the fields named, leaving every metadata key it does not name. */
+			/**
+			 * Changes the fields named, leaving every metadata key it does not name.
+			 * Our own identifier lives in metadata here, so adopting a customer that
+			 * carries none is the same write as any other field.
+			 */
 			update: async (customer: CustomerRef, input: UpdateCustomerInput) => {
 				let id = await this.#resolveCustomerId(customer);
 				if (isFailure(id)) return id;
+
+				let metadata =
+					input.externalId === undefined
+						? input.metadata
+						: { ...input.metadata, [this.#externalIdKey]: input.externalId };
 
 				let updated = await this.#send({
 					method: "POST",
 					path: `customers/${encodeURIComponent(id.data)}`,
 					schema: CUSTOMER_SCHEMA,
-					form: { email: input.email, name: input.name, metadata: input.metadata },
+					form: { email: input.email, name: input.name, metadata },
 				});
 
 				if (isFailure(updated)) return updated;
@@ -742,6 +751,13 @@ export class StripeBilling extends APIClient implements Billing {
 						? input.customer.externalId
 						: undefined;
 
+				if (input.discount !== undefined && input.allowDiscountCodes === true) {
+					return this.#fail(
+						"unsupported",
+						"a Stripe session either applies a discount or collects a code, never both",
+					);
+				}
+
 				let session = await this.#send({
 					method: "POST",
 					path: "checkout/sessions",
@@ -756,6 +772,8 @@ export class StripeBilling extends APIClient implements Billing {
 						client_reference_id: externalId,
 						metadata: { ...input.metadata, [PRODUCT_SLUG_KEY]: input.product },
 						discounts: input.discount === undefined ? undefined : [discountField(input.discount)],
+						allow_promotion_codes:
+							input.discount === undefined ? input.allowDiscountCodes : undefined,
 					},
 				});
 

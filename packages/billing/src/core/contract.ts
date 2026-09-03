@@ -43,6 +43,13 @@ export interface CreateCustomerInput {
 export interface UpdateCustomerInput {
 	email?: string;
 	name?: string;
+	/**
+	 * Our own subject id, for adopting a platform customer that carries none —
+	 * the record a support agent or an import created. A platform holding a
+	 * different id already reports `conflict`, since it treats the join key as
+	 * immutable once set.
+	 */
+	externalId?: string;
 	metadata?: Record<string, string>;
 }
 
@@ -148,8 +155,18 @@ export interface CreateCheckoutInput {
 	quantity?: number;
 	metadata?: Record<string, string>;
 	/**
-	 * Key that makes a repeated open the same session rather than a second one,
-	 * so a retried request bills once.
+	 * Whether the hosted page collects a discount code the buyer types. `false`
+	 * is what keeps a typed code off a price a campaign already discounted, and
+	 * a platform whose page has no code field answers `unsupported` when asked
+	 * to allow one.
+	 */
+	allowDiscountCodes?: boolean;
+	/**
+	 * Key correlating a retried open with the first attempt. A platform with an
+	 * idempotency header answers the same session for it, so a double-submitted
+	 * form bills once; a platform with none records it on the session, which
+	 * makes the second session attributable but does not prevent it, so a caller
+	 * wanting one session per attempt keys its own store on the same value.
 	 */
 	idempotencyKey?: string;
 }

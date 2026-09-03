@@ -277,6 +277,43 @@ describe("StripeBilling requests", () => {
 		expect(result.data.amount).toEqual({ amount: 4900, currency: "usd" });
 	});
 
+	test("closes the code field on a session opened without a discount", async () => {
+		let body = "";
+
+		server.use(
+			http.get(`${ORIGIN}/prices/price_pro`, () => HttpResponse.json(PRICE)),
+			http.post(`${ORIGIN}/checkout/sessions`, async ({ request }) => {
+				body = await request.text();
+				return HttpResponse.json(SESSION);
+			}),
+		);
+
+		let result = await create().checkouts.create({
+			product: "pro",
+			customer: { id: "cus_1" },
+			allowDiscountCodes: false,
+		});
+
+		if (isFailure(result)) throw result.error;
+
+		expect(new URLSearchParams(body).get("allow_promotion_codes")).toBe("false");
+	});
+
+	test("refuses a session that would both apply a discount and collect a code", async () => {
+		server.use(http.get(`${ORIGIN}/prices/price_pro`, () => HttpResponse.json(PRICE)));
+
+		let result = await create().checkouts.create({
+			product: "pro",
+			discount: "promo_123",
+			allowDiscountCodes: true,
+		});
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+
+		expect(result.error.code).toBe("unsupported");
+	});
+
 	test("authenticates every request and pins the API version", async () => {
 		let authorization: string | null = null;
 		let version: string | null = null;
@@ -673,6 +710,7 @@ describe("StripeBilling entitlements", () => {
 				subscriptionId: "sub_1",
 				productSlug: "pro",
 				status: "active",
+				currentPeriodStart: new Date(CREATED * MS_PER_SECOND),
 				currentPeriodEnd: new Date(PERIOD_END * MS_PER_SECOND),
 				cancelAtPeriodEnd: false,
 			},

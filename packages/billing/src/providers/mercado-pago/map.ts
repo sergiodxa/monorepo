@@ -571,6 +571,8 @@ export function orderFrom(
 	return {
 		id: payload.id,
 		customerId: payload.payer?.id ?? null,
+		customerEmail: payload.payer?.email ?? null,
+		customerExternalId: payload.external_reference ?? null,
 		productSlug:
 			metadataString(payload.metadata, PRODUCT_SLUG_KEY) ??
 			catalog.slugForPlan(metadataString(payload.metadata, PREAPPROVAL_KEY)),

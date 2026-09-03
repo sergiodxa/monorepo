@@ -10,7 +10,7 @@
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
-import type { Order } from "../../core/types";
+import type { Customer, Order } from "../../core/types";
 
 import type { MemoryBillingOptions, MemoryProductSeed } from "./index";
 
@@ -374,6 +374,133 @@ describe("MemoryBilling", () => {
 		let state = billing.native as { orders: Map<string, Order> };
 
 		expect(state.orders.size).toBe(1);
+	});
+
+	test("adopts our own id on a customer that carries none, and refuses to move one", async () => {
+		let billing = build();
+
+		let adopted = await unwrap(
+			billing.customers.create({ email: "one@example.com", externalId: "u_1" }),
+		);
+		let unlinked = (billing.native as { customers: Map<string, Customer> }).customers.get(
+			adopted.id,
+		);
+
+		if (unlinked === undefined) throw new Error("the created customer is stored");
+
+		unlinked.externalId = null;
+
+		let linked = await unwrap(billing.customers.update({ id: adopted.id }, { externalId: "u_1" }));
+
+		expect(linked.externalId).toBe("u_1");
+
+		let moved = await billing.customers.update({ id: adopted.id }, { externalId: "u_2" });
+
+		expect(isFailure(moved)).toBe(true);
+		if (isFailure(moved)) expect(moved.error.code).toBe("conflict");
+	});
+
+	test("seeds a campaign with the window and the redemptions it has already spent", async () => {
+		let starts = new Date("2026-07-01T00:00:00.000Z");
+		let ends = new Date("2026-07-08T00:00:00.000Z");
+
+		let billing = build({
+			discounts: [
+				{
+					id: "disc_launch",
+					code: "LAUNCH",
+					amount: 500,
+					redemptions: 12,
+					startsAt: starts,
+					endsAt: ends,
+				},
+			],
+		});
+
+		let discount = await unwrap(billing.discounts.find("disc_launch"));
+
+		expect(discount.redemptions).toBe(12);
+		expect(discount.startsAt).toEqual(starts);
+		expect(discount.endsAt).toEqual(ends);
+	});
+
+	test("delivers a paid order that names no customer, as the model permits", async () => {
+		let billing = build();
+
+		let { checkout } = await buy(billing, "book");
+		let order = await unwrap(billing.orders.find(checkout.orderId ?? ""));
+
+		let delivery = await unwrap(
+			billing.webhooks.emit({ type: "order.paid", order: { ...order, customerId: null } }),
+		);
+
+		let event = await unwrap(billing.webhooks.event(delivery.request, delivery.body));
+
+		expect(event.type).toBe("order.paid");
+		if (event.type !== "order.paid") return;
+
+		expect(event.order.customerId).toBeNull();
+		expect(event.order.customerEmail).toBe("u_1@example.com");
+	});
+
+	test("fails a whole group, and one method of it, until it is healed", async () => {
+		let billing = build({ faults: { customers: "unauthenticated" } });
+
+		let refused = await billing.customers.find({ id: "cus_1" });
+
+		expect(isFailure(refused)).toBe(true);
+		if (isFailure(refused)) expect(refused.error.code).toBe("unauthenticated");
+
+		billing.heal("customers");
+
+		let created = await unwrap(
+			billing.customers.create({ email: "one@example.com", externalId: "u_1" }),
+		);
+
+		billing.fail("subscriptions.list", "rate_limited");
+
+		let listed = await billing.subscriptions.list({ customer: { id: created.id } });
+
+		expect(isFailure(listed)).toBe(true);
+		if (isFailure(listed)) expect(listed.error.code).toBe("rate_limited");
+
+		expect(isSuccess(await billing.subscriptions.find("sub_missing"))).toBe(false);
+		expect(isSuccess(await billing.entitlements.of({ id: created.id }))).toBe(true);
+
+		billing.heal();
+
+		expect(isSuccess(await billing.subscriptions.list({ customer: { id: created.id } }))).toBe(
+			true,
+		);
+	});
+
+	test("answers as a platform without the groups a view leaves out", async () => {
+		let billing = build();
+		let narrow = billing.with({ portal: undefined, discounts: undefined });
+
+		expect(narrow.portal).toBeUndefined();
+		expect(narrow.discounts).toBeUndefined();
+		expect(narrow.usage).toBeDefined();
+		expect(narrow.connection).toBe("memory");
+		expect(isSuccess(await narrow.catalog.find("pro"))).toBe(true);
+	});
+
+	test("answers a group a view replaces through the replacement", async () => {
+		let billing = build();
+		let asked: string[] = [];
+
+		let recording = billing.with({
+			catalog: {
+				find: async (slug) => {
+					asked.push(slug);
+					return await billing.catalog.find(slug);
+				},
+				list: (query) => billing.catalog.list(query),
+			},
+		});
+
+		expect(isSuccess(await recording.catalog.find("pro"))).toBe(true);
+		expect(asked).toEqual(["pro"]);
 	});
 
 	test("reports a portal session for a known customer only", async () => {

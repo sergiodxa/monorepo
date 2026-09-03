@@ -431,6 +431,30 @@ describe("MercadoPagoBilling", () => {
 		});
 	});
 
+	test("reports a hosted page asked to collect a typed code as unsupported", async () => {
+		let opened = await billing().checkouts.create({
+			product: "book",
+			allowDiscountCodes: true,
+		});
+
+		expect(requests).toHaveLength(0);
+		expect(isFailure(opened)).toBe(true);
+		if (!isFailure(opened)) return;
+
+		expect(opened.error.code).toBe("unsupported");
+	});
+
+	test("opens a hosted page for a caller that closed the code field", async () => {
+		server.use(captured("/checkout/preferences", PREFERENCE));
+
+		let opened = await billing().checkouts.create({
+			product: "book",
+			allowDiscountCodes: false,
+		});
+
+		expect(isSuccess(opened)).toBe(true);
+	});
+
 	test("prices a one-time product from configuration, since the platform stores none", async () => {
 		let product = await billing().catalog.find("book");
 

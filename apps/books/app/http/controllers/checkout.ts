@@ -72,6 +72,13 @@ export default createAction(routes.api.checkout, async (ctx) => {
 		product,
 		email: customerEmail,
 		discount: discount?.id,
+		/**
+		 * Complete sells behind the launch campaign, so its hosted page collects
+		 * no code: a buyer typing one would take a second reduction off a price
+		 * that is already reduced. Essentials sells at list price, where a code
+		 * is the only discount there is.
+		 */
+		allowDiscountCodes: product !== Product.Complete,
 	});
 
 	if (isFailure(checkout)) {

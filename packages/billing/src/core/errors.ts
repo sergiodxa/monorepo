@@ -98,3 +98,18 @@ export class BillingError extends Error {
 		this.retryAfter = options.retryAfter ?? null;
 	}
 }
+
+/**
+ * Reports a row a read dropped rather than failing over. A list that carried on
+ * is otherwise indistinguishable from one the platform never held the row in,
+ * and a projection missing a record is worth a line in the log.
+ *
+ * @param connection - The credential set the read was made against.
+ * @param what - The row and why it could not be mapped.
+ *
+ * @example
+ * reportSkipped("polar", `subscription ${id} names an unconfigured product`);
+ */
+export function reportSkipped(connection: string, what: string): void {
+	console.warn(`billing.skipped_row connection=${connection} ${what}`);
+}

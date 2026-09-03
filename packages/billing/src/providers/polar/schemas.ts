@@ -71,6 +71,7 @@ const CUSTOMER_STATE_SUBSCRIPTION_SCHEMA = s.object({
 	id: s.string(),
 	product_id: s.string(),
 	status: SUBSCRIPTION_STATUS_SCHEMA,
+	current_period_start: maybe(coerce.date()),
 	current_period_end: maybe(coerce.date()),
 	cancel_at_period_end: s.optional(s.boolean()),
 });
@@ -161,6 +162,14 @@ export const ORDER_SCHEMA = s.object({
 	id: s.string(),
 	created_at: coerce.date(),
 	customer_id: s.string(),
+	/** The buyer as the paid record carries them, which is who a delivery is about. */
+	customer: s.optional(
+		s.object({
+			id: s.optional(s.string()),
+			email: maybe(s.string()),
+			external_id: maybe(s.string()),
+		}),
+	),
 	product_id: maybe(s.string()),
 	subscription_id: maybe(s.string()),
 	discount_id: maybe(s.string()),

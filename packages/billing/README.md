@@ -166,6 +166,7 @@ let checkout = await context.billing.checkouts.create({
 	product: "pro",
 	customer: { id: customerId },
 	returnTo: "https://example.com/billing/thanks",
+	allowDiscountCodes: false,
 	idempotencyKey: `checkout_${orderAttemptId}`,
 });
 
@@ -272,6 +273,8 @@ customers.list(query?: ListCustomersQuery): Promise<Result<Page<Customer>, Billi
 
 `create` takes `{ email, externalId, name?, metadata? }`. `externalId` is required: it is our own subject id, the join key that makes a customer re-resolvable, and platforms treat it as immutable once set. A taken `externalId` reports `conflict`.
 
+`UpdateCustomerInput` is `{ email?, name?, externalId?, metadata? }`. Naming `externalId` adopts a platform customer that carries none — the record a support agent or an import created — and a record already holding a different one reports `conflict`, since the join key does not move.
+
 `ListCustomersQuery` is `{ email?, limit?, cursor? }`.
 
 #### `CatalogApi`
@@ -291,7 +294,11 @@ checkouts.find(checkout: string): Promise<Result<Checkout, BillingError>>
 checkouts.finish(checkout: string): Promise<Result<Checkout, BillingError>>
 ```
 
-`CreateCheckoutInput` is `{ product, customer?, email?, returnTo?, discount?, quantity?, metadata?, idempotencyKey? }`. Omitting `customer` lets the hosted page collect the buyer's identity, which is what a sale to someone with no account yet needs. `idempotencyKey` makes a retried request open the same session rather than a second one.
+`CreateCheckoutInput` is `{ product, customer?, email?, returnTo?, discount?, quantity?, metadata?, allowDiscountCodes?, idempotencyKey? }`. Omitting `customer` lets the hosted page collect the buyer's identity, which is what a sale to someone with no account yet needs.
+
+`allowDiscountCodes: false` closes the code field on the hosted page, which is what keeps a typed code off a price a campaign already discounted. Polar sends it as `allow_discount_codes` and Stripe as `allow_promotion_codes`; Stripe refuses a session that both applies a `discount` and collects a code, so that pair answers `unsupported`, and Mercado Pago answers `unsupported` for `true` because its hosted page has no code field to open.
+
+`idempotencyKey` correlates a retried open with the first attempt, and what a platform does with it differs: Stripe and Mercado Pago carry it as an idempotency header, so a double-submitted form answers the same session, while Polar reads no such header and records it in the session's metadata as `idempotency_key`. On a platform of the second kind the second session is attributable but not prevented, so a caller that needs one session per attempt keys its own store on the same value.
 
 `finish` is the call a return route makes for a customer who has just come back from the hosted page. It is separate from `find` because a delivery from the platform and a customer standing in front of you differ in trust and in who is waiting.
 
@@ -332,6 +339,8 @@ orders.list(query?: ListOrdersQuery): Promise<Result<Page<Order>, BillingError>>
 
 `ListOrdersQuery` is `{ customer?, product?, subscription?, limit?, cursor? }`.
 
+An `Order` names the buyer three ways — `customerId`, `customerEmail`, `customerExternalId` — because a paid record carries them and an `order.paid` handler that has to fulfil a sale would otherwise read the customer back to learn an address it was already sent.
+
 #### `DiscountApi` (optional)
 
 ```typescript
@@ -341,6 +350,8 @@ discounts.list(query?: ListDiscountsQuery): Promise<Result<Page<Discount>, Billi
 ```
 
 Discounts are created in the platform's dashboard. `findByCode` turns a code typed into our own form into the id `checkouts.create({ discount })` accepts. `ListDiscountsQuery` is `{ product?, limit?, cursor? }`. Present only on a platform whose API exposes its coupons.
+
+`productSlugs` carries the scope entries this connection has a slug for, and an empty array still means every product, so an entry configured elsewhere is dropped from the scope rather than widening it. A discount whose whole scope is unconfigured applies to nothing here: `find` reports it, because a caller asked for exactly that record, while `list` and `findByCode` skip it and log it, so one unrelated dashboard campaign cannot take down a sales page's campaign lookup.
 
 #### `UsageApi` (optional)
 
@@ -569,6 +580,10 @@ interface EntitlementState {
 
 `products` and the keys of `features` are our own slugs. `readAt` is when the platform answered, so a projection can record how fresh it is. `MeterBalance` is `{ meter, credited, consumed, balance }`, and `balance` is what a limit check compares against.
 
+`EntitlementSubscription` is `{ subscriptionId, productSlug, status, currentPeriodStart?, currentPeriodEnd, cancelAtPeriodEnd }`. Every provider fills both period dates, so a projection that stores the period needs no second `subscriptions.find()`; the start stays optional so an app writing a snapshot of its own states only what it holds.
+
+A snapshot names only what this connection is configured to sell. An active subscription to a product outside the configured `products` is skipped rather than failing the read, so one unrelated product elsewhere in the organization costs that row instead of turning every sync into a retry loop. A skipped row is logged as `billing.skipped_row` through `console.warn`, since a list that carried on is otherwise indistinguishable from one the platform never held the row in.
+
 #### `BillingEvent`
 
 ```typescript
@@ -666,8 +681,8 @@ A configured Polar organization, answering every group in the contract — `port
 **Parameters:**
 
 - `options.accessToken`: `Secret` — organization access token, or a function resolving one
-- `options.webhookSecret`: `Secret` — signing secret for this endpoint's deliveries, exactly as Polar issued it
-- `options.products`: Polar product id per our own slug, which is how a call site names a product
+- `options.webhookSecret?`: `Secret` — signing secret for this endpoint's deliveries, exactly as Polar issued it; verification fails closed without it, which is what an app that mounts no webhook route wants
+- `options.products?`: Polar product id per our own slug, which is how a call site names a product; an app that only mirrors customers configures none, and every read addressing a product then reports the slug as unknown
 - `options.meters?`: Polar meter id per our own meter slug
 - `options.features?`: Polar benefit id per our own feature slug
 - `options.connection?`: Code stored beside every id this instance issues; defaults to `"polar"`
@@ -743,14 +758,42 @@ A billing platform held in memory, implementing every group including all four o
 
 - `options.catalog?`: `Record<string, MemoryProductSeed>` — products to start with, keyed by slug
 - `options.discounts?`: `MemoryDiscountSeed[]` — discounts a checkout can apply
+- `options.faults?`: Failures armed from the first call, keyed by the group or method they cover
 - `options.webhookSecret?`: Base64 secret emitted deliveries are signed with, so a test can point an endpoint at the same value it configures for a real provider
 - `options.connection?`: Defaults to `"memory"`
 
 `MemoryProductSeed` is `{ amount, currency?, name?, description?, interval?, meter?, features?, credits?, archived? }`. Naming a `meter` prices it as metered, an `interval` as recurring, and neither as a one-time sale. `credits` grants meter balances to a customer holding the product.
 
+`MemoryDiscountSeed` is `{ id?, code?, name?, percentage?, amount?, currency?, products?, maxRedemptions?, redemptions?, startsAt?, endsAt? }`, so a seeded campaign can start part-way through its window and part-way through its redemptions.
+
 ##### `billing.seed(catalog: Record<string, MemoryProductSeed>): void`
 
 Adds products, replacing any sharing a slug, so a test can price what it is about to sell without constructing another provider.
+
+##### `billing.fail(target: MemoryFaultTarget, code?: BillingErrorCode): void`
+
+Arms a failure on a group or one method of it, checked on every call from then on, so a test drives the path an outage takes without building a second provider.
+
+**Parameters:**
+
+- `target`: A group, such as `"customers"`, or `"group.method"` for a single call, such as `"subscriptions.list"`. The type is derived from the contract's own groups, so a misspelled target is a compile error
+- `code`: The `BillingErrorCode` the armed calls report; defaults to `"unknown"`
+
+A method-level fault wins over one armed on its group. `webhooks` takes no fault, since its questions answer a verdict rather than a `Result`.
+
+##### `billing.heal(target?: MemoryFaultTarget): void`
+
+Takes an armed failure away, so the call answers from memory again. Omitting the target disarms everything.
+
+##### `billing.with(overrides: MemoryBillingOverrides): Billing`
+
+The platform a call site sees, with the named groups answered by something else — for a call a test wants to record, or a snapshot only a real platform could hold. It is a plain object rather than the instance, so every group it does not name still answers from memory, and naming an optional group as `undefined` leaves it absent, which is how a `supports()` guard's false branch gets exercised.
+
+```typescript
+let portalless = billing.with({ portal: undefined });
+
+expect(supports(portalless, "portal")).toBe(false);
+```
 
 ##### `billing.checkouts.finish(id)`
 
@@ -762,7 +805,7 @@ Signs and returns a delivery for an event without sending it anywhere, so a test
 
 **Parameters:**
 
-- `payload`: A `BillingEventPayload` plus an optional `id`; omitting the id issues one, and reusing one models a redelivery
+- `payload`: A `BillingEventPayload` plus an optional `id`; omitting the id issues one, and reusing one models a redelivery. It accepts every object the models permit, an order naming no customer included
 
 **Returns:**
 
@@ -1200,6 +1243,34 @@ test("a paid order grants the feature it sells", async () => {
 });
 ```
 
+## Pattern: Testing the degraded path
+
+A platform that is unreachable, rate-limited, or refusing one group is a path worth a test, and `MemoryBilling` arms it on the instance the test is already using. Nothing is wrapped, so the object under test stays the same object:
+
+```typescript
+import { MemoryBilling } from "@pkg/billing/providers/memory";
+import { isFailure } from "@pkg/result";
+import { expect, test } from "vitest";
+
+import { syncEntitlements } from "~/app/services/entitlements";
+
+test("leaves the projection alone when the snapshot cannot be read", async () => {
+	let billing = new MemoryBilling({ catalog: CATALOG });
+	let customer = await unwrap(billing.customers.create({ email, externalId: "u_1" }));
+
+	billing.fail("entitlements.of", "unknown");
+
+	expect(isFailure(await syncEntitlements(billing, customer.id))).toBe(true);
+	expect(await readProjection("u_1")).toBeNull();
+
+	billing.heal("entitlements.of");
+
+	expect(isFailure(await syncEntitlements(billing, customer.id))).toBe(false);
+});
+```
+
+Arm a whole group when the test is about an outage — `billing.fail("customers")` — and one method when it is about a single read, since a method-level fault wins over its group's. A test that needs a group to answer something rather than fail, or to be absent entirely, asks for `billing.with({ ... })` instead.
+
 ## Pattern: Writing a new provider
 
 Implement `Billing`, then register the conformance suites for the required core plus every group the platform actually has:
@@ -1257,7 +1328,10 @@ Type every credential option as `Secret` and read it through `secretReader` from
 12. **Run a reconciliation job** — deliveries get missed, so a periodic sweep re-reading the snapshot is part of adopting this package rather than an optimization.
 13. **Give a store to the webhook endpoint** — without one, every delivery dispatches, replays included, so the handlers themselves have to be idempotent.
 14. **Send an `externalId` with every usage event** — it is the idempotency key, so a resent batch is counted once and a failed ingest can be retried safely.
-15. **Use `MemoryBilling` rather than mocking an SDK** — it is a full implementation that passes the same conformance suite, so it fails when the contract changes instead of quietly drifting.
-16. **The Stripe provider is not adopted by anything** — it exists to prove the contract fits a second platform, and its `orders` group answers `not_implemented` on purpose, so treat it as a starting point rather than a supported backend.
-17. **No conformance suite has run against a real sandbox yet** — every remote suite is written and skipped pending credentials, so a provider's mapping of live payloads is unverified until that run happens.
-18. **Mercado Pago leaves the app as the seller of record** — it is a payment processor rather than a merchant of record, so tax registration, invoicing obligations, remittance, and disputes belong to the app and are handled outside this package.
+15. **Arm a fault rather than hand-rolling a refusing provider** — `billing.fail("customers")` and `billing.heal()` make one group or one method fail on the instance a test already drives, so nothing has to spread a provider into a partial copy of it.
+16. **Read the buyer off the order** — an `order.paid` delivery already carries `customerEmail` and `customerExternalId`, so fulfilment needs no second read.
+17. **Watch for `billing.skipped_row` in the logs** — a snapshot or a discount list carries on past a product this connection is not configured with, so a projection that is missing a record has this line behind it.
+18. **Use `MemoryBilling` rather than mocking an SDK** — it is a full implementation that passes the same conformance suite, so it fails when the contract changes instead of quietly drifting.
+19. **The Stripe provider is not adopted by anything** — it exists to prove the contract fits a second platform, and its `orders` group answers `not_implemented` on purpose, so treat it as a starting point rather than a supported backend.
+20. **No conformance suite has run against a real sandbox yet** — every remote suite is written and skipped pending credentials, so a provider's mapping of live payloads is unverified until that run happens.
+21. **Mercado Pago leaves the app as the seller of record** — it is a payment processor rather than a merchant of record, so tax registration, invoicing obligations, remittance, and disputes belong to the app and are handled outside this package.

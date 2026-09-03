@@ -85,6 +85,24 @@ describe("GET /api/checkout/:type", () => {
 		});
 	});
 
+	test("opens the Complete checkout with the code field closed", async () => {
+		let billing = memoryBilling({ discounts: [activeCampaign()] });
+
+		let response = await start(billing, "/api/checkout/complete");
+		let checkout = await openedCheckout(billing, response);
+
+		expect(checkout.providerData.allowDiscountCodes).toBe(false);
+	});
+
+	test("leaves the code field open on an Essentials checkout, which carries no campaign", async () => {
+		let billing = memoryBilling();
+
+		let response = await start(billing, "/api/checkout/essentials");
+		let checkout = await openedCheckout(billing, response);
+
+		expect(checkout.providerData.allowDiscountCodes).toBe(true);
+	});
+
 	test("still checks out at full price when no campaign applies", async () => {
 		let billing = memoryBilling();
 

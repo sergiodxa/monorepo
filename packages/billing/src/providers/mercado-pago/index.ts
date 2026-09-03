@@ -470,11 +470,17 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 				return success(customerFrom(created.data.value, created.data.raw));
 			},
 
+			/**
+			 * Changes the fields named. Our own reference is a field of the payer
+			 * record here rather than something the platform keys on, so adopting a
+			 * payer that carries none is the same write as any other field.
+			 */
 			update: async (customer: CustomerRef, input: UpdateCustomerInput) => {
 				let record = await this.#resolveCustomer(customer);
 				if (isFailure(record)) return record;
 
 				let [first, ...rest] = (input.name ?? "").split(" ");
+				let reference = input.externalId ?? record.data.value.description;
 
 				let updated = await this.#call(
 					`/v1/customers/${encodeURIComponent(record.data.value.id)}`,
@@ -485,13 +491,11 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 							email: input.email,
 							first_name: input.name === undefined || first === "" ? undefined : first,
 							last_name: rest.length > 0 ? rest.join(" ") : undefined,
+							description: input.externalId,
 							metadata:
 								input.metadata === undefined
 									? undefined
-									: {
-											...input.metadata,
-											[EXTERNAL_REFERENCE_KEY]: record.data.value.description,
-										},
+									: { ...input.metadata, [EXTERNAL_REFERENCE_KEY]: reference },
 						},
 					},
 				);
@@ -702,6 +706,10 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 
 				if (input.discount !== undefined) {
 					return this.#unsupported("discount an API-opened checkout can apply");
+				}
+
+				if (input.allowDiscountCodes === true) {
+					return this.#unsupported("code field on its hosted page for a buyer to type into");
 				}
 
 				let buyer =
@@ -936,6 +944,7 @@ export class MercadoPagoBilling extends APIClient implements Billing {
 							subscriptionId: mapped.data.id,
 							productSlug: mapped.data.productSlug,
 							status: mapped.data.status,
+							currentPeriodStart: mapped.data.currentPeriodStart,
 							currentPeriodEnd: mapped.data.currentPeriodEnd,
 							cancelAtPeriodEnd: mapped.data.cancelAtPeriodEnd,
 						});

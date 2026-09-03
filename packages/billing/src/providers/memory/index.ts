@@ -126,6 +126,12 @@ export interface MemoryDiscountSeed {
 	/** Products it applies to, by slug; omitted applies it to every product. */
 	products?: string[];
 	maxRedemptions?: number;
+	/** Redemptions already spent, for a campaign a test starts part-way through. */
+	redemptions?: number;
+	/** When it starts applying; omitted has it apply from the beginning. */
+	startsAt?: Date;
+	/** When it stops applying; omitted leaves it open-ended. */
+	endsAt?: Date;
 }
 
 /** How a memory provider is configured. */
@@ -145,6 +151,12 @@ export interface MemoryBillingOptions {
 	 * an endpoint at the same value it configures for a real provider.
 	 */
 	webhookSecret?: string;
+	/**
+	 * Failures armed from the first call, keyed by the group or method they
+	 * cover. {@link MemoryBilling.fail} arms one later and
+	 * {@link MemoryBilling.heal} takes it away.
+	 */
+	faults?: MemoryFaults;
 }
 
 /** An envelope read off the wire, kept beside the exact payload it came from. */
@@ -185,6 +197,60 @@ export interface MemoryWebhookApi extends WebhookApi {
 	 * @returns The signed delivery, or a failure when the configured secret is unusable.
 	 */
 	emit(payload: MemoryEmitEvent): Promise<Result<MemoryDelivery, BillingError>>;
+}
+
+/**
+ * The resource groups a fault is armed on. `webhooks` is absent because its
+ * questions answer a verdict rather than a `Result`, so a failure has nowhere
+ * to go there.
+ */
+interface MemoryFaultGroups {
+	customers: CustomerApi;
+	catalog: CatalogApi;
+	checkouts: CheckoutApi;
+	portal: PortalApi;
+	subscriptions: SubscriptionApi;
+	entitlements: EntitlementApi;
+	orders: OrderApi;
+	discounts: DiscountApi;
+	usage: UsageApi;
+	meters: MeterApi;
+}
+
+/**
+ * What a fault covers: a whole group, or one of its methods. It is derived from
+ * the contract's own groups, so a method the contract gains is armable without
+ * a list here being updated.
+ *
+ * @example
+ * billing.fail("customers");
+ * billing.fail("subscriptions.list", "rate_limited");
+ */
+export type MemoryFaultTarget = {
+	[Group in keyof MemoryFaultGroups]:
+		| Group
+		| `${Group}.${Extract<keyof MemoryFaultGroups[Group], string>}`;
+}[keyof MemoryFaultGroups];
+
+/** Faults armed from the start, as the failure each target reports. */
+export type MemoryFaults = Partial<Record<MemoryFaultTarget, BillingErrorCode>>;
+
+/**
+ * Groups a view answers differently. Naming an optional group as `undefined`
+ * leaves it absent, so a `supports()` guard takes its false branch.
+ */
+export interface MemoryBillingOverrides {
+	customers?: CustomerApi;
+	catalog?: CatalogApi;
+	checkouts?: CheckoutApi;
+	subscriptions?: SubscriptionApi;
+	entitlements?: EntitlementApi;
+	orders?: OrderApi;
+	webhooks?: WebhookApi;
+	portal?: PortalApi | undefined;
+	discounts?: DiscountApi | undefined;
+	usage?: UsageApi | undefined;
+	meters?: MeterApi | undefined;
 }
 
 /** Envelope every emitted delivery carries, and the shape a parse starts from. */
@@ -253,7 +319,9 @@ const SUBSCRIPTION_SCHEMA = s.object({
 
 const ORDER_SCHEMA = s.object({
 	id: s.string(),
-	customerId: s.string(),
+	customerId: s.nullable(s.string()),
+	customerEmail: s.nullable(s.string()),
+	customerExternalId: s.nullable(s.string()),
 	productSlug: s.nullable(s.string()),
 	subscriptionId: s.nullable(s.string()),
 	total: MONEY_SCHEMA,
@@ -357,6 +425,8 @@ export class MemoryBilling implements Billing {
 
 	#webhookSecret: string;
 
+	#faults: Map<string, BillingErrorCode>;
+
 	#customerRecords = new Map<string, Customer>();
 
 	#productRecords = new Map<string, Product>();
@@ -384,21 +454,22 @@ export class MemoryBilling implements Billing {
 	constructor(options: MemoryBillingOptions = {}) {
 		this.connection = options.connection ?? DEFAULT_CONNECTION;
 		this.#webhookSecret = options.webhookSecret ?? DEFAULT_WEBHOOK_SECRET;
+		this.#faults = new Map(Object.entries(options.faults ?? {}));
 
 		this.seed(options.catalog ?? {});
 		for (let discount of options.discounts ?? []) this.#seedDiscount(discount);
 
-		this.customers = this.#buildCustomerApi();
-		this.catalog = this.#buildCatalogApi();
-		this.checkouts = this.#buildCheckoutApi();
-		this.portal = this.#buildPortalApi();
-		this.subscriptions = this.#buildSubscriptionApi();
-		this.entitlements = this.#buildEntitlementApi();
-		this.orders = this.#buildOrderApi();
-		this.discounts = this.#buildDiscountApi();
-		this.usage = this.#buildUsageApi();
+		this.customers = this.#faultable("customers", this.#buildCustomerApi());
+		this.catalog = this.#faultable("catalog", this.#buildCatalogApi());
+		this.checkouts = this.#faultable("checkouts", this.#buildCheckoutApi());
+		this.portal = this.#faultable("portal", this.#buildPortalApi());
+		this.subscriptions = this.#faultable("subscriptions", this.#buildSubscriptionApi());
+		this.entitlements = this.#faultable("entitlements", this.#buildEntitlementApi());
+		this.orders = this.#faultable("orders", this.#buildOrderApi());
+		this.discounts = this.#faultable("discounts", this.#buildDiscountApi());
+		this.usage = this.#faultable("usage", this.#buildUsageApi());
 		this.webhooks = this.#buildWebhookApi();
-		this.meters = this.#buildMeterApi();
+		this.meters = this.#faultable("meters", this.#buildMeterApi());
 
 		this.native = {
 			customers: this.#customerRecords,
@@ -419,6 +490,63 @@ export class MemoryBilling implements Billing {
 	 */
 	seed(catalog: Record<string, MemoryProductSeed>): void {
 		for (let [slug, seed] of Object.entries(catalog)) this.#seedProduct(slug, seed);
+	}
+
+	/**
+	 * Arms a failure on a group or one method of it, checked on every call from
+	 * now on, so a test drives the path an outage takes without building a second
+	 * provider. A method-level fault wins over one armed on its group.
+	 *
+	 * @param target - The group, or `"group.method"` for a single call.
+	 * @param code - The failure the armed calls report.
+	 *
+	 * @example
+	 * billing.fail("subscriptions.list", "unknown");
+	 * expect(isFailure(await billing.subscriptions.list())).toBe(true);
+	 */
+	fail(target: MemoryFaultTarget, code: BillingErrorCode = "unknown"): void {
+		this.#faults.set(target, code);
+	}
+
+	/**
+	 * Takes an armed failure away, so the call answers from memory again.
+	 *
+	 * @param target - What to disarm; omitted disarms everything.
+	 */
+	heal(target?: MemoryFaultTarget): void {
+		if (target === undefined) this.#faults.clear();
+		else this.#faults.delete(target);
+	}
+
+	/**
+	 * Builds the platform a call site sees, with the named groups answered by
+	 * something else. It is a plain object rather than this instance, so a group
+	 * can be recorded through or left absent while every other group still
+	 * answers from memory.
+	 *
+	 * @param overrides - Groups to answer differently; an optional group named as `undefined` is absent.
+	 * @returns The platform as a route or a job sees it.
+	 *
+	 * @example
+	 * let portalless = billing.with({ portal: undefined });
+	 * expect(supports(portalless, "portal")).toBe(false);
+	 */
+	with(overrides: MemoryBillingOverrides): Billing {
+		return {
+			connection: this.connection,
+			customers: overrides.customers ?? this.customers,
+			catalog: overrides.catalog ?? this.catalog,
+			checkouts: overrides.checkouts ?? this.checkouts,
+			subscriptions: overrides.subscriptions ?? this.subscriptions,
+			entitlements: overrides.entitlements ?? this.entitlements,
+			orders: overrides.orders ?? this.orders,
+			webhooks: overrides.webhooks ?? this.webhooks,
+			portal: "portal" in overrides ? overrides.portal : this.portal,
+			discounts: "discounts" in overrides ? overrides.discounts : this.discounts,
+			usage: "usage" in overrides ? overrides.usage : this.usage,
+			meters: "meters" in overrides ? overrides.meters : this.meters,
+			native: this.native,
+		};
 	}
 
 	#seedProduct(slug: string, seed: MemoryProductSeed): void {
@@ -461,12 +589,34 @@ export class MemoryBilling implements Billing {
 			amount: seed.amount === undefined ? null : { amount: seed.amount, currency },
 			productSlugs: seed.products ?? [],
 			maxRedemptions: seed.maxRedemptions ?? null,
-			redemptions: 0,
-			startsAt: null,
-			endsAt: null,
+			redemptions: seed.redemptions ?? 0,
+			startsAt: seed.startsAt ?? null,
+			endsAt: seed.endsAt ?? null,
 			createdAt: new Date(),
 			providerData: {},
 		});
+	}
+
+	/**
+	 * Wraps a group so every call reports the failure armed for it, if any, before
+	 * reaching the maps. Only groups whose methods answer a `Result` are wrapped.
+	 */
+	#faultable<Api extends object>(group: string, api: Api): Api {
+		let faultable: Record<string, unknown> = {};
+
+		for (let [method, implementation] of Object.entries<unknown>(api as Record<string, unknown>)) {
+			faultable[method] = async (...args: unknown[]) => {
+				let armed = this.#faults.get(`${group}.${method}`) ?? this.#faults.get(group);
+
+				if (armed !== undefined) {
+					return this.#fail(armed, `the memory platform is failing ${group}.${method}`);
+				}
+
+				return await (implementation as (...called: unknown[]) => unknown)(...args);
+			};
+		}
+
+		return faultable as Api;
 	}
 
 	#nextId(prefix: string): string {
@@ -541,6 +691,24 @@ export class MemoryBilling implements Billing {
 		return false;
 	}
 
+	/** Settles what a record's own id becomes, refusing to move one already set. */
+	#adoptExternalId(
+		customer: Customer,
+		wanted: string | undefined,
+	): Result<string | null, BillingError> {
+		if (wanted === undefined || wanted === customer.externalId) return success(customer.externalId);
+
+		if (customer.externalId !== null) {
+			return this.#fail("conflict", `externalId is already ${customer.externalId}`);
+		}
+
+		if (this.#lookupCustomer({ externalId: wanted }) !== undefined) {
+			return this.#fail("conflict", `externalId already taken: ${wanted}`);
+		}
+
+		return success(wanted);
+	}
+
 	#buildCustomerApi(): CustomerApi {
 		return {
 			/** Rejects a repeated `externalId` or email, so either identifier stays a key. */
@@ -568,7 +736,12 @@ export class MemoryBilling implements Billing {
 				return success(customer);
 			},
 
-			/** Applies only the named fields, leaving `externalId` as it was created. */
+			/**
+			 * Applies only the named fields. Our own id is adopted by a record that
+			 * carries none, which is how an existing platform customer becomes
+			 * re-resolvable; a record already holding a different one reports a
+			 * conflict, as a platform treating the join key as immutable does.
+			 */
 			update: async (customer: CustomerRef, input: UpdateCustomerInput) => {
 				let found = this.#requireCustomer(customer);
 				if (isFailure(found)) return found;
@@ -577,8 +750,12 @@ export class MemoryBilling implements Billing {
 					return this.#fail("conflict", `email already taken: ${input.email}`);
 				}
 
+				let externalId = this.#adoptExternalId(found.data, input.externalId);
+				if (isFailure(externalId)) return externalId;
+
 				let updated: Customer = {
 					...found.data,
+					externalId: externalId.data,
 					email: input.email ?? found.data.email,
 					name: input.name ?? found.data.name,
 					metadata: input.metadata ?? found.data.metadata,
@@ -673,6 +850,9 @@ export class MemoryBilling implements Billing {
 						email: input.email ?? null,
 						quantity: input.quantity ?? 1,
 						metadata: input.metadata ?? {},
+						/** A hosted page collects a typed code unless the caller closed that door. */
+						allowDiscountCodes: input.allowDiscountCodes ?? true,
+						idempotencyKey: input.idempotencyKey ?? null,
 					},
 				};
 
@@ -750,6 +930,8 @@ export class MemoryBilling implements Billing {
 		let order: Order = {
 			id: this.#nextId("ord"),
 			customerId: customer.data.id,
+			customerEmail: customer.data.email,
+			customerExternalId: customer.data.externalId,
 			productSlug: checkout.productSlug,
 			subscriptionId: subscription?.id ?? null,
 			total,
@@ -950,6 +1132,7 @@ export class MemoryBilling implements Billing {
 				subscriptionId: subscription.id,
 				productSlug: subscription.productSlug,
 				status: subscription.status,
+				currentPeriodStart: subscription.currentPeriodStart,
 				currentPeriodEnd: subscription.currentPeriodEnd,
 				cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
 			})),

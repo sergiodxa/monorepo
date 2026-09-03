@@ -191,6 +191,13 @@ export interface Order {
 	id: string;
 	/** Who paid; `null` when the platform reports no payer on the record. */
 	customerId: string | null;
+	/**
+	 * The buyer's address, as the paid record carries it, so fulfilling a sale
+	 * needs no second read; `null` when the platform names none.
+	 */
+	customerEmail: string | null;
+	/** Our own identifier for the buyer; `null` when the record carries none. */
+	customerExternalId: string | null;
 	/** Our own name for what was bought; `null` when the platform reports no product. */
 	productSlug: string | null;
 	subscriptionId: string | null;
@@ -284,6 +291,12 @@ export interface EntitlementSubscription {
 	/** Our own name for what was bought; `null` when no configured slug maps to it. */
 	productSlug: string | null;
 	status: SubscriptionStatus;
+	/**
+	 * Start of the paid period, which is what a projection dates a period's usage
+	 * from. Every provider fills it; it stays optional so an app writing a
+	 * snapshot of its own states only what it holds.
+	 */
+	currentPeriodStart?: Date | null;
 	currentPeriodEnd: Date | null;
 	cancelAtPeriodEnd: boolean;
 }

@@ -15,8 +15,7 @@
 import type { Billing } from "@pkg/billing";
 import type { Database } from "remix/data-table";
 
-import { BillingError } from "@pkg/billing";
-import { failure, isFailure, isSuccess, unwrap } from "@pkg/result";
+import { isFailure, isSuccess, unwrap } from "@pkg/result";
 import { describe, expect, test } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
@@ -61,16 +60,9 @@ async function createBilling(subscribed = false) {
 async function createFailingBilling(): Promise<Billing> {
 	let billing = await createBilling(true);
 
-	return {
-		...billing,
-		subscriptions: {
-			...billing.subscriptions,
-			list: async () =>
-				failure(
-					new BillingError("platform unavailable", { code: "unknown", connection: "memory" }),
-				),
-		},
-	};
+	billing.fail("subscriptions.list", "unknown");
+
+	return billing;
 }
 
 async function createTeamRow(db: Database, overrides: Partial<SelectTeam> = {}) {

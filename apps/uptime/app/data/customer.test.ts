@@ -170,16 +170,16 @@ describe("Customer.checkout", () => {
 		);
 
 		let opened: CreateCheckoutInput[] = [];
-		let recording: Billing = {
-			...billing,
+		let recording = billing.with({
 			checkouts: {
-				...billing.checkouts,
 				create: async (input) => {
 					opened.push(input);
 					return await billing.checkouts.create(input);
 				},
+				find: (checkout) => billing.checkouts.find(checkout),
+				finish: (checkout) => billing.checkouts.finish(checkout),
 			},
-		};
+		});
 
 		let url = await unwrap(Customer.checkout(recording, TEAM, REQUEST_URL));
 
@@ -195,16 +195,9 @@ describe("Customer.checkout", () => {
 
 	test("reports the platform's refusal rather than throwing", async () => {
 		let billing = createTestBilling();
-		let refusing: Billing = {
-			...billing,
-			checkouts: {
-				...billing.checkouts,
-				create: async () =>
-					failure(new BillingError("gateway timeout", { code: "unknown", connection: "memory" })),
-			},
-		};
+		billing.fail("checkouts.create", "unknown");
 
-		let opened = await Customer.checkout(refusing, TEAM, REQUEST_URL);
+		let opened = await Customer.checkout(billing, TEAM, REQUEST_URL);
 
 		expect(isFailure(opened)).toBe(true);
 		if (isFailure(opened)) expect(opened.error.code).toBe("unknown");
@@ -222,15 +215,14 @@ describe("Customer.portal", () => {
 		if (hosted === undefined) throw new Error("the in-memory platform hosts a portal");
 
 		let opened: CreatePortalInput[] = [];
-		let recording: Billing = {
-			...billing,
+		let recording = billing.with({
 			portal: {
 				create: async (input) => {
 					opened.push(input);
 					return await hosted.create(input);
 				},
 			},
-		};
+		});
 
 		let url = await unwrap(Customer.portal(recording, TEAM, REQUEST_URL));
 
@@ -240,7 +232,7 @@ describe("Customer.portal", () => {
 
 	test("reports `unsupported` on a platform that hosts no portal", async () => {
 		let billing = createTestBilling();
-		let portalless = { ...billing, portal: undefined } as unknown as Billing;
+		let portalless = billing.with({ portal: undefined });
 
 		let opened = await Customer.portal(portalless, TEAM, REQUEST_URL);
 
@@ -290,18 +282,9 @@ describe("Customer.cancelSubscriptions", () => {
 
 	test("reports the platform's refusal, so its caller decides what that costs", async () => {
 		let billing = createTestBilling();
-		let refusing: Billing = {
-			...billing,
-			subscriptions: {
-				...billing.subscriptions,
-				list: async () =>
-					failure(
-						new BillingError("service unavailable", { code: "unknown", connection: "memory" }),
-					),
-			},
-		};
+		billing.fail("subscriptions.list", "unknown");
 
-		let cancelled = await Customer.cancelSubscriptions(refusing, TEAM.owner_id);
+		let cancelled = await Customer.cancelSubscriptions(billing, TEAM.owner_id);
 
 		expect(isFailure(cancelled)).toBe(true);
 		if (isFailure(cancelled)) expect(cancelled.error.code).toBe("unknown");

@@ -37,6 +37,8 @@ import type {
 	UsageRecord,
 } from "../../core/types";
 
+import { reportSkipped } from "../../core/errors";
+
 import { toMappingError } from "./errors";
 import {
 	CHECKOUT_SCHEMA,
@@ -397,6 +399,8 @@ export function mapOrder(raw: unknown, mapping: PolarMapping): Result<Order, Bil
 	return success({
 		id: order.id,
 		customerId: order.customer_id,
+		customerEmail: order.customer?.email ?? null,
+		customerExternalId: order.customer?.external_id ?? null,
 		productSlug: slug,
 		subscriptionId: order.subscription_id ?? null,
 		total: { amount: order.total_amount, currency: order.currency },
@@ -411,9 +415,11 @@ export function mapOrder(raw: unknown, mapping: PolarMapping): Result<Order, Bil
 }
 
 /**
- * Maps a discount. Polar scopes one to products by id, so a discount naming a
- * product this connection is not configured with is reported rather than read
- * as applying everywhere.
+ * Maps a discount. Polar scopes one to products by id, so a scope entry this
+ * connection has no slug for is dropped from `productSlugs` while the rest
+ * stand, which keeps a discount scoped elsewhere from reading as applying
+ * everywhere. A discount whose whole scope is unconfigured applies to nothing
+ * here and is reported instead.
  *
  * @param raw - The payload as Polar answered with it.
  * @param mapping - The connection and its configured slugs.
@@ -425,11 +431,28 @@ export function mapDiscount(raw: unknown, mapping: PolarMapping): Result<Discoun
 
 	let discount = parsed.data;
 	let slugs: string[] = [];
+	let unconfigured: string[] = [];
 
 	for (let product of discount.products ?? []) {
-		let slug = slugOf(product.id, mapping);
-		if (isFailure(slug)) return slug;
-		slugs.push(slug.data);
+		let slug = mapping.products.get(product.id);
+		if (slug === undefined) unconfigured.push(product.id);
+		else slugs.push(slug);
+	}
+
+	if (slugs.length === 0 && unconfigured.length > 0) {
+		return failure(
+			toMappingError(
+				mapping.connection,
+				`Polar discount ${discount.id} is scoped to products outside this connection's configured catalog: ${unconfigured.join(", ")}`,
+			),
+		);
+	}
+
+	if (unconfigured.length > 0) {
+		reportSkipped(
+			mapping.connection,
+			`discount=${discount.id} products=${unconfigured.join(",")} reason=unconfigured_product`,
+		);
 	}
 
 	let basisPoints = discount.basis_points ?? null;
@@ -577,18 +600,26 @@ export function mapEntitlementState(
 	let subscriptions: EntitlementSubscription[] = [];
 
 	for (let active of state.active_subscriptions ?? []) {
-		let slug = slugOf(active.product_id, mapping);
-		if (isFailure(slug)) return slug;
+		let slug = mapping.products.get(active.product_id);
+
+		if (slug === undefined) {
+			reportSkipped(
+				mapping.connection,
+				`subscription=${active.id} product=${active.product_id} reason=unconfigured_product`,
+			);
+			continue;
+		}
 
 		let status = statusOf(active.status, mapping);
 		if (isFailure(status)) return status;
 
-		if (!products.includes(slug.data)) products.push(slug.data);
+		if (!products.includes(slug)) products.push(slug);
 
 		subscriptions.push({
 			subscriptionId: active.id,
-			productSlug: slug.data,
+			productSlug: slug,
 			status: status.data,
+			currentPeriodStart: active.current_period_start ?? null,
 			currentPeriodEnd: active.current_period_end ?? null,
 			cancelAtPeriodEnd: active.cancel_at_period_end ?? false,
 		});
