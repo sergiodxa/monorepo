@@ -93,7 +93,7 @@ vi.doMock("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
-let { Job, createJobContext } = await import("@pkg/jobs-next");
+let { Job, createJobContext } = await import("@pkg/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let checkHttp = (await import("./check-http")).default;

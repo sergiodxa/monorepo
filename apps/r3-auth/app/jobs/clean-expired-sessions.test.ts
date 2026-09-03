@@ -10,7 +10,7 @@
 
 import type { Database as DataTableDatabase } from "remix/data-table";
 
-import { createJobContext } from "@pkg/jobs-next";
+import { createJobContext } from "@pkg/jobs";
 import { generateUUID } from "@pkg/uuid";
 import { beforeEach, describe, expect, test } from "vitest";
 

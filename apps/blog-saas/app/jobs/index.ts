@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { job, jobs } from "@pkg/jobs-next";
+import { job, jobs } from "@pkg/jobs";
 
 /**
  * Every scheduled job, keyed by the name it travels under: the key is the message

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JobMiddleware } from "@pkg/jobs-next";
+import type { JobMiddleware } from "@pkg/jobs";
 
 import { getServiceContainer } from "@pkg/service-container";
 import { Database as DataTable } from "remix/data-table";

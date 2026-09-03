@@ -53,7 +53,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
 
-let { createJobContext } = await import("@pkg/jobs-next");
+let { createJobContext } = await import("@pkg/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;

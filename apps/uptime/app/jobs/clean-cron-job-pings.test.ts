@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobContext } from "@pkg/jobs-next";
+import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { beforeEach, describe, expect, test } from "vitest";
 

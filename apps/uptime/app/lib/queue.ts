@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyJobDefinition, JobArgs, JobInput } from "@pkg/jobs-next";
+import type { AnyJobDefinition, JobArgs, JobInput } from "@pkg/jobs";
 
-import { messageBody } from "@pkg/jobs-next";
+import { messageBody } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 
 import { chunk } from "~/app/lib/concurrency";

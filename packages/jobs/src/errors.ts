@@ -100,7 +100,7 @@ export class Timeout extends Ending {
 }
 
 /**
- * The endings, under one name to catch and construct them by. `@pkg/jobs-next/errors`
+ * The endings, under one name to catch and construct them by. `@pkg/jobs/errors`
  * exports each of them on its own, which is what a type position needs — `Job.Retry`
  * names a value.
  *

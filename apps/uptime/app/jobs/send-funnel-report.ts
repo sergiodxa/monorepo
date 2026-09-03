@@ -10,7 +10,7 @@
  */
 
 import { toDayKey, subDays } from "@pkg/dates";
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";

@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import * as s from "remix/data-schema";
 
 import TeamDomain from "~/app/data/team-domain";

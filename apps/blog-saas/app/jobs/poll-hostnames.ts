@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { HostnameClient } from "@pkg/hostname";
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 
 import jobs from "~/app/jobs";
 import Hostname from "~/app/models/hostname";

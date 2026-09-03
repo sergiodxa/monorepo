@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { JobDispatcherContext } from "@pkg/jobs-next";
+import type { JobDispatcherContext } from "@pkg/jobs";
 
-import { createJobDispatcher } from "@pkg/jobs-next";
+import { createJobDispatcher } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
@@ -44,7 +44,7 @@ dispatcher.map(jobs.reportUsage, () => import("~/app/jobs/report-usage"));
 dispatcher.map(jobs.purgeDeletedBlogs, () => import("~/app/jobs/purge-deleted-blogs"));
 dispatcher.map(jobs.pollHostnames, () => import("~/app/jobs/poll-hostnames"));
 
-declare module "@pkg/jobs-next" {
+declare module "@pkg/jobs" {
 	interface JobTypes {
 		context: JobDispatcherContext<typeof dispatcher>;
 	}

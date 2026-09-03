@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JobMiddleware } from "@pkg/jobs-next";
+import type { JobMiddleware } from "@pkg/jobs";
 import type { Database as DataTable } from "remix/data-table";
 
 import { createContextKey } from "remix/router";

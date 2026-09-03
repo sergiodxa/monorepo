@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { JobMiddleware } from "@pkg/jobs-next";
+import type { JobMiddleware } from "@pkg/jobs";
 
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { env } from "cloudflare:workers";

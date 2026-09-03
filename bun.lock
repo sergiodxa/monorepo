@@ -86,7 +86,7 @@
         "@pkg/data-table-sqlstorage": "workspace:*",
         "@pkg/hostname": "workspace:*",
         "@pkg/http": "workspace:*",
-        "@pkg/jobs-next": "workspace:*",
+        "@pkg/jobs": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/polar": "workspace:*",
         "@pkg/result": "workspace:*",
@@ -147,7 +147,7 @@
         "@pkg/get-client-ip": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/i18n": "workspace:*",
-        "@pkg/jobs-next": "workspace:*",
+        "@pkg/jobs": "workspace:*",
         "@pkg/jwt": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/mail": "workspace:*",
@@ -197,7 +197,7 @@
         "@pkg/highlight": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/i18n": "workspace:*",
-        "@pkg/jobs-next": "workspace:*",
+        "@pkg/jobs": "workspace:*",
         "@pkg/kv-cache": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
@@ -407,21 +407,6 @@
     },
     "packages/jobs": {
       "name": "@pkg/jobs",
-      "version": "0.0.1",
-      "dependencies": {
-        "@pkg/logger": "workspace:*",
-        "@pkg/result": "workspace:*",
-        "@pkg/strings": "workspace:*",
-        "@pkg/types": "workspace:*",
-        "@pkg/validate": "workspace:*",
-      },
-      "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
-        "remix": "3.0.0-rc.1",
-      },
-    },
-    "packages/jobs-next": {
-      "name": "@pkg/jobs-next",
       "version": "0.0.1",
       "dependencies": {
         "@pkg/cron": "workspace:*",
@@ -1233,8 +1218,6 @@
     "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
 
     "@pkg/jobs": ["@pkg/jobs@workspace:packages/jobs"],
-
-    "@pkg/jobs-next": ["@pkg/jobs-next@workspace:packages/jobs-next"],
 
     "@pkg/jwt": ["@pkg/jwt@workspace:packages/jwt"],
 

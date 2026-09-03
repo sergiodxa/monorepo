@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs-next";
+import type { CurrentJobContext } from "@pkg/jobs";
 
 import { ManagementClient } from "@pkg/auth/management-client";
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";

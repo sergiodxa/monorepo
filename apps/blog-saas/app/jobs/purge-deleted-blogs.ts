@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 
 import jobs from "~/app/jobs";
 import Blog from "~/app/models/blog";

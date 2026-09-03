@@ -19,7 +19,7 @@
 		"@pkg/data-table-sqlstorage": "workspace:*",
 		"@pkg/hostname": "workspace:*",
 		"@pkg/http": "workspace:*",
-		"@pkg/jobs-next": "workspace:*",
+		"@pkg/jobs": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/polar": "workspace:*",
 		"@pkg/result": "workspace:*",

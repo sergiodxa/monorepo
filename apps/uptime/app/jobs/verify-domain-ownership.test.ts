@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createJobContext } from "@pkg/jobs-next";
+import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";

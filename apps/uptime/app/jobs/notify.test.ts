@@ -78,7 +78,7 @@ vi.doMock("~/app/services/alerts", () => ({
 	notifySslResult: notifySslResultMock,
 }));
 
-let { Job, createJobContext } = await import("@pkg/jobs-next");
+let { Job, createJobContext } = await import("@pkg/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let notify = (await import("./notify")).default;

@@ -380,7 +380,7 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 
 ## Implementation Plan
 
-The work happens in a new package, `@pkg/jobs-next`, rather than beside the class in `@pkg/jobs`. Two shapes this different sharing a module means every export has to say which world it belongs to, and the old package has two apps depending on it the whole time. The name is temporary by construction: Phase 4 deletes `@pkg/jobs` and renames this one into its place, so nothing ends up living under a version-flavoured name.
+The work happens in a new package, `@pkg/jobs-next`, rather than beside the class in `@pkg/jobs`. Two shapes this different sharing a module means every export has to say which world it belongs to, and the old package has apps depending on it the whole time. The name is temporary by construction: Phase 4 deletes `@pkg/jobs` and renames this one into its place, so nothing ends up living under a version-flavoured name.
 
 ### Phase 1: The New Package
 
@@ -424,7 +424,7 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 **Estimated Effort:** 1 hour
 
 1. Delete `packages/jobs` once nothing depends on it — the class, its statics, `setJobUsageTracker`, and the usage types go with it.
-2. Rename `packages/jobs-next` to `packages/jobs` and `@pkg/jobs-next` to `@pkg/jobs`, updating both apps' dependencies and imports.
+2. Rename `packages/jobs-next` to `packages/jobs` and `@pkg/jobs-next` to `@pkg/jobs`, updating every app's dependencies and imports.
 3. The temporary name exists only between Phase 1 and here, so no app ever ships a release naming it long-term.
 
 ## Alternatives Considered
@@ -494,10 +494,14 @@ Have the build write `triggers.crons` in `wrangler.jsonc` from the map.
 
 ## Current Progress
 
-- [ ] Phase 1: The Package
-- [ ] Phase 2: `apps/r3-auth`
-- [ ] Phase 3: `apps/uptime`
-- [ ] Phase 4: Remove The Class
+- [x] Phase 1: The New Package
+- [x] Phase 2: `apps/r3-auth`
+- [x] Phase 3: `apps/uptime`
+- [x] Phase 4: Delete The Old Package And Take Its Name
+
+`apps/blog-saas` adopted the package alongside Phase 3. It had no queue and ran its three
+maintenance jobs inline in `scheduled`, so adopting meant introducing one. `apps/auth-saas`
+declared a dependency on the old package that nothing imported, and it was dropped.
 
 ## Notes
 

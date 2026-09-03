@@ -15,7 +15,7 @@
 
 import type { Subscription as PolarSubscription } from "@pkg/polar";
 
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import { isActiveSubscriptionStatus, PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 

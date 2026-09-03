@@ -12,9 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs-next";
+import type { CurrentJobContext } from "@pkg/jobs";
 
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { CronJobStatus, SelectCronJobMonitor } from "~/database/schema";

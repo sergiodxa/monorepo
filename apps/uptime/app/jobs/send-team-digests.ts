@@ -10,7 +10,7 @@
  */
 
 import type { TFunction } from "@pkg/i18n";
-import type { CurrentJobContext } from "@pkg/jobs-next";
+import type { CurrentJobContext } from "@pkg/jobs";
 
 import { ManagementClient } from "@pkg/auth/management-client";
 import { subDays, toDayKey } from "@pkg/dates";

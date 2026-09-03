@@ -14,7 +14,7 @@
 
 import type { Result } from "@pkg/result";
 
-import { createJobContext } from "@pkg/jobs-next";
+import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { failure, success } from "@pkg/result";
 import { Database } from "remix/data-table";

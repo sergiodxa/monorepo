@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 

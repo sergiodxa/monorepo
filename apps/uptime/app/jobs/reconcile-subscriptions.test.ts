@@ -11,7 +11,7 @@
 
 import type { Subscription as PolarSubscription } from "@pkg/polar";
 
-import { createJobContext } from "@pkg/jobs-next";
+import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";

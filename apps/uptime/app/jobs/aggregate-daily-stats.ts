@@ -13,9 +13,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs-next";
+import type { CurrentJobContext } from "@pkg/jobs";
 
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 
 import MonitorDailyStats, {

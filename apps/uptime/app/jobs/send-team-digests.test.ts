@@ -10,7 +10,7 @@
 import type { Transport } from "@pkg/mail";
 
 import { ManagementClient, SubjectNotFoundError } from "@pkg/auth/management-client";
-import { createJobContext } from "@pkg/jobs-next";
+import { createJobContext } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";

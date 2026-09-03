@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs-next";
+import type { CurrentJobContext } from "@pkg/jobs";
 
-import { createJobHandler } from "@pkg/jobs-next";
+import { createJobHandler } from "@pkg/jobs";
 import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 

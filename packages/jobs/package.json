@@ -5,20 +5,24 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./errors": "./src/errors.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/cron": "workspace:*",
+		"@pkg/duration": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/result": "workspace:*",
-		"@pkg/strings": "workspace:*",
 		"@pkg/types": "workspace:*",
-		"@pkg/validate": "workspace:*"
+		"@pkg/validate": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
+		"@pkg/cloudflare-mocks": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
 }

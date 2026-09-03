@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CurrentJobContext } from "@pkg/jobs-next";
+import type { CurrentJobContext } from "@pkg/jobs";
 import type { Database } from "remix/data-table";
 
-import { createJobHandler, Job } from "@pkg/jobs-next";
+import { createJobHandler, Job } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { getServiceContainer } from "@pkg/service-container";
 import * as s from "remix/data-schema";

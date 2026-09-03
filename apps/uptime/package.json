@@ -21,7 +21,7 @@
 		"@pkg/highlight": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/i18n": "workspace:*",
-		"@pkg/jobs-next": "workspace:*",
+		"@pkg/jobs": "workspace:*",
 		"@pkg/kv-cache": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",

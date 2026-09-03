@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { job, jobs } from "@pkg/jobs-next";
+import { job, jobs } from "@pkg/jobs";
 
 export default jobs({
 	/**

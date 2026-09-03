@@ -20,7 +20,7 @@
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/i18n": "workspace:*",
-		"@pkg/jobs-next": "workspace:*",
+		"@pkg/jobs": "workspace:*",
 		"@pkg/jwt": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/mail": "workspace:*",
