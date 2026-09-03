@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/ui";
 
-import type { SeoSite } from "../create-seo";
-import type { SchemaOrg } from "../lib/schema";
+import type { SeoSite } from "../create-seo.js";
+import type { SchemaOrg } from "../lib/schema.js";
 
-import { serializeJsonLd } from "../lib/json-ld";
+import { serializeJsonLd } from "../lib/json-ld.js";
 
 const DEFAULT_OG_TYPE = "website";
 

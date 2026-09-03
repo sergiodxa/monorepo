@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BillingErrorCode } from "../../core/errors";
+import type { BillingErrorCode } from "../../core/errors.js";
 import type {
 	Checkout,
 	CheckoutStatus,
@@ -21,9 +21,9 @@ import type {
 	Product,
 	Subscription,
 	SubscriptionStatus,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { BillingError } from "../../core/errors";
+import { BillingError } from "../../core/errors.js";
 
 import type {
 	ExpandableId,
@@ -35,7 +35,7 @@ import type {
 	StripeProduct,
 	StripeProductFeature,
 	StripeSubscription,
-} from "./schemas";
+} from "./schemas.js";
 
 /** Media type Stripe accepts request bodies in. */
 export const FORM_MEDIA_TYPE = "application/x-www-form-urlencoded";

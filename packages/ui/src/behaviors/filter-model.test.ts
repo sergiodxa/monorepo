@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { FilterModel } from "./filter-model";
+import { FilterModel } from "./filter-model.js";
 
 const APPLE: FilterModel.Option = { id: "apple", value: "Apple" };
 const BANANA: FilterModel.Option = { id: "banana", value: "Banana" };

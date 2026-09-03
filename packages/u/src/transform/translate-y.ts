@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SpacingValue } from "../internal/tokens";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { spacing } from "../internal/tokens";
-import { transformFunction } from "../internal/transform";
+import { spacing } from "../internal/tokens.js";
+import { transformFunction } from "../internal/transform.js";
 
 /**
  * Translates the element along the block axis using the spacing scale or a

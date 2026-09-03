@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyJobContext } from "./context";
+import type { AnyJobContext } from "./context.js";
 
 /** Runs the rest of the chain, ending in the job's handler. */
 export type NextFunction = () => Promise<void>;

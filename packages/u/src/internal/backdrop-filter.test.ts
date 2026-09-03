@@ -8,8 +8,8 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { backdropFilterFunction, COMPOSITE_BACKDROP_FILTER } from "./backdrop-filter";
-import { declarations } from "./serialize";
+import { backdropFilterFunction, COMPOSITE_BACKDROP_FILTER } from "./backdrop-filter.js";
+import { declarations } from "./serialize.js";
 
 describe("backdropFilterFunction", () => {
 	test("sets the given custom property plus the shared composite backdropFilter value, on both the standard and Webkit-prefixed properties", async () => {

@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { getClientIP } from "./index";
+import { getClientIP } from "./index.js";
 
 describe("getClientIP", () => {
 	test("returns IP address from CF-Connecting-IP header", () => {

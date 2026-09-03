@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
+import type { CSSStyles } from "../internal/css-styles.js";
 
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 export interface GridTemplateOptions {
 	/** Sets `grid-template-columns`. A raw CSS track-list string (e.g. `"1fr 2fr"`, `"repeat(3, 1fr)"`). */

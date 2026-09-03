@@ -16,7 +16,7 @@
 import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { Cache } from "./index";
+import { Cache } from "./index.js";
 
 /** One hour in seconds, the unit KV's `expirationTtl` counts. */
 const HOUR_SECONDS = 60 * 60;

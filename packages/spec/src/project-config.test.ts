@@ -19,12 +19,12 @@ import { isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { expect, test } from "vitest";
 
-import type { PermissionSet } from "./permissions";
-import type { ToolContext } from "./plugin";
-import type { Value } from "./values";
-import type { Workspace } from "./workspace";
+import type { PermissionSet } from "./permissions.js";
+import type { ToolContext } from "./plugin.js";
+import type { Value } from "./values.js";
+import type { Workspace } from "./workspace.js";
 
-import { loadSuite } from "./loader";
+import { loadSuite } from "./loader.js";
 import {
 	connectDeclaredPlugins,
 	deniedReferences,
@@ -34,8 +34,8 @@ import {
 	parsePluginGrant,
 	planPluginLaunch,
 	pluginGrantFromConfig,
-} from "./project-config";
-import { connectStdioPlugin } from "./transport-stdio";
+} from "./project-config.js";
+import { connectStdioPlugin } from "./transport-stdio.js";
 
 /** Absolute path of this package, the acceptance runs' working directory. */
 const PACKAGE_DIR = resolve(import.meta.dirname, "..");

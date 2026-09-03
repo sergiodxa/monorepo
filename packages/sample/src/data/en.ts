@@ -10,7 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Dataset } from "../dataset";
+import type { Dataset } from "../dataset.js";
 
 const FEMALE_FIRST_NAMES = [
 	"Ana",

@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { ResizeSession } from "./resize-session";
+import { ResizeSession } from "./resize-session.js";
 
 /**
  * Collects every event of a given type dispatched by a target for the

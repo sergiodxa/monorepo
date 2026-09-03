@@ -35,10 +35,10 @@ import { when } from "@sdxc/u/state";
 import { text, textAlign, truncate, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { shimmer } from "../animations/keyframes";
-import { scrollFade } from "../animations/scroll";
+import { shimmer } from "../animations/keyframes.js";
+import { scrollFade } from "../animations/scroll.js";
 
-import { Button } from "./button";
+import { Button } from "./button.js";
 
 const DEFAULT_STATE: Attachment.State = "idle";
 

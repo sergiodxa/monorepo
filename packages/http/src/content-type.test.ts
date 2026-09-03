@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import * as ContentType from "./content-type";
+import * as ContentType from "./content-type.js";
 
 describe("text types", () => {
 	test("Text has correct value", () => {

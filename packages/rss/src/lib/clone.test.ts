@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { cloneChannel, cloneItem } from "./clone";
+import { cloneChannel, cloneItem } from "./clone.js";
 
 describe("rss clone helpers", () => {
 	test("clones channel data deeply enough to prevent mutation leaks", () => {

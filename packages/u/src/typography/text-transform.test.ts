@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { textTransform } from "./text-transform";
+import { textTransform } from "./text-transform.js";
 
 describe("textTransform", () => {
 	test("applies the given text-transform value", async () => {

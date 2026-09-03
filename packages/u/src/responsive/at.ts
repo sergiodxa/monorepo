@@ -2,11 +2,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
-import type { ContainerName } from "../types";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
+import type { ContainerName } from "../types.js";
 
-import { compose, nest } from "../internal/descriptor";
-import { containerLength } from "../internal/tokens";
+import { compose, nest } from "../internal/descriptor.js";
+import { containerLength } from "../internal/tokens.js";
 
 /**
  * `size` compares against the nearest ancestor with `container-type` set.

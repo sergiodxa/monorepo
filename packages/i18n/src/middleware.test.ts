@@ -15,7 +15,7 @@ import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
 import { describe, expect, test, vi } from "vitest";
 
-import i18next from "./middleware";
+import i18next from "./middleware.js";
 
 /** Inline resources with a key shared across languages and one English-only key. */
 const RESOURCES = {

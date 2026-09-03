@@ -24,10 +24,10 @@ import { active, hover, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
-import { SentinelRow } from "./sentinel-row";
+import { SentinelRow } from "./sentinel-row.js";
 
 /**
  * Default {@link ListBox.Props} selection cardinality, applied when

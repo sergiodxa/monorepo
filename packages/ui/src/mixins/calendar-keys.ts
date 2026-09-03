@@ -9,7 +9,7 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { CalendarModel } from "../behaviors/calendar-model";
+import type { CalendarModel } from "../behaviors/calendar-model.js";
 
 /**
  * Attribute every calendar day cell exposes its date on, in local

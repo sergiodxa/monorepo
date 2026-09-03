@@ -12,7 +12,7 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { etag } from "./etag";
+import { etag } from "./etag.js";
 
 /** Base64url of the SHA-256 digest of "hello world". */
 const HELLO_WORLD_DIGEST = "uU0nuZNNPgilLlLX2n2r-sSE7-N6U4DukIj3rOLvzek";

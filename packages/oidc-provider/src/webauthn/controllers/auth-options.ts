@@ -22,13 +22,13 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import TenantMeta from "../../management/models/tenant-meta";
-import routes from "../../routes";
-import { base64UrlDecode } from "../../shared/lib/base64url";
-import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit";
-import Subject from "../../subjects/models/subject";
-import Passkey from "../models/passkey";
-import WebAuthnChallenge from "../models/webauthn-challenge";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import routes from "../../routes.js";
+import { base64UrlDecode } from "../../shared/lib/base64url.js";
+import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit.js";
+import Subject from "../../subjects/models/subject.js";
+import Passkey from "../models/passkey.js";
+import WebAuthnChallenge from "../models/webauthn-challenge.js";
 
 let RequestSchema = s.object({
 	email: s.string(),

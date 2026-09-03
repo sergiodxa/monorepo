@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar } from "../lexer";
+import type { Grammar } from "../lexer.js";
 
 /**
  * Highlights JSON, including the comments and trailing commas a `jsonc` fence

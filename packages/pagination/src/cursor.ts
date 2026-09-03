@@ -16,7 +16,7 @@ import { Base64Url } from "@sdxc/crypto";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
-import { InvalidCursorError, UnencodableCursorValueError } from "./errors";
+import { InvalidCursorError, UnencodableCursorValueError } from "./errors.js";
 
 /**
  * A row value that survives a round trip through a cursor.

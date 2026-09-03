@@ -4,12 +4,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BOX_SHADOW } from "../internal/box-shadow";
-import { compose } from "../internal/descriptor";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_BOX_SHADOW } from "../internal/box-shadow.js";
+import { compose } from "../internal/descriptor.js";
+import { declarations } from "../internal/serialize.js";
 
-import { ringShadow } from "./ring-shadow";
-import { shadow } from "./shadow";
+import { ringShadow } from "./ring-shadow.js";
+import { shadow } from "./shadow.js";
 
 describe("shadow", () => {
 	test("no-arg defaults to the md shadow, written to the elevation slot", async () => {

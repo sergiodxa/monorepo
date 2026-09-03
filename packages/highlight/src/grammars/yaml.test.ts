@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { yaml } from "./yaml";
+import { yaml } from "./yaml.js";
 
 describe("yaml", () => {
 	test("paints a mapping key apart from its scalar", () => {

@@ -16,7 +16,7 @@ import {
 	normalizeArray,
 	normalizeStringArray,
 	parseOptionalNumber,
-} from "./utils";
+} from "./utils.js";
 
 describe("rss utils", () => {
 	test("reads child elements and text content", () => {

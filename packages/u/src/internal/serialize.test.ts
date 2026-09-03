@@ -8,18 +8,18 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { animationHost } from "../animation/animation";
-import { fillOpacity } from "../color/fill-opacity";
-import { opacity } from "../effects/opacity";
-import { gridRow } from "../layout/grid-row";
-import { aspect } from "../size/aspect";
-import { p } from "../size/p";
-import { z } from "../stacking/z";
-import { leading } from "../typography/leading";
-import { lineClamp } from "../typography/line-clamp";
-import { weight } from "../typography/weight";
+import { animationHost } from "../animation/animation.js";
+import { fillOpacity } from "../color/fill-opacity.js";
+import { opacity } from "../effects/opacity.js";
+import { gridRow } from "../layout/grid-row.js";
+import { aspect } from "../size/aspect.js";
+import { p } from "../size/p.js";
+import { z } from "../stacking/z.js";
+import { leading } from "../typography/leading.js";
+import { lineClamp } from "../typography/line-clamp.js";
+import { weight } from "../typography/weight.js";
 
-import { declarations, serialize } from "./serialize";
+import { declarations, serialize } from "./serialize.js";
 
 describe("serialize", () => {
 	test("returns the stylesheet text, layer and selector included", async () => {

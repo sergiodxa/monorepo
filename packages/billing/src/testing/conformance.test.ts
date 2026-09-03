@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MemoryProductSeed } from "../providers/memory";
+import type { MemoryProductSeed } from "../providers/memory/index.js";
 
-import { MemoryBilling } from "../providers/memory";
+import { MemoryBilling } from "../providers/memory/index.js";
 
-import type { ConformanceOptions } from "./conformance";
+import type { ConformanceOptions } from "./conformance.js";
 
 import {
 	capabilityConformance,
@@ -20,7 +20,7 @@ import {
 	meterConformance,
 	portalConformance,
 	usageConformance,
-} from "./conformance";
+} from "./conformance.js";
 
 /** Catalog the suite is told about: a subscription, a one-time sale, and a yen price. */
 const CATALOG: Record<string, MemoryProductSeed> = {

@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { var as varUtility } from "../general/var";
+import { var as varUtility } from "../general/var.js";
 
-import type { CSSStyles } from "./css-styles";
-import type { UtilityMixin } from "./descriptor";
+import type { CSSStyles } from "./css-styles.js";
+import type { UtilityMixin } from "./descriptor.js";
 
-import { utility } from "./descriptor";
+import { utility } from "./descriptor.js";
 
 /**
  * Each transform function's CSS custom property, as the bare name

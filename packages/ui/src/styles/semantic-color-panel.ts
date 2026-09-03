@@ -14,8 +14,8 @@ import { bg, border, fg } from "@sdxc/u/color";
 import { combine } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 
-import type { CSSStyles } from "../utils/css-styles";
-import type { SemanticColor } from "../utils/semantic-color";
+import type { CSSStyles } from "../utils/css-styles.js";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
 /**
  * Every {@link SemanticColor}, in the order {@link semanticColorPanel} emits

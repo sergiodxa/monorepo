@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { isolate } from "./isolate";
+import { isolate } from "./isolate.js";
 
 describe("isolate", () => {
 	test("sets isolation: isolate", async () => {

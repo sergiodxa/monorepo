@@ -8,9 +8,9 @@
  */
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { DurableObjectStateMock } from "./durable-object-state";
+import type { DurableObjectStateMock } from "./durable-object-state.js";
 
-import { createDurableObjectState } from "./durable-object-state";
+import { createDurableObjectState } from "./durable-object-state.js";
 
 describe("createDurableObjectState", () => {
 	let state: DurableObjectStateMock;

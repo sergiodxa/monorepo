@@ -8,9 +8,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { hstack } from "./hstack";
+import { hstack } from "./hstack.js";
 
 describe("hstack", () => {
 	test("no options sets only display and flex-direction", async () => {

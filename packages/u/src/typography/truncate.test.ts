@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { truncate } from "./truncate";
+import { truncate } from "./truncate.js";
 
 describe("truncate", () => {
 	test("applies the fixed single-line ellipsis overflow declaration", async () => {

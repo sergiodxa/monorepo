@@ -22,8 +22,8 @@ import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { hasAccessibleText } from "../utils/has-accessible-text";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { hasAccessibleText } from "../utils/has-accessible-text.js";
 
 /** Semantic color role {@link FileTrigger} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: FileTrigger.Color = "neutral";

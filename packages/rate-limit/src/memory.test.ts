@@ -10,7 +10,7 @@
 import { isSuccess, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { MemoryAdapter } from "./memory";
+import { MemoryAdapter } from "./memory.js";
 
 /** An instant aligned to a 10 second window, so a case starts at a boundary. */
 const WINDOW_START = 1_700_000_000_000;

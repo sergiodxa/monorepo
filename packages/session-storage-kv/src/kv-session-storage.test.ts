@@ -10,9 +10,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { KVStore } from "./kv-store";
+import type { KVStore } from "./kv-store.js";
 
-import { KVSessionStorage } from "./kv-session-storage";
+import { KVSessionStorage } from "./kv-session-storage.js";
 
 /**
  * One hour in seconds, the unit KV expiration counts, so the expected lifetimes

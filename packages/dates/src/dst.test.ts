@@ -9,10 +9,10 @@
 
 import { describe, expect, test } from "vitest";
 
-import { endOfDay, startOfDay, startOfWeek } from "./boundaries";
-import { diffInDays, eachDayOfInterval, isSameDay } from "./compare";
-import { toDayKey } from "./day-key";
-import { daysOfYear, groupByWeek, lastNDays } from "./grid";
+import { endOfDay, startOfDay, startOfWeek } from "./boundaries.js";
+import { diffInDays, eachDayOfInterval, isSameDay } from "./compare.js";
+import { toDayKey } from "./day-key.js";
+import { daysOfYear, groupByWeek, lastNDays } from "./grid.js";
 
 /** Zone whose transitions happen at 02:00 local, on the standard US dates. */
 const NEW_YORK = "America/New_York";

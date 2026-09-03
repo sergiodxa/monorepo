@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "./types";
+import type { DurationInput } from "./types.js";
 
-import { toMs } from "./to-ms";
-import { SECOND_MS } from "./units";
+import { toMs } from "./to-ms.js";
+import { SECOND_MS } from "./units.js";
 
 /**
  * Convert a duration to whole seconds, rounding to the nearest second with

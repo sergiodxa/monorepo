@@ -14,7 +14,7 @@ import {
 	listFormatter,
 	numberFormatter,
 	relativeTimeFormatter,
-} from "./intl-cache";
+} from "./intl-cache.js";
 
 describe("dateTimeFormatter", () => {
 	test("reuses one instance for the same locale and options", () => {

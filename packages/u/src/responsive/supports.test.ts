@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { supports } from "./supports";
+import { supports } from "./supports.js";
 
 describe("supports", () => {
 	test("nests the wrapped utility's styles under '@supports <query>'", async () => {

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { textAlign } from "./text-align";
+import { textAlign } from "./text-align.js";
 
 describe("textAlign", () => {
 	test("no-arg defaults to the logical start keyword", async () => {

@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
 
-import { media } from "./media";
+import { media } from "./media.js";
 
 /**
  * Sugar over `media("(prefers-reduced-transparency: no-preference)", input)`,

@@ -17,7 +17,7 @@ import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Tabs, tabIndicatorMix } from "./tabs";
+import { Tabs, tabIndicatorMix } from "./tabs.js";
 
 /** Unwraps a `raw()`/`css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {

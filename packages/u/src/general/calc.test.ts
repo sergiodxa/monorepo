@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { calc } from "./calc";
+import { calc } from "./calc.js";
 
 describe("calc", () => {
 	test("wraps the expression in calc(...)", () => {

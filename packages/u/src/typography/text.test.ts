@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { text } from "./text";
+import { text } from "./text.js";
 
 describe("text", () => {
 	test("a named size resolves fontSize and its paired lineHeight", async () => {

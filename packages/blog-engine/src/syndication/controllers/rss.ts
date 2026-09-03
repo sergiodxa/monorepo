@@ -13,13 +13,13 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import { PostType, type PostTypeDefinition } from "../../post-types/models/post-type";
-import { createMetaCodec } from "../../posts/models/meta-codec";
-import { Post } from "../../posts/models/post";
-import routes from "../../routes";
-import { Settings } from "../../settings/models/settings";
-import { excerptFor } from "../../shared/components/post-render";
-import { renderNotFound } from "../../shared/not-found";
+import { PostType, type PostTypeDefinition } from "../../post-types/models/post-type.js";
+import { createMetaCodec } from "../../posts/models/meta-codec.js";
+import { Post } from "../../posts/models/post.js";
+import routes from "../../routes.js";
+import { Settings } from "../../settings/models/settings.js";
+import { excerptFor } from "../../shared/components/post-render.js";
+import { renderNotFound } from "../../shared/not-found.js";
 
 /**
  * Builds RSS items for one post type's published posts, linking each to its

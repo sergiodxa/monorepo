@@ -4,8 +4,8 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { boxShadowSlot, COMPOSITE_BOX_SHADOW } from "./box-shadow";
-import { declarations } from "./serialize";
+import { boxShadowSlot, COMPOSITE_BOX_SHADOW } from "./box-shadow.js";
+import { declarations } from "./serialize.js";
 
 describe("boxShadowSlot", () => {
 	test("sets the given slot's custom property plus the shared composite boxShadow value", async () => {

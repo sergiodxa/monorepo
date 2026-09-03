@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { overscrollBehavior } from "./overscroll-behavior";
+import { overscrollBehavior } from "./overscroll-behavior.js";
 
 describe("overscrollBehavior", () => {
 	test("no-arg defaults to contain", async () => {

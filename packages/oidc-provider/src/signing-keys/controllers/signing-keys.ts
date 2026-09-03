@@ -16,10 +16,10 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
-import SigningKey from "../models/signing-key";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp.js";
+import SigningKey from "../models/signing-key.js";
 
 /**
  * `GET /api/signing-keys` — lists signing keys (public metadata only).

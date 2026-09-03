@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /**
  * Balances line lengths across a wrapped block, best suited to short text

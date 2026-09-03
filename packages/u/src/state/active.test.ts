@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { declarations, serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { active } from "./active";
+import { active } from "./active.js";
 
 describe("active", () => {
 	test("emits an '&:active' block around the wrapped utility's declarations", async () => {

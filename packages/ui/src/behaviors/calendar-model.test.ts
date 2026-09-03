@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { CalendarModel } from "./calendar-model";
+import { CalendarModel } from "./calendar-model.js";
 
 describe(CalendarModel.name, () => {
 	test("defaults to today's day, focused, with the visible month derived from it", () => {

@@ -8,9 +8,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createRandom } from "../random";
+import { createRandom } from "../random.js";
 
-import { createHelpersModule } from "./helpers";
+import { createHelpersModule } from "./helpers.js";
 
 function module(seed: string) {
 	return createHelpersModule(createRandom(seed), (path) => `<${path}>`);

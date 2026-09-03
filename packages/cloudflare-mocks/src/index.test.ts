@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import * as mocks from "./index";
+import * as mocks from "./index.js";
 
 describe("@sdxc/cloudflare-mocks", () => {
 	test("exports every binding factory", () => {

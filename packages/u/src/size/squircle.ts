@@ -2,12 +2,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { RadiusName } from "../types";
+import type { RadiusName } from "../types.js";
 
-import { rounded } from "../effects/rounded";
-import { compose } from "../internal/descriptor";
+import { rounded } from "../effects/rounded.js";
+import { compose } from "../internal/descriptor.js";
 
-import { corner } from "./corner";
+import { corner } from "./corner.js";
 
 /**
  * A shape pattern for continuous rounded corners: sets a radius, then

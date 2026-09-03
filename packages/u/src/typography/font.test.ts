@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { font } from "./font";
+import { font } from "./font.js";
 
 describe("font", () => {
 	test("a named family resolves fontFamily", async () => {

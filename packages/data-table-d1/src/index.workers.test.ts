@@ -11,9 +11,9 @@ import { env, reset } from "cloudflare:test";
 import { column as c, Database, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { D1StatementObservation, D1StatementObserver } from "./index";
+import type { D1StatementObservation, D1StatementObserver } from "./index.js";
 
-import { createD1DatabaseAdapter } from "./index";
+import { createD1DatabaseAdapter } from "./index.js";
 
 let users = table({
 	name: "users",

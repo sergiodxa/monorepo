@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
-import type { UtilityMixin } from "../internal/descriptor";
+import type { CSSStyles } from "../internal/css-styles.js";
+import type { UtilityMixin } from "../internal/descriptor.js";
 
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** How a mask image tiles when it's smaller than the element it masks. */
 export type MaskRepeatValue = "repeat" | "no-repeat" | "repeat-x" | "repeat-y" | "round" | "space";

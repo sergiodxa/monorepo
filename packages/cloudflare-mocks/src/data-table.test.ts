@@ -11,8 +11,8 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { column as c, Database, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { createD1Database } from "./d1";
-import { createSqlStorage } from "./sql-storage";
+import { createD1Database } from "./d1.js";
+import { createSqlStorage } from "./sql-storage.js";
 
 let users = table({
 	name: "users",

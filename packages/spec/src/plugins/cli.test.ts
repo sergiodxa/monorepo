@@ -17,14 +17,14 @@ import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import type { PermissionSet } from "../permissions";
-import type { ToolContext } from "../plugin";
-import type { ToolArg, Value } from "../values";
-import type { Workspace } from "../workspace";
+import type { PermissionSet } from "../permissions.js";
+import type { ToolContext } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { PermissionDeniedError } from "../errors";
+import { PermissionDeniedError } from "../errors.js";
 
-import { createCliPlugin } from "./cli";
+import { createCliPlugin } from "./cli.js";
 
 /** The env var the leak tests plant on the host side. */
 const SECRET_NAME = "SPEC_CLI_TEST_SECRET";

@@ -18,9 +18,9 @@ import { calc, combine, raw, var as varUtility } from "@sdxc/u/general";
 import { media, startingStyle, supports } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
-import { easings } from "./tokens";
+import { easings } from "./tokens.js";
 
 /** The `@sdxc/u` mixin type every factory in this file returns. */
 type Mixin<Node extends Element> = MixinDescriptor<Node, [styles: CSSStyles], ElementProps>;

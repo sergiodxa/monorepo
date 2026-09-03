@@ -12,9 +12,9 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { ColorSwatchPicker } from "./color-swatch-picker";
-import { RadioGroup } from "./radio-group";
-import { Tooltip } from "./tooltip";
+import { ColorSwatchPicker } from "./color-swatch-picker.js";
+import { RadioGroup } from "./radio-group.js";
+import { Tooltip } from "./tooltip.js";
 
 /**
  * The fingerprint of the bug this file exists for: a style-tree key not

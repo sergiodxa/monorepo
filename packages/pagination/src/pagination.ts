@@ -15,18 +15,18 @@ import type { Predicate } from "remix/data-table";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { CursorDirection } from "./cursor";
-import type { OrderByTuple, OrderDirection, SeekKey } from "./keyset";
+import type { CursorDirection } from "./cursor.js";
+import type { OrderByTuple, OrderDirection, SeekKey } from "./keyset.js";
 
-import { decodeCursor, encodeCursor } from "./cursor";
-import { InvalidCursorError, PaginationError, QueryFailedError } from "./errors";
+import { decodeCursor, encodeCursor } from "./cursor.js";
+import { InvalidCursorError, PaginationError, QueryFailedError } from "./errors.js";
 import {
 	buildSeekPredicate,
 	readOrderingValue,
 	reverseOrdering,
 	validateOrdering,
 	zipSeekKeys,
-} from "./keyset";
+} from "./keyset.js";
 
 /** Page numbers shown either side of the current page when `series()` is called without one. */
 const DEFAULT_SERIES_WINDOW = 1;

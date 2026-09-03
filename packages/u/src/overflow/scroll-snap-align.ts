@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Where an item's box lines up against the scroll container's snapport. */
 export type ScrollSnapAlignValue = "none" | "start" | "center" | "end";

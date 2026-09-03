@@ -80,7 +80,7 @@ describe("findPurityViolations (scanner self-check)", () => {
 	});
 
 	test("passes a file with no remix/ui import at all", () => {
-		expect(findPurityViolations('import { Button } from "./button";')).toEqual([]);
+		expect(findPurityViolations('import { Button } from "./button.js";')).toEqual([]);
 	});
 
 	test.each(BANNED_BINDINGS)("flags a bare %s import", (banned) => {

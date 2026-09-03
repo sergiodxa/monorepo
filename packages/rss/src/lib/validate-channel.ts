@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
 /**
  * Ensures channel updates preserve the required RSS 2.0 fields.

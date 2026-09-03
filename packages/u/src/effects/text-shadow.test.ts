@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { textShadow } from "./text-shadow";
+import { textShadow } from "./text-shadow.js";
 
 describe("textShadow", () => {
 	test("no-arg resolves the default offsets off the spacing scale and a translucent black", async () => {

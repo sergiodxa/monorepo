@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { InvalidCronExpression } from "./invalid-cron-expression";
+import { InvalidCronExpression } from "./invalid-cron-expression.js";
 
 describe("InvalidCronExpression", () => {
 	test("is an error that can be returned inside a failure", () => {

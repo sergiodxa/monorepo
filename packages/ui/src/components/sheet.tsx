@@ -33,9 +33,9 @@ import { data, when } from "@sdxc/u/state";
 import { translateX } from "@sdxc/u/transform";
 import { fontSize } from "@sdxc/u/typography";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
-import { Dialog } from "./dialog";
+import { Dialog } from "./dialog.js";
 
 /**
  * Physical side of the viewport {@link Sheet} docks to when `side` is left

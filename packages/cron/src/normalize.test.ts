@@ -11,8 +11,8 @@
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { normalizeExpression } from "./normalize";
-import { parseExpression } from "./parse-expression";
+import { normalizeExpression } from "./normalize.js";
+import { parseExpression } from "./parse-expression.js";
 
 /** Normalize an expression, failing the test if it could not be parsed. */
 function normalized(expression: string): string {

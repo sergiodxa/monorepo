@@ -22,7 +22,7 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
-import { catchResponse } from "./index";
+import { catchResponse } from "./index.js";
 
 /**
  * Stands in for an auth helper: throws from three frames below the handler, with

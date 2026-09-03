@@ -12,10 +12,10 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createClient, createSession, createSubject } from "../../shared/test/fixtures";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createClient, createSession, createSubject } from "../../shared/test/fixtures.js";
 
-import Session from "./session";
+import Session from "./session.js";
 
 describe("Session", () => {
 	let sqliteDb: SqliteDatabase;

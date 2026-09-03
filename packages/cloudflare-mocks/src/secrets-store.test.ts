@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createSecretsStoreSecret } from "./secrets-store";
+import { createSecretsStoreSecret } from "./secrets-store.js";
 
 describe("createSecretsStoreSecret", () => {
 	test("resolves the value it was created with", async () => {

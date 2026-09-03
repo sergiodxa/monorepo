@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { randomBytes, randomToken } from "./random";
+import { randomBytes, randomToken } from "./random.js";
 
 describe("randomBytes", () => {
 	test("returns exactly the requested number of bytes", () => {

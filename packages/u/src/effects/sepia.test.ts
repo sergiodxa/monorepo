@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { sepia } from "./sepia";
+import { sepia } from "./sepia.js";
 
 describe("sepia", () => {
 	test("no-arg defaults to a full conversion", async () => {

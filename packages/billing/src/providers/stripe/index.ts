@@ -32,9 +32,9 @@ import type {
 	UpdateCustomerInput,
 	WebhookApi,
 	WebhookReference,
-} from "../../core/contract";
-import type { BillingErrorCode } from "../../core/errors";
-import type { Secret } from "../../core/secret";
+} from "../../core/contract.js";
+import type { BillingErrorCode } from "../../core/errors.js";
+import type { Secret } from "../../core/secret.js";
 import type {
 	BillingEvent,
 	BillingEventPayload,
@@ -46,14 +46,14 @@ import type {
 	Page,
 	Product,
 	Subscription,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { BillingError, reportSkipped } from "../../core/errors";
-import { secretReader, verificationSecret } from "../../core/secret";
-import { DEFAULT_PAGE_SIZE } from "../../core/types";
+import { BillingError, reportSkipped } from "../../core/errors.js";
+import { secretReader, verificationSecret } from "../../core/secret.js";
+import { DEFAULT_PAGE_SIZE } from "../../core/types.js";
 
-import type { FormFields, FormValue, SlugResolver } from "./map";
-import type { StripeCheckoutSession, StripePrice, StripeSubscription } from "./schemas";
+import type { FormFields, FormValue, SlugResolver } from "./map.js";
+import type { StripeCheckoutSession, StripePrice, StripeSubscription } from "./schemas.js";
 
 import {
 	ENTITLED_STATUSES,
@@ -68,7 +68,7 @@ import {
 	toPortalSession,
 	toProduct,
 	toSubscription,
-} from "./map";
+} from "./map.js";
 import {
 	ACTIVE_ENTITLEMENT_SCHEMA,
 	CHECKOUT_SESSION_SCHEMA,
@@ -82,8 +82,8 @@ import {
 	STRIPE_ERROR_SCHEMA,
 	SUBSCRIPTION_SCHEMA,
 	listOf,
-} from "./schemas";
-import { SIGNATURE_HEADER, verifyStripeSignature } from "./signature";
+} from "./schemas.js";
+import { SIGNATURE_HEADER, verifyStripeSignature } from "./signature.js";
 
 /** Origin and version prefix every request is resolved against. */
 const DEFAULT_BASE_URL = new URL("https://api.stripe.com/v1/");

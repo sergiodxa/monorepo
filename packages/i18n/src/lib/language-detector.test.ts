@@ -13,7 +13,7 @@ import { createCookie } from "remix/cookie";
 import { createSession } from "remix/session";
 import { describe, expect, test } from "vitest";
 
-import { LanguageDetector } from "./language-detector";
+import { LanguageDetector } from "./language-detector.js";
 
 function makeRequest(path = "/", headers: Record<string, string> = {}): Request {
 	return new Request(new URL(path, "https://example.com"), { headers });

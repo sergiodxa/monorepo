@@ -12,7 +12,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { decode, encode } from "./base32";
+import { decode, encode } from "./base32.js";
 
 /** RFC 4648 test vectors, with the padding this codec omits removed. */
 const VECTORS = [

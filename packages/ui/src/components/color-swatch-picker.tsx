@@ -18,7 +18,7 @@ import { flexWrap, hstack, inlineFlex } from "@sdxc/u/layout";
 import { precededBy, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { ColorSwatch } from "./color-swatch";
+import { ColorSwatch } from "./color-swatch.js";
 
 /**
  * `role="radiogroup"` applied through {@link attrs} unless a consumer

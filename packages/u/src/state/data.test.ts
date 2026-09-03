@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { data } from "./data";
+import { data } from "./data.js";
 
 describe("data", () => {
 	test("with no value, emits the bare attribute selector", async () => {

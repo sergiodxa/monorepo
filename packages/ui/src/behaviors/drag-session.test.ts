@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { DragSession } from "./drag-session";
+import { DragSession } from "./drag-session.js";
 
 function countChanges(session: DragSession): { count(): number } {
 	let calls = 0;

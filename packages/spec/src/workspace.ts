@@ -17,9 +17,9 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { PermissionSet } from "./permissions";
+import type { PermissionSet } from "./permissions.js";
 
-import { SpecError, WorkspaceEscapeError } from "./errors";
+import { SpecError, WorkspaceEscapeError } from "./errors.js";
 
 /**
  * One test's isolated workspace. Path resolution is the safety boundary:

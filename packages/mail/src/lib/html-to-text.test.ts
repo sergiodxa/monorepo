@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { htmlToText } from "./html-to-text";
+import { htmlToText } from "./html-to-text.js";
 
 describe("htmlToText", () => {
 	test("separates paragraphs with a blank line", () => {

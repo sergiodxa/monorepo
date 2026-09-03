@@ -10,10 +10,10 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createClient, createSubject } from "../../shared/test/fixtures";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createClient, createSubject } from "../../shared/test/fixtures.js";
 
-import Grant from "./grant";
+import Grant from "./grant.js";
 
 describe("Grant", () => {
 	let sqliteDb: SqliteDatabase;

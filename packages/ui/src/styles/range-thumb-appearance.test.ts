@@ -11,7 +11,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { rangeThumbAppearance } from "./range-thumb-appearance";
+import { rangeThumbAppearance } from "./range-thumb-appearance.js";
 
 function styles(mixin: CSSMixinDescriptor): Record<string, any> {
 	return mixin.args[0] as Record<string, any>;

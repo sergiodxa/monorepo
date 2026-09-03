@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { border } from "../color/border";
-import { declarations, serialize } from "../internal/serialize";
+import { border } from "../color/border.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { invalid } from "./invalid";
+import { invalid } from "./invalid.js";
 
 describe("invalid", () => {
 	test("emits ':user-invalid' — not ':invalid' — alongside the ARIA selector", async () => {

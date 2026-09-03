@@ -6,10 +6,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
-import type { UtilityMixin } from "../internal/descriptor";
+import type { CSSStyles } from "../internal/css-styles.js";
+import type { UtilityMixin } from "../internal/descriptor.js";
 
-import { nest, utility } from "../internal/descriptor";
+import { nest, utility } from "../internal/descriptor.js";
 
 /**
  * Emits an `@keyframes` rule under `name` at the top level, where the

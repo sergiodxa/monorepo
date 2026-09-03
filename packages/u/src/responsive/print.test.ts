@@ -6,13 +6,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { raw } from "../general/raw";
-import { serialize } from "../internal/serialize";
-import { hover } from "../state/hover";
+import { bg } from "../color/bg.js";
+import { raw } from "../general/raw.js";
+import { serialize } from "../internal/serialize.js";
+import { hover } from "../state/hover.js";
 
-import { media } from "./media";
-import { print } from "./print";
+import { media } from "./media.js";
+import { print } from "./print.js";
 
 describe("print", () => {
 	test("nests the wrapped utility's styles under the bare media type '@media print'", async () => {

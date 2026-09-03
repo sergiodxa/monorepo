@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { mask } from "./mask";
+import { mask } from "./mask.js";
 
 describe("mask", () => {
 	test("mirrors a gradient onto both the standard and webkit-prefixed properties", async () => {

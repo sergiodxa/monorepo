@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scroll } from "./scroll";
+import { scroll } from "./scroll.js";
 
 describe("scroll", () => {
 	test("no-arg defaults to both axes", async () => {

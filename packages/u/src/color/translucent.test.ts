@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { declarations, serialize } from "../internal/serialize";
+import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { translucent } from "./translucent";
+import { translucent } from "./translucent.js";
 
 describe("translucent", () => {
 	test("defaults to the md blur", async () => {

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { utility } from "../internal/descriptor";
-import { color as colorToken, spacing } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { color as colorToken, spacing } from "../internal/tokens.js";
 
 export interface TextShadowOptions {
 	/** The shadow's inline offset, from the spacing scale or a raw CSS length. Defaults to `0`. */

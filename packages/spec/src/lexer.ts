@@ -13,11 +13,11 @@ import type { Result } from "@sdxc/result";
 import { parse as parseDuration } from "@sdxc/duration";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SourceFile } from "./source";
-import type { Keyword, Token, TokenKind } from "./tokens";
+import type { SourceFile } from "./source.js";
+import type { Keyword, Token, TokenKind } from "./tokens.js";
 
-import { ParseError } from "./errors";
-import { KEYWORDS } from "./tokens";
+import { ParseError } from "./errors.js";
+import { KEYWORDS } from "./tokens.js";
 
 /** Single-character punctuation, mapped to the token kind each one lexes as. */
 const PUNCTUATION: Record<string, TokenKind | undefined> = {

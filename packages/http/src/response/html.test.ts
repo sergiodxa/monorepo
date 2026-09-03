@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import * as ContentType from "../content-type";
+import * as ContentType from "../content-type.js";
 
 import {
 	accepted,
@@ -32,7 +32,7 @@ import {
 	unauthorized,
 	unprocessableEntity,
 	unsupportedMediaType,
-} from "./html";
+} from "./html.js";
 
 describe("content-type", () => {
 	test("ok sets HTML content-type", () => {

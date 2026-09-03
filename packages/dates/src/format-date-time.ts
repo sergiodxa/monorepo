@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DateStyle, Locale, TimeStyle, TimeZone } from "./types";
+import type { DateStyle, Locale, TimeStyle, TimeZone } from "./types.js";
 
-import { dateTimeFormatter } from "./intl-cache";
+import { dateTimeFormatter } from "./intl-cache.js";
 
 /** How and where a date is rendered. Both the locale and the zone are required. */
 export interface FormatDateOptions {

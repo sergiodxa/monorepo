@@ -16,7 +16,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createJobDispatcher, createJobHandler, job, jobs } from "./index";
+import { createJobDispatcher, createJobHandler, job, jobs } from "./index.js";
 
 const UPTIME_URL = "https://uptime.sergiodxa.com";
 const MONITOR_ID = "monitor-1";

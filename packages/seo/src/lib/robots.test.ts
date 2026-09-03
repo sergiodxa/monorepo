@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { robotsDirectives } from "./robots";
+import { robotsDirectives } from "./robots.js";
 
 describe("robotsDirectives", () => {
 	test("defaults to fully permissive", () => {

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { resize } from "./resize";
+import { resize } from "./resize.js";
 
 describe("resize", () => {
 	test("defaults to the logical block axis", async () => {

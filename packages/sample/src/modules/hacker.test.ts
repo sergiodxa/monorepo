@@ -7,10 +7,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createHackerModule } from "./hacker";
+import { createHackerModule } from "./hacker.js";
 
 function module(seed: string) {
 	return createHackerModule(createRandom(seed), en);

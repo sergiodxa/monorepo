@@ -11,7 +11,7 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { FilterModel } from "../behaviors/filter-model";
+import type { FilterModel } from "../behaviors/filter-model.js";
 
 /**
  * Attribute the search input exposes itself on — `Command.Input`'s own

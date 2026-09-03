@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { tracking } from "./tracking";
+import { tracking } from "./tracking.js";
 
 describe("tracking", () => {
 	test("every named scale value resolves through the tracking variable with its fallback", async () => {

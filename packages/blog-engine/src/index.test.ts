@@ -12,11 +12,11 @@
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "./shared/test/db";
+import { createSqliteDatabaseAdapter } from "./shared/test/db.js";
 
-import type { OIDCMetadata } from "./index";
+import type { OIDCMetadata } from "./index.js";
 
-import { createBlogEngine } from "./index";
+import { createBlogEngine } from "./index.js";
 
 /**
  * Inline OIDC metadata so the relying-party config never triggers network

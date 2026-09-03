@@ -20,20 +20,20 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import Secret from "../../clients/models/secret";
-import TenantMeta from "../../management/models/tenant-meta";
-import Resource from "../../resources/models/resource";
-import routes from "../../routes";
-import parseBasicAuth from "../../shared/lib/parse-basic-auth";
-import { reject } from "../../shared/lib/reject";
-import SigningKey from "../../signing-keys/models/signing-key";
-import Subject from "../../subjects/models/subject";
-import AuthorizationCode from "../models/authorization-code";
-import Session from "../models/session";
-import AccessToken from "../values/access-token";
-import IdToken from "../values/id-token";
-import ScopeSet from "../values/scope-set";
+import Client from "../../clients/models/client.js";
+import Secret from "../../clients/models/secret.js";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import Resource from "../../resources/models/resource.js";
+import routes from "../../routes.js";
+import parseBasicAuth from "../../shared/lib/parse-basic-auth.js";
+import { reject } from "../../shared/lib/reject.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
+import Subject from "../../subjects/models/subject.js";
+import AuthorizationCode from "../models/authorization-code.js";
+import Session from "../models/session.js";
+import AccessToken from "../values/access-token.js";
+import IdToken from "../values/id-token.js";
+import ScopeSet from "../values/scope-set.js";
 
 let AuthorizationCodeSchema = s.object({
 	grant_type: s.literal("authorization_code"),

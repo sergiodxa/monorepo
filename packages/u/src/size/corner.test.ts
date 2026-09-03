@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { corner } from "./corner";
+import { corner } from "./corner.js";
 
 describe("corner", () => {
 	test("nests 'squircle' under an @supports block for that shape", async () => {

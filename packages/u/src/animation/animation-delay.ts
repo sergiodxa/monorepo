@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /**
  * Applies the `animation-delay` property. The value is a `<time>` string, so

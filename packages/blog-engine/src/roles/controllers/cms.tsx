@@ -15,15 +15,15 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
-import { requirePermission } from "../../auth/middleware/require-permission";
-import routes from "../../routes";
-import { Settings } from "../../settings/models/settings";
-import { CmsLayout } from "../../shared/components/cms-layout";
-import * as s from "../../shared/components/styles";
-import { PERMISSIONS, PERMISSION_KEYS, type Permission } from "../../shared/permissions";
-import { fieldText } from "../../shared/text";
-import { Role, type RoleInput, type RoleWithPermissions } from "../models/role";
+import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
+import { requirePermission } from "../../auth/middleware/require-permission.js";
+import routes from "../../routes.js";
+import { Settings } from "../../settings/models/settings.js";
+import { CmsLayout } from "../../shared/components/cms-layout.js";
+import * as s from "../../shared/components/styles.js";
+import { PERMISSIONS, PERMISSION_KEYS, type Permission } from "../../shared/permissions.js";
+import { fieldText } from "../../shared/text.js";
+import { Role, type RoleInput, type RoleWithPermissions } from "../models/role.js";
 
 /**
  * Loads the shared CMS chrome (current user, permission set, site title) for a view.

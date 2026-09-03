@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { isValidPrefix } from "./is-valid-prefix";
+import { isValidPrefix } from "./is-valid-prefix.js";
 
 describe(isValidPrefix.name, () => {
 	test("returns true for valid prefixes", () => {

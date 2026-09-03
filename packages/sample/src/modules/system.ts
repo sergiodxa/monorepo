@@ -4,8 +4,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Dataset } from "../dataset";
-import type { Random } from "../random";
+import type { Dataset } from "../dataset.js";
+import type { Random } from "../random.js";
 
 /** Interface name parts, in the order a name is assembled. */
 const INTERFACE_TYPES = ["en", "wl", "ww"] as const;

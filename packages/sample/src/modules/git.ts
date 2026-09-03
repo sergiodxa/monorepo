@@ -5,12 +5,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Dataset } from "../dataset";
-import type { Random } from "../random";
+import type { Dataset } from "../dataset.js";
+import type { Random } from "../random.js";
 
-import type { DateModule } from "./date";
-import type { InternetModule } from "./internet";
-import type { PersonModule } from "./person";
+import type { DateModule } from "./date.js";
+import type { InternetModule } from "./internet.js";
+import type { PersonModule } from "./person.js";
 
 /** How many hexadecimal characters a full commit hash carries. */
 const SHA_LENGTH = 40;

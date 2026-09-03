@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { lastModified, parseHttpDate } from "./http-date";
+import { lastModified, parseHttpDate } from "./http-date.js";
 
 describe(lastModified, () => {
 	test("formats a Date as an HTTP-date", () => {

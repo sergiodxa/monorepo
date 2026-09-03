@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { type } from "./type";
+import { type } from "./type.js";
 
 describe("type", () => {
 	test("combines text()'s font-size/line-height with the base sans font family", async () => {

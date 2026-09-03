@@ -10,7 +10,7 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { DragSession } from "../behaviors/drag-session";
+import type { DragSession } from "../behaviors/drag-session.js";
 
 /**
  * `data-*` attribute {@link dropZone} toggles on its host while a file

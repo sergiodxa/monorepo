@@ -9,13 +9,13 @@
 
 import { readFileSync } from "node:fs";
 
-import type { Sink, SuiteResult, TestResult } from "./diagnostics";
-import type { SpecError } from "./errors";
-import type { SourceFile } from "./source";
-import type { Value } from "./values";
+import type { Sink, SuiteResult, TestResult } from "./diagnostics.js";
+import type { SpecError } from "./errors.js";
+import type { SourceFile } from "./source.js";
+import type { Value } from "./values.js";
 
-import { positionAt } from "./source";
-import { formatValue } from "./values";
+import { positionAt } from "./source.js";
+import { formatValue } from "./values.js";
 
 /** Indentation prefixing every non-empty line of a failure's detail block. */
 const DETAIL_INDENT = "  ";

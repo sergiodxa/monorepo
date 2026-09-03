@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { filterFunction } from "../internal/filter";
+import { filterFunction } from "../internal/filter.js";
 
 /**
  * Inverts colors (`1`, the default, fully) to flip single-color raster assets

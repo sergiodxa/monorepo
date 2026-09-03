@@ -13,10 +13,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { Base64Url } from "./encoding";
-import { CryptoError, DecryptionError, InvalidEnvelopeError, InvalidKeyError } from "./errors";
-import { toBytes, toText } from "./lib/bytes";
-import { randomBytes } from "./random";
+import { Base64Url } from "./encoding.js";
+import { CryptoError, DecryptionError, InvalidEnvelopeError, InvalidKeyError } from "./errors.js";
+import { toBytes, toText } from "./lib/bytes.js";
+import { randomBytes } from "./random.js";
 
 /** Cipher used by the `v1` envelope. */
 const SEAL_ALGORITHM = "AES-GCM";

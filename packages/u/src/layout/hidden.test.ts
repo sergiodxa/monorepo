@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { hidden } from "./hidden";
+import { hidden } from "./hidden.js";
 
 describe("hidden", () => {
 	test("sets display: none", async () => {

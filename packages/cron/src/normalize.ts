@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CronFieldSet } from "./fields";
+import type { CronFieldSet } from "./fields.js";
 
-import { stepFromStart } from "./describe";
+import { stepFromStart } from "./describe.js";
 
 /**
  * Render a parsed schedule as a normalized expression, with runs collapsed to

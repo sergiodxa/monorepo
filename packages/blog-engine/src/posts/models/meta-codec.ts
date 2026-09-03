@@ -6,11 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { PostTypeDefinition, FieldKind } from "../../post-types/models/post-type";
+import type { PostTypeDefinition, FieldKind } from "../../post-types/models/post-type.js";
 
-import { asText } from "../../shared/text";
+import { asText } from "../../shared/text.js";
 
-import type { Post } from "./post";
+import type { Post } from "./post.js";
 
 /**
  * Domain metadata for a post: an implicit `title` plus one entry per defined

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { transitionProperty } from "./transition-property";
+import { transitionProperty } from "./transition-property.js";
 
 describe("transitionProperty", () => {
 	test("sets only transition-property", async () => {

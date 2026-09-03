@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { countGraphemes, graphemes, upperFirst, words, wordSegmenter } from "./segment";
+import { countGraphemes, graphemes, upperFirst, words, wordSegmenter } from "./segment.js";
 
 /** Runs of whitespace, collapsed by {@link excerpt} before truncating. */
 const WHITESPACE_RUN = /\s+/gu;

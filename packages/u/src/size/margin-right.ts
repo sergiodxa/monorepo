@@ -7,10 +7,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SpacingValue } from "../internal/tokens";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { utility } from "../internal/descriptor";
-import { spacing } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { spacing } from "../internal/tokens.js";
 
 /**
  * Sets the physical `margin-right` property directly, pinned to the fixed

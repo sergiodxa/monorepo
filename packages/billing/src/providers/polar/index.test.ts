@@ -15,12 +15,12 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { BillingErrorCode } from "../../core/errors";
-import type { Secret } from "../../core/secret";
+import type { BillingErrorCode } from "../../core/errors.js";
+import type { Secret } from "../../core/secret.js";
 
-import { BillingError } from "../../core/errors";
+import { BillingError } from "../../core/errors.js";
 
-import { PolarBilling } from "./index";
+import { PolarBilling } from "./index.js";
 
 /** Polar product id the tests configure the `pro` slug with. */
 const PRODUCT_ID = "019product";

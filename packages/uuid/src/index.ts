@@ -3,7 +3,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { InvalidUUIDFormatError, InvalidUUIDLengthError, InvalidUUIDTypeError } from "./lib/errors";
+import {
+	InvalidUUIDFormatError,
+	InvalidUUIDLengthError,
+	InvalidUUIDTypeError,
+} from "./lib/errors.js";
 
 import type { UUID as BaseUUID } from "node:crypto";
 

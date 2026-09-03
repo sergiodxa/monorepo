@@ -14,9 +14,9 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { ScrollFollowModel } from "../behaviors/scroll-follow-model";
+import type { ScrollFollowModel } from "../behaviors/scroll-follow-model.js";
 
-import { prefersReducedMotion } from "../utils/prefers-reduced-motion";
+import { prefersReducedMotion } from "../utils/prefers-reduced-motion.js";
 
 /**
  * Attribute every conversational turn exposes itself on, its value the

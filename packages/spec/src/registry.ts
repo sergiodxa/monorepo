@@ -12,11 +12,11 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isSuccess, success } from "@sdxc/result";
 
-import type { CommandNode, FixtureNode } from "./ast";
-import type { Plugin, ToolDescriptor } from "./plugin";
-import type { LoadedSuite } from "./sources";
+import type { CommandNode, FixtureNode } from "./ast.js";
+import type { Plugin, ToolDescriptor } from "./plugin.js";
+import type { LoadedSuite } from "./sources.js";
 
-import { ResolutionError } from "./errors";
+import { ResolutionError } from "./errors.js";
 
 /** What a call target resolved to: a plugin tool or a suite command. */
 export type ResolvedCallable =

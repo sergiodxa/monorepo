@@ -2,12 +2,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
 
-import { compose } from "../internal/descriptor";
-import { when } from "../state/when";
+import { compose } from "../internal/descriptor.js";
+import { when } from "../state/when.js";
 
-import { media } from "./media";
+import { media } from "./media.js";
 
 /**
  * Applies the given utilities under both the forced `.dark`/`.light` class

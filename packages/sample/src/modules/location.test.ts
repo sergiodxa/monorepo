@@ -8,12 +8,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import type { Dataset } from "../dataset";
+import type { Dataset } from "../dataset.js";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createLocationModule } from "./location";
+import { createLocationModule } from "./location.js";
 
 function module(seed: string, data: Dataset = en) {
 	return createLocationModule(createRandom(seed), data);

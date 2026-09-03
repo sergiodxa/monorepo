@@ -23,16 +23,16 @@ import type {
 	RhsNode,
 	StatementNode,
 	TestNode,
-} from "./ast";
-import type { ExpectationHost } from "./expectation";
-import type { Grants, PermissionKind, PermissionSet } from "./permissions";
-import type { Registry, ResolvedCallable } from "./registry";
-import type { Span } from "./source";
-import type { ToolArg, Value, ValueObject } from "./values";
-import type { Workspace } from "./workspace";
+} from "./ast.js";
+import type { ExpectationHost } from "./expectation.js";
+import type { Grants, PermissionKind, PermissionSet } from "./permissions.js";
+import type { Registry, ResolvedCallable } from "./registry.js";
+import type { Span } from "./source.js";
+import type { ToolArg, Value, ValueObject } from "./values.js";
+import type { Workspace } from "./workspace.js";
 
-import { PermissionDeniedError, ResolutionError, SpecError, ToolError } from "./errors";
-import { executeEventually, executeExpect } from "./expectation";
+import { PermissionDeniedError, ResolutionError, SpecError, ToolError } from "./errors.js";
+import { executeEventually, executeExpect } from "./expectation.js";
 
 /** How deep command/fixture invocations may nest before a cycle is suspected. */
 const MAX_CALL_DEPTH = 32;

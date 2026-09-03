@@ -11,7 +11,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { pulse, shimmer, spin, textShimmer } from "./keyframes";
+import { pulse, shimmer, spin, textShimmer } from "./keyframes.js";
 
 /** Unwraps a utility mixin back to the style tree it was built from. */
 function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {

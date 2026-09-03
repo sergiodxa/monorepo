@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { flexRow } from "./flex-row";
+import { flexRow } from "./flex-row.js";
 
 describe("flexRow", () => {
 	test("sets flex-direction: row", async () => {

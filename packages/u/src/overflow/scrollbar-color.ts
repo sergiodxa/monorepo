@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { utility } from "../internal/descriptor";
-import { color } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { color } from "../internal/tokens.js";
 
 /**
  * Themes a scroll container's scrollbar via the standard `scrollbar-color`

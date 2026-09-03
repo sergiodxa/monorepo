@@ -17,7 +17,7 @@ import {
 	ManagementError,
 	ManagementErrorCode,
 	SubjectNotFoundError,
-} from "./management-client";
+} from "./management-client.js";
 
 /** The provider every test in this file reads records from. */
 const ISSUER = "https://auth.test";

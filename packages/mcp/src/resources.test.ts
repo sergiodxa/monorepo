@@ -14,10 +14,10 @@
 import { RequestContext } from "remix/router";
 import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import { createHandler } from "./handler";
-import { ErrorCode } from "./jsonrpc";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "./protocol";
-import { createResource, resource, resources } from "./resources";
+import { createHandler } from "./handler.js";
+import { ErrorCode } from "./jsonrpc.js";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "./protocol.js";
+import { createResource, resource, resources } from "./resources.js";
 
 const ARTICLE = "https://sergiodxa.com/articles/:slug.md";
 

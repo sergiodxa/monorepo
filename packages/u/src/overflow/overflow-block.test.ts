@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { overflowBlock } from "./overflow-block";
+import { overflowBlock } from "./overflow-block.js";
 
 describe("overflowBlock", () => {
 	test("defaults to hidden", async () => {

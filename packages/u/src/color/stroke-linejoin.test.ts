@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { strokeLinejoin } from "./stroke-linejoin";
+import { strokeLinejoin } from "./stroke-linejoin.js";
 
 describe("strokeLinejoin", () => {
 	test("sets the stroke linejoin", async () => {

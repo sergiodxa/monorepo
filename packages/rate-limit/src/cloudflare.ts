@@ -12,11 +12,11 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { Adapter, RateLimitDecision } from "./types";
+import type { Adapter, RateLimitDecision } from "./types.js";
 
-import { normalizeCost } from "./cost";
-import { RateLimitError } from "./rate-limit-error";
-import { fixedWindow, windowDecision } from "./window";
+import { normalizeCost } from "./cost.js";
+import { RateLimitError } from "./rate-limit-error.js";
+import { fixedWindow, windowDecision } from "./window.js";
 
 /**
  * The part of a Cloudflare rate limiter binding this adapter uses. Declared

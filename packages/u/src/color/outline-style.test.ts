@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { outlineStyle } from "./outline-style";
+import { outlineStyle } from "./outline-style.js";
 
 describe("outlineStyle", () => {
 	test("sets the outline style", async () => {

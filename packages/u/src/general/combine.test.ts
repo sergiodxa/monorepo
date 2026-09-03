@@ -4,12 +4,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { border } from "../color/border";
-import { rounded } from "../effects/rounded";
-import { declarations, serialize } from "../internal/serialize";
-import { when } from "../state/when";
+import { border } from "../color/border.js";
+import { rounded } from "../effects/rounded.js";
+import { declarations, serialize } from "../internal/serialize.js";
+import { when } from "../state/when.js";
 
-import { combine } from "./combine";
+import { combine } from "./combine.js";
 
 describe("combine", () => {
 	test("merges several utilities' styles into one flat object, with no wrapping key", async () => {

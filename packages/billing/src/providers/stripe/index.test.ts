@@ -14,15 +14,15 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { Billing } from "../../core/contract";
-import type { BillingError } from "../../core/errors";
-import type { Secret } from "../../core/secret";
+import type { Billing } from "../../core/contract.js";
+import type { BillingError } from "../../core/errors.js";
+import type { Secret } from "../../core/secret.js";
 
-import { supports } from "../../core/supports";
+import { supports } from "../../core/supports.js";
 
-import type { StripeBillingOptions } from "./index";
+import type { StripeBillingOptions } from "./index.js";
 
-import { StripeBilling } from "./index";
+import { StripeBilling } from "./index.js";
 
 /** Origin every request in this file is intercepted at. */
 const ORIGIN = "https://api.stripe.com/v1";

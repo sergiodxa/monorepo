@@ -7,12 +7,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BOX_SHADOW } from "../internal/box-shadow";
-import { compose } from "../internal/descriptor";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_BOX_SHADOW } from "../internal/box-shadow.js";
+import { compose } from "../internal/descriptor.js";
+import { declarations } from "../internal/serialize.js";
 
-import { ringShadow } from "./ring-shadow";
-import { shadow } from "./shadow";
+import { ringShadow } from "./ring-shadow.js";
+import { shadow } from "./shadow.js";
 
 describe("ringShadow", () => {
 	test("a bare tone defaults to a 2px ring in that tone's solid background color", async () => {

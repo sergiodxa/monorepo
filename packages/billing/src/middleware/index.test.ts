@@ -10,13 +10,13 @@
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { Billing } from "../core/contract";
+import type { Billing } from "../core/contract.js";
 
-import { MemoryBilling } from "../providers/memory";
+import { MemoryBilling } from "../providers/memory/index.js";
 
-import type { EntitlementSnapshot } from "./index";
+import type { EntitlementSnapshot } from "./index.js";
 
-import billing, { Entitlements, requireEntitlement } from "./index";
+import billing, { Entitlements, requireEntitlement } from "./index.js";
 
 /** A projection granting one feature, which is what an entitled request carries. */
 const ENTITLED: EntitlementSnapshot = { products: ["pro"], features: { flow_monitors: true } };

@@ -10,10 +10,10 @@
 import type { Issuer } from "@sdxc/auth/issuer";
 import type { RelyingParty } from "@sdxc/auth/relying-party";
 
-import type { EngineAuthConfig } from "../../auth/oidc";
+import type { EngineAuthConfig } from "../../auth/oidc.js";
 
-import { createRelyingParty } from "../../auth/oidc";
-import middleware from "../lib/middleware";
+import { createRelyingParty } from "../../auth/oidc.js";
+import middleware from "../lib/middleware.js";
 
 /**
  * Attaches the blog's OIDC config as `ctx.oidc` and a client bound to this

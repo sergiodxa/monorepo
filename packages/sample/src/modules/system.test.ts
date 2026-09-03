@@ -8,10 +8,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createSystemModule } from "./system";
+import { createSystemModule } from "./system.js";
 
 function module(seed: string) {
 	return createSystemModule(createRandom(seed), en);

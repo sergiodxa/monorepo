@@ -18,7 +18,7 @@ import { DatabaseSync } from "node:sqlite";
 import { column as c, Database, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { createSQLStorageDatabaseAdapter } from "./index";
+import { createSQLStorageDatabaseAdapter } from "./index.js";
 
 import type { SQLInputValue } from "node:sqlite";
 

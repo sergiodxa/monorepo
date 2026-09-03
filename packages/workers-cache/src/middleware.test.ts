@@ -15,12 +15,12 @@ import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createTags } from "./create-tags";
-import cacheMiddleware from "./middleware";
-import { CACHE_CONTROL_HEADER, CACHE_TAG_HEADER, NON_CACHEABLE_POLICY } from "./platform";
-import { PurgeError } from "./purge-error";
-import { createRecordingCache } from "./recording-cache";
-import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error";
+import { createTags } from "./create-tags.js";
+import cacheMiddleware from "./middleware.js";
+import { CACHE_CONTROL_HEADER, CACHE_TAG_HEADER, NON_CACHEABLE_POLICY } from "./platform.js";
+import { PurgeError } from "./purge-error.js";
+import { createRecordingCache } from "./recording-cache.js";
+import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error.js";
 
 /** A public policy, the kind an app would build once and import everywhere. */
 const PUBLIC_PAGE = "public, max-age=86400, stale-while-revalidate=604800";

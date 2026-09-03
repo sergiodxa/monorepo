@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { transitionDelay } from "./transition-delay";
+import { transitionDelay } from "./transition-delay.js";
 
 describe("transitionDelay", () => {
 	test("no-arg defaults to 0s", async () => {

@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
-import { compose } from "../lexer";
+import { compose } from "../lexer.js";
 
-import { javascript } from "./javascript";
+import { javascript } from "./javascript.js";
 
 /**
  * A `<` opens an element where a value can start — at the beginning of a line,

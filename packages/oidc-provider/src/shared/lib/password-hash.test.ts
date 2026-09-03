@@ -14,9 +14,9 @@ import { password } from "@sdxc/crypto";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { underpoweredHash } from "../test/hashes";
+import { underpoweredHash } from "../test/hashes.js";
 
-import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash";
+import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash.js";
 
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 

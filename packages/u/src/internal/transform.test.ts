@@ -8,8 +8,8 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "./serialize";
-import { angle, COMPOSITE_TRANSFORM, scaleFactor, transformFunction } from "./transform";
+import { declarations } from "./serialize.js";
+import { angle, COMPOSITE_TRANSFORM, scaleFactor, transformFunction } from "./transform.js";
 
 describe("angle", () => {
 	test("treats a bare number as degrees", () => {

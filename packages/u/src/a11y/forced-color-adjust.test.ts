@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { forcedColorAdjust } from "./forced-color-adjust";
+import { forcedColorAdjust } from "./forced-color-adjust.js";
 
 describe("forcedColorAdjust", () => {
 	test('defaults to "none"', async () => {

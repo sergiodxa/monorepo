@@ -14,9 +14,9 @@ import { isFailure, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { minLength, url } from "remix/data-schema/checks";
 
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { nonJsonMediaType } from "./content-type";
-import { IdToken } from "./id-token";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { nonJsonMediaType } from "./content-type.js";
+import { IdToken } from "./id-token.js";
 
 /** Path OpenID Connect Discovery §4 appends to an issuer identifier. */
 const DISCOVERY_PATH = "/.well-known/openid-configuration";

@@ -16,7 +16,7 @@ import {
 	upperFirst,
 	words,
 	wordSegmenter,
-} from "./segment";
+} from "./segment.js";
 
 /** Family emoji: four people joined by zero-width joiners, one grapheme. */
 const FAMILY = "\u{1F469}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}";

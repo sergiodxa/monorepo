@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollSnapType } from "./scroll-snap-type";
+import { scrollSnapType } from "./scroll-snap-type.js";
 
 describe("scrollSnapType", () => {
 	test("no-arg defaults to inline mandatory", async () => {

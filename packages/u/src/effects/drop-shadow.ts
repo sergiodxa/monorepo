@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { filterFunction } from "../internal/filter";
-import { color as colorToken, spacing } from "../internal/tokens";
+import { filterFunction } from "../internal/filter.js";
+import { color as colorToken, spacing } from "../internal/tokens.js";
 
 export interface DropShadowOptions {
 	/** The shadow's inline offset, from the spacing scale or a raw CSS length. Defaults to `0`. */

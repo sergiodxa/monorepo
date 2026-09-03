@@ -21,7 +21,7 @@ import { bs, is } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { panelChrome } from "../styles/panel-chrome";
+import { panelChrome } from "../styles/panel-chrome.js";
 
 /**
  * Native tab-stop order applied to {@link ScrollArea.Viewport} through

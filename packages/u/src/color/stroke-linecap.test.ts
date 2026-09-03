@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { strokeLinecap } from "./stroke-linecap";
+import { strokeLinecap } from "./stroke-linecap.js";
 
 describe("strokeLinecap", () => {
 	test("sets the stroke linecap", async () => {

@@ -10,10 +10,10 @@
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { ScheduleDescriptor } from "./describe";
+import type { ScheduleDescriptor } from "./describe.js";
 
-import { describeFields, stepFromStart } from "./describe";
-import { parseExpression } from "./parse-expression";
+import { describeFields, stepFromStart } from "./describe.js";
+import { parseExpression } from "./parse-expression.js";
 
 /** Describe an expression, failing the test if it could not be parsed. */
 function descriptorOf(expression: string): ScheduleDescriptor {

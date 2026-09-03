@@ -11,7 +11,7 @@
 
 import { afterEach, describe, expect, test } from "vitest";
 
-import { ONE_YEAR_SECONDS, writeCookie } from "./write-cookie";
+import { ONE_YEAR_SECONDS, writeCookie } from "./write-cookie.js";
 
 function stubDocumentCookie(): () => string {
 	let written = "";

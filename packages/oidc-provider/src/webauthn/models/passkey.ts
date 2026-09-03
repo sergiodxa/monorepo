@@ -13,7 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
 
 /**
  * Persistence model for a subject's registered WebAuthn passkeys.

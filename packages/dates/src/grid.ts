@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CalendarDay, Day, TimeZone, Weekday } from "./types";
+import type { CalendarDay, Day, TimeZone, Weekday } from "./types.js";
 
-import { toDayKey } from "./day-key";
+import { toDayKey } from "./day-key.js";
 import {
 	calendarDayAt,
 	calendarDayFromEpochDay,
@@ -17,7 +17,7 @@ import {
 	shiftCalendarDay,
 	startOfDayInstant,
 	weekdayOf,
-} from "./zone";
+} from "./zone.js";
 
 /** Where a rolling window ends, and the zone its days are measured in. */
 export interface LastNDaysOptions {

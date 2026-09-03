@@ -13,9 +13,9 @@ import type { FrameHandle, MixinFactory } from "remix/ui";
 
 import { createElement, createMixin } from "remix/ui";
 
-import { prefersReducedMotion } from "../utils/prefers-reduced-motion";
+import { prefersReducedMotion } from "../utils/prefers-reduced-motion.js";
 
-import { trackHostNode } from "./track-host-node";
+import { trackHostNode } from "./track-host-node.js";
 
 /**
  * `data-*` attribute {@link viewTransition} sets on a SharedElement's host

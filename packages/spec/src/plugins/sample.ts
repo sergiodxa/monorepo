@@ -25,11 +25,11 @@ import type { Sample } from "@sdxc/sample";
 import { failure, success } from "@sdxc/result";
 import { createSample } from "@sdxc/sample";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value, ValueObject } from "../values.js";
 
-import { ToolError } from "../errors";
+import { ToolError } from "../errors.js";
 
 /** One module, as the record a spec binds and reads fields off. */
 const MODULE_TOOLS = [

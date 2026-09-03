@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { DISABLED_SELECTOR } from "./disabled-selector";
+import { DISABLED_SELECTOR } from "./disabled-selector.js";
 
 describe("DISABLED_SELECTOR", () => {
 	test("is the exact native-disabled-or-aria-disabled selector list", () => {

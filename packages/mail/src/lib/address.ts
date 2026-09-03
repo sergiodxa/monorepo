@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Address } from "../types";
+import type { Address } from "../types.js";
 
 /** Characters that force a display name to be quoted in a mailbox string. */
 const SPECIAL_CHARACTERS = /[()<>[\]:;@\\,."]/;

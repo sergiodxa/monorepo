@@ -23,8 +23,8 @@ import { when } from "@sdxc/u/state";
 import { text, textAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { floatingSurface } from "../styles/floating-surface";
-import { interactiveTransition } from "../styles/interactive-transition";
+import { floatingSurface } from "../styles/floating-surface.js";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** `role="listbox"` applied to {@link Command.List} through {@link attrs} unless a consumer supplies its own `role`. */
 const DEFAULT_LIST_ROLE = "listbox";

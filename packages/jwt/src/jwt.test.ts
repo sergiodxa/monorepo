@@ -11,8 +11,8 @@
 import * as jose from "jose";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { JWK } from "./jwk";
-import { JWT } from "./jwt";
+import { JWK } from "./jwk.js";
+import { JWT } from "./jwt.js";
 
 /** Seconds of clock drift the tolerance tests allow. */
 const CLOCK_TOLERANCE = 60;

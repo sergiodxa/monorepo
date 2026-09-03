@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export type { Country, Dataset, FirstNames } from "./dataset";
+export type { Country, Dataset, FirstNames } from "./dataset.js";
 
 export type {
 	ColorFormat,
@@ -14,11 +14,11 @@ export type {
 	ColorOptions,
 	RgbOptions,
 	SpaceOptions,
-} from "./modules/color";
+} from "./modules/color.js";
 
-export type { CompanyModule } from "./modules/company";
+export type { CompanyModule } from "./modules/company.js";
 
-export type { BooleanOptions, DatatypeModule } from "./modules/datatype";
+export type { BooleanOptions, DatatypeModule } from "./modules/datatype.js";
 
 export type {
 	BetweenOptions,
@@ -27,11 +27,11 @@ export type {
 	DateModule,
 	NameOptions as DateNameOptions,
 	SpanOptions,
-} from "./modules/date";
+} from "./modules/date.js";
 
-export type { GitModule, ShaOptions } from "./modules/git";
+export type { GitModule, ShaOptions } from "./modules/git.js";
 
-export type { HackerModule } from "./modules/hacker";
+export type { HackerModule } from "./modules/hacker.js";
 
 export type {
 	GeneratorLookup,
@@ -42,9 +42,14 @@ export type {
 	NumberRange,
 	PickManyOptions,
 	WeightedChoice,
-} from "./modules/helpers";
+} from "./modules/helpers.js";
 
-export type { InternetModule, JwtOptions, NameOptions, PasswordOptions } from "./modules/internet";
+export type {
+	InternetModule,
+	JwtOptions,
+	NameOptions,
+	PasswordOptions,
+} from "./modules/internet.js";
 
 export type {
 	CityOptions,
@@ -52,14 +57,14 @@ export type {
 	LocationModule,
 	NearbyOptions,
 	StateOptions,
-} from "./modules/location";
+} from "./modules/location.js";
 
 export type {
 	CountOptions,
 	LoremModule,
 	ParagraphOptions,
 	ParagraphsOptions,
-} from "./modules/lorem";
+} from "./modules/lorem.js";
 
 export type {
 	BaseOptions,
@@ -67,7 +72,7 @@ export type {
 	FloatOptions,
 	IntOptions,
 	NumberModule,
-} from "./modules/number";
+} from "./modules/number.js";
 
 export type {
 	FirstNameOptions,
@@ -75,18 +80,18 @@ export type {
 	PersonModule,
 	PersonRecord,
 	SexType,
-} from "./modules/person";
+} from "./modules/person.js";
 
-export type { PhoneModule, PhoneNumberOptions, PhoneStyle } from "./modules/phone";
+export type { PhoneModule, PhoneNumberOptions, PhoneStyle } from "./modules/phone.js";
 
-export type { AlphaOptions, HexadecimalOptions, StringModule } from "./modules/string";
+export type { AlphaOptions, HexadecimalOptions, StringModule } from "./modules/string.js";
 
-export type { FileNameOptions, NetworkInterfaceOptions, SystemModule } from "./modules/system";
+export type { FileNameOptions, NetworkInterfaceOptions, SystemModule } from "./modules/system.js";
 
-export type { Random, Seed } from "./random";
+export type { Random, Seed } from "./random.js";
 
-export { createRandom, systemSeed } from "./random";
+export { createRandom, systemSeed } from "./random.js";
 
-export type { Sample, SampleOptions } from "./sample";
+export type { Sample, SampleOptions } from "./sample.js";
 
-export { createSample } from "./sample";
+export { createSample } from "./sample.js";

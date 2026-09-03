@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { AngleValue } from "../internal/transform";
+import type { AngleValue } from "../internal/transform.js";
 
-import { filterFunction } from "../internal/filter";
-import { angle } from "../internal/transform";
+import { filterFunction } from "../internal/filter.js";
+import { angle } from "../internal/transform.js";
 
 /**
  * Applies a `filter: hue-rotate(...)`, rotating every pixel's hue by the given

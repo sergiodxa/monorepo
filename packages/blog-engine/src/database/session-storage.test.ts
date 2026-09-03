@@ -11,10 +11,10 @@ import { Database } from "remix/data-table";
 import { createSession } from "remix/session";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { createTestDatabase } from "../shared/test/db";
+import { createTestDatabase } from "../shared/test/db.js";
 
-import { sessions } from "./schema";
-import { SqlSessionStorage } from "./session-storage";
+import { sessions } from "./schema.js";
+import { SqlSessionStorage } from "./session-storage.js";
 
 describe("SqlSessionStorage expiry", () => {
 	let db: Database;

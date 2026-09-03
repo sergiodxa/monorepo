@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { roundedCorner } from "./rounded-corner";
+import { roundedCorner } from "./rounded-corner.js";
 
 describe("roundedCorner", () => {
 	test("no radius name defaults to the md radius", async () => {

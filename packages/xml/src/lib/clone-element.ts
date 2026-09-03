@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { XML } from "../index";
+import type { XML } from "../index.js";
 
 /**
  * Clones one XML element tree recursively.

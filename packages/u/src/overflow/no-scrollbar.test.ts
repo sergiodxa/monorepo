@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { noScrollbar } from "./no-scrollbar";
+import { noScrollbar } from "./no-scrollbar.js";
 
 describe("noScrollbar", () => {
 	test("hides the scrollbar across every browser engine", async () => {

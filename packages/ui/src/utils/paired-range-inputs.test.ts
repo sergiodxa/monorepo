@@ -9,7 +9,7 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import { findPairedRangeInputs } from "./paired-range-inputs";
+import { findPairedRangeInputs } from "./paired-range-inputs.js";
 
 /** Builds a minimal stand-in for an `<input type="range">` element. */
 function createInput(): HTMLInputElement {

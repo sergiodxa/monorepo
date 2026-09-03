@@ -17,11 +17,11 @@ import { column as c, Database, table } from "remix/data-table";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { OrderByTuple } from "./keyset";
+import type { OrderByTuple } from "./keyset.js";
 
-import { decodeCursor } from "./cursor";
-import { InvalidCursorError, InvalidOrderingError, QueryFailedError } from "./errors";
-import { Pagination } from "./pagination";
+import { decodeCursor } from "./cursor.js";
+import { InvalidCursorError, InvalidOrderingError, QueryFailedError } from "./errors.js";
+import { Pagination } from "./pagination.js";
 
 /** Append-only event log, the shape keyset paging exists for. */
 let events = table({

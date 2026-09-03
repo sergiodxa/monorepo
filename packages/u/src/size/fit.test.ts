@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { fit } from "./fit";
+import { fit } from "./fit.js";
 
 describe("fit", () => {
 	test("defaults to 'cover'", async () => {

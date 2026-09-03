@@ -14,8 +14,8 @@ import { dirname, join } from "node:path";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { LoadError, ParseError } from "./errors";
-import { loadSuite } from "./loader";
+import { LoadError, ParseError } from "./errors.js";
+import { loadSuite } from "./loader.js";
 
 const CREATED_DIRS: string[] = [];
 

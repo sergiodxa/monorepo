@@ -36,17 +36,17 @@ import type {
 	StringNode,
 	TestNode,
 	WordNode,
-} from "./ast";
-import type { ExecutionContext } from "./executor";
-import type { Grants, PermissionKind, PermissionSet } from "./permissions";
-import type { Plugin, ToolDescriptor } from "./plugin";
-import type { Registry, ResolvedCallable } from "./registry";
-import type { Span } from "./source";
-import type { ToolArg, Value } from "./values";
-import type { Workspace } from "./workspace";
+} from "./ast.js";
+import type { ExecutionContext } from "./executor.js";
+import type { Grants, PermissionKind, PermissionSet } from "./permissions.js";
+import type { Plugin, ToolDescriptor } from "./plugin.js";
+import type { Registry, ResolvedCallable } from "./registry.js";
+import type { Span } from "./source.js";
+import type { ToolArg, Value } from "./values.js";
+import type { Workspace } from "./workspace.js";
 
-import { ExpectationError, PermissionDeniedError, ResolutionError, SpecError } from "./errors";
-import { executeTest } from "./executor";
+import { ExpectationError, PermissionDeniedError, ResolutionError, SpecError } from "./errors.js";
+import { executeTest } from "./executor.js";
 
 /** Build a span; tests that assert spans pass distinctive offsets. */
 function span(start = 0, end = 0): Span {

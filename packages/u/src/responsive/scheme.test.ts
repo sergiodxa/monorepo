@@ -7,10 +7,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { serialize } from "../internal/serialize.js";
 
-import { scheme } from "./scheme";
+import { scheme } from "./scheme.js";
 
 describe("scheme", () => {
 	test("'dark' produces both the forced-class block and the system-preference at-rule with the same styles", async () => {

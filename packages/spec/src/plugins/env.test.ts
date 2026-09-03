@@ -14,15 +14,15 @@ import { failure, isFailure, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { SpecError } from "../errors";
-import type { PermissionSet } from "../permissions";
-import type { ToolContext } from "../plugin";
-import type { ToolArg, Value } from "../values";
-import type { Workspace } from "../workspace";
+import type { SpecError } from "../errors.js";
+import type { PermissionSet } from "../permissions.js";
+import type { ToolContext } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { PermissionDeniedError } from "../errors";
+import { PermissionDeniedError } from "../errors.js";
 
-import { createEnvPlugin } from "./env";
+import { createEnvPlugin } from "./env.js";
 
 /** The variable name every test reads; removed again in `afterEach`. */
 const NAME = "SPEC_ENV_PLUGIN_TEST";

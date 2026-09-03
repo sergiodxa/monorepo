@@ -14,13 +14,13 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value } from "../values";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
 
-import { ToolError } from "../errors";
-import { servePlugin } from "../transport-stdio";
-import { formatValue } from "../values";
+import { ToolError } from "../errors.js";
+import { servePlugin } from "../transport-stdio.js";
+import { formatValue } from "../values.js";
 
 /** The tools the demo plugin exposes, stable for the plugin's lifetime. */
 const DEMO_TOOLS: ToolDescriptor[] = [

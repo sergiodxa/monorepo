@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Log } from "./types";
+import type { Log } from "./types.js";
 
 export namespace Logger {
 	export interface Event {

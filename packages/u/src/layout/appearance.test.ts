@@ -8,9 +8,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { appearance } from "./appearance";
+import { appearance } from "./appearance.js";
 
 describe("appearance", () => {
 	test("defaults to none across the standard property and both vendor prefixes", async () => {

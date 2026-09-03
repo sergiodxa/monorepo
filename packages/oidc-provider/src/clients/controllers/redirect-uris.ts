@@ -19,12 +19,12 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { LIMITS, maxLength, minLength, url } from "../../shared/lib/schema-checks";
-import { toIsoString } from "../../shared/lib/timestamp";
-import Client from "../models/client";
-import RedirectUri from "../models/redirect-uri";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { LIMITS, maxLength, minLength, url } from "../../shared/lib/schema-checks.js";
+import { toIsoString } from "../../shared/lib/timestamp.js";
+import Client from "../models/client.js";
+import RedirectUri from "../models/redirect-uri.js";
 
 type RedirectUriRow = Awaited<ReturnType<typeof RedirectUri.list>>[number];
 

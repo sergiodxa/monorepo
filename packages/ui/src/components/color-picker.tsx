@@ -18,11 +18,11 @@ import { bs, is, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { ColorField } from "./color-field";
-import { ColorSwatch } from "./color-swatch";
-import { Popover } from "./popover";
+import { ColorField } from "./color-field.js";
+import { ColorSwatch } from "./color-swatch.js";
+import { Popover } from "./popover.js";
 
 /**
  * Native `<button>` `type` {@link ColorPicker.Trigger} falls back to,

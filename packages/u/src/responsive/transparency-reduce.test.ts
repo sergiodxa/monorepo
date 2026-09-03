@@ -7,12 +7,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { serialize } from "../internal/serialize";
-import { hover } from "../state/hover";
+import { bg } from "../color/bg.js";
+import { serialize } from "../internal/serialize.js";
+import { hover } from "../state/hover.js";
 
-import { media } from "./media";
-import { transparencyReduce } from "./transparency-reduce";
+import { media } from "./media.js";
+import { transparencyReduce } from "./transparency-reduce.js";
 
 describe("transparencyReduce", () => {
 	test("nests the wrapped utility's styles under '@media (prefers-reduced-transparency: reduce)'", async () => {

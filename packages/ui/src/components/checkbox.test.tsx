@@ -10,7 +10,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Checkbox } from "./checkbox";
+import { Checkbox } from "./checkbox.js";
 
 describe(Checkbox.name, () => {
 	test("refuses to be compressed by a long label sharing its row", async () => {

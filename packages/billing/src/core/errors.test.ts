@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { BillingError } from "./errors";
+import { BillingError } from "./errors.js";
 
 describe("BillingError", () => {
 	test("keeps the platform's own code and the connection it failed against", () => {

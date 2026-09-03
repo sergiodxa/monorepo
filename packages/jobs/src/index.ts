@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { AnyJobContext, JobContextInit } from "./context";
+export type { AnyJobContext, JobContextInit } from "./context.js";
 export type {
 	AnyJobHandler,
 	CurrentJobContext,
@@ -17,8 +17,8 @@ export type {
 	JobHandlerContext,
 	JobHandlerFunction,
 	JobTypes,
-} from "./handler";
-export type { CronExpression, JobLeaf, JobOptions } from "./job";
+} from "./handler.js";
+export type { CronExpression, JobLeaf, JobOptions } from "./job.js";
 export type {
 	AnyJobDefinition,
 	AnyJobLeaf,
@@ -29,7 +29,7 @@ export type {
 	JobInput,
 	JobMap,
 	JobTree,
-} from "./jobs";
+} from "./jobs.js";
 export type {
 	AnyJobMiddleware,
 	ChainProperties,
@@ -37,7 +37,7 @@ export type {
 	EmptyContextEffect,
 	JobMiddleware,
 	NextFunction,
-} from "./middleware";
+} from "./middleware.js";
 export type {
 	HandlerModule,
 	InvalidMessage,
@@ -47,11 +47,11 @@ export type {
 	LoadHandler,
 	RefusalReason,
 	SendMessages,
-} from "./dispatcher";
+} from "./dispatcher.js";
 
-export { JobContext } from "./context";
-export { createJobDispatcher } from "./dispatcher";
-export { Ending, Job } from "./errors";
-export { createJobContext, createJobHandler } from "./handler";
-export { job } from "./job";
-export { jobs, messageBody } from "./jobs";
+export { JobContext } from "./context.js";
+export { createJobDispatcher } from "./dispatcher.js";
+export { Ending, Job } from "./errors.js";
+export { createJobContext, createJobHandler } from "./handler.js";
+export { job } from "./job.js";
+export { jobs, messageBody } from "./jobs.js";

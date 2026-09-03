@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TimeZone, Weekday } from "./types";
+import type { TimeZone, Weekday } from "./types.js";
 
-import { calendarDayAt, shiftCalendarDay, startOfDayInstant, weekdayOf } from "./zone";
+import { calendarDayAt, shiftCalendarDay, startOfDayInstant, weekdayOf } from "./zone.js";
 
 /** How a week is delimited, a decision the product makes explicitly. */
 export interface StartOfWeekOptions {

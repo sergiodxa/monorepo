@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { DEFAULT_ICON_ARIA_HIDDEN } from "./decorative-icon";
+import { DEFAULT_ICON_ARIA_HIDDEN } from "./decorative-icon.js";
 
 describe("DEFAULT_ICON_ARIA_HIDDEN", () => {
 	/**

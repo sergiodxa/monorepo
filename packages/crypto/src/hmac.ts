@@ -13,12 +13,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { BinaryLike, Bytes } from "./lib/bytes";
+import type { BinaryLike, Bytes } from "./lib/bytes.js";
 
-import { Hex } from "./encoding";
-import { CryptoError, UnsupportedAlgorithmError } from "./errors";
-import { toBytes } from "./lib/bytes";
-import { timingSafeEqual } from "./timing-safe-equal";
+import { Hex } from "./encoding.js";
+import { CryptoError, UnsupportedAlgorithmError } from "./errors.js";
+import { toBytes } from "./lib/bytes.js";
+import { timingSafeEqual } from "./timing-safe-equal.js";
 
 /** Hash functions WebCrypto exposes for HMAC keys. */
 const SUPPORTED_HASHES = ["SHA-1", "SHA-256", "SHA-384", "SHA-512"] as const;

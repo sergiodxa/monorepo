@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { fontSize } from "./font-size";
-import { text } from "./text";
+import { fontSize } from "./font-size.js";
+import { text } from "./text.js";
 
 describe("fontSize", () => {
 	test("a named size resolves only fontSize, with no lineHeight", async () => {

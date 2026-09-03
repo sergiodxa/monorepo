@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildDocument } from "./build-document";
+import { buildDocument } from "./build-document.js";
 
 describe("buildDocument", () => {
 	test("builds the RSS XML document shape with namespaces and items", () => {

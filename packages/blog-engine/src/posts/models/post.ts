@@ -8,11 +8,11 @@
  */
 import type { Database } from "remix/data-table";
 
-import type { SelectPost, SelectPostMeta } from "../../database/schema";
+import type { SelectPost, SelectPostMeta } from "../../database/schema.js";
 
-import { posts } from "../../database/schema";
+import { posts } from "../../database/schema.js";
 
-import { PostMeta } from "./post-meta";
+import { PostMeta } from "./post-meta.js";
 
 /**
  * Shared type contracts for post persistence and typed metadata mapping.

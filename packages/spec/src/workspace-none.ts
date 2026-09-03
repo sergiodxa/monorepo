@@ -13,10 +13,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { SpecError } from "./errors";
-import type { Workspace } from "./workspace";
+import type { SpecError } from "./errors.js";
+import type { Workspace } from "./workspace.js";
 
-import { ToolError } from "./errors";
+import { ToolError } from "./errors.js";
 
 /**
  * Create a workspace that refuses every path, shaped as an async factory

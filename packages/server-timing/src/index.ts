@@ -9,4 +9,4 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export { TimingCollector } from "./timing-collector";
+export { TimingCollector } from "./timing-collector.js";

@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
-import type { GridLineValue } from "./grid-column";
+import type { GridLineValue } from "./grid-column.js";
 
 /**
  * Applies `grid-row`, placing or spanning a grid item along the block axis. A

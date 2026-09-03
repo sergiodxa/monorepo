@@ -10,10 +10,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { when } from "../state/when";
+import { declarations, serialize } from "../internal/serialize.js";
+import { when } from "../state/when.js";
 
-import { raw } from "./raw";
+import { raw } from "./raw.js";
 
 describe("raw", () => {
 	test("passes a plain style object through unchanged", async () => {

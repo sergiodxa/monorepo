@@ -24,7 +24,7 @@ import { after, before, data } from "@sdxc/u/state";
 import { verticalAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { mergeStyle } from "../utils/merge-style";
+import { mergeStyle } from "../utils/merge-style.js";
 
 /** Shape variant {@link ColorSwatch} falls back to when `shape` is omitted. */
 const DEFAULT_SHAPE: ColorSwatch.Shape = "rounded";

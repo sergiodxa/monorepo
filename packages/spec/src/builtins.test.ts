@@ -15,10 +15,10 @@ import { join } from "node:path";
 import { isFailure } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { Grants } from "./permissions";
+import type { Grants } from "./permissions.js";
 
-import { BUILTIN_NAMESPACES, createBuiltinPlugins } from "./builtins";
-import { runSuite } from "./runner";
+import { BUILTIN_NAMESPACES, createBuiltinPlugins } from "./builtins.js";
+import { runSuite } from "./runner.js";
 
 const CREATED_DIRS: string[] = [];
 

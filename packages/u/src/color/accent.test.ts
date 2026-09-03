@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { accent } from "./accent";
+import { accent } from "./accent.js";
 
 describe("accent", () => {
 	test("defaults to the brand solid color", async () => {

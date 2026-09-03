@@ -85,12 +85,12 @@ import {
 } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { durations, easings } from "../animations/tokens";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { durations, easings } from "../animations/tokens.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
-import { Dialog } from "./dialog";
-import { ScrollArea } from "./scroll-area";
-import { Separator } from "./separator";
+import { Dialog } from "./dialog.js";
+import { ScrollArea } from "./scroll-area.js";
+import { Separator } from "./separator.js";
 
 /** Visual treatment {@link Sidebar} falls back to when `variant` is omitted. */
 const DEFAULT_VARIANT: Sidebar.Variant = "sidebar";

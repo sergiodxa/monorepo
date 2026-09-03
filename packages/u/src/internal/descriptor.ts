@@ -12,7 +12,7 @@ import type { ElementProps, MixinDescriptor } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import type { CSSStyles } from "./css-styles";
+import type { CSSStyles } from "./css-styles.js";
 
 /**
  * Private symbol keying the style-tree metadata carried by every utility

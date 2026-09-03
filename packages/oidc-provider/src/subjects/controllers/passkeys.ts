@@ -19,13 +19,13 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
-import { LIMITS, maxLength } from "../../shared/lib/schema-checks";
-import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
-import Passkey from "../../webauthn/models/passkey";
-import Subject from "../models/subject";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { isResponse, safeJsonParse } from "../../shared/lib/safe-json.js";
+import { LIMITS, maxLength } from "../../shared/lib/schema-checks.js";
+import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp.js";
+import Passkey from "../../webauthn/models/passkey.js";
+import Subject from "../models/subject.js";
 
 let UpdatePasskeySchema = s.object({
 	name: s.string().pipe(maxLength(LIMITS.name.max)),

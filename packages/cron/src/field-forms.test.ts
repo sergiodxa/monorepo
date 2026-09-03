@@ -11,10 +11,10 @@
 import { isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { FieldSpec } from "./test/corpus";
+import type { FieldSpec } from "./test/corpus.js";
 
-import { parseExpression } from "./parse-expression";
-import { Schedule } from "./schedule";
+import { parseExpression } from "./parse-expression.js";
+import { Schedule } from "./schedule.js";
 import {
 	everyFormOf,
 	expectedValues,
@@ -24,8 +24,8 @@ import {
 	MACROS,
 	specFor,
 	valuesOf,
-} from "./test/corpus";
-import { expectDescriptorShape, expectStableNormalization } from "./test/properties";
+} from "./test/corpus.js";
+import { expectDescriptorShape, expectStableNormalization } from "./test/properties.js";
 
 /**
  * Expand a form through the package and compare it with the values the grammar says it

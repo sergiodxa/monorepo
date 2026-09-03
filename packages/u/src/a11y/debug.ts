@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { merge, nest, utility } from "../internal/descriptor";
+import { merge, nest, utility } from "../internal/descriptor.js";
 
 /**
  * Outlines the host in red during development and resolves to an empty style

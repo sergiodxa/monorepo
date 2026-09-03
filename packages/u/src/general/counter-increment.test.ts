@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { counterIncrement } from "./counter-increment";
+import { counterIncrement } from "./counter-increment.js";
 
 describe("counterIncrement", () => {
 	test("no value falls back to CSS's own default", async () => {

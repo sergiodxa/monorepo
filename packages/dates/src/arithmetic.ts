@@ -11,7 +11,7 @@ import type { DurationInput } from "@sdxc/duration";
 
 import { toMs } from "@sdxc/duration";
 
-import { DAY_MS } from "./zone";
+import { DAY_MS } from "./zone.js";
 
 /**
  * Move an instant forward by whole 24-hour days. Across a DST transition the

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { borderSpacing } from "./border-spacing";
+import { borderSpacing } from "./border-spacing.js";
 
 describe("borderSpacing", () => {
 	test("sets a single-length value", async () => {

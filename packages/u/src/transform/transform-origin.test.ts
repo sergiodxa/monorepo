@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { transformOrigin } from "./transform-origin";
+import { transformOrigin } from "./transform-origin.js";
 
 describe("transformOrigin", () => {
 	test("defaults to center", async () => {

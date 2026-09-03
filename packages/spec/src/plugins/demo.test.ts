@@ -10,10 +10,10 @@ import { isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
-import type { ToolContext } from "../plugin";
-import type { Value } from "../values";
+import type { ToolContext } from "../plugin.js";
+import type { Value } from "../values.js";
 
-import { createDemoPlugin } from "./demo";
+import { createDemoPlugin } from "./demo.js";
 
 /** A minimal context: the demo plugin's tools run the same regardless of workspace or grants. */
 function stubContext(): ToolContext {

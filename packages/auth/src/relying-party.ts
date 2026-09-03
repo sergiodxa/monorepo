@@ -26,13 +26,13 @@ import * as s from "remix/data-schema";
 import { redirect } from "remix/response/redirect";
 import { Session } from "remix/session";
 
-import type { Issuer } from "./issuer";
+import type { Issuer } from "./issuer.js";
 
-import { AccessToken } from "./access-token";
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { AuthSession } from "./auth-session";
-import { nonJsonMediaType } from "./content-type";
-import { IdToken } from "./id-token";
+import { AccessToken } from "./access-token.js";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { AuthSession } from "./auth-session.js";
+import { nonJsonMediaType } from "./content-type.js";
+import { IdToken } from "./id-token.js";
 
 /** Milliseconds in a second, the unit `auth_time` and `expires_in` count in. */
 const MS_PER_SECOND = 1000;

@@ -10,10 +10,10 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { CronFieldSet } from "./fields";
-import type { InvalidCronExpression } from "./invalid-cron-expression";
+import type { CronFieldSet } from "./fields.js";
+import type { InvalidCronExpression } from "./invalid-cron-expression.js";
 
-import { parseExpression } from "./parse-expression";
+import { parseExpression } from "./parse-expression.js";
 
 /** Parse an expression, failing the test if it was rejected. */
 function fields(expression: string): CronFieldSet {

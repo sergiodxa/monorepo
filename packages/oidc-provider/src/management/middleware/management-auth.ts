@@ -14,12 +14,12 @@ import { JWK } from "@sdxc/jwt";
 import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
-import Client from "../../clients/models/client";
-import AccessToken from "../../oauth/values/access-token";
-import { verifyInternalToken } from "../../shared/lib/internal-auth";
-import middleware from "../../shared/lib/middleware";
-import SigningKey from "../../signing-keys/models/signing-key";
-import TenantMeta from "../models/tenant-meta";
+import Client from "../../clients/models/client.js";
+import AccessToken from "../../oauth/values/access-token.js";
+import { verifyInternalToken } from "../../shared/lib/internal-auth.js";
+import middleware from "../../shared/lib/middleware.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
+import TenantMeta from "../models/tenant-meta.js";
 
 /**
  * Middleware that verifies the request carries either a signed internal token

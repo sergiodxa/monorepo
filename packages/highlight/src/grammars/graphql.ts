@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
 /**
  * The words that introduce an operation or a type definition, plus `null`,

@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { Sitemap } from "./index";
+import { Sitemap } from "./index.js";
 
 describe("Sitemap", () => {
 	describe("append", () => {

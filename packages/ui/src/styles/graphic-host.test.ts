@@ -9,7 +9,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
  */
 import { describe, expect, test } from "vitest";
 
-import { graphicHostStyle } from "./graphic-host";
+import { graphicHostStyle } from "./graphic-host.js";
 
 /** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {

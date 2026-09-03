@@ -12,7 +12,7 @@ import {
 	InvalidUUIDLengthError,
 	InvalidUUIDTypeError,
 	isUUID,
-} from "./index";
+} from "./index.js";
 
 describe(isUUID.name, () => {
 	test("returns true for valid UUIDs", () => {

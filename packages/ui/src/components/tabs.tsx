@@ -37,7 +37,7 @@ import { boxLength, spacing } from "@sdxc/u/tokens";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** Default {@link Tabs.Props} orientation, applied when `orientation` is omitted. */
 const DEFAULT_ORIENTATION: Tabs.Orientation = "horizontal";

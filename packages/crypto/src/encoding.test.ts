@@ -13,8 +13,8 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Base64, Base64Url, Hex } from "./encoding";
-import { InvalidEncodingError } from "./errors";
+import { Base64, Base64Url, Hex } from "./encoding.js";
+import { InvalidEncodingError } from "./errors.js";
 
 describe("Hex", () => {
 	test("encodes bytes as lowercase hex", () => {

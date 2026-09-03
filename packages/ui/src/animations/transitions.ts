@@ -11,9 +11,9 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
-import { durations, easings } from "./tokens";
+import { durations, easings } from "./tokens.js";
 
 /**
  * Options accepted by {@link enterExit}.

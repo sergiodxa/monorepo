@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CacheInterface, PurgeSelector } from "./types";
+import type { CacheInterface, PurgeSelector } from "./types.js";
 
 /** Configuration for a recording cache. */
 export interface RecordingCacheOptions {

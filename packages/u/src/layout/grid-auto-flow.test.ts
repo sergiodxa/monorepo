@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { gridAutoFlow } from "./grid-auto-flow";
+import { gridAutoFlow } from "./grid-auto-flow.js";
 
 describe("gridAutoFlow", () => {
 	test("defaults to row", async () => {

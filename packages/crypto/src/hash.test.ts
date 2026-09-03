@@ -12,8 +12,8 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Hex } from "./encoding";
-import { sha256, sha384, sha512 } from "./hash";
+import { Hex } from "./encoding.js";
+import { sha256, sha384, sha512 } from "./hash.js";
 
 describe("sha256", () => {
 	test("matches the published digest for 'abc'", async () => {

@@ -8,10 +8,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createInternetModule } from "./internet";
+import { createInternetModule } from "./internet.js";
 
 const RESERVED = /^example\.(com|org|net)$/;
 

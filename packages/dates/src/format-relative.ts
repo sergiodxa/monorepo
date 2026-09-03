@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Locale } from "./types";
+import type { Locale } from "./types.js";
 
-import { relativeTimeFormatter } from "./intl-cache";
+import { relativeTimeFormatter } from "./intl-cache.js";
 
 /**
  * The unit ladder, each rung holding how many of that unit make up the next one.

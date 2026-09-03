@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { cloneDeclaration } from "./clone-declaration";
+import { cloneDeclaration } from "./clone-declaration.js";
 
 describe("cloneDeclaration", () => {
 	test("returns undefined for missing declarations", () => {

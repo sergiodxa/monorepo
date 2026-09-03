@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as ContentType from "./content-type";
+import * as ContentType from "./content-type.js";
 
 type Init = Omit<RequestInit, "body" | "headers"> & {
 	headers?: HeadersInit;

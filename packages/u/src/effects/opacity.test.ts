@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { opacity } from "./opacity";
+import { opacity } from "./opacity.js";
 
 describe("opacity", () => {
 	test("converts a 0-100 integer to the CSS 0-1 range", async () => {

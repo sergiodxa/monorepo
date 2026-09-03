@@ -11,7 +11,7 @@
 
 import { afterEach, describe, expect, test } from "vitest";
 
-import { prefersReducedMotion } from "./prefers-reduced-motion";
+import { prefersReducedMotion } from "./prefers-reduced-motion.js";
 
 /**
  * Stands a `window.matchMedia` stub in for the test's duration, always

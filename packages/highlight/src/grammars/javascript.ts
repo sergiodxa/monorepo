@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
 /**
  * Words that are reserved, plus the literals spelled as words: painting `null`

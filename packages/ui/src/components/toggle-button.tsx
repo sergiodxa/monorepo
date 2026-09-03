@@ -22,10 +22,10 @@ import { when, hover, active, data } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 /** Semantic color role {@link ToggleButton} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: ToggleButton.Color = "neutral";

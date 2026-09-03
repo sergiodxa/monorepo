@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { perspective } from "./perspective";
+import { perspective } from "./perspective.js";
 
 describe("perspective", () => {
 	test("defaults to 800px", async () => {

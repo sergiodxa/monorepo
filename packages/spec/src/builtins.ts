@@ -9,17 +9,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Plugin } from "./plugin";
+import type { Plugin } from "./plugin.js";
 
-import { createBrowserPlugin } from "./plugins/browser";
-import { createCliPlugin } from "./plugins/cli";
-import { createDbPlugin } from "./plugins/db";
-import { createEnvPlugin } from "./plugins/env";
-import { createFsPlugin } from "./plugins/fs";
-import { createHttpPlugin } from "./plugins/http";
-import { createJwtPlugin } from "./plugins/jwt";
-import { createSamplePlugin } from "./plugins/sample";
-import { createUrlPlugin } from "./plugins/url";
+import { createBrowserPlugin } from "./plugins/browser.js";
+import { createCliPlugin } from "./plugins/cli.js";
+import { createDbPlugin } from "./plugins/db.js";
+import { createEnvPlugin } from "./plugins/env.js";
+import { createFsPlugin } from "./plugins/fs.js";
+import { createHttpPlugin } from "./plugins/http.js";
+import { createJwtPlugin } from "./plugins/jwt.js";
+import { createSamplePlugin } from "./plugins/sample.js";
+import { createUrlPlugin } from "./plugins/url.js";
 
 /**
  * Every built-in namespace, in the order a run registers them.

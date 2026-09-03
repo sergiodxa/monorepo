@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { HUE_GRADIENT_STOPS } from "./hue-spectrum";
+import { HUE_GRADIENT_STOPS } from "./hue-spectrum.js";
 
 describe("HUE_GRADIENT_STOPS", () => {
 	test("holds exactly seven comma-separated stops", () => {

@@ -8,7 +8,7 @@
  */
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
-import { splitSqlStatements } from "./sql-script";
+import { splitSqlStatements } from "./sql-script.js";
 
 /** Value shapes SQLite accepts as a positional binding. */
 type SqliteBinding = string | number | null | Uint8Array;

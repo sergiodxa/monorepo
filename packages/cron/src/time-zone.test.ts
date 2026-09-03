@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { instantFromWallClock, offsetAt, zonedPartsOf } from "./time-zone";
+import { instantFromWallClock, offsetAt, zonedPartsOf } from "./time-zone.js";
 
 /** One hour in milliseconds, the unit most offsets are a multiple of. */
 const HOUR_MS = 3_600_000;

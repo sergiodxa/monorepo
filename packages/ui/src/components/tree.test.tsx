@@ -12,7 +12,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Tree } from "./tree";
+import { Tree } from "./tree.js";
 
 describe("Tree.ExpandButton", () => {
 	test('types itself "button", so its command survives inside a form', async () => {

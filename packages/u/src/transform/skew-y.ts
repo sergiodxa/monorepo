@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { AngleValue } from "../internal/transform";
+import type { AngleValue } from "../internal/transform.js";
 
-import { angle, transformFunction } from "../internal/transform";
+import { angle, transformFunction } from "../internal/transform.js";
 
 /**
  * Skews the element along the vertical axis. A bare number is treated as

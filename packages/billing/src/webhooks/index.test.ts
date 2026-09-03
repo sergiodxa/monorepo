@@ -12,12 +12,12 @@ import { sign } from "@sdxc/webhooks";
 import { createRouter, RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { Order, Subscription } from "../core/types";
-import type { WebhookLogger } from "../webhooks";
+import type { Order, Subscription } from "../core/types.js";
+import type { WebhookLogger } from "../webhooks/index.js";
 
-import { BillingError } from "../core/errors";
-import { MemoryBilling } from "../providers/memory";
-import { BillingWebhook, MemoryWebhookStore } from "../webhooks";
+import { BillingError } from "../core/errors.js";
+import { MemoryBilling } from "../providers/memory/index.js";
+import { BillingWebhook, MemoryWebhookStore } from "../webhooks/index.js";
 
 /** Secret the deliveries a test signs by hand are keyed on. */
 const SECRET = "dGVzdC1zaWduaW5nLXNlY3JldC12YWx1ZQ";

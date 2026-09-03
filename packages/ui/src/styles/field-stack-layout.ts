@@ -12,7 +12,7 @@ import type { ElementProps, MixinDescriptor } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * Composes the single-column stack — a `0.25rem` gap between a field's own

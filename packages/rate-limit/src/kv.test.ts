@@ -10,10 +10,10 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { RateLimitKVNamespace } from "./kv";
+import type { RateLimitKVNamespace } from "./kv.js";
 
-import { KVAdapter } from "./kv";
-import { RateLimitError } from "./rate-limit-error";
+import { KVAdapter } from "./kv.js";
+import { RateLimitError } from "./rate-limit-error.js";
 
 /** An instant aligned to a 10 second window, so a case starts at a boundary. */
 const WINDOW_START = 1_700_000_000_000;

@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { FULL_TURN_RADIANS } from "./full-turn-radians";
+import { FULL_TURN_RADIANS } from "./full-turn-radians.js";
 
 /**
  * Thresholds {@link niceStep} compares a candidate step's residual against

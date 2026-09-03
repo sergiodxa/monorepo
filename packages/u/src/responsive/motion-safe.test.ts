@@ -7,13 +7,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { raw } from "../general/raw";
-import { serialize } from "../internal/serialize";
-import { hover } from "../state/hover";
+import { bg } from "../color/bg.js";
+import { raw } from "../general/raw.js";
+import { serialize } from "../internal/serialize.js";
+import { hover } from "../state/hover.js";
 
-import { media } from "./media";
-import { motionSafe } from "./motion-safe";
+import { media } from "./media.js";
+import { motionSafe } from "./motion-safe.js";
 
 describe("motionSafe", () => {
 	test("nests the wrapped utility's styles under '@media (prefers-reduced-motion: no-preference)'", async () => {

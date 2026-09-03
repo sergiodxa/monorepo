@@ -16,7 +16,7 @@ import { createInstance } from "i18next";
 import { renderToString } from "remix/ui/server";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import { intl, IntlProvider, setIntl } from "./intl-provider";
+import { intl, IntlProvider, setIntl } from "./intl-provider.js";
 
 function Greeting(handle: Handle) {
 	return () => {

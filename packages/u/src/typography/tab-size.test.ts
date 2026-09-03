@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { tabSize } from "./tab-size";
+import { tabSize } from "./tab-size.js";
 
 describe("tabSize", () => {
 	test("no-arg defaults to 2", async () => {

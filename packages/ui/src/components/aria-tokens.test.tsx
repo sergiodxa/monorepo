@@ -16,15 +16,15 @@ import { fileURLToPath } from "node:url";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import type { AriaViolation } from "../../../../test/aria-tokens";
+import type { AriaViolation } from "../../../../test/aria-tokens.js";
 
-import { findAriaViolations } from "../../../../test/aria-tokens";
+import { findAriaViolations } from "../../../../test/aria-tokens.js";
 
-import { Attachment } from "./attachment";
-import { Checkbox } from "./checkbox";
-import { Skeleton } from "./skeleton";
-import { TextField } from "./text-field";
-import { ToggleButton } from "./toggle-button";
+import { Attachment } from "./attachment.js";
+import { Checkbox } from "./checkbox.js";
+import { Skeleton } from "./skeleton.js";
+import { TextField } from "./text-field.js";
+import { ToggleButton } from "./toggle-button.js";
 
 /**
  * Generated `<style>` rules select on the same ARIA attributes under test, so

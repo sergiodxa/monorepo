@@ -15,7 +15,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 
-import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils";
+import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils.js";
 
 const InternalTokenPayloadSchema = s.object({
 	iss: s.string(),

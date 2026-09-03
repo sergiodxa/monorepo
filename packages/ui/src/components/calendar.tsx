@@ -31,14 +31,14 @@ import { scaleX } from "@sdxc/u/transform";
 import { text, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 import {
 	warnIfNoAccessibleLabel,
 	warnIfNoAccessibleName,
-} from "../utils/warn-if-no-accessible-name";
+} from "../utils/warn-if-no-accessible-name.js";
 
-import { Heading } from "./heading";
-import { Input } from "./input";
+import { Heading } from "./heading.js";
+import { Input } from "./input.js";
 
 const DEFAULT_COLOR: Calendar.Color = "neutral";
 

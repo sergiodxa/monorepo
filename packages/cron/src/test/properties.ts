@@ -11,15 +11,15 @@
 import { isSuccess, unwrap } from "@sdxc/result";
 import { expect } from "vitest";
 
-import type { ScheduleDescriptor } from "../describe";
-import type { CronFieldSet } from "../fields";
-import type { InvalidCronExpression } from "../invalid-cron-expression";
-import type { Schedule } from "../schedule";
+import type { ScheduleDescriptor } from "../describe.js";
+import type { CronFieldSet } from "../fields.js";
+import type { InvalidCronExpression } from "../invalid-cron-expression.js";
+import type { Schedule } from "../schedule.js";
 
-import { describeFields } from "../describe";
-import { parseExpression } from "../parse-expression";
-import { Schedule as CronSchedule } from "../schedule";
-import { offsetAt } from "../time-zone";
+import { describeFields } from "../describe.js";
+import { parseExpression } from "../parse-expression.js";
+import { Schedule as CronSchedule } from "../schedule.js";
+import { offsetAt } from "../time-zone.js";
 
 /** One minute in milliseconds, the resolution every occurrence lands on. */
 const MINUTE_MS = 60_000;

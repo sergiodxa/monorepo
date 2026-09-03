@@ -11,9 +11,9 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { createSeo } from "../create-seo";
+import { createSeo } from "../create-seo.js";
 
-import { Seo } from "./seo";
+import { Seo } from "./seo.js";
 
 /** An instance standing in for a site's single configured registration. */
 function seo() {

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar } from "../lexer";
+import type { Grammar } from "../lexer.js";
 
 /**
  * Highlights YAML, leaving the body of a block scalar as the literal text it is.

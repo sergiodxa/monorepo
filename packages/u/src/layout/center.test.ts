@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { center } from "./center";
+import { center } from "./center.js";
 
 describe("center", () => {
 	test("sets display: flex with both axes centered", async () => {

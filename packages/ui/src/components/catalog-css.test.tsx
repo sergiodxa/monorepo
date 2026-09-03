@@ -15,7 +15,7 @@ import { jsx } from "remix/ui/jsx-runtime";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import * as catalog from "./index";
+import * as catalog from "./index.js";
 
 /**
  * The fingerprint every instance of this bug class leaves in the stylesheet:

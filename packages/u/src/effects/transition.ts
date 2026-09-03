@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
+import type { CSSStyles } from "../internal/css-styles.js";
 
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 export interface TransitionOptions {
 	/** Sets `transition-duration`. A bare number is treated as milliseconds; a string passes through unchanged. Defaults to `150ms`. */

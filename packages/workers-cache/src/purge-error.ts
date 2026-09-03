@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PurgeSelector } from "./types";
+import type { PurgeSelector } from "./types.js";
 
 /**
  * Error describing a purge that did not happen, delivered as the value inside

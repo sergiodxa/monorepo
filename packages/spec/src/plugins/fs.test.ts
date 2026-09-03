@@ -17,14 +17,14 @@ import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import type { PermissionSet } from "../permissions";
-import type { ToolContext } from "../plugin";
-import type { ToolArg, Value } from "../values";
-import type { Workspace } from "../workspace";
+import type { PermissionSet } from "../permissions.js";
+import type { ToolContext } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { ExpectationError, PermissionDeniedError, WorkspaceEscapeError } from "../errors";
+import { ExpectationError, PermissionDeniedError, WorkspaceEscapeError } from "../errors.js";
 
-import { createFsPlugin } from "./fs";
+import { createFsPlugin } from "./fs.js";
 
 let plugin = createFsPlugin();
 let root: string;

@@ -12,7 +12,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { success, failure, isFailure } from "@sdxc/result";
 
-import { ValidationError } from "./validation-error";
+import { ValidationError } from "./validation-error.js";
 
 export { ValidationError };
 

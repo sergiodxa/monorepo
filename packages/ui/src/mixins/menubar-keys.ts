@@ -16,14 +16,14 @@ import type { ElementProps, MixinFactory } from "remix/ui";
 
 import { createMixin, ref } from "remix/ui";
 
-import { DISABLED_SELECTOR } from "../utils/disabled-selector";
+import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 import {
 	focusItem as focusTrigger,
 	isPrintableKey,
 	labelFor,
 	queryItems as queryMenuItems,
 	setRovingTabindex,
-} from "../utils/keyboard-nav";
+} from "../utils/keyboard-nav.js";
 
 /**
  * Selector matching a top-level trigger's role, evaluated against the row's

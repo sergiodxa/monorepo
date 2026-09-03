@@ -10,10 +10,10 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { DurationString } from "./types";
+import type { DurationString } from "./types.js";
 
-import { parse } from "./parse";
-import { toMs } from "./to-ms";
+import { parse } from "./parse.js";
+import { toMs } from "./to-ms.js";
 
 describe("toMs", () => {
 	test("passes a bare number through as milliseconds", () => {

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
 /**
  * The words that structure a script rather than name something to run. `elif`

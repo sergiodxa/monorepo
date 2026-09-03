@@ -11,7 +11,7 @@ import type { Session, SessionStorage } from "remix/session";
 
 import { createSession } from "remix/session";
 
-import { sessions } from "./schema";
+import { sessions } from "./schema.js";
 
 /** Default session lifetime (one year). */
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;

@@ -16,7 +16,7 @@ import Markdoc from "@markdoc/markdoc";
 import { tokenize } from "@sdxc/highlight";
 import { fence } from "@sdxc/highlight/markdoc";
 
-import { CODE_COLOR, CodeInline, Heading, Hr, Img, Link, MONO_FAMILY, Text } from "./components";
+import { CODE_COLOR, CodeInline, Heading, Hr, Img, Link, MONO_FAMILY, Text } from "./components.js";
 
 /**
  * The colour of each token type, and the class that recolours it in dark mode.

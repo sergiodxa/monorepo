@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { DurationString } from "./types";
+import type { DurationString } from "./types.js";
 
-import { toSeconds } from "./to-seconds";
+import { toSeconds } from "./to-seconds.js";
 
 describe("toSeconds", () => {
 	test("converts long spellings", () => {

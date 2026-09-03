@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { touchAction } from "./touch-action";
+import { touchAction } from "./touch-action.js";
 
 describe("touchAction", () => {
 	test("no-arg defaults to 'none'", async () => {

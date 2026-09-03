@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { en } from "./en";
+import { en } from "./en.js";
 
 function duplicates(values: readonly string[]): string[] {
 	let seen = new Set<string>();

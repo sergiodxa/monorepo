@@ -13,7 +13,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
 import { css } from "remix/ui";
 import { describe, expect, test } from "vitest";
 
-import type { CSSStyles } from "./css-styles";
+import type { CSSStyles } from "./css-styles.js";
 
 function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
 	return descriptor.args[0] as Record<string, unknown>;

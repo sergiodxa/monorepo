@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Bytes } from "./lib/bytes";
+import type { Bytes } from "./lib/bytes.js";
 
-import { Base64Url } from "./encoding";
+import { Base64Url } from "./encoding.js";
 
 /** Largest buffer `crypto.getRandomValues` fills in a single call. */
 const MAX_RANDOM_BYTES = 65536;

@@ -39,9 +39,9 @@ import type {
 	UsageApi,
 	WebhookApi,
 	WebhookReference,
-} from "../../core/contract";
-import type { BillingErrorCode } from "../../core/errors";
-import type { Secret } from "../../core/secret";
+} from "../../core/contract.js";
+import type { BillingErrorCode } from "../../core/errors.js";
+import type { Secret } from "../../core/secret.js";
 import type {
 	BillingEvent,
 	BillingEventPayload,
@@ -49,15 +49,15 @@ import type {
 	Page,
 	SubscriptionStatus,
 	UsageEvent,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { BillingError, reportSkipped } from "../../core/errors";
-import { secretReader, verificationSecret } from "../../core/secret";
+import { BillingError, reportSkipped } from "../../core/errors.js";
+import { secretReader, verificationSecret } from "../../core/secret.js";
 
-import type { PolarErrorOptions } from "./errors";
-import type { PolarMapping } from "./map";
+import type { PolarErrorOptions } from "./errors.js";
+import type { PolarMapping } from "./map.js";
 
-import { toBillingError, toMappingError, toTransportError } from "./errors";
+import { toBillingError, toMappingError, toTransportError } from "./errors.js";
 import {
 	mapCheckout,
 	mapCustomer,
@@ -69,8 +69,8 @@ import {
 	mapProduct,
 	mapSubscription,
 	mapUsageRecord,
-} from "./map";
-import { EVENTS_INGEST_SCHEMA, PAGE_ENVELOPE_SCHEMA, WEBHOOK_ENVELOPE_SCHEMA } from "./schemas";
+} from "./map.js";
+import { EVENTS_INGEST_SCHEMA, PAGE_ENVELOPE_SCHEMA, WEBHOOK_ENVELOPE_SCHEMA } from "./schemas.js";
 
 /** Polar's live API, which is where money moves. */
 const PRODUCTION_ORIGIN = "https://api.polar.sh";

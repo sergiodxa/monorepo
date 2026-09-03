@@ -11,9 +11,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { NormalizedMessage } from "./types";
+import type { NormalizedMessage } from "./types.js";
 
-import { buildMimeMessage } from "./mime";
+import { buildMimeMessage } from "./mime.js";
 
 /** Sender identity used unless a test needs a different one. */
 const SENDER = { email: "no-reply@example.com", name: "Example" };

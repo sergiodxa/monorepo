@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { XML } from "./index";
+import { XML } from "./index.js";
 
 const FEED = readFileSync(new URL("./fixtures/sergiodxa-rss.xml", import.meta.url), "utf8");
 

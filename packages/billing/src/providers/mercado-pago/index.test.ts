@@ -15,17 +15,17 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { Billing } from "../../core/contract";
-import type { BillingError } from "../../core/errors";
-import type { Secret } from "../../core/secret";
+import type { Billing } from "../../core/contract.js";
+import type { BillingError } from "../../core/errors.js";
+import type { Secret } from "../../core/secret.js";
 
-import type { MercadoPagoProduct } from "./catalog";
+import type { MercadoPagoProduct } from "./catalog.js";
 
-import { decodeCursor, toMajorUnits, toMinorUnits } from "./money";
+import { decodeCursor, toMajorUnits, toMinorUnits } from "./money.js";
 
-import type { MercadoPagoBillingOptions } from "./index";
+import type { MercadoPagoBillingOptions } from "./index.js";
 
-import { MercadoPagoBilling } from "./index";
+import { MercadoPagoBilling } from "./index.js";
 
 /** Origin every stub answers on. */
 const API = "https://api.mercadopago.com";

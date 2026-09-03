@@ -18,11 +18,11 @@ import { bs, is, m, minIs } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 
-import { outputCaptionText } from "../styles/output-caption-text";
-import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
-import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction";
-import { HUE_GRADIENT_STOPS } from "../utils/hue-spectrum";
-import { mergeStyle } from "../utils/merge-style";
+import { outputCaptionText } from "../styles/output-caption-text.js";
+import { rangeThumbAppearance } from "../styles/range-thumb-appearance.js";
+import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction.js";
+import { HUE_GRADIENT_STOPS } from "../utils/hue-spectrum.js";
+import { mergeStyle } from "../utils/merge-style.js";
 
 /**
  * Custom property carrying a {@link ColorSlider.Track}'s gradient direction,

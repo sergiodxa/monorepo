@@ -16,7 +16,7 @@ import { block } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { is } from "@sdxc/u/size";
 
-import { mergeStyle } from "../utils/merge-style";
+import { mergeStyle } from "../utils/merge-style.js";
 
 const DEFAULT_RATIO: AspectRatio.Ratio = "1 / 1";
 

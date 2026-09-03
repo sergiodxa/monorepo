@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { clampChannel, roundChannel } from "./color-math";
+import { clampChannel, roundChannel } from "./color-math.js";
 
 /**
  * Computes how far `value` has traveled from `min` toward `max` as a

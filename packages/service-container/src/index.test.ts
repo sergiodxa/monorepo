@@ -19,7 +19,7 @@ import {
 	ServiceContainer,
 	ServiceContainerScopeError,
 	ServiceNotFoundError,
-} from "./index";
+} from "./index.js";
 
 class Database {
 	constructor(readonly id: number) {}

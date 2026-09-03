@@ -14,9 +14,9 @@ import { JWK, JWT } from "@sdxc/jwt";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
 
-import SigningKey from "./signing-key";
+import SigningKey from "./signing-key.js";
 
 type Db = Database;
 

@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { SemanticColor } from "./semantic-color";
+import type { SemanticColor } from "./semantic-color.js";
 
 describe("SemanticColor", () => {
 	test("is exactly the five semantic tones every component colors itself with", () => {

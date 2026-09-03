@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { hexToOklch, renderThemeStyle } from "./theme";
+import { hexToOklch, renderThemeStyle } from "./theme.js";
 
 describe("hexToOklch", () => {
 	test("white is near lightness 1, chroma ~0", () => {

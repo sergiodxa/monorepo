@@ -18,7 +18,7 @@ import {
 	pluralize,
 	singularize,
 	underscore,
-} from "./inflect";
+} from "./inflect.js";
 
 describe("pluralize", () => {
 	test("appends s to a regular noun", () => {

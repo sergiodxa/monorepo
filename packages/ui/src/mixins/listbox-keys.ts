@@ -13,7 +13,7 @@ import type { MixinFactory } from "remix/ui";
 import { createMixin } from "remix/ui";
 import * as listbox from "remix/ui/listbox";
 
-import { trackHostNode } from "./track-host-node";
+import { trackHostNode } from "./track-host-node.js";
 
 /** DOM event type dispatched by {@link listboxKeys} whenever the selected value or the active option changes. */
 const LISTBOX_CHANGE_EVENT = "ui:listbox-change" as const;

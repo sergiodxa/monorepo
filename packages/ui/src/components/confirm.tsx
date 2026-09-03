@@ -14,9 +14,9 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { flex, flexCol, gap } from "@sdxc/u/layout";
 
-import type { Button } from "./button";
+import type { Button } from "./button.js";
 
-import { AlertDialog } from "./alert-dialog";
+import { AlertDialog } from "./alert-dialog.js";
 
 /** Semantic color role {@link Confirm} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Button.Color = "danger";

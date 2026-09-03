@@ -11,7 +11,7 @@
 
 import type { Logger } from "@sdxc/logger/request";
 
-import middleware from "../lib/middleware";
+import middleware from "../lib/middleware.js";
 
 /**
  * Builds a middleware that stores the given logger on the request context.

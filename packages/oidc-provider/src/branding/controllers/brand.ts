@@ -17,10 +17,10 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
-import { hexColor, httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks";
-import Brand from "../models/brand";
+import routes from "../../routes.js";
+import { isResponse, safeJsonParse } from "../../shared/lib/safe-json.js";
+import { hexColor, httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks.js";
+import Brand from "../models/brand.js";
 
 let CSS_MAX_LENGTH = 50_000;
 

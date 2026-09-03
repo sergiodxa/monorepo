@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollbarColor } from "./scrollbar-color";
+import { scrollbarColor } from "./scrollbar-color.js";
 
 describe("scrollbarColor", () => {
 	test("no-arg leaves the platform scrollbar alone", async () => {

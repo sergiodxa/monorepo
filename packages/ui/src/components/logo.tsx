@@ -10,7 +10,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { ImagePlaceholder } from "./image-placeholder";
+import { ImagePlaceholder } from "./image-placeholder.js";
 
 /**
  * Prop types for {@link Logo} and its compound parts, each an alias of

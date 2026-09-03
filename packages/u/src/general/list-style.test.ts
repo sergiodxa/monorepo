@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { listStyle } from "./list-style";
+import { listStyle } from "./list-style.js";
 
 describe("listStyle", () => {
 	test("no-arg defaults to 'none'", async () => {

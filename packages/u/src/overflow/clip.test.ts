@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { clip } from "./clip";
+import { clip } from "./clip.js";
 
 describe("clip", () => {
 	test("sets overflow: clip", async () => {

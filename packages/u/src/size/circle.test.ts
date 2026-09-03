@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { circle } from "./circle";
+import { circle } from "./circle.js";
 
 describe("circle", () => {
 	test("applies a 1:1 aspect ratio and the full radius token", async () => {

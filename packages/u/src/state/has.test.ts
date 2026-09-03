@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { has } from "./has";
+import { has } from "./has.js";
 
 describe("has", () => {
 	test("emits an '&:has(selector)' block around the input's declarations", async () => {

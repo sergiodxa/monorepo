@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ticks } from "./chart-scale";
+import { ticks } from "./chart-scale.js";
 
 /**
  * Finds the index of the point in `points` whose `x` value sits closest to

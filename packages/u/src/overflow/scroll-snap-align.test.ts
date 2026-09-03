@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollSnapAlign } from "./scroll-snap-align";
+import { scrollSnapAlign } from "./scroll-snap-align.js";
 
 describe("scrollSnapAlign", () => {
 	test("no-arg defaults to start", async () => {

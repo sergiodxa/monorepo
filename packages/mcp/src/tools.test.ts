@@ -11,9 +11,9 @@
 
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { InputOf } from "./tools";
+import type { InputOf } from "./tools.js";
 
-import { createTool, createToolController, tool, tools, walk } from "./tools";
+import { createTool, createToolController, tool, tools, walk } from "./tools.js";
 
 /** A tool exercising an enum, a default, an optional, and a required argument. */
 let searchPosts = tool("search_posts", {

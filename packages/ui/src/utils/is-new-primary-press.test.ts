@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { isNewPrimaryPress } from "./is-new-primary-press";
+import { isNewPrimaryPress } from "./is-new-primary-press.js";
 
 describe(isNewPrimaryPress.name, () => {
 	test("reports true for a primary pointer, primary button, with no pointer already tracked", () => {

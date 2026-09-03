@@ -16,30 +16,30 @@ import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
 
-import type { EngineAuthConfig } from "./auth/oidc";
+import type { EngineAuthConfig } from "./auth/oidc.js";
 
-import appearance from "./appearance/controllers/cms";
-import assets from "./assets/controllers/assets";
-import { callback, login, logout } from "./auth/controllers/auth";
-import { authMiddleware } from "./auth/middleware/auth";
-import dashboard from "./cms/controllers/dashboard";
-import postTypes from "./post-types/controllers/cms";
-import posts from "./posts/controllers/cms";
-import feed from "./posts/controllers/feed";
-import post from "./posts/controllers/post";
-import typeIndex from "./posts/controllers/type-index";
-import roles from "./roles/controllers/cms";
-import routes from "./routes";
-import settings from "./settings/controllers/cms";
-import loggerMiddleware from "./shared/middleware/logger";
-import oidcMiddleware from "./shared/middleware/oidc";
-import renderMiddleware from "./shared/middleware/render";
-import trailingSlash from "./shared/middleware/trailing-slash";
-import notFound from "./shared/not-found";
-import robots from "./syndication/controllers/robots";
-import * as rss from "./syndication/controllers/rss";
-import sitemap from "./syndication/controllers/sitemap";
-import users from "./users/controllers/cms";
+import appearance from "./appearance/controllers/cms.js";
+import assets from "./assets/controllers/assets.js";
+import { callback, login, logout } from "./auth/controllers/auth.js";
+import { authMiddleware } from "./auth/middleware/auth.js";
+import dashboard from "./cms/controllers/dashboard.js";
+import postTypes from "./post-types/controllers/cms.js";
+import posts from "./posts/controllers/cms.js";
+import feed from "./posts/controllers/feed.js";
+import post from "./posts/controllers/post.js";
+import typeIndex from "./posts/controllers/type-index.js";
+import roles from "./roles/controllers/cms.js";
+import routes from "./routes.js";
+import settings from "./settings/controllers/cms.js";
+import loggerMiddleware from "./shared/middleware/logger.js";
+import oidcMiddleware from "./shared/middleware/oidc.js";
+import renderMiddleware from "./shared/middleware/render.js";
+import trailingSlash from "./shared/middleware/trailing-slash.js";
+import notFound from "./shared/not-found.js";
+import robots from "./syndication/controllers/robots.js";
+import * as rss from "./syndication/controllers/rss.js";
+import sitemap from "./syndication/controllers/sitemap.js";
+import users from "./users/controllers/cms.js";
 
 /** Dependencies the request pipeline is bound to. */
 export interface EngineRouterDeps {

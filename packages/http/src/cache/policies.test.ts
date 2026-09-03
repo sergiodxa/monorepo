@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { Policies } from "./policies";
+import { Policies } from "./policies.js";
 
 describe(Policies, () => {
 	describe(Policies.noStore.name, () => {

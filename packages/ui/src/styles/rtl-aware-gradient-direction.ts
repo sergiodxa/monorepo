@@ -13,7 +13,7 @@ import type { ElementProps, MixinDescriptor } from "remix/ui";
 import { combine, vars } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /** Strips a leading `--` from a custom property name, matching `u.vars()`'s own bare-name convention. */
 function stripLeadingDashes(propertyName: string): string {

@@ -14,9 +14,9 @@ import type { Middleware } from "remix/router";
 import { createInstance } from "i18next";
 import { Session } from "remix/session";
 
-import type { LanguageDetectorOptions } from "./lib/language-detector";
+import type { LanguageDetectorOptions } from "./lib/language-detector.js";
 
-import { LanguageDetector } from "./lib/language-detector";
+import { LanguageDetector } from "./lib/language-detector.js";
 
 /**
  * Declared in an imported module, not an ambient .d.ts, so the augmentation

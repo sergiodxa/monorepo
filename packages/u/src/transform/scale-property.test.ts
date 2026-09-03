@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scaleProperty } from "./scale-property";
+import { scaleProperty } from "./scale-property.js";
 
 describe("scaleProperty", () => {
 	test("passes a raw string value through unchanged", async () => {

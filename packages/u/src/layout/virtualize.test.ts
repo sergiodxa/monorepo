@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { virtualize } from "./virtualize";
+import { virtualize } from "./virtualize.js";
 
 describe("virtualize", () => {
 	test("applies content-visibility with the given intrinsic size fallback", async () => {

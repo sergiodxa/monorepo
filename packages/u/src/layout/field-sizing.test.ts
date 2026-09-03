@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { fieldSizing } from "./field-sizing";
+import { fieldSizing } from "./field-sizing.js";
 
 describe("fieldSizing", () => {
 	test("defaults to content", async () => {

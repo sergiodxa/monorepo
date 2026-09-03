@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { atQuery } from "./at-query";
+import { atQuery } from "./at-query.js";
 
 describe("atQuery", () => {
 	test("nests the wrapped utility's styles under the literal query, unwrapped", async () => {

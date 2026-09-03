@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { daysInMonth, isLeapYear, longestMonth, weekdayOf } from "./calendar";
+import { daysInMonth, isLeapYear, longestMonth, weekdayOf } from "./calendar.js";
 
 describe("isLeapYear", () => {
 	test("follows the four, hundred, four hundred rule", () => {

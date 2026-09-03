@@ -17,15 +17,15 @@ import type { Result } from "@sdxc/result";
 import { isFailure, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 
-import type { SpecError } from "../errors";
-import type { PermissionSet } from "../permissions";
-import type { ToolContext } from "../plugin";
-import type { Value, ValueObject } from "../values";
-import type { Workspace } from "../workspace";
+import type { SpecError } from "../errors.js";
+import type { PermissionSet } from "../permissions.js";
+import type { ToolContext } from "../plugin.js";
+import type { Value, ValueObject } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { ToolError } from "../errors";
+import { ToolError } from "../errors.js";
 
-import { createDbPlugin } from "./db";
+import { createDbPlugin } from "./db.js";
 
 /** A permission set granting every family; the driver's grants are not what is under test. */
 function allowAll(): PermissionSet {

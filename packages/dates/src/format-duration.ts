@@ -11,9 +11,9 @@ import type { DurationInput } from "@sdxc/duration";
 
 import { toMs } from "@sdxc/duration";
 
-import type { Locale } from "./types";
+import type { Locale } from "./types.js";
 
-import { listFormatter, numberFormatter } from "./intl-cache";
+import { listFormatter, numberFormatter } from "./intl-cache.js";
 
 /**
  * The units a length is broken into, largest first, each with its exact span. Weeks,

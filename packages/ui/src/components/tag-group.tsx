@@ -23,12 +23,12 @@ import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { Button } from "./button";
+import { Button } from "./button.js";
 
 /** `role="group"` applied to {@link TagGroup} through {@link attrs} unless a consumer supplies its own `role`. */
 const DEFAULT_ROLE = "group";

@@ -2,13 +2,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { BlurName } from "../types";
+import type { BlurName } from "../types.js";
 
-import { backdropBlur } from "../effects/backdrop-blur";
-import { compose } from "../internal/descriptor";
-import { media } from "../responsive/media";
+import { backdropBlur } from "../effects/backdrop-blur.js";
+import { compose } from "../internal/descriptor.js";
+import { media } from "../responsive/media.js";
 
-import { bg } from "./bg";
+import { bg } from "./bg.js";
 
 /**
  * A solid background plus backdrop blur, gated behind

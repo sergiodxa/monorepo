@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { vectorEffect } from "./vector-effect";
+import { vectorEffect } from "./vector-effect.js";
 
 describe("vectorEffect", () => {
 	test("sets the vector effect", async () => {

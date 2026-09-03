@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { TimingCollector } from "./timing-collector";
+import { TimingCollector } from "./timing-collector.js";
 
 describe("TimingCollector#measure", () => {
 	test("returns whatever the operation resolves to", async () => {

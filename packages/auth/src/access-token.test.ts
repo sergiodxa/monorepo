@@ -10,7 +10,7 @@
 import { JWK } from "@sdxc/jwt";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { AccessToken } from "./access-token";
+import { AccessToken } from "./access-token.js";
 
 let keys: JWK.KeyPair[];
 

@@ -11,8 +11,8 @@
 
 export type { Random, Seed } from "@sdxc/sample";
 
-export type * from "./ast";
-export type { Sink, SuiteResult, TestResult, TestStatus } from "./diagnostics";
+export type * from "./ast.js";
+export type { Sink, SuiteResult, TestResult, TestStatus } from "./diagnostics.js";
 export {
 	ExpectationError,
 	LoadError,
@@ -22,30 +22,30 @@ export {
 	SpecError,
 	ToolError,
 	WorkspaceEscapeError,
-} from "./errors";
-export type { DiagnosticCode } from "./errors";
-export { executeTest } from "./executor";
-export type { ExecutionContext } from "./executor";
-export { lex } from "./lexer";
-export { parse } from "./parser";
-export { createPermissionSet, parseGrants } from "./permissions";
-export type { Grant, Grants, PermissionKind, PermissionSet } from "./permissions";
-export type { Plugin, ToolContext, ToolDescriptor, ToolParam } from "./plugin";
-export { createHttpPlugin } from "./plugins/http";
-export { createJwtPlugin } from "./plugins/jwt";
-export { createSamplePlugin } from "./plugins/sample";
-export { createUrlPlugin } from "./plugins/url";
-export { createRegistry } from "./registry";
-export type { Registry, ResolvedCallable } from "./registry";
-export { runTests } from "./run";
-export type { RunTestsOptions, WorkspaceFactory } from "./run";
-export { positionAt } from "./source";
-export type { Position, SourceFile, Span } from "./source";
-export { loadSources } from "./sources";
-export type { LoadedSuite, SpecSource } from "./sources";
-export type { Token, TokenKind } from "./tokens";
-export { KEYWORDS } from "./tokens";
-export { formatValue, valueEquals } from "./values";
-export type { ToolArg, Value, ValueObject } from "./values";
-export type { Workspace } from "./workspace";
-export { createNoFilesystemWorkspace } from "./workspace-none";
+} from "./errors.js";
+export type { DiagnosticCode } from "./errors.js";
+export { executeTest } from "./executor.js";
+export type { ExecutionContext } from "./executor.js";
+export { lex } from "./lexer.js";
+export { parse } from "./parser.js";
+export { createPermissionSet, parseGrants } from "./permissions.js";
+export type { Grant, Grants, PermissionKind, PermissionSet } from "./permissions.js";
+export type { Plugin, ToolContext, ToolDescriptor, ToolParam } from "./plugin.js";
+export { createHttpPlugin } from "./plugins/http.js";
+export { createJwtPlugin } from "./plugins/jwt.js";
+export { createSamplePlugin } from "./plugins/sample.js";
+export { createUrlPlugin } from "./plugins/url.js";
+export { createRegistry } from "./registry.js";
+export type { Registry, ResolvedCallable } from "./registry.js";
+export { runTests } from "./run.js";
+export type { RunTestsOptions, WorkspaceFactory } from "./run.js";
+export { positionAt } from "./source.js";
+export type { Position, SourceFile, Span } from "./source.js";
+export { loadSources } from "./sources.js";
+export type { LoadedSuite, SpecSource } from "./sources.js";
+export type { Token, TokenKind } from "./tokens.js";
+export { KEYWORDS } from "./tokens.js";
+export { formatValue, valueEquals } from "./values.js";
+export type { ToolArg, Value, ValueObject } from "./values.js";
+export type { Workspace } from "./workspace.js";
+export { createNoFilesystemWorkspace } from "./workspace-none.js";

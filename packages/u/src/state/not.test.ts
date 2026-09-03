@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { not } from "./not";
+import { not } from "./not.js";
 
 describe("not", () => {
 	test("emits an '&:not(selector)' block around the input's declarations", async () => {

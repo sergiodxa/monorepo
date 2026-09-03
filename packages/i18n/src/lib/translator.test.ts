@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { createTranslator } from "./translator";
+import { createTranslator } from "./translator.js";
 
 /** Bundles for three languages, with one key present in every one of them. */
 const RESOURCES = {

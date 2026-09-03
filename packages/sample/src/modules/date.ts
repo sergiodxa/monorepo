@@ -9,8 +9,8 @@
 import { add, elapsed, subtract } from "@sdxc/dates";
 import { toMs } from "@sdxc/duration";
 
-import type { Dataset } from "../dataset";
-import type { Random } from "../random";
+import type { Dataset } from "../dataset.js";
+import type { Random } from "../random.js";
 
 /** Options for an instant measured in days from the reference. */
 export interface SpanOptions {

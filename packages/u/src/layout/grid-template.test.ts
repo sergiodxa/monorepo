@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { gridTemplate } from "./grid-template";
+import { gridTemplate } from "./grid-template.js";
 
 describe("gridTemplate", () => {
 	test("no-arg sets nothing", async () => {

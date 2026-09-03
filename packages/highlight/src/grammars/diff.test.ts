@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { diff } from "./diff";
+import { diff } from "./diff.js";
 
 describe("diff", () => {
 	test("paints an added and a removed line whole", () => {

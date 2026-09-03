@@ -12,11 +12,11 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { Adapter, RateLimitDecision } from "./types";
+import type { Adapter, RateLimitDecision } from "./types.js";
 
-import { normalizeCost } from "./cost";
-import { RateLimitError } from "./rate-limit-error";
-import { fixedWindow, windowDecision, windowLengthMs } from "./window";
+import { normalizeCost } from "./cost.js";
+import { RateLimitError } from "./rate-limit-error.js";
+import { fixedWindow, windowDecision, windowLengthMs } from "./window.js";
 
 /** Milliseconds in one second, for converting a window to a KV TTL. */
 const SECOND_MS = 1000;

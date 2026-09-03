@@ -13,7 +13,7 @@ import type { Schema } from "remix/data-schema";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
-import type { BillingError } from "../../core/errors";
+import type { BillingError } from "../../core/errors.js";
 import type {
 	BillingInterval,
 	Checkout,
@@ -35,11 +35,11 @@ import type {
 	SubscriptionStatus,
 	UsageMetadata,
 	UsageRecord,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { reportSkipped } from "../../core/errors";
+import { reportSkipped } from "../../core/errors.js";
 
-import { toMappingError } from "./errors";
+import { toMappingError } from "./errors.js";
 import {
 	CHECKOUT_SCHEMA,
 	COST_METADATA_SCHEMA,
@@ -52,7 +52,7 @@ import {
 	ORDER_SCHEMA,
 	PRODUCT_SCHEMA,
 	SUBSCRIPTION_SCHEMA,
-} from "./schemas";
+} from "./schemas.js";
 
 /**
  * Our vocabulary for each state Polar keeps a subscription in, declared as data

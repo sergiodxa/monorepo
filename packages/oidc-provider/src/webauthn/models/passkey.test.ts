@@ -13,10 +13,10 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createSubject } from "../../shared/test/fixtures";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createSubject } from "../../shared/test/fixtures.js";
 
-import Passkey from "./passkey";
+import Passkey from "./passkey.js";
 
 describe("Passkey", () => {
 	let sqliteDb: SqliteDatabase;

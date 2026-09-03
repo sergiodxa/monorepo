@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { FetcherHandler } from "./fetcher";
+import type { FetcherHandler } from "./fetcher.js";
 
-import { createFetcher } from "./fetcher";
+import { createFetcher } from "./fetcher.js";
 
 /**
  * Builds the object a name routes to.

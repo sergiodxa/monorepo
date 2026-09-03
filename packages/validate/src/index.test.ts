@@ -14,7 +14,7 @@ import { email, minLength } from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { describe, expect, test } from "vitest";
 
-import { validate, ValidationError } from "./index";
+import { validate, ValidationError } from "./index.js";
 
 /** Checks are plain objects, so a custom `message` is applied by spreading the factory's result instead of passing an argument to it. */
 let userSchema = s.object({

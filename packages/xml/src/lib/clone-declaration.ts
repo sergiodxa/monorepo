@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { XML } from "../index";
+import type { XML } from "../index.js";
 
 /**
  * Clones declaration data so external code cannot mutate the stored value.

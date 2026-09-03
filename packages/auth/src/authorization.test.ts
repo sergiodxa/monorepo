@@ -19,12 +19,12 @@ import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
-import type { Authorization } from "./authorization";
+import type { Authorization } from "./authorization.js";
 
-import { AuthSession } from "./auth-session";
-import { createAuthorization } from "./authorization";
-import { Issuer } from "./issuer";
-import { RelyingParty } from "./relying-party";
+import { AuthSession } from "./auth-session.js";
+import { createAuthorization } from "./authorization.js";
+import { Issuer } from "./issuer.js";
+import { RelyingParty } from "./relying-party.js";
 
 /** A route under test, which asks its questions of the request out of band. */
 type Handler = () => Response | Promise<Response>;

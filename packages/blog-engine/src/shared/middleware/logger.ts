@@ -8,7 +8,7 @@
  */
 import type { Logger } from "@sdxc/logger/request";
 
-import middleware from "../lib/middleware";
+import middleware from "../lib/middleware.js";
 
 /** Attaches a request-scoped logger to the context as `ctx.logger`. */
 export default (logger: Logger) =>

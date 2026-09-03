@@ -13,9 +13,9 @@ import type { Middleware, RequestContext } from "remix/router";
 
 import { isFailure } from "@sdxc/result";
 
-import type { Address, Transport } from "./types";
+import type { Address, Transport } from "./types.js";
 
-import { Mailer } from "./mailer";
+import { Mailer } from "./mailer.js";
 
 /**
  * Declared here, in an imported module rather than an ambient .d.ts, so the

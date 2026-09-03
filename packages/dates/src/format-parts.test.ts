@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { Weekday } from "./types";
+import type { Weekday } from "./types.js";
 
-import { formatParts, formatWeekday } from "./format-parts";
+import { formatParts, formatWeekday } from "./format-parts.js";
 
 /** The instant every case breaks down, mid-morning UTC on a Wednesday. */
 const MORNING = new Date("2026-07-29T10:00:00Z");

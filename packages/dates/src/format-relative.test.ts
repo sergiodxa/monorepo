@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { formatRelative } from "./format-relative";
+import { formatRelative } from "./format-relative.js";
 
 /** The instant every test measures against, so each case uses a fixed instant. */
 const NOW = new Date("2026-07-29T12:00:00Z");

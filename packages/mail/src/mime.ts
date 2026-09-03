@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Address, NormalizedMessage } from "./types";
+import type { Address, NormalizedMessage } from "./types.js";
 
-import { formatAddress } from "./lib/address";
+import { formatAddress } from "./lib/address.js";
 
 /** Line ending every part of a MIME message uses, regardless of the host platform. */
 const CRLF = "\r\n";

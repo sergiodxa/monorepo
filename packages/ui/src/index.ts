@@ -6,4 +6,4 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export * from "./components";
+export * from "./components/index.js";

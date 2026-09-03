@@ -11,7 +11,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { AlertDialog } from "./alert-dialog";
+import { AlertDialog } from "./alert-dialog.js";
 
 describe("AlertDialog.Cancel", () => {
 	test('renders an explicit type="button" so its close command survives inside a form', async () => {

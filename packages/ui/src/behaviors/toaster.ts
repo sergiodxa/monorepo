@@ -10,7 +10,7 @@
 
 import { TypedEventTarget } from "remix/ui";
 
-import { dispatchChange } from "../utils/dispatch-change";
+import { dispatchChange } from "../utils/dispatch-change.js";
 
 /** Auto-dismiss delay, in milliseconds, a toast uses when {@link Toaster.AddOptions.duration} is omitted. */
 const DEFAULT_DURATION = 5000;

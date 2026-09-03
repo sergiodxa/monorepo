@@ -14,20 +14,20 @@ import type { Middleware, RequestContext } from "remix/router";
 import { isFailure } from "@sdxc/result";
 import { Session } from "remix/session";
 
-import type { PurgeError } from "./purge-error";
-import type { CacheInterface, CachePolicy, CacheTag } from "./types";
-import type { CacheRefusalReason } from "./unsafe-cache-policy-error";
+import type { PurgeError } from "./purge-error.js";
+import type { CacheInterface, CachePolicy, CacheTag } from "./types.js";
+import type { CacheRefusalReason } from "./unsafe-cache-policy-error.js";
 
-import { cacheTag } from "./cache-tag";
+import { cacheTag } from "./cache-tag.js";
 import {
 	CACHE_CONTROL_HEADER,
 	CACHE_TAG_HEADER,
 	CACHEABLE_METHODS,
 	CACHEABLE_STATUS_CODES,
 	NON_CACHEABLE_POLICY,
-} from "./platform";
-import { purge as purgeCache } from "./purge";
-import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error";
+} from "./platform.js";
+import { purge as purgeCache } from "./purge.js";
+import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error.js";
 
 /**
  * Declared as an imported module so the augmentation applies in every
@@ -44,9 +44,9 @@ declare module "remix/router" {
  * Re-exported so a consumer can name the refusal it caught, since the throw
  * only happens through this middleware.
  */
-export type { CacheRefusalReason } from "./unsafe-cache-policy-error";
+export type { CacheRefusalReason } from "./unsafe-cache-policy-error.js";
 
-export { UnsafeCachePolicyError } from "./unsafe-cache-policy-error";
+export { UnsafeCachePolicyError } from "./unsafe-cache-policy-error.js";
 
 /** Log event emitted when a declaration is refused and the response downgraded. */
 const DOWNGRADE_EVENT = "workers_cache.downgraded";

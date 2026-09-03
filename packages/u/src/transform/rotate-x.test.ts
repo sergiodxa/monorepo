@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
-import { COMPOSITE_TRANSFORM } from "../internal/transform";
+import { declarations } from "../internal/serialize.js";
+import { COMPOSITE_TRANSFORM } from "../internal/transform.js";
 
-import { rotateX } from "./rotate-x";
+import { rotateX } from "./rotate-x.js";
 
 describe("rotateX", () => {
 	test("treats a bare number as degrees", async () => {

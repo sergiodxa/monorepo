@@ -10,11 +10,15 @@
 
 import { describe } from "vitest";
 
-import type { ConformanceOptions } from "../../testing/conformance";
+import type { ConformanceOptions } from "../../testing/conformance.js";
 
-import { capabilityConformance, conformance, portalConformance } from "../../testing/conformance";
+import {
+	capabilityConformance,
+	conformance,
+	portalConformance,
+} from "../../testing/conformance.js";
 
-import { StripeBilling } from "./index";
+import { StripeBilling } from "./index.js";
 
 /**
  * Credentials and catalog the remote run is configured with. A run supplies a

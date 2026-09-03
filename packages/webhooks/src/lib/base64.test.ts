@@ -12,7 +12,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { decodeBase64, encodeBase64 } from "./base64";
+import { decodeBase64, encodeBase64 } from "./base64.js";
 
 describe("encodeBase64", () => {
 	test("emits the standard alphabet with padding", () => {

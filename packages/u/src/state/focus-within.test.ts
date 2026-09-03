@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { border } from "../color/border";
-import { declarations, serialize } from "../internal/serialize";
+import { border } from "../color/border.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { focusWithin } from "./focus-within";
+import { focusWithin } from "./focus-within.js";
 
 describe("focusWithin", () => {
 	test("emits an '&:focus-within' block around the wrapped utility's declarations", async () => {

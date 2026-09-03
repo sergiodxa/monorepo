@@ -11,10 +11,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { XML } from "../index";
+import type { XML } from "../index.js";
 
-import { decodeEntities } from "./decode-entities";
-import { matchName } from "./xml-names";
+import { decodeEntities } from "./decode-entities.js";
+import { matchName } from "./xml-names.js";
 
 const XML_DECLARATION_PATTERN = /^\s*<\?xml\s+([^?]+)\?>/i;
 const XML_DECLARATION_ATTRIBUTE_PATTERN = /([a-zA-Z_:][\w:.-]*)\s*=\s*(["'])(.*?)\2/g;

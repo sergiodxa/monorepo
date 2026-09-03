@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { arcPath, areaPath, linePath } from "./chart-path";
+import { arcPath, areaPath, linePath } from "./chart-path.js";
 
 describe(linePath.name, () => {
 	test("returns an empty string for no points", () => {

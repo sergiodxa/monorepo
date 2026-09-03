@@ -11,7 +11,7 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { asCommandEvent } from "../utils/command-event";
+import { asCommandEvent } from "../utils/command-event.js";
 
 /**
  * Direction a single step moves a NumberField's value: `"increment"` raises

@@ -8,10 +8,10 @@
  */
 import type { Database } from "remix/data-table";
 
-import type { SelectUser } from "../../database/schema";
+import type { SelectUser } from "../../database/schema.js";
 
-import { users } from "../../database/schema";
-import { Role } from "../../roles/models/role";
+import { users } from "../../database/schema.js";
+import { Role } from "../../roles/models/role.js";
 
 /** Normalized profile fields from the OIDC provider. */
 export interface AuthProfile {

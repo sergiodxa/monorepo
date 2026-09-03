@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { formatLanguageString, parse, pick } from "./parser";
+import { formatLanguageString, parse, pick } from "./parser.js";
 
 describe(parse, () => {
 	test("parses a single language", () => {

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { contain } from "./contain";
+import { contain } from "./contain.js";
 
 describe("contain", () => {
 	test("defaults to content", async () => {

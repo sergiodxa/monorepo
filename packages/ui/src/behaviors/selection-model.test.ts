@@ -9,7 +9,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { SelectionModel } from "./selection-model";
+import { SelectionModel } from "./selection-model.js";
 
 /** Returns a counter whose `count` rises with every `"change"` the model fires. */
 function countChanges(model: SelectionModel): { readonly count: number } {

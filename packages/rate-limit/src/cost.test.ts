@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { normalizeCost } from "./cost";
+import { normalizeCost } from "./cost.js";
 
 describe("normalizeCost", () => {
 	test("defaults a missing cost to one unit", () => {

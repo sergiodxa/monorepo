@@ -8,11 +8,11 @@
  */
 import { describe, expect, test } from "vitest";
 
-import type { Dataset } from "./dataset";
+import type { Dataset } from "./dataset.js";
 
-import { en } from "./data/en";
-import { createRandom } from "./random";
-import { createSample } from "./sample";
+import { en } from "./data/en.js";
+import { createRandom } from "./random.js";
+import { createSample } from "./sample.js";
 
 const REFERENCE = new Date("2026-06-15T12:00:00.000Z");
 

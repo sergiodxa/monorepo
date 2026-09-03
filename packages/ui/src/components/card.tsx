@@ -17,11 +17,11 @@ import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { p, pbe, pbs, pi } from "@sdxc/u/size";
 import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { semanticColorPanel } from "../styles/semantic-color-panel";
+import { semanticColorPanel } from "../styles/semantic-color-panel.js";
 
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
+import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /** Semantic color role {@link Card} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Card.Color = "neutral";

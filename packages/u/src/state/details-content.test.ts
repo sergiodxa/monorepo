@@ -6,11 +6,11 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { overflow } from "../overflow/overflow";
-import { bs } from "../size/bs";
+import { declarations, serialize } from "../internal/serialize.js";
+import { overflow } from "../overflow/overflow.js";
+import { bs } from "../size/bs.js";
 
-import { detailsContent } from "./details-content";
+import { detailsContent } from "./details-content.js";
 
 describe("detailsContent", () => {
 	test("emits an '&::details-content' block holding the merged input", async () => {

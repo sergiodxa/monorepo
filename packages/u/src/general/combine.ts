@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
 
-import { compose } from "../internal/descriptor";
+import { compose } from "../internal/descriptor.js";
 
 /**
  * Flattens `input` and merges the flattened utilities' style trees into one

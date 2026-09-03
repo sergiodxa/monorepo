@@ -10,10 +10,10 @@ import { Database } from "remix/data-table";
  */
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { renderThemeStyle } from "../../appearance/theme/theme";
-import { createTestDatabase } from "../../shared/test/db";
+import { renderThemeStyle } from "../../appearance/theme/theme.js";
+import { createTestDatabase } from "../../shared/test/db.js";
 
-import { Settings } from "./settings";
+import { Settings } from "./settings.js";
 
 describe("Settings.theme", () => {
 	let db: Database;

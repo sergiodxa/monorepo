@@ -14,12 +14,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { WebhookError } from "./errors";
+import type { WebhookError } from "./errors.js";
 
-import { InvalidDeliveryError } from "./errors";
-import { ID_HEADER, SIGNATURE_HEADER, TIMESTAMP_HEADER } from "./headers";
-import { decodeSecret } from "./secret";
-import { computeSignature, formatSignature, signedContent } from "./signature";
+import { InvalidDeliveryError } from "./errors.js";
+import { ID_HEADER, SIGNATURE_HEADER, TIMESTAMP_HEADER } from "./headers.js";
+import { decodeSecret } from "./secret.js";
+import { computeSignature, formatSignature, signedContent } from "./signature.js";
 
 /** Milliseconds in one second, the only unit conversion signing needs. */
 const SECOND_MS = 1000;

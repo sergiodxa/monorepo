@@ -19,15 +19,15 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import Secret from "../../clients/models/secret";
-import TenantMeta from "../../management/models/tenant-meta";
-import routes from "../../routes";
-import parseBasicAuth from "../../shared/lib/parse-basic-auth";
-import { reject } from "../../shared/lib/reject";
-import SigningKey from "../../signing-keys/models/signing-key";
-import Session from "../models/session";
-import AccessToken from "../values/access-token";
+import Client from "../../clients/models/client.js";
+import Secret from "../../clients/models/secret.js";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import routes from "../../routes.js";
+import parseBasicAuth from "../../shared/lib/parse-basic-auth.js";
+import { reject } from "../../shared/lib/reject.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
+import Session from "../models/session.js";
+import AccessToken from "../values/access-token.js";
 
 let IntrospectSchema = s.object({
 	token: s.string(),

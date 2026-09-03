@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { upperFirst } from "./segment";
+import { upperFirst } from "./segment.js";
 
 /** Options for {@link titleize}. */
 export interface TitleizeOptions {

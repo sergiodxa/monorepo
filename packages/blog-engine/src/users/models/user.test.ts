@@ -9,12 +9,12 @@
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { Role } from "../../roles/models/role";
-import { createTestDatabase } from "../../shared/test/db";
+import { Role } from "../../roles/models/role.js";
+import { createTestDatabase } from "../../shared/test/db.js";
 
-import type { AuthProfile } from "./user";
+import type { AuthProfile } from "./user.js";
 
-import { User } from "./user";
+import { User } from "./user.js";
 
 /** Builds an OIDC {@link AuthProfile} with sensible defaults for tests. */
 function profile(overrides: Partial<AuthProfile> = {}): AuthProfile {

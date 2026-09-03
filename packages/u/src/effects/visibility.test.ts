@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { visibility } from "./visibility";
+import { visibility } from "./visibility.js";
 
 describe("visibility", () => {
 	test("no-arg defaults to visible", async () => {

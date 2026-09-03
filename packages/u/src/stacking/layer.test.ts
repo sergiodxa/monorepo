@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { layer } from "./layer";
+import { layer } from "./layer.js";
 
 describe("layer", () => {
 	test("merges isolate and z into one stacking-context-plus-order declaration", async () => {

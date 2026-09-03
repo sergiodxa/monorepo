@@ -29,10 +29,10 @@ import { bs, is, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 const DEFAULT_COLOR: Button.Color = "neutral";
 

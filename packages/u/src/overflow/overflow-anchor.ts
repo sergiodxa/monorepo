@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Whether an element may be picked as the browser's scroll anchor. */
 export type OverflowAnchorValue = "auto" | "none";

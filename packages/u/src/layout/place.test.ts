@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { place } from "./place";
+import { place } from "./place.js";
 
 describe("place", () => {
 	test("no options emits no declarations", async () => {

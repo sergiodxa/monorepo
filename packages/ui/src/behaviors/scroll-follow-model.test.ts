@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { ScrollFollowModel } from "./scroll-follow-model";
+import { ScrollFollowModel } from "./scroll-follow-model.js";
 
 function countChanges(model: ScrollFollowModel): { count(): number } {
 	let calls = 0;

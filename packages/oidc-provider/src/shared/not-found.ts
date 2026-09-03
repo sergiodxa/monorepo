@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import requestHandler from "./lib/request-handler";
+import requestHandler from "./lib/request-handler.js";
 
 /** Request handler that responds with a bare `404 Not Found`. */
 export default requestHandler(() => {

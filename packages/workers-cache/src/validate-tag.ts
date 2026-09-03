@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CacheTag } from "./types";
+import type { CacheTag } from "./types.js";
 
-import { CacheTagError } from "./cache-tag-error";
-import { FORBIDDEN_TAG_CHARACTERS, MAX_TAG_LENGTH, PRINTABLE_ASCII_PATTERN } from "./platform";
+import { CacheTagError } from "./cache-tag-error.js";
+import { FORBIDDEN_TAG_CHARACTERS, MAX_TAG_LENGTH, PRINTABLE_ASCII_PATTERN } from "./platform.js";
 
 /**
  * Validates a tag against the platform's character set and length rules and

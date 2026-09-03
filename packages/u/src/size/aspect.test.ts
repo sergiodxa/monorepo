@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { aspect } from "./aspect";
+import { aspect } from "./aspect.js";
 
 describe("aspect", () => {
 	test("joins width and height into an aspect-ratio expression", async () => {

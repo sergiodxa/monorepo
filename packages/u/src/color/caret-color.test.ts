@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { caretColor } from "./caret-color";
+import { caretColor } from "./caret-color.js";
 
 describe("caretColor", () => {
 	test("with no value it emits CSS's own auto default", async () => {

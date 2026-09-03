@@ -9,10 +9,10 @@
 
 import { IfNoneMatch } from "remix/headers";
 
-import * as StatusCode from "../status-code";
+import * as StatusCode from "../status-code.js";
 
-import { parseHttpDate } from "./http-date";
-import { ifModifiedSince, isModifiedSince } from "./if-modified-since";
+import { parseHttpDate } from "./http-date.js";
+import { ifModifiedSince, isModifiedSince } from "./if-modified-since.js";
 
 /**
  * Methods a `304` may answer. A conditional header on any other method is a

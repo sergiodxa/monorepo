@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { MemoryBilling } from "../providers/memory";
+import { MemoryBilling } from "../providers/memory/index.js";
 
-import { OPTIONAL_CAPABILITIES, supports } from "./supports";
+import { OPTIONAL_CAPABILITIES, supports } from "./supports.js";
 
 describe("supports", () => {
 	test("answers yes for a group the provider carries", () => {

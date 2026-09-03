@@ -19,11 +19,11 @@ import { createAction } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 
-import Brand from "../../branding/models/brand";
-import routes from "../../routes";
-import { Layout } from "../../shared/layout";
-import EmailVerificationToken from "../models/email-verification-token";
-import Subject from "../models/subject";
+import Brand from "../../branding/models/brand.js";
+import routes from "../../routes.js";
+import { Layout } from "../../shared/layout.js";
+import EmailVerificationToken from "../models/email-verification-token.js";
+import Subject from "../models/subject.js";
 
 /**
  * `GET /verify-email` action that consumes the token and renders the result page.

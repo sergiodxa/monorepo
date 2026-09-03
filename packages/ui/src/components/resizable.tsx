@@ -33,7 +33,7 @@ import { bs, is, maxBs, maxIs, minBs, minIs } from "@sdxc/u/size";
 import { before, data, focusVisible, hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { mergeStyle } from "../utils/merge-style";
+import { mergeStyle } from "../utils/merge-style.js";
 
 /** Default {@link Resizable.Props} orientation, applied when `orientation` is omitted. */
 const DEFAULT_ORIENTATION: Resizable.Orientation = "horizontal";

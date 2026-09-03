@@ -10,11 +10,11 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { CacheTag } from "./types";
+import type { CacheTag } from "./types.js";
 
-import { CacheTagError } from "./cache-tag-error";
-import { createTags } from "./create-tags";
-import { MAX_TAG_LENGTH } from "./platform";
+import { CacheTagError } from "./cache-tag-error.js";
+import { createTags } from "./create-tags.js";
+import { MAX_TAG_LENGTH } from "./platform.js";
 
 /** Reads a branded tag as plain text, so assertions compare header content. */
 function text(tag: CacheTag): string {

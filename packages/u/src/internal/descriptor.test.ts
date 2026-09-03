@@ -10,14 +10,14 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
-import { at } from "../responsive/at";
-import { p } from "../size/p";
-import { hover } from "../state/hover";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
+import { at } from "../responsive/at.js";
+import { p } from "../size/p.js";
+import { hover } from "../state/hover.js";
 
-import { merge } from "./descriptor";
-import { declarations, serialize } from "./serialize";
+import { merge } from "./descriptor.js";
+import { declarations, serialize } from "./serialize.js";
 
 describe("merge", () => {
 	test("a later tree's declaration overwrites an earlier tree's same key", () => {

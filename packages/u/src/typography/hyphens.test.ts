@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { hyphens } from "./hyphens";
+import { hyphens } from "./hyphens.js";
 
 describe("hyphens", () => {
 	test("no-arg defaults to auto", async () => {

@@ -19,9 +19,9 @@ import { data, when } from "@sdxc/u/state";
 import { fontSize, leading, nowrap, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { DEFAULT_ICON_ARIA_HIDDEN } from "../utils/decorative-icon";
+import { DEFAULT_ICON_ARIA_HIDDEN } from "../utils/decorative-icon.js";
 
 /** Semantic color role {@link Badge} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Badge.Color = "neutral";

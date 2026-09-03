@@ -11,9 +11,9 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
-import { interactiveTransition } from "./interactive-transition";
+import { interactiveTransition } from "./interactive-transition.js";
 
 /** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {

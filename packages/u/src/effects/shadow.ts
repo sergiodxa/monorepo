@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ShadowName } from "../types";
+import type { ShadowName } from "../types.js";
 
-import { boxShadowSlot } from "../internal/box-shadow";
-import { shadow as shadowToken } from "../internal/tokens";
+import { boxShadowSlot } from "../internal/box-shadow.js";
+import { shadow as shadowToken } from "../internal/tokens.js";
 
 /**
  * Applies a box shadow from the shadow scale, written to the `elevation` slot

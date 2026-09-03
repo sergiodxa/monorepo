@@ -12,10 +12,10 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { MalformedSignatureError } from "./errors";
-import { encodeBase64 } from "./lib/base64";
-import { decodeSecret } from "./secret";
-import { computeSignature, formatSignature, parseSignatures, signedContent } from "./signature";
+import { MalformedSignatureError } from "./errors.js";
+import { encodeBase64 } from "./lib/base64.js";
+import { decodeSecret } from "./secret.js";
+import { computeSignature, formatSignature, parseSignatures, signedContent } from "./signature.js";
 
 /** Specification example signature, used as a value that parses. */
 const EXAMPLE = "v1,K5oZfzN95Z9UVu1EsfQmfVNQhnkZ2pj9o9NDN/H/pI4=";

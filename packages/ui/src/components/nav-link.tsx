@@ -17,9 +17,9 @@ import { cursor, raw } from "@sdxc/u/general";
 import { data, hover, when } from "@sdxc/u/state";
 import { textDecoration, weight } from "@sdxc/u/typography";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** Semantic color role {@link NavLink} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: NavLink.Color = "neutral";

@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext, ToolContext } from "./context";
-import type { FromObjectSchema, ObjectSchema } from "./schema";
+import type { AnyRequestContext, ToolContext } from "./context.js";
+import type { FromObjectSchema, ObjectSchema } from "./schema.js";
 
 /**
  * Hints a client may weigh when shaping the approval prompt a person sees before a tool

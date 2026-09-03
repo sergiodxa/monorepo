@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { mi } from "./mi";
+import { mi } from "./mi.js";
 
 describe("mi", () => {
 	test("one value applies both inline edges", async () => {

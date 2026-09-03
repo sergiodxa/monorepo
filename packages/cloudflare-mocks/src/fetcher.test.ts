@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createFetcher } from "./fetcher";
+import { createFetcher } from "./fetcher.js";
 
 describe("createFetcher", () => {
 	test("answers with the handler's response", async () => {

@@ -11,7 +11,7 @@ import type { MixinHandle } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { trackHostNode } from "./track-host-node";
+import { trackHostNode } from "./track-host-node.js";
 
 /**
  * Builds a plain `EventTarget` standing in for a mixin handle, along with

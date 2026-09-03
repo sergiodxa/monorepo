@@ -2,13 +2,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
-import type { UtilityMixin } from "../internal/descriptor";
-import type { ColorValue } from "../types";
+import type { CSSStyles } from "../internal/css-styles.js";
+import type { UtilityMixin } from "../internal/descriptor.js";
+import type { ColorValue } from "../types.js";
 
-import { var as varUtility } from "../general/var";
-import { utility } from "../internal/descriptor";
-import { color } from "../internal/tokens";
+import { var as varUtility } from "../general/var.js";
+import { utility } from "../internal/descriptor.js";
+import { color } from "../internal/tokens.js";
 
 export type BorderStyleValue =
 	| "solid"

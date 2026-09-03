@@ -14,10 +14,10 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { CalendarModel } from "../behaviors/calendar-model";
+import type { CalendarModel } from "../behaviors/calendar-model.js";
 
-import { CALENDAR_DAY_DATE_ATTRIBUTE } from "./calendar-keys";
-import { trackHostNode } from "./track-host-node";
+import { CALENDAR_DAY_DATE_ATTRIBUTE } from "./calendar-keys.js";
+import { trackHostNode } from "./track-host-node.js";
 
 /**
  * Parses a day cell's {@link CALENDAR_DAY_DATE_ATTRIBUTE} value into a

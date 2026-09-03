@@ -12,8 +12,8 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { InvalidSecretError } from "./errors";
-import { decodeSecret, resolveSecrets } from "./secret";
+import { InvalidSecretError } from "./errors.js";
+import { decodeSecret, resolveSecrets } from "./secret.js";
 
 /** Base64 secret body used across the cases, 24 bytes once decoded. */
 const SECRET = "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";

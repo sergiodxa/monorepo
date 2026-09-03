@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { graphql } from "./graphql";
+import { graphql } from "./graphql.js";
 
 /** The runs a rule claimed, with the plain text between them dropped. */
 function painted(code: string) {

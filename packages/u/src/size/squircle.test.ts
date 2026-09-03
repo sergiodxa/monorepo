@@ -8,9 +8,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { squircle } from "./squircle";
+import { squircle } from "./squircle.js";
 
 describe("squircle", () => {
 	test("defaults to the 'md' radius, alongside the @supports corner-shape block", async () => {

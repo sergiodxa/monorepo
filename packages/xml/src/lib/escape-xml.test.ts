@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { escapeAttribute, escapeText } from "./escape-xml";
+import { escapeAttribute, escapeText } from "./escape-xml.js";
 
 describe("escapeText", () => {
 	test("escapes the markup delimiters", () => {

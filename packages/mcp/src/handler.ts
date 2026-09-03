@@ -15,16 +15,16 @@
 import { isFailure } from "@sdxc/result";
 import { createMultiMatcher } from "remix/route-pattern/match";
 
-import type { AnyRequestContext, ResourceContext, ToolContext } from "./context";
-import type { JsonRpcResponse, RequestId } from "./jsonrpc";
+import type { AnyRequestContext, ResourceContext, ToolContext } from "./context.js";
+import type { JsonRpcResponse, RequestId } from "./jsonrpc.js";
 import type {
 	ReadResult,
 	Resource,
 	ResourceAction,
 	ResourceContents,
 	ResourceListing,
-} from "./resources";
-import type { ObjectSchema } from "./schema";
+} from "./resources.js";
+import type { ObjectSchema } from "./schema.js";
 import type {
 	Action,
 	ActionOrHandler,
@@ -34,7 +34,7 @@ import type {
 	ToolGroup,
 	ToolHandler,
 	ToolMiddleware,
-} from "./tools";
+} from "./tools.js";
 
 import {
 	contextFor,
@@ -43,9 +43,9 @@ import {
 	ResourceUri,
 	ResourceVariables,
 	ToolInput,
-} from "./context";
-import { ForbiddenError, InvalidArgumentsError, ToolError } from "./errors";
-import { ErrorCode, isJsonRpcMessage, isRequest, reply, replyError } from "./jsonrpc";
+} from "./context.js";
+import { ForbiddenError, InvalidArgumentsError, ToolError } from "./errors.js";
+import { ErrorCode, isJsonRpcMessage, isRequest, reply, replyError } from "./jsonrpc.js";
 import {
 	decodeHeaderValue,
 	isMetadataProblem,
@@ -56,10 +56,10 @@ import {
 	PROTOCOL_VERSION_HEADER,
 	readRequestMetadata,
 	SUPPORTED_PROTOCOL_VERSIONS,
-} from "./protocol";
-import { toContents } from "./resources";
-import { isTool } from "./tools";
-import { validateArguments } from "./validate";
+} from "./protocol.js";
+import { toContents } from "./resources.js";
+import { isTool } from "./tools.js";
+import { validateArguments } from "./validate.js";
 
 /** How results advertise their own cacheability. */
 export type CacheScope = "public" | "private";

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { pointerEvents } from "./pointer-events";
+import { pointerEvents } from "./pointer-events.js";
 
 describe("pointerEvents", () => {
 	test("no-arg defaults to 'none'", async () => {

@@ -13,8 +13,8 @@ import type { ContextEntries } from "remix/router";
 
 import { createContextKey, RequestContext } from "remix/router";
 
-import type { ResourceDescriptor } from "./resources";
-import type { ToolDescriptor } from "./tools";
+import type { ResourceDescriptor } from "./resources.js";
+import type { ToolDescriptor } from "./tools.js";
 
 /**
  * A request context whatever its params and middleware entries.

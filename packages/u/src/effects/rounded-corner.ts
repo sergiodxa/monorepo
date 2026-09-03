@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { RadiusName } from "../types";
+import type { RadiusName } from "../types.js";
 
-import { utility } from "../internal/descriptor";
-import { radius } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { radius } from "../internal/tokens.js";
 
 /** A single logical corner, named by its block/inline start/end pair. */
 export type LogicalCorner = "start-start" | "start-end" | "end-start" | "end-end";

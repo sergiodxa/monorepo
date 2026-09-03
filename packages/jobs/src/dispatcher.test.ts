@@ -16,9 +16,9 @@ import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { AnyJobContext, JobDispatcherContext, JobMiddleware } from "./index";
+import type { AnyJobContext, JobDispatcherContext, JobMiddleware } from "./index.js";
 
-import { createJobDispatcher, createJobHandler, job, jobs } from "./index";
+import { createJobDispatcher, createJobHandler, job, jobs } from "./index.js";
 
 let consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
 let consoleError = vi.spyOn(console, "error").mockImplementation(() => {});

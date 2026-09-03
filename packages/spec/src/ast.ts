@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Span } from "./source";
+import type { Span } from "./source.js";
 
 /** A parsed `.spec` file: its `use` imports, definitions, and tests. */
 export interface SpecFileNode {

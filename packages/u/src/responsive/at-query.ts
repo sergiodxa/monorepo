@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
 
-import { compose, nest } from "../internal/descriptor";
+import { compose, nest } from "../internal/descriptor.js";
 
 /**
  * The raw escape hatch for expressing a container condition directly —

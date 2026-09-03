@@ -12,10 +12,10 @@ import type { MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { Point } from "../utils/color-math";
+import type { Point } from "../utils/color-math.js";
 
-import { normalizedPointerPosition } from "../utils/color-math";
-import { findPairedRangeInputs } from "../utils/paired-range-inputs";
+import { normalizedPointerPosition } from "../utils/color-math.js";
+import { findPairedRangeInputs } from "../utils/paired-range-inputs.js";
 
 /**
  * `data-*` attribute a ColorArea's paired axis inputs carry so

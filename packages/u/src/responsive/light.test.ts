@@ -6,11 +6,11 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { serialize } from "../internal/serialize.js";
 
-import { light } from "./light";
-import { scheme } from "./scheme";
+import { light } from "./light.js";
+import { scheme } from "./scheme.js";
 
 describe("light", () => {
 	test("produces the identical stylesheet scheme('light', input) would", async () => {

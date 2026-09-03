@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { compose, utility } from "../internal/descriptor";
-import { overflow } from "../overflow/overflow";
+import { compose, utility } from "../internal/descriptor.js";
+import { overflow } from "../overflow/overflow.js";
 
-import { nowrap } from "./nowrap";
+import { nowrap } from "./nowrap.js";
 
 /**
  * Truncates single-line text with an ellipsis once it overflows its box;

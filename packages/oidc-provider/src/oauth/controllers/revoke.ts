@@ -17,12 +17,12 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import Secret from "../../clients/models/secret";
-import routes from "../../routes";
-import parseBasicAuth from "../../shared/lib/parse-basic-auth";
-import { reject } from "../../shared/lib/reject";
-import Session from "../models/session";
+import Client from "../../clients/models/client.js";
+import Secret from "../../clients/models/secret.js";
+import routes from "../../routes.js";
+import parseBasicAuth from "../../shared/lib/parse-basic-auth.js";
+import { reject } from "../../shared/lib/reject.js";
+import Session from "../models/session.js";
 
 let RevokeSchema = s.object({
 	token: s.string(),

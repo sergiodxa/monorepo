@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { createRecordingCache } from "./recording-cache";
+import { createRecordingCache } from "./recording-cache.js";
 
 describe("createRecordingCache", () => {
 	test("records selectors in call order", async () => {

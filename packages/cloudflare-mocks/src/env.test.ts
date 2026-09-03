@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createD1Database } from "./d1";
-import { createEnv } from "./env";
-import { createKVNamespace } from "./kv";
+import { createD1Database } from "./d1.js";
+import { createEnv } from "./env.js";
+import { createKVNamespace } from "./kv.js";
 
 /** Binding shape a Worker under test would have generated. */
 interface TestEnv {

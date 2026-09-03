@@ -16,11 +16,11 @@ import { isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
-import type { ToolContext } from "./plugin";
-import type { Value } from "./values";
+import type { ToolContext } from "./plugin.js";
+import type { Value } from "./values.js";
 
-import { SpecError } from "./errors";
-import { connectStdioPlugin } from "./transport-stdio";
+import { SpecError } from "./errors.js";
+import { connectStdioPlugin } from "./transport-stdio.js";
 
 /** The demo plugin's path, resolved from this file's directory. */
 const DEMO_PLUGIN_PATH = path.join(import.meta.dirname, "plugins", "demo.ts");

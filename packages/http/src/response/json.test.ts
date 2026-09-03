@@ -30,7 +30,7 @@ import {
 	unauthorized,
 	unprocessableEntity,
 	unsupportedMediaType,
-} from "./json";
+} from "./json.js";
 
 describe("2xx success", () => {
 	test("ok returns 200 with JSON body", async () => {

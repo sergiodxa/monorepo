@@ -10,9 +10,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { SchemaOrg } from "./schema";
+import type { SchemaOrg } from "./schema.js";
 
-import { serializeJsonLd } from "./json-ld";
+import { serializeJsonLd } from "./json-ld.js";
 
 /** A minimal valid node whose description carries whatever a test needs to smuggle. */
 function nodeWithDescription(description: string): SchemaOrg.WebSite {

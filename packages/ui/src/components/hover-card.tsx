@@ -32,9 +32,9 @@ import { is, mb, mbe, mbs, marginLeft, marginRight, mi, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import type { AnchorPlacement } from "../utils/placement";
+import type { AnchorPlacement } from "../utils/placement.js";
 
-import { floatingSurface } from "../styles/floating-surface";
+import { floatingSurface } from "../styles/floating-surface.js";
 
 /**
  * Side of the trigger {@link HoverCard.Content} renders against when

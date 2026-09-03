@@ -10,8 +10,8 @@
 import { createSession, Session } from "remix/session";
 import { describe, expect, test } from "vitest";
 
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { AuthSession } from "./auth-session";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { AuthSession } from "./auth-session.js";
 
 /** Seconds in an hour, the lifetime the fixtures hand out. */
 const ONE_HOUR = 3600;

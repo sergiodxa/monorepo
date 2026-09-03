@@ -11,7 +11,7 @@ import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { SentinelRow } from "./sentinel-row";
+import { SentinelRow } from "./sentinel-row.js";
 
 describe(SentinelRow.name, () => {
 	test("renders a div holding its children", async () => {

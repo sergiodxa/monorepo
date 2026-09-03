@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { border } from "./border";
+import { border } from "./border.js";
 
 describe("border", () => {
 	test("no-arg resolves the system default", async () => {

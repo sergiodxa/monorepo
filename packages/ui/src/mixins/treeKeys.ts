@@ -11,9 +11,9 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { SelectionModel } from "../behaviors/selection-model";
+import type { SelectionModel } from "../behaviors/selection-model.js";
 
-import { isPrintableKey, labelFor, setRovingTabindex } from "../utils/keyboard-nav";
+import { isPrintableKey, labelFor, setRovingTabindex } from "../utils/keyboard-nav.js";
 
 /**
  * Attribute every Tree row exposes itself on; its value doubles as the

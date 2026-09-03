@@ -13,7 +13,7 @@ export type {
 	Inflector,
 	InflectorOptions,
 	IrregularPair,
-} from "./inflect";
+} from "./inflect.js";
 
 export {
 	camelize,
@@ -24,16 +24,16 @@ export {
 	pluralize,
 	singularize,
 	underscore,
-} from "./inflect";
+} from "./inflect.js";
 
-export type { SlugifyOptions } from "./slugify";
+export type { SlugifyOptions } from "./slugify.js";
 
-export { slugify } from "./slugify";
+export { slugify } from "./slugify.js";
 
-export type { ExcerptOptions, InitialsOptions, LocaleOptions, TruncateOptions } from "./text";
+export type { ExcerptOptions, InitialsOptions, LocaleOptions, TruncateOptions } from "./text.js";
 
-export { capitalize, excerpt, initials, truncate, wordCount } from "./text";
+export { capitalize, excerpt, initials, truncate, wordCount } from "./text.js";
 
-export type { Titleizer, TitleizeOptions } from "./titleize";
+export type { Titleizer, TitleizeOptions } from "./titleize.js";
 
-export { createTitleizer, titleize } from "./titleize";
+export { createTitleizer, titleize } from "./titleize.js";

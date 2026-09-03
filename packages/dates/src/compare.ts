@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Interval, TimeZone } from "./types";
+import type { Interval, TimeZone } from "./types.js";
 
-import { calendarDayAt, calendarDayFromEpochDay, epochDayOf, startOfDayInstant } from "./zone";
+import { calendarDayAt, calendarDayFromEpochDay, epochDayOf, startOfDayInstant } from "./zone.js";
 
 /**
  * Calendar days from `b` to `a` in a zone: the count of day boundaries crossed

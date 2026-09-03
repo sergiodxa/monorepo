@@ -21,7 +21,7 @@ import { bs, is, minIs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { Button } from "./button";
+import { Button } from "./button.js";
 
 /** Native ARIA role applied to {@link Carousel.Viewport} unless a consumer overrides it. */
 const DEFAULT_VIEWPORT_ROLE = "group";

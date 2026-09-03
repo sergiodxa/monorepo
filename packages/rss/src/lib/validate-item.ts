@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
 /**
  * Ensures items preserve the minimum RSS requirement of a title or description.

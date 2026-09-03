@@ -13,7 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-import { base64UrlEncode } from "../../shared/lib/base64url";
+import { base64UrlEncode } from "../../shared/lib/base64url.js";
 
 /** Time-to-live for WebAuthn challenges (5 minutes in milliseconds). */
 const CHALLENGE_TTL = 5 * 60 * 1000;

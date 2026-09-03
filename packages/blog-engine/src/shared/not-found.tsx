@@ -11,8 +11,8 @@ import type { RequestContext } from "remix/router";
 import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
-import { Layout } from "./components/layout";
-import { loadSiteChrome } from "./site";
+import { Layout } from "./components/layout.js";
+import { loadSiteChrome } from "./site.js";
 
 /**
  * Renders a themed 404 page through `ctx.render`, reusing the public site chrome so

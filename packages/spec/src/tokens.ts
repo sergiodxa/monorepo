@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Span } from "./source";
+import type { Span } from "./source.js";
 
 /** Reserved words; never valid as identifiers, tool names, or definitions. */
 export const KEYWORDS = [

@@ -14,9 +14,9 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { ObjectSchema, PropertySchema } from "./schema";
+import type { ObjectSchema, PropertySchema } from "./schema.js";
 
-import { InvalidArgumentsError } from "./errors";
+import { InvalidArgumentsError } from "./errors.js";
 
 /**
  * Checks `value` against `schema`, filling in defaults and dropping unknown properties:

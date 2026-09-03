@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { XML } from "../index";
+import type { XML } from "../index.js";
 
-import { cloneElement } from "./clone-element";
+import { cloneElement } from "./clone-element.js";
 
 /**
  * Returns the first element matching the predicate in depth-first order.

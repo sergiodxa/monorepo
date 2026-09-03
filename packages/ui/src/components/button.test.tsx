@@ -16,7 +16,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Button } from "./button";
+import { Button } from "./button.js";
 
 describe(Button.name, () => {
 	test('types itself "button" when it carries a command, so its command survives inside a form', async () => {

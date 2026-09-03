@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { after } from "./after";
+import { after } from "./after.js";
 
 describe("after", () => {
 	test("emits an '&::after' block around the input's declarations", async () => {

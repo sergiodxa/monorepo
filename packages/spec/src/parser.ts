@@ -34,12 +34,12 @@ import type {
 	StatementNode,
 	TestNode,
 	UseNode,
-} from "./ast";
-import type { SourceFile, Span } from "./source";
-import type { Keyword, Token, TokenKind } from "./tokens";
+} from "./ast.js";
+import type { SourceFile, Span } from "./source.js";
+import type { Keyword, Token, TokenKind } from "./tokens.js";
 
-import { ParseError } from "./errors";
-import { lex } from "./lexer";
+import { ParseError } from "./errors.js";
+import { lex } from "./lexer.js";
 
 /** The three test phases, in the only order the grammar admits. */
 const PHASES = ["given", "when", "then"] as const;

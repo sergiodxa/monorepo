@@ -2,11 +2,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { if as ifUtility } from "../general/if";
-import { compose } from "../internal/descriptor";
+import { if as ifUtility } from "../general/if.js";
+import { compose } from "../internal/descriptor.js";
 
-import { overflowX } from "./overflow-x";
-import { overflowY } from "./overflow-y";
+import { overflowX } from "./overflow-x.js";
+import { overflowY } from "./overflow-y.js";
 
 export type ScrollAxis = "x" | "y" | "both";
 

@@ -2,13 +2,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue, SemanticToneName } from "../types";
+import type { ColorValue, SemanticToneName } from "../types.js";
 
-import { compose } from "../internal/descriptor";
+import { compose } from "../internal/descriptor.js";
 
-import { bg } from "./bg";
-import { border } from "./border";
-import { fg } from "./fg";
+import { bg } from "./bg.js";
+import { border } from "./border.js";
+import { fg } from "./fg.js";
 
 export type SurfaceRecipe = "default" | "muted" | SemanticToneName | `${SemanticToneName}.tinted`;
 

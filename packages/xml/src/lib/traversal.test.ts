@@ -14,7 +14,7 @@ import {
 	normalizePath,
 	queryFromElements,
 	startsWithRoot,
-} from "./traversal";
+} from "./traversal.js";
 
 let tree = {
 	name: "rss",

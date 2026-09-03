@@ -11,7 +11,7 @@ import type { DurationString } from "@sdxc/duration";
 
 import { describe, expect, test } from "vitest";
 
-import { formatDuration } from "./format-duration";
+import { formatDuration } from "./format-duration.js";
 
 describe("formatDuration", () => {
 	test("breaks a length into the units it covers", () => {

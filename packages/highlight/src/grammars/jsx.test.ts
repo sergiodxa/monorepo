@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { jsx } from "./jsx";
+import { jsx } from "./jsx.js";
 
 describe("jsx", () => {
 	test("paints a tag, its attribute and its children", () => {

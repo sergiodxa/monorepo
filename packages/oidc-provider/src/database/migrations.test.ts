@@ -16,9 +16,9 @@ import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../shared/test/db.js";
 
-import { MIGRATIONS, runMigrations } from "./migrations";
+import { MIGRATIONS, runMigrations } from "./migrations.js";
 
 describe(runMigrations, () => {
 	let sqliteDb: SqliteDatabase;

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SpacingValue } from "../internal/tokens";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { utility } from "../internal/descriptor";
-import { spacing } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { spacing } from "../internal/tokens.js";
 
 /**
  * Applies `padding-block-start` — the leading block edge, the top edge in

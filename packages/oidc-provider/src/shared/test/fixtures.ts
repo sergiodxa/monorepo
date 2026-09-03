@@ -11,14 +11,14 @@
 
 import type { Database } from "remix/data-table";
 
-import Client from "../../clients/models/client";
-import RedirectUri from "../../clients/models/redirect-uri";
-import ClientSecret from "../../clients/models/secret";
-import Grant from "../../oauth/models/grant";
-import Session from "../../oauth/models/session";
-import Resource from "../../resources/models/resource";
-import Subject from "../../subjects/models/subject";
-import Passkey from "../../webauthn/models/passkey";
+import Client from "../../clients/models/client.js";
+import RedirectUri from "../../clients/models/redirect-uri.js";
+import ClientSecret from "../../clients/models/secret.js";
+import Grant from "../../oauth/models/grant.js";
+import Session from "../../oauth/models/session.js";
+import Resource from "../../resources/models/resource.js";
+import Subject from "../../subjects/models/subject.js";
+import Passkey from "../../webauthn/models/passkey.js";
 
 /**
  * Creates a test subject with optional overrides.

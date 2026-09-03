@@ -10,18 +10,18 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, success } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
-import { cloneAttributes } from "./clone";
-import { RSS_VERSION } from "./constants";
-import { toExtensionElement } from "./extensions";
+import { cloneAttributes } from "./clone.js";
+import { RSS_VERSION } from "./constants.js";
+import { toExtensionElement } from "./extensions.js";
 import {
 	collapseArray,
 	getChildElements,
 	getElementText,
 	isEmptyRecord,
 	parseOptionalNumber,
-} from "./utils";
+} from "./utils.js";
 
 /**
  * Parses a validated XML tree into RSS channel and item data.

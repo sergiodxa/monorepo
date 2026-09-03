@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { highlight, languages, normalizeLanguage, tokenize } from "./index";
+import { highlight, languages, normalizeLanguage, tokenize } from "./index.js";
 
 const SAMPLE = 'let a = "b"; // c\n<x y="z">\n- d\n@e f(1)\n#g\n';
 

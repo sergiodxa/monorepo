@@ -5,41 +5,41 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Dataset } from "./dataset";
-import type { ColorModule } from "./modules/color";
-import type { CompanyModule } from "./modules/company";
-import type { DatatypeModule } from "./modules/datatype";
-import type { DateModule } from "./modules/date";
-import type { GitModule } from "./modules/git";
-import type { HackerModule } from "./modules/hacker";
-import type { HelpersModule } from "./modules/helpers";
-import type { InternetModule } from "./modules/internet";
-import type { LocationModule } from "./modules/location";
-import type { LoremModule } from "./modules/lorem";
-import type { NumberModule } from "./modules/number";
-import type { PersonModule } from "./modules/person";
-import type { PhoneModule } from "./modules/phone";
-import type { StringModule } from "./modules/string";
-import type { SystemModule } from "./modules/system";
-import type { Random, Seed } from "./random";
+import type { Dataset } from "./dataset.js";
+import type { ColorModule } from "./modules/color.js";
+import type { CompanyModule } from "./modules/company.js";
+import type { DatatypeModule } from "./modules/datatype.js";
+import type { DateModule } from "./modules/date.js";
+import type { GitModule } from "./modules/git.js";
+import type { HackerModule } from "./modules/hacker.js";
+import type { HelpersModule } from "./modules/helpers.js";
+import type { InternetModule } from "./modules/internet.js";
+import type { LocationModule } from "./modules/location.js";
+import type { LoremModule } from "./modules/lorem.js";
+import type { NumberModule } from "./modules/number.js";
+import type { PersonModule } from "./modules/person.js";
+import type { PhoneModule } from "./modules/phone.js";
+import type { StringModule } from "./modules/string.js";
+import type { SystemModule } from "./modules/system.js";
+import type { Random, Seed } from "./random.js";
 
-import { en } from "./data/en";
-import { createColorModule } from "./modules/color";
-import { createCompanyModule } from "./modules/company";
-import { createDatatypeModule } from "./modules/datatype";
-import { createDateModule } from "./modules/date";
-import { createGitModule } from "./modules/git";
-import { createHackerModule } from "./modules/hacker";
-import { createHelpersModule } from "./modules/helpers";
-import { createInternetModule } from "./modules/internet";
-import { createLocationModule } from "./modules/location";
-import { createLoremModule } from "./modules/lorem";
-import { createNumberModule } from "./modules/number";
-import { createPersonModule } from "./modules/person";
-import { createPhoneModule } from "./modules/phone";
-import { createStringModule } from "./modules/string";
-import { createSystemModule } from "./modules/system";
-import { createRandom } from "./random";
+import { en } from "./data/en.js";
+import { createColorModule } from "./modules/color.js";
+import { createCompanyModule } from "./modules/company.js";
+import { createDatatypeModule } from "./modules/datatype.js";
+import { createDateModule } from "./modules/date.js";
+import { createGitModule } from "./modules/git.js";
+import { createHackerModule } from "./modules/hacker.js";
+import { createHelpersModule } from "./modules/helpers.js";
+import { createInternetModule } from "./modules/internet.js";
+import { createLocationModule } from "./modules/location.js";
+import { createLoremModule } from "./modules/lorem.js";
+import { createNumberModule } from "./modules/number.js";
+import { createPersonModule } from "./modules/person.js";
+import { createPhoneModule } from "./modules/phone.js";
+import { createStringModule } from "./modules/string.js";
+import { createSystemModule } from "./modules/system.js";
+import { createRandom } from "./random.js";
 
 /** What a generator is built from. */
 export interface SampleOptions {

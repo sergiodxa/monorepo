@@ -28,12 +28,12 @@ import { media } from "@sdxc/u/responsive";
 import { bs, is, m, mbs, minIs, mis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 
-import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
-import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction";
-import { clampChannel, roundChannel } from "../utils/color-math";
-import { HUE_GRADIENT_STOPS } from "../utils/hue-spectrum";
-import { mergeStyle } from "../utils/merge-style";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { rangeThumbAppearance } from "../styles/range-thumb-appearance.js";
+import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction.js";
+import { clampChannel, roundChannel } from "../utils/color-math.js";
+import { HUE_GRADIENT_STOPS } from "../utils/hue-spectrum.js";
+import { mergeStyle } from "../utils/merge-style.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /** Lower bound of {@link ColorWheel}'s fixed hue domain, in degrees — fixed, since the full domain is what makes this control a hue wheel. */
 const DEFAULT_MIN = 0;

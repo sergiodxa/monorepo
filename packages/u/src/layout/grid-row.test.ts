@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { gridRow } from "./grid-row";
+import { gridRow } from "./grid-row.js";
 
 describe("gridRow", () => {
 	test("emits a bare number as a line number, unchanged", async () => {

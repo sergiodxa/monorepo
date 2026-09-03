@@ -4,7 +4,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
 /**
  * Clones channel data deeply enough to protect internal state.

@@ -11,7 +11,7 @@ import type { RelyingParty } from "@sdxc/auth/relying-party";
 
 import { describe, expect, test } from "vitest";
 
-import { toAuthProfile } from "./oidc";
+import { toAuthProfile } from "./oidc.js";
 
 /** A login whose provider sent nothing beyond the subject, before any override. */
 function profile(claims: Partial<RelyingParty.Profile> = {}): RelyingParty.Profile {

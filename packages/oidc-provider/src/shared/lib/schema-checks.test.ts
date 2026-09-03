@@ -8,7 +8,7 @@
 import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
-import { email, hexColor, httpsUrl, maxLength, minLength, url } from "./schema-checks";
+import { email, hexColor, httpsUrl, maxLength, minLength, url } from "./schema-checks.js";
 
 describe("minLength", () => {
 	test("passes when string meets minimum length", () => {

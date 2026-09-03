@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
+import type { CSSStyles } from "../internal/css-styles.js";
 
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /**
  * The two standard CSS `appearance` values: `"none"` clears the platform's

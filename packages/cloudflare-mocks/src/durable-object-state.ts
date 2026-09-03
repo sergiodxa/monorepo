@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createSqlStorage } from "./sql-storage";
+import { createSqlStorage } from "./sql-storage.js";
 
 /** Options for {@link createDurableObjectState}. */
 export interface DurableObjectStateMockOptions<Props> {

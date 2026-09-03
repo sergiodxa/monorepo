@@ -9,12 +9,12 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { CacheTag } from "./types";
+import type { CacheTag } from "./types.js";
 
-import { cacheTag } from "./cache-tag";
-import { CacheTagError } from "./cache-tag-error";
-import { createTags } from "./create-tags";
-import { MAX_CACHE_TAG_HEADER_LENGTH } from "./platform";
+import { CacheTagError } from "./cache-tag-error.js";
+import { cacheTag } from "./cache-tag.js";
+import { createTags } from "./create-tags.js";
+import { MAX_CACHE_TAG_HEADER_LENGTH } from "./platform.js";
 
 const TAGS = createTags({
 	post: (id: string) => `post:${id}`,

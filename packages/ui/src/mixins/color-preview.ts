@@ -12,7 +12,7 @@ import type { MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { formatRgb, parseColor } from "../utils/color-math";
+import { formatRgb, parseColor } from "../utils/color-math.js";
 
 /**
  * CSS custom property {@link colorPreview} writes a successfully parsed

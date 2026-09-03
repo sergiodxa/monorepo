@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
-import type { TransformOriginValue } from "./transform-origin";
+import type { TransformOriginValue } from "./transform-origin.js";
 
 /**
  * Moves the vanishing point that `u.perspective()` establishes, aiming the

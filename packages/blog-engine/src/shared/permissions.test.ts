@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { hasAll, hasAny, parsePermissions, PERMISSION_KEYS } from "./permissions";
+import { hasAll, hasAny, parsePermissions, PERMISSION_KEYS } from "./permissions.js";
 
 describe("parsePermissions", () => {
 	test("keeps catalog keys and drops unknown ones", () => {

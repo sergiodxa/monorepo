@@ -21,10 +21,10 @@ import { center, hstack, spacer, vstack } from "@sdxc/u/layout";
 import { bs, is, mis, pie } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { Input } from "./input";
+import { Input } from "./input.js";
 
 /**
  * Native `<button>` `type` {@link ComboBox.Button} falls back to when a

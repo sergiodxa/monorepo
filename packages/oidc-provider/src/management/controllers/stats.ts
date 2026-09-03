@@ -14,10 +14,10 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import Session from "../../oauth/models/session";
-import routes from "../../routes";
-import Subject from "../../subjects/models/subject";
+import Client from "../../clients/models/client.js";
+import Session from "../../oauth/models/session.js";
+import routes from "../../routes.js";
+import Subject from "../../subjects/models/subject.js";
 
 /**
  * `GET /api/stats` action returning aggregate tenant usage counts as JSON.

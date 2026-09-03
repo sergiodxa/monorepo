@@ -19,8 +19,8 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import TenantMeta from "../models/tenant-meta";
+import routes from "../../routes.js";
+import TenantMeta from "../models/tenant-meta.js";
 
 /**
  * Payload written by the control plane to provision a tenant Durable Object.

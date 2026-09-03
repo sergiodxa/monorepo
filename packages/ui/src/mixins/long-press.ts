@@ -14,7 +14,7 @@ import type { AnchorPoint } from "remix/ui/anchor";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { isNewPrimaryPress } from "../utils/is-new-primary-press";
+import { isNewPrimaryPress } from "../utils/is-new-primary-press.js";
 
 /** Duration, in milliseconds, {@link longPress} holds the pointer for before dispatching, when {@link LongPress.Options.duration} is omitted. */
 const DEFAULT_DURATION = 500;

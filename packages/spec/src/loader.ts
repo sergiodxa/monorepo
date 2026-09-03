@@ -16,11 +16,11 @@ import type { Result } from "@sdxc/result";
 
 import { failure } from "@sdxc/result";
 
-import type { SpecError } from "./errors";
-import type { LoadedSuite, SpecSource } from "./sources";
+import type { SpecError } from "./errors.js";
+import type { LoadedSuite, SpecSource } from "./sources.js";
 
-import { LoadError } from "./errors";
-import { loadSources } from "./sources";
+import { LoadError } from "./errors.js";
+import { loadSources } from "./sources.js";
 
 /**
  * Load a suite from a directory: find `*.spec` files recursively, read them in

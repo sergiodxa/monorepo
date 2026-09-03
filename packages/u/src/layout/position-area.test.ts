@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { positionArea } from "./position-area";
+import { positionArea } from "./position-area.js";
 
 describe("positionArea", () => {
 	test("sets a two-keyword area", async () => {

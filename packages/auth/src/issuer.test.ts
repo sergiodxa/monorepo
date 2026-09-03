@@ -14,8 +14,8 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { Issuer } from "./issuer";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { Issuer } from "./issuer.js";
 
 /** The issuer every test in this file is pointed at. */
 const ISSUER = "https://auth.test";

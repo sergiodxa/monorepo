@@ -12,7 +12,7 @@ import type { MixinFactory } from "remix/ui";
 
 import { createMixin } from "remix/ui";
 
-import { trackHostNode } from "./track-host-node";
+import { trackHostNode } from "./track-host-node.js";
 
 /** Modifier token spellings {@link parseCombo} resolves to the platform's primary modifier, checked as `event.ctrlKey || event.metaKey`. */
 const MOD_ALIASES = new Set(["mod", "ctrl", "control", "cmd", "command", "meta"]);

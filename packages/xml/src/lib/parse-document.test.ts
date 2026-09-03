@@ -10,7 +10,7 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { parseDocument } from "./parse-document";
+import { parseDocument } from "./parse-document.js";
 
 /**
  * Parses a source that the test expects to succeed and returns its root element.

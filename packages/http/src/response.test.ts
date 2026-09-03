@@ -8,7 +8,7 @@
 import { Location } from "@sdxc/location";
 import { describe, expect, test } from "vitest";
 
-import * as ContentType from "./content-type";
+import * as ContentType from "./content-type.js";
 import {
 	css,
 	csv,
@@ -23,7 +23,7 @@ import {
 	stream,
 	text,
 	xml,
-} from "./response";
+} from "./response.js";
 
 describe(json, () => {
 	test("creates JSON response", async () => {

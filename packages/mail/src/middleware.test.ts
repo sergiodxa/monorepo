@@ -11,12 +11,12 @@
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { MailLogger } from "./middleware";
+import type { MailLogger } from "./middleware.js";
 
-import { MemoryTransport } from "./memory";
-import mail from "./middleware";
+import { MemoryTransport } from "./memory.js";
+import mail from "./middleware.js";
 
-import { Mailer } from "./index";
+import { Mailer } from "./index.js";
 
 const SENDER = { email: "no-reply@example.com", name: "Example" };
 

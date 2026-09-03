@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CacheTag } from "./types";
+import type { CacheTag } from "./types.js";
 
-import { CacheTagError } from "./cache-tag-error";
-import { MAX_CACHE_TAG_HEADER_LENGTH, TAG_SEPARATOR } from "./platform";
-import { validateTag } from "./validate-tag";
+import { CacheTagError } from "./cache-tag-error.js";
+import { MAX_CACHE_TAG_HEADER_LENGTH, TAG_SEPARATOR } from "./platform.js";
+import { validateTag } from "./validate-tag.js";
 
 /**
  * Builds the header value for a tag list, dropping repeats while preserving

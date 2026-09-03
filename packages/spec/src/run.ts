@@ -21,17 +21,17 @@ import type { Random, Seed } from "@sdxc/sample";
 import { isFailure, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 
-import type { DefinitionNode, TestNode } from "./ast";
-import type { SuiteResult, TestResult } from "./diagnostics";
-import type { SpecError } from "./errors";
-import type { Grants, PermissionSet } from "./permissions";
-import type { Plugin } from "./plugin";
-import type { LoadedSuite } from "./sources";
-import type { Workspace } from "./workspace";
+import type { DefinitionNode, TestNode } from "./ast.js";
+import type { SuiteResult, TestResult } from "./diagnostics.js";
+import type { SpecError } from "./errors.js";
+import type { Grants, PermissionSet } from "./permissions.js";
+import type { Plugin } from "./plugin.js";
+import type { LoadedSuite } from "./sources.js";
+import type { Workspace } from "./workspace.js";
 
-import { executeTest } from "./executor";
-import { createPermissionSet } from "./permissions";
-import { createRegistry } from "./registry";
+import { executeTest } from "./executor.js";
+import { createPermissionSet } from "./permissions.js";
+import { createRegistry } from "./registry.js";
 
 /** Creates the isolated workspace one test runs in. */
 export type WorkspaceFactory = (

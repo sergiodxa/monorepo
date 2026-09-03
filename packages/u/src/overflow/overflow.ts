@@ -2,13 +2,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { if as ifUtility } from "../general/if";
-import { compose, utility } from "../internal/descriptor";
+import { if as ifUtility } from "../general/if.js";
+import { compose, utility } from "../internal/descriptor.js";
 
-import { overflowBlock } from "./overflow-block";
-import { overflowInline } from "./overflow-inline";
-import { overflowX } from "./overflow-x";
-import { overflowY } from "./overflow-y";
+import { overflowBlock } from "./overflow-block.js";
+import { overflowInline } from "./overflow-inline.js";
+import { overflowX } from "./overflow-x.js";
+import { overflowY } from "./overflow-y.js";
 
 export type OverflowValue = "visible" | "hidden" | "auto" | "clip" | "scroll";
 

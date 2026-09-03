@@ -5,8 +5,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Dataset } from "../dataset";
-import type { Random } from "../random";
+import type { Dataset } from "../dataset.js";
+import type { Random } from "../random.js";
 
 /** How many words a generated sentence runs to. */
 const SENTENCE_MIN_WORDS = 4;

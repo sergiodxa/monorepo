@@ -40,10 +40,10 @@ import { is, maxBs, maxIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
-import { Button } from "./button";
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
+import { Button } from "./button.js";
+import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /**
  * Named container {@link Dialog} declares on its own host, so

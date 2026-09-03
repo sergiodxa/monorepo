@@ -8,9 +8,9 @@
  */
 import type { Database } from "remix/data-table";
 
-import type { SelectPostType } from "../../database/schema";
+import type { SelectPostType } from "../../database/schema.js";
 
-import { postTypes } from "../../database/schema";
+import { postTypes } from "../../database/schema.js";
 
 /** The field input kinds available for a custom field, each holding a single flat value. */
 export type FieldKind = "text" | "textarea" | "markdown" | "date" | "url" | "boolean" | "tags";

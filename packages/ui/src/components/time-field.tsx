@@ -14,16 +14,16 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import type { FieldPartsProps } from "../utils/field-parts";
+import type { FieldPartsProps } from "../utils/field-parts.js";
 
-import { fieldStackLayout } from "../styles/field-stack-layout";
-import { resolveFieldWiring } from "../utils/resolve-field-wiring";
+import { fieldStackLayout } from "../styles/field-stack-layout.js";
+import { resolveFieldWiring } from "../utils/resolve-field-wiring.js";
 
-import { Description } from "./description";
-import { FieldError } from "./field-error";
-import { resolveFieldIssue } from "./form";
-import { Input } from "./input";
-import { Label } from "./label";
+import { Description } from "./description.js";
+import { FieldError } from "./field-error.js";
+import { resolveFieldIssue } from "./form.js";
+import { Input } from "./input.js";
+import { Label } from "./label.js";
 
 /**
  * Prop types for {@link TimeField}.

@@ -11,10 +11,10 @@
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { InvalidCronReason } from "./invalid-cron-expression";
-import type { FieldSpec } from "./test/corpus";
+import type { InvalidCronReason } from "./invalid-cron-expression.js";
+import type { FieldSpec } from "./test/corpus.js";
 
-import { Schedule } from "./schedule";
+import { Schedule } from "./schedule.js";
 import {
 	CORPUS_SEED,
 	CORPUS_SIZE,
@@ -23,8 +23,8 @@ import {
 	MONTH_LENGTHS,
 	randomInvalidExpressions,
 	specFor,
-} from "./test/corpus";
-import { rejectionOf } from "./test/properties";
+} from "./test/corpus.js";
+import { rejectionOf } from "./test/properties.js";
 
 /** Where a field starts in the expression `expressionWith` builds, minute first. */
 const FIELD_OFFSETS = [0, 2, 4, 6, 8];

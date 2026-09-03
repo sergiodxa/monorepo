@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fixedWindow, retryAfterSeconds, windowDecision, windowLengthMs } from "./window";
+import { fixedWindow, retryAfterSeconds, windowDecision, windowLengthMs } from "./window.js";
 
 describe("windowLengthMs", () => {
 	test("converts a duration string", () => {

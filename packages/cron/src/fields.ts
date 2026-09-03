@@ -11,10 +11,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { InvalidCronReason } from "./invalid-cron-expression";
-import type { CronFieldName } from "./types";
+import type { InvalidCronReason } from "./invalid-cron-expression.js";
+import type { CronFieldName } from "./types.js";
 
-import { InvalidCronExpression } from "./invalid-cron-expression";
+import { InvalidCronExpression } from "./invalid-cron-expression.js";
 
 /** Month abbreviations cron accepts, lowercased, mapped to month numbers. */
 const MONTH_NAMES: Record<string, number | undefined> = {

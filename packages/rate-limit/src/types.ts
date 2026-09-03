@@ -10,7 +10,7 @@
 import type { DurationInput } from "@sdxc/duration";
 import type { Result } from "@sdxc/result";
 
-import type { RateLimitError } from "./rate-limit-error";
+import type { RateLimitError } from "./rate-limit-error.js";
 
 /**
  * What a backend answers for one attempt against one key. Every field except

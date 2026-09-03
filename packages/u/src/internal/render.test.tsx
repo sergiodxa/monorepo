@@ -10,15 +10,15 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
-import { var as varUtility } from "../general/var";
-import { at } from "../responsive/at";
-import { p } from "../size/p";
-import { hover } from "../state/hover";
-import { rotate } from "../transform/rotate";
-import { scale } from "../transform/scale";
-import { translateX } from "../transform/translate-x";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
+import { var as varUtility } from "../general/var.js";
+import { at } from "../responsive/at.js";
+import { p } from "../size/p.js";
+import { hover } from "../state/hover.js";
+import { rotate } from "../transform/rotate.js";
+import { scale } from "../transform/scale.js";
+import { translateX } from "../transform/translate-x.js";
 
 describe("rendering a real <div mix={...}>", () => {
 	test("an atomic utility renders its declaration in a <style> tag and applies a class", async () => {

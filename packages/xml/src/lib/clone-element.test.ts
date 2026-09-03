@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { cloneElement } from "./clone-element";
+import { cloneElement } from "./clone-element.js";
 
 describe("cloneElement", () => {
 	test("clones nested element trees", () => {

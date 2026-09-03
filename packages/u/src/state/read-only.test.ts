@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { declarations, serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { readOnly } from "./read-only";
+import { readOnly } from "./read-only.js";
 
 describe("readOnly", () => {
 	test("emits both the native and the ARIA selector in one block", async () => {

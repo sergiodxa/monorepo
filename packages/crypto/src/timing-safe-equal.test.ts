@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { timingSafeEqual } from "./timing-safe-equal";
+import { timingSafeEqual } from "./timing-safe-equal.js";
 
 describe("timingSafeEqual", () => {
 	test("returns true for identical bytes", () => {

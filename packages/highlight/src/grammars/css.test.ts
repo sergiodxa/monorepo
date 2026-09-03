@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { css } from "./css";
+import { css } from "./css.js";
 
 describe("css", () => {
 	test("covers a stylesheet exactly", () => {

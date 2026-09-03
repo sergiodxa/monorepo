@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CalendarDay, TimeZone, Weekday } from "./types";
+import type { CalendarDay, TimeZone, Weekday } from "./types.js";
 
-import { dateTimeFormatter } from "./intl-cache";
+import { dateTimeFormatter } from "./intl-cache.js";
 
 /** Milliseconds in one exact 24-hour day, the unit day indexes are counted in. */
 export const DAY_MS = 86_400_000;

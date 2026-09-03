@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { positionAnchor } from "./position-anchor";
+import { positionAnchor } from "./position-anchor.js";
 
 describe("positionAnchor", () => {
 	test("prefixes the name with --", async () => {

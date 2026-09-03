@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CronFieldSet } from "./fields";
-import type { TimeOfDay } from "./types";
+import type { CronFieldSet } from "./fields.js";
+import type { TimeOfDay } from "./types.js";
 
 /**
  * How many times of day a descriptor will spell out before giving up. Past a day's

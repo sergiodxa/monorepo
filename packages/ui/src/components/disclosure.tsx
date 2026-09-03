@@ -22,9 +22,9 @@ import { bs, is, m, pb, pi } from "@sdxc/u/size";
 import { detailsContent, hover, when } from "@sdxc/u/state";
 import { textAlign, weight } from "@sdxc/u/typography";
 
-import { panelChrome } from "../styles/panel-chrome";
+import { panelChrome } from "../styles/panel-chrome.js";
 
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
+import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /**
  * Prop types for {@link Disclosure} and its compound parts.

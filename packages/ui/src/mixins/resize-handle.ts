@@ -15,11 +15,11 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { ResizeSession } from "../behaviors/resize-session";
+import type { ResizeSession } from "../behaviors/resize-session.js";
 
-import { isNewPrimaryPress } from "../utils/is-new-primary-press";
+import { isNewPrimaryPress } from "../utils/is-new-primary-press.js";
 
-import { trackHostNode } from "./track-host-node";
+import { trackHostNode } from "./track-host-node.js";
 
 /**
  * Axis a Resizable panel group lays its panels out along, and the direction

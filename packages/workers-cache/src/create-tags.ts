@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CacheTag } from "./types";
+import type { CacheTag } from "./types.js";
 
-import { validateTag } from "./validate-tag";
+import { validateTag } from "./validate-tag.js";
 
 /**
  * The shape a vocabulary declaration takes: named builders that render a tag

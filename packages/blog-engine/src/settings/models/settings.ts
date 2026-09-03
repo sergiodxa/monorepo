@@ -8,9 +8,9 @@
  */
 import type { Database } from "remix/data-table";
 
-import type { ThemeSettings } from "../../appearance/theme/theme";
+import type { ThemeSettings } from "../../appearance/theme/theme.js";
 
-import { settings } from "../../database/schema";
+import { settings } from "../../database/schema.js";
 
 /** Blog-owner settings stored as JSON-encoded values in the `settings` table. */
 export class Settings {

@@ -12,7 +12,7 @@ import type { ElementProps, MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { asCommandEvent } from "../utils/command-event";
+import { asCommandEvent } from "../utils/command-event.js";
 
 /** Auto-dismiss delay, in milliseconds, {@link dismiss} uses when {@link Dismiss.Options.duration} is omitted. */
 const DEFAULT_DURATION = 5000;

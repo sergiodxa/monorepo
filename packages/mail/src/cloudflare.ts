@@ -13,10 +13,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-import type { NormalizedMessage, SentMessage, Transport } from "./types";
+import type { NormalizedMessage, SentMessage, Transport } from "./types.js";
 
-import { MailError } from "./errors";
-import { formatAddress } from "./lib/address";
+import { MailError } from "./errors.js";
+import { formatAddress } from "./lib/address.js";
 
 /**
  * The send payload the binding accepts, narrowed to the fields this package fills.

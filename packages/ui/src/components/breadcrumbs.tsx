@@ -20,9 +20,9 @@ import { m, mi, p } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
 import { fontSize, textDecoration, weight } from "@sdxc/u/typography";
 
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { Link } from "./link";
+import { Link } from "./link.js";
 
 /** Semantic color role {@link Breadcrumbs.Link} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Link.Color = "neutral";

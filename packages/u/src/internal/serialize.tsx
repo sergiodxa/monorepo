@@ -10,7 +10,7 @@
  */
 import { renderToString } from "remix/ui/server";
 
-import type { UtilityMixin } from "./descriptor";
+import type { UtilityMixin } from "./descriptor.js";
 
 /**
  * Renders `mixin` on a bare `<div>` and returns every `<style>` tag's contents

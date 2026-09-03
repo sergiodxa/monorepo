@@ -18,12 +18,12 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
-import { LIMITS, maxLength, minLength } from "../../shared/lib/schema-checks";
-import { toIsoString } from "../../shared/lib/timestamp";
-import Resource from "../models/resource";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { isResponse, safeJsonParse } from "../../shared/lib/safe-json.js";
+import { LIMITS, maxLength, minLength } from "../../shared/lib/schema-checks.js";
+import { toIsoString } from "../../shared/lib/timestamp.js";
+import Resource from "../models/resource.js";
 
 type ResourceRow = Awaited<ReturnType<typeof Resource.list>>[number];
 

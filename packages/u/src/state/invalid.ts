@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
 
-import { when } from "./when";
+import { when } from "./when.js";
 
 /**
  * Waits for user interaction before flagging a field invalid, matching

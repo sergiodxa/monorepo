@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createKVNamespace } from "./kv";
+import { createKVNamespace } from "./kv.js";
 
 /** Builds a namespace over a clock the test controls, in milliseconds. */
 function createClockedNamespace(start = 0) {

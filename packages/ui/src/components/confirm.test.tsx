@@ -12,7 +12,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Confirm } from "./confirm";
+import { Confirm } from "./confirm.js";
 
 describe(Confirm.name, () => {
 	test("closes the panel with a command, and renders no form, by default", async () => {

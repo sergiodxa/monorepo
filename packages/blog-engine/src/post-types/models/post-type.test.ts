@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { PostType, type PostTypeInput } from "./post-type";
+import { PostType, type PostTypeInput } from "./post-type.js";
 
 function base(overrides: Partial<PostTypeInput> = {}): PostTypeInput {
 	return {

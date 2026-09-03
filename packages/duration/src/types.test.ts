@@ -9,11 +9,11 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { DurationInput, DurationString } from "./types";
-import type { DurationUnit, DurationUnitShort } from "./units";
+import type { DurationInput, DurationString } from "./types.js";
+import type { DurationUnit, DurationUnitShort } from "./units.js";
 
-import { toMs } from "./to-ms";
-import { toSeconds } from "./to-seconds";
+import { toMs } from "./to-ms.js";
+import { toSeconds } from "./to-seconds.js";
 
 describe("DurationString", () => {
 	test("accepts every long spelling after a single space", () => {

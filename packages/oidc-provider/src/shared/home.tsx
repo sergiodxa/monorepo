@@ -17,12 +17,12 @@ import { createAction } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 
-import Brand from "../branding/models/brand";
-import Client from "../clients/models/client";
-import routes from "../routes";
-import Subject from "../subjects/models/subject";
+import Brand from "../branding/models/brand.js";
+import Client from "../clients/models/client.js";
+import routes from "../routes.js";
+import Subject from "../subjects/models/subject.js";
 
-import { Layout } from "./layout";
+import { Layout } from "./layout.js";
 
 /**
  * `GET /` action rendering the tenant home page with live client/user counts.

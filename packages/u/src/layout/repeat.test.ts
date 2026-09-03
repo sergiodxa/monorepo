@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { repeat } from "./repeat";
+import { repeat } from "./repeat.js";
 
 describe("repeat", () => {
 	test("numeric count with a numeric track defaults to fr units", () => {

@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { objectPosition } from "./object-position";
+import { objectPosition } from "./object-position.js";
 
 describe("objectPosition", () => {
 	test("defaults to 'center'", async () => {

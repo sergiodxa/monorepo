@@ -21,7 +21,7 @@ import { bs, is, m, p } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /** Semantic color role {@link Meter.Indicator} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Meter.Color = "neutral";

@@ -12,9 +12,9 @@
 
 import * as jose from "jose";
 
-import type { KeyStorage } from "./key-storage";
+import type { KeyStorage } from "./key-storage.js";
 
-import * as SignatureAlgorithm from "./algorithm";
+import * as SignatureAlgorithm from "./algorithm.js";
 
 /**
  * Prefix every stored signing key is written under.

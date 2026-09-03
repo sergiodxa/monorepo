@@ -13,7 +13,7 @@ import { failure, isFailure, success, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { url } from "remix/data-schema/checks";
 
-import { nonJsonMediaType } from "./content-type";
+import { nonJsonMediaType } from "./content-type.js";
 
 /** Path the management API serves one subject at, with the id appended to it. */
 const SUBJECT_PATH = "/api/subjects";

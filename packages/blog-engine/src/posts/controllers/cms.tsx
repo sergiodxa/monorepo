@@ -16,21 +16,21 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
-import { requirePermission } from "../../auth/middleware/require-permission";
+import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
+import { requirePermission } from "../../auth/middleware/require-permission.js";
 import {
 	PostType,
 	type FieldDefinition,
 	type PostTypeDefinition,
-} from "../../post-types/models/post-type";
-import routes from "../../routes";
-import { Settings } from "../../settings/models/settings";
-import { CmsLayout } from "../../shared/components/cms-layout";
-import * as s from "../../shared/components/styles";
-import { type Permission } from "../../shared/permissions";
-import { entryText, fieldText } from "../../shared/text";
-import { createMetaCodec, type PostMetaValues } from "../models/meta-codec";
-import { Post } from "../models/post";
+} from "../../post-types/models/post-type.js";
+import routes from "../../routes.js";
+import { Settings } from "../../settings/models/settings.js";
+import { CmsLayout } from "../../shared/components/cms-layout.js";
+import * as s from "../../shared/components/styles.js";
+import { type Permission } from "../../shared/permissions.js";
+import { entryText, fieldText } from "../../shared/text.js";
+import { createMetaCodec, type PostMetaValues } from "../models/meta-codec.js";
+import { Post } from "../models/post.js";
 
 /**
  * Derives a URL slug from a title (lowercased, non-alphanumerics collapsed to

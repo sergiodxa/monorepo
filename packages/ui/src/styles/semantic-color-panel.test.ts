@@ -10,7 +10,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
  */
 import { describe, expect, test } from "vitest";
 
-import { semanticColorPanel } from "./semantic-color-panel";
+import { semanticColorPanel } from "./semantic-color-panel.js";
 
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;

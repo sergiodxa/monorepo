@@ -7,12 +7,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createMetaCodec } from "../../posts/models/meta-codec";
+import { createMetaCodec } from "../../posts/models/meta-codec.js";
 
-import type { ArticleMeta } from "./article";
+import type { ArticleMeta } from "./article.js";
 
-import { ARTICLE_FIELDS } from "./article";
-import { ARTICLE_DEFINITION } from "./article";
+import { ARTICLE_FIELDS } from "./article.js";
+import { ARTICLE_DEFINITION } from "./article.js";
 
 describe("built-in article type", () => {
 	test("seeded fields match the ArticleMeta interface", () => {

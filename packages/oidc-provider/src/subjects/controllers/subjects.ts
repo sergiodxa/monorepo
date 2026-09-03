@@ -18,11 +18,11 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
-import { httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks";
-import Subject from "../models/subject";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { isResponse, safeJsonParse } from "../../shared/lib/safe-json.js";
+import { httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks.js";
+import Subject from "../models/subject.js";
 
 let UpdateSubjectSchema = s.object({
 	displayName: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),

@@ -16,9 +16,9 @@ import type { Result } from "@sdxc/result";
 import { isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { ConfigPermissionEntry, Grants } from "./permissions";
+import type { ConfigPermissionEntry, Grants } from "./permissions.js";
 
-import { PermissionDeniedError } from "./errors";
+import { PermissionDeniedError } from "./errors.js";
 import {
 	configWouldAdmit,
 	createPermissionSet,
@@ -26,7 +26,7 @@ import {
 	grantsFromConfig,
 	mergeGrants,
 	parseGrants,
-} from "./permissions";
+} from "./permissions.js";
 
 /**
  * Narrow a result to its error, failing the test when it succeeded.

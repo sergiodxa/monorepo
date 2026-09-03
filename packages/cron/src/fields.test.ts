@@ -10,9 +10,9 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { CronFieldSpec } from "./fields";
+import type { CronFieldSpec } from "./fields.js";
 
-import { FIELD_SPECS, isRestrictedField, parseCronField } from "./fields";
+import { FIELD_SPECS, isRestrictedField, parseCronField } from "./fields.js";
 
 /** The spec for one of the five fields, by name, for a readable test setup. */
 function specFor(name: string): CronFieldSpec {

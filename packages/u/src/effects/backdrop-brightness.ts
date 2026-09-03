@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { backdropFilterFunction } from "../internal/backdrop-filter";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
 
 /**
  * Scales the backdrop's lightness — below `1` darkens, above `1` brightens —

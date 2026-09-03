@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export * from "./announcer";
-export * from "./calendar-model";
-export * from "./drag-session";
-export * from "./filter-model";
-export * from "./resize-session";
-export * from "./scroll-follow-model";
-export * from "./selection-model";
-export * from "./toaster";
+export * from "./announcer.js";
+export * from "./calendar-model.js";
+export * from "./drag-session.js";
+export * from "./filter-model.js";
+export * from "./resize-session.js";
+export * from "./scroll-follow-model.js";
+export * from "./selection-model.js";
+export * from "./toaster.js";

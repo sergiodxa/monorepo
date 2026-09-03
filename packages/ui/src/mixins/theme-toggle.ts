@@ -13,8 +13,8 @@ import type { ElementProps, MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { asCommandEvent } from "../utils/command-event";
-import { writeCookie } from "../utils/write-cookie";
+import { asCommandEvent } from "../utils/command-event.js";
+import { writeCookie } from "../utils/write-cookie.js";
 
 /**
  * Cookie {@link themeToggle} persists the active mode under by default, so

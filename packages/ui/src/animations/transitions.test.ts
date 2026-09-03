@@ -11,8 +11,8 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { durations, easings } from "./tokens";
-import { enterExit, fade, slide, zoom } from "./transitions";
+import { durations, easings } from "./tokens.js";
+import { enterExit, fade, slide, zoom } from "./transitions.js";
 
 const DEFAULT_SELECTOR = "&[open], &:popover-open";
 

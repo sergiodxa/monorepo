@@ -7,13 +7,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { forcedColorAdjust } from "../a11y/forced-color-adjust";
-import { bg } from "../color/bg";
-import { serialize } from "../internal/serialize";
-import { hover } from "../state/hover";
+import { forcedColorAdjust } from "../a11y/forced-color-adjust.js";
+import { bg } from "../color/bg.js";
+import { serialize } from "../internal/serialize.js";
+import { hover } from "../state/hover.js";
 
-import { forcedColors } from "./forced-colors";
-import { media } from "./media";
+import { forcedColors } from "./forced-colors.js";
+import { media } from "./media.js";
 
 describe("forcedColors", () => {
 	test("nests the wrapped utility's styles under '@media (forced-colors: active)'", async () => {

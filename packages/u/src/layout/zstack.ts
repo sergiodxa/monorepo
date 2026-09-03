@@ -7,14 +7,14 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { if as ifUtility } from "../general/if";
-import { compose, utility } from "../internal/descriptor";
-import { when } from "../state/when";
+import { if as ifUtility } from "../general/if.js";
+import { compose, utility } from "../internal/descriptor.js";
+import { when } from "../state/when.js";
 
-import type { AlignItemsValue } from "./items";
+import type { AlignItemsValue } from "./items.js";
 
-import { grid } from "./grid";
-import { items } from "./items";
+import { grid } from "./grid.js";
+import { items } from "./items.js";
 
 export interface ZStackOptions {
 	/** Sets `align-items`. */

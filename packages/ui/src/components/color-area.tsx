@@ -22,8 +22,8 @@ import { when } from "@sdxc/u/state";
 import { scaleProperty } from "@sdxc/u/transform";
 import { attrs } from "remix/ui";
 
-import { mergeStyle } from "../utils/merge-style";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { mergeStyle } from "../utils/merge-style.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /** Hue, in degrees, {@link ColorArea} falls back to when `hue` is omitted. */
 const DEFAULT_HUE = 0;

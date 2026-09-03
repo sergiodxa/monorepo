@@ -18,11 +18,11 @@ import { active, disabled, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 import {
 	warnIfNoAccessibleLabel,
 	warnIfNoAccessibleName,
-} from "../utils/warn-if-no-accessible-name";
+} from "../utils/warn-if-no-accessible-name.js";
 
 /**
  * `role="menubar"` applied to {@link Menubar}'s host through {@link attrs}

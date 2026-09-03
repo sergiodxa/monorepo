@@ -10,10 +10,10 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { RateLimiterBinding } from "./cloudflare";
+import type { RateLimiterBinding } from "./cloudflare.js";
 
-import { CloudflareAdapter } from "./cloudflare";
-import { RateLimitError } from "./rate-limit-error";
+import { CloudflareAdapter } from "./cloudflare.js";
+import { RateLimitError } from "./rate-limit-error.js";
 
 /** An instant aligned to a 10 second window, so a case starts at a boundary. */
 const WINDOW_START = 1_700_000_000_000;

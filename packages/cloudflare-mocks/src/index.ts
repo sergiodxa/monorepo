@@ -6,17 +6,20 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export type { AnalyticsEngineMock } from "./analytics-engine";
-export type { D1DatabaseMockOptions } from "./d1";
+export type { AnalyticsEngineMock } from "./analytics-engine.js";
+export type { D1DatabaseMockOptions } from "./d1.js";
 export type {
 	DurableObjectNamespaceMock,
 	DurableObjectStubFactory,
-} from "./durable-object-namespace";
-export type { DurableObjectStateMock, DurableObjectStateMockOptions } from "./durable-object-state";
-export type { EnvMockOptions } from "./env";
-export type { ExecutionContextMock, ExecutionContextMockOptions } from "./execution-context";
-export type { FetcherHandler, FetcherMock } from "./fetcher";
-export type { KVNamespaceMockOptions } from "./kv";
+} from "./durable-object-namespace.js";
+export type {
+	DurableObjectStateMock,
+	DurableObjectStateMockOptions,
+} from "./durable-object-state.js";
+export type { EnvMockOptions } from "./env.js";
+export type { ExecutionContextMock, ExecutionContextMockOptions } from "./execution-context.js";
+export type { FetcherHandler, FetcherMock } from "./fetcher.js";
+export type { KVNamespaceMockOptions } from "./kv.js";
 export type {
 	DeferredWork,
 	QueueConsumeOptions,
@@ -25,24 +28,24 @@ export type {
 	QueueMessageRecord,
 	QueueMock,
 	QueueMockOptions,
-} from "./queue";
-export type { R2BucketMock } from "./r2";
-export type { RateLimitMock, RateLimitMockOptions } from "./rate-limit";
-export type { SecretsStoreSecretMock, SecretsStoreSecretMockOptions } from "./secrets-store";
-export type { SendEmailMock, SendEmailMockOptions, SentEmailRecord } from "./send-email";
-export type { SqlStorageMockOptions } from "./sql-storage";
+} from "./queue.js";
+export type { R2BucketMock } from "./r2.js";
+export type { RateLimitMock, RateLimitMockOptions } from "./rate-limit.js";
+export type { SecretsStoreSecretMock, SecretsStoreSecretMockOptions } from "./secrets-store.js";
+export type { SendEmailMock, SendEmailMockOptions, SentEmailRecord } from "./send-email.js";
+export type { SqlStorageMockOptions } from "./sql-storage.js";
 
-export { createAnalyticsEngine } from "./analytics-engine";
-export { createD1Database } from "./d1";
-export { createDurableObjectNamespace } from "./durable-object-namespace";
-export { createDurableObjectState } from "./durable-object-state";
-export { createEnv } from "./env";
-export { createExecutionContext } from "./execution-context";
-export { createFetcher } from "./fetcher";
-export { createKVNamespace } from "./kv";
-export { createQueue } from "./queue";
-export { createR2Bucket } from "./r2";
-export { createRateLimit } from "./rate-limit";
-export { createSecretsStoreSecret } from "./secrets-store";
-export { createSendEmail } from "./send-email";
-export { createSqlStorage, MockSqlStorageCursor, MockSqlStorageStatement } from "./sql-storage";
+export { createAnalyticsEngine } from "./analytics-engine.js";
+export { createD1Database } from "./d1.js";
+export { createDurableObjectNamespace } from "./durable-object-namespace.js";
+export { createDurableObjectState } from "./durable-object-state.js";
+export { createEnv } from "./env.js";
+export { createExecutionContext } from "./execution-context.js";
+export { createFetcher } from "./fetcher.js";
+export { createKVNamespace } from "./kv.js";
+export { createQueue } from "./queue.js";
+export { createR2Bucket } from "./r2.js";
+export { createRateLimit } from "./rate-limit.js";
+export { createSecretsStoreSecret } from "./secrets-store.js";
+export { createSendEmail } from "./send-email.js";
+export { createSqlStorage, MockSqlStorageCursor, MockSqlStorageStatement } from "./sql-storage.js";

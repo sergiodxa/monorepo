@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { backdropFilterFunction } from "../internal/backdrop-filter";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
 
 /**
  * Fades what shows through the element's translucent background, taking CSS's

@@ -14,11 +14,11 @@ import { auth, Auth, createSessionAuthScheme } from "remix/middleware/auth";
 import { createContextKey } from "remix/router";
 import { Session } from "remix/session";
 
-import type { SelectUser } from "../../database/schema";
-import type { Permission } from "../../shared/permissions";
+import type { SelectUser } from "../../database/schema.js";
+import type { Permission } from "../../shared/permissions.js";
 
-import { Role } from "../../roles/models/role";
-import { User } from "../../users/models/user";
+import { Role } from "../../roles/models/role.js";
+import { User } from "../../users/models/user.js";
 
 /** The session key holding the signed-in user's local row id. */
 const USER_ID_KEY = "userId";

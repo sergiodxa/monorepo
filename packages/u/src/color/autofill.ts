@@ -8,12 +8,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { var as varUtility } from "../general/var";
-import { utility } from "../internal/descriptor";
-import { color } from "../internal/tokens";
-import { when } from "../state/when";
+import { var as varUtility } from "../general/var.js";
+import { utility } from "../internal/descriptor.js";
+import { color } from "../internal/tokens.js";
+import { when } from "../state/when.js";
 
 /**
  * Overrides the browser's autofill background and text color under

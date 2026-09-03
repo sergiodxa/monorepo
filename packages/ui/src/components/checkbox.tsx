@@ -19,8 +19,8 @@ import { block, center, hidden, hstack, relative, shrink } from "@sdxc/u/layout"
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 /** Semantic color role {@link Checkbox} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Checkbox.Color = "neutral";

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollMargin } from "./scroll-margin";
+import { scrollMargin } from "./scroll-margin.js";
 
 describe("scrollMargin", () => {
 	test("one value applies uniformly", async () => {

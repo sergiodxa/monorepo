@@ -8,7 +8,7 @@
 import { generateUUID } from "@sdxc/uuid";
 import { describe, expect, test } from "vitest";
 
-import { encode } from "./lib/base32";
+import { encode } from "./lib/base32.js";
 import {
 	EmptyPrefixError,
 	InvalidBase32CharacterError,
@@ -18,9 +18,9 @@ import {
 	MissingSeparatorError,
 	PrefixMismatchError,
 	TypeIdError,
-} from "./lib/errors";
+} from "./lib/errors.js";
 
-import { typeid, TypeID } from "./index";
+import { typeid, TypeID } from "./index.js";
 
 describe(TypeID.name, () => {
 	test("creates a TypeID from a UUID", () => {

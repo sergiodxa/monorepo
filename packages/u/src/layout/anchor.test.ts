@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { anchor } from "./anchor";
+import { anchor } from "./anchor.js";
 
 describe("anchor", () => {
 	test("prefixes the anchor name with --", () => {

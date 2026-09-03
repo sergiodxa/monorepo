@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { colorScheme } from "./color-scheme";
+import { colorScheme } from "./color-scheme.js";
 
 describe("colorScheme", () => {
 	test("defaults to supporting both schemes", async () => {

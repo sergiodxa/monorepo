@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { weight } from "./weight";
+import { weight } from "./weight.js";
 
 describe("weight", () => {
 	test("every named alias resolves its numeric weight", async () => {

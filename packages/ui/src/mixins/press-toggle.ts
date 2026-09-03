@@ -14,7 +14,7 @@ import type { MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { DISABLED_SELECTOR } from "../utils/disabled-selector";
+import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 
 /**
  * Attribute {@link pressToggle} reads and flips on every click — the same

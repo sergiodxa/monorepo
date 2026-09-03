@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
-import type { AlignItemsValue } from "./items";
+import type { AlignItemsValue } from "./items.js";
 
 /** Accepted `align-self` keywords: {@link AlignItemsValue} plus `"auto"` to defer to the container's `align-items`. */
 export type AlignSelfValue = AlignItemsValue | "auto";

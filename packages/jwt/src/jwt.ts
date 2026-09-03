@@ -16,9 +16,9 @@ import type { DurationString } from "@sdxc/duration";
 import { toSeconds } from "@sdxc/duration";
 import * as jose from "jose";
 
-import type { JWK } from "./jwk";
+import type { JWK } from "./jwk.js";
 
-import { ObjectParser } from "./lib/parser";
+import { ObjectParser } from "./lib/parser.js";
 
 /** Milliseconds in a second, for converting between epoch claims and `Date`. */
 const MS_PER_SECOND = 1000;

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { FontFamilyName } from "../types";
+import type { FontFamilyName } from "../types.js";
 
-import { utility } from "../internal/descriptor";
-import { font as fontToken } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { font as fontToken } from "../internal/tokens.js";
 
 /**
  * Applies `font-family` from the named font scale (`sans`, `serif`, `mono`,

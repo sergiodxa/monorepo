@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { BlurName } from "../types";
+import type { BlurName } from "../types.js";
 
-import { filterFunction } from "../internal/filter";
-import { blur as blurToken } from "../internal/tokens";
+import { filterFunction } from "../internal/filter.js";
+import { blur as blurToken } from "../internal/tokens.js";
 
 /**
  * Applies a blur from the blur scale by writing only its own

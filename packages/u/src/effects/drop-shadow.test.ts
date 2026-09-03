@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { dropShadow } from "./drop-shadow";
+import { dropShadow } from "./drop-shadow.js";
 
 describe("dropShadow", () => {
 	test("no-arg resolves the default offsets off the spacing scale and a translucent black", async () => {

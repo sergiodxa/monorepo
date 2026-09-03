@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { shrink } from "./shrink";
+import { shrink } from "./shrink.js";
 
 describe("shrink", () => {
 	test("no-arg defaults to 0", async () => {

@@ -17,8 +17,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { attrs } from "remix/ui";
 
-import { DateField } from "./date-field";
-import { DatePicker } from "./date-picker";
+import { DateField } from "./date-field.js";
+import { DatePicker } from "./date-picker.js";
 
 /**
  * Prop types for {@link DateRangePicker} and its compound parts. The

@@ -10,10 +10,10 @@
 import * as s from "remix/data-schema";
 import { Session } from "remix/session";
 
-import { AccessToken } from "./access-token";
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { accessTokenExpiry, signedExpiry, spent } from "./expiry";
-import { IdToken } from "./id-token";
+import { AccessToken } from "./access-token.js";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { accessTokenExpiry, signedExpiry, spent } from "./expiry.js";
+import { IdToken } from "./id-token.js";
 
 /**
  * The single session key this package writes, so an app reading the session

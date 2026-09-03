@@ -7,7 +7,7 @@
 
 import { Location } from "@sdxc/location";
 
-import * as ContentType from "./content-type";
+import * as ContentType from "./content-type.js";
 
 /**
  * Creates a Response with JSON content.

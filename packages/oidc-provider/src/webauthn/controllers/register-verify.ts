@@ -19,16 +19,16 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import TenantMeta from "../../management/models/tenant-meta";
-import AuthorizationCode from "../../oauth/models/authorization-code";
-import Session from "../../oauth/models/session";
-import routes from "../../routes";
-import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
-import { generatePasskeyName } from "../../shared/lib/user-agent";
-import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit";
-import Subject from "../../subjects/models/subject";
-import Passkey from "../models/passkey";
-import WebAuthnChallenge from "../models/webauthn-challenge";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import AuthorizationCode from "../../oauth/models/authorization-code.js";
+import Session from "../../oauth/models/session.js";
+import routes from "../../routes.js";
+import { isResponse, safeJsonParse } from "../../shared/lib/safe-json.js";
+import { generatePasskeyName } from "../../shared/lib/user-agent.js";
+import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit.js";
+import Subject from "../../subjects/models/subject.js";
+import Passkey from "../models/passkey.js";
+import WebAuthnChallenge from "../models/webauthn-challenge.js";
 
 /** Validation schema for the WebAuthn registration (attestation) response body. */
 let RequestSchema = s.object({

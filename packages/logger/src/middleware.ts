@@ -13,7 +13,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { Logger } from "./request-logger";
+import { Logger } from "./request-logger.js";
 
 declare module "remix/router" {
 	interface RequestContext {

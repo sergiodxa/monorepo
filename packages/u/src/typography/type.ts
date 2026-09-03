@@ -2,12 +2,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { TextSizeName } from "../types";
+import type { TextSizeName } from "../types.js";
 
-import { compose } from "../internal/descriptor";
+import { compose } from "../internal/descriptor.js";
 
-import { font } from "./font";
-import { text } from "./text";
+import { font } from "./font.js";
+import { text } from "./text.js";
 
 /**
  * Combines {@link text}'s `font-size`/`line-height` pair with the base sans

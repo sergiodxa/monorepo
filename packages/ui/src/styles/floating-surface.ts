@@ -14,7 +14,7 @@ import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { combine, raw } from "@sdxc/u/general";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * Composes the shared floating-surface border, tint, and elevation shadow as

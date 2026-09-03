@@ -16,13 +16,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { failure, isFailure, success } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { SuiteResult } from "./diagnostics";
-import type { Grants } from "./permissions";
-import type { Plugin } from "./plugin";
-import type { Value } from "./values";
+import type { SuiteResult } from "./diagnostics.js";
+import type { Grants } from "./permissions.js";
+import type { Plugin } from "./plugin.js";
+import type { Value } from "./values.js";
 
-import { PermissionDeniedError, ToolError } from "./errors";
-import { runSuite } from "./runner";
+import { PermissionDeniedError, ToolError } from "./errors.js";
+import { runSuite } from "./runner.js";
 
 const CREATED_DIRS: string[] = [];
 

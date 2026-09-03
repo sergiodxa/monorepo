@@ -11,7 +11,7 @@ import type { Handle } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { render } from "./render";
+import { render } from "./render.js";
 
 namespace InviteBody {
 	export interface Props {

@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import * as ContentType from "./content-type";
-import { formData, formURLEncoded, json, text, xml } from "./request";
+import * as ContentType from "./content-type.js";
+import { formData, formURLEncoded, json, text, xml } from "./request.js";
 
 describe(json, () => {
 	test("creates request with JSON content-type", () => {

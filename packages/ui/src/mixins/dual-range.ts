@@ -11,7 +11,7 @@ import type { MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { findPairedRangeInputs } from "../utils/paired-range-inputs";
+import { findPairedRangeInputs } from "../utils/paired-range-inputs.js";
 
 /**
  * `data-*` attribute a Slider group's paired range inputs carry so

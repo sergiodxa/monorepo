@@ -15,7 +15,7 @@ import type { Middleware } from "remix/router";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { headRequests } from "./head-requests";
+import { headRequests } from "./head-requests.js";
 
 /** Refuses every request with a 401, standing in for an app's auth guard. */
 const requireAuth: Middleware = (_context, _next) => {

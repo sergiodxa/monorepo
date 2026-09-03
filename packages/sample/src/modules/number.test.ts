@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createRandom } from "../random";
+import { createRandom } from "../random.js";
 
-import { createNumberModule } from "./number";
+import { createNumberModule } from "./number.js";
 
 function module(seed: string) {
 	return createNumberModule(createRandom(seed));

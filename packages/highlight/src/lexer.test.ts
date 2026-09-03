@@ -9,11 +9,11 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { Grammar } from "./lexer";
+import type { Grammar } from "./lexer.js";
 
-import { compose, scan } from "./lexer";
+import { compose, scan } from "./lexer.js";
 
-import { languages } from "./index";
+import { languages } from "./index.js";
 
 const quoted: Grammar = {
 	main: [

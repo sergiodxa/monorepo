@@ -9,7 +9,7 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { decodeEntities } from "./decode-entities";
+import { decodeEntities } from "./decode-entities.js";
 
 describe("decodeEntities", () => {
 	test("decodes the five predefined entities", () => {

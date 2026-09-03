@@ -11,11 +11,11 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode, SpecFileNode, StatementNode } from "./ast";
-import type { ParseError } from "./errors";
+import type { BlockNode, SpecFileNode, StatementNode } from "./ast.js";
+import type { ParseError } from "./errors.js";
 
-import { parse } from "./parser";
-import { positionAt } from "./source";
+import { parse } from "./parser.js";
+import { positionAt } from "./source.js";
 
 function parseOk(text: string): SpecFileNode {
 	let result = parse({ path: "test.spec", text });

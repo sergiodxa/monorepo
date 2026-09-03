@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnalyticsSink } from "../../index";
+import type { AnalyticsSink } from "../../index.js";
 
-import middleware from "../lib/middleware";
+import middleware from "../lib/middleware.js";
 
 /**
  * Reaches consuming projects through their own compilation of this

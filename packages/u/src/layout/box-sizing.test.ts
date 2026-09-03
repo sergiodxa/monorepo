@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { boxSizing } from "./box-sizing";
+import { boxSizing } from "./box-sizing.js";
 
 describe("boxSizing", () => {
 	test("'border-box'", async () => {

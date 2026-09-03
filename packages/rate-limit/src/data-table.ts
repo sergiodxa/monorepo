@@ -14,11 +14,11 @@ import type { Database, TableRow } from "remix/data-table";
 import { failure, success } from "@sdxc/result";
 import { and, column as c, eq, gte, lt, table } from "remix/data-table";
 
-import type { Adapter, RateLimitDecision } from "./types";
+import type { Adapter, RateLimitDecision } from "./types.js";
 
-import { normalizeCost } from "./cost";
-import { RateLimitError } from "./rate-limit-error";
-import { retryAfterSeconds, windowLengthMs } from "./window";
+import { normalizeCost } from "./cost.js";
+import { RateLimitError } from "./rate-limit-error.js";
+import { retryAfterSeconds, windowLengthMs } from "./window.js";
 
 /**
  * One counted attempt: which bucket it belongs to, what it cost, and when it

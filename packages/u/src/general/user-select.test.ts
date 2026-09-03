@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { userSelect } from "./user-select";
+import { userSelect } from "./user-select.js";
 
 describe("userSelect", () => {
 	test("no-arg defaults to 'none'", async () => {

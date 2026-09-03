@@ -33,10 +33,10 @@ export type {
 	UsageApi,
 	WebhookApi,
 	WebhookReference,
-} from "./core/contract";
-export type { BillingErrorCode, BillingErrorOptions } from "./core/errors";
-export type { Secret } from "./core/secret";
-export type { OptionalCapability } from "./core/supports";
+} from "./core/contract.js";
+export type { BillingErrorCode, BillingErrorOptions } from "./core/errors.js";
+export type { Secret } from "./core/secret.js";
+export type { OptionalCapability } from "./core/supports.js";
 export type {
 	BillingEvent,
 	BillingEventPayload,
@@ -66,7 +66,7 @@ export type {
 	UsageIngest,
 	UsageMetadata,
 	UsageRecord,
-} from "./core/types";
+} from "./core/types.js";
 export type {
 	BillingEventOf,
 	BillingEventType,
@@ -76,9 +76,9 @@ export type {
 	WebhookDelivery,
 	WebhookLogger,
 	WebhookStore,
-} from "./webhooks";
+} from "./webhooks/index.js";
 
-export { BillingError } from "./core/errors";
-export { OPTIONAL_CAPABILITIES, supports } from "./core/supports";
-export { DEFAULT_PAGE_SIZE, minorUnitDigits } from "./core/types";
-export { BillingWebhook, MemoryWebhookStore } from "./webhooks";
+export { BillingError } from "./core/errors.js";
+export { OPTIONAL_CAPABILITIES, supports } from "./core/supports.js";
+export { DEFAULT_PAGE_SIZE, minorUnitDigits } from "./core/types.js";
+export { BillingWebhook, MemoryWebhookStore } from "./webhooks/index.js";

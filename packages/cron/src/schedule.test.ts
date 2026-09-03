@@ -10,8 +10,8 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { InvalidCronExpression } from "./invalid-cron-expression";
-import { Schedule } from "./schedule";
+import { InvalidCronExpression } from "./invalid-cron-expression.js";
+import { Schedule } from "./schedule.js";
 
 /** Parse an expression, failing the test if it was rejected. */
 function scheduleFor(expression: string): Schedule {

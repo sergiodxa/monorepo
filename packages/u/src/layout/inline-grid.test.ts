@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { inlineGrid } from "./inline-grid";
+import { inlineGrid } from "./inline-grid.js";
 
 describe("inlineGrid", () => {
 	test("sets display: inline-grid", async () => {

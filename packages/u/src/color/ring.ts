@@ -2,12 +2,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { var as varUtility } from "../general/var";
-import { utility } from "../internal/descriptor";
-import { color } from "../internal/tokens";
-import { focusVisible } from "../state/focus-visible";
+import { var as varUtility } from "../general/var.js";
+import { utility } from "../internal/descriptor.js";
+import { color } from "../internal/tokens.js";
+import { focusVisible } from "../state/focus-visible.js";
 
 /**
  * Applies a focus ring already scoped to `&:focus-visible`, so it shows for

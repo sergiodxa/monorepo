@@ -19,7 +19,7 @@ import type { MatchParams } from "remix/route-pattern/match";
 
 import { createHref } from "remix/route-pattern/href";
 
-import type { AnyRequestContext, ResourceContext } from "./context";
+import type { AnyRequestContext, ResourceContext } from "./context.js";
 
 /** A value a handler may return directly or as a promise. */
 type Awaitable<T> = T | Promise<T>;

@@ -10,13 +10,13 @@ import type { Handle } from "remix/ui";
 
 import { MarkdownView } from "@sdxc/markdown/client";
 
-import type { PostTypeDefinition } from "../../post-types/models/post-type";
-import type { PostMetaValues } from "../../posts/models/meta-codec";
+import type { PostTypeDefinition } from "../../post-types/models/post-type.js";
+import type { PostMetaValues } from "../../posts/models/meta-codec.js";
 
-import { parseMarkdown } from "../markdown";
-import { asText } from "../text";
+import { parseMarkdown } from "../markdown.js";
+import { asText } from "../text.js";
 
-import * as s from "./styles";
+import * as s from "./styles.js";
 
 /** A summary row for post list views. */
 export interface PostListItem {

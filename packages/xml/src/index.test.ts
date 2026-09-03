@@ -8,7 +8,7 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { XML, XMLParseError, XMLStringifyError } from "./index";
+import { XML, XMLParseError, XMLStringifyError } from "./index.js";
 
 describe("XML.parse", () => {
 	test("returns an XML instance for RSS-like XML", () => {

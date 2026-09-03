@@ -9,8 +9,8 @@
 import { Base64Url } from "@sdxc/crypto";
 import * as Algorithm from "@sdxc/jwt/algorithm";
 
-import type { Dataset } from "../dataset";
-import type { Random } from "../random";
+import type { Dataset } from "../dataset.js";
+import type { Random } from "../random.js";
 
 /**
  * The domains generated addresses and links use, reserved by RFC 2606 for

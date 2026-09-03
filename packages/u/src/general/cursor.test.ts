@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { cursor } from "./cursor";
+import { cursor } from "./cursor.js";
 
 describe("cursor", () => {
 	test("pointer", async () => {

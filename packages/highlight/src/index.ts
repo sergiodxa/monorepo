@@ -6,29 +6,29 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Token } from "./lexer";
+import type { Grammar, Token } from "./lexer.js";
 
-import { bash } from "./grammars/bash";
-import { css } from "./grammars/css";
-import { diff } from "./grammars/diff";
-import { graphql } from "./grammars/graphql";
-import { html } from "./grammars/html";
-import { http } from "./grammars/http";
-import { javascript } from "./grammars/javascript";
-import { json } from "./grammars/json";
-import { jsx } from "./grammars/jsx";
-import { markdown } from "./grammars/markdown";
-import { plain } from "./grammars/plain";
-import { python } from "./grammars/python";
-import { ruby } from "./grammars/ruby";
-import { sql } from "./grammars/sql";
-import { tsx } from "./grammars/tsx";
-import { typescript } from "./grammars/typescript";
-import { yaml } from "./grammars/yaml";
-import { scan } from "./lexer";
+import { bash } from "./grammars/bash.js";
+import { css } from "./grammars/css.js";
+import { diff } from "./grammars/diff.js";
+import { graphql } from "./grammars/graphql.js";
+import { html } from "./grammars/html.js";
+import { http } from "./grammars/http.js";
+import { javascript } from "./grammars/javascript.js";
+import { json } from "./grammars/json.js";
+import { jsx } from "./grammars/jsx.js";
+import { markdown } from "./grammars/markdown.js";
+import { plain } from "./grammars/plain.js";
+import { python } from "./grammars/python.js";
+import { ruby } from "./grammars/ruby.js";
+import { sql } from "./grammars/sql.js";
+import { tsx } from "./grammars/tsx.js";
+import { typescript } from "./grammars/typescript.js";
+import { yaml } from "./grammars/yaml.js";
+import { scan } from "./lexer.js";
 
-export type { Grammar, Rule, Token } from "./lexer";
-export { compose, scan } from "./lexer";
+export type { Grammar, Rule, Token } from "./lexer.js";
+export { compose, scan } from "./lexer.js";
 
 /**
  * Every language a fence can name, by the name it registers under.

@@ -10,9 +10,9 @@
 import { createContextKey } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
-import type { NonRetriable, Retry } from "./errors";
+import type { NonRetriable, Retry } from "./errors.js";
 
-import { createJobContext, Job, job, JobContext, jobs } from "./index";
+import { createJobContext, Job, job, JobContext, jobs } from "./index.js";
 
 let map = jobs({ clean: job({ cron: "0 0 * * *", monitorId: "monitor-1" }) });
 

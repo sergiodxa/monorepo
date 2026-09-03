@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { parseLinkHeader, serializeLink, serializeLinkHeader } from "./link";
+import { parseLinkHeader, serializeLink, serializeLinkHeader } from "./link.js";
 
 describe("parseLinkHeader", () => {
 	test("returns nothing for an absent header", () => {

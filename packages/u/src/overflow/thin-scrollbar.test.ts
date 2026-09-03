@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { thinScrollbar } from "./thin-scrollbar";
+import { thinScrollbar } from "./thin-scrollbar.js";
 
 describe("thinScrollbar", () => {
 	test("requests a thin, layout-stable scrollbar", async () => {

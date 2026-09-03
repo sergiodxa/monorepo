@@ -17,10 +17,10 @@ import { Auth, auth } from "remix/middleware/auth";
 import { RequestContext } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import { AccessToken } from "./access-token";
-import { AuthError } from "./auth-error";
-import { Issuer } from "./issuer";
-import { ResourceServer } from "./resource-server";
+import { AccessToken } from "./access-token.js";
+import { AuthError } from "./auth-error.js";
+import { Issuer } from "./issuer.js";
+import { ResourceServer } from "./resource-server.js";
 
 /** The issuer every test in this file is pointed at. */
 const ISSUER = "https://auth.test";

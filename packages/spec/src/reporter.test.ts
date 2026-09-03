@@ -12,8 +12,8 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import type { Sink, SuiteResult, TestResult } from "./diagnostics";
-import type { SourceFile } from "./source";
+import type { Sink, SuiteResult, TestResult } from "./diagnostics.js";
+import type { SourceFile } from "./source.js";
 
 import {
 	ExpectationError,
@@ -23,8 +23,8 @@ import {
 	SpecError,
 	ToolError,
 	WorkspaceEscapeError,
-} from "./errors";
-import { reportFatal, reportSuite } from "./reporter";
+} from "./errors.js";
+import { reportFatal, reportSuite } from "./reporter.js";
 
 class BufferSink implements Sink {
 	text = "";

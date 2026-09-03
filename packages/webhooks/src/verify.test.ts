@@ -15,8 +15,8 @@ import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
-import type { ReplayStore } from "./replay-store";
-import type { SignedDelivery } from "./sign";
+import type { ReplayStore } from "./replay-store.js";
+import type { SignedDelivery } from "./sign.js";
 
 import {
 	DuplicateDeliveryError,
@@ -29,9 +29,9 @@ import {
 	SignatureMismatchError,
 	StaleTimestampError,
 	UnreadableBodyError,
-} from "./errors";
-import { sign } from "./sign";
-import { verify } from "./verify";
+} from "./errors.js";
+import { sign } from "./sign.js";
+import { verify } from "./verify.js";
 
 /**
  * Test vector published with the Standard Webhooks reference implementation, used

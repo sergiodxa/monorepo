@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createURLChildren } from "./create-url-children";
+import { createURLChildren } from "./create-url-children.js";
 
 describe("createURLChildren", () => {
 	test("returns only loc when no optional fields are present", () => {

@@ -12,13 +12,13 @@ import type { Result } from "@sdxc/result";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { Billing } from "../core/contract";
-import type { OptionalCapability } from "../core/supports";
-import type { Currency, Price } from "../core/types";
+import type { Billing } from "../core/contract.js";
+import type { OptionalCapability } from "../core/supports.js";
+import type { Currency, Price } from "../core/types.js";
 
-import { BillingError } from "../core/errors";
-import { OPTIONAL_CAPABILITIES, supports } from "../core/supports";
-import { minorUnitDigits } from "../core/types";
+import { BillingError } from "../core/errors.js";
+import { OPTIONAL_CAPABILITIES, supports } from "../core/supports.js";
+import { minorUnitDigits } from "../core/types.js";
 
 /** Page size the paging assertions ask for, small enough to force a second page. */
 const SMALL_PAGE = 2;

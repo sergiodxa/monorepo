@@ -14,13 +14,13 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { Bytes } from "./lib/bytes";
+import type { Bytes } from "./lib/bytes.js";
 
-import { Base64Url } from "./encoding";
-import { CryptoError, MalformedHashError, UnsupportedAlgorithmError } from "./errors";
-import { toBytes } from "./lib/bytes";
-import { randomBytes } from "./random";
-import { timingSafeEqual } from "./timing-safe-equal";
+import { Base64Url } from "./encoding.js";
+import { CryptoError, MalformedHashError, UnsupportedAlgorithmError } from "./errors.js";
+import { toBytes } from "./lib/bytes.js";
+import { randomBytes } from "./random.js";
+import { timingSafeEqual } from "./timing-safe-equal.js";
 
 /**
  * Current iteration count for new hashes.

@@ -13,14 +13,14 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { InvalidCursorError, InvalidOrderingError } from "./errors";
+import { InvalidCursorError, InvalidOrderingError } from "./errors.js";
 import {
 	buildSeekPredicate,
 	readOrderingValue,
 	reverseOrdering,
 	validateOrdering,
 	zipSeekKeys,
-} from "./keyset";
+} from "./keyset.js";
 
 describe("validateOrdering", () => {
 	test("accepts a sort key followed by a tiebreaker", () => {

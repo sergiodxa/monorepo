@@ -12,7 +12,7 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { precondition, PreconditionFailedError } from "./precondition";
+import { precondition, PreconditionFailedError } from "./precondition.js";
 
 function createRequest(ifMatch?: string): Request {
 	return new Request("https://example.com/article", {

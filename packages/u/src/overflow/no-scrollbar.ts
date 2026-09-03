@@ -2,8 +2,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { compose, utility } from "../internal/descriptor";
-import { when } from "../state/when";
+import { compose, utility } from "../internal/descriptor.js";
+import { when } from "../state/when.js";
 
 /**
  * Hides the scrollbar across Chrome/Safari, legacy Edge, and Firefox, while

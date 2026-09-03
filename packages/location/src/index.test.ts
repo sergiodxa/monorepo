@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { Location } from "./index";
+import { Location } from "./index.js";
 
 describe("Location", () => {
 	describe("constructor", () => {

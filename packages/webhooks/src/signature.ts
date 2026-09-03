@@ -16,8 +16,8 @@ import type { Result } from "@sdxc/result";
 import { hmac } from "@sdxc/crypto";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { MalformedSignatureError, SignatureComputationError } from "./errors";
-import { decodeBase64, encodeBase64 } from "./lib/base64";
+import { MalformedSignatureError, SignatureComputationError } from "./errors.js";
+import { decodeBase64, encodeBase64 } from "./lib/base64.js";
 
 /** Scheme tag for a symmetric HMAC-SHA256 signature, the only one this package produces. */
 const SYMMETRIC_SCHEME = "v1";

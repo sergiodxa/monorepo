@@ -11,8 +11,8 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import { InvalidDurationError } from "./invalid-duration-error";
-import { longUnitToMs, shortUnitToMs } from "./units";
+import { InvalidDurationError } from "./invalid-duration-error.js";
+import { longUnitToMs, shortUnitToMs } from "./units.js";
 
 /**
  * An amount, one space, then a long unit spelling: `"5 minutes"`. The amount is

@@ -16,9 +16,9 @@ import { randomToken } from "@sdxc/crypto";
 import { isFailure, unwrap } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
 
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { hashSecret, spendVerificationCost, verifySecret } from "../../shared/lib/password-hash";
-import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { hashSecret, spendVerificationCost, verifySecret } from "../../shared/lib/password-hash.js";
+import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp.js";
 
 /** Entropy behind a generated secret, in bytes. */
 const SECRET_BYTES = 32;

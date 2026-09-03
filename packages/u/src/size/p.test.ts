@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { p } from "./p";
+import { p } from "./p.js";
 
 describe("p", () => {
 	test("one value applies uniformly", async () => {

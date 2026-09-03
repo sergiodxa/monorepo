@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Money } from "../../core/types";
+import type { Money } from "../../core/types.js";
 
 /**
  * A one-time sale. The price, title, and description are configuration because

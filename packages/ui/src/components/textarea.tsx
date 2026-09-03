@@ -19,7 +19,7 @@ import { is, bs, minBs, pi, pb } from "@sdxc/u/size";
 import { when, hover, invalid } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** Semantic color role {@link TextArea} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: TextArea.Color = "neutral";

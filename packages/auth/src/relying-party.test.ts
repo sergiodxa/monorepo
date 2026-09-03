@@ -26,11 +26,11 @@ import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { AuthSession } from "./auth-session";
-import { IdToken } from "./id-token";
-import { Issuer } from "./issuer";
-import { RelyingParty } from "./relying-party";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { AuthSession } from "./auth-session.js";
+import { IdToken } from "./id-token.js";
+import { Issuer } from "./issuer.js";
+import { RelyingParty } from "./relying-party.js";
 
 /** Seconds in an hour, the lifetime every fixture token carries. */
 const ONE_HOUR = 3600;

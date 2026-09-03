@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export * from "./chart-palette";
-export * from "./field-stack-layout";
-export * from "./floating-surface";
-export * from "./graphic-host";
-export * from "./interactive-transition";
-export * from "./legend-toggle";
-export * from "./output-caption-text";
-export * from "./panel-chrome";
-export * from "./range-thumb-appearance";
-export * from "./rtl-aware-gradient-direction";
-export * from "./semantic-color-panel";
+export * from "./chart-palette.js";
+export * from "./field-stack-layout.js";
+export * from "./floating-surface.js";
+export * from "./graphic-host.js";
+export * from "./interactive-transition.js";
+export * from "./legend-toggle.js";
+export * from "./output-caption-text.js";
+export * from "./panel-chrome.js";
+export * from "./range-thumb-appearance.js";
+export * from "./rtl-aware-gradient-direction.js";
+export * from "./semantic-color-panel.js";

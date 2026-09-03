@@ -20,12 +20,12 @@ import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 
-import type { PaginateOptions } from "./headers";
-import type { PagingNames } from "./names";
-import type { KeysetPage, Page } from "./pagination";
+import type { PaginateOptions } from "./headers.js";
+import type { PagingNames } from "./names.js";
+import type { KeysetPage, Page } from "./pagination.js";
 
-import { annotate } from "./headers";
-import { DEFAULT_MAX_PER_PAGE, DEFAULT_PER_PAGE, resolveNames } from "./names";
+import { annotate } from "./headers.js";
+import { DEFAULT_MAX_PER_PAGE, DEFAULT_PER_PAGE, resolveNames } from "./names.js";
 
 /** The paging parameters a request asked for, after validation. */
 export interface PageParams {

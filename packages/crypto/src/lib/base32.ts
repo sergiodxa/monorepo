@@ -13,9 +13,9 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import { InvalidEncodingError } from "../errors";
+import { InvalidEncodingError } from "../errors.js";
 
-import type { Bytes } from "./bytes";
+import type { Bytes } from "./bytes.js";
 
 /** RFC 4648 base32 alphabet, uppercase and without the padding character. */
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";

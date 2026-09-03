@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RobotsOptions } from "./lib/robots";
-import type { SchemaOrg, SeoSchema } from "./lib/schema";
+import type { RobotsOptions } from "./lib/robots.js";
+import type { SchemaOrg, SeoSchema } from "./lib/schema.js";
 
-import { serializeJsonLd } from "./lib/json-ld";
-import { robotsDirectives } from "./lib/robots";
-import { createSchemaBuilders } from "./lib/schema";
-import { absoluteUrl, canonicalUrl, normalizeBaseUrl } from "./lib/urls";
+import { serializeJsonLd } from "./lib/json-ld.js";
+import { robotsDirectives } from "./lib/robots.js";
+import { createSchemaBuilders } from "./lib/schema.js";
+import { absoluteUrl, canonicalUrl, normalizeBaseUrl } from "./lib/urls.js";
 
 /** Twitter card metadata for the site, unchanged from page to page. */
 export interface SeoTwitter {

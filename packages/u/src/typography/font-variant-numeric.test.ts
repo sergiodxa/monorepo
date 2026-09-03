@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { fontVariantNumeric } from "./font-variant-numeric";
+import { fontVariantNumeric } from "./font-variant-numeric.js";
 
 describe("fontVariantNumeric", () => {
 	test("no-arg defaults to tabular-nums", async () => {

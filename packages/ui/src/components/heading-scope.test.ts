@@ -11,9 +11,9 @@ import type { Handle } from "remix/ui";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { HeadingLevel } from "./heading-scope";
+import type { HeadingLevel } from "./heading-scope.js";
 
-import { readAmbientLevel, resolveHeadingLevel } from "./heading-scope";
+import { readAmbientLevel, resolveHeadingLevel } from "./heading-scope.js";
 
 /**
  * Minimal `Handle` fixture exposing only `context.get`, matching how this

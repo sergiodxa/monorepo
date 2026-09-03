@@ -16,8 +16,8 @@ export type {
 	ScheduleDescriptor,
 	WeeklyDescriptor,
 	YearlyDescriptor,
-} from "./describe";
-export type { InvalidCronExpressionInput, InvalidCronReason } from "./invalid-cron-expression";
+} from "./describe.js";
+export type { InvalidCronExpressionInput, InvalidCronReason } from "./invalid-cron-expression.js";
 export type {
 	CronFieldName,
 	ExpectedByOptions,
@@ -26,7 +26,7 @@ export type {
 	NextOptions,
 	OccurrenceOptions,
 	TimeOfDay,
-} from "./types";
+} from "./types.js";
 
-export { InvalidCronExpression } from "./invalid-cron-expression";
-export { Schedule } from "./schedule";
+export { InvalidCronExpression } from "./invalid-cron-expression.js";
+export { Schedule } from "./schedule.js";

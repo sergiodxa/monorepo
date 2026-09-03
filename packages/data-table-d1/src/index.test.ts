@@ -19,9 +19,9 @@ import { DatabaseSync } from "node:sqlite";
 import { column as c, Database, table } from "remix/data-table";
 import { describe, expect, test } from "vitest";
 
-import type { D1StatementObservation } from "./index";
+import type { D1StatementObservation } from "./index.js";
 
-import { createD1DatabaseAdapter } from "./index";
+import { createD1DatabaseAdapter } from "./index.js";
 
 import type { SQLInputValue } from "node:sqlite";
 

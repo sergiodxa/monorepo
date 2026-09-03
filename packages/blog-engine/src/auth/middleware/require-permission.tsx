@@ -11,13 +11,13 @@ import type { Handle } from "remix/ui";
 import { redirect } from "@sdxc/http/response";
 import { css } from "remix/ui";
 
-import type { Permission } from "../../shared/permissions";
+import type { Permission } from "../../shared/permissions.js";
 
-import routes from "../../routes";
-import middleware from "../../shared/lib/middleware";
-import { hasAll } from "../../shared/permissions";
+import routes from "../../routes.js";
+import middleware from "../../shared/lib/middleware.js";
+import { hasAll } from "../../shared/permissions.js";
 
-import { getAuthUser, getPermissions } from "./auth";
+import { getAuthUser, getPermissions } from "./auth.js";
 
 function NoAccessPage(_handle: Handle<Record<string, never>>) {
 	return () => (

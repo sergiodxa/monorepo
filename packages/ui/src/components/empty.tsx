@@ -17,12 +17,12 @@ import { bs, is, mbs, p } from "@sdxc/u/size";
 import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { semanticColorPanel } from "../styles/semantic-color-panel";
-import { DEFAULT_ICON_ARIA_HIDDEN } from "../utils/decorative-icon";
+import { semanticColorPanel } from "../styles/semantic-color-panel.js";
+import { DEFAULT_ICON_ARIA_HIDDEN } from "../utils/decorative-icon.js";
 
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
+import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /**
  * Default {@link Empty.Props.color}, rendering the panel in the neutral

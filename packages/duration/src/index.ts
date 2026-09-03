@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { DurationInput, DurationString } from "./types";
-export type { DurationUnit, DurationUnitShort } from "./units";
+export type { DurationInput, DurationString } from "./types.js";
+export type { DurationUnit, DurationUnitShort } from "./units.js";
 
-export { InvalidDurationError } from "./invalid-duration-error";
-export { parse } from "./parse";
-export { toMs } from "./to-ms";
-export { toSeconds } from "./to-seconds";
+export { InvalidDurationError } from "./invalid-duration-error.js";
+export { parse } from "./parse.js";
+export { toMs } from "./to-ms.js";
+export { toSeconds } from "./to-seconds.js";

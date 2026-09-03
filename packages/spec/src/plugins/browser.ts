@@ -16,13 +16,13 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value } from "../values";
-import type { Workspace } from "../workspace";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { ExpectationError, ToolError } from "../errors";
-import { formatValue } from "../values";
+import { ExpectationError, ToolError } from "../errors.js";
+import { formatValue } from "../values.js";
 
 /** The trusted CLI binary every browser tool shells out to. */
 const BROWSER_BINARY = "agent-browser";

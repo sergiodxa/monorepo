@@ -10,8 +10,8 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { fromDayKey, parseDayKey, toDayKey } from "./day-key";
-import { InvalidDayKeyError } from "./invalid-day-key-error";
+import { fromDayKey, parseDayKey, toDayKey } from "./day-key.js";
+import { InvalidDayKeyError } from "./invalid-day-key-error.js";
 
 /** Zone whose offset puts late-UTC instants on the previous calendar day. */
 const NEW_YORK = "America/New_York";

@@ -15,8 +15,8 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { InvalidSecretError } from "./errors";
-import { decodeBase64 } from "./lib/base64";
+import { InvalidSecretError } from "./errors.js";
+import { decodeBase64 } from "./lib/base64.js";
 
 /** Prefix senders put on a symmetric signing secret, per the specification. */
 const SECRET_PREFIX = "whsec_";

@@ -42,8 +42,8 @@ import {
 } from "@sdxc/u";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /**
  * Named container {@link Table.Container} declares on its own host, so a

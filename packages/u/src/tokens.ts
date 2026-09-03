@@ -10,4 +10,4 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export * from "./internal/tokens";
+export * from "./internal/tokens.js";

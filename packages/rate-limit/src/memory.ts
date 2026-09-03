@@ -12,11 +12,11 @@ import type { Result } from "@sdxc/result";
 
 import { success } from "@sdxc/result";
 
-import type { RateLimitError } from "./rate-limit-error";
-import type { Adapter, RateLimitDecision } from "./types";
+import type { RateLimitError } from "./rate-limit-error.js";
+import type { Adapter, RateLimitDecision } from "./types.js";
 
-import { normalizeCost } from "./cost";
-import { fixedWindow, windowDecision } from "./window";
+import { normalizeCost } from "./cost.js";
+import { fixedWindow, windowDecision } from "./window.js";
 
 /** How a {@link MemoryAdapter} is configured. */
 export interface MemoryAdapterOptions {

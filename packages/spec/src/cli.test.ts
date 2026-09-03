@@ -13,9 +13,9 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { Sink } from "./diagnostics";
+import type { Sink } from "./diagnostics.js";
 
-import { main } from "./cli";
+import { main } from "./cli.js";
 
 const CREATED_DIRS: string[] = [];
 

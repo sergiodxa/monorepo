@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { BlurName } from "../types";
+import type { BlurName } from "../types.js";
 
-import { backdropFilterFunction } from "../internal/backdrop-filter";
-import { blur } from "../internal/tokens";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
+import { blur } from "../internal/tokens.js";
 
 /**
  * Blurs the backdrop by a step from the blur scale, whatever the user's

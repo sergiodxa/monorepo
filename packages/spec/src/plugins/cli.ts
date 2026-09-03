@@ -16,12 +16,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value } from "../values";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
 
-import { ToolError } from "../errors";
-import { formatValue } from "../values";
+import { ToolError } from "../errors.js";
+import { formatValue } from "../values.js";
 
 /** Host variables every child needs to execute at all; always forwarded. */
 const BASE_ENV_NAMES = ["PATH", "HOME", "TMPDIR"];

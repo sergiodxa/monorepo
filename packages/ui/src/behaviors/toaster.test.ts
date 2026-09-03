@@ -10,7 +10,7 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { Toaster } from "./toaster";
+import { Toaster } from "./toaster.js";
 
 /** One pending call recorded by the faked `setTimeout`. */
 interface FakeTimer {

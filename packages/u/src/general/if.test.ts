@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
 
-import { if as ifUtility } from "./if";
+import { if as ifUtility } from "./if.js";
 
 describe("if", () => {
 	test("returns the input unchanged when condition is truthy, for a single mixin", () => {

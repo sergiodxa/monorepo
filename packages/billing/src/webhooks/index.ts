@@ -11,10 +11,10 @@ import type { RequestContext, RequestHandler } from "remix/router";
 
 import { isFailure } from "@sdxc/result";
 
-import type { Billing } from "../core/contract";
-import type { BillingEvent } from "../core/types";
+import type { Billing } from "../core/contract.js";
+import type { BillingEvent } from "../core/types.js";
 
-import { BillingError } from "../core/errors";
+import { BillingError } from "../core/errors.js";
 
 /**
  * Splits an arm naming several deliveries into one arm per name, so a handler

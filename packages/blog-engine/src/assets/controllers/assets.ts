@@ -10,8 +10,8 @@ import { css } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { HIGHLIGHT_CSS } from "../highlight-css";
+import routes from "../../routes.js";
+import { HIGHLIGHT_CSS } from "../highlight-css.js";
 
 const ASSETS: Record<string, string> = {
 	"highlight.css": HIGHLIGHT_CSS,

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { backdropFilterFunction } from "../internal/backdrop-filter";
-import { color as colorToken, spacing } from "../internal/tokens";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
+import { color as colorToken, spacing } from "../internal/tokens.js";
 
 export interface BackdropDropShadowOptions {
 	/** The shadow's inline offset, from the spacing scale or a raw CSS length. Defaults to `0`. */

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { RadiusName } from "../types";
+import type { RadiusName } from "../types.js";
 
-import { utility } from "../internal/descriptor";
-import { radius } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { radius } from "../internal/tokens.js";
 
 /**
  * Applies a corner radius from the radius scale or a raw CSS length.

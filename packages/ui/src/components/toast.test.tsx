@@ -12,7 +12,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Toast } from "./toast";
+import { Toast } from "./toast.js";
 
 describe("Toast.Action", () => {
 	test('types itself "button", so its command survives inside a form', async () => {

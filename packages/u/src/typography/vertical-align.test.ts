@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { verticalAlign } from "./vertical-align";
+import { verticalAlign } from "./vertical-align.js";
 
 describe("verticalAlign", () => {
 	test("sets a known keyword", async () => {

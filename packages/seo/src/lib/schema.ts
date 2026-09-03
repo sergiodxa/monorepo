@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { absoluteUrl, canonicalUrl } from "./urls";
+import { absoluteUrl, canonicalUrl } from "./urls.js";
 
 /** The one JSON-LD context value every top-level node declares. */
 const SCHEMA_CONTEXT = "https://schema.org";

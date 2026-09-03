@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { bandScale, linearScale, pieAngles, ticks } from "./chart-scale";
+import { bandScale, linearScale, pieAngles, ticks } from "./chart-scale.js";
 
 describe(linearScale.name, () => {
 	test("maps a value proportionally from domain to range", () => {

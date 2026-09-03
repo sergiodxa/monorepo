@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { overflowAnchor } from "./overflow-anchor";
+import { overflowAnchor } from "./overflow-anchor.js";
 
 describe("overflowAnchor", () => {
 	test("no-arg defaults to none, opting out of scroll anchoring", async () => {

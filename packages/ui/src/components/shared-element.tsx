@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { block } from "@sdxc/u/layout";
 
-import { mergeStyle } from "../utils/merge-style";
+import { mergeStyle } from "../utils/merge-style.js";
 
 /**
  * Written as plain CSS text inside a `<style>` element: `@view-transition`

@@ -7,18 +7,18 @@
 
 import type { XML } from "@sdxc/xml";
 
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
-import { cloneAttributes } from "./clone";
+import { cloneAttributes } from "./clone.js";
 import {
 	ATOM_NAMESPACE,
 	CONTENT_NAMESPACE,
 	DUBLIN_CORE_NAMESPACE,
 	RSS_VERSION,
 	SLASH_NAMESPACE,
-} from "./constants";
-import { toXMLElement } from "./extensions";
-import { normalizeArray, normalizeStringArray } from "./utils";
+} from "./constants.js";
+import { toXMLElement } from "./extensions.js";
+import { normalizeArray, normalizeStringArray } from "./utils.js";
 
 /**
  * Builds the XML document used to serialize the feed.

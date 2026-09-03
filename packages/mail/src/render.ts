@@ -11,7 +11,7 @@ import type { RemixElement } from "remix/ui";
 
 import { renderToString } from "remix/ui/server";
 
-import { htmlToText } from "./lib/html-to-text";
+import { htmlToText } from "./lib/html-to-text.js";
 
 /**
  * The document type every mail client is calibrated against.

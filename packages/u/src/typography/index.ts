@@ -2,42 +2,42 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export { balance } from "./balance";
-export { font } from "./font";
-export { fontSize } from "./font-size";
-export { fontVariantNumeric } from "./font-variant-numeric";
-export type { FontVariantNumericValue } from "./font-variant-numeric";
-export { hyphens } from "./hyphens";
-export type { HyphensValue } from "./hyphens";
-export { leading } from "./leading";
-export type { LeadingValue } from "./leading";
-export { lineClamp } from "./line-clamp";
-export { nowrap } from "./nowrap";
-export { overflowWrap } from "./overflow-wrap";
-export type { OverflowWrapValue } from "./overflow-wrap";
-export { pretty } from "./pretty";
-export { tabSize } from "./tab-size";
-export { tabularNums } from "./tabular-nums";
-export { text } from "./text";
-export { textAlign } from "./text-align";
-export type { TextAlignValue } from "./text-align";
-export { textDecoration } from "./text-decoration";
+export { balance } from "./balance.js";
+export { font } from "./font.js";
+export { fontSize } from "./font-size.js";
+export { fontVariantNumeric } from "./font-variant-numeric.js";
+export type { FontVariantNumericValue } from "./font-variant-numeric.js";
+export { hyphens } from "./hyphens.js";
+export type { HyphensValue } from "./hyphens.js";
+export { leading } from "./leading.js";
+export type { LeadingValue } from "./leading.js";
+export { lineClamp } from "./line-clamp.js";
+export { nowrap } from "./nowrap.js";
+export { overflowWrap } from "./overflow-wrap.js";
+export type { OverflowWrapValue } from "./overflow-wrap.js";
+export { pretty } from "./pretty.js";
+export { tabSize } from "./tab-size.js";
+export { tabularNums } from "./tabular-nums.js";
+export { text } from "./text.js";
+export { textAlign } from "./text-align.js";
+export type { TextAlignValue } from "./text-align.js";
+export { textDecoration } from "./text-decoration.js";
 export type {
 	TextDecorationLineValue,
 	TextDecorationOptions,
 	TextDecorationStyleValue,
-} from "./text-decoration";
-export { textTransform } from "./text-transform";
-export type { TextTransformValue } from "./text-transform";
-export { tracking } from "./tracking";
-export type { TrackingValue } from "./tracking";
-export { truncate } from "./truncate";
-export { type } from "./type";
-export { verticalAlign } from "./vertical-align";
-export type { VerticalAlignValue } from "./vertical-align";
-export { weight } from "./weight";
-export type { FontWeightValue } from "./weight";
-export { whiteSpace } from "./white-space";
-export type { WhiteSpaceValue } from "./white-space";
-export { wordBreak } from "./word-break";
-export type { WordBreakValue } from "./word-break";
+} from "./text-decoration.js";
+export { textTransform } from "./text-transform.js";
+export type { TextTransformValue } from "./text-transform.js";
+export { tracking } from "./tracking.js";
+export type { TrackingValue } from "./tracking.js";
+export { truncate } from "./truncate.js";
+export { type } from "./type.js";
+export { verticalAlign } from "./vertical-align.js";
+export type { VerticalAlignValue } from "./vertical-align.js";
+export { weight } from "./weight.js";
+export type { FontWeightValue } from "./weight.js";
+export { whiteSpace } from "./white-space.js";
+export type { WhiteSpaceValue } from "./white-space.js";
+export { wordBreak } from "./word-break.js";
+export type { WordBreakValue } from "./word-break.js";

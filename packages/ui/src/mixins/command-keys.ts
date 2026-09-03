@@ -11,13 +11,13 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { FilterModel } from "../behaviors/filter-model";
+import type { FilterModel } from "../behaviors/filter-model.js";
 
 import {
 	COMMAND_INPUT_ATTRIBUTE,
 	COMMAND_ITEM_ATTRIBUTE,
 	getCommandItemId,
-} from "./command-filter";
+} from "./command-filter.js";
 
 /** `KeyboardEvent.key` value that moves the active match to the previous visible option. */
 const ARROW_UP_KEY = "ArrowUp";

@@ -15,9 +15,9 @@ import type {
 	RadiusName,
 	ShadowName,
 	TextSizeName,
-} from "../types";
+} from "../types.js";
 
-import { var as varUtility } from "../general/var";
+import { var as varUtility } from "../general/var.js";
 
 /** Friendly suffix a call site writes, mapped to the CSS variable's actual property segment. */
 const COLOR_PROPERTY_ALIASES: Record<string, string> = {

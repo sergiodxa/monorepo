@@ -12,9 +12,9 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Hex } from "./encoding";
-import { UnsupportedAlgorithmError } from "./errors";
-import { hmac } from "./hmac";
+import { Hex } from "./encoding.js";
+import { UnsupportedAlgorithmError } from "./errors.js";
+import { hmac } from "./hmac.js";
 
 /** RFC 4231 test case 2 key. */
 const RFC_KEY = "Jefe";

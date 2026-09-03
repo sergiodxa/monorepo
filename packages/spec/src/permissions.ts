@@ -15,7 +15,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isSuccess, success } from "@sdxc/result";
 
-import { PermissionDeniedError, SpecError } from "./errors";
+import { PermissionDeniedError, SpecError } from "./errors.js";
 
 /** The permission families v1 knows about. */
 export type PermissionKind = "run" | "net" | "env" | "host-fs";

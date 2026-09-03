@@ -10,9 +10,9 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { XML } from "../index";
+import type { XML } from "../index.js";
 
-import { stringifyDocument } from "./stringify-document";
+import { stringifyDocument } from "./stringify-document.js";
 
 /**
  * Serializes a document the test expects to succeed and returns the XML text.

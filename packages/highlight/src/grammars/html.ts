@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar } from "../lexer";
+import type { Grammar } from "../lexer.js";
 
-import { compose } from "../lexer";
+import { compose } from "../lexer.js";
 
-import { css } from "./css";
-import { javascript } from "./javascript";
+import { css } from "./css.js";
+import { javascript } from "./javascript.js";
 
 /**
  * Each embedded language split into the rules its body starts with and the

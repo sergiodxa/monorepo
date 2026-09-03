@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createDurableObjectNamespace } from "./durable-object-namespace";
+import { createDurableObjectNamespace } from "./durable-object-namespace.js";
 
 describe("createDurableObjectNamespace", () => {
 	test("routes to the stub the factory built", async () => {

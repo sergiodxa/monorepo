@@ -10,8 +10,8 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { InvalidDateError } from "./invalid-date-error";
-import { parseDate } from "./parse-date";
+import { InvalidDateError } from "./invalid-date-error.js";
+import { parseDate } from "./parse-date.js";
 
 describe("parseDate", () => {
 	test("reads a full ISO 8601 instant", () => {

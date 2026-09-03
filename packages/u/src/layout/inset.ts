@@ -6,11 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
-import type { SpacingValue } from "../internal/tokens";
+import type { CSSStyles } from "../internal/css-styles.js";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { utility } from "../internal/descriptor";
-import { spacing } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { spacing } from "../internal/tokens.js";
 
 function resolveInset(values: SpacingValue[]): CSSStyles {
 	let result: Record<string, string> = {};

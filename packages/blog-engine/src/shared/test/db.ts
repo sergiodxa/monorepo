@@ -22,7 +22,7 @@ import type {
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database, getTableName, getTablePrimaryKey, type Predicate } from "remix/data-table";
 
-import { runMigrations } from "../../database/migrations";
+import { runMigrations } from "../../database/migrations.js";
 
 interface SqliteAdapterOptions {
 	capabilities?: Partial<DatabaseCapabilities>;

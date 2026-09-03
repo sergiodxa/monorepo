@@ -9,7 +9,7 @@ import { isFailure, isSuccess } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 import { describe, expect, test } from "vitest";
 
-import { parseFeed } from "./parse-feed";
+import { parseFeed } from "./parse-feed.js";
 
 let FULL_SPEC_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:slash="http://purl.org/rss/1.0/modules/slash/" xmlns:media="http://search.yahoo.com/mrss/">

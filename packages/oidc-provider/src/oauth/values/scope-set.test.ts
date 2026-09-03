@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import ScopeSet from "./scope-set";
+import ScopeSet from "./scope-set.js";
 
 describe(ScopeSet.name, () => {
 	describe("constructor", () => {

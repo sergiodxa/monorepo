@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { inlineFlex } from "./inline-flex";
+import { inlineFlex } from "./inline-flex.js";
 
 describe("inlineFlex", () => {
 	test("sets display: inline-flex", async () => {

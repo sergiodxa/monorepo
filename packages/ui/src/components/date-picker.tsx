@@ -22,11 +22,11 @@ import { bs, is, mis, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { DateField } from "./date-field";
-import { Popover } from "./popover";
+import { DateField } from "./date-field.js";
+import { Popover } from "./popover.js";
 
 /**
  * Default `type` for {@link DatePicker.Button}, keeping a click on the

@@ -2,11 +2,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SpacingValue } from "../internal/tokens";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { spacing } from "../internal/tokens";
+import { spacing } from "../internal/tokens.js";
 
-import { mi } from "./mi";
+import { mi } from "./mi.js";
 
 /**
  * Pulls the host past its container's inline padding by `value` on both

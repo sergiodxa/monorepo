@@ -12,10 +12,10 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import { PostType } from "../../post-types/models/post-type";
-import { createMetaCodec } from "../../posts/models/meta-codec";
-import { Post } from "../../posts/models/post";
-import routes from "../../routes";
+import { PostType } from "../../post-types/models/post-type.js";
+import { createMetaCodec } from "../../posts/models/meta-codec.js";
+import { Post } from "../../posts/models/post.js";
+import routes from "../../routes.js";
 
 /** Serves `/sitemap.xml`: home, each visible type index, and every published post. */
 export default createAction(

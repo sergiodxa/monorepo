@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { json } from "./json";
+import { json } from "./json.js";
 
 describe("json", () => {
 	test("paints a member's name apart from a string value", () => {

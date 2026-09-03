@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { container } from "./container";
+import { container } from "./container.js";
 
 describe("container", () => {
 	test("defaults to an inline-size container type", async () => {

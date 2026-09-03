@@ -17,9 +17,9 @@ import { inset, positionArea, positionTryFallbacks } from "@sdxc/u/layout";
 import { m, marginLeft, marginRight, mbe, mbs } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
 
-import type { AnchorPlacement } from "../utils/placement";
+import type { AnchorPlacement } from "../utils/placement.js";
 
-import { floatingSurface } from "../styles/floating-surface";
+import { floatingSurface } from "../styles/floating-surface.js";
 
 /**
  * Side of the anchor {@link Popover} renders against when `placement` is

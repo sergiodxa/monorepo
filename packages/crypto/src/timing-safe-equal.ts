@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { BinaryLike } from "./lib/bytes";
+import type { BinaryLike } from "./lib/bytes.js";
 
-import { toBytes } from "./lib/bytes";
+import { toBytes } from "./lib/bytes.js";
 
 /**
  * Compares two values byte for byte without an early exit.

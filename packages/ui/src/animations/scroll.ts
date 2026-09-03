@@ -18,9 +18,9 @@ import { is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
-import { easings } from "./tokens";
+import { easings } from "./tokens.js";
 
 const DEFAULT_SCROLL_SHADOW_DISTANCE = "120px";
 const SCROLL_SHADOW_KEYFRAMES_NAME = "ui-scroll-shadow-reveal";

@@ -9,7 +9,7 @@
 
 import { describe } from "vitest";
 
-import type { ConformanceOptions } from "../../testing/conformance";
+import type { ConformanceOptions } from "../../testing/conformance.js";
 
 import {
 	capabilityConformance,
@@ -18,9 +18,9 @@ import {
 	meterConformance,
 	portalConformance,
 	usageConformance,
-} from "../../testing/conformance";
+} from "../../testing/conformance.js";
 
-import { PolarBilling } from "./index";
+import { PolarBilling } from "./index.js";
 
 /**
  * The sandbox organization the suite bills against. Polar's sandbox shares no

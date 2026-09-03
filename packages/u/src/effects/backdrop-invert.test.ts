@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { backdropInvert } from "./backdrop-invert";
+import { backdropInvert } from "./backdrop-invert.js";
 
 describe("backdropInvert", () => {
 	test("no-arg defaults to 1", async () => {

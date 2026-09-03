@@ -2,19 +2,19 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export { at, atMax } from "./at";
-export { atQuery } from "./at-query";
-export { contrastLess } from "./contrast-less";
-export { contrastMore } from "./contrast-more";
-export { dark } from "./dark";
-export { forcedColors } from "./forced-colors";
-export { light } from "./light";
-export { media } from "./media";
-export { motionReduce } from "./motion-reduce";
-export { motionSafe } from "./motion-safe";
-export { print } from "./print";
-export { scheme } from "./scheme";
-export { startingStyle } from "./starting-style";
-export { supports } from "./supports";
-export { transparencyReduce } from "./transparency-reduce";
-export { transparencySafe } from "./transparency-safe";
+export { at, atMax } from "./at.js";
+export { atQuery } from "./at-query.js";
+export { contrastLess } from "./contrast-less.js";
+export { contrastMore } from "./contrast-more.js";
+export { dark } from "./dark.js";
+export { forcedColors } from "./forced-colors.js";
+export { light } from "./light.js";
+export { media } from "./media.js";
+export { motionReduce } from "./motion-reduce.js";
+export { motionSafe } from "./motion-safe.js";
+export { print } from "./print.js";
+export { scheme } from "./scheme.js";
+export { startingStyle } from "./starting-style.js";
+export { supports } from "./supports.js";
+export { transparencyReduce } from "./transparency-reduce.js";
+export { transparencySafe } from "./transparency-safe.js";

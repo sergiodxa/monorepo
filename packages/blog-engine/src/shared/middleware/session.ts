@@ -13,7 +13,7 @@ import type { SessionStorage } from "remix/session";
 import { createCookie } from "remix/cookie";
 import { session } from "remix/middleware/session";
 
-import { SqlSessionStorage } from "../../database/session-storage";
+import { SqlSessionStorage } from "../../database/session-storage.js";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
 

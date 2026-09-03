@@ -13,7 +13,7 @@ import type { ElementProps, MixinFactory } from "remix/ui";
 
 import { createMixin, ref } from "remix/ui";
 
-import type { HeadingLevel } from "../components/heading-scope";
+import type { HeadingLevel } from "../components/heading-scope.js";
 
 /**
  * Attribute every resolved `HeadingScope` and `Heading` carries with its own

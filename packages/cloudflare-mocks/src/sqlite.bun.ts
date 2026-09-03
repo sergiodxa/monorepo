@@ -7,11 +7,11 @@
  */
 import { Database } from "bun:sqlite";
 
-import type { SqliteDatabase, SqliteStatement } from "./sqlite";
+import type { SqliteDatabase, SqliteStatement } from "./sqlite.js";
 
-import { toPositional } from "./sqlite";
+import { toPositional } from "./sqlite.js";
 
-export type { SqliteDatabase, SqliteStatement } from "./sqlite";
+export type { SqliteDatabase, SqliteStatement } from "./sqlite.js";
 
 /**
  * Opens an in-memory SQLite database.

@@ -12,10 +12,10 @@ import type { Result } from "@sdxc/result";
 
 import { success } from "@sdxc/result";
 
-import type { MailError } from "./errors";
-import type { NormalizedMessage, SentMessage, Transport } from "./types";
+import type { MailError } from "./errors.js";
+import type { NormalizedMessage, SentMessage, Transport } from "./types.js";
 
-import { buildMimeMessage } from "./mime";
+import { buildMimeMessage } from "./mime.js";
 
 /** Configuration for what a memory transport records beyond the message itself. */
 export interface MemoryTransportOptions {

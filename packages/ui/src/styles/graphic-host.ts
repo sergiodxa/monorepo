@@ -14,7 +14,7 @@ import { combine } from "@sdxc/u/general";
 import { shrink } from "@sdxc/u/layout";
 import { mbs } from "@sdxc/u/size";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * A shrink-resistant, nudged-down, current-colored mixin for a leading

@@ -8,7 +8,7 @@
  */
 import type { Handle, RemixNode } from "remix/ui";
 
-import * as s from "./styles";
+import * as s from "./styles.js";
 
 /** A navigation link in the public site header. */
 export interface NavLink {

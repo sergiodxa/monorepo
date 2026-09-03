@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { declarations, serialize } from "../internal/serialize";
+import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { backdropBlur } from "./backdrop-blur";
+import { backdropBlur } from "./backdrop-blur.js";
 
 describe("backdropBlur", () => {
 	test("no-arg defaults to the md blur, set on the --ui-backdrop-blur variable behind the composite backdrop-filter", async () => {

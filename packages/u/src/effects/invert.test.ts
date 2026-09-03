@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { invert } from "./invert";
+import { invert } from "./invert.js";
 
 describe("invert", () => {
 	test("no-arg defaults to a full inversion", async () => {

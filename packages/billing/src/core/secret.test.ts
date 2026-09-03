@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { secretReader, verificationSecret } from "./secret";
+import { secretReader, verificationSecret } from "./secret.js";
 
 describe("secretReader", () => {
 	test("answers a credential given directly", async () => {

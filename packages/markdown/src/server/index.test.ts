@@ -8,7 +8,7 @@ import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
-import { Markdown, MarkdownParseError } from "./index";
+import { Markdown, MarkdownParseError } from "./index.js";
 
 let defaultSchema = s.object({
 	title: s.optional(s.string()),

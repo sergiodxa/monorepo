@@ -22,16 +22,16 @@ import { createController } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 
-import { WebAuthnAuth } from "../../client/webauthn-auth";
-import { WebAuthnRegister } from "../../client/webauthn-register";
-import Client from "../../clients/models/client";
-import RedirectUri from "../../clients/models/redirect-uri";
-import TenantMeta from "../../management/models/tenant-meta";
-import routes from "../../routes";
-import { Layout } from "../../shared/layout";
-import Subject from "../../subjects/models/subject";
-import Passkey from "../../webauthn/models/passkey";
-import WebAuthnChallenge from "../../webauthn/models/webauthn-challenge";
+import { WebAuthnAuth } from "../../client/webauthn-auth.js";
+import { WebAuthnRegister } from "../../client/webauthn-register.js";
+import Client from "../../clients/models/client.js";
+import RedirectUri from "../../clients/models/redirect-uri.js";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import routes from "../../routes.js";
+import { Layout } from "../../shared/layout.js";
+import Subject from "../../subjects/models/subject.js";
+import Passkey from "../../webauthn/models/passkey.js";
+import WebAuthnChallenge from "../../webauthn/models/webauthn-challenge.js";
 
 /**
  * OAuth 2.0 Authorization Request parameters per RFC 6749.

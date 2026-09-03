@@ -6,7 +6,7 @@
  */
 import { XML } from "@sdxc/xml";
 
-import { createURLChildren } from "./lib/create-url-children";
+import { createURLChildren } from "./lib/create-url-children.js";
 
 /**
  * Groups sitemap types under the package namespace.

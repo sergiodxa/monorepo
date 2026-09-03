@@ -10,7 +10,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { APIClient } from "./api-client";
+import { APIClient } from "./api-client.js";
 
 let server = setupServer(
 	http.all("https://api.example.com/*", ({ request }) => {

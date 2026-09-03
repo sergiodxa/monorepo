@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { FontPreset } from "./presets";
+import type { FontPreset } from "./presets.js";
 
 import {
 	FONT_SIZE_SCALE,
@@ -15,7 +15,7 @@ import {
 	LIGHTNESS_LADDER,
 	RADIUS_SCALE,
 	SPACING_SCALE,
-} from "./presets";
+} from "./presets.js";
 
 /** The nine theme knobs edited in `/cms/appearance`, stored in `settings.theme`. */
 export interface ThemeSettings {

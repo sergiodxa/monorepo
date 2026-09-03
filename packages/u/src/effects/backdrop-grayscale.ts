@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { backdropFilterFunction } from "../internal/backdrop-filter";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
 
 /**
  * Desaturates the backdrop toward grey (`1` fully, `0` untouched) so a coloured

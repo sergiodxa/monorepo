@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { InvalidTypeError, MissingKeyError, ObjectParser, ParserError } from "./parser";
+import { InvalidTypeError, MissingKeyError, ObjectParser, ParserError } from "./parser.js";
 
 describe("ObjectParser", () => {
 	test("refuses to wrap anything that is not an object", () => {

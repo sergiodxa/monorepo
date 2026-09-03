@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { resolveFieldWiring } from "./resolve-field-wiring";
+import { resolveFieldWiring } from "./resolve-field-wiring.js";
 
 describe(resolveFieldWiring.name, () => {
 	test("falls back to the neutral color and a valid, undescribed state when every option is omitted", () => {

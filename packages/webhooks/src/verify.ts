@@ -21,9 +21,9 @@ import { toMs } from "@sdxc/duration";
 import { failure, isFailure, success } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
-import type { WebhookError } from "./errors";
-import type { ReplayStore } from "./replay-store";
-import type { SecretOptions } from "./secret";
+import type { WebhookError } from "./errors.js";
+import type { ReplayStore } from "./replay-store.js";
+import type { SecretOptions } from "./secret.js";
 
 import {
 	DuplicateDeliveryError,
@@ -34,10 +34,10 @@ import {
 	SignatureMismatchError,
 	StaleTimestampError,
 	UnreadableBodyError,
-} from "./errors";
-import { ID_HEADER, SIGNATURE_HEADER, TIMESTAMP_HEADER } from "./headers";
-import { resolveSecrets } from "./secret";
-import { computeSignature, parseSignatures, signedContent } from "./signature";
+} from "./errors.js";
+import { ID_HEADER, SIGNATURE_HEADER, TIMESTAMP_HEADER } from "./headers.js";
+import { resolveSecrets } from "./secret.js";
+import { computeSignature, parseSignatures, signedContent } from "./signature.js";
 
 /** Accepted clock skew when a caller does not choose one, applied in both directions. */
 const DEFAULT_TOLERANCE: DurationInput = "5 minutes";

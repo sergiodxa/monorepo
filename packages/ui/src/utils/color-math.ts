@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Point } from "./geometry";
+import type { Point } from "./geometry.js";
 
-import { FULL_TURN_RADIANS } from "./full-turn-radians";
-import { roundChannel } from "./round-precision";
+import { FULL_TURN_RADIANS } from "./full-turn-radians.js";
+import { roundChannel } from "./round-precision.js";
 
 export { roundChannel };
 
@@ -497,7 +497,7 @@ export function formatHsl(color: RGBAColor): string {
 		: `hsla(${hue}, ${saturation}%, ${lightness}%, ${roundChannel(a, 2)})`;
 }
 
-export type { Point } from "./geometry";
+export type { Point } from "./geometry.js";
 
 /**
  * The rectangle a pointer position is measured against — the plain

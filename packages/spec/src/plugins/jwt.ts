@@ -13,12 +13,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value, ValueObject } from "../values.js";
 
-import { ToolError } from "../errors";
-import { formatValue } from "../values";
+import { ToolError } from "../errors.js";
+import { formatValue } from "../values.js";
 
 /** The only signature algorithm this capability supports; see the module note. */
 const SUPPORTED_ALG = "ES256";

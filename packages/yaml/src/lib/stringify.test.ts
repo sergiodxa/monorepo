@@ -8,8 +8,8 @@
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { YAMLStringifyError } from "./errors";
-import { stringify } from "./stringify";
+import { YAMLStringifyError } from "./errors.js";
+import { stringify } from "./stringify.js";
 
 /**
  * Writes a value the subset covers, failing the test when it does not.

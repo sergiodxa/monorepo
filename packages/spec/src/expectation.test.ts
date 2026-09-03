@@ -28,20 +28,20 @@ import type {
 	StatementNode,
 	StringNode,
 	WordNode,
-} from "./ast";
-import type { ExpectationHost } from "./expectation";
-import type { Plugin } from "./plugin";
-import type { Registry, ResolvedCallable } from "./registry";
-import type { Span } from "./source";
-import type { Value } from "./values";
+} from "./ast.js";
+import type { ExpectationHost } from "./expectation.js";
+import type { Plugin } from "./plugin.js";
+import type { Registry, ResolvedCallable } from "./registry.js";
+import type { Span } from "./source.js";
+import type { Value } from "./values.js";
 
-import { ExpectationError, ResolutionError, SpecError, ToolError } from "./errors";
+import { ExpectationError, ResolutionError, SpecError, ToolError } from "./errors.js";
 import {
 	DEFAULT_EVENTUALLY_MS,
 	POLL_INTERVAL_MS,
 	executeEventually,
 	executeExpect,
-} from "./expectation";
+} from "./expectation.js";
 
 function span(start = 0, end = 0): Span {
 	return { start, end };

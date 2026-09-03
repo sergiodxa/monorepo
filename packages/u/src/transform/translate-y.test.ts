@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
-import { COMPOSITE_TRANSFORM } from "../internal/transform";
+import { declarations } from "../internal/serialize.js";
+import { COMPOSITE_TRANSFORM } from "../internal/transform.js";
 
-import { translateY } from "./translate-y";
+import { translateY } from "./translate-y.js";
 
 describe("translateY", () => {
 	test("resolves a spacing-scale value into --ui-translate-y plus the composite transform", async () => {

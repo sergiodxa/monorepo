@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { atMax } from "./at";
+import { atMax } from "./at.js";
 
 describe("atMax", () => {
 	test("nests the wrapped utility's styles under a max-width container query for a known name", async () => {

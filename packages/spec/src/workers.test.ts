@@ -13,8 +13,8 @@ import { dirname, join, resolve } from "node:path";
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { Grants } from "./permissions";
-import type { SuiteResult } from "./workers";
+import type { Grants } from "./permissions.js";
+import type { SuiteResult } from "./workers.js";
 
 import {
 	createHttpPlugin,
@@ -23,7 +23,7 @@ import {
 	createUrlPlugin,
 	loadSources,
 	runTests,
-} from "./workers";
+} from "./workers.js";
 
 function noGrants(): Grants {
 	return {
@@ -148,7 +148,7 @@ describe("the Workers entry point's import graph", () => {
 					continue;
 				}
 				if (!specifier.startsWith(".")) continue;
-				await walk(join(relativeTo, `${specifier}.ts`));
+				await walk(join(relativeTo, specifier.replace(/\.js$/, ".ts")));
 			}
 			if (/\bBun\./.test(text)) offences.push(`${path} uses the Bun global`);
 		}

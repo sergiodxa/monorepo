@@ -6,5 +6,5 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { KVStore } from "./kv-store";
-export { KVSessionStorage } from "./kv-session-storage";
+export type { KVStore } from "./kv-store.js";
+export { KVSessionStorage } from "./kv-session-storage.js";

@@ -12,8 +12,8 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { encode as encodeBase32 } from "./lib/base32";
-import { totp } from "./totp";
+import { encode as encodeBase32 } from "./lib/base32.js";
+import { totp } from "./totp.js";
 
 /** RFC 6238 seed for SHA-1, base32 encoded as this API expects. */
 const SEED_SHA1 = encodeBase32(new TextEncoder().encode("12345678901234567890"));

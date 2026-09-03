@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { rounded } from "./rounded";
+import { rounded } from "./rounded.js";
 
 describe("rounded", () => {
 	test("no-arg defaults to the md radius", async () => {

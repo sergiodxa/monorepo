@@ -18,11 +18,11 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { LIMITS, maxLength } from "../../shared/lib/schema-checks";
-import Client from "../models/client";
-import Secret from "../models/secret";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { LIMITS, maxLength } from "../../shared/lib/schema-checks.js";
+import Client from "../models/client.js";
+import Secret from "../models/secret.js";
 
 /**
  * Validation schema for the create-secret request body.

@@ -15,12 +15,12 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createClient } from "../../shared/test/fixtures";
-import { underpoweredHash } from "../../shared/test/hashes";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createClient } from "../../shared/test/fixtures.js";
+import { underpoweredHash } from "../../shared/test/hashes.js";
 
-import Secret from "./secret";
+import Secret from "./secret.js";
 
 /** Prefix identifying the format written for new hashes. */
 const CURRENT_PREFIX = "$pbkdf2-sha256$";

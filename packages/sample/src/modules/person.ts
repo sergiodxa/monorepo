@@ -6,11 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Dataset } from "../dataset";
-import type { Random } from "../random";
+import type { Dataset } from "../dataset.js";
+import type { Random } from "../random.js";
 
-import type { InternetModule } from "./internet";
-import type { PhoneModule } from "./phone";
+import type { InternetModule } from "./internet.js";
+import type { PhoneModule } from "./phone.js";
 
 /** Which list of given names to draw from. */
 export type SexType = "female" | "male";

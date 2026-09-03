@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { borderEdge } from "./border-edge";
+import { borderEdge } from "./border-edge.js";
 
 describe("borderEdge", () => {
 	test("a numeric width defaults style to solid, on the inline-start edge", async () => {

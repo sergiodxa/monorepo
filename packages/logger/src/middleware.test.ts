@@ -12,8 +12,8 @@
 import { RequestContext } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import logger from "./middleware";
-import { Logger } from "./request-logger";
+import logger from "./middleware.js";
+import { Logger } from "./request-logger.js";
 
 describe("logger middleware", () => {
 	let consoleInfoSpy: ReturnType<typeof vi.spyOn>;

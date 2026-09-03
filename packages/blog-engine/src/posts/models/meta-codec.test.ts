@@ -7,10 +7,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import type { SelectPostMeta } from "../../database/schema";
-import type { PostTypeDefinition } from "../../post-types/models/post-type";
+import type { SelectPostMeta } from "../../database/schema.js";
+import type { PostTypeDefinition } from "../../post-types/models/post-type.js";
 
-import { createMetaCodec, decodeFieldValue, encodeFieldValue } from "./meta-codec";
+import { createMetaCodec, decodeFieldValue, encodeFieldValue } from "./meta-codec.js";
 
 const DEFINITION: PostTypeDefinition = {
 	id: "pt_test",

@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "../random";
+import type { Random } from "../random.js";
 
 /** How many draws `uniqueArray` makes per value before giving up. */
 const UNIQUE_ATTEMPTS = 100;

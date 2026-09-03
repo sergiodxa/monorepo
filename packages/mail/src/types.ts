@@ -10,7 +10,7 @@
 import type { Result } from "@sdxc/result";
 import type { RemixElement } from "remix/ui";
 
-import type { MailError } from "./errors";
+import type { MailError } from "./errors.js";
 
 /** A single mailbox, optionally with the display name clients show instead of it. */
 export interface Address {

@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { bash } from "./bash";
+import { bash } from "./bash.js";
 
 describe("bash", () => {
 	test("paints a comment from the `#` to the end of the line", () => {

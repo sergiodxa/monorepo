@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { grid } from "./grid";
+import { grid } from "./grid.js";
 
 describe("grid", () => {
 	test("sets display: grid", async () => {

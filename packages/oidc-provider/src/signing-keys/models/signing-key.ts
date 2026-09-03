@@ -18,7 +18,7 @@ import type { Database } from "remix/data-table";
 import { JWK } from "@sdxc/jwt";
 import { column as c, table } from "remix/data-table";
 
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
 
 /**
  * Cache TTL for signing keys (1 minute in milliseconds).

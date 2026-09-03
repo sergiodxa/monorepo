@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput } from "../internal/descriptor";
+import type { UtilityInput } from "../internal/descriptor.js";
 
 /**
  * Conditionally returns `input`, or a falsy value when `condition` is falsy.

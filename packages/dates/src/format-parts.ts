@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Locale, TimeZone, Weekday } from "./types";
+import type { Locale, TimeZone, Weekday } from "./types.js";
 
-import { dateTimeFormatter } from "./intl-cache";
-import { DAY_MS } from "./zone";
+import { dateTimeFormatter } from "./intl-cache.js";
+import { DAY_MS } from "./zone.js";
 
 /**
  * A Sunday at UTC midnight, used as the anchor whose weekday name is read. Any

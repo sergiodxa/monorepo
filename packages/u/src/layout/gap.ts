@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SpacingValue } from "../internal/tokens";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { resolveEdge } from "../internal/box";
-import { utility } from "../internal/descriptor";
+import { resolveEdge } from "../internal/box.js";
+import { utility } from "../internal/descriptor.js";
 
 /**
  * Applies `gap` using the spacing scale or a raw CSS length. One value

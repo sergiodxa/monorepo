@@ -12,10 +12,10 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import type { Form as FormNamespace } from "./form";
+import type { Form as FormNamespace } from "./form.js";
 
-import { Form } from "./form";
-import { TextField } from "./text-field";
+import { Form } from "./form.js";
+import { TextField } from "./text-field.js";
 
 /**
  * Strips the `<style>` block `renderToString` emits ahead of the markup: the

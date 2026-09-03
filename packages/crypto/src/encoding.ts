@@ -13,10 +13,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { BinaryLike, Bytes } from "./lib/bytes";
+import type { BinaryLike, Bytes } from "./lib/bytes.js";
 
-import { InvalidEncodingError } from "./errors";
-import { toBytes, toText } from "./lib/bytes";
+import { InvalidEncodingError } from "./errors.js";
+import { toBytes, toText } from "./lib/bytes.js";
 
 /** Lowercase hex digits; encoding always emits from this alphabet. */
 const HEX_ALPHABET = "0123456789abcdef";

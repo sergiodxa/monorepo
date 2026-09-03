@@ -11,7 +11,7 @@ import type { DurationInput } from "@sdxc/duration";
 
 import { toSeconds } from "@sdxc/duration";
 
-import type { RateLimitDecision } from "./types";
+import type { RateLimitDecision } from "./types.js";
 
 /** Quota state for the current window: `limit`, `remaining`, and `reset`. */
 const RATE_LIMIT_FIELD = "RateLimit";

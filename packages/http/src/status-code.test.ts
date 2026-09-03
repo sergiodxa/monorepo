@@ -7,9 +7,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { StatusCode as StatusCodeType } from "./status-code";
+import type { StatusCode as StatusCodeType } from "./status-code.js";
 
-import * as StatusCode from "./status-code";
+import * as StatusCode from "./status-code.js";
 
 describe("1xx informational", () => {
 	test("Continue has status 100", () => {

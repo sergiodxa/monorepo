@@ -31,9 +31,9 @@ import type {
 	UpdateCustomerInput,
 	WebhookApi,
 	WebhookReference,
-} from "../../core/contract";
-import type { BillingErrorCode } from "../../core/errors";
-import type { Secret } from "../../core/secret";
+} from "../../core/contract.js";
+import type { BillingErrorCode } from "../../core/errors.js";
+import type { Secret } from "../../core/secret.js";
 import type {
 	BillingEvent,
 	Checkout,
@@ -45,17 +45,17 @@ import type {
 	Page,
 	Product,
 	Subscription,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { BillingError, reportSkipped } from "../../core/errors";
-import { secretReader, verificationSecret } from "../../core/secret";
-import { DEFAULT_PAGE_SIZE } from "../../core/types";
+import { BillingError, reportSkipped } from "../../core/errors.js";
+import { secretReader, verificationSecret } from "../../core/secret.js";
+import { DEFAULT_PAGE_SIZE } from "../../core/types.js";
 
-import type { MercadoPagoProduct } from "./catalog";
-import type { ProviderData } from "./map";
-import type { NotificationPayload } from "./schemas";
+import type { MercadoPagoProduct } from "./catalog.js";
+import type { ProviderData } from "./map.js";
+import type { NotificationPayload } from "./schemas.js";
 
-import { MercadoPagoCatalog } from "./catalog";
+import { MercadoPagoCatalog } from "./catalog.js";
 import {
 	EXTERNAL_REFERENCE_KEY,
 	PRODUCT_SLUG_KEY,
@@ -69,8 +69,8 @@ import {
 	productFromConfig,
 	productFromPlan,
 	subscriptionFrom,
-} from "./map";
-import { decodeCursor, encodeCursor } from "./money";
+} from "./map.js";
+import { decodeCursor, encodeCursor } from "./money.js";
 import {
 	CustomerBody,
 	ErrorBody,
@@ -81,7 +81,7 @@ import {
 	PreapprovalPlanBody,
 	PreferenceBody,
 	SearchBody,
-} from "./schemas";
+} from "./schemas.js";
 import {
 	DATA_ID_PARAM,
 	LEGACY_ID_PARAM,
@@ -90,7 +90,7 @@ import {
 	parseSignature,
 	signedManifest,
 	verifyManifest,
-} from "./signature";
+} from "./signature.js";
 
 /** The platform's API, which every path here is resolved against. */
 const BASE_URL = "https://api.mercadopago.com";

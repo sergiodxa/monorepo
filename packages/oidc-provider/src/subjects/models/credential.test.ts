@@ -15,11 +15,11 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createSubject } from "../../shared/test/fixtures";
-import { underpoweredHash } from "../../shared/test/hashes";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createSubject } from "../../shared/test/fixtures.js";
+import { underpoweredHash } from "../../shared/test/hashes.js";
 
-import Credential from "./credential";
+import Credential from "./credential.js";
 
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 

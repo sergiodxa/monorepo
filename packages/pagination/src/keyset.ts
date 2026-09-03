@@ -14,9 +14,9 @@ import type { Predicate } from "remix/data-table";
 
 import { failure, success } from "@sdxc/result";
 
-import type { CursorDirection, CursorValue } from "./cursor";
+import type { CursorDirection, CursorValue } from "./cursor.js";
 
-import { InvalidCursorError, InvalidOrderingError } from "./errors";
+import { InvalidCursorError, InvalidOrderingError } from "./errors.js";
 
 /** Sort direction for one keyset ordering column. */
 export type OrderDirection = "asc" | "desc";

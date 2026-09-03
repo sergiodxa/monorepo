@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Accepted `align-items` keywords, shared with `u.self()`, `u.place()`, `u.hstack()`, `u.vstack()`, and `u.zstack()`. */
 export type AlignItemsValue = "start" | "center" | "end" | "stretch" | "baseline";

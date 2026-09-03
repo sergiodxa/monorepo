@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { safeAreaPadding } from "./safe-area-padding";
+import { safeAreaPadding } from "./safe-area-padding.js";
 
 describe("safeAreaPadding", () => {
 	test("defaults the fallback to 0px, on the bottom side", async () => {

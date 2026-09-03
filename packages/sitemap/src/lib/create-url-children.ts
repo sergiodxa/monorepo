@@ -6,7 +6,7 @@
  */
 import type { XML } from "@sdxc/xml";
 
-import type { Sitemap } from "../index";
+import type { Sitemap } from "../index.js";
 
 /**
  * Builds the ordered child nodes for one sitemap `<url>` element.

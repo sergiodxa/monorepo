@@ -13,8 +13,8 @@ import { Base64Url } from "@sdxc/crypto";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { decodeCursor, encodeCursor } from "./cursor";
-import { InvalidCursorError, UnencodableCursorValueError } from "./errors";
+import { decodeCursor, encodeCursor } from "./cursor.js";
+import { InvalidCursorError, UnencodableCursorValueError } from "./errors.js";
 
 describe("encodeCursor / decodeCursor", () => {
 	test("round-trips the ordering columns, values, and direction", () => {

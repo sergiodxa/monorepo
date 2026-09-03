@@ -9,8 +9,8 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { YAMLParseError } from "./errors";
-import { parse as parseYAML } from "./parse";
+import { YAMLParseError } from "./errors.js";
+import { parse as parseYAML } from "./parse.js";
 
 /**
  * Parses source the subset covers, failing the test when it does not.

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { outlineColor } from "./outline-color";
+import { outlineColor } from "./outline-color.js";
 
 describe("outlineColor", () => {
 	test("no-arg resolves the system default ring color", async () => {

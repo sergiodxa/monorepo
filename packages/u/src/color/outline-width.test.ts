@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { outlineWidth } from "./outline-width";
+import { outlineWidth } from "./outline-width.js";
 
 describe("outlineWidth", () => {
 	test("a bare number sets the width in pixels", async () => {

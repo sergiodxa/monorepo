@@ -7,12 +7,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
-import type { UtilityMixin } from "../internal/descriptor";
+import type { CSSStyles } from "../internal/css-styles.js";
+import type { UtilityMixin } from "../internal/descriptor.js";
 
-import { compose, utility } from "../internal/descriptor";
+import { compose, utility } from "../internal/descriptor.js";
 
-import { keyframes } from "./keyframes";
+import { keyframes } from "./keyframes.js";
 
 /** The keyframes and timing shared by both `animation()` call shapes. */
 export interface AnimationConfig {

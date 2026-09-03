@@ -21,11 +21,11 @@ import { bs, m, minIs, p, pi } from "@sdxc/u/size";
 import { active, hover, when } from "@sdxc/u/state";
 import { text, textDecoration, weight } from "@sdxc/u/typography";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 import {
 	warnIfNoAccessibleLabel,
 	warnIfNoAccessibleName,
-} from "../utils/warn-if-no-accessible-name";
+} from "../utils/warn-if-no-accessible-name.js";
 
 /**
  * `type` given to a {@link Pagination.Button} carrying an Invoker Command, for

@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { iife } from "./index";
+import { iife } from "./index.js";
 
 describe(iife.name, () => {
 	test("returns the computed value", () => {

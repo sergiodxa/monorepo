@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { validateChannel } from "./validate-channel";
+import { validateChannel } from "./validate-channel.js";
 
 describe("validateChannel", () => {
 	test("accepts channels with required fields", () => {

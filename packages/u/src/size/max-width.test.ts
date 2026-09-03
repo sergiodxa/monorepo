@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { maxWidth } from "./max-width";
+import { maxWidth } from "./max-width.js";
 
 describe("maxWidth", () => {
 	test("resolves a spacing-scale number", async () => {

@@ -14,11 +14,11 @@ import type { Handle } from "remix/ui";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { MemoryTransport } from "./memory";
+import { MemoryTransport } from "./memory.js";
 
-import type { Email, NormalizedMessage, SentMessage, Transport } from "./index";
+import type { Email, NormalizedMessage, SentMessage, Transport } from "./index.js";
 
-import { MailError, Mailer, isEmail } from "./index";
+import { MailError, Mailer, isEmail } from "./index.js";
 
 /** Sender identity every test mailer is configured with. */
 const SENDER = { email: "no-reply@example.com", name: "Example" };

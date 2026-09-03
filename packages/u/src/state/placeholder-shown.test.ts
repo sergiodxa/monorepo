@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { placeholderShown } from "./placeholder-shown";
+import { placeholderShown } from "./placeholder-shown.js";
 
 describe("placeholderShown", () => {
 	test("emits an '&:placeholder-shown' block around the input's declarations", async () => {

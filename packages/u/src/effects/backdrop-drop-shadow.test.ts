@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { backdropDropShadow } from "./backdrop-drop-shadow";
+import { backdropDropShadow } from "./backdrop-drop-shadow.js";
 
 describe("backdropDropShadow", () => {
 	test("no-arg defaults resolve through the spacing scale and a literal color", async () => {

@@ -12,7 +12,7 @@
 import { CacheControl } from "remix/headers";
 import { describe, expect, test } from "vitest";
 
-import { policy } from "./policy";
+import { policy } from "./policy.js";
 
 describe(policy, () => {
 	test("returns a framework CacheControl so it composes with remix/headers", () => {

@@ -11,7 +11,7 @@ import type { Middleware, RequestContext } from "remix/router";
 
 import { createContextKey } from "remix/router";
 
-import type { Billing } from "../core/contract";
+import type { Billing } from "../core/contract.js";
 
 /**
  * Declared here, in an imported module rather than an ambient .d.ts, so the

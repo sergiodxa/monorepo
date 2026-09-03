@@ -8,14 +8,14 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createDateModule } from "./date";
-import { createGitModule } from "./git";
-import { createInternetModule } from "./internet";
-import { createPersonModule } from "./person";
-import { createPhoneModule } from "./phone";
+import { createDateModule } from "./date.js";
+import { createGitModule } from "./git.js";
+import { createInternetModule } from "./internet.js";
+import { createPersonModule } from "./person.js";
+import { createPhoneModule } from "./phone.js";
 
 const NOW = new Date("2026-06-15T12:00:00.000Z");
 

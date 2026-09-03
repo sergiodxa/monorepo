@@ -10,7 +10,7 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { asCommandEvent } from "../utils/command-event";
+import { asCommandEvent } from "../utils/command-event.js";
 
 /** Command a Previous-slide invoker button dispatches at the Carousel viewport. */
 const PREV_COMMAND = "--ui-prev";

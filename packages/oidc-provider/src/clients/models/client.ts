@@ -13,12 +13,12 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
 import {
 	InvalidUriError,
 	UnsafeSchemeError,
 	validateScheme,
-} from "../../shared/lib/uri-validation";
+} from "../../shared/lib/uri-validation.js";
 
 /** OAuth 2.0 client model backed by the `clients` table. */
 export default class Client {

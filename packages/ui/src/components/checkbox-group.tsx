@@ -16,7 +16,7 @@ import { flexRow, gap, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /**
  * Announces the host as a related set of controls to assistive technology;

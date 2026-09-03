@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { strokeWidth } from "./stroke-width";
+import { strokeWidth } from "./stroke-width.js";
 
 describe("strokeWidth", () => {
 	test("a bare number is a unitless SVG user-unit value", async () => {

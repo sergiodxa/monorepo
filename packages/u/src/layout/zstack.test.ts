@@ -9,11 +9,11 @@
  */
 import { describe, expect, test } from "vitest";
 
-import type { UtilityMixin } from "../internal/descriptor";
+import type { UtilityMixin } from "../internal/descriptor.js";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { zstack } from "./zstack";
+import { zstack } from "./zstack.js";
 
 /**
  * Collapses indentation so the nested `& > *` block matches as a single

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { AngleValue } from "../internal/transform";
+import type { AngleValue } from "../internal/transform.js";
 
-import { backdropFilterFunction } from "../internal/backdrop-filter";
-import { angle } from "../internal/transform";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
+import { angle } from "../internal/transform.js";
 
 /**
  * Rotates the backdrop's hue while preserving lightness and saturation, so a

@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createExecutionContext } from "./execution-context";
+import { createExecutionContext } from "./execution-context.js";
 
 describe("createExecutionContext", () => {
 	test("records the promises handed to waitUntil", () => {

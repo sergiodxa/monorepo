@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { LONG_UNIT_MS, longUnitToMs, SECOND_MS, SHORT_UNIT_MS, shortUnitToMs } from "./units";
+import { LONG_UNIT_MS, longUnitToMs, SECOND_MS, SHORT_UNIT_MS, shortUnitToMs } from "./units.js";
 
 describe("unit tables", () => {
 	test("a second is a thousand milliseconds", () => {

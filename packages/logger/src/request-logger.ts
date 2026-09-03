@@ -7,7 +7,7 @@
  */
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types";
 
-import { Logger as BatchedLogger } from "./batched-logger";
+import { Logger as BatchedLogger } from "./batched-logger.js";
 
 export namespace Logger {
 	export interface Subject {

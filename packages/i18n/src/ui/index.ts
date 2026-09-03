@@ -6,5 +6,5 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export { intl, IntlProvider, setIntl } from "./intl-provider";
-export { Trans } from "./trans";
+export { intl, IntlProvider, setIntl } from "./intl-provider.js";
+export { Trans } from "./trans.js";

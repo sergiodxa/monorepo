@@ -9,7 +9,7 @@
 import { InvalidCronExpression } from "@sdxc/cron";
 import { describe, expect, test } from "vitest";
 
-import { job, jobs } from "./index";
+import { job, jobs } from "./index.js";
 
 describe("jobs()", () => {
 	test("names every leaf after the key it is filed under", () => {

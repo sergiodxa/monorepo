@@ -8,12 +8,12 @@
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
-import { buildDocument } from "./lib/build-document";
-import { cloneChannel, cloneItem } from "./lib/clone";
-import { parseFeed } from "./lib/parse-feed";
-import { getGuidValue } from "./lib/utils";
-import { validateChannel } from "./lib/validate-channel";
-import { validateItem } from "./lib/validate-item";
+import { buildDocument } from "./lib/build-document.js";
+import { cloneChannel, cloneItem } from "./lib/clone.js";
+import { parseFeed } from "./lib/parse-feed.js";
+import { getGuidValue } from "./lib/utils.js";
+import { validateChannel } from "./lib/validate-channel.js";
+import { validateItem } from "./lib/validate-item.js";
 
 /**
  * Groups the public RSS types under a single import surface.

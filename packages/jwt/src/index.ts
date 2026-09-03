@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "./key-storage";
+export type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "./key-storage.js";
 
-export { JWK } from "./jwk";
-export { JWT } from "./jwt";
+export { JWK } from "./jwk.js";
+export { JWT } from "./jwt.js";

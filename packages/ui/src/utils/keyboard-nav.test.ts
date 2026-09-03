@@ -10,7 +10,13 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import { focusItem, isPrintableKey, labelFor, queryItems, setRovingTabindex } from "./keyboard-nav";
+import {
+	focusItem,
+	isPrintableKey,
+	labelFor,
+	queryItems,
+	setRovingTabindex,
+} from "./keyboard-nav.js";
 
 /**
  * Builds a minimal stand-in for an `HTMLElement`, carrying only the members

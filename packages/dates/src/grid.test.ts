@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { daysOfYear, groupByWeek, lastNDays } from "./grid";
+import { daysOfYear, groupByWeek, lastNDays } from "./grid.js";
 
 /** Zone whose DST transitions make a naive 24-hour step drift. */
 const NEW_YORK = "America/New_York";

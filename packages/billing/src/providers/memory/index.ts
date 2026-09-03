@@ -39,8 +39,8 @@ import type {
 	UsageApi,
 	WebhookApi,
 	WebhookReference,
-} from "../../core/contract";
-import type { BillingErrorCode } from "../../core/errors";
+} from "../../core/contract.js";
+import type { BillingErrorCode } from "../../core/errors.js";
 import type {
 	BillingEvent,
 	BillingEventPayload,
@@ -60,10 +60,10 @@ import type {
 	Subscription,
 	UsageEvent,
 	UsageRecord,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { BillingError } from "../../core/errors";
-import { DEFAULT_PAGE_SIZE } from "../../core/types";
+import { BillingError } from "../../core/errors.js";
+import { DEFAULT_PAGE_SIZE } from "../../core/types.js";
 
 /** Connection code the provider reports when the caller names none. */
 const DEFAULT_CONNECTION = "memory";

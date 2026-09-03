@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { hasSibling } from "./has-sibling";
+import { hasSibling } from "./has-sibling.js";
 
 describe("hasSibling", () => {
 	test("emits an '&:has(~ selector)' block — the combinator must stay inside :has()", async () => {

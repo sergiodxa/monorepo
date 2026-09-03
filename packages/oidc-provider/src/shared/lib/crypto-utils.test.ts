@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils";
+import { base64UrlDecode, base64UrlEncode, constantTimeCompare, hmacSign } from "./crypto-utils.js";
 
 describe("hmacSign", () => {
 	test("signs data with HMAC-SHA256", async () => {

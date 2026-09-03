@@ -14,13 +14,13 @@ import { isFailure, success, unwrap } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
-import type { SpecError } from "../errors";
-import type { PermissionSet } from "../permissions";
-import type { ToolContext } from "../plugin";
-import type { ToolArg, Value } from "../values";
-import type { Workspace } from "../workspace";
+import type { SpecError } from "../errors.js";
+import type { PermissionSet } from "../permissions.js";
+import type { ToolContext } from "../plugin.js";
+import type { ToolArg, Value } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { createUrlPlugin } from "./url";
+import { createUrlPlugin } from "./url.js";
 
 const PLUGIN = createUrlPlugin();
 

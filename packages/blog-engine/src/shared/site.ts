@@ -8,11 +8,11 @@
  */
 import type { Database } from "remix/data-table";
 
-import { renderThemeStyle } from "../appearance/theme/theme";
-import { PostType } from "../post-types/models/post-type";
-import { Settings } from "../settings/models/settings";
+import { renderThemeStyle } from "../appearance/theme/theme.js";
+import { PostType } from "../post-types/models/post-type.js";
+import { Settings } from "../settings/models/settings.js";
 
-import type { NavLink } from "./components/layout";
+import type { NavLink } from "./components/layout.js";
 
 /** Per-request site chrome derived from settings + visible post types. */
 export interface SiteChrome {

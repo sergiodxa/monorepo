@@ -17,11 +17,11 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { toIsoString } from "../../shared/lib/timestamp";
-import Connection from "../models/connection";
-import Subject from "../models/subject";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { toIsoString } from "../../shared/lib/timestamp.js";
+import Connection from "../models/connection.js";
+import Subject from "../models/subject.js";
 
 /**
  * `GET /api/subjects/:id/connections` — lists a subject's external connections.

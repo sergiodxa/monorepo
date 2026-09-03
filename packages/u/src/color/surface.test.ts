@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { surface } from "./surface";
+import { surface } from "./surface.js";
 
 describe("surface", () => {
 	test("default recipe uses the system bg/fg/border trio", async () => {

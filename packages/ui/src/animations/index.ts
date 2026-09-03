@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export * from "./keyframes";
-export * from "./scroll";
-export * from "./tokens";
-export * from "./transitions";
+export * from "./keyframes.js";
+export * from "./scroll.js";
+export * from "./tokens.js";
+export * from "./transitions.js";

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { ring } from "./ring";
+import { ring } from "./ring.js";
 
 describe("ring", () => {
 	test("no-arg resolves the system default, nested under &:focus-visible", async () => {

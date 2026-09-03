@@ -11,14 +11,14 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import { PostType } from "../../post-types/models/post-type";
-import routes from "../../routes";
-import { Layout } from "../../shared/components/layout";
-import { excerptFor, PostList, type PostListItem } from "../../shared/components/post-render";
-import { renderNotFound } from "../../shared/not-found";
-import { loadSiteChrome } from "../../shared/site";
-import { createMetaCodec } from "../models/meta-codec";
-import { Post } from "../models/post";
+import { PostType } from "../../post-types/models/post-type.js";
+import routes from "../../routes.js";
+import { Layout } from "../../shared/components/layout.js";
+import { excerptFor, PostList, type PostListItem } from "../../shared/components/post-render.js";
+import { renderNotFound } from "../../shared/not-found.js";
+import { loadSiteChrome } from "../../shared/site.js";
+import { createMetaCodec } from "../models/meta-codec.js";
+import { Post } from "../models/post.js";
 
 /** Public per-type index: `/:typePath` lists published posts of that type. */
 export default createAction(

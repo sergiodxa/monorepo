@@ -9,7 +9,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { slugify } from "./slugify";
+import { slugify } from "./slugify.js";
 
 describe("slugify", () => {
 	test("lowercases and joins words with a dash", () => {

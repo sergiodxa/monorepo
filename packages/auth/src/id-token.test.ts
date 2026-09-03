@@ -10,7 +10,7 @@
 import { JWK } from "@sdxc/jwt";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { AUTHENTICATION_METHODS, IdToken } from "./id-token";
+import { AUTHENTICATION_METHODS, IdToken } from "./id-token.js";
 
 /** Seconds since the epoch, the unit `auth_time` travels in. */
 const AUTH_TIME = 1_700_000_000;

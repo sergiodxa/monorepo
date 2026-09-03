@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** What happens once a scroll container reaches the end of its own scrollable area. */
 export type OverscrollBehaviorValue = "auto" | "contain" | "none";

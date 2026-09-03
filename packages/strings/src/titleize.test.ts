@@ -9,7 +9,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createTitleizer, titleize } from "./titleize";
+import { createTitleizer, titleize } from "./titleize.js";
 
 describe("titleize", () => {
 	test("capitalizes the first and last word even when they are small words", () => {

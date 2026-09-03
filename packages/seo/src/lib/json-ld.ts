@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SchemaOrg } from "./schema";
+import type { SchemaOrg } from "./schema.js";
 
 /**
  * Serializes one node, or several, for a `<script type="application/ld+json">` body,

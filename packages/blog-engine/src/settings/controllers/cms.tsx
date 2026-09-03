@@ -12,13 +12,13 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
-import { requirePermission } from "../../auth/middleware/require-permission";
-import routes from "../../routes";
-import { CmsLayout } from "../../shared/components/cms-layout";
-import * as s from "../../shared/components/styles";
-import { fieldText } from "../../shared/text";
-import { Settings } from "../models/settings";
+import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
+import { requirePermission } from "../../auth/middleware/require-permission.js";
+import routes from "../../routes.js";
+import { CmsLayout } from "../../shared/components/cms-layout.js";
+import * as s from "../../shared/components/styles.js";
+import { fieldText } from "../../shared/text.js";
+import { Settings } from "../models/settings.js";
 
 /** `/cms/settings` — site title/description/language (gated by `settings.manage`). */
 export default createController(routes.cms.settings, {

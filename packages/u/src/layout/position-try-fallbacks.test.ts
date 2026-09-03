@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { positionTryFallbacks } from "./position-try-fallbacks";
+import { positionTryFallbacks } from "./position-try-fallbacks.js";
 
 describe("positionTryFallbacks", () => {
 	test("sets a single fallback", async () => {

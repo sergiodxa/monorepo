@@ -8,8 +8,8 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createExecutionContext } from "./execution-context";
-import { createQueue } from "./queue";
+import { createExecutionContext } from "./execution-context.js";
+import { createQueue } from "./queue.js";
 
 /** Body shape used throughout these tests. */
 interface Job {

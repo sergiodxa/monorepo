@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createRandom, systemSeed } from "./random";
+import { createRandom, systemSeed } from "./random.js";
 
 describe("createRandom", () => {
 	test("replays the same sequence from the same seed", () => {

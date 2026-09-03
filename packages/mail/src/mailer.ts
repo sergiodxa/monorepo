@@ -13,12 +13,19 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-import type { Address, Email, Message, NormalizedMessage, SentMessage, Transport } from "./types";
+import type {
+	Address,
+	Email,
+	Message,
+	NormalizedMessage,
+	SentMessage,
+	Transport,
+} from "./types.js";
 
-import { MailError } from "./errors";
-import { isValidAddress, toAddressList } from "./lib/address";
-import { htmlToText } from "./lib/html-to-text";
-import { render } from "./render";
+import { MailError } from "./errors.js";
+import { isValidAddress, toAddressList } from "./lib/address.js";
+import { htmlToText } from "./lib/html-to-text.js";
+import { render } from "./render.js";
 
 /**
  * Fields that replace what a `Message` or an `Email` already provides for a single

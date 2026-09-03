@@ -14,20 +14,20 @@ export {
 	ResourceUri,
 	ResourceVariables,
 	ToolInput,
-} from "./context";
+} from "./context.js";
 export type {
 	AnyRequestContext,
 	ResourceContext,
 	ResourceVariableValues,
 	ToolContext,
-} from "./context";
-export { ForbiddenError, InvalidArgumentsError, ToolError } from "./errors";
-export { createHandler } from "./handler";
-export type { CacheScope, HandlerOptions, McpHandler } from "./handler";
-export { ErrorCode } from "./jsonrpc";
-export { LATEST_PROTOCOL_VERSION, MetaKey, SUPPORTED_PROTOCOL_VERSIONS } from "./protocol";
-export type { ClientCapabilities, Implementation } from "./protocol";
-export { createResource, resource, resources, walkResources } from "./resources";
+} from "./context.js";
+export { ForbiddenError, InvalidArgumentsError, ToolError } from "./errors.js";
+export { createHandler } from "./handler.js";
+export type { CacheScope, HandlerOptions, McpHandler } from "./handler.js";
+export { ErrorCode } from "./jsonrpc.js";
+export { LATEST_PROTOCOL_VERSION, MetaKey, SUPPORTED_PROTOCOL_VERSIONS } from "./protocol.js";
+export type { ClientCapabilities, Implementation } from "./protocol.js";
+export { createResource, resource, resources, walkResources } from "./resources.js";
 export type {
 	ReadResult,
 	Resource,
@@ -37,7 +37,7 @@ export type {
 	ResourceDescriptor,
 	ResourceGroup,
 	ResourceListing,
-} from "./resources";
+} from "./resources.js";
 export type {
 	ArraySchema,
 	BooleanSchema,
@@ -47,8 +47,8 @@ export type {
 	ObjectSchema,
 	PropertySchema,
 	StringSchema,
-} from "./schema";
-export { createTool, createToolController, tool, tools, walk } from "./tools";
+} from "./schema.js";
+export { createTool, createToolController, tool, tools, walk } from "./tools.js";
 export type {
 	Action,
 	ActionOrHandler,
@@ -63,5 +63,5 @@ export type {
 	ToolGroup,
 	ToolHandler,
 	ToolMiddleware,
-} from "./tools";
-export { validateArguments } from "./validate";
+} from "./tools.js";
+export { validateArguments } from "./validate.js";

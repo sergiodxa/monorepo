@@ -34,11 +34,11 @@ import { active, data, hover, not, when } from "@sdxc/u/state";
 import { text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { panelChrome } from "../styles/panel-chrome";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { panelChrome } from "../styles/panel-chrome.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { SentinelRow } from "./sentinel-row";
+import { SentinelRow } from "./sentinel-row.js";
 
 /**
  * Named container {@link GridList} declares on its own host, so its inner

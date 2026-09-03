@@ -13,13 +13,13 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { Bytes } from "./lib/bytes";
+import type { Bytes } from "./lib/bytes.js";
 
-import { CryptoError } from "./errors";
-import { hmac } from "./hmac";
-import { decode as decodeBase32, encode as encodeBase32 } from "./lib/base32";
-import { randomBytes } from "./random";
-import { timingSafeEqual } from "./timing-safe-equal";
+import { CryptoError } from "./errors.js";
+import { hmac } from "./hmac.js";
+import { decode as decodeBase32, encode as encodeBase32 } from "./lib/base32.js";
+import { randomBytes } from "./random.js";
+import { timingSafeEqual } from "./timing-safe-equal.js";
 
 /** Hash functions RFC 6238 allows for TOTP. */
 const SUPPORTED_ALGORITHMS = ["SHA-1", "SHA-256", "SHA-512"] as const;

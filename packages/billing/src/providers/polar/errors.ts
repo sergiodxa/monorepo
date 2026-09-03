@@ -9,11 +9,11 @@
 
 import * as s from "remix/data-schema";
 
-import type { BillingErrorCode } from "../../core/errors";
+import type { BillingErrorCode } from "../../core/errors.js";
 
-import { BillingError } from "../../core/errors";
+import { BillingError } from "../../core/errors.js";
 
-import { DOMAIN_ERROR_SCHEMA, MESSAGE_ERROR_SCHEMA, VALIDATION_ERROR_SCHEMA } from "./schemas";
+import { DOMAIN_ERROR_SCHEMA, MESSAGE_ERROR_SCHEMA, VALIDATION_ERROR_SCHEMA } from "./schemas.js";
 
 /**
  * How each status Polar answers with is reported. A status outside the table is

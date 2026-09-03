@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
+import type { UtilityInput, UtilityMixin } from "../internal/descriptor.js";
 
-import { compose, nest } from "../internal/descriptor";
+import { compose, nest } from "../internal/descriptor.js";
 
 /**
  * A feature-query wrapper, applying the given utilities only when the

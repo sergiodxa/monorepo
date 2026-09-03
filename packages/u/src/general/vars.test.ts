@@ -9,9 +9,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { vars } from "./vars";
+import { vars } from "./vars.js";
 
 describe("vars", () => {
 	test("prefixes a single key with '--'", async () => {

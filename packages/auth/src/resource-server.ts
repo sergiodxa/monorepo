@@ -12,10 +12,10 @@ import type { RequestContext } from "remix/router";
 
 import { isFailure, wrap } from "@sdxc/result";
 
-import type { Issuer } from "./issuer";
+import type { Issuer } from "./issuer.js";
 
-import { AccessToken } from "./access-token";
-import { AuthError, AuthErrorCode } from "./auth-error";
+import { AccessToken } from "./access-token.js";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
 
 /** Milliseconds in a second, for the epoch claim an introspected token is given. */
 const MS_PER_SECOND = 1000;

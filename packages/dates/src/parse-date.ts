@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import { InvalidDateError } from "./invalid-date-error";
+import { InvalidDateError } from "./invalid-date-error.js";
 
 /**
  * Reads text or a timestamp into a `Date`, failing instead of producing an

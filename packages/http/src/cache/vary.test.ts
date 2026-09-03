@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { vary } from "./vary";
+import { vary } from "./vary.js";
 
 describe(vary, () => {
 	test("merges into an existing value instead of replacing it", () => {

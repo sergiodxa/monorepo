@@ -7,10 +7,10 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { Base32 } from "./base32";
+import type { Base32 } from "./base32.js";
 
-import { decode, encode, isBase32 } from "./base32";
-import { InvalidBase32CharacterError, InvalidBase32StringError, TypeIdError } from "./errors";
+import { decode, encode, isBase32 } from "./base32.js";
+import { InvalidBase32CharacterError, InvalidBase32StringError, TypeIdError } from "./errors.js";
 
 describe("base32", () => {
 	let uuid: string = "550e8400-e29b-41d4-a716-446655440000";

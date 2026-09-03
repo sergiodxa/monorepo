@@ -6,8 +6,8 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_FILTER, filterFunction } from "./filter";
-import { declarations } from "./serialize";
+import { COMPOSITE_FILTER, filterFunction } from "./filter.js";
+import { declarations } from "./serialize.js";
 
 describe("filterFunction", () => {
 	test("sets the given custom property plus the shared composite filter value", async () => {

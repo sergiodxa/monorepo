@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { flexWrap } from "./flex-wrap";
+import { flexWrap } from "./flex-wrap.js";
 
 describe("flexWrap", () => {
 	test("defaults to wrap", async () => {

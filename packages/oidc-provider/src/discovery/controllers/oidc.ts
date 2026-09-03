@@ -15,8 +15,8 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import TenantMeta from "../../management/models/tenant-meta";
-import routes from "../../routes";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import routes from "../../routes.js";
 
 /**
  * OpenID Connect Discovery endpoint (OIDC Discovery 1.0).

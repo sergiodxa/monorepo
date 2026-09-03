@@ -11,11 +11,11 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { CronFieldSet } from "./fields";
+import type { CronFieldSet } from "./fields.js";
 
-import { longestMonth } from "./calendar";
-import { FIELD_SPECS, isRestrictedField, parseCronField } from "./fields";
-import { InvalidCronExpression } from "./invalid-cron-expression";
+import { longestMonth } from "./calendar.js";
+import { FIELD_SPECS, isRestrictedField, parseCronField } from "./fields.js";
+import { InvalidCronExpression } from "./invalid-cron-expression.js";
 
 /**
  * The `@` shorthands this package accepts, expanded to the five-field expression

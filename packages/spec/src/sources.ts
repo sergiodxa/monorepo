@@ -16,11 +16,11 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { CommandNode, FixtureNode, SpecFileNode } from "./ast";
-import type { SpecError } from "./errors";
+import type { CommandNode, FixtureNode, SpecFileNode } from "./ast.js";
+import type { SpecError } from "./errors.js";
 
-import { LoadError, ParseError } from "./errors";
-import { parse } from "./parser";
+import { LoadError, ParseError } from "./errors.js";
+import { parse } from "./parser.js";
 
 /** One `.spec` file's text, plus the path errors from it are attributed to. */
 export interface SpecSource {

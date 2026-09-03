@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { accepts, respond, AcceptList } from "./negotiate";
+import { accepts, respond, AcceptList } from "./negotiate.js";
 
 function createRequest(accept?: string): Request {
 	let headers = new Headers();

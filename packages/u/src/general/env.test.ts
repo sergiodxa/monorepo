@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { env } from "./env";
+import { env } from "./env.js";
 
 describe("env", () => {
 	test("resolves a bare reference with no fallback", () => {

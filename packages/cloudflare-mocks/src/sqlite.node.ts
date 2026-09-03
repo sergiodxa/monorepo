@@ -7,9 +7,9 @@
  */
 import { DatabaseSync } from "node:sqlite";
 
-import type { SqliteDatabase, SqliteStatement } from "./sqlite";
+import type { SqliteDatabase, SqliteStatement } from "./sqlite.js";
 
-import { toPositional } from "./sqlite";
+import { toPositional } from "./sqlite.js";
 
 /**
  * Binds an integral number as a SQLite INTEGER: `node:sqlite` otherwise maps
@@ -29,7 +29,7 @@ function toBindings(values: unknown[]): unknown[] {
 	return toPositional(values).map(toBinding);
 }
 
-export type { SqliteDatabase, SqliteStatement } from "./sqlite";
+export type { SqliteDatabase, SqliteStatement } from "./sqlite.js";
 
 /**
  * Opens an in-memory SQLite database with double-quoted string literals

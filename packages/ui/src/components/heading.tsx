@@ -17,9 +17,9 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { fg } from "@sdxc/u/color";
 import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
-import type { HeadingLevel } from "./heading-scope";
+import type { HeadingLevel } from "./heading-scope.js";
 
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
+import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /**
  * Prop types for {@link Heading}.

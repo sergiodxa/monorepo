@@ -4,13 +4,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
-import { opacity } from "../effects/opacity";
-import { declarations, serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
+import { opacity } from "../effects/opacity.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { hasSibling } from "./has-sibling";
-import { precededBy } from "./preceded-by";
+import { hasSibling } from "./has-sibling.js";
+import { precededBy } from "./preceded-by.js";
 
 describe("precededBy", () => {
 	test("emits a ':is({selector}) ~ &' block", async () => {

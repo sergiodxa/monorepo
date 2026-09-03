@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { wordBreak } from "./word-break";
+import { wordBreak } from "./word-break.js";
 
 describe("wordBreak", () => {
 	test("no-arg defaults to normal", async () => {

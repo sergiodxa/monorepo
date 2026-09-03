@@ -17,12 +17,12 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import Session from "../../oauth/models/session";
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { toIsoString } from "../../shared/lib/timestamp";
-import Subject from "../models/subject";
+import Client from "../../clients/models/client.js";
+import Session from "../../oauth/models/session.js";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { toIsoString } from "../../shared/lib/timestamp.js";
+import Subject from "../models/subject.js";
 
 /**
  * `GET /api/subjects/:id/sessions` — lists a subject's sessions with client info.

@@ -11,11 +11,11 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { SendEmailMessage, SendEmailResult } from "./cloudflare";
-import type { NormalizedMessage } from "./types";
+import type { SendEmailMessage, SendEmailResult } from "./cloudflare.js";
+import type { NormalizedMessage } from "./types.js";
 
-import { CloudflareTransport } from "./cloudflare";
-import { MailError } from "./errors";
+import { CloudflareTransport } from "./cloudflare.js";
+import { MailError } from "./errors.js";
 
 /** Sender identity, with a display name so formatting is observable in the payload. */
 const SENDER = { email: "no-reply@example.com", name: "Example" };

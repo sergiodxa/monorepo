@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { RateLimitDecision } from "./types";
+import type { RateLimitDecision } from "./types.js";
 
-import { applyRateLimitHeaders, rateLimitHeaders } from "./headers";
+import { applyRateLimitHeaders, rateLimitHeaders } from "./headers.js";
 
 /** Builds a decision, overriding only the fields a case cares about. */
 function decision(overrides: Partial<RateLimitDecision> = {}): RateLimitDecision {

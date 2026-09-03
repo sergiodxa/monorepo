@@ -10,13 +10,13 @@
 import { isFailure, isSuccess, success } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode, CommandNode, FixtureNode } from "./ast";
-import type { Plugin } from "./plugin";
-import type { Span } from "./source";
-import type { LoadedSuite } from "./sources";
+import type { BlockNode, CommandNode, FixtureNode } from "./ast.js";
+import type { Plugin } from "./plugin.js";
+import type { Span } from "./source.js";
+import type { LoadedSuite } from "./sources.js";
 
-import { ResolutionError } from "./errors";
-import { createRegistry } from "./registry";
+import { ResolutionError } from "./errors.js";
+import { createRegistry } from "./registry.js";
 
 const SPAN: Span = { start: 0, end: 0 };
 

@@ -39,8 +39,8 @@ import { translateX } from "@sdxc/u/transform";
 import { fontSize, leading, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { graphicHostStyle } from "../styles/graphic-host";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { graphicHostStyle } from "../styles/graphic-host.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /**
  * `role` applied to {@link Toast} through {@link attrs} unless a consumer

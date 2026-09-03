@@ -12,11 +12,11 @@ import type { RemixElement } from "remix/ui";
 import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { MemoryTransport } from "./memory";
+import { MemoryTransport } from "./memory.js";
 
-import type { Email, NormalizedMessage } from "./index";
+import type { Email, NormalizedMessage } from "./index.js";
 
-import { Mailer } from "./index";
+import { Mailer } from "./index.js";
 
 /** Sender identity every test mailer is configured with. */
 const SENDER = { email: "no-reply@example.com", name: "Example" };

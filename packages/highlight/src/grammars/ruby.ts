@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
 /**
  * Reserved words, plus the literals spelled as words and the attribute macros:

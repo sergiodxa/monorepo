@@ -13,9 +13,9 @@ import type { ElementProps, MixinDescriptor } from "remix/ui";
 
 import { transition } from "@sdxc/u/effects";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
 /**
  * Composes the transition-property/timing-function/duration triplet shared

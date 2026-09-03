@@ -34,7 +34,7 @@ import {
 	unauthorized,
 	unprocessableEntity,
 	unsupportedMediaType,
-} from "./index";
+} from "./index.js";
 
 describe("ok", () => {
 	test("merges input with ok: true", async () => {

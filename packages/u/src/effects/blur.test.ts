@@ -4,12 +4,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { compose } from "../internal/descriptor";
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { compose } from "../internal/descriptor.js";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { blur } from "./blur";
-import { grayscale } from "./grayscale";
+import { blur } from "./blur.js";
+import { grayscale } from "./grayscale.js";
 
 describe("blur", () => {
 	test("no-arg defaults to the md blur, written to the composite's blur variable", async () => {

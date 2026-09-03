@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { TextSizeName } from "../types";
+import type { TextSizeName } from "../types.js";
 
-import { utility } from "../internal/descriptor";
-import { text as textToken } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { text as textToken } from "../internal/tokens.js";
 
 /**
  * Applies `font-size` from the named text scale (`xs` through `9xl`, or an

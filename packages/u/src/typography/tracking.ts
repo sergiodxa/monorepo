@@ -2,8 +2,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { var as varUtility } from "../general/var";
-import { utility } from "../internal/descriptor";
+import { var as varUtility } from "../general/var.js";
+import { utility } from "../internal/descriptor.js";
 
 type NamedTrackingValue = "tighter" | "tight" | "normal" | "wide" | "wider" | "widest";
 

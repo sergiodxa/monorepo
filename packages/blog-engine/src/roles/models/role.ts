@@ -8,16 +8,16 @@
  */
 import type { Database } from "remix/data-table";
 
-import type { SelectRole } from "../../database/schema";
-import type { Permission } from "../../shared/permissions";
+import type { SelectRole } from "../../database/schema.js";
+import type { Permission } from "../../shared/permissions.js";
 
-import { roles } from "../../database/schema";
+import { roles } from "../../database/schema.js";
 import {
 	ADMIN_PERMISSIONS,
 	hasAll,
 	parsePermissions,
 	PERMISSION_KEYS,
-} from "../../shared/permissions";
+} from "../../shared/permissions.js";
 
 /** A role with its permission set decoded from JSON. */
 export interface RoleWithPermissions {

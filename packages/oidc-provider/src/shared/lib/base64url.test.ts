@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { base64UrlDecode, base64UrlEncode } from "./base64url";
+import { base64UrlDecode, base64UrlEncode } from "./base64url.js";
 
 describe("base64url", () => {
 	describe("base64UrlEncode", () => {

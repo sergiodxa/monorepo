@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Currency, Money } from "../../core/types";
+import type { Currency, Money } from "../../core/types.js";
 
-import { minorUnitDigits } from "../../core/types";
+import { minorUnitDigits } from "../../core/types.js";
 
 /** Radix the minor-unit exponent is taken against. */
 const DECIMAL_RADIX = 10;

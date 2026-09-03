@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Timing } from "./timing";
+import { Timing } from "./timing.js";
 
 /** Header the measurements are reported under. */
 const HEADER_NAME = "Server-Timing";

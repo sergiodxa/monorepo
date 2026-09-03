@@ -20,7 +20,7 @@ import {
 	utcFromParts,
 	weekdayOf,
 	zonedParts,
-} from "./zone";
+} from "./zone.js";
 
 /** Zone used for every DST case, since its transitions are well known. */
 const NEW_YORK = "America/New_York";

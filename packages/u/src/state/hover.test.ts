@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { declarations, serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { hover } from "./hover";
+import { hover } from "./hover.js";
 
 describe("hover", () => {
 	test("emits an '&:hover' block around the wrapped utility's declarations", async () => {

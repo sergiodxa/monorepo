@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { endOfDay, startOfDay, startOfWeek } from "./boundaries";
+import { endOfDay, startOfDay, startOfWeek } from "./boundaries.js";
 
 /** An instant late enough in UTC that the previous day is still running west of it. */
 const EVENING_UTC = new Date("2026-07-29T02:00:00Z");

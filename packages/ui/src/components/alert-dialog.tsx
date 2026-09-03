@@ -16,9 +16,9 @@ import { flex, gap, justify, vstack } from "@sdxc/u/layout";
 import { maxIs, mbs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 
-import { Button } from "./button";
-import { Dialog } from "./dialog";
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
+import { Button } from "./button.js";
+import { Dialog } from "./dialog.js";
+import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /**
  * Invoker Commands verb {@link AlertDialog.Action} and

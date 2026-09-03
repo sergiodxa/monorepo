@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { stroke } from "./stroke";
+import { stroke } from "./stroke.js";
 
 describe("stroke", () => {
 	test("no-arg resolves the system default", async () => {

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { willChange } from "./will-change";
+import { willChange } from "./will-change.js";
 
 describe("willChange", () => {
 	test("a single property", async () => {

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { compose } from "../internal/descriptor";
+import { compose } from "../internal/descriptor.js";
 
-import { isolate } from "./isolate";
-import { z } from "./z";
+import { isolate } from "./isolate.js";
+import { z } from "./z.js";
 
 /**
  * Composes {@link isolate} and {@link z} so a single call gets both a new

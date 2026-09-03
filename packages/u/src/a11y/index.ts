@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export { debug } from "./debug";
-export { forcedColorAdjust } from "./forced-color-adjust";
-export type { ForcedColorAdjustValue } from "./forced-color-adjust";
-export { visuallyHidden } from "./visually-hidden";
+export { debug } from "./debug.js";
+export { forcedColorAdjust } from "./forced-color-adjust.js";
+export type { ForcedColorAdjustValue } from "./forced-color-adjust.js";
+export { visuallyHidden } from "./visually-hidden.js";

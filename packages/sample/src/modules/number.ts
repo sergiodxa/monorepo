@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "../random";
+import type { Random } from "../random.js";
 
 /** Roman numerals, largest first, for the greedy conversion below. */
 const ROMAN_NUMERALS = [

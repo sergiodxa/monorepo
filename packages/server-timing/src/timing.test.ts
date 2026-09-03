@@ -13,7 +13,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { describe, expect, test } from "vitest";
 
-import { Timing } from "./timing";
+import { Timing } from "./timing.js";
 
 /** Long enough that `performance.now()` has certainly advanced on any runtime. */
 const MEASURABLE_DELAY_MS = 5;

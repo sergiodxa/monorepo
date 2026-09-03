@@ -14,7 +14,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Pagination } from "./pagination";
+import { Pagination } from "./pagination.js";
 
 describe("Pagination.Button", () => {
 	test('types itself "button" when it carries a command, so its command survives inside a form', async () => {

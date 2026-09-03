@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Email as EmailContract } from "./types";
+import type { Email as EmailContract } from "./types.js";
 
-import * as EmailComponents from "./components";
+import * as EmailComponents from "./components.js";
 
-export type { Address, Message, NormalizedMessage, SentMessage, Transport } from "./types";
-export type { MailerOptions, SendOptions } from "./mailer";
-export type { RenderedEmail } from "./render";
+export type { Address, Message, NormalizedMessage, SentMessage, Transport } from "./types.js";
+export type { MailerOptions, SendOptions } from "./mailer.js";
+export type { RenderedEmail } from "./render.js";
 
 /**
  * One row of an `Email.Table`. Exported under its own name because `Email` is a type
@@ -26,12 +26,12 @@ export type EmailTableRow = EmailComponents.Table.Row;
 /** A web font for `Email.Layout` to declare, named here for the same reason as above. */
 export type EmailFont = EmailComponents.Font;
 
-export { MailError } from "./errors";
-export { formatAddress, toAddressList } from "./lib/address";
-export { htmlToText } from "./lib/html-to-text";
-export { isEmail, Mailer } from "./mailer";
-export { buildMimeMessage } from "./mime";
-export { render } from "./render";
+export { MailError } from "./errors.js";
+export { formatAddress, toAddressList } from "./lib/address.js";
+export { htmlToText } from "./lib/html-to-text.js";
+export { isEmail, Mailer } from "./mailer.js";
+export { buildMimeMessage } from "./mime.js";
+export { render } from "./render.js";
 
 /**
  * An email authored as a class: who it goes to, what it says, and what it

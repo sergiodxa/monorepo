@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { AnchorPlacement } from "./placement";
+import type { AnchorPlacement } from "./placement.js";
 
 describe("AnchorPlacement", () => {
 	test("is exactly the twelve placements every anchored surface renders against", () => {

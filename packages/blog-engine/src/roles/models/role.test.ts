@@ -9,10 +9,10 @@ import { Database } from "remix/data-table";
  */
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { ADMIN_PERMISSIONS, PERMISSION_KEYS } from "../../shared/permissions";
-import { createTestDatabase } from "../../shared/test/db";
+import { ADMIN_PERMISSIONS, PERMISSION_KEYS } from "../../shared/permissions.js";
+import { createTestDatabase } from "../../shared/test/db.js";
 
-import { Role } from "./role";
+import { Role } from "./role.js";
 
 describe("Role permission resolution", () => {
 	let db: Database;

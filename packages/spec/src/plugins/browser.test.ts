@@ -17,22 +17,22 @@ import { failure, isFailure, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import type { SpecError } from "../errors";
-import type { ExecutionContext } from "../executor";
-import type { Grants, PermissionSet } from "../permissions";
-import type { Plugin, ToolContext } from "../plugin";
-import type { LoadedSuite } from "../sources";
-import type { ToolArg, Value } from "../values";
-import type { Workspace } from "../workspace";
+import type { SpecError } from "../errors.js";
+import type { ExecutionContext } from "../executor.js";
+import type { Grants, PermissionSet } from "../permissions.js";
+import type { Plugin, ToolContext } from "../plugin.js";
+import type { LoadedSuite } from "../sources.js";
+import type { ToolArg, Value } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { ExpectationError, PermissionDeniedError } from "../errors";
-import { executeTest } from "../executor";
-import { parse } from "../parser";
-import { createRegistry } from "../registry";
+import { ExpectationError, PermissionDeniedError } from "../errors.js";
+import { executeTest } from "../executor.js";
+import { parse } from "../parser.js";
+import { createRegistry } from "../registry.js";
 
-import { browserBinaryPath, createBrowserPlugin } from "./browser";
-import { createEnvPlugin } from "./env";
-import { createUrlPlugin } from "./url";
+import { browserBinaryPath, createBrowserPlugin } from "./browser.js";
+import { createEnvPlugin } from "./env.js";
+import { createUrlPlugin } from "./url.js";
 
 /** Whether the real `agent-browser` CLI is installed; gates the e2e suite. */
 const AVAILABLE = browserBinaryPath() !== null;

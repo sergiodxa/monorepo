@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SpecError } from "./errors";
+import type { SpecError } from "./errors.js";
 
 /** How one test ended. */
 export type TestStatus = "passed" | "failed";

@@ -8,9 +8,9 @@
  */
 import type { Handle, RemixNode } from "remix/ui";
 
-import type { Permission } from "../permissions";
+import type { Permission } from "../permissions.js";
 
-import * as s from "./styles";
+import * as s from "./styles.js";
 
 /** A CMS sidebar link with the permission that gates it. */
 interface CmsNavItem {

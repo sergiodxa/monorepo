@@ -9,8 +9,8 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import { YAMLStringifyError } from "./errors";
-import { resolvePlain } from "./scalars";
+import { YAMLStringifyError } from "./errors.js";
+import { resolvePlain } from "./scalars.js";
 
 /**
  * Settings for one serialization.

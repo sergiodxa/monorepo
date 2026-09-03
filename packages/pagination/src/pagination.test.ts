@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { Pagination } from "./pagination";
+import { Pagination } from "./pagination.js";
 
 describe("Pagination", () => {
 	test("derives every value from page, perPage, and total", () => {

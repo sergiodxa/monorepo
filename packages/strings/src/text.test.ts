@@ -9,7 +9,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { capitalize, excerpt, initials, truncate, wordCount } from "./text";
+import { capitalize, excerpt, initials, truncate, wordCount } from "./text.js";
 
 /** Family emoji: four people joined by zero-width joiners, one grapheme. */
 const FAMILY = "\u{1F469}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}";

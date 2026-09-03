@@ -18,7 +18,7 @@ import {
 	labelFor,
 	queryItems,
 	setRovingTabindex,
-} from "../utils/keyboard-nav";
+} from "../utils/keyboard-nav.js";
 
 /** Selector matching a menu item's role, regardless of its checked state. */
 const DEFAULT_ITEM_SELECTOR = '[role^="menuitem"]';

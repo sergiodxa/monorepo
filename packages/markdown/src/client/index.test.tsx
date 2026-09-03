@@ -10,7 +10,7 @@ import Markdoc from "@markdoc/markdoc";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { MarkdownView } from "./index";
+import { MarkdownView } from "./index.js";
 
 describe("MarkdownView", () => {
 	test("renders as JSX, following the Handle<Props> component model", async () => {

@@ -15,8 +15,8 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
-import SigningKey from "../../signing-keys/models/signing-key";
+import routes from "../../routes.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
 
 /**
  * JSON Web Key Set (JWKS) endpoint (RFC 7517).

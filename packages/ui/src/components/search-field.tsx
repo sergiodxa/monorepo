@@ -18,9 +18,9 @@ import { pointerEvents } from "@sdxc/u/general";
 import { absolute, flex, insIs, items, relative } from "@sdxc/u/layout";
 import { pis } from "@sdxc/u/size";
 
-import { fieldStackLayout } from "../styles/field-stack-layout";
+import { fieldStackLayout } from "../styles/field-stack-layout.js";
 
-import { Input } from "./input";
+import { Input } from "./input.js";
 
 /**
  * Prop types for {@link SearchField} and its compound parts.

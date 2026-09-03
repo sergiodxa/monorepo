@@ -9,7 +9,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
  */
 import { describe, expect, test } from "vitest";
 
-import { panelChrome } from "./panel-chrome";
+import { panelChrome } from "./panel-chrome.js";
 
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;

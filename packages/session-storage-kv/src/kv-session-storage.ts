@@ -15,7 +15,7 @@ import type { Session, SessionStorage } from "remix/session";
 import { toSeconds } from "@sdxc/duration";
 import { createSession } from "remix/session";
 
-import type { KVStore } from "./kv-store";
+import type { KVStore } from "./kv-store.js";
 
 /**
  * Default KV TTL used when no custom session lifetime is provided.

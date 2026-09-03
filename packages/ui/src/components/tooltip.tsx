@@ -21,10 +21,10 @@ import { when } from "@sdxc/u/state";
 import { scaleProperty } from "@sdxc/u/transform";
 import { text } from "@sdxc/u/typography";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
-import { OverlayArrow } from "./overlay-arrow";
-import { Popover } from "./popover";
+import { OverlayArrow } from "./overlay-arrow.js";
+import { Popover } from "./popover.js";
 
 /**
  * Side of the trigger {@link Tooltip} renders against when `placement` is

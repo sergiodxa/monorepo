@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { CodeBlock, Markdown } from "./markdown";
+import { CodeBlock, Markdown } from "./markdown.js";
 
-import { render } from "./index";
+import { render } from "./index.js";
 
 describe("Markdown", () => {
 	test("renders every block with the kit's own inline styles, never a class alone", async () => {

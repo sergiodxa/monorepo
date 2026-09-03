@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { textDecoration } from "./text-decoration";
+import { textDecoration } from "./text-decoration.js";
 
 describe("textDecoration", () => {
 	test("no-arg defaults to underline", async () => {

@@ -11,7 +11,7 @@ import type { Tag } from "@markdoc/markdoc";
 import Markdoc from "@markdoc/markdoc";
 import { describe, expect, test } from "vitest";
 
-import { fence } from "./markdoc";
+import { fence } from "./markdoc.js";
 
 /**
  * Transforms a markdown source's first fence the way a configured parser does.

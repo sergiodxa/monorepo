@@ -4,13 +4,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { compose } from "../internal/descriptor";
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter.js";
+import { compose } from "../internal/descriptor.js";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { backdropSaturate } from "./backdrop-saturate";
-import { saturate } from "./saturate";
+import { backdropSaturate } from "./backdrop-saturate.js";
+import { saturate } from "./saturate.js";
 
 describe("saturate", () => {
 	test("no-arg defaults to 1.5", async () => {

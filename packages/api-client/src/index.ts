@@ -8,6 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { APIClientInit } from "./api-client";
+export type { APIClientInit } from "./api-client.js";
 
-export { APIClient } from "./api-client";
+export { APIClient } from "./api-client.js";

@@ -12,9 +12,9 @@
 /** Re-exported so consumers can type a translator or i18n instance without adding i18next as a dependency. */
 export type { i18n, TFunction } from "i18next";
 
-export type { DetectionMethod, LanguageDetectorOptions } from "./lib/language-detector";
-export type { Translation, Translator, TranslatorOptions } from "./lib/translator";
+export type { DetectionMethod, LanguageDetectorOptions } from "./lib/language-detector.js";
+export type { Translation, Translator, TranslatorOptions } from "./lib/translator.js";
 
-export { getClientLocales } from "./lib/get-client-locales";
-export { LanguageDetector } from "./lib/language-detector";
-export { createTranslator } from "./lib/translator";
+export { getClientLocales } from "./lib/get-client-locales.js";
+export { LanguageDetector } from "./lib/language-detector.js";
+export { createTranslator } from "./lib/translator.js";

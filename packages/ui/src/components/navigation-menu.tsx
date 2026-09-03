@@ -42,11 +42,11 @@ import { scaleProperty } from "@sdxc/u/transform";
 import { fontSize, leading, text, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { durations, easings } from "../animations/tokens";
-import { floatingSurface } from "../styles/floating-surface";
-import { interactiveTransition } from "../styles/interactive-transition";
+import { durations, easings } from "../animations/tokens.js";
+import { floatingSurface } from "../styles/floating-surface.js";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
-import { Popover } from "./popover";
+import { Popover } from "./popover.js";
 
 /**
  * Named container {@link NavigationMenu.Content} declares on its own host, so

@@ -17,14 +17,14 @@ import type { Seed } from "@sdxc/sample";
 import { failure, isFailure, success } from "@sdxc/result";
 import { systemSeed } from "@sdxc/sample";
 
-import type { Sink } from "./diagnostics";
-import type { PermissionKind } from "./permissions";
-import type { Plugin } from "./plugin";
-import type { SourceFile } from "./source";
+import type { Sink } from "./diagnostics.js";
+import type { PermissionKind } from "./permissions.js";
+import type { Plugin } from "./plugin.js";
+import type { SourceFile } from "./source.js";
 
-import { SpecError } from "./errors";
-import { loadSuite } from "./loader";
-import { configWouldAdmit, grantsFromConfig, mergeGrants, parseGrants } from "./permissions";
+import { SpecError } from "./errors.js";
+import { loadSuite } from "./loader.js";
+import { configWouldAdmit, grantsFromConfig, mergeGrants, parseGrants } from "./permissions.js";
 import {
 	connectDeclaredPlugins,
 	deniedReferences,
@@ -36,10 +36,10 @@ import {
 	planPluginLaunch,
 	pluginGrantAdmits,
 	pluginGrantFromConfig,
-} from "./project-config";
-import { reportFatal, reportSuite } from "./reporter";
-import { DEFAULT_SEED } from "./run";
-import { runSuite } from "./runner";
+} from "./project-config.js";
+import { reportFatal, reportSuite } from "./reporter.js";
+import { DEFAULT_SEED } from "./run.js";
+import { runSuite } from "./runner.js";
 
 /**
  * The line appended to a permission denial when the project's

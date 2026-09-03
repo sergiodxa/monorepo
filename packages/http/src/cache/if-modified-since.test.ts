@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { ifModifiedSince, isModifiedSince } from "./if-modified-since";
+import { ifModifiedSince, isModifiedSince } from "./if-modified-since.js";
 
 /** The modification time every comparison in this file is made against. */
 const MODIFIED_AT = new Date("2015-10-21T07:28:00Z");

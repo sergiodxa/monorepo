@@ -6,8 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export type { StringifyOptions } from "./lib/stringify";
+export type { StringifyOptions } from "./lib/stringify.js";
 
-export { YAMLParseError, YAMLStringifyError } from "./lib/errors";
-export { parse } from "./lib/parse";
-export { stringify } from "./lib/stringify";
+export { YAMLParseError, YAMLStringifyError } from "./lib/errors.js";
+export { parse } from "./lib/parse.js";
+export { stringify } from "./lib/stringify.js";

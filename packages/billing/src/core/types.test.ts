@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { minorUnitDigits } from "./types";
+import { minorUnitDigits } from "./types.js";
 
 describe("minorUnitDigits", () => {
 	test("reports two decimals for the currencies that have them", () => {

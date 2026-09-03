@@ -8,9 +8,9 @@
  */
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { R2BucketMock } from "./r2";
+import type { R2BucketMock } from "./r2.js";
 
-import { createR2Bucket } from "./r2";
+import { createR2Bucket } from "./r2.js";
 
 /** MD5 of `"hello"`, which R2 reports as the object's etag. */
 const HELLO_ETAG = "5d41402abc4b2a76b9719d911017c592";

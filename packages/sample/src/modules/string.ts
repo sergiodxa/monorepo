@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "../random";
+import type { Random } from "../random.js";
 
 /** Digits and every lowercase letter, the 36 characters base 36 spells. */
 const ALPHANUMERIC_RADIX = 36;

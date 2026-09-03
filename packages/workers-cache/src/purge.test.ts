@@ -10,12 +10,12 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { CacheTag, PurgeOptions } from "./types";
+import type { CacheTag, PurgeOptions } from "./types.js";
 
-import { createTags } from "./create-tags";
-import { purge } from "./purge";
-import { PurgeError } from "./purge-error";
-import { createRecordingCache } from "./recording-cache";
+import { createTags } from "./create-tags.js";
+import { PurgeError } from "./purge-error.js";
+import { purge } from "./purge.js";
+import { createRecordingCache } from "./recording-cache.js";
 
 const TAGS = createTags({
 	post: (id: string) => `post:${id}`,

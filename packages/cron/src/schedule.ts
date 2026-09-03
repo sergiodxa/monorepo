@@ -13,21 +13,21 @@ import type { Result } from "@sdxc/result";
 import { toMs } from "@sdxc/duration";
 import { isFailure, success } from "@sdxc/result";
 
-import type { ScheduleDescriptor } from "./describe";
-import type { CronFieldSet } from "./fields";
-import type { InvalidCronExpression } from "./invalid-cron-expression";
+import type { ScheduleDescriptor } from "./describe.js";
+import type { CronFieldSet } from "./fields.js";
+import type { InvalidCronExpression } from "./invalid-cron-expression.js";
 import type {
 	ExpectedByOptions,
 	IsDueOptions,
 	MatchOptions,
 	NextOptions,
 	OccurrenceOptions,
-} from "./types";
+} from "./types.js";
 
-import { describeFields } from "./describe";
-import { normalizeExpression } from "./normalize";
-import { matchesInstant, nextOccurrence, previousOccurrence } from "./occurrences";
-import { parseExpression } from "./parse-expression";
+import { describeFields } from "./describe.js";
+import { normalizeExpression } from "./normalize.js";
+import { matchesInstant, nextOccurrence, previousOccurrence } from "./occurrences.js";
+import { parseExpression } from "./parse-expression.js";
 
 /**
  * A cron schedule: immutable, cheap to hold, and safe to parse once and reuse.

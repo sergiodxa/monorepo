@@ -21,10 +21,10 @@ import { active, focusVisible, hover, invalid, when } from "@sdxc/u/state";
 import { textAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { fieldStackLayout } from "../styles/field-stack-layout";
-import { interactiveTransition } from "../styles/interactive-transition";
+import { fieldStackLayout } from "../styles/field-stack-layout.js";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
-import { Input } from "./input";
+import { Input } from "./input.js";
 
 /**
  * ARIA role applied to {@link NumberField.Group} through {@link attrs}

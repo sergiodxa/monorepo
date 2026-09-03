@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { declarations, serialize } from "../internal/serialize";
+import { bg } from "../color/bg.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { selection } from "./selection";
+import { selection } from "./selection.js";
 
 describe("selection", () => {
 	test("emits an '&::selection' block around the input's declarations", async () => {

@@ -46,16 +46,16 @@ import { scaleProperty, translateProperty } from "@sdxc/u/transform";
 import { fontSize, leading, nowrap, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import type { Point } from "../utils/chart-path";
-import type { PieAngles } from "../utils/chart-scale";
+import type { Point } from "../utils/chart-path.js";
+import type { PieAngles } from "../utils/chart-scale.js";
 
-import { durations, easings } from "../animations/tokens";
-import { CHART_COLOR_SLOT_COUNT, chartPalette } from "../styles/chart-palette";
-import { legendToggle } from "../styles/legend-toggle";
-import { computeMarkerIndices } from "../utils/chart-marker-indices";
-import { arcPath, areaPath, linePath } from "../utils/chart-path";
-import { bandScale, linearScale, pieAngles, ticks } from "../utils/chart-scale";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { durations, easings } from "../animations/tokens.js";
+import { CHART_COLOR_SLOT_COUNT, chartPalette } from "../styles/chart-palette.js";
+import { legendToggle } from "../styles/legend-toggle.js";
+import { computeMarkerIndices } from "../utils/chart-marker-indices.js";
+import { arcPath, areaPath, linePath } from "../utils/chart-path.js";
+import { bandScale, linearScale, pieAngles, ticks } from "../utils/chart-scale.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /** Categorical color {@link Chart.Line} falls back to when `color` is omitted. */
 const DEFAULT_LINE_COLOR: Chart.Color = 1;

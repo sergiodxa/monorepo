@@ -11,7 +11,7 @@ import type { Handle } from "remix/ui";
 
 import { tabularNums, text, textAlign, weight } from "@sdxc/u/typography";
 
-import { Input } from "./input";
+import { Input } from "./input.js";
 
 /** Maximum code length {@link OtpField} falls back to when `length` is omitted. */
 const DEFAULT_LENGTH = 6;

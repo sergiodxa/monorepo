@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { BillingErrorCode } from "../../core/errors";
+import type { BillingErrorCode } from "../../core/errors.js";
 import type {
 	BillingInterval,
 	Checkout,
@@ -25,11 +25,11 @@ import type {
 	Product,
 	Subscription,
 	SubscriptionStatus,
-} from "../../core/types";
+} from "../../core/types.js";
 
-import { BillingError } from "../../core/errors";
+import { BillingError } from "../../core/errors.js";
 
-import type { MercadoPagoCatalog, MercadoPagoOneTimeProduct } from "./catalog";
+import type { MercadoPagoCatalog, MercadoPagoOneTimeProduct } from "./catalog.js";
 import type {
 	CustomerPayload,
 	ErrorPayload,
@@ -37,9 +37,9 @@ import type {
 	PreapprovalPayload,
 	PreapprovalPlanPayload,
 	PreferencePayload,
-} from "./schemas";
+} from "./schemas.js";
 
-import { toMajorUnits, toMinorUnits } from "./money";
+import { toMajorUnits, toMinorUnits } from "./money.js";
 
 /** Raw payload kept beside every model, which the package stores and never reads. */
 export type ProviderData = Readonly<Record<string, unknown>>;

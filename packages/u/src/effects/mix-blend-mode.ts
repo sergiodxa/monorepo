@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Every blend mode `mix-blend-mode` accepts, including the two `plus-*` compositing modes. */
 export type MixBlendModeValue =

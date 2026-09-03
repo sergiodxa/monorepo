@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { gridAutoRows } from "./grid-auto-rows";
+import { gridAutoRows } from "./grid-auto-rows.js";
 
 describe("gridAutoRows", () => {
 	test("resolves a spacing-scale number", async () => {

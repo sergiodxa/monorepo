@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { toPlainText } from "./plain-text";
+import { toPlainText } from "./plain-text.js";
 
 describe("toPlainText", () => {
 	test("returns an empty string for empty input", () => {

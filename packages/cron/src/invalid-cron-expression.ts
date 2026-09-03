@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CronFieldName } from "./types";
+import type { CronFieldName } from "./types.js";
 
 /**
  * Why an expression was rejected, as a code an app maps to its own wording. A

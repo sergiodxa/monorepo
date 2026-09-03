@@ -10,9 +10,9 @@
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { SelectionModel } from "../behaviors/selection-model";
+import type { SelectionModel } from "../behaviors/selection-model.js";
 
-import { DISABLED_SELECTOR } from "../utils/disabled-selector";
+import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 
 /**
  * Attribute every GridList row exposes its {@link SelectionModel.Key} on;

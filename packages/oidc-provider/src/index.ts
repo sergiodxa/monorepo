@@ -14,14 +14,14 @@ import type { DatabaseDriver } from "remix/data-table";
 import { Logger } from "@sdxc/logger/request";
 import { Database } from "remix/data-table";
 
-import { runMigrations } from "./database/migrations";
-import AuthorizationCode from "./oauth/models/authorization-code";
-import Session from "./oauth/models/session";
-import { createProviderRouter } from "./provider";
-import SigningKey from "./signing-keys/models/signing-key";
-import EmailVerificationToken from "./subjects/models/email-verification-token";
-import Subject from "./subjects/models/subject";
-import WebAuthnChallenge from "./webauthn/models/webauthn-challenge";
+import { runMigrations } from "./database/migrations.js";
+import AuthorizationCode from "./oauth/models/authorization-code.js";
+import Session from "./oauth/models/session.js";
+import { createProviderRouter } from "./provider.js";
+import SigningKey from "./signing-keys/models/signing-key.js";
+import EmailVerificationToken from "./subjects/models/email-verification-token.js";
+import Subject from "./subjects/models/subject.js";
+import WebAuthnChallenge from "./webauthn/models/webauthn-challenge.js";
 
 /** Sink for authentication/registration analytics events (host-provided). */
 export interface AnalyticsSink {
@@ -116,4 +116,4 @@ export function createOidcProvider(config: OidcProviderConfig): OidcProvider {
  * The platform<->tenant internal-token contract ships from here so the
  * control plane and the provider always agree on algorithm and claims.
  */
-export { createInternalToken, verifyInternalToken } from "./shared/lib/internal-auth";
+export { createInternalToken, verifyInternalToken } from "./shared/lib/internal-auth.js";

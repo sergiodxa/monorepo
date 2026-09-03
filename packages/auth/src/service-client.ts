@@ -15,11 +15,11 @@ import { toSeconds } from "@sdxc/duration";
 import { isFailure, wrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
-import type { Issuer } from "./issuer";
+import type { Issuer } from "./issuer.js";
 
-import { AuthError, AuthErrorCode } from "./auth-error";
-import { nonJsonMediaType } from "./content-type";
-import { accessTokenExpiry, spent } from "./expiry";
+import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { nonJsonMediaType } from "./content-type.js";
+import { accessTokenExpiry, spent } from "./expiry.js";
 
 /**
  * How much of a token's life is kept in reserve. A token handed out is valid for

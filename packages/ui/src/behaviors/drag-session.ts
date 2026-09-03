@@ -10,7 +10,7 @@
 
 import { TypedEventTarget } from "remix/ui";
 
-import { dispatchChange } from "../utils/dispatch-change";
+import { dispatchChange } from "../utils/dispatch-change.js";
 
 /**
  * Types associated with {@link DragSession}: the dragged item, the drop

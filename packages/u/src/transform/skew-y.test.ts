@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
-import { COMPOSITE_TRANSFORM } from "../internal/transform";
+import { declarations } from "../internal/serialize.js";
+import { COMPOSITE_TRANSFORM } from "../internal/transform.js";
 
-import { skewY } from "./skew-y";
+import { skewY } from "./skew-y.js";
 
 describe("skewY", () => {
 	test("treats a bare number as degrees", async () => {

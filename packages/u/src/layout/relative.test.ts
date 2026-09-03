@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { relative } from "./relative";
+import { relative } from "./relative.js";
 
 describe("relative", () => {
 	test("sets position: relative", async () => {

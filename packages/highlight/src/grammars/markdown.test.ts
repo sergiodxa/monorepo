@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { markdown } from "./markdown";
+import { markdown } from "./markdown.js";
 
 describe("markdown", () => {
 	test("paints a heading apart from its marker", () => {

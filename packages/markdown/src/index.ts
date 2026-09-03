@@ -7,6 +7,6 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export type { PlainTextOptions } from "./server/plain-text";
+export type { PlainTextOptions } from "./server/plain-text.js";
 
-export { toPlainText } from "./server/plain-text";
+export { toPlainText } from "./server/plain-text.js";

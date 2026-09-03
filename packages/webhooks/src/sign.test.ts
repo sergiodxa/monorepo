@@ -12,8 +12,8 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { InvalidDeliveryError, InvalidSecretError } from "./errors";
-import { sign } from "./sign";
+import { InvalidDeliveryError, InvalidSecretError } from "./errors.js";
+import { sign } from "./sign.js";
 
 /**
  * Test vector published with the Standard Webhooks reference implementation: this

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { pretty } from "./pretty";
+import { pretty } from "./pretty.js";
 
 describe("pretty", () => {
 	test("applies the pretty text-wrap declaration", async () => {

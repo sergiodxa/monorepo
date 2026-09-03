@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatLanguageString, parse, pick } from "./parser";
+import { formatLanguageString, parse, pick } from "./parser.js";
 
 /**
  * Gets the client's preferred locale from the Accept-Language header,

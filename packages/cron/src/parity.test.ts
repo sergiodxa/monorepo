@@ -13,7 +13,7 @@ import { unwrap } from "@sdxc/result";
 import { CronExpressionParser } from "cron-parser";
 import { describe, expect, test } from "vitest";
 
-import { Schedule } from "./schedule";
+import { Schedule } from "./schedule.js";
 
 /**
  * Every distinct cron expression stored by the product, read from the production

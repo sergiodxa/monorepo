@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { splitSqlStatements } from "./sql-script";
+import { splitSqlStatements } from "./sql-script.js";
 
 describe("splitSqlStatements", () => {
 	test("splits on statement boundaries", () => {

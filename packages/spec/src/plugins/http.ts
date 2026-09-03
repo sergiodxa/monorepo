@@ -15,12 +15,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { PermissionSet } from "../permissions";
-import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
+import type { SpecError } from "../errors.js";
+import type { PermissionSet } from "../permissions.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value, ValueObject } from "../values.js";
 
-import { ToolError } from "../errors";
+import { ToolError } from "../errors.js";
 
 /** The request tools the plugin exposes; each issues its uppercased method. */
 const HTTP_VERBS = ["get", "post", "put", "patch", "delete"] as const;

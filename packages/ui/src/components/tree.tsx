@@ -26,11 +26,11 @@ import { rotate } from "@sdxc/u/transform";
 import { text } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { panelChrome } from "../styles/panel-chrome";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { panelChrome } from "../styles/panel-chrome.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
-import { SentinelRow } from "./sentinel-row";
+import { SentinelRow } from "./sentinel-row.js";
 
 /** `role="tree"` applied to {@link Tree} through {@link attrs} unless a consumer supplies its own `role`. */
 const DEFAULT_ROLE = "tree";

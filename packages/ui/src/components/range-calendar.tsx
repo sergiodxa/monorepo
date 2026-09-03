@@ -19,8 +19,8 @@ import { flex, gap, items } from "@sdxc/u/layout";
 import { data, when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
-import { Calendar } from "./calendar";
-import { Input } from "./input";
+import { Calendar } from "./calendar.js";
+import { Input } from "./input.js";
 
 /** Semantic color role {@link RangeCalendar}'s bare fallback pair falls back to when `color` is omitted. */
 const DEFAULT_COLOR: RangeCalendar.Color = "neutral";

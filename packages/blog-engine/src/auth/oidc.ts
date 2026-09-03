@@ -10,9 +10,9 @@
 import { Issuer } from "@sdxc/auth/issuer";
 import { RelyingParty } from "@sdxc/auth/relying-party";
 
-import type { AuthProfile } from "../users/models/user";
+import type { AuthProfile } from "../users/models/user.js";
 
-import routes from "../routes";
+import routes from "../routes.js";
 
 /**
  * An OIDC discovery document, in the shape a provider publishes it, so a document

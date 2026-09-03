@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { FULL_TURN_RADIANS } from "./full-turn-radians";
+import { FULL_TURN_RADIANS } from "./full-turn-radians.js";
 
 describe("FULL_TURN_RADIANS", () => {
 	test("equals a full turn's radian measure", () => {

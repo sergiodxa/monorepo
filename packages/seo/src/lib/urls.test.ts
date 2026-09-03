@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { absoluteUrl, canonicalUrl, normalizeBaseUrl } from "./urls";
+import { absoluteUrl, canonicalUrl, normalizeBaseUrl } from "./urls.js";
 
 const BASE_URL = "https://example.com";
 

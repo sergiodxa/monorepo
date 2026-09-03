@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { BinaryLike, Bytes } from "./lib/bytes";
+export type { BinaryLike, Bytes } from "./lib/bytes.js";
 
-export { Base64, Base64Url, Hex } from "./encoding";
+export { Base64, Base64Url, Hex } from "./encoding.js";
 export {
 	CryptoError,
 	DecryptionError,
@@ -20,11 +20,11 @@ export {
 	InvalidKeyError,
 	MalformedHashError,
 	UnsupportedAlgorithmError,
-} from "./errors";
-export { sha256, sha384, sha512 } from "./hash";
-export { hmac } from "./hmac";
-export { password } from "./password";
-export { randomBytes, randomToken } from "./random";
-export { importKey, open, seal } from "./seal";
-export { timingSafeEqual } from "./timing-safe-equal";
-export { totp } from "./totp";
+} from "./errors.js";
+export { sha256, sha384, sha512 } from "./hash.js";
+export { hmac } from "./hmac.js";
+export { password } from "./password.js";
+export { randomBytes, randomToken } from "./random.js";
+export { importKey, open, seal } from "./seal.js";
+export { timingSafeEqual } from "./timing-safe-equal.js";
+export { totp } from "./totp.js";

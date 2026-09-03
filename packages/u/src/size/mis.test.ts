@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { mis } from "./mis";
+import { mis } from "./mis.js";
 
 describe("mis", () => {
 	test("resolves a spacing-scale number", async () => {

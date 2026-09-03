@@ -14,8 +14,8 @@ import { fence } from "@sdxc/highlight/markdoc";
 import { failure, isFailure, success } from "@sdxc/result";
 import { parse as parseYAML } from "@sdxc/yaml";
 
-export { toPlainText } from "./plain-text";
-export type { PlainTextOptions } from "./plain-text";
+export { toPlainText } from "./plain-text.js";
+export type { PlainTextOptions } from "./plain-text.js";
 
 /**
  * Error returned when frontmatter fails to parse or validate.

@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { durations, easings } from "./tokens";
+import { durations, easings } from "./tokens.js";
 
 describe("easings", () => {
 	test("standard is the general-purpose enter/exit curve", () => {

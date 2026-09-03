@@ -16,11 +16,11 @@ import type { Result } from "@sdxc/result";
 import { failure, isSuccess, success, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { PermissionSet } from "./permissions";
-import type { Workspace } from "./workspace";
+import type { PermissionSet } from "./permissions.js";
+import type { Workspace } from "./workspace.js";
 
-import { PermissionDeniedError, WorkspaceEscapeError } from "./errors";
-import { createWorkspace } from "./workspace";
+import { PermissionDeniedError, WorkspaceEscapeError } from "./errors.js";
+import { createWorkspace } from "./workspace.js";
 
 /** Workspaces created during a test, removed again by the afterEach hook. */
 const OPEN_WORKSPACES: Workspace[] = [];

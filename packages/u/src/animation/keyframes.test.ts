@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { keyframes } from "./keyframes";
+import { keyframes } from "./keyframes.js";
 
 describe("keyframes", () => {
 	test("emits only the @keyframes rule for the given name and frames", async () => {

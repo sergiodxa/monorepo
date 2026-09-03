@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { Email, render } from "./index";
+import { Email, render } from "./index.js";
 
 describe("Email.Layout", () => {
 	test("renders a full document with a table-based, inline-styled body", async () => {

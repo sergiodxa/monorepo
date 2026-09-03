@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import { cacheStatus } from "./cache-status";
-import { CACHE_STATUS_HEADER } from "./platform";
+import { cacheStatus } from "./cache-status.js";
+import { CACHE_STATUS_HEADER } from "./platform.js";
 
 function respond(status?: string): Response {
 	return new Response("ok", {

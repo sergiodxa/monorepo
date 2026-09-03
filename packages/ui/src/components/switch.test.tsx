@@ -12,7 +12,7 @@ import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Switch } from "./switch";
+import { Switch } from "./switch.js";
 
 describe(Switch.name, () => {
 	test("renders a bare input with no wrapping label when children is omitted", async () => {

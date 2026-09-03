@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { fixed } from "./fixed";
+import { fixed } from "./fixed.js";
 
 describe("fixed", () => {
 	test("sets position: fixed", async () => {

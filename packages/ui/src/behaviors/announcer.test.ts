@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { Announcer } from "./announcer";
+import { Announcer } from "./announcer.js";
 
 describe(Announcer.name, () => {
 	test("starts with an empty queue and no current message", () => {

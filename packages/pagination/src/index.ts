@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { CursorDirection, CursorValue, DecodedCursor } from "./cursor";
-export type { PaginateOptions } from "./headers";
-export type { OrderByTuple, OrderDirection } from "./keyset";
-export type { PagingNames } from "./names";
+export type { CursorDirection, CursorValue, DecodedCursor } from "./cursor.js";
+export type { PaginateOptions } from "./headers.js";
+export type { OrderByTuple, OrderDirection } from "./keyset.js";
+export type { PagingNames } from "./names.js";
 export type {
 	KeysetCursors,
 	KeysetOptions,
@@ -27,18 +27,18 @@ export type {
 	PageSeriesOptions,
 	PaginationInit,
 	PaginationJSON,
-} from "./pagination";
-export type { CreatePagingOptions, PageParams, Paging, ParsePageParamsOptions } from "./params";
+} from "./pagination.js";
+export type { CreatePagingOptions, PageParams, Paging, ParsePageParamsOptions } from "./params.js";
 
-export { decodeCursor, encodeCursor } from "./cursor";
+export { decodeCursor, encodeCursor } from "./cursor.js";
 export {
 	InvalidCursorError,
 	InvalidOrderingError,
 	PaginationError,
 	QueryFailedError,
 	UnencodableCursorValueError,
-} from "./errors";
-export { paginate } from "./headers";
-export { DEFAULT_MAX_PER_PAGE, DEFAULT_PAGING_NAMES, DEFAULT_PER_PAGE } from "./names";
-export { Pagination } from "./pagination";
-export { createPaging, parsePageParams } from "./params";
+} from "./errors.js";
+export { paginate } from "./headers.js";
+export { DEFAULT_MAX_PER_PAGE, DEFAULT_PAGING_NAMES, DEFAULT_PER_PAGE } from "./names.js";
+export { Pagination } from "./pagination.js";
+export { createPaging, parsePageParams } from "./params.js";

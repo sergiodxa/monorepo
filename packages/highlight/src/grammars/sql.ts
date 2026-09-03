@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar } from "../lexer";
+import type { Grammar } from "../lexer.js";
 
 /**
  * Reserved words. The `i` flag rides along with the sticky one because a

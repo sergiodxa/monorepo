@@ -9,7 +9,7 @@
 import { text } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
-import routes from "../../routes";
+import routes from "../../routes.js";
 
 /** Serves `/robots.txt` pointing crawlers at the sitemap (URL derived per request). */
 export default createAction(routes.robots, async ({ request }) => {

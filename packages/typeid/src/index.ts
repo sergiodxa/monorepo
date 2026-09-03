@@ -10,17 +10,17 @@ import type { UUID } from "@sdxc/uuid";
 
 import { assertUUID } from "@sdxc/uuid";
 
-import type { Base32 } from "./lib/base32";
+import type { Base32 } from "./lib/base32.js";
 
-import { decode, encode } from "./lib/base32";
+import { decode, encode } from "./lib/base32.js";
 import {
 	EmptyPrefixError,
 	InvalidPrefixError,
 	InvalidSuffixLengthError,
 	MissingSeparatorError,
 	PrefixMismatchError,
-} from "./lib/errors";
-import { isValidPrefix } from "./lib/is-valid-prefix";
+} from "./lib/errors.js";
+import { isValidPrefix } from "./lib/is-valid-prefix.js";
 
 /** Delimiter between a TypeID prefix and suffix. */
 const SEPARATOR = "_";

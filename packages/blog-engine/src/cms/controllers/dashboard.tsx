@@ -12,13 +12,13 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
-import { PostType } from "../../post-types/models/post-type";
-import { Post } from "../../posts/models/post";
-import routes from "../../routes";
-import { Settings } from "../../settings/models/settings";
-import { CmsLayout } from "../../shared/components/cms-layout";
-import * as s from "../../shared/components/styles";
+import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
+import { PostType } from "../../post-types/models/post-type.js";
+import { Post } from "../../posts/models/post.js";
+import routes from "../../routes.js";
+import { Settings } from "../../settings/models/settings.js";
+import { CmsLayout } from "../../shared/components/cms-layout.js";
+import * as s from "../../shared/components/styles.js";
 
 export default createAction(
 	routes.cms.dashboard,

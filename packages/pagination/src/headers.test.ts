@@ -11,11 +11,11 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { KeysetPage, Page } from "./pagination";
+import type { KeysetPage, Page } from "./pagination.js";
 
-import { paginate } from "./headers";
-import { parseLinkHeader } from "./link";
-import { Pagination } from "./pagination";
+import { paginate } from "./headers.js";
+import { parseLinkHeader } from "./link.js";
+import { Pagination } from "./pagination.js";
 
 /** Builds an offset page whose rows are irrelevant to the headers under test. */
 function offsetPage(page: number, perPage: number, total: number): Page<number> {

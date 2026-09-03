@@ -13,10 +13,10 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "./key-storage";
+import type { KeyStorage, KeyStorageListOptions, KeyStorageListResult } from "./key-storage.js";
 
-import { JWK } from "./jwk";
-import { JWT } from "./jwt";
+import { JWK } from "./jwk.js";
+import { JWT } from "./jwt.js";
 
 /** Where the remote-JWKS tests pretend an authorization server publishes its keys. */
 const JWKS_URL = "https://auth.test/.well-known/jwks.json";

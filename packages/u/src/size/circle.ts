@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { rounded } from "../effects/rounded";
-import { compose } from "../internal/descriptor";
+import { rounded } from "../effects/rounded.js";
+import { compose } from "../internal/descriptor.js";
 
-import { aspect } from "./aspect";
+import { aspect } from "./aspect.js";
 
 /**
  * A shape pattern for circular boxes: a square aspect ratio plus full

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
 /** Tried before the `/` that opens it can read as a separator. */
 const comment: Rule = { type: "comment", match: /\/\*(?:[^*]|\*(?!\/))*(?:\*\/)?/y };

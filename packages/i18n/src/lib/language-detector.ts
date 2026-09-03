@@ -11,7 +11,7 @@
 import type { Cookie } from "remix/cookie";
 import type { Session, SessionStorage } from "remix/session";
 
-import { pick } from "./parser";
+import { pick } from "./parser.js";
 
 /** A source the detector can probe for the user's preferred language. */
 export type DetectionMethod = "searchParams" | "cookie" | "session" | "header" | "custom";

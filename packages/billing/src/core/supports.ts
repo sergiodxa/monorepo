@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Billing } from "./contract";
+import type { Billing } from "./contract.js";
 
 /**
  * Resource groups whose presence varies by platform. Derived from which

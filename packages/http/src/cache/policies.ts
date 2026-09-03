@@ -10,7 +10,7 @@
 import type { DurationInput } from "@sdxc/duration";
 import type { CacheControl } from "remix/headers";
 
-import { policy } from "./policy";
+import { policy } from "./policy.js";
 
 /**
  * Freshness lifetime for fingerprinted assets: one year, the longest value the

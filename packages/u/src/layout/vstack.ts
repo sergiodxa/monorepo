@@ -2,20 +2,20 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SpacingValue } from "../internal/tokens";
+import type { SpacingValue } from "../internal/tokens.js";
 
-import { if as ifUtility } from "../general/if";
-import { compose } from "../internal/descriptor";
+import { if as ifUtility } from "../general/if.js";
+import { compose } from "../internal/descriptor.js";
 
-import type { StackOptions } from "./hstack";
-import type { AlignItemsValue } from "./items";
-import type { JustifyValue } from "./justify";
+import type { StackOptions } from "./hstack.js";
+import type { AlignItemsValue } from "./items.js";
+import type { JustifyValue } from "./justify.js";
 
-import { flex } from "./flex";
-import { flexCol } from "./flex-col";
-import { gap } from "./gap";
-import { items } from "./items";
-import { justify } from "./justify";
+import { flexCol } from "./flex-col.js";
+import { flex } from "./flex.js";
+import { gap } from "./gap.js";
+import { items } from "./items.js";
+import { justify } from "./justify.js";
 
 /**
  * A vertical flex stack. Composes `u.flex()`, `u.flexCol()`, and — from

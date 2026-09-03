@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { whiteSpace } from "./white-space";
+import { whiteSpace } from "./white-space.js";
 
 describe("whiteSpace", () => {
 	test("no-arg defaults to pre-wrap", async () => {

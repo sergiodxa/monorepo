@@ -19,7 +19,7 @@ import {
 	type RouterProviderValue,
 	type UIControllerActions,
 	type ViewHandler,
-} from "./index";
+} from "./index.js";
 
 interface ProviderRender {
 	value: RouterProviderValue;

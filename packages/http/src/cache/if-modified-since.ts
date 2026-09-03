@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { parseHttpDate } from "./http-date";
+import { parseHttpDate } from "./http-date.js";
 
 /** Milliseconds in the one second an HTTP-date can express. */
 const SECOND_MS = 1000;

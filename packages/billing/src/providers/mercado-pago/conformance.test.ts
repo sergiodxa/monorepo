@@ -14,11 +14,11 @@
 
 import { describe } from "vitest";
 
-import type { ConformanceOptions } from "../../testing/conformance";
+import type { ConformanceOptions } from "../../testing/conformance.js";
 
-import { capabilityConformance, conformance } from "../../testing/conformance";
+import { capabilityConformance, conformance } from "../../testing/conformance.js";
 
-import { MercadoPagoBilling } from "./index";
+import { MercadoPagoBilling } from "./index.js";
 
 /** The sandbox credential the suite bills against when it is enabled. */
 const ACCESS_TOKEN = process.env["MERCADO_PAGO_ACCESS_TOKEN"] ?? "";

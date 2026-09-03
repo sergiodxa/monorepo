@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { backdropHueRotate } from "./backdrop-hue-rotate";
+import { backdropHueRotate } from "./backdrop-hue-rotate.js";
 
 describe("backdropHueRotate", () => {
 	test("no-arg defaults to 90deg", async () => {

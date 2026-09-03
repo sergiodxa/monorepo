@@ -10,10 +10,10 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import type { AnyJobContext, JobContext, JobContextInit } from "./context";
-import type { AnyJobDefinition, JobDefinition } from "./jobs";
+import type { AnyJobContext, JobContext, JobContextInit } from "./context.js";
+import type { AnyJobDefinition, JobDefinition } from "./jobs.js";
 
-import { JobContext as Context } from "./context";
+import { JobContext as Context } from "./context.js";
 
 /**
  * Augmented by an app to name the context its handlers receive, the way

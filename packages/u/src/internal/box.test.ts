@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { resolveBox, resolveEdge } from "./box";
+import { resolveBox, resolveEdge } from "./box.js";
 
 describe("resolveBox", () => {
 	test("one value applies uniformly", () => {

@@ -12,7 +12,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Typeset } from "./typeset";
+import { Typeset } from "./typeset.js";
 
 /** The stylesheet {@link Typeset} emits, with every `<style>` tag joined. */
 async function typesetCss(): Promise<string> {

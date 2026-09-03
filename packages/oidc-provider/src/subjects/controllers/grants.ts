@@ -17,12 +17,12 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import Grant from "../../oauth/models/grant";
-import routes from "../../routes";
-import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { toIsoString } from "../../shared/lib/timestamp";
-import Subject from "../models/subject";
+import Client from "../../clients/models/client.js";
+import Grant from "../../oauth/models/grant.js";
+import routes from "../../routes.js";
+import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
+import { toIsoString } from "../../shared/lib/timestamp.js";
+import Subject from "../models/subject.js";
 
 /**
  * `GET /api/subjects/:id/grants` — lists a subject's grants with client info.

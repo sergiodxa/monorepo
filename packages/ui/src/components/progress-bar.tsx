@@ -20,7 +20,7 @@ import { bs, is, m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /** Native `max` value {@link ProgressBar.Indicator} falls back to when `max` is omitted, so a bare `value` reads as a percentage without passing `max={100}` every time. */
 const DEFAULT_MAX = 100;

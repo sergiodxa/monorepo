@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { translateProperty } from "./translate-property";
+import { translateProperty } from "./translate-property.js";
 
 describe("translateProperty", () => {
 	test("passes a two-axis percentage shorthand through unchanged", async () => {

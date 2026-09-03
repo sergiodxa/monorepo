@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { outline } from "./outline";
+import { outline } from "./outline.js";
 
 describe("outline", () => {
 	test("no-arg resolves the system default color, 2px solid, no offset", async () => {

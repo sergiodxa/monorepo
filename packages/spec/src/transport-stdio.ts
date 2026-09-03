@@ -20,13 +20,13 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 
-import type { DiagnosticCode } from "./errors";
-import type { PermissionSet } from "./permissions";
-import type { Plugin, ToolContext, ToolDescriptor } from "./plugin";
-import type { ToolArg, Value } from "./values";
-import type { Workspace } from "./workspace";
+import type { DiagnosticCode } from "./errors.js";
+import type { PermissionSet } from "./permissions.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "./plugin.js";
+import type { ToolArg, Value } from "./values.js";
+import type { Workspace } from "./workspace.js";
 
-import { PermissionDeniedError, SpecError, ToolError, WorkspaceEscapeError } from "./errors";
+import { PermissionDeniedError, SpecError, ToolError, WorkspaceEscapeError } from "./errors.js";
 
 /** How long `connectStdioPlugin` waits for the describe reply. */
 const HANDSHAKE_TIMEOUT_MS = 5000;

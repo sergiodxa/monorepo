@@ -23,7 +23,7 @@ import {
 	rgbToHsl,
 	rgbToHsv,
 	roundChannel,
-} from "./color-math";
+} from "./color-math.js";
 
 describe(clampChannel.name, () => {
 	test("holds a value already inside the default 0-255 bound unchanged", () => {

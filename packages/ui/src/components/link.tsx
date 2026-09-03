@@ -15,9 +15,9 @@ import { cursor, raw, var as varUtility } from "@sdxc/u/general";
 import { data, when } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** Semantic color role {@link Link} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Link.Color = "brand";

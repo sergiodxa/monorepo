@@ -23,7 +23,7 @@ import { when } from "@sdxc/u/state";
 import { leading, textAlign, textDecoration, tracking, weight } from "@sdxc/u/typography";
 import { css } from "remix/ui";
 
-import { easings } from "../animations/tokens";
+import { easings } from "../animations/tokens.js";
 
 /**
  * Named container {@link Typeset} declares on its own host, so its wide-table

@@ -4,13 +4,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { compose } from "../internal/descriptor";
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { compose } from "../internal/descriptor.js";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { blur } from "./blur";
-import { filterOpacity } from "./filter-opacity";
-import { hueRotate } from "./hue-rotate";
+import { blur } from "./blur.js";
+import { filterOpacity } from "./filter-opacity.js";
+import { hueRotate } from "./hue-rotate.js";
 
 describe("hueRotate", () => {
 	test("no-arg defaults to 90deg", async () => {

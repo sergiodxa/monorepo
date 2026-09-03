@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Accepted `container-type` keywords the `container` shorthand's second segment names. */
 export type ContainerTypeValue = "size" | "inline-size" | "normal";

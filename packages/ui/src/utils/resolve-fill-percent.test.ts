@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { resolveFillPercent } from "./resolve-fill-percent";
+import { resolveFillPercent } from "./resolve-fill-percent.js";
 
 describe(resolveFillPercent.name, () => {
 	test("computes how far value has traveled from min toward max as a percentage", () => {

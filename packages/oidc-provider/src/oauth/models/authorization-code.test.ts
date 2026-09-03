@@ -10,10 +10,10 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createClient, createSession, createSubject } from "../../shared/test/fixtures";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createClient, createSession, createSubject } from "../../shared/test/fixtures.js";
 
-import AuthorizationCode from "./authorization-code";
+import AuthorizationCode from "./authorization-code.js";
 
 describe("AuthorizationCode", () => {
 	let sqliteDb: SqliteDatabase;

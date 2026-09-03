@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ScaleValue } from "../internal/transform";
+import type { ScaleValue } from "../internal/transform.js";
 
-import { scaleFactor, transformFunction } from "../internal/transform";
+import { scaleFactor, transformFunction } from "../internal/transform.js";
 
 /**
  * Scales the element along the horizontal axis only. A bare number is a

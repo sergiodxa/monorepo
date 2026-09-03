@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { createSchemaBuilders } from "./schema";
+import { createSchemaBuilders } from "./schema.js";
 
 const BASE_URL = "https://example.com";
 

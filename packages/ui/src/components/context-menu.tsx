@@ -18,8 +18,8 @@ import { mis, pb, pi, pie } from "@sdxc/u/size";
 import { not } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
-import { Menu } from "./menu";
-import { Section } from "./section";
+import { Menu } from "./menu.js";
+import { Section } from "./section.js";
 
 /**
  * Side {@link ContextMenu.SubContent} renders against relative to its

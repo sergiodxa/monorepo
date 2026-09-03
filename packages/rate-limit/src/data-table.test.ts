@@ -13,8 +13,8 @@ import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { DataTableAdapter, RATE_LIMIT_HITS_SCHEMA_SQL, rateLimitHits } from "./data-table";
-import { RateLimitError } from "./rate-limit-error";
+import { DataTableAdapter, RATE_LIMIT_HITS_SCHEMA_SQL, rateLimitHits } from "./data-table.js";
+import { RateLimitError } from "./rate-limit-error.js";
 
 /** A fixed instant, so every window boundary in a case is exact. */
 const NOW = 1_700_000_000_000;

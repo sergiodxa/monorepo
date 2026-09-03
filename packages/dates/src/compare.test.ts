@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { diffInDays, eachDayOfInterval, isSameDay } from "./compare";
+import { diffInDays, eachDayOfInterval, isSameDay } from "./compare.js";
 
 /** Zone whose offset puts late-UTC instants on the previous calendar day. */
 const NEW_YORK = "America/New_York";

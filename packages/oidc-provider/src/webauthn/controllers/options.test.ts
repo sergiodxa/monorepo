@@ -16,14 +16,14 @@ import { Logger } from "@sdxc/logger/request";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import type { AnalyticsSink } from "../../index";
+import type { AnalyticsSink } from "../../index.js";
 
-import { createProviderRouter } from "../../provider";
-import { clearUserRateLimitCache } from "../../shared/lib/user-rate-limit";
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createSubject } from "../../shared/test/fixtures";
-import Subject from "../../subjects/models/subject";
-import Passkey from "../models/passkey";
+import { createProviderRouter } from "../../provider.js";
+import { clearUserRateLimitCache } from "../../shared/lib/user-rate-limit.js";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createSubject } from "../../shared/test/fixtures.js";
+import Subject from "../../subjects/models/subject.js";
+import Passkey from "../models/passkey.js";
 
 /** No-op analytics sink, mirroring the provider's self-hosted default. */
 let analytics: AnalyticsSink = {

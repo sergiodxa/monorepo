@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { balance } from "./balance";
+import { balance } from "./balance.js";
 
 describe("balance", () => {
 	test("applies the balance text-wrap declaration", async () => {

@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createRateLimit } from "./rate-limit";
+import { createRateLimit } from "./rate-limit.js";
 
 describe("createRateLimit", () => {
 	test("allows requests up to the limit, then denies", async () => {

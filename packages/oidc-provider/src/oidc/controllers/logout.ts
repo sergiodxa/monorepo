@@ -18,15 +18,15 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import Client from "../../clients/models/client";
-import LogoutUri from "../../clients/models/logout-uri";
-import TenantMeta from "../../management/models/tenant-meta";
-import Session from "../../oauth/models/session";
-import IdToken from "../../oauth/values/id-token";
-import routes from "../../routes";
-import { reject } from "../../shared/lib/reject";
-import SigningKey from "../../signing-keys/models/signing-key";
-import Subject from "../../subjects/models/subject";
+import Client from "../../clients/models/client.js";
+import LogoutUri from "../../clients/models/logout-uri.js";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import Session from "../../oauth/models/session.js";
+import IdToken from "../../oauth/values/id-token.js";
+import routes from "../../routes.js";
+import { reject } from "../../shared/lib/reject.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
+import Subject from "../../subjects/models/subject.js";
 
 let LogoutSchema = s.object({
 	id_token_hint: s.optional(s.string()),

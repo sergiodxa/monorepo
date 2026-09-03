@@ -15,14 +15,14 @@ import { unwrap } from "@sdxc/result";
 import { CronExpressionParser } from "cron-parser";
 import { describe, expect, test } from "vitest";
 
-import { Schedule } from "./schedule";
+import { Schedule } from "./schedule.js";
 import {
 	ANCHORS,
 	CORPUS_SEED,
 	CORPUS_SIZE,
 	randomExpressions,
 	randomInvalidExpressions,
-} from "./test/corpus";
+} from "./test/corpus.js";
 
 /** How many occurrences each comparison walks in each direction. */
 const DEPTH = 6;

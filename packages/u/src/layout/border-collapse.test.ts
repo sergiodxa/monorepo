@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { borderCollapse } from "./border-collapse";
+import { borderCollapse } from "./border-collapse.js";
 
 describe("borderCollapse", () => {
 	test("no-arg defaults to 'collapse'", async () => {

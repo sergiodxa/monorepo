@@ -13,7 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-import { sanitizeCss } from "../../shared/lib/css-sanitizer";
+import { sanitizeCss } from "../../shared/lib/css-sanitizer.js";
 
 /**
  * Single row keyed by `id: "default"`. Reads substitute default colors when

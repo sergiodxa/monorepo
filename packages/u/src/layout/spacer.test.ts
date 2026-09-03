@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { spacer } from "./spacer";
+import { spacer } from "./spacer.js";
 
 describe("spacer", () => {
 	test("grows and shrinks to fill the available space", async () => {

@@ -13,7 +13,7 @@ import { border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { combine } from "@sdxc/u/general";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * A framed panel's shared border and rounding: a solid, 1px neutral border

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { animationDelay } from "./animation-delay";
+import { animationDelay } from "./animation-delay.js";
 
 describe("animationDelay", () => {
 	test("passes the given time value through unchanged", async () => {

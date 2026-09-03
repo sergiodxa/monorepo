@@ -8,7 +8,7 @@
  */
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { createSqlStorage } from "./sql-storage";
+import { createSqlStorage } from "./sql-storage.js";
 
 /** Builds a storage with a `users` table ready to query. */
 function setup(): SqlStorage {

@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { conicGradient, linearGradient, radialGradient } from "./gradient";
+import { conicGradient, linearGradient, radialGradient } from "./gradient.js";
 
 describe("linearGradient", () => {
 	test("a numeric angle is treated as degrees", () => {

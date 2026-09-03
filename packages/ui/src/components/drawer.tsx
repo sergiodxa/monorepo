@@ -20,9 +20,9 @@ import { bs, is, m, maxBs, maxIs } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
 import { translateX, translateY } from "@sdxc/u/transform";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
-import { Dialog } from "./dialog";
+import { Dialog } from "./dialog.js";
 
 /**
  * Physical edge of the viewport {@link Drawer} docks against when

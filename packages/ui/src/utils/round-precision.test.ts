@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { roundChannel } from "./round-precision";
+import { roundChannel } from "./round-precision.js";
 
 describe(roundChannel.name, () => {
 	test("rounds to the nearest whole number by default", () => {

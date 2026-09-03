@@ -19,7 +19,7 @@ import { media } from "@sdxc/u/responsive";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * The declarations shared by both engines' thumb pseudo-elements; the

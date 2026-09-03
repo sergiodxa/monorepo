@@ -21,11 +21,11 @@ import { active, disabled, focusVisible, hover, when } from "@sdxc/u/state";
 import { text, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
-import { Popover } from "./popover";
-import { Separator } from "./separator";
+import { Popover } from "./popover.js";
+import { Separator } from "./separator.js";
 
 /**
  * Side of the invoker {@link Menu} renders against when `placement` is left

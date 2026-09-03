@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { semanticColorPanelStyle } from "./semantic-color-panel";
+import { semanticColorPanelStyle } from "./semantic-color-panel.js";
 
 describe(semanticColorPanelStyle.name, () => {
 	test("builds the border, tinted background, and emphasized foreground for a color", () => {

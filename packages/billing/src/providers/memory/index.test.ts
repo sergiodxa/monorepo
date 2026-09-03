@@ -10,11 +10,11 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { Customer, Order } from "../../core/types";
+import type { Customer, Order } from "../../core/types.js";
 
-import type { MemoryBillingOptions, MemoryProductSeed } from "./index";
+import type { MemoryBillingOptions, MemoryProductSeed } from "./index.js";
 
-import { MemoryBilling } from "./index";
+import { MemoryBilling } from "./index.js";
 
 /** Catalog every test starts from: a monthly plan, a one-time sale, and a yen plan. */
 const CATALOG: Record<string, MemoryProductSeed> = {

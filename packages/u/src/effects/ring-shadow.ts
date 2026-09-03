@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ColorValue } from "../types";
+import type { ColorValue } from "../types.js";
 
-import { boxShadowSlot } from "../internal/box-shadow";
-import { color } from "../internal/tokens";
+import { boxShadowSlot } from "../internal/box-shadow.js";
+import { color } from "../internal/tokens.js";
 
 /**
  * Draws a selection ring that stays visible for as long as a component applies

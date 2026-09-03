@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { pseudoContent } from "./pseudo-content";
+import { pseudoContent } from "./pseudo-content.js";
 
 describe("pseudoContent", () => {
 	test("sets an empty pseudo-element content", async () => {

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar } from "../lexer";
+import type { Grammar } from "../lexer.js";
 
 /**
  * Claims nothing, so the scanner returns the whole input as one `plain` token.

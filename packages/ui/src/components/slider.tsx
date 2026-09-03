@@ -47,10 +47,10 @@ import {
 	z,
 } from "@sdxc/u";
 
-import { outputCaptionText } from "../styles/output-caption-text";
-import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
-import { mergeStyle } from "../utils/merge-style";
-import { resolveFillPercent } from "../utils/resolve-fill-percent";
+import { outputCaptionText } from "../styles/output-caption-text.js";
+import { rangeThumbAppearance } from "../styles/range-thumb-appearance.js";
+import { mergeStyle } from "../utils/merge-style.js";
+import { resolveFillPercent } from "../utils/resolve-fill-percent.js";
 
 /** Default {@link Slider.Props} orientation, applied when `orientation` is omitted. */
 const DEFAULT_ORIENTATION: Slider.Orientation = "horizontal";

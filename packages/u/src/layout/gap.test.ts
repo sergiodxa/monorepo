@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { gap } from "./gap";
+import { gap } from "./gap.js";
 
 describe("gap", () => {
 	test("one value applies to both row and column gap", async () => {

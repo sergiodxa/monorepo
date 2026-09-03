@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DISABLED_SELECTOR } from "./disabled-selector";
+import { DISABLED_SELECTOR } from "./disabled-selector.js";
 
 /**
  * Collects `root`'s enabled descendants matching `selector`, in document

@@ -15,14 +15,14 @@ import { createContextKey, RequestContext, createRouter } from "remix/router";
 import { route } from "remix/routes";
 import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import type { CallToolResult, ToolMiddleware } from "./tools";
-import type { InputOf } from "./tools";
+import type { CallToolResult, ToolMiddleware } from "./tools.js";
+import type { InputOf } from "./tools.js";
 
-import { ForbiddenError, ToolError } from "./errors";
-import { createHandler } from "./handler";
-import { ErrorCode } from "./jsonrpc";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "./protocol";
-import { tool, tools } from "./tools";
+import { ForbiddenError, ToolError } from "./errors.js";
+import { createHandler } from "./handler.js";
+import { ErrorCode } from "./jsonrpc.js";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "./protocol.js";
+import { tool, tools } from "./tools.js";
 
 /** Stands in for whatever an app's middleware provides. */
 class Database {

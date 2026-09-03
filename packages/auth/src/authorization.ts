@@ -16,10 +16,10 @@ import { isFailure, wrap } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 import { redirect } from "remix/response/redirect";
 
-import type { AccessToken } from "./access-token";
-import type { IdToken } from "./id-token";
+import type { AccessToken } from "./access-token.js";
+import type { IdToken } from "./id-token.js";
 
-import { AuthSession } from "./auth-session";
+import { AuthSession } from "./auth-session.js";
 
 /** Where a signed-in visitor lands when an app names no destination of its own. */
 const DEFAULT_SIGNED_IN = "/";

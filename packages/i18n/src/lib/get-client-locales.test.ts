@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { getClientLocales } from "./get-client-locales";
+import { getClientLocales } from "./get-client-locales.js";
 
 function makeRequest(acceptLanguage?: string): Request {
 	return new Request("https://example.com/", {

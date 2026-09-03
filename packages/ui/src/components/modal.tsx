@@ -16,9 +16,9 @@ import { media, startingStyle } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { scaleProperty } from "@sdxc/u/transform";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
-import { Dialog } from "./dialog";
+import { Dialog } from "./dialog.js";
 
 /**
  * Exit-state `scale` factor {@link Modal}'s panel animates from on entry and

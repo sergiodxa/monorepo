@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { required } from "./required";
+import { required } from "./required.js";
 
 describe("required", () => {
 	test("emits both the native and the ARIA selector in one block", async () => {

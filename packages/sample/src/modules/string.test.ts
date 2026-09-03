@@ -8,9 +8,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createRandom } from "../random";
+import { createRandom } from "../random.js";
 
-import { createStringModule } from "./string";
+import { createStringModule } from "./string.js";
 
 function module(seed: string) {
 	return createStringModule(createRandom(seed), new Date("2026-06-15T12:00:00.000Z"));

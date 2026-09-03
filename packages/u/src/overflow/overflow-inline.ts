@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
-import type { OverflowValue } from "./overflow";
+import type { OverflowValue } from "./overflow.js";
 
 /**
  * Applies `overflow-inline`, independently of the block axis. The inline axis

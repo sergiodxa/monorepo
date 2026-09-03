@@ -12,10 +12,10 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Base64Url } from "./encoding";
-import { DecryptionError, InvalidEnvelopeError, InvalidKeyError } from "./errors";
-import { randomBytes, randomToken } from "./random";
-import { importKey, open, seal } from "./seal";
+import { Base64Url } from "./encoding.js";
+import { DecryptionError, InvalidEnvelopeError, InvalidKeyError } from "./errors.js";
+import { randomBytes, randomToken } from "./random.js";
+import { importKey, open, seal } from "./seal.js";
 
 /** Plaintext used across the round-trip cases. */
 const PLAINTEXT = "refresh-token-value";

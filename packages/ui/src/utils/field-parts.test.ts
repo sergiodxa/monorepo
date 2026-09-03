@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { FieldPartsProps } from "./field-parts";
+import type { FieldPartsProps } from "./field-parts.js";
 
 describe("FieldPartsProps", () => {
 	test("every member is optional, so an empty object satisfies it", () => {

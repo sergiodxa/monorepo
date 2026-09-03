@@ -14,14 +14,14 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
-import { requirePermission } from "../../auth/middleware/require-permission";
-import routes from "../../routes";
-import { Settings } from "../../settings/models/settings";
-import { CmsLayout } from "../../shared/components/cms-layout";
-import * as s from "../../shared/components/styles";
-import { fieldText } from "../../shared/text";
-import { DEFAULT_THEME, resolveTheme, type ThemeSettings } from "../theme/theme";
+import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
+import { requirePermission } from "../../auth/middleware/require-permission.js";
+import routes from "../../routes.js";
+import { Settings } from "../../settings/models/settings.js";
+import { CmsLayout } from "../../shared/components/cms-layout.js";
+import * as s from "../../shared/components/styles.js";
+import { fieldText } from "../../shared/text.js";
+import { DEFAULT_THEME, resolveTheme, type ThemeSettings } from "../theme/theme.js";
 
 /**
  * Renders a labeled `<select>` for one theme knob whose name doubles as its label.

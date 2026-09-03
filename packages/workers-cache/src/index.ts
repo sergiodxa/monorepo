@@ -18,14 +18,14 @@ export type {
 	PurgeEverything,
 	PurgeOptions,
 	PurgeSelector,
-} from "./types";
-export type { CacheTags, TagVocabulary } from "./create-tags";
-export type { RecordingCache, RecordingCacheOptions } from "./recording-cache";
+} from "./types.js";
+export type { CacheTags, TagVocabulary } from "./create-tags.js";
+export type { RecordingCache, RecordingCacheOptions } from "./recording-cache.js";
 
-export { cacheStatus } from "./cache-status";
-export { cacheTag } from "./cache-tag";
-export { CacheTagError } from "./cache-tag-error";
-export { createTags } from "./create-tags";
+export { cacheStatus } from "./cache-status.js";
+export { cacheTag } from "./cache-tag.js";
+export { CacheTagError } from "./cache-tag-error.js";
+export { createTags } from "./create-tags.js";
 export {
 	CACHE_CONTROL_HEADER,
 	CACHE_STATUS_HEADER,
@@ -35,7 +35,7 @@ export {
 	MAX_CACHE_TAG_HEADER_LENGTH,
 	MAX_TAG_LENGTH,
 	NON_CACHEABLE_POLICY,
-} from "./platform";
-export { purge } from "./purge";
-export { PurgeError } from "./purge-error";
-export { createRecordingCache } from "./recording-cache";
+} from "./platform.js";
+export { purge } from "./purge.js";
+export { PurgeError } from "./purge-error.js";
+export { createRecordingCache } from "./recording-cache.js";

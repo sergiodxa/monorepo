@@ -15,16 +15,16 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
-import { requirePermission } from "../../auth/middleware/require-permission";
-import { Post } from "../../posts/models/post";
-import { Role } from "../../roles/models/role";
-import routes from "../../routes";
-import { Settings } from "../../settings/models/settings";
-import { CmsLayout } from "../../shared/components/cms-layout";
-import * as s from "../../shared/components/styles";
-import { fieldText } from "../../shared/text";
-import { User } from "../models/user";
+import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
+import { requirePermission } from "../../auth/middleware/require-permission.js";
+import { Post } from "../../posts/models/post.js";
+import { Role } from "../../roles/models/role.js";
+import routes from "../../routes.js";
+import { Settings } from "../../settings/models/settings.js";
+import { CmsLayout } from "../../shared/components/cms-layout.js";
+import * as s from "../../shared/components/styles.js";
+import { fieldText } from "../../shared/text.js";
+import { User } from "../models/user.js";
 
 async function chrome(db: Database) {
 	let user = getAuthUser();

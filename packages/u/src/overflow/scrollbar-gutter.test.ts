@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollbarGutter } from "./scrollbar-gutter";
+import { scrollbarGutter } from "./scrollbar-gutter.js";
 
 describe("scrollbarGutter", () => {
 	test("no-arg defaults to stable", async () => {

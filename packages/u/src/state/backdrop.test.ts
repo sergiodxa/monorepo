@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { backdrop } from "./backdrop";
+import { backdrop } from "./backdrop.js";
 
 describe("backdrop", () => {
 	test("emits an '&::backdrop' block around the input's declarations", async () => {

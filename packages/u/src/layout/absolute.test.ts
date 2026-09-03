@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { absolute } from "./absolute";
+import { absolute } from "./absolute.js";
 
 describe("absolute", () => {
 	test("sets position: absolute", async () => {

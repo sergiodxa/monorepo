@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Rule } from "../lexer";
+import type { Grammar, Rule } from "../lexer.js";
 
-import { compose } from "../lexer";
+import { compose } from "../lexer.js";
 
-import { expression, javascript } from "./javascript";
+import { expression, javascript } from "./javascript.js";
 
 /**
  * The words TypeScript reserves on top of JavaScript's.

@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { brightness } from "./brightness";
+import { brightness } from "./brightness.js";
 
 describe("brightness", () => {
 	test("no-arg defaults to 1.1", async () => {

@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { typescript } from "./typescript";
+import { typescript } from "./typescript.js";
 
 describe("typescript", () => {
 	test("paints a declared type and the builtin it is made of", () => {

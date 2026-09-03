@@ -12,9 +12,9 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
 
-import Client from "./client";
+import Client from "./client.js";
 
 describe("Client", () => {
 	let sqliteDb: SqliteDatabase;

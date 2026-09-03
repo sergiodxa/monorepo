@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { opacity } from "../effects/opacity";
-import { declarations, serialize } from "../internal/serialize";
+import { opacity } from "../effects/opacity.js";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { startingStyle } from "./starting-style";
+import { startingStyle } from "./starting-style.js";
 
 describe("startingStyle", () => {
 	test("nests the wrapped utility's styles under '@starting-style'", async () => {

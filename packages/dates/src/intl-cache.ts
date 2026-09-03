@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Locale } from "./types";
+import type { Locale } from "./types.js";
 
 /** Cached date and time formatters, keyed by locale and options. */
 const DATE_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>();

@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { fill } from "./fill";
+import { fill } from "./fill.js";
 
 describe("fill", () => {
 	test("no-arg resolves the system default", async () => {

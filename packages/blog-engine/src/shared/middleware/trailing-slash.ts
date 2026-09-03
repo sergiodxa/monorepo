@@ -7,7 +7,7 @@
  */
 import { redirect } from "@sdxc/http/response";
 
-import middleware from "../lib/middleware";
+import middleware from "../lib/middleware.js";
 
 /** Redirects `/path/` to `/path` (root excluded) so URLs stay canonical. */
 export default middleware((context, next) => {

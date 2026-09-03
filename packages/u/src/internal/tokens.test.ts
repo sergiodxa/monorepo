@@ -19,7 +19,7 @@ import {
 	shadow,
 	spacing,
 	text,
-} from "./tokens";
+} from "./tokens.js";
 
 describe("spacing", () => {
 	test("resolves a number against the spacing scale", () => {

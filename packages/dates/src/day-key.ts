@@ -11,10 +11,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { CalendarDay, TimeZone } from "./types";
+import type { CalendarDay, TimeZone } from "./types.js";
 
-import { InvalidDayKeyError } from "./invalid-day-key-error";
-import { calendarDayAt, startOfDayInstant } from "./zone";
+import { InvalidDayKeyError } from "./invalid-day-key-error.js";
+import { calendarDayAt, startOfDayInstant } from "./zone.js";
 
 /** A day key: four-digit year, two-digit month, two-digit day, hyphen separated. */
 const DAY_KEY_PATTERN = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/;

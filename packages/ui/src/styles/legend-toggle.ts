@@ -12,9 +12,9 @@ import { combine } from "@sdxc/u/general";
 import { hidden } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
-import { CHART_COLOR_SLOT_COUNT } from "./chart-palette";
+import { CHART_COLOR_SLOT_COUNT } from "./chart-palette.js";
 
 /**
  * Composes the categorical legend-toggle visibility rules as a `css()`

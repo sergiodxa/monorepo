@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { filterFunction } from "../internal/filter";
+import { filterFunction } from "../internal/filter.js";
 
 /**
  * Applies a `filter: grayscale(...)`, desaturating toward grey; `1` (the

@@ -10,8 +10,8 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import { YAMLParseError } from "./errors";
-import { resolvePlain } from "./scalars";
+import { YAMLParseError } from "./errors.js";
+import { resolvePlain } from "./scalars.js";
 
 /**
  * One source line, split into its indentation width and the text after it.

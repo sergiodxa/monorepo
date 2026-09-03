@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationUnit, DurationUnitShort } from "./units";
+import type { DurationUnit, DurationUnitShort } from "./units.js";
 
 /**
  * A duration written as text: a whole amount plus a unit, spelled out after a

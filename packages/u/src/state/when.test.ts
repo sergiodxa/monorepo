@@ -11,12 +11,12 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { when } from "./when";
+import { when } from "./when.js";
 
 let originalDev: string | undefined;
 

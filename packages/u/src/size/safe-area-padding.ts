@@ -7,11 +7,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "../internal/css-styles";
-import type { UtilityMixin } from "../internal/descriptor";
+import type { CSSStyles } from "../internal/css-styles.js";
+import type { UtilityMixin } from "../internal/descriptor.js";
 
-import { env } from "../general/env";
-import { utility } from "../internal/descriptor";
+import { env } from "../general/env.js";
+import { utility } from "../internal/descriptor.js";
 
 /** A physical side matching one of the platform's `safe-area-inset-*` environment variables. */
 export type SafeAreaSide = "left" | "right" | "top" | "bottom";

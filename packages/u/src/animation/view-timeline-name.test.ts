@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { viewTimelineName } from "./view-timeline-name";
+import { viewTimelineName } from "./view-timeline-name.js";
 
 describe("viewTimelineName", () => {
 	test("prefixes the name with --", async () => {

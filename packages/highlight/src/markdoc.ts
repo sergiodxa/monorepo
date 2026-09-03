@@ -12,9 +12,9 @@ import type { Schema } from "@markdoc/markdoc";
 import { Tag } from "@markdoc/markdoc";
 import * as s from "remix/data-schema";
 
-import type { Token } from "./lexer";
+import type { Token } from "./lexer.js";
 
-import { normalizeLanguage, tokenize } from "./index";
+import { normalizeLanguage, tokenize } from "./index.js";
 
 const AttributesSchema = s.object({
 	content: s.string(),

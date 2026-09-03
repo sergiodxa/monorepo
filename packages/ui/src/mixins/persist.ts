@@ -16,8 +16,8 @@ import type { ElementProps, MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import { asCommandEvent } from "../utils/command-event";
-import { writeCookie } from "../utils/write-cookie";
+import { asCommandEvent } from "../utils/command-event.js";
+import { writeCookie } from "../utils/write-cookie.js";
 
 /** Invoker command {@link persist} answers on the Sidebar root: flips the collapse checkbox and mirrors its new state into the cookie. */
 const TOGGLE_COMMAND = "--ui-toggle";

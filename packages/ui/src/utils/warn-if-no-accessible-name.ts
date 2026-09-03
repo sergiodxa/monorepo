@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hasAccessibleText } from "./has-accessible-text";
+import { hasAccessibleText } from "./has-accessible-text.js";
 
 /**
  * The two ARIA attributes this module's checks read to tell whether a

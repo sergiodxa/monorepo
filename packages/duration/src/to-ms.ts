@@ -10,9 +10,9 @@
 
 import { isSuccess } from "@sdxc/result";
 
-import type { DurationInput } from "./types";
+import type { DurationInput } from "./types.js";
 
-import { parse } from "./parse";
+import { parse } from "./parse.js";
 
 /**
  * Convert a duration to milliseconds. A bare number is already milliseconds

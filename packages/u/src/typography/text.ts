@@ -2,11 +2,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { TextSizeName } from "../types";
+import type { TextSizeName } from "../types.js";
 
-import { var as varUtility } from "../general/var";
-import { utility } from "../internal/descriptor";
-import { text as textToken } from "../internal/tokens";
+import { var as varUtility } from "../general/var.js";
+import { utility } from "../internal/descriptor.js";
+import { text as textToken } from "../internal/tokens.js";
 
 /**
  * Fallback line-height per named text size, as a unitless ratio (e.g.

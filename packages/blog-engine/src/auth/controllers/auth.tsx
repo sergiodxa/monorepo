@@ -17,11 +17,11 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction, createController } from "remix/router";
 
-import routes from "../../routes";
-import * as s from "../../shared/components/styles";
-import { User } from "../../users/models/user";
-import { login as signIn, logout as signOut } from "../middleware/auth";
-import { toAuthProfile } from "../oidc";
+import routes from "../../routes.js";
+import * as s from "../../shared/components/styles.js";
+import { User } from "../../users/models/user.js";
+import { login as signIn, logout as signOut } from "../middleware/auth.js";
+import { toAuthProfile } from "../oidc.js";
 
 /**
  * Standalone centered page shell for the auth screens (login/logout), with an

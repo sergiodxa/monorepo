@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CronFieldSet } from "./fields";
-import type { WallClock, ZonedParts } from "./time-zone";
+import type { CronFieldSet } from "./fields.js";
+import type { WallClock, ZonedParts } from "./time-zone.js";
 
-import { daysInMonth, weekdayOf } from "./calendar";
-import { instantFromWallClock, offsetAt, zonedPartsOf } from "./time-zone";
+import { daysInMonth, weekdayOf } from "./calendar.js";
+import { instantFromWallClock, offsetAt, zonedPartsOf } from "./time-zone.js";
 
 /**
  * How far the calendar walk may reach before giving up. Eight years is the widest

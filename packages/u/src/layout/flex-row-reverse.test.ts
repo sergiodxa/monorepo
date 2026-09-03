@@ -7,9 +7,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { flexRowReverse } from "./flex-row-reverse";
+import { flexRowReverse } from "./flex-row-reverse.js";
 
 describe("flexRowReverse", () => {
 	test("sets display: flex and flex-direction: row-reverse", async () => {

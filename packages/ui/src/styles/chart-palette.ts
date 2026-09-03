@@ -13,7 +13,7 @@ import type { ElementProps, MixinDescriptor } from "remix/ui";
 import { combine, raw, var as varUtility } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * Number of categorical color slots a chart's `--ui-chart-*` palette spans.

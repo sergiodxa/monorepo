@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SemanticColor } from "./semantic-color";
+import type { SemanticColor } from "./semantic-color.js";
 
 /**
  * The `borderColor`, `backgroundColor`, and `color` declarations a tinted

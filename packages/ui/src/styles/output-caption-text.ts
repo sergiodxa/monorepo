@@ -12,7 +12,7 @@ import { fg } from "@sdxc/u/color";
 import { combine } from "@sdxc/u/general";
 import { text } from "@sdxc/u/typography";
 
-import type { CSSStyles } from "../utils/css-styles";
+import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * `text("sm")`'s font-size/line-height fallback pair matches the

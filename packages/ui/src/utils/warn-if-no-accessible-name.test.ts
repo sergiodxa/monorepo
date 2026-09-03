@@ -11,9 +11,9 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { AccessibleNameProps } from "./warn-if-no-accessible-name";
+import type { AccessibleNameProps } from "./warn-if-no-accessible-name.js";
 
-import { warnIfNoAccessibleLabel, warnIfNoAccessibleName } from "./warn-if-no-accessible-name";
+import { warnIfNoAccessibleLabel, warnIfNoAccessibleName } from "./warn-if-no-accessible-name.js";
 
 const MESSAGE = "Example: needs an accessible name.";
 

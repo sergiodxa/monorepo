@@ -13,10 +13,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { BinaryLike, Bytes } from "./lib/bytes";
+import type { BinaryLike, Bytes } from "./lib/bytes.js";
 
-import { CryptoError } from "./errors";
-import { toBytes } from "./lib/bytes";
+import { CryptoError } from "./errors.js";
+import { toBytes } from "./lib/bytes.js";
 
 /** SHA-2 digests this module computes, spelled the way WebCrypto expects them. */
 type DigestAlgorithm = "SHA-256" | "SHA-384" | "SHA-512";

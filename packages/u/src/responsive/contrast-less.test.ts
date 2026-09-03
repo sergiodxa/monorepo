@@ -7,13 +7,13 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
-import { serialize } from "../internal/serialize";
-import { hover } from "../state/hover";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
+import { serialize } from "../internal/serialize.js";
+import { hover } from "../state/hover.js";
 
-import { contrastLess } from "./contrast-less";
-import { media } from "./media";
+import { contrastLess } from "./contrast-less.js";
+import { media } from "./media.js";
 
 describe("contrastLess", () => {
 	test("nests the wrapped utility's styles under '@media (prefers-contrast: less)'", async () => {

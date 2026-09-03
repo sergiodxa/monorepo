@@ -6,12 +6,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { bg } from "../color/bg";
-import { border } from "../color/border";
-import { declarations, serialize } from "../internal/serialize";
-import { p } from "../size/p";
+import { bg } from "../color/bg.js";
+import { border } from "../color/border.js";
+import { declarations, serialize } from "../internal/serialize.js";
+import { p } from "../size/p.js";
 
-import { where } from "./where";
+import { where } from "./where.js";
 
 describe("where", () => {
 	test("emits '& :where(selector)', keeping the descendant space", async () => {

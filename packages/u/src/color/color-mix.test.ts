@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { colorMix } from "./color-mix";
+import { colorMix } from "./color-mix.js";
 
 describe("colorMix", () => {
 	test("bare color strings pass through unchanged with no weight", () => {

@@ -2,10 +2,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { SizeValue } from "../internal/tokens";
+import type { SizeValue } from "../internal/tokens.js";
 
-import { utility } from "../internal/descriptor";
-import { boxLength } from "../internal/tokens";
+import { utility } from "../internal/descriptor.js";
+import { boxLength } from "../internal/tokens.js";
 
 /**
  * Applies `min-inline-size`.

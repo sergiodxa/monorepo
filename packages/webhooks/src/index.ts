@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { KVReplayStoreOptions, ReplayKVNamespace, ReplayStore } from "./replay-store";
-export type { SecretOptions } from "./secret";
-export type { SignOptions, SignedDelivery } from "./sign";
-export type { VerifiedDelivery, VerifiedPayload, VerifyOptions } from "./verify";
+export type { KVReplayStoreOptions, ReplayKVNamespace, ReplayStore } from "./replay-store.js";
+export type { SecretOptions } from "./secret.js";
+export type { SignOptions, SignedDelivery } from "./sign.js";
+export type { VerifiedDelivery, VerifiedPayload, VerifyOptions } from "./verify.js";
 
 export {
 	DuplicateDeliveryError,
@@ -29,7 +29,7 @@ export {
 	StaleTimestampError,
 	UnreadableBodyError,
 	WebhookError,
-} from "./errors";
-export { KVReplayStore } from "./replay-store";
-export { sign } from "./sign";
-export { verify } from "./verify";
+} from "./errors.js";
+export { KVReplayStore } from "./replay-store.js";
+export { sign } from "./sign.js";
+export { verify } from "./verify.js";

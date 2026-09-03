@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { transformStyle } from "./transform-style";
+import { transformStyle } from "./transform-style.js";
 
 describe("transformStyle", () => {
 	test("defaults to preserve-3d", async () => {

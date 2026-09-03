@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { first, hasAny, hasMany, isEmpty, last, skip, toArray, unique } from "./index";
+import { first, hasAny, hasMany, isEmpty, last, skip, toArray, unique } from "./index.js";
 
 describe("hasAny", () => {
 	test("returns true for non-empty array", () => {

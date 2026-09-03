@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { filterFunction } from "../internal/filter";
+import { filterFunction } from "../internal/filter.js";
 
 /**
  * Applies a `filter: saturate(...)` to the element itself, where `0` is fully

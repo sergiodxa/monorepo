@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar } from "../lexer";
+import type { Grammar } from "../lexer.js";
 
-import { compose } from "../lexer";
+import { compose } from "../lexer.js";
 
-import { elements } from "./jsx";
-import { typescript } from "./typescript";
+import { elements } from "./jsx.js";
+import { typescript } from "./typescript.js";
 
 /**
  * Highlights TSX: everything TypeScript paints, plus tags, their attributes and

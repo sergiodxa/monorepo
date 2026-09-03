@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Whether a fast scroll gesture may pass over this snap position or must stop on it. */
 export type ScrollSnapStopValue = "normal" | "always";

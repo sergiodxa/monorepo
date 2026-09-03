@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { dispatchChange } from "./dispatch-change";
+import { dispatchChange } from "./dispatch-change.js";
 
 describe(dispatchChange.name, () => {
 	test("dispatches a change event on the given target", () => {

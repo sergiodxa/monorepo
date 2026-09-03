@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { asCommandEvent } from "./command-event";
+import { asCommandEvent } from "./command-event.js";
 
 describe(asCommandEvent.name, () => {
 	test("returns the exact same event reference", () => {

@@ -12,9 +12,9 @@ import type { MixinFactory } from "remix/ui";
 
 import { createElement, createMixin, on } from "remix/ui";
 
-import type { Point } from "../utils/color-math";
+import type { Point } from "../utils/color-math.js";
 
-import { angleFromCenter, angleToHue, roundChannel } from "../utils/color-math";
+import { angleFromCenter, angleToHue, roundChannel } from "../utils/color-math.js";
 
 /**
  * `data-*` attribute {@link colorWheelDrag} sets to

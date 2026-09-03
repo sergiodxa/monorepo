@@ -9,7 +9,7 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import * as YAML from "./index";
+import * as YAML from "./index.js";
 
 /**
  * Writes a value and reads it back.
@@ -41,7 +41,7 @@ describe("the package entry point", () => {
 	});
 
 	test("reaches each half on its own, for a caller that only needs one", async () => {
-		let { parse, stringify } = await import("./index");
+		let { parse, stringify } = await import("./index.js");
 
 		expect(isSuccess(parse("a: 1"))).toBe(true);
 		expect(isSuccess(stringify({ a: 1 }))).toBe(true);

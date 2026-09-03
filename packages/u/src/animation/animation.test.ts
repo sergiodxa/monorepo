@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { animation, animationHost } from "./animation";
+import { animation, animationHost } from "./animation.js";
 
 /**
  * Reads back the generated `ui-anim-{hash}` name from the emitted CSS, which

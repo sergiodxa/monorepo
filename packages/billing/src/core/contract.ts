@@ -9,7 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
-import type { BillingError } from "./errors";
+import type { BillingError } from "./errors.js";
 import type {
 	BillingEvent,
 	BillingInterval,
@@ -28,7 +28,7 @@ import type {
 	UsageEvent,
 	UsageIngest,
 	UsageRecord,
-} from "./types";
+} from "./types.js";
 
 /** What a customer is created with; `externalId` is required so the join key is always there. */
 export interface CreateCustomerInput {

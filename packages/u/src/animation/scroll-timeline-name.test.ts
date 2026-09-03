@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollTimelineName } from "./scroll-timeline-name";
+import { scrollTimelineName } from "./scroll-timeline-name.js";
 
 describe("scrollTimelineName", () => {
 	test("prefixes the name with --", async () => {

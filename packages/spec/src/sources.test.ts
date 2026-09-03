@@ -10,7 +10,7 @@
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { loadSources } from "./sources";
+import { loadSources } from "./sources.js";
 
 describe("loadSources", () => {
 	test("parses every source and keeps them in the given order", () => {

@@ -2,9 +2,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { UtilityMixin } from "../internal/descriptor";
+import type { UtilityMixin } from "../internal/descriptor.js";
 
-import { utility } from "../internal/descriptor";
+import { utility } from "../internal/descriptor.js";
 
 /** Common named aspect ratios, resolved without a width/height pair. */
 export type AspectRatioName = "square" | "video" | "widescreen" | "portrait" | "story" | "photo";

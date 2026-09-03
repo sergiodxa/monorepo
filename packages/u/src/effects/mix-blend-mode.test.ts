@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { mixBlendMode } from "./mix-blend-mode";
+import { mixBlendMode } from "./mix-blend-mode.js";
 
 describe("mixBlendMode", () => {
 	test("no-arg defaults to multiply", async () => {

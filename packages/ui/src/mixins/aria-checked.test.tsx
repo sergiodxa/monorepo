@@ -14,11 +14,11 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { Checkbox } from "../components/checkbox";
-import { RadioGroup } from "../components/radio-group";
-import { Switch } from "../components/switch";
+import { Checkbox } from "../components/checkbox.js";
+import { RadioGroup } from "../components/radio-group.js";
+import { Switch } from "../components/switch.js";
 
-import { ariaChecked, syncAriaChecked } from "./aria-checked";
+import { ariaChecked, syncAriaChecked } from "./aria-checked.js";
 
 /** A stand-in for the form or document a radio group's lookup runs over. */
 interface Scope {

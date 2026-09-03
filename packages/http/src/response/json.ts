@@ -5,8 +5,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { json } from "../response";
-import * as StatusCode from "../status-code";
+import { json } from "../response.js";
+import * as StatusCode from "../status-code.js";
 
 type Init = Omit<ResponseInit, "status" | "statusText">;
 

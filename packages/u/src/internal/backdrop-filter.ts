@@ -8,12 +8,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { var as varUtility } from "../general/var";
+import { var as varUtility } from "../general/var.js";
 
-import type { CSSStyles } from "./css-styles";
-import type { UtilityMixin } from "./descriptor";
+import type { CSSStyles } from "./css-styles.js";
+import type { UtilityMixin } from "./descriptor.js";
 
-import { utility } from "./descriptor";
+import { utility } from "./descriptor.js";
 
 /** The CSS custom property (without its leading `--`) each backdrop-filter function reads from. */
 const BACKDROP_FILTER_VARS = {

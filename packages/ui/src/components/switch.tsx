@@ -39,7 +39,7 @@ import {
 } from "@sdxc/u";
 import { attrs } from "remix/ui";
 
-import { durations, easings } from "../animations/tokens";
+import { durations, easings } from "../animations/tokens.js";
 
 /**
  * Applied through {@link attrs} so the host always carries the platform's

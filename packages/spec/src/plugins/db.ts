@@ -16,11 +16,11 @@ import type { SQL } from "bun";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value, ValueObject } from "../values.js";
 
-import { ToolError } from "../errors";
+import { ToolError } from "../errors.js";
 
 const DATABASE_URL_VAR = "DATABASE_URL";
 

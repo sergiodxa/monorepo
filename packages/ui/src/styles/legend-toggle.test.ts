@@ -10,8 +10,8 @@ import type { CSSMixinDescriptor } from "remix/ui";
  */
 import { describe, expect, test } from "vitest";
 
-import { CHART_COLOR_SLOT_COUNT } from "./chart-palette";
-import { legendToggle } from "./legend-toggle";
+import { CHART_COLOR_SLOT_COUNT } from "./chart-palette.js";
+import { legendToggle } from "./legend-toggle.js";
 
 /** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {

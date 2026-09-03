@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { PostTypeDefinition, FieldDefinition } from "./post-type";
+import type { PostTypeDefinition, FieldDefinition } from "./post-type.js";
 
-import { ARTICLE_TYPE_NAME } from "./post-type";
+import { ARTICLE_TYPE_NAME } from "./post-type.js";
 
 /**
  * Typed metadata for the built-in `article` post type. A type alias (not an

@@ -6,9 +6,9 @@
  */
 import type { XML } from "@sdxc/xml";
 
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
-import { cloneAttributes } from "./clone";
+import { cloneAttributes } from "./clone.js";
 
 /**
  * Converts one XML element into the package extension element shape.

@@ -12,10 +12,10 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Base64Url } from "./encoding";
-import { MalformedHashError, UnsupportedAlgorithmError } from "./errors";
-import { password } from "./password";
-import { randomBytes } from "./random";
+import { Base64Url } from "./encoding.js";
+import { MalformedHashError, UnsupportedAlgorithmError } from "./errors.js";
+import { password } from "./password.js";
+import { randomBytes } from "./random.js";
 
 /** Shape of the encoded format, used to assert hashes are self-describing. */
 const ENCODED_PATTERN = /^\$pbkdf2-sha256\$i=\d+\$[A-Za-z0-9_-]+\$[A-Za-z0-9_-]+$/;

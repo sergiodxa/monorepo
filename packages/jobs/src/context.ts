@@ -12,11 +12,11 @@ import type { ContextValue } from "remix/router";
 
 import { BatchedLogger } from "@sdxc/logger";
 
-import type { RetryOptions } from "./errors";
-import type { CronExpression } from "./job";
-import type { AnyJobDefinition } from "./jobs";
+import type { RetryOptions } from "./errors.js";
+import type { CronExpression } from "./job.js";
+import type { AnyJobDefinition } from "./jobs.js";
 
-import { Ack, NonRetriable, Retry, Timeout } from "./errors";
+import { Ack, NonRetriable, Retry, Timeout } from "./errors.js";
 
 /** What a context needs to exist, beyond the job it is running. */
 export interface JobContextInit<Input = undefined> {

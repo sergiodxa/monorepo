@@ -4,11 +4,11 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { COMPOSITE_FILTER } from "../internal/filter";
-import { declarations } from "../internal/serialize";
+import { COMPOSITE_FILTER } from "../internal/filter.js";
+import { declarations } from "../internal/serialize.js";
 
-import { filterOpacity } from "./filter-opacity";
-import { opacity } from "./opacity";
+import { filterOpacity } from "./filter-opacity.js";
+import { opacity } from "./opacity.js";
 
 describe("filterOpacity", () => {
 	test("no-arg defaults to 0.5", async () => {

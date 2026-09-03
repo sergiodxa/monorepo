@@ -12,13 +12,13 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
-import type { ArgumentNode, EventuallyNode, ExpectNode, ExpressionNode } from "./ast";
-import type { Registry, ResolvedCallable } from "./registry";
-import type { Span } from "./source";
-import type { Value } from "./values";
+import type { ArgumentNode, EventuallyNode, ExpectNode, ExpressionNode } from "./ast.js";
+import type { Registry, ResolvedCallable } from "./registry.js";
+import type { Span } from "./source.js";
+import type { Value } from "./values.js";
 
-import { ExpectationError, ResolutionError, SpecError, ToolError } from "./errors";
-import { formatValue, valueEquals } from "./values";
+import { ExpectationError, ResolutionError, SpecError, ToolError } from "./errors.js";
+import { formatValue, valueEquals } from "./values.js";
 
 /** Deadline of an `eventually` block with no `within` clause, in milliseconds. */
 export const DEFAULT_EVENTUALLY_MS = 5000;

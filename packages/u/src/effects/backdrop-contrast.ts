@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { backdropFilterFunction } from "../internal/backdrop-filter";
+import { backdropFilterFunction } from "../internal/backdrop-filter.js";
 
 /**
  * Pushes the backdrop away from (above `1`) or toward (below `1`) mid-grey;

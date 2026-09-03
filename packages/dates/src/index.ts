@@ -17,29 +17,29 @@ export type {
 	TimeStyle,
 	TimeZone,
 	Weekday,
-} from "./types";
+} from "./types.js";
 
-export type { StartOfWeekOptions } from "./boundaries";
+export type { StartOfWeekOptions } from "./boundaries.js";
 export type {
 	FormatDateOptions,
 	FormatDateTimeOptions,
 	FormatRangeOptions,
 	FormatTimeOptions,
-} from "./format-date-time";
-export type { FormatDurationOptions } from "./format-duration";
-export type { FormatPartsOptions, FormatWeekdayOptions } from "./format-parts";
-export type { FormatRelativeOptions } from "./format-relative";
-export type { GroupByWeekOptions, LastNDaysOptions } from "./grid";
+} from "./format-date-time.js";
+export type { FormatDurationOptions } from "./format-duration.js";
+export type { FormatPartsOptions, FormatWeekdayOptions } from "./format-parts.js";
+export type { FormatRelativeOptions } from "./format-relative.js";
+export type { GroupByWeekOptions, LastNDaysOptions } from "./grid.js";
 
-export { add, addDays, elapsed, subDays, subtract } from "./arithmetic";
-export { endOfDay, startOfDay, startOfWeek } from "./boundaries";
-export { diffInDays, eachDayOfInterval, isSameDay } from "./compare";
-export { fromDayKey, parseDayKey, toDayKey } from "./day-key";
-export { formatDate, formatDateTime, formatRange, formatTime } from "./format-date-time";
-export { formatDuration } from "./format-duration";
-export { formatParts, formatWeekday } from "./format-parts";
-export { formatRelative } from "./format-relative";
-export { daysOfYear, groupByWeek, lastNDays } from "./grid";
-export { InvalidDateError } from "./invalid-date-error";
-export { InvalidDayKeyError } from "./invalid-day-key-error";
-export { parseDate } from "./parse-date";
+export { add, addDays, elapsed, subDays, subtract } from "./arithmetic.js";
+export { endOfDay, startOfDay, startOfWeek } from "./boundaries.js";
+export { diffInDays, eachDayOfInterval, isSameDay } from "./compare.js";
+export { fromDayKey, parseDayKey, toDayKey } from "./day-key.js";
+export { formatDate, formatDateTime, formatRange, formatTime } from "./format-date-time.js";
+export { formatDuration } from "./format-duration.js";
+export { formatParts, formatWeekday } from "./format-parts.js";
+export { formatRelative } from "./format-relative.js";
+export { daysOfYear, groupByWeek, lastNDays } from "./grid.js";
+export { InvalidDateError } from "./invalid-date-error.js";
+export { InvalidDayKeyError } from "./invalid-day-key-error.js";
+export { parseDate } from "./parse-date.js";

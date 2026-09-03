@@ -19,20 +19,20 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import Client from "../../clients/models/client";
-import RedirectUri from "../../clients/models/redirect-uri";
-import Secret from "../../clients/models/secret";
-import TenantMeta from "../../management/models/tenant-meta";
-import Resource from "../../resources/models/resource";
-import routes from "../../routes";
-import loggerMiddleware from "../../shared/middleware/logger";
-import { createSqliteDatabaseAdapter } from "../../shared/test/db";
-import { createSubject } from "../../shared/test/fixtures";
-import SigningKey from "../../signing-keys/models/signing-key";
-import AuthorizationCode from "../models/authorization-code";
-import Session from "../models/session";
+import Client from "../../clients/models/client.js";
+import RedirectUri from "../../clients/models/redirect-uri.js";
+import Secret from "../../clients/models/secret.js";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import Resource from "../../resources/models/resource.js";
+import routes from "../../routes.js";
+import loggerMiddleware from "../../shared/middleware/logger.js";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
+import { createSubject } from "../../shared/test/fixtures.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
+import AuthorizationCode from "../models/authorization-code.js";
+import Session from "../models/session.js";
 
-import token from "./token";
+import token from "./token.js";
 
 type Db = Database;
 

@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { formatAddress, isValidAddress, toAddressList } from "./address";
+import { formatAddress, isValidAddress, toAddressList } from "./address.js";
 
 describe("toAddressList", () => {
 	test("treats a missing value as no addresses", () => {

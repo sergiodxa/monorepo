@@ -14,9 +14,9 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { HostnameResult } from "./index";
+import type { HostnameResult } from "./index.js";
 
-import { HostnameApiError, HostnameClient } from "./index";
+import { HostnameApiError, HostnameClient } from "./index.js";
 
 /** The Cloudflare custom-hostnames collection the client is pointed at. */
 let API_URL = "https://api.cloudflare.com/client/v4/zones/zone-123/custom_hostnames";

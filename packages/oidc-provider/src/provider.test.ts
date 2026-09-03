@@ -10,10 +10,10 @@
 import { Logger } from "@sdxc/logger/request";
 import { describe, expect, test } from "vitest";
 
-import { createProviderRouter } from "./provider";
-import { createTestDatabase } from "./shared/test/db";
+import { createProviderRouter } from "./provider.js";
+import { createTestDatabase } from "./shared/test/db.js";
 
-import type { AnalyticsSink } from "./index";
+import type { AnalyticsSink } from "./index.js";
 
 /** No-op analytics sink, mirroring the provider's self-hosted default. */
 let analytics: AnalyticsSink = {

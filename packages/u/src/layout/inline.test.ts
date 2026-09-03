@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { inline } from "./inline";
+import { inline } from "./inline.js";
 
 describe("inline", () => {
 	test("sets display: inline", async () => {

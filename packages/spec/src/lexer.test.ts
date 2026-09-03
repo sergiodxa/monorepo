@@ -10,12 +10,12 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { ParseError } from "./errors";
-import type { Token, TokenKind } from "./tokens";
+import type { ParseError } from "./errors.js";
+import type { Token, TokenKind } from "./tokens.js";
 
-import { lex } from "./lexer";
-import { positionAt } from "./source";
-import { KEYWORDS } from "./tokens";
+import { lex } from "./lexer.js";
+import { positionAt } from "./source.js";
+import { KEYWORDS } from "./tokens.js";
 
 /** Lex text that must tokenize, throwing the failure otherwise. */
 function lexOk(text: string): Token[] {

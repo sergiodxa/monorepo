@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { lineClamp } from "./line-clamp";
+import { lineClamp } from "./line-clamp.js";
 
 describe("lineClamp", () => {
 	test("a numeric line count applies the -webkit-line-clamp trick", async () => {

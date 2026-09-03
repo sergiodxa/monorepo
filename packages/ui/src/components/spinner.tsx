@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { LoaderCircleIcon } from "@sdxc/icons";
 import { bs, fg, inlineFlex, is, items, justify, when } from "@sdxc/u";
 
-import type { SemanticColor } from "../utils/semantic-color";
+import type { SemanticColor } from "../utils/semantic-color.js";
 
 /** Semantic color role {@link Spinner} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Spinner.Color = "neutral";

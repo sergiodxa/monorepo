@@ -11,7 +11,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { scrollProgress, scrollShadow, viewReveal } from "./scroll";
+import { scrollProgress, scrollShadow, viewReveal } from "./scroll.js";
 
 const SUPPORTS_SCROLL_TIMELINE = "@supports (animation-timeline: scroll())";
 const REDUCED_MOTION = "@media (prefers-reduced-motion: reduce)";

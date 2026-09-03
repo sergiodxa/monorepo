@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createAnalyticsEngine } from "./analytics-engine";
+import { createAnalyticsEngine } from "./analytics-engine.js";
 
 describe("createAnalyticsEngine", () => {
 	test("records a data point with blobs, doubles, and indexes", () => {

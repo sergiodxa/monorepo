@@ -15,15 +15,15 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { SpecError } from "../errors";
-import type { PermissionSet } from "../permissions";
-import type { ToolContext } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
-import type { Workspace } from "../workspace";
+import type { SpecError } from "../errors.js";
+import type { PermissionSet } from "../permissions.js";
+import type { ToolContext } from "../plugin.js";
+import type { ToolArg, Value, ValueObject } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
-import { PermissionDeniedError } from "../errors";
+import { PermissionDeniedError } from "../errors.js";
 
-import { createHttpPlugin } from "./http";
+import { createHttpPlugin } from "./http.js";
 
 const SERVER = setupServer();
 const PLUGIN = createHttpPlugin();

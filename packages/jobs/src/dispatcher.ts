@@ -17,13 +17,13 @@ import { BatchedLogger } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
-import type { JobContext } from "./context";
-import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler";
-import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs";
-import type { AnyJobMiddleware, ChainProperties } from "./middleware";
+import type { JobContext } from "./context.js";
+import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler.js";
+import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs.js";
+import type { AnyJobMiddleware, ChainProperties } from "./middleware.js";
 
-import { messageBody } from "./jobs";
-import { runJob } from "./lifecycle";
+import { messageBody } from "./jobs.js";
+import { runJob } from "./lifecycle.js";
 
 /** A handler module, however it is reached. */
 export type HandlerModule = AnyJobHandler | { default: AnyJobHandler };

@@ -11,7 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { ImagePlaceholder } from "./image-placeholder";
+import { ImagePlaceholder } from "./image-placeholder.js";
 
 /**
  * Prop types for {@link Avatar} and its compound parts. Each part aliases

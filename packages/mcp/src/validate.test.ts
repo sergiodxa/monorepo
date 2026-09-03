@@ -13,9 +13,9 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { ObjectSchema } from "./schema";
+import type { ObjectSchema } from "./schema.js";
 
-import { validateArguments } from "./validate";
+import { validateArguments } from "./validate.js";
 
 /** The argument schema most cases here are checked against. */
 const SCHEMA: ObjectSchema = {

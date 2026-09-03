@@ -19,8 +19,8 @@ import { minBs, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { textAlign } from "@sdxc/u/typography";
 
-import { interactiveTransition } from "../styles/interactive-transition";
-import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 /**
  * Prop types for {@link DropZone}.

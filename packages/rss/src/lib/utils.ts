@@ -7,7 +7,7 @@
 
 import type { XML } from "@sdxc/xml";
 
-import type { RSS } from "../index";
+import type { RSS } from "../index.js";
 
 /**
  * Returns the direct child elements of an XML element.

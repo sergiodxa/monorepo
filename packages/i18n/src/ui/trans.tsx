@@ -12,8 +12,8 @@
 import type { i18n as I18n, TOptions } from "i18next";
 import type { Handle, RemixElement } from "remix/ui";
 
-import { intl } from "./intl-provider";
-import { parseTrans } from "./lib/parse-trans";
+import { intl } from "./intl-provider.js";
+import { parseTrans } from "./lib/parse-trans.js";
 
 export namespace Trans {
 	export interface Props {

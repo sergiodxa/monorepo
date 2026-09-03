@@ -11,10 +11,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import type { XML } from "../index";
+import type { XML } from "../index.js";
 
-import { escapeAttribute, escapeText } from "./escape-xml";
-import { isValidName } from "./xml-names";
+import { escapeAttribute, escapeText } from "./escape-xml.js";
+import { isValidName } from "./xml-names.js";
 
 /**
  * `xml` and `xmlns` are bound by the specification itself, so every document may

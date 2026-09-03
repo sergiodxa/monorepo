@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export { createSeo } from "./create-seo";
-export type { SeoConfig, SeoService, SeoSite, SeoTwitter } from "./create-seo";
+export { createSeo } from "./create-seo.js";
+export type { SeoConfig, SeoService, SeoSite, SeoTwitter } from "./create-seo.js";
 
-export { Seo } from "./components/seo";
+export { Seo } from "./components/seo.js";
 
-export type { RobotsOptions } from "./lib/robots";
-export type { SchemaOrg, SeoSchema } from "./lib/schema";
+export type { RobotsOptions } from "./lib/robots.js";
+export type { SchemaOrg, SeoSchema } from "./lib/schema.js";

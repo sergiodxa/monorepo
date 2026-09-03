@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CacheStatus } from "./types";
+import type { CacheStatus } from "./types.js";
 
-import { CACHE_STATUS_HEADER } from "./platform";
+import { CACHE_STATUS_HEADER } from "./platform.js";
 
 /**
  * Header values mapped onto the closed status set. Values that mean "served from

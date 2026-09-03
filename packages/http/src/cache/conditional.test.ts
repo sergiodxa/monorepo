@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { conditional } from "./conditional";
+import { conditional } from "./conditional.js";
 
 const LAST_MODIFIED = "Wed, 21 Oct 2015 07:28:00 GMT";
 

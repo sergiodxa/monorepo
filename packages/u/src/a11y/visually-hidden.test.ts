@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { visuallyHidden } from "./visually-hidden";
+import { visuallyHidden } from "./visually-hidden.js";
 
 describe("visuallyHidden", () => {
 	test("emits the full fixed nine-declaration clipping recipe", async () => {

@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { createSendEmail } from "./send-email";
+import { createSendEmail } from "./send-email.js";
 
 describe("createSendEmail", () => {
 	test("records a message built from fields", async () => {

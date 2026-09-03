@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { lowerFirst, upperFirst } from "./segment";
+import { lowerFirst, upperFirst } from "./segment.js";
 
 /** A single rewrite rule: the first pattern that matches a word wins. */
 interface InflectionRule {

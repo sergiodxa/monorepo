@@ -34,8 +34,8 @@ import { when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
 import { attrs } from "remix/ui";
 
-import { Button } from "./button";
-import { ScrollArea } from "./scroll-area";
+import { Button } from "./button.js";
+import { ScrollArea } from "./scroll-area.js";
 
 /**
  * Named container {@link MessageScroller} declares on its own host, so

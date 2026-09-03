@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { javascript } from "./javascript";
+import { javascript } from "./javascript.js";
 
 /**
  * The types the grammar assigns, in order, for the runs it painted.

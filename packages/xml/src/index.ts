@@ -10,17 +10,17 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
-import { cloneDeclaration } from "./lib/clone-declaration";
-import { cloneElement } from "./lib/clone-element";
-import { parseDocument } from "./lib/parse-document";
-import { stringifyDocument } from "./lib/stringify-document";
+import { cloneDeclaration } from "./lib/clone-declaration.js";
+import { cloneElement } from "./lib/clone-element.js";
+import { parseDocument } from "./lib/parse-document.js";
+import { stringifyDocument } from "./lib/stringify-document.js";
 import {
 	collectInElement,
 	findInElement,
 	normalizePath,
 	queryFromElements,
 	startsWithRoot,
-} from "./lib/traversal";
+} from "./lib/traversal.js";
 
 /**
  * Signals that XML source could not be converted into the package tree format.

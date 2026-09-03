@@ -15,11 +15,11 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import TenantMeta from "../../management/models/tenant-meta";
-import AccessToken from "../../oauth/values/access-token";
-import routes from "../../routes";
-import SigningKey from "../../signing-keys/models/signing-key";
-import Subject from "../../subjects/models/subject";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import AccessToken from "../../oauth/values/access-token.js";
+import routes from "../../routes.js";
+import SigningKey from "../../signing-keys/models/signing-key.js";
+import Subject from "../../subjects/models/subject.js";
 
 /**
  * Returns an OAuth error response with WWW-Authenticate header per RFC 6750.

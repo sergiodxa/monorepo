@@ -8,7 +8,7 @@
  */
 import type { Database } from "remix/data-table";
 
-import { postMeta } from "../../database/schema";
+import { postMeta } from "../../database/schema.js";
 
 /** Fields accepted when creating a metadata row; `id`, `created_at`, and `updated_at` default when omitted. */
 export interface CreatePostMetaInput {

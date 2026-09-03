@@ -11,10 +11,10 @@
 import type { Result } from "@sdxc/result";
 import type { Random } from "@sdxc/sample";
 
-import type { SpecError } from "./errors";
-import type { PermissionKind, PermissionSet } from "./permissions";
-import type { ToolArg, Value } from "./values";
-import type { Workspace } from "./workspace";
+import type { SpecError } from "./errors.js";
+import type { PermissionKind, PermissionSet } from "./permissions.js";
+import type { ToolArg, Value } from "./values.js";
+import type { Workspace } from "./workspace.js";
 
 /** One declared parameter of a tool, for diagnostics and documentation. */
 export interface ToolParam {

@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { interpolateSize } from "./interpolate-size";
+import { interpolateSize } from "./interpolate-size.js";
 
 describe("interpolateSize", () => {
 	test("defaults to allow-keywords", async () => {

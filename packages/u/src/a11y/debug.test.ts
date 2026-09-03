@@ -8,9 +8,9 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { debug } from "./debug";
+import { debug } from "./debug.js";
 
 let originalDev: string | undefined;
 

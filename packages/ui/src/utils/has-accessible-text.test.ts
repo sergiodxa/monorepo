@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { hasAccessibleText } from "./has-accessible-text";
+import { hasAccessibleText } from "./has-accessible-text.js";
 
 describe(hasAccessibleText.name, () => {
 	test("a plain string with content counts as accessible text", () => {

@@ -8,7 +8,7 @@
 
 import { assertUUID } from "@sdxc/uuid";
 
-import { InvalidBase32CharacterError, InvalidBase32StringError } from "./errors";
+import { InvalidBase32CharacterError, InvalidBase32StringError } from "./errors.js";
 
 export type Base32 = string & { __base32: never };
 

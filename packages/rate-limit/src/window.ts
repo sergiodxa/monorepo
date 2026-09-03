@@ -11,7 +11,7 @@ import type { DurationInput } from "@sdxc/duration";
 
 import { toMs } from "@sdxc/duration";
 
-import type { RateLimitDecision } from "./types";
+import type { RateLimitDecision } from "./types.js";
 
 /** Milliseconds in one second, the unit `Retry-After` and `reset` count in. */
 const SECOND_MS = 1000;

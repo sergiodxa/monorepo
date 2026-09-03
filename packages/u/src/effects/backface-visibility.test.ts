@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { backfaceVisibility } from "./backface-visibility";
+import { backfaceVisibility } from "./backface-visibility.js";
 
 describe("backfaceVisibility", () => {
 	test("defaults to hidden", async () => {

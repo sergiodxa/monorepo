@@ -11,9 +11,9 @@
 import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import type { CronExpression, JobLeaf } from "./job";
+import type { CronExpression, JobLeaf } from "./job.js";
 
-import { leaf } from "./job";
+import { leaf } from "./job.js";
 
 /** A declared job whatever its schema, for the places that hold many at once. */
 // oxlint-disable-next-line typescript/no-explicit-any -- leaves vary by schema

@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { formatDate, formatDateTime, formatRange, formatTime } from "./format-date-time";
+import { formatDate, formatDateTime, formatRange, formatTime } from "./format-date-time.js";
 
 /** The instant every case formats, mid-morning UTC on a Wednesday. */
 const MORNING = new Date("2026-07-29T10:00:00Z");

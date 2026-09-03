@@ -10,7 +10,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { safeNext } from "./auth";
+import { safeNext } from "./auth.js";
 
 describe("safeNext", () => {
 	test("allows a same-site absolute path", () => {

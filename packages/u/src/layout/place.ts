@@ -2,15 +2,15 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { if as ifUtility } from "../general/if";
-import { compose, utility } from "../internal/descriptor";
+import { if as ifUtility } from "../general/if.js";
+import { compose, utility } from "../internal/descriptor.js";
 
-import type { AlignItemsValue } from "./items";
-import type { JustifyValue } from "./justify";
+import type { AlignItemsValue } from "./items.js";
+import type { JustifyValue } from "./justify.js";
 
-import { content } from "./content";
-import { items } from "./items";
-import { justify } from "./justify";
+import { content } from "./content.js";
+import { items } from "./items.js";
+import { justify } from "./justify.js";
 
 export interface PlaceOptions {
 	/** Sets `align-items` and `justify-items` together. */

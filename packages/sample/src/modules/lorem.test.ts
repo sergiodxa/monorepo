@@ -7,12 +7,12 @@
  */
 import { describe, expect, test } from "vitest";
 
-import type { Dataset } from "../dataset";
+import type { Dataset } from "../dataset.js";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createLoremModule } from "./lorem";
+import { createLoremModule } from "./lorem.js";
 
 function module(seed: string, data: Dataset = en) {
 	return createLoremModule(createRandom(seed), data);

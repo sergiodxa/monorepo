@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { nowrap } from "./nowrap";
+import { nowrap } from "./nowrap.js";
 
 describe("nowrap", () => {
 	test("applies the fixed white-space nowrap declaration", async () => {

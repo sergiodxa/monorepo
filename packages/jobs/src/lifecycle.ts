@@ -15,14 +15,14 @@ import { toMs, toSeconds } from "@sdxc/duration";
 import { BatchedLogger } from "@sdxc/logger";
 import { ValidationError } from "@sdxc/validate";
 
-import type { AnyJobContext } from "./context";
-import type { RunnableJobHandler } from "./handler";
-import type { AnyJobDefinition } from "./jobs";
-import type { AnyJobMiddleware } from "./middleware";
+import type { AnyJobContext } from "./context.js";
+import type { RunnableJobHandler } from "./handler.js";
+import type { AnyJobDefinition } from "./jobs.js";
+import type { AnyJobMiddleware } from "./middleware.js";
 
-import { JobContext } from "./context";
-import { Ack, NonRetriable, Retry, Timeout } from "./errors";
-import { ping, UptimeFetchError, UptimeNetworkError } from "./uptime";
+import { JobContext } from "./context.js";
+import { Ack, NonRetriable, Retry, Timeout } from "./errors.js";
+import { ping, UptimeFetchError, UptimeNetworkError } from "./uptime.js";
 
 /**
  * How long a handler has to end the delivery itself after its timeout aborts the

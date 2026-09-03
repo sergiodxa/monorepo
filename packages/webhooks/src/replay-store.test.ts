@@ -11,9 +11,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { ReplayKVNamespace } from "./replay-store";
+import type { ReplayKVNamespace } from "./replay-store.js";
 
-import { KVReplayStore } from "./replay-store";
+import { KVReplayStore } from "./replay-store.js";
 
 /** Delivery id used across the cases. */
 const ID = "msg_p5jXN8AQM9LWM0D4loKWxJek";

@@ -13,10 +13,10 @@ import { getClientIP } from "@sdxc/get-client-ip";
 import { tooManyRequests } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 
-import type { RateLimitError } from "./rate-limit-error";
-import type { Adapter, RateLimitDecision } from "./types";
+import type { RateLimitError } from "./rate-limit-error.js";
+import type { Adapter, RateLimitDecision } from "./types.js";
 
-import { applyRateLimitHeaders } from "./headers";
+import { applyRateLimitHeaders } from "./headers.js";
 
 /** Error code in the default limited response body. */
 const LIMITED_ERROR = "too_many_requests";

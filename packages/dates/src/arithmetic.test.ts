@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { add, addDays, elapsed, subDays, subtract } from "./arithmetic";
+import { add, addDays, elapsed, subDays, subtract } from "./arithmetic.js";
 
 /** An arbitrary reference instant with no DST transition near it. */
 const REFERENCE = new Date("2026-07-29T10:00:00Z");

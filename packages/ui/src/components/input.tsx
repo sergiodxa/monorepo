@@ -20,7 +20,7 @@ import { bs, is, pb, pi } from "@sdxc/u/size";
 import { focusVisible, hover, invalid, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import { interactiveTransition } from "../styles/interactive-transition";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** Semantic color role {@link Input} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Input.Color = "neutral";

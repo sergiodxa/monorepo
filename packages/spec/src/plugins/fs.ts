@@ -15,12 +15,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { SpecError } from "../errors";
-import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
+import type { SpecError } from "../errors.js";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
+import type { ToolArg, Value, ValueObject } from "../values.js";
 
-import { ExpectationError, ToolError } from "../errors";
-import { formatValue } from "../values";
+import { ExpectationError, ToolError } from "../errors.js";
+import { formatValue } from "../values.js";
 
 /** Words the `file` observable accepts as its assertion selector. */
 const FILE_WORDS = ["exists", "contains"];

@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { scan } from "../lexer";
+import { scan } from "../lexer.js";
 
-import { http } from "./http";
+import { http } from "./http.js";
 
 describe("http", () => {
 	test("paints a request line's method, target and version", () => {

@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { var as varUtility } from "./var";
+import { var as varUtility } from "./var.js";
 
 describe("var", () => {
 	test("resolves a bare reference with no fallback", () => {

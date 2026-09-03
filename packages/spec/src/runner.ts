@@ -15,16 +15,16 @@ import type { Seed } from "@sdxc/sample";
 
 import { isFailure } from "@sdxc/result";
 
-import type { BuiltinNamespace } from "./builtins";
-import type { SuiteResult } from "./diagnostics";
-import type { SpecError } from "./errors";
-import type { Grants } from "./permissions";
-import type { Plugin } from "./plugin";
+import type { BuiltinNamespace } from "./builtins.js";
+import type { SuiteResult } from "./diagnostics.js";
+import type { SpecError } from "./errors.js";
+import type { Grants } from "./permissions.js";
+import type { Plugin } from "./plugin.js";
 
-import { createBuiltinPlugins } from "./builtins";
-import { loadSuite } from "./loader";
-import { runTests } from "./run";
-import { createWorkspace } from "./workspace";
+import { createBuiltinPlugins } from "./builtins.js";
+import { loadSuite } from "./loader.js";
+import { runTests } from "./run.js";
+import { createWorkspace } from "./workspace.js";
 
 /** What a `spec run` needs: the suite directory and the caller's grants. */
 export interface RunOptions {

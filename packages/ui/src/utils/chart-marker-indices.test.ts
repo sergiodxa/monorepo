@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { computeMarkerIndices } from "./chart-marker-indices";
+import { computeMarkerIndices } from "./chart-marker-indices.js";
 
 describe(computeMarkerIndices.name, () => {
 	test("returns no markers for an empty series", () => {

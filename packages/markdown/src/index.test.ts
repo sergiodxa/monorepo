@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { toPlainText } from "./index";
+import { toPlainText } from "./index.js";
 
 describe("toPlainText", () => {
 	test("is reachable from the package root", () => {

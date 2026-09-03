@@ -8,10 +8,10 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { en } from "../data/en";
-import { createRandom } from "../random";
+import { en } from "../data/en.js";
+import { createRandom } from "../random.js";
 
-import { createDateModule } from "./date";
+import { createDateModule } from "./date.js";
 
 const REFERENCE = new Date("2026-06-15T12:00:00.000Z");
 

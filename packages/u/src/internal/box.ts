@@ -6,10 +6,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSStyles } from "./css-styles";
-import type { SpacingValue } from "./tokens";
+import type { CSSStyles } from "./css-styles.js";
+import type { SpacingValue } from "./tokens.js";
 
-import { spacing } from "./tokens";
+import { spacing } from "./tokens.js";
 
 /**
  * Resolves a 1, 2, or 4-value logical box shorthand for `padding`, `margin`,

@@ -12,10 +12,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { CacheInterface, PurgeOptions, PurgeSelector } from "./types";
+import type { CacheInterface, PurgeOptions, PurgeSelector } from "./types.js";
 
-import { PurgeError } from "./purge-error";
-import { validateTag } from "./validate-tag";
+import { PurgeError } from "./purge-error.js";
+import { validateTag } from "./validate-tag.js";
 
 /**
  * Normalizes purge options into the selector the platform receives, collapsing

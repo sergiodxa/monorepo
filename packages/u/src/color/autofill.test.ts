@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { autofill } from "./autofill";
+import { autofill } from "./autofill.js";
 
 describe("autofill", () => {
 	test("defaults to the system background/foreground tokens, nested under &:-webkit-autofill", async () => {

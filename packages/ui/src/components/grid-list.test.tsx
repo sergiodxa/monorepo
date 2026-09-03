@@ -12,7 +12,7 @@
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { GridList } from "./grid-list";
+import { GridList } from "./grid-list.js";
 
 describe("GridList.DragHandle", () => {
 	test('types itself "button", so its command survives inside a form', async () => {

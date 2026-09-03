@@ -19,12 +19,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { ConfigPermissionEntry } from "./permissions";
-import type { Plugin } from "./plugin";
-import type { LoadedSuite } from "./sources";
+import type { ConfigPermissionEntry } from "./permissions.js";
+import type { Plugin } from "./plugin.js";
+import type { LoadedSuite } from "./sources.js";
 
-import { LoadError, SpecError, ToolError } from "./errors";
-import { connectStdioPlugin } from "./transport-stdio";
+import { LoadError, SpecError, ToolError } from "./errors.js";
+import { connectStdioPlugin } from "./transport-stdio.js";
 
 /** The permission families a `spec/config.jsonc` `permissions.allow` may name. */
 const PERMISSION_FAMILIES: ReadonlySet<string> = new Set([

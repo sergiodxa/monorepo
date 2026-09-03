@@ -1,4 +1,4 @@
-import type { Log } from "./types";
+import type { Log } from "./types.js";
 
 /**
  * Immediate logger that outputs each log call directly to console.

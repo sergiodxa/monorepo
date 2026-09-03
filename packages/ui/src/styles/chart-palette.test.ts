@@ -11,7 +11,7 @@ import type { CSSMixinDescriptor } from "remix/ui";
 
 import { describe, expect, test } from "vitest";
 
-import { CHART_COLOR_SLOT_COUNT, chartPalette } from "./chart-palette";
+import { CHART_COLOR_SLOT_COUNT, chartPalette } from "./chart-palette.js";
 
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;

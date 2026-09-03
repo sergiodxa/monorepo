@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { mergeStyle } from "./merge-style";
+import { mergeStyle } from "./merge-style.js";
 
 describe(mergeStyle.name, () => {
 	test("appends declarations to a CSS text prop", () => {

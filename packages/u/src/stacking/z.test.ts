@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { z } from "./z";
+import { z } from "./z.js";
 
 describe("z", () => {
 	test("sets zIndex from a plain number", async () => {

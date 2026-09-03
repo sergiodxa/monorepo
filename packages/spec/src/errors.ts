@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PermissionKind } from "./permissions";
-import type { Span } from "./source";
-import type { Value } from "./values";
+import type { PermissionKind } from "./permissions.js";
+import type { Span } from "./source.js";
+import type { Value } from "./values.js";
 
 /**
  * Machine-readable category of a failure, stable across message rewording.

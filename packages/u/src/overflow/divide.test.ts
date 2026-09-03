@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations, serialize } from "../internal/serialize";
+import { declarations, serialize } from "../internal/serialize.js";
 
-import { divide } from "./divide";
+import { divide } from "./divide.js";
 
 /** Same tiny system default `u.border()` falls back to when no color is given. */
 const DEFAULT_BORDER_COLOR = "var(--ui-border, color-mix(in oklab, CanvasText 16%, transparent))";

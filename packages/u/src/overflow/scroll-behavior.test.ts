@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { scrollBehavior } from "./scroll-behavior";
+import { scrollBehavior } from "./scroll-behavior.js";
 
 describe("scrollBehavior", () => {
 	test("no-arg defaults to smooth", async () => {

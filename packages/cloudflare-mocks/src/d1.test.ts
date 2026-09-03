@@ -8,7 +8,7 @@
  */
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { createD1Database } from "./d1";
+import { createD1Database } from "./d1.js";
 
 /** Builds a database with a `users` table ready to query. */
 async function setup(): Promise<D1Database> {

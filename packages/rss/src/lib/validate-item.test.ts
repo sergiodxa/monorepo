@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { validateItem } from "./validate-item";
+import { validateItem } from "./validate-item.js";
 
 describe("validateItem", () => {
 	test("accepts items with a title", () => {

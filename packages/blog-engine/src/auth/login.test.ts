@@ -13,10 +13,10 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlogEngine } from "../index";
+import type { BlogEngine } from "../index.js";
 
-import { createBlogEngine } from "../index";
-import { createSqliteDatabaseAdapter } from "../shared/test/db";
+import { createBlogEngine } from "../index.js";
+import { createSqliteDatabaseAdapter } from "../shared/test/db.js";
 
 /** The origin the blog answers on, which every redirect target is held to. */
 const APP_ORIGIN = "https://blog.example.com";

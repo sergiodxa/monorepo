@@ -4,9 +4,9 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { declarations } from "../internal/serialize";
+import { declarations } from "../internal/serialize.js";
 
-import { contentVisibility } from "./content-visibility";
+import { contentVisibility } from "./content-visibility.js";
 
 describe("contentVisibility", () => {
 	test("defaults to auto", async () => {

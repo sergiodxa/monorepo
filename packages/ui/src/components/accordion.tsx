@@ -20,7 +20,7 @@ import { hover, open, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
 import { text, textDecoration } from "@sdxc/u/typography";
 
-import { Disclosure } from "./disclosure";
+import { Disclosure } from "./disclosure.js";
 
 /**
  * Prop types for {@link Accordion} and its compound parts.

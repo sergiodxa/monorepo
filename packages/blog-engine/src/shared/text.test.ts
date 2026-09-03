@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { asText, entryText, fieldText } from "./text";
+import { asText, entryText, fieldText } from "./text.js";
 
 describe("entryText", () => {
 	test("returns the submitted text", () => {

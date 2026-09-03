@@ -16,8 +16,8 @@ import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import TenantMeta from "../../management/models/tenant-meta";
-import routes from "../../routes";
+import TenantMeta from "../../management/models/tenant-meta.js";
+import routes from "../../routes.js";
 
 /**
  * OAuth 2.0 Authorization Server Metadata endpoint (RFC 8414).

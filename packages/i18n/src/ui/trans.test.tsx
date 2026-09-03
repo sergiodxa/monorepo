@@ -9,8 +9,8 @@ import { createInstance } from "i18next";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
-import { IntlProvider } from "./intl-provider";
-import { Trans } from "./trans";
+import { IntlProvider } from "./intl-provider.js";
+import { Trans } from "./trans.js";
 
 describe(Trans, () => {
 	test("interpolates {{variables}} through i18n.t() and splices components in for tags", async () => {
