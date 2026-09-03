@@ -1,0 +1,285 @@
+/**
+ * Exercises what happens around the handler: the timeout that aborts its signal
+ * and stops the router waiting, the monitor ping a completed run sends, the
+ * dead-letter batches the router records itself, and the errors it does not own.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { MessageBatch } from "@cloudflare/workers-types";
+import type { QueueMock } from "@pkg/cloudflare-mocks";
+
+import { createQueue } from "@pkg/cloudflare-mocks";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { createJobHandler, createJobRouter, job, jobs, JobTimeout } from "./index";
+
+const UPTIME_URL = "https://uptime.sergiodxa.com";
+const MONITOR_ID = "monitor-1";
+
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+let consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+let consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+beforeEach(() => {
+	consoleInfo.mockClear();
+	consoleError.mockClear();
+});
+
+afterEach(() => vi.useRealTimers());
+
+/** Builds a map whose sends land in a recording queue binding. */
+function setup() {
+	let queue = createQueue({ name: "ping" }) as QueueMock<unknown>;
+
+	let map = jobs(
+		{
+			clean: job(),
+			watched: job({ monitorId: MONITOR_ID }),
+		},
+		{ send: async (bodies) => void (await queue.sendBatch(bodies.map((body) => ({ body })))) },
+	);
+
+	return { queue, map };
+}
+
+/** Delivers everything pending to the router, as the worker's `queue` handler would. */
+function consume(
+	queue: QueueMock<unknown>,
+	handler: (batch: MessageBatch<unknown>) => Promise<void>,
+) {
+	return queue.consume((batch) => handler(batch as MessageBatch<unknown>));
+}
+
+/** Every event name the batched logger flushed in this test. */
+function events() {
+	return [...consoleInfo.mock.calls, ...consoleError.mock.calls].flatMap((call) =>
+		call.flatMap((entry) => {
+			if (typeof entry !== "object" || entry === null) return [];
+			if (!("events" in entry) || !Array.isArray(entry.events)) return [];
+			return entry.events.map((logged: { event: string }) => logged.event);
+		}),
+	);
+}
+
+describe("timeouts", () => {
+	test("aborts the signal and stops waiting for a handler that ignores it", async () => {
+		let { queue, map } = setup();
+		let aborted = vi.fn();
+
+		vi.useFakeTimers();
+
+		let router = createJobRouter({ timeout: "1 second" });
+		router.map(
+			map.clean,
+			createJobHandler(map.clean, ({ signal }) => {
+				signal.addEventListener("abort", () => aborted());
+				return new Promise<void>(() => {});
+			}),
+		);
+
+		await map.clean.enqueue();
+
+		let running = consume(queue, (batch) => router.queue(batch));
+		await vi.advanceTimersByTimeAsync(1_000);
+		expect(aborted).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(5_000);
+		let result = await running;
+
+		expect(result.retried).toHaveLength(1);
+		expect(events()).toContain("job.timed-out");
+	});
+
+	test("lets a handler that gives up settle it first", async () => {
+		let { queue, map } = setup();
+
+		vi.useFakeTimers();
+
+		let router = createJobRouter({ timeout: "1 second" });
+		router.map(
+			map.clean,
+			createJobHandler(map.clean, async ({ signal, ack }) => {
+				await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()));
+				ack();
+			}),
+		);
+
+		await map.clean.enqueue();
+
+		let running = consume(queue, (batch) => router.queue(batch));
+		await vi.advanceTimersByTimeAsync(1_000);
+		let result = await running;
+
+		expect(result.acked).toHaveLength(1);
+		expect(events()).toContain("job.timed-out");
+	});
+
+	test("reports a thrown JobTimeout as a timeout", async () => {
+		let { queue, map } = setup();
+
+		let router = createJobRouter({ timeout: "1 minute" });
+		router.map(
+			map.clean,
+			createJobHandler(map.clean, () => {
+				throw new JobTimeout();
+			}),
+		);
+
+		await map.clean.enqueue();
+		let result = await consume(queue, (batch) => router.queue(batch));
+
+		expect(result.retried).toHaveLength(1);
+		expect(events()).toContain("job.timed-out");
+	});
+
+	test("waits indefinitely when no timeout is configured", async () => {
+		let { queue, map } = setup();
+
+		let router = createJobRouter();
+		router.map(
+			map.clean,
+			createJobHandler(map.clean, ({ signal }) => {
+				expect(signal.aborted).toBe(false);
+			}),
+		);
+
+		await map.clean.enqueue();
+		let result = await consume(queue, (batch) => router.queue(batch));
+
+		expect(result.acked).toHaveLength(1);
+	});
+});
+
+describe("the monitor ping", () => {
+	test("reports a completed run to the job's monitor", async () => {
+		let { queue, map } = setup();
+		let pinged = vi.fn();
+
+		server.use(
+			http.post(`${UPTIME_URL}/api/v1/cron-jobs/${MONITOR_ID}/ping`, ({ request }) => {
+				pinged(request.headers.get("Authorization"));
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+
+		let router = createJobRouter({ uptime: () => "token-1" });
+		router.map(
+			map.watched,
+			createJobHandler(map.watched, () => {}),
+		);
+
+		await map.watched.enqueue();
+		let result = await consume(queue, (batch) => router.queue(batch));
+
+		expect(pinged).toHaveBeenCalledWith("Bearer token-1");
+		expect(result.acked).toHaveLength(1);
+		expect(events()).toContain("job.completed");
+	});
+
+	test("skips the ping when the job names no monitor", async () => {
+		let { queue, map } = setup();
+
+		let router = createJobRouter({ uptime: () => "token-1" });
+		router.map(
+			map.clean,
+			createJobHandler(map.clean, () => {}),
+		);
+
+		await map.clean.enqueue();
+		let result = await consume(queue, (batch) => router.queue(batch));
+
+		expect(result.acked).toHaveLength(1);
+	});
+
+	test("acks the message when the ping itself fails", async () => {
+		let { queue, map } = setup();
+
+		server.use(
+			http.post(`${UPTIME_URL}/api/v1/cron-jobs/${MONITOR_ID}/ping`, () =>
+				HttpResponse.text("nope", { status: 500 }),
+			),
+		);
+
+		let router = createJobRouter({ uptime: () => "token-1" });
+		router.map(
+			map.watched,
+			createJobHandler(map.watched, () => {}),
+		);
+
+		await map.watched.enqueue();
+		let result = await consume(queue, (batch) => router.queue(batch));
+
+		expect(result.acked).toHaveLength(1);
+		expect(events()).toContain("job.uptime-failed");
+	});
+});
+
+describe("the dead-letter queue", () => {
+	test("records a body the router refused, and acks it", async () => {
+		let dlq = createQueue({ name: "ping-dlq" }) as QueueMock<unknown>;
+
+		let router = createJobRouter({ deadLetterQueue: "ping-dlq" });
+
+		await dlq.send({ invalid: { type: "nobodyHome" } });
+		let result = await consume(dlq, (batch) => router.queue(batch));
+
+		expect(result.acked).toHaveLength(1);
+		expect(events()).toContain("job.dead_letter.invalid_message");
+	});
+
+	test("records a body that exhausted its retries, and acks it", async () => {
+		let dlq = createQueue({ name: "ping-dlq" }) as QueueMock<unknown>;
+
+		let router = createJobRouter({ deadLetterQueue: "ping-dlq" });
+
+		await dlq.send({ type: "clean" });
+		let result = await consume(dlq, (batch) => router.queue(batch));
+
+		expect(result.acked).toHaveLength(1);
+		expect(events()).toContain("job.dead_letter.retries_exhausted");
+	});
+});
+
+describe("errors the package does not own", () => {
+	test("re-throws so the platform retries the invocation", async () => {
+		let { queue, map } = setup();
+
+		let router = createJobRouter();
+		router.map(
+			map.clean,
+			createJobHandler(map.clean, () => {
+				throw new Error("boom");
+			}),
+		);
+
+		await map.clean.enqueue();
+
+		await expect(consume(queue, (batch) => router.queue(batch))).rejects.toThrow("boom");
+		expect(events()).toContain("job.failed");
+	});
+
+	test("refuses a handler written for a different job", async () => {
+		let { queue, map } = setup();
+
+		let router = createJobRouter();
+		router.map(
+			map.clean,
+			createJobHandler(map.watched, () => {}),
+		);
+
+		await map.clean.enqueue();
+
+		await expect(consume(queue, (batch) => router.queue(batch))).rejects.toThrow(
+			/mapped to a handler written for/,
+		);
+	});
+});

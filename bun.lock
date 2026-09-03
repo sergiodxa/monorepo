@@ -420,6 +420,23 @@
         "remix": "3.0.0-rc.1",
       },
     },
+    "packages/jobs-next": {
+      "name": "@pkg/jobs-next",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/duration": "workspace:*",
+        "@pkg/logger": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/types": "workspace:*",
+        "@pkg/validate": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260901.1",
+        "@pkg/cloudflare-mocks": "workspace:*",
+        "remix": "3.0.0-rc.1",
+      },
+    },
     "packages/jwt": {
       "name": "@pkg/jwt",
       "version": "0.0.1",
@@ -1215,6 +1232,8 @@
     "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
 
     "@pkg/jobs": ["@pkg/jobs@workspace:packages/jobs"],
+
+    "@pkg/jobs-next": ["@pkg/jobs-next@workspace:packages/jobs-next"],
 
     "@pkg/jwt": ["@pkg/jwt@workspace:packages/jwt"],
 
