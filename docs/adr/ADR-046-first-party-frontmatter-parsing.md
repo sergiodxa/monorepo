@@ -2,7 +2,12 @@
 
 ## Status
 
-**Proposed** - 2026-09-03
+**Superseded** by [ADR-047](./ADR-047-yaml-package-with-a-json-shaped-surface.md) - 2026-09-03
+
+The decision to stop depending on the `yaml` library stands, and the evidence gathered
+here for the subset carries over. What changed is where the parser lives: ADR-047 moves
+it out of `@pkg/markdown` into `@pkg/yaml` and pairs it with a serializer, which makes
+this ADR's fourth alternative — extract a `@pkg/yaml` package — the one that was taken.
 
 ## Background
 
@@ -120,64 +125,83 @@ valid.
 
 ### The supported subset
 
-Resolution follows the YAML 1.2 core schema, so the values match what `yaml` returns
-today:
+Resolution follows the YAML 1.2 core schema, so values match what `yaml` returned:
 
-| Supported                                               | Example                   |
-| ------------------------------------------------------- | ------------------------- |
-| Block mappings, nested by space indentation             | `section:\n  order: 1`    |
-| Block sequences of scalars or mappings                  | `tags:\n  - remix`        |
-| Plain scalars                                           | `title: Team & Settings`  |
-| Single- and double-quoted scalars, with escapes         | `title: "a: b"`           |
-| Flow sequences and mappings of scalars                  | `tags: [remix, workers]`  |
-| Literal and folded block scalars                        | `description: >\n  long`  |
-| Comments, whole-line and trailing                       | `order: 1 # first`        |
-| `null` (`null`, `~`, empty), booleans, integers, floats | `lastUpdated:`            |
-| Everything else scalar-shaped resolves to a string      | `lastUpdated: 2026-08-02` |
+| Supported                                                               | Example                   |
+| ----------------------------------------------------------------------- | ------------------------- |
+| Block mappings, nested by space indentation                             | `section:` / `  order: 1` |
+| Block sequences of scalars, mappings or sequences                       | `tags:` / `  - remix`     |
+| Plain scalars, folded when written across lines                         | `title: Team & Settings`  |
+| Single- and double-quoted scalars, with escapes                         | `title: "a: b"`           |
+| Flow sequences and mappings, which may span lines                       | `tags: [remix, workers]`  |
+| Literal and folded block scalars, with chomping and an indent indicator | `description: >-`         |
+| Comments, whole-line and trailing                                       | `order: 1 # first`        |
+| `null` (`null`, `~`, empty), booleans, integers, floats                 | `lastUpdated:`            |
+| Everything else scalar-shaped resolves to a string                      | `lastUpdated: 2026-08-02` |
 
 Outside the subset, and reported as a failure rather than guessed at: anchors, aliases and
-merge keys; explicit tags; explicit keys (`? `); multi-document streams; tab indentation.
-The README states this list, so the boundary is a documented contract rather than
-something an author discovers by writing a doc that renders blank.
+merge keys; tags; explicit keys (`? `); quoted values spanning lines; multi-document
+sources; tab indentation. A plain scalar opening on a character YAML reserves — `@`,
+`` ` ``, `%`, `,`, `]`, `}` — is a failure too, as it is in YAML. The README states this
+list, so the boundary is a documented contract rather than something an author discovers
+by writing a doc that renders blank.
 
-### Proving equivalence before the swap
+### Proving equivalence
 
-The dependency is removed only after the replacement is shown to agree with it. Following
-ADR-041, the check is a recorded corpus rather than a reading of the code:
+The dependency came out only after the replacement was shown to agree with it. Following
+ADR-041, the evidence is recorded behavior rather than a reading of the code, gathered
+while `yaml` was still installed:
 
-1. Record `YAML.parse` output for all 34 frontmatter blocks in the repository.
-2. Record it for a synthetic set covering every row of the subset table above, every
-   construct on the unsupported list, and the malformed inputs that reach the `{}`
-   fallback.
-3. Land the corpus as `packages/markdown/src/server/frontmatter.test.ts` against the new
-   parser, asserting deep equality with the recorded values.
-4. Re-measure the bundle. The acceptance bar is `@pkg/markdown/server` landing within
-   5 KB minified of the 171.6 KB `yaml`-external measurement.
+1. `YAML.parse` output was recorded for all 34 frontmatter blocks in the repository and
+   for 109 synthetic cases covering every row of the subset table, every construct on the
+   unsupported list, and the malformed inputs that reach the `{}` fallback. The new parser
+   agrees on 138 of those 143, the five departures being the constructs it declines:
+   anchors, aliases through a merge key, tags, explicit keys, and a quoted value spanning
+   lines. `yaml` reads all five; this parser fails them, so they reach the schema as `{}`.
+2. A generator built 4,000 further documents out of the same constructs. `yaml` accepted
+   3,332 of them and the parser matched its value on every one; `yaml` rejected the other
+   668 and the parser rejected all 668 as well. No document parsed here that `yaml`
+   refused.
+3. The corpus is committed as `packages/markdown/src/server/frontmatter.test.ts`, stating
+   the recorded values as assertions.
 
-Steps 1 and 2 run while `yaml` is still installed; step 4 is what closes the ADR.
+### What it cost to carry
 
-### Documentation to follow
+Re-measuring `@pkg/markdown/server` the same way:
 
-- `packages/markdown/README.md` gains the subset table and the unsupported list.
-- The root `README.md` dependency table drops its `yaml` row.
+| Entry                  | Before   | After    | Recovered                  |
+| ---------------------- | -------- | -------- | -------------------------- |
+| `@pkg/markdown/server` | 277.2 KB | 180.0 KB | 94.9 KB min / 28.2 KB gzip |
+
+The parser is 8.4 KB minified, 2.8 KB gzipped, against the 171.6 KB `yaml`-external
+measurement. That misses the 5 KB bar this ADR set for it: the bar was written before the
+subset was, and block scalars, flow collections and multi-line plain scalars each cost
+more than a mapping reader would. The subset is what the README documents, so trimming it
+to reach the bar would trade a stated contract for 3 KB.
+
+### Documentation
+
+- `packages/markdown/README.md` carries the subset table and the unsupported list.
+- The root `README.md` dependency table no longer has a `yaml` row.
 
 ## Consequences
 
 ### Positive
 
-- 105.6 KB minified, 31.6 KB gzipped, leaves the SSR bundle of `blog`, `books`, `uptime`
+- 94.9 KB minified, 28.2 KB gzipped, left the SSR bundle of `blog`, `books`, `uptime`
   and `blog-saas`.
-- The frontmatter format becomes a stated contract with a test corpus behind it, where
-  today it is "whatever `yaml@2.x` happens to accept".
+- The frontmatter format is a stated contract with a test corpus behind it, where it was
+  "whatever `yaml@2.x` happens to accept".
 - The markdown path reaches zero third-party runtime dependencies beyond Markdoc itself,
   finishing what ADR-041 and ADR-042 started.
 
 ### Negative
 
-- Frontmatter parsing becomes this repository's to maintain. The 34 recorded blocks and
-  the synthetic set are the guard against that cost arriving as a surprise.
-- An author reaching for YAML outside the subset gets `{}` and a schema issue, where
-  `yaml` would have parsed it. Anchors and merge keys in a docs frontmatter are the
+- Frontmatter parsing is this repository's to maintain. The 34 recorded blocks, the 109
+  synthetic cases and the 4,000 generated documents are the guard against that cost
+  arriving as a surprise.
+- An author reaching for one of the five declined constructs gets `{}` and a schema issue,
+  where `yaml` would have parsed it. Anchors and merge keys in a docs frontmatter are the
   plausible case, and none of the 34 files uses them.
 - Upstream YAML fixes stop arriving for free.
 
@@ -188,6 +212,8 @@ Steps 1 and 2 run while `yaml` is still installed; step 4 is what closes the ADR
   would turn an accidental `---` fence into a broken page rather than a swallowed one.
 - Values are unchanged for every file in the repository, `lastUpdated` included, because
   the subset resolves scalars by the same YAML 1.2 core schema `yaml` defaults to.
+- A key spelled `__proto__` becomes an own property rather than reaching the prototype,
+  which is what `yaml` did and what assigning it would not have.
 - `@pkg/highlight` keeps its own YAML grammar. It tokenizes for display and shares nothing
   with this parser; the two have different jobs on the same syntax.
 
@@ -233,8 +259,8 @@ implementation this ADR exists to remove.
 
 ## Current Progress
 
-- [ ] Record the 34-block corpus and the synthetic set against `YAML.parse`
-- [ ] Implement `parseFrontmatter` and its test corpus
-- [ ] Switch `Markdown.frontmatter` over and drop the `yaml` dependency
-- [ ] Re-measure the bundle against the 171.6 KB bar
-- [ ] Document the subset in `packages/markdown/README.md`; drop the root README row
+- [x] Record the 34-block corpus and the synthetic set against `YAML.parse`
+- [x] Implement `parseFrontmatter` and its test corpus
+- [x] Switch `Markdown.frontmatter` over and drop the `yaml` dependency
+- [x] Re-measure the bundle: 180.0 KB, 8.4 KB over the 171.6 KB `yaml`-external mark
+- [x] Document the subset in `packages/markdown/README.md`; drop the root README row

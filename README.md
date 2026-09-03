@@ -143,6 +143,7 @@ Run from the repository root:
 | [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                      |
 | [workers-cache](packages/workers-cache)                         | Cloudflare cache tags, purging and cache-status reads                          |
 | [xml](packages/xml)                                             | XML generation utilities                                                       |
+| [yaml](packages/yaml)                                           | YAML reading and writing over a documented subset                              |
 
 ## Third-Party Dependencies
 
@@ -170,7 +171,6 @@ repeats it. `@pkg/*` workspace dependencies are listed under [Packages](#package
 | `@simplewebauthn/server`          | `oidc-provider`                                                                                                            | Passkey registration and authentication.                              |
 | `@polar-sh/sdk`                   | `polar`                                                                                                                    | Client for the Polar billing API.                                     |
 | `@markdoc/markdoc`                | `highlight`, `mail`, `markdown`                                                                                            | Parses Markdown into a renderable tree.                               |
-| `yaml`                            | `markdown`                                                                                                                 | Parses document frontmatter.                                          |
 | `@standard-schema/spec`           | `markdown`, `validate`, `webhooks`                                                                                         | The `StandardSchemaV1` interface, as types only.                      |
 | `i18next`                         | `i18n`                                                                                                                     | Translation lookup and interpolation.                                 |
 | `html-parse-stringify`            | `i18n`                                                                                                                     | Parses the tag AST inside a translation string.                       |

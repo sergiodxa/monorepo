@@ -483,9 +483,9 @@
         "@markdoc/markdoc": "^0.5.9",
         "@pkg/highlight": "workspace:*",
         "@pkg/result": "workspace:*",
+        "@pkg/yaml": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "remix": "3.0.0-rc.1",
-        "yaml": "^2.9.0",
       },
     },
     "packages/mcp": {
@@ -695,6 +695,13 @@
     },
     "packages/xml": {
       "name": "@pkg/xml",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+      },
+    },
+    "packages/yaml": {
+      "name": "@pkg/yaml",
       "version": "0.0.1",
       "dependencies": {
         "@pkg/result": "workspace:*",
@@ -1277,6 +1284,8 @@
 
     "@pkg/xml": ["@pkg/xml@workspace:packages/xml"],
 
+    "@pkg/yaml": ["@pkg/yaml@workspace:packages/yaml"],
+
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
     "@poppinss/colors": ["@poppinss/colors@4.1.6", "", { "dependencies": { "kleur": "^4.1.5" } }, "sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg=="],
@@ -1814,8 +1823,6 @@
     "ws": ["ws@8.21.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g=="],
 
     "y18n": ["y18n@5.0.8", "", {}, "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="],
-
-    "yaml": ["yaml@2.9.0", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA=="],
 
     "yargs": ["yargs@17.7.2", "", { "dependencies": { "cliui": "^8.0.1", "escalade": "^3.1.1", "get-caller-file": "^2.0.5", "require-directory": "^2.1.1", "string-width": "^4.2.3", "y18n": "^5.0.5", "yargs-parser": "^21.1.1" } }, "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w=="],
 

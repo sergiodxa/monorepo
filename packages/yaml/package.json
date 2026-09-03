@@ -1,0 +1,16 @@
+{
+	"name": "@pkg/yaml",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/result": "workspace:*"
+	}
+}

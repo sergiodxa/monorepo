@@ -12,7 +12,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import * as Markdoc from "@markdoc/markdoc";
 import { fence } from "@pkg/highlight/markdoc";
 import { failure, isFailure, success } from "@pkg/result";
-import YAML from "yaml";
+import { parse as parseYAML } from "@pkg/yaml";
 
 export { toPlainText } from "./plain-text";
 export type { PlainTextOptions } from "./plain-text";
@@ -120,14 +120,15 @@ export class Markdown<Schema extends StandardSchemaV1> {
 		if (raw.startsWith("---\n")) {
 			let end = raw.indexOf("\n---\n", 4);
 			if (end !== -1) {
-				let yaml = raw.slice(4, end);
 				content = raw.slice(end + 5);
 
-				try {
-					frontmatter = YAML.parse(yaml) ?? {};
-				} catch {
-					frontmatter = {};
-				}
+				/**
+				 * A block the parser cannot read stands in as empty rather than failing here,
+				 * so the schema is what reports the document as invalid — and a body that
+				 * merely opens on two thematic breaks still renders.
+				 */
+				let parsed = parseYAML(raw.slice(4, end));
+				frontmatter = isFailure(parsed) ? {} : (parsed.data ?? {});
 			}
 		}
 

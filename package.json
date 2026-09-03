@@ -34,14 +34,14 @@
 		"vite-plus": "0.2.9",
 		"vitest": "4.1.10"
 	},
+	"overrides": {
+		"miniflare": "5.20260831.0-alpha"
+	},
 	"devEngines": {
 		"packageManager": {
 			"name": "bun",
 			"version": "1.3.14",
 			"onFail": "download"
 		}
-	},
-	"overrides": {
-		"miniflare": "5.20260831.0-alpha"
 	}
 }

@@ -9,7 +9,7 @@ Markdown parsing, frontmatter validation, and rendering, from source text to Rem
 The package has three entry points, split by what they need to run:
 
 - `@pkg/markdown` — markdown transformations that are neither parsing nor rendering, currently plain-text extraction. It carries no runtime beyond the parser, so an excerpt or a search index can use it without pulling in a highlighter or a renderer.
-- `@pkg/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, and the highlighter's fence node.
+- `@pkg/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, and the highlighter's fence node. Frontmatter is read by [`@pkg/yaml`](/packages/yaml), over [the subset it documents](#frontmatter-format).
 - `@pkg/markdown/client` — the renderer, which turns a Markdoc tree into `remix/ui` nodes instead of React DOM elements, including the code-fence UI.
 
 Keeping the split at the entry-point level means the grammars stay out of client bundles and the renderer stays out of loaders and services. The token colors the rendered fences expect live with the tokens, in `@pkg/highlight/styles.css`.
@@ -226,6 +226,18 @@ validate, or when the schema validates asynchronously.
 - `name`: `"MarkdownParseError"`
 - `issues`: `ReadonlyArray<StandardSchemaV1.Issue>` — the validator's issues, empty for non-validation failures
 
+#### Frontmatter format
+
+Frontmatter is the block between a leading `---` line and the next one, read by
+[`@pkg/yaml`](/packages/yaml) over the subset that package documents. Scalars resolve
+by the YAML 1.2 core schema, so `2026-08-02` arrives as a string, `yes` stays `"yes"`,
+and only `true`/`false` become booleans. Anchors, aliases, merge keys, tags, explicit
+keys and multi-document sources are not part of the subset.
+
+A block that fails to parse is treated as empty, which leaves the frontmatter schema to
+report what the document is missing. A document whose schema is `s.object({})` therefore
+still renders when its body opens on two thematic breaks.
+
 #### Fenced code
 
 Fences are highlighted by [`@pkg/highlight`](/packages/highlight)'s Markdoc node,
@@ -430,6 +442,7 @@ let minutes = Math.ceil(wordCount(text) / 200);
 ## Related Packages
 
 - [`@pkg/result`](/packages/result) - Explicit success/failure handling, used by every parse entry point
+- [`@pkg/yaml`](/packages/yaml) - Reads the frontmatter block, over a documented subset of YAML
 - [`@pkg/validate`](/packages/validate) - Validation helpers over Standard Schema
 - [`@pkg/strings`](/packages/strings) - Excerpts, word counts, and slugs over the text `toPlainText()` returns
 
@@ -438,9 +451,10 @@ let minutes = Math.ceil(wordCount(text) / 200);
 1. **Import `/server` only from server code** - The server entry point pulls in the grammars; keeping it out of components keeps that weight out of client bundles.
 2. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests instead of building one per parse.
 3. **Always load the highlighter's stylesheet** - Without `@pkg/highlight/styles.css`, highlighted fences render as undifferentiated text.
-4. **Keep frontmatter schemas synchronous** - An async validator returns a `MarkdownParseError` rather than awaiting; the parse path is deliberately sync.
-5. **Prefer `Markdown.frontmatter` for index pages** - It skips the Markdoc transform and the highlighting that comes with it.
-6. **Write fences with known aliases** - `tsx`, `sh`, `jsonc`, and friends resolve to a grammar; an unrecognized language renders as plain text.
-7. **Use `toPlainText` for excerpts and search indexes** - It reads the parsed tree, so it cannot be fooled by markup a regular expression would miss.
-8. **Turn on `fences` only for a search index** - Code reads as noise in an excerpt but is worth indexing.
-9. **Reach for `renderToRemix` over `MarkdownView` when composing** - Use it when the rendered nodes go inside surrounding markup you control; use the component when the document stands alone.
+4. **Write frontmatter inside `@pkg/yaml`'s subset** - Anchors, aliases and tags are failures there, and a failed block reaches the schema as empty.
+5. **Keep frontmatter schemas synchronous** - An async validator returns a `MarkdownParseError` rather than awaiting; the parse path is deliberately sync.
+6. **Prefer `Markdown.frontmatter` for index pages** - It skips the Markdoc transform and the highlighting that comes with it.
+7. **Write fences with known aliases** - `tsx`, `sh`, `jsonc`, and friends resolve to a grammar; an unrecognized language renders as plain text.
+8. **Use `toPlainText` for excerpts and search indexes** - It reads the parsed tree, so it cannot be fooled by markup a regular expression would miss.
+9. **Turn on `fences` only for a search index** - Code reads as noise in an excerpt but is worth indexing.
+10. **Reach for `renderToRemix` over `MarkdownView` when composing** - Use it when the rendered nodes go inside surrounding markup you control; use the component when the document stands alone.

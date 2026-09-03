@@ -16,8 +16,8 @@
 		"@markdoc/markdoc": "^0.5.9",
 		"@pkg/highlight": "workspace:*",
 		"@pkg/result": "workspace:*",
+		"@pkg/yaml": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
-		"remix": "3.0.0-rc.1",
-		"yaml": "^2.9.0"
+		"remix": "3.0.0-rc.1"
 	}
 }
