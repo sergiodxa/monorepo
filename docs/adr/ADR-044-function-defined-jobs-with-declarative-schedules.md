@@ -310,11 +310,17 @@ A message body stays flat: the job's name under `type`, the input's fields along
 
 Messages enqueued by the deploy before the migration are still in flight when the one after it starts consuming, and `apps/uptime` enqueues on the order of one message per monitor per minute. A nested envelope (`{ type, input }`) would read better and would dead-letter every message in the queue at cutover. `input` is therefore restricted to object schemas, and `type` is reserved.
 
-### 8. Cron Expressions Are Compared, Not Parsed
+### 8. Cron Expressions Are Validated At Declaration, Compared At Dispatch
 
-`scheduled()` compares a definition's `cron` to `controller.cron` as strings. It does not parse the expression, and the package does not depend on `@pkg/cron`: the map is evaluated at module scope, where a Worker's upload validation runs under a startup CPU budget, and work put there fails the upload rather than the test suite.
+`job()` parses its `cron` with `Schedule.parse` from `@pkg/cron` and throws when the platform would reject it. A job whose expression can never match a trigger is silence at three in the morning, so it fails the upload instead: the deploy stops, naming the expression, the field, and the position.
 
-Validity is checked where it costs nothing at runtime. Each app gets one test asserting that `dispatcher.crons` and the `triggers.crons` in its `wrangler.jsonc` are the same set, and that each expression parses with `Schedule.parse` from `@pkg/cron`. That test is what makes the two files a single source of truth, and it catches a trigger that fires into nothing as well as a job that declares a schedule nothing triggers.
+The type catches the coarser half before that. `cron` is typed as five space-separated fields, so an expression with too few of them — or a string that is not an expression at all — is a compile error, and the parse covers the ranges, steps, and lists inside each field.
+
+Dispatch still compares strings. `scheduled()` matches a declaration's `cron` against `controller.cron` and evaluates no schedule, because the platform has already decided when to deliver; the parse exists to reject a declaration, not to compute occurrences.
+
+An earlier draft of this ADR avoided parsing entirely, on the grounds that a definition is evaluated at module scope where a Worker's upload validation runs under a startup CPU budget. Measured, twenty expressions parse in 0.84ms cold. That budget is spent by real work, not by five integer fields, and the earlier caution was a rule about heavy module-scope parsing applied where it did not fit.
+
+Agreement is still a separate question, and still a test. Each app asserts that `dispatcher.crons` and the `triggers.crons` in its `wrangler.jsonc` are the same set — a valid expression that matches no trigger fires nothing, and a trigger that matches no job enqueues nothing.
 
 ### 9. The Lifecycle Carries Over Unchanged
 
@@ -346,7 +352,7 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 - **A malformed message loads nothing** - The body is parsed against the definition before the loader is awaited, so a dead-letter costs a schema check.
 - **Every job is visible in one map** - What jobs exist, what each carries, and what runs at 06:00 are one file, the way routes are.
 - **Enqueuing is typed** - `jobs.checkHttp.enqueue({ … })` is checked against the same schema the consumer parses with, so a wrong field is a type error rather than a dead letter.
-- **Cron drift is testable** - `dispatcher.crons` gives the assertion that `wrangler.jsonc` and the code agree.
+- **A bad schedule fails the deploy** - `job()` parses its cron and throws, and the type rejects anything that is not five fields, so a job that could never fire never ships. `dispatcher.crons` still gives the assertion that the code and `wrangler.jsonc` name the same set.
 - **Backoff becomes expressible** - `ctx.retry({ delay: "5 minutes" })` gives a rate-limited job the delay it wants, where today every retry is immediate and a job that knows better has no way to say so.
 - **A hung job is named and bounded** - The batch closes on time and the log says which job hung, where today the invocation dies at the platform's limit and the batch is what gets reported.
 - **Both worker handlers are one line** - Every branch a worker used to carry — cron matching, type dispatch, batch bookkeeping, the dead-letter queue — is either a declaration or a mapping, so the entry point says only that jobs are routed.

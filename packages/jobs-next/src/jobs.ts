@@ -11,7 +11,7 @@
 import type { JSONValue } from "@pkg/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import type { JobLeaf } from "./job";
+import type { CronExpression, JobLeaf } from "./job";
 
 import { leaf } from "./job";
 
@@ -57,7 +57,7 @@ export const sender: unique symbol = Symbol("jobs.send");
 export interface JobDefinition<Schema extends StandardSchemaV1 | undefined = undefined> {
 	/** The message `type`, from the key this job is filed under. */
 	readonly name: string;
-	readonly cron: string | undefined;
+	readonly cron: CronExpression | undefined;
 	readonly monitorId: string | undefined;
 	readonly input: Schema | undefined;
 	/**

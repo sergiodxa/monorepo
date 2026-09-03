@@ -10,6 +10,16 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { Schedule } from "@pkg/cron";
+import { isFailure } from "@pkg/result";
+
+/**
+ * The five fields a cron trigger is written in. Catches an expression with too few of
+ * them, and anything that is not one at all, where the checking costs nothing; the
+ * ranges, steps, and lists inside each field are checked when the job is declared.
+ */
+export type CronExpression = `${string} ${string} ${string} ${string} ${string}`;
+
 /** Marks a value as declared by `job()`, so `jobs()` can tell a leaf from a group. */
 export const leaf: unique symbol = Symbol("jobs.leaf");
 
@@ -22,9 +32,10 @@ export interface JobOptions<Schema extends StandardSchemaV1 | undefined = undefi
 	input?: Schema;
 	/**
 	 * Cron expression this job is enqueued on, spelled exactly as the matching trigger
-	 * in `wrangler.jsonc`. Omit for a job that is only ever enqueued explicitly.
+	 * in `wrangler.jsonc`. Parsed when the job is declared, so an expression no platform
+	 * would accept throws here. Omit for a job that is only ever enqueued explicitly.
 	 */
-	cron?: string;
+	cron?: CronExpression;
 	/** Uptime cron monitor to ping once a run completes. */
 	monitorId?: string;
 }
@@ -46,5 +57,15 @@ export interface JobLeaf<
 export function job<Schema extends StandardSchemaV1 | undefined = undefined>(
 	options: JobOptions<Schema> = {},
 ): JobLeaf<Schema> {
+	if (options.cron !== undefined) {
+		/**
+		 * Declaring a schedule the platform would reject is a deploy-time mistake, so it
+		 * fails the upload rather than a delivery: a job whose expression never matches a
+		 * trigger is silence at 3am, which is the failure this package exists to catch.
+		 */
+		let schedule = Schedule.parse(options.cron);
+		if (isFailure(schedule)) throw schedule.error;
+	}
+
 	return { ...options, [leaf]: true };
 }

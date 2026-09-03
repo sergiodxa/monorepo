@@ -424,6 +424,7 @@
       "name": "@pkg/jobs-next",
       "version": "0.0.1",
       "dependencies": {
+        "@pkg/cron": "workspace:*",
         "@pkg/duration": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/result": "workspace:*",

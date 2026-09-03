@@ -18,7 +18,7 @@ export type {
 	JobHandlerFunction,
 	JobTypes,
 } from "./handler";
-export type { JobLeaf, JobOptions } from "./job";
+export type { CronExpression, JobLeaf, JobOptions } from "./job";
 export type {
 	AnyJobDefinition,
 	AnyJobLeaf,

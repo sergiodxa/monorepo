@@ -13,6 +13,7 @@ import type { ContextValue } from "remix/router";
 import { BatchedLogger } from "@pkg/logger";
 
 import type { RetryOptions } from "./errors";
+import type { CronExpression } from "./job";
 import type { AnyJobDefinition } from "./jobs";
 
 import { Ack, NonRetriable, Retry, Timeout } from "./errors";
@@ -45,7 +46,7 @@ export class JobContext<Input = undefined> {
 	/** The job's name, as its map key spells it. */
 	readonly name: string;
 	/** The schedule this job is enqueued on, when it declares one. */
-	readonly cron: string | undefined;
+	readonly cron: CronExpression | undefined;
 	/** The uptime monitor this job reports to, when it declares one. */
 	readonly monitorId: string | undefined;
 	/** The payload, parsed against the job's schema. */

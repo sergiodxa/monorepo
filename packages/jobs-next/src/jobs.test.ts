@@ -8,6 +8,7 @@
 
 import type { JSONValue } from "@pkg/types";
 
+import { InvalidCronExpression } from "@pkg/cron";
 import * as s from "remix/data-schema";
 import { describe, expect, test, vi } from "vitest";
 
@@ -93,5 +94,21 @@ describe("enqueueMany()", () => {
 		await map.notify.enqueueMany([]);
 
 		expect(send).not.toHaveBeenCalled();
+	});
+});
+
+describe("job()", () => {
+	test("declares a schedule the platform would accept", () => {
+		expect(() => job({ cron: "*/15 * * * *" })).not.toThrow();
+	});
+
+	test("refuses a field the platform would reject, naming where it is", () => {
+		expect(() => job({ cron: "0 99 * * *" })).toThrow(InvalidCronExpression);
+		expect(() => job({ cron: "0 99 * * *" })).toThrow(/hour/);
+	});
+
+	test("refuses an expression that is not five fields", () => {
+		// @ts-expect-error -- too few fields is a type error before it is a thrown one
+		expect(() => job({ cron: "invalid" })).toThrow(InvalidCronExpression);
 	});
 });
