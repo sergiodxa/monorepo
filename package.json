@@ -40,5 +40,8 @@
 			"version": "1.3.14",
 			"onFail": "download"
 		}
+	},
+	"overrides": {
+		"miniflare": "5.20260831.0-alpha"
 	}
 }
