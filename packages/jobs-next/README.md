@@ -1,6 +1,6 @@
 # @pkg/jobs-next
 
-Background jobs for Cloudflare Queues: one map declares them, one router runs them,
+Background jobs for Cloudflare Queues: one map declares them, one dispatcher runs them,
 and handlers are ordinary functions that read what they need off a context.
 
 ## Overview
@@ -56,17 +56,17 @@ export default createJobHandler(jobs.checkHttp, async (ctx) => {
 });
 ```
 
-Passing the job is what types `ctx.input`, and it is also what the router checks the
+Passing the job is what types `ctx.input`, and it is also what the dispatcher checks the
 handler was mapped to.
 
 ### Wiring the worker
 
 ```typescript
-import { createJobRouter } from "@pkg/jobs-next";
+import { createJobDispatcher } from "@pkg/jobs-next";
 
 import jobs from "~/app/jobs";
 
-export const router = createJobRouter({
+export const dispatcher = createJobDispatcher({
 	middleware: [database()],
 	timeout: "5 minutes",
 	uptime: () => env.UPTIME_CRON_API_KEY,
@@ -74,18 +74,18 @@ export const router = createJobRouter({
 	onInvalid: (_message, body) => env.DLQ.send(body, { contentType: "json" }),
 });
 
-router.map(jobs.clean, () => import("~/app/jobs/clean"));
-router.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
+dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
+dispatcher.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
 ```
 
 ```typescript
 export default {
 	async scheduled(controller) {
-		await router.scheduled(controller);
+		await dispatcher.scheduled(controller);
 	},
 
 	async queue(batch) {
-		await router.queue(batch);
+		await dispatcher.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```
@@ -114,12 +114,12 @@ export function database(): JobMiddleware<{
 }
 ```
 
-Naming the router's context once makes every handler see what its chain installed:
+Naming the dispatcher's context once makes every handler see what its chain installed:
 
 ```typescript
 declare module "@pkg/jobs-next" {
 	interface JobTypes {
-		context: JobRouterContext<typeof router>;
+		context: JobDispatcherContext<typeof dispatcher>;
 	}
 }
 ```
@@ -146,11 +146,11 @@ a job that declares none. A batch is one write, and enqueuing nothing writes not
 | `ctx.retry({ delay: "5 minutes" })`    | Settle for redelivery; return next                                          |
 | Anything else thrown                   | Log `job.failed` and re-throw, leaving the platform to retry the invocation |
 
-The first settlement wins, and the router settles nothing a handler already settled.
+The first settlement wins, and the dispatcher settles nothing a handler already settled.
 
 ### Timeouts
 
-`timeout` bounds how long the router waits for one job. It cannot stop a handler —
+`timeout` bounds how long the dispatcher waits for one job. It cannot stop a handler —
 nothing can stop a promise — so what it does is abort `ctx.signal`, cancelling the I/O
 that agreed to be cancelled, and stop the batch being held open by one stuck job.
 
@@ -164,24 +164,24 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 ```
 
 At the deadline the signal aborts and the handler has a short grace to give up on its
-own, before the router leaves the message unacked for redelivery. A handler whose work
+own, before the dispatcher leaves the message unacked for redelivery. A handler whose work
 is durable and must not repeat can `ctx.ack()` instead. A run whose signal aborted
 reports `job.timed-out` and pings no monitor however it was settled.
 
 ## API
 
-| Export               | What it is                                                               |
-| -------------------- | ------------------------------------------------------------------------ |
-| `jobs()`             | Builds the map, naming every leaf after its key and binding it to `send` |
-| `job()`              | Declares one leaf: `input`, `cron`, `monitorId`                          |
-| `createJobHandler()` | Pairs a handler with the job it runs, and types its payload              |
-| `createJobRouter()`  | The registry both worker handlers delegate to                            |
-| `JobContext`         | The context handlers and middleware share; tests build one directly      |
-| `JobTimeout`         | Give up because the timeout fired                                        |
-| `RetryError`         | Retry this delivery, optionally after a `delay`                          |
-| `NonRetriableError`  | Ack this delivery; it will not get better                                |
+| Export                  | What it is                                                               |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `jobs()`                | Builds the map, naming every leaf after its key and binding it to `send` |
+| `job()`                 | Declares one leaf: `input`, `cron`, `monitorId`                          |
+| `createJobHandler()`    | Pairs a handler with the job it runs, and types its payload              |
+| `createJobDispatcher()` | The registry both worker handlers delegate to                            |
+| `JobContext`            | The context handlers and middleware share; tests build one directly      |
+| `JobTimeout`            | Give up because the timeout fired                                        |
+| `RetryError`            | Retry this delivery, optionally after a `delay`                          |
+| `NonRetriableError`     | Ack this delivery; it will not get better                                |
 
-### Router
+### Dispatcher
 
 | Member                  | What it does                                                                   |
 | ----------------------- | ------------------------------------------------------------------------------ |

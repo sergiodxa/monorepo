@@ -1,6 +1,6 @@
 /**
  * Public surface of the jobs package: the declaration helpers that build a job map,
- * the handler and middleware types an app writes against, the router both worker
+ * the handler and middleware types an app writes against, the dispatcher both worker
  * handlers delegate to, the context they all share, and the errors that end a delivery.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -41,16 +41,16 @@ export type {
 export type {
 	HandlerModule,
 	InvalidMessage,
-	JobRouter,
-	JobRouterContext,
-	JobRouterOptions,
+	JobDispatcher,
+	JobDispatcherContext,
+	JobDispatcherOptions,
 	LoadHandler,
 	RefusalReason,
-} from "./router";
+} from "./dispatcher";
 
 export { JobContext } from "./context";
 export { JobTimeout, NonRetriableError, RetryError } from "./errors";
 export { createJobHandler } from "./handler";
 export { job } from "./job";
 export { jobs } from "./jobs";
-export { createJobRouter } from "./router";
+export { createJobDispatcher } from "./dispatcher";

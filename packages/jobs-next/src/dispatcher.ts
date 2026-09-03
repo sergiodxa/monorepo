@@ -1,5 +1,5 @@
 /**
- * `createJobRouter()`, which pairs handlers with the jobs an app declared and owns
+ * `createJobDispatcher()`, which pairs handlers with the jobs an app declared and owns
  * both worker handlers. A cron delivery enqueues and never handles; a queue delivery
  * finds the job its message names, parses the body against that job's own schema,
  * and only then loads the handler, so an isolate serving requests never parses one.
@@ -39,11 +39,11 @@ export interface InvalidMessage {
 	invalid: unknown;
 }
 
-/** What a router needs beyond the handlers mapped onto it. */
-export interface JobRouterOptions<Chain extends readonly AnyJobMiddleware[] = []> {
+/** What a dispatcher needs beyond the handlers mapped onto it. */
+export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] = []> {
 	/** Runs around every job, in the order declared. Prefer an inline array. */
 	middleware?: Chain;
-	/** How long a job gets before its `ctx.signal` aborts and the router stops waiting. */
+	/** How long a job gets before its `ctx.signal` aborts and the dispatcher stops waiting. */
 	timeout?: DurationInput;
 	/** Resolves the bearer token a monitor ping is sent with. */
 	uptime?: () => string | undefined;
@@ -53,14 +53,14 @@ export interface JobRouterOptions<Chain extends readonly AnyJobMiddleware[] = []
 	 */
 	deadLetterQueue?: string;
 	/**
-	 * Forwards a message the router refused, already wrapped as `{ invalid: body }`.
-	 * The router acks it either way — neither refusal survives a redelivery.
+	 * Forwards a message the dispatcher refused, already wrapped as `{ invalid: body }`.
+	 * The dispatcher acks it either way — neither refusal survives a redelivery.
 	 */
 	onInvalid?: (message: Message<unknown>, body: InvalidMessage) => void | Promise<void>;
 }
 
 /** The registry both worker handlers run through. */
-export interface JobRouter<Chain extends readonly AnyJobMiddleware[] = []> {
+export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 	/**
 	 * Registers where a job's handler comes from.
 	 * @param job The job, from the app's map.
@@ -81,12 +81,14 @@ export interface JobRouter<Chain extends readonly AnyJobMiddleware[] = []> {
 	readonly [chain]?: Chain | undefined;
 }
 
-/** Type-only slot carrying the router's middleware chain. */
+/** Type-only slot carrying the dispatcher's middleware chain. */
 declare const chain: unique symbol;
 
-/** The context a router's handlers receive: the bare one, plus what its chain installs. */
-export type JobRouterContext<Router> =
-	Router extends JobRouter<infer Chain> ? JobContext<unknown> & ChainProperties<Chain> : never;
+/** The context a dispatcher's handlers receive: the bare one, plus what its chain installs. */
+export type JobDispatcherContext<Dispatcher> =
+	Dispatcher extends JobDispatcher<infer Chain>
+		? JobContext<unknown> & ChainProperties<Chain>
+		: never;
 
 /**
  * True for a handler `createJobHandler()` produced, false for a loader that
@@ -104,14 +106,14 @@ function typeOf(body: unknown): string | undefined {
 }
 
 /**
- * Builds the router both worker handlers delegate to.
+ * Builds the dispatcher both worker handlers delegate to.
  *
  * @param options The middleware, timeout, and queues this app's jobs run with.
- * @example export const router = createJobRouter({ middleware: [database()] });
+ * @example export const dispatcher = createJobDispatcher({ middleware: [database()] });
  */
-export function createJobRouter<const Chain extends readonly AnyJobMiddleware[] = []>(
-	options: JobRouterOptions<Chain> = {},
-): JobRouter<Chain> {
+export function createJobDispatcher<const Chain extends readonly AnyJobMiddleware[] = []>(
+	options: JobDispatcherOptions<Chain> = {},
+): JobDispatcher<Chain> {
 	let mapped = new Map<string, { job: AnyJobDefinition; load: LoadHandler | AnyJobHandler }>();
 	/**
 	 * Loads in flight or already done, keyed by job. The promise is cached rather than
@@ -144,7 +146,7 @@ export function createJobRouter<const Chain extends readonly AnyJobMiddleware[] 
 	}
 
 	/**
-	 * Records a message the router will not dispatch, forwards it, and acks it.
+	 * Records a message the dispatcher will not dispatch, forwards it, and acks it.
 	 * @param message The refused delivery.
 	 * @param reason Which refusal this is.
 	 */

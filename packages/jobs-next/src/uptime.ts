@@ -30,7 +30,7 @@ export class UptimeNetworkError extends Error {
 
 /**
  * Reports a completed run to its cron monitor. Does nothing unless the job
- * declares a monitor and the router was given a token.
+ * declares a monitor and the dispatcher was given a token.
  *
  * @param monitorId The monitor to ping, from the job's declaration.
  * @param token Bearer token for the uptime service.

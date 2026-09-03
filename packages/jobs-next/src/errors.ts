@@ -1,6 +1,6 @@
 /**
  * The outcomes a handler throws to end its delivery: retry it, refuse it, or
- * give up because the timeout fired. The router classifies by these classes, so
+ * give up because the timeout fired. The dispatcher classifies by these classes, so
  * throwing one is how a handler decides what happens to the message it was given.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

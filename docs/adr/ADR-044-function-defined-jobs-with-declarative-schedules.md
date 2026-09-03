@@ -8,7 +8,7 @@
 
 `@pkg/jobs` gives every queue consumer in the monorepo one lifecycle: a batched logger, an ack/retry decision derived from the thrown error, an optional uptime ping, and per-job database usage attribution. It does that through an abstract `Job` class whose subclasses implement `perform()`, and it does it well — the lifecycle is not what this ADR changes.
 
-What the package does not model is everything around that lifecycle. A job does not know its own message type, does not know its schedule, cannot enqueue itself, and has no way to be handed its dependencies, so each app rebuilds those facts by hand: a discriminated-union schema of every message body, a `switch` mapping each `type` to a class, an `if` chain mapping each cron expression to a `send()`, a `validate()` call inside every `perform()`, and a `getServiceContainer()` lookup for every service the job touches. The rest of the repository moved to Remix v3's shape — a map of addressable definitions, a router that maps handlers onto them, and middleware that publishes request-scoped values into a typed context — while jobs stayed on the class-and-switch shape that predates it.
+What the package does not model is everything around that lifecycle. A job does not know its own message type, does not know its schedule, cannot enqueue itself, and has no way to be handed its dependencies, so each app rebuilds those facts by hand: a discriminated-union schema of every message body, a `switch` mapping each `type` to a class, an `if` chain mapping each cron expression to a `send()`, a `validate()` call inside every `perform()`, and a `getServiceContainer()` lookup for every service the job touches. The rest of the repository moved to Remix v3's shape — a map of addressable definitions, a dispatcher that maps handlers onto them, and middleware that publishes request-scoped values into a typed context — while jobs stayed on the class-and-switch shape that predates it.
 
 ## Context
 
@@ -54,7 +54,7 @@ Nothing checks that steps 2 and 1 agree, that step 4's expression is one of step
 
 ## Decision
 
-Model jobs the way the repository already models HTTP: a **map** of definitions, a **router** that maps handlers onto them with middleware, and **handlers** in their own modules that read what they need from a **context**.
+Model jobs the way the repository already models HTTP: a **map** of definitions, a **dispatcher** that maps handlers onto them with middleware, and **handlers** in their own modules that read what they need from a **context**.
 
 ### 1. `jobs()` Builds The Map, `job()` Declares A Leaf
 
@@ -108,7 +108,7 @@ export default createJobHandler(jobs.clean, async ({ database, logger }) => {
 
 The handler receives one context object: the job's own declaration, the message it is running for, and whatever the middleware published. Passing the definition is what supplies the input type, the same way `createAction()` types a stored Remix handler.
 
-A handler settles its own delivery when it wants to, through `ctx.ack()` and `ctx.retry(options?)`. The `Message` itself stays out of reach: the context exposes the two verbs, so the router keeps owning the logging, the uptime ping, and the decision it makes when the handler settles nothing.
+A handler settles its own delivery when it wants to, through `ctx.ack()` and `ctx.retry(options?)`. The `Message` itself stays out of reach: the context exposes the two verbs, so the dispatcher keeps owning the logging, the uptime ping, and the decision it makes when the handler settles nothing.
 
 | Call                                | Effect                                                                                                                        |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -118,7 +118,7 @@ A handler settles its own delivery when it wants to, through `ctx.ack()` and `ct
 | Returning without settling          | Unchanged: ping, then ack, then `job.completed`                                                                               |
 | Throwing                            | Unchanged: `RetryError` retries, `NonRetriableError` acks, `JobTimeout` reports a timeout, anything else re-throws            |
 
-The first settlement wins. A second call is ignored, and so is the router's own ack at the end of a run the handler already settled — which is what makes early-acking safe for a job that wants its delivery released before a slow tail finishes. A handler that settles and then throws still logs the throw; it does not re-settle.
+The first settlement wins. A second call is ignored, and so is the dispatcher's own ack at the end of a run the handler already settled — which is what makes early-acking safe for a job that wants its delivery released before a slow tail finishes. A handler that settles and then throws still logs the throw; it does not re-settle.
 
 `delay` is a `DurationInput` from `@pkg/duration`, so a backoff is written the way the cron package already takes a grace period: `ctx.retry({ delay: "5 minutes" })`. The package converts it with `toSeconds()`, which rounds to the nearest second, and hands that to the platform's `delaySeconds`. Taking a duration rather than a raw seconds number is what keeps a caller from passing milliseconds to a seconds-shaped API, which is the mistake that package exists to prevent — a bare number in a `DurationInput` is already milliseconds.
 
@@ -128,23 +128,23 @@ The first settlement wins. A second call is ignored, and so is the router's own 
 
 The context mixes the two the repository already has: the route context's typed key access and middleware-installed properties, and `@pkg/mcp`'s habit of flattening the descriptor being executed onto that same object, so a tool reads `ctx.input` and `ctx.tool` without going through a key.
 
-| Property            | Comes from  | Meaning                                                                                                        |
-| ------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
-| `input`             | The leaf    | The payload, parsed and typed by `s.InferOutput` of the leaf's schema; `undefined` when the leaf declares none |
-| `name`              | The map key | The job's name, dot-joined for a nested leaf                                                                   |
-| `cron`              | The leaf    | The schedule it is enqueued on, `undefined` when it has none                                                   |
-| `monitorId`         | The leaf    | The uptime monitor it reports to, `undefined` when it has none                                                 |
-| `logger`            | The router  | The job's `BatchedLogger`, already carrying its identifier                                                     |
-| `id`, `attempts`    | The message | Delivery id and delivery count                                                                                 |
-| `batchSize`         | The batch   | How many messages share this invocation, for a job that prices its share of it                                 |
-| `ack`, `retry`      | The router  | Settle this delivery from inside the handler                                                                   |
-| `signal`            | The router  | Aborts when the job's timeout expires; pass it to `fetch`, or read `signal.aborted` between iterations         |
-| `get`, `has`, `set` | The context | Typed key access, the same surface `RequestContext` has                                                        |
-| Anything else       | Middleware  | Installed by `set(key, value, { property })`, so a handler reads `ctx.database` with its real type             |
+| Property            | Comes from     | Meaning                                                                                                        |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------- |
+| `input`             | The leaf       | The payload, parsed and typed by `s.InferOutput` of the leaf's schema; `undefined` when the leaf declares none |
+| `name`              | The map key    | The job's name, dot-joined for a nested leaf                                                                   |
+| `cron`              | The leaf       | The schedule it is enqueued on, `undefined` when it has none                                                   |
+| `monitorId`         | The leaf       | The uptime monitor it reports to, `undefined` when it has none                                                 |
+| `logger`            | The dispatcher | The job's `BatchedLogger`, already carrying its identifier                                                     |
+| `id`, `attempts`    | The message    | Delivery id and delivery count                                                                                 |
+| `batchSize`         | The batch      | How many messages share this invocation, for a job that prices its share of it                                 |
+| `ack`, `retry`      | The dispatcher | Settle this delivery from inside the handler                                                                   |
+| `signal`            | The dispatcher | Aborts when the job's timeout expires; pass it to `fetch`, or read `signal.aborted` between iterations         |
+| `get`, `has`, `set` | The context    | Typed key access, the same surface `RequestContext` has                                                        |
+| Anything else       | Middleware     | Installed by `set(key, value, { property })`, so a handler reads `ctx.database` with its real type             |
 
 `cron` and `monitorId` are on the context because a handler mapped to more than one leaf is a real case: the daily and weekly team digests differ by exactly those two values, so reading them turns today's three-class hierarchy into one handler mapped twice.
 
-Middleware is declared once on the router and runs around every job, in the shape `fetch-router` already uses: a factory returning `(context, next)`, which must call `next()`.
+Middleware is declared once on the dispatcher and runs around every job, in the shape `fetch-router` already uses: a factory returning `(context, next)`, which must call `next()`.
 
 ```typescript
 // app/jobs/middleware/database.ts
@@ -169,9 +169,9 @@ export function database(): JobMiddleware<{
 }
 ```
 
-Context keys come from `remix/router`: `createContextKey()` returns a plain typed key, tied to nothing in the router, and `@pkg/mcp` already reuses it outside a fetch router. The context object is the package's own, because `RequestContext` takes a `Request` in its constructor and carries `headers`, `url`, `params`, and `router` — a job has none of those, and inventing a synthetic request to borrow the class would be a lie in every log line. `JobContext` implements the same `get` / `has` / `set(key, value, { property })` surface, so an app defines a key once and publishes it from both an HTTP middleware and a job middleware, and a service written against `ctx.database` does not care which one is running.
+Context keys come from `remix/router`: `createContextKey()` returns a plain typed key, tied to nothing in the dispatcher, and `@pkg/mcp` already reuses it outside a fetch router. The context object is the package's own, because `RequestContext` takes a `Request` in its constructor and carries `headers`, `url`, `params`, and `router` — a job has none of those, and inventing a synthetic request to borrow the class would be a lie in every log line. `JobContext` implements the same `get` / `has` / `set(key, value, { property })` surface, so an app defines a key once and publishes it from both an HTTP middleware and a job middleware, and a service written against `ctx.database` does not care which one is running.
 
-Middleware is router-level only. Per-job middleware is deliberately absent: a job that needs setup nothing else needs can do it in its own first lines, and one chain for every job is what keeps the ordering guarantees legible.
+Middleware is dispatcher-level only. Per-job middleware is deliberately absent: a job that needs setup nothing else needs can do it in its own first lines, and one chain for every job is what keeps the ordering guarantees legible.
 
 Ordering inside a delivery is: read `type`, find the definition, parse the body, build the context, run the middleware chain, load the handler module, run the handler. Middleware therefore never runs for a message that was never going to be handled, and a throw from middleware is classified exactly as a throw from a handler — `RetryError` retries, `NonRetriableError` acks.
 
@@ -200,7 +200,7 @@ The second argument to `jobs()` is how the map reaches its queue:
 | ------ | ---------------------------------------- | ------------------------------------------------------------------------------ |
 | `send` | `(bodies: JSONValue[]) => Promise<void>` | The app's queue write. `apps/uptime` passes its cost-counting `sendQueueBatch` |
 
-Enqueuing is the one thing that cannot come from the router: `jobs.checkHttp.enqueue()` is called from controllers that have no business importing a router, which is exactly the module-graph problem the map exists to solve. The sender therefore arrives where the map is built — the one module every call site already imports — so there is no registration call to make, no order to get wrong, and no entry point that can forget to make it. A map that exists can enqueue.
+Enqueuing is the one thing that cannot come from the dispatcher: `jobs.checkHttp.enqueue()` is called from controllers that have no business importing a dispatcher, which is exactly the module-graph problem the map exists to solve. The sender therefore arrives where the map is built — the one module every call site already imports — so there is no registration call to make, no order to get wrong, and no entry point that can forget to make it. A map that exists can enqueue.
 
 The package takes a `send` function rather than a `Queue` binding because the binding is not the whole write anywhere it is used: `apps/uptime` prices each queue operation on the way out, and chunking a batch at the platform's 100-message limit already lives in the app. Passing a function also keeps the map's own module free of work at import time: nothing reads a binding until something enqueues.
 
@@ -214,34 +214,34 @@ await jobs.verifyDomainOwnership.enqueueAll(domains.map((d) => ({ teamDomainId: 
 
 `enqueue` takes exactly the job's input type, and takes no argument at all for a job without a schema. Both forms funnel into one `send` call, so a batch stays one write, and neither loads a handler.
 
-### 5. `createJobRouter()` Maps Handlers And Owns Both Worker Handlers
+### 5. `createJobDispatcher()` Maps Handlers And Owns Both Worker Handlers
 
 ```typescript
-// app/jobs/router.ts
-import { createJobRouter } from "@pkg/jobs";
+// app/jobs/dispatcher.ts
+import { createJobDispatcher } from "@pkg/jobs";
 
 import jobs from "~/app/jobs";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
 
-export const router = createJobRouter({
+export const dispatcher = createJobDispatcher({
 	middleware: [database(), costLedger()],
 	onInvalid: deadLetter,
 });
 
-router.map(jobs.clean, () => import("~/app/jobs/clean"));
-router.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
+dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
+dispatcher.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
 ```
 
 ```typescript
 // bootstrap/worker.ts
 export default {
 	async scheduled(controller) {
-		await router.scheduled(controller);
+		await dispatcher.scheduled(controller);
 	},
 
 	async queue(batch) {
-		await router.queue(batch);
+		await dispatcher.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```
@@ -253,34 +253,34 @@ export default {
 | `scheduled(controller)`  | Enqueues every mapped job whose `cron` equals `controller.cron`, in one batched send. Never runs one                            |
 | `crons`                  | The distinct cron expressions the mapped jobs declare, for asserting against `wrangler.jsonc`                                   |
 | `middleware` option      | The chain every job runs inside                                                                                                 |
-| `timeout` option         | How long the router waits for one job before it aborts `ctx.signal` and stops waiting                                           |
+| `timeout` option         | How long the dispatcher waits for one job before it aborts `ctx.signal` and stops waiting                                       |
 | `uptime` option          | Deferred resolver for the monitor-ping token, matching the credential rule ADR-043 settled                                      |
 | `onInvalid` option       | Called with a body naming no mapped job, or failing that job's schema, wrapped ready to send on. Defaults to logging and acking |
-| `deadLetterQueue` option | Name of the dead-letter queue, so the router recognizes its batches and records them itself                                     |
+| `deadLetterQueue` option | Name of the dead-letter queue, so the dispatcher recognizes its batches and records them itself                                 |
 
-A cron delivery enqueues; it never handles. `scheduled()` writes one message per due job and returns, so the handler runs later, off the queue, exactly as it does for a job that was enqueued by a controller. Both apps already work this way by hand — `apps/r3-auth`'s worker says it outright, that a sweep outgrowing the trigger's budget should become the queue's problem and get its own retries — and this makes it the router's rule rather than a convention each worker re-decides. It is also why `cron` is purely additive on a leaf: the scheduled path _is_ the enqueue path, so a scheduled job needs no second code path, gets the same middleware, timeout, logging, and uptime ping, and gets the retries and dead-letter queue a cron trigger cannot offer. The practical shape of it is that a `scheduled` invocation loads no job module at all.
+A cron delivery enqueues; it never handles. `scheduled()` writes one message per due job and returns, so the handler runs later, off the queue, exactly as it does for a job that was enqueued by a controller. Both apps already work this way by hand — `apps/r3-auth`'s worker says it outright, that a sweep outgrowing the trigger's budget should become the queue's problem and get its own retries — and this makes it the dispatcher's rule rather than a convention each worker re-decides. It is also why `cron` is purely additive on a leaf: the scheduled path _is_ the enqueue path, so a scheduled job needs no second code path, gets the same middleware, timeout, logging, and uptime ping, and gets the retries and dead-letter queue a cron trigger cannot offer. The practical shape of it is that a `scheduled` invocation loads no job module at all.
 
 A malformed message never parses a handler module, and an isolate that only serves `fetch` never parses one at all. The loader is the convention rather than a passed handler because a loader is what keeps the handler out of the importing module's graph.
 
 `apps/uptime` passes `onInvalid` to keep its current behavior of forwarding the body to the dead-letter queue as `{ invalid: body }`; `deadLetter` in the sample above is that app's own function, not package API.
 
-The dead-letter queue is the router's, not the app's. Naming it in `deadLetterQueue` is the whole of an app's involvement on that side: a batch arriving from it is recorded and acked by the package, with no leaf, no handler module, and no way for a message there to be retried — that queue has no dead-letter queue of its own, so anything left unacked would redeliver forever.
+The dead-letter queue is the dispatcher's, not the app's. Naming it in `deadLetterQueue` is the whole of an app's involvement on that side: a batch arriving from it is recorded and acked by the package, with no leaf, no handler module, and no way for a message there to be retried — that queue has no dead-letter queue of its own, so anything left unacked would redeliver forever.
 
-Both ends of the convention move with it. A message reaches that queue either because the platform exhausted its `max_retries` and moved it verbatim, or because the router refused it: a body naming no job, or failing its schema, will not parse on a redelivery either, so `onInvalid` receives it already wrapped as `{ invalid: body }` and the app's only part is writing that to its `DLQ` binding. The recorder on the other side reads the same wrapper to tell "never matched anything" from "tried three times and died", which is why the package owns both halves rather than leaving the shape to each app. That envelope is a wire format like any other: bodies sit in that queue across deploys.
+Both ends of the convention move with it. A message reaches that queue either because the platform exhausted its `max_retries` and moved it verbatim, or because the dispatcher refused it: a body naming no job, or failing its schema, will not parse on a redelivery either, so `onInvalid` receives it already wrapped as `{ invalid: body }` and the app's only part is writing that to its `DLQ` binding. The recorder on the other side reads the same wrapper to tell "never matched anything" from "tried three times and died", which is why the package owns both halves rather than leaving the shape to each app. That envelope is a wire format like any other: bodies sit in that queue across deploys.
 
 `map()` is the only thing that makes a job runnable, so a job in the map that nobody maps is dead code that still accepts enqueues. One test walks the map and asserts every leaf is mapped — the completeness check the hand-written `switch` never had either.
 
 ### 6. Timeouts Bound The Wait, Not The Handler
 
 ```typescript
-export const router = createJobRouter({ timeout: "5 minutes", middleware: [database()] });
+export const dispatcher = createJobDispatcher({ timeout: "5 minutes", middleware: [database()] });
 ```
 
-A handler cannot be terminated — JavaScript has no way to stop a promise mid-flight — so this is not a kill switch, and the ADR would be lying if it read like one. What the timeout does is bound how long the router waits, cancel the I/O the handler agreed to have cancelled, and put a name on the failure.
+A handler cannot be terminated — JavaScript has no way to stop a promise mid-flight — so this is not a kill switch, and the ADR would be lying if it read like one. What the timeout does is bound how long the dispatcher waits, cancel the I/O the handler agreed to have cancelled, and put a name on the failure.
 
 That is worth having because `queue()` awaits every message: one hung job holds the invocation open long after every other message in the batch has settled, and it dies at the platform's own limit with no attribution. Neither app sets `limits.cpu_ms`, `max_batch_timeout`, or `max_concurrency`, so that platform limit is the only backstop today.
 
-At the deadline the router aborts `ctx.signal` and gives the handler a short, package-fixed grace to give up on its own before settling on its behalf. A handler that notices gives up by throwing, in the same vocabulary as every other outcome:
+At the deadline the dispatcher aborts `ctx.signal` and gives the handler a short, package-fixed grace to give up on its own before settling on its behalf. A handler that notices gives up by throwing, in the same vocabulary as every other outcome:
 
 ```typescript
 export default createJobHandler(jobs.checkFlows, async ({ signal, database }) => {
@@ -299,9 +299,9 @@ Throwing rather than settling is what keeps the cooperative path clear of the on
 if (signal.aborted) return ack(); // The mail already sent must not be sent twice.
 ```
 
-The router's own default is the other one: leave the message unacked so the platform redelivers, which is right for a job that hung before doing anything durable. Only the handler can tell those apart, which is what the grace is for, and it is sized to unwind rather than to keep working. Acking that way settles the message and nothing more: the run still reports a timeout and still pings no monitor, because a handler that gave up early has not done the work the monitor watches for.
+The dispatcher's own default is the other one: leave the message unacked so the platform redelivers, which is right for a job that hung before doing anything durable. Only the handler can tell those apart, which is what the grace is for, and it is sized to unwind rather than to keep working. Acking that way settles the message and nothing more: the run still reports a timeout and still pings no monitor, because a handler that gave up early has not done the work the monitor watches for.
 
-All three paths report the same thing. A thrown `JobTimeout`, an `AbortError` surfacing from a `fetch` that was given `ctx.signal`, and the router giving up all log `job.timed-out` and skip the uptime ping. With no `timeout` configured, `ctx.signal` is a signal that never aborts, so handlers pass it along unconditionally.
+All three paths report the same thing. A thrown `JobTimeout`, an `AbortError` surfacing from a `fetch` that was given `ctx.signal`, and the dispatcher giving up all log `job.timed-out` and skip the uptime ping. With no `timeout` configured, `ctx.signal` is a signal that never aborts, so handlers pass it along unconditionally.
 
 ### 7. The Wire Format Does Not Change
 
@@ -317,7 +317,7 @@ Messages enqueued by the deploy before the migration are still in flight when th
 
 `scheduled()` compares a definition's `cron` to `controller.cron` as strings. It does not parse the expression, and the package does not depend on `@pkg/cron`: the map is evaluated at module scope, where a Worker's upload validation runs under a startup CPU budget, and work put there fails the upload rather than the test suite.
 
-Validity is checked where it costs nothing at runtime. Each app gets one test asserting that `router.crons` and the `triggers.crons` in its `wrangler.jsonc` are the same set, and that each expression parses with `Schedule.parse` from `@pkg/cron`. That test is what makes the two files a single source of truth, and it catches a trigger that fires into nothing as well as a job that declares a schedule nothing triggers.
+Validity is checked where it costs nothing at runtime. Each app gets one test asserting that `dispatcher.crons` and the `triggers.crons` in its `wrangler.jsonc` are the same set, and that each expression parses with `Schedule.parse` from `@pkg/cron`. That test is what makes the two files a single source of truth, and it catches a trigger that fires into nothing as well as a job that declares a schedule nothing triggers.
 
 ### 9. The Lifecycle Carries Over Unchanged
 
@@ -329,17 +329,17 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 
 ### API Surface
 
-| Export               | Kind     | Note                                                                                              |
-| -------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `jobs()`             | Function | Builds a job map, naming each leaf after its key                                                  |
-| `job()`              | Function | Declares one leaf: `input`, `cron`, `monitorId`                                                   |
-| `createJobHandler()` | Function | Types a handler against a definition, returns a `JobHandler`                                      |
-| `createJobRouter()`  | Function | Returns `map` / `queue` / `scheduled` / `crons`                                                   |
-| `JobContext`         | Class    | The context handlers and middleware share; built from a leaf and a message, or by a test directly |
-| `JobMiddleware`      | Type     | `(context, next) => Promise<void>`, entry-typed like `Middleware`                                 |
-| `JobTimeout`         | Class    | Give up because the timeout fired; also what the router reports when it gives up                  |
-| `RetryError`         | Class    | Retry this message, optionally after a `delay`                                                    |
-| `NonRetriableError`  | Class    | Ack this message, it will not get better                                                          |
+| Export                  | Kind     | Note                                                                                              |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `jobs()`                | Function | Builds a job map, naming each leaf after its key                                                  |
+| `job()`                 | Function | Declares one leaf: `input`, `cron`, `monitorId`                                                   |
+| `createJobHandler()`    | Function | Types a handler against a definition, returns a `JobHandler`                                      |
+| `createJobDispatcher()` | Function | Returns `map` / `queue` / `scheduled` / `crons`                                                   |
+| `JobContext`            | Class    | The context handlers and middleware share; built from a leaf and a message, or by a test directly |
+| `JobMiddleware`         | Type     | `(context, next) => Promise<void>`, entry-typed like `Middleware`                                 |
+| `JobTimeout`            | Class    | Give up because the timeout fired; also what the dispatcher reports when it gives up              |
+| `RetryError`            | Class    | Retry this message, optionally after a `delay`                                                    |
+| `NonRetriableError`     | Class    | Ack this message, it will not get better                                                          |
 
 ## Consequences
 
@@ -351,13 +351,13 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 - **A malformed message loads nothing** - The body is parsed against the definition before the loader is awaited, so a dead-letter costs a schema check.
 - **Every job is visible in one map** - What jobs exist, what each carries, and what runs at 06:00 are one file, the way routes are.
 - **Enqueuing is typed** - `jobs.checkHttp.enqueue({ … })` is checked against the same schema the consumer parses with, so a wrong field is a type error rather than a dead letter.
-- **Cron drift is testable** - `router.crons` gives the assertion that `wrangler.jsonc` and the code agree.
+- **Cron drift is testable** - `dispatcher.crons` gives the assertion that `wrangler.jsonc` and the code agree.
 - **Backoff becomes expressible** - `ctx.retry({ delay: "5 minutes" })` gives a rate-limited job the delay it wants, where today every retry is immediate and a job that knows better has no way to say so.
 - **A hung job is named and bounded** - The batch closes on time and the log says which job hung, where today the invocation dies at the platform's limit and the batch is what gets reported.
 - **Both worker handlers are one line** - Every branch a worker used to carry — cron matching, type dispatch, batch bookkeeping, the dead-letter queue — is either a declaration or a mapping, so the entry point says only that jobs are routed.
 - **The dead-letter queue costs an app one option** - Naming it is all an app does; the package recognizes those batches, tells an exhausted message from a refused one, records it, and acks. `apps/uptime` deletes a job file, and `apps/r3-auth`, which has no such queue, sets nothing.
 - **A schedule is a queue message** - Every job runs through one path whatever triggered it, so a scheduled job gets the retries, the dead-letter queue, the middleware, and the timeout that a cron trigger has none of.
-- **Nothing is configured globally** - The sender is an argument to the map and the ping token an option on the router, so a job cannot be enqueued by a process that forgot to set something up.
+- **Nothing is configured globally** - The sender is an argument to the map and the ping token an option on the dispatcher, so a job cannot be enqueued by a process that forgot to set something up.
 - **Cross-cutting work is written once** - The cost ledger, the container scope, and anything else that wrapped every `perform()` becomes one middleware in one list.
 - **Shared jobs become functions** - The two team digests come from one factory returning two leaves, instead of a three-class hierarchy.
 
@@ -366,17 +366,17 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 - **The map's keys are a wire contract** - Renaming a key renames a message type, and renaming a nested group renames every type beneath it. Nothing in the type system says so; only this ADR and a comment in the map will.
 - **The package reimplements a slice of Remix's context types** - Entry-typed middleware that installs `ctx.db` needs the conditional types behind `property`, and those are internal to `fetch-router`. They have to be written here and kept in step. If they prove unstable, the fallback is keys only, and handlers read `ctx.get(Database)` with an `undefined` to narrow.
 - **Dead-letter records are the package's shape** - An app names the queue and gets the package's log events for it. `onInvalid` still decides what is forwarded and where, but what a dead-letter record looks like is no longer an app's to change.
-- **A timeout can duplicate work** - The handler keeps running after the router stops waiting, so a job that hangs partway can finish its writes and then have its redelivery do them again. Queues are at-least-once and jobs already tolerate redelivery, but the timeout turns "hung" into "possibly done twice", and only a cooperative `ctx.ack()` avoids it.
+- **A timeout can duplicate work** - The handler keeps running after the dispatcher stops waiting, so a job that hangs partway can finish its writes and then have its redelivery do them again. Queues are at-least-once and jobs already tolerate redelivery, but the timeout turns "hung" into "possibly done twice", and only a cooperative `ctx.ack()` avoids it.
 - **Two ways to settle a delivery** - Throwing and calling both exist, and `ctx.retry()` returns rather than unwinding, so a handler that calls it and keeps working is a mistake the compiler cannot catch. Throwing is the path to reach for, and first-settlement-wins bounds the other to wasted work rather than a double settle.
 - **A job in the map with no mapping is silently dead** - It still accepts enqueues, and nothing in the type system objects. One test catches it; the compiler does not.
-- **A large mechanical migration** - 21 job classes become handlers, two apps gain a map, a router, and middleware, two workers change, and every enqueue call site moves to the map. `apps/uptime` is the bulk of it and carries the traffic.
+- **A large mechanical migration** - 21 job classes become handlers, two apps gain a map, a dispatcher, and middleware, two workers change, and every enqueue call site moves to the map. `apps/uptime` is the bulk of it and carries the traffic.
 - **Log identifiers change** - `job:check-http-job:…` becomes `job:check-http:…`, which breaks saved queries at the cutover.
 - **Two packages during the migration** - `@pkg/jobs` and `@pkg/jobs-next` both exist until the last app moves, and the rename in Phase 4 touches every import that landed in Phases 2 and 3.
 
 ### Neutral
 
 - **Handler modules load per dispatch** - The runtime caches a module after the first message that needs it, so the cost is one parse per isolate rather than one per message.
-- **Queue handler timing** - `router.queue(batch)` is awaited and runs its messages concurrently, where the workers currently hand each `Job.run` to `waitUntil` and return. Both keep the invocation alive until every message settles; the awaited form is what lets the router report a batch-level failure.
+- **Queue handler timing** - `dispatcher.queue(batch)` is awaited and runs its messages concurrently, where the workers currently hand each `Job.run` to `waitUntil` and return. Both keep the invocation alive until every message settles; the awaited form is what lets the dispatcher report a batch-level failure.
 - **The container does not disappear** - Services a job still resolves from it keep working; the middleware chain is simply where an app can stop doing so, one service at a time.
 - **The wire format is unchanged** - Nothing in the queue, the dead-letter queue, or the DLQ consumer needs a migration.
 
@@ -389,11 +389,11 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 **Priority:** High
 **Estimated Effort:** 2 days
 
-1. Scaffold `packages/jobs-next` and add `jobs()`, `job()`, `createJobHandler()`, `createJobRouter()`, `JobContext`, and `JobMiddleware`, taking `@pkg/duration` as a dependency for the retry delay.
+1. Scaffold `packages/jobs-next` and add `jobs()`, `job()`, `createJobHandler()`, `createJobDispatcher()`, `JobContext`, and `JobMiddleware`, taking `@pkg/duration` as a dependency for the retry delay.
 2. Build the context on `createContextKey` from `remix/router`, with `get` / `has` / `set(key, value, { property })` and the entry typing that makes an installed property visible to handlers.
 3. Port the lifecycle — logger identifier, ack/retry classification, uptime ping — from `@pkg/jobs`, keeping its log event names.
 4. Export `RetryError`, `NonRetriableError`, and `JobTimeout` at the top level.
-5. Tests: naming from map keys including nested paths, dispatch by `type`, a loader resolved once and reused, a handler module left unloaded for a body that fails its schema, middleware ordering and its `RetryError` classification, settlement precedence across `ctx.ack()` / `ctx.retry()` / a later throw / the router's own ack, a `delay` converted to whole seconds and reaching the platform from both spellings, a context property installed by middleware and read by a handler, a timeout aborting `ctx.signal`, a thrown `JobTimeout` and a cooperative `ctx.ack()` both winning inside the grace, the router settling after it, an `AbortError` from the shared signal reported as a timeout, and `job.timed-out` logged with no ping, a dead-letter batch recorded and acked with both body shapes told apart, `ctx.batchSize` reporting the batch, `scheduled()` matching one cron across several jobs and enqueuing them rather than running them, `enqueue` / `enqueueAll` batching into one `send`, duplicate-name rejection, and the unchanged ack/retry/ping behavior.
+5. Tests: naming from map keys including nested paths, dispatch by `type`, a loader resolved once and reused, a handler module left unloaded for a body that fails its schema, middleware ordering and its `RetryError` classification, settlement precedence across `ctx.ack()` / `ctx.retry()` / a later throw / the dispatcher's own ack, a `delay` converted to whole seconds and reaching the platform from both spellings, a context property installed by middleware and read by a handler, a timeout aborting `ctx.signal`, a thrown `JobTimeout` and a cooperative `ctx.ack()` both winning inside the grace, the dispatcher settling after it, an `AbortError` from the shared signal reported as a timeout, and `job.timed-out` logged with no ping, a dead-letter batch recorded and acked with both body shapes told apart, `ctx.batchSize` reporting the batch, `scheduled()` matching one cron across several jobs and enqueuing them rather than running them, `enqueue` / `enqueueAll` batching into one `send`, duplicate-name rejection, and the unchanged ack/retry/ping behavior.
 6. Write the README around the new API. `@pkg/jobs` is not touched in this phase and keeps serving both apps.
 
 ### Phase 2: `apps/r3-auth`
@@ -403,9 +403,9 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 
 1. Add `app/jobs/index.ts` with a one-leaf map declaring `cleanExpiredSessions`, its cron, and its monitor id, built with a `send` that writes to the queue binding.
 2. Reduce `clean-expired-sessions.ts` to a handler reading its database from context, and add the `database()` middleware.
-3. Add `app/jobs/router.ts` with the one `map()` call and the `uptime` resolver, keeping today's dynamic import as its loader.
-4. Delete `app/http/validators/queue.ts` and the `DAILY_CRON` constant, and reduce both worker handlers to the router calls.
-5. Add the `router.crons` assertion against `wrangler.jsonc` and the mapped-leaf test.
+3. Add `app/jobs/dispatcher.ts` with the one `map()` call and the `uptime` resolver, keeping today's dynamic import as its loader.
+4. Delete `app/http/validators/queue.ts` and the `DAILY_CRON` constant, and reduce both worker handlers to the dispatcher calls.
+5. Add the `dispatcher.crons` assertion against `wrangler.jsonc` and the mapped-leaf test.
 
 ### Phase 3: `apps/uptime`
 
@@ -415,7 +415,7 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 1. Declare the 20 jobs in `app/jobs/index.ts`, folding each `static schema` into `input` and each `static monitorId` into its leaf, keeping every key spelled exactly as the message type it replaces, and build it with `send: sendQueueBatch`.
 2. Reduce each job file to a handler, folding the `validate()` preamble into the signature and the container lookups into context reads.
 3. Write the `database()` and `costLedger()` middleware, retiring `setJobUsageTracker(trackJobCost)`.
-4. Add `app/jobs/router.ts` with the 20 `map()` calls, the `uptime` resolver, `deadLetterQueue: "ping-dlq"`, and an `onInvalid` that writes to the `DLQ` binding, then reduce both worker handlers to their router call. Delete `app/jobs/dead-letter.ts`.
+4. Add `app/jobs/dispatcher.ts` with the 20 `map()` calls, the `uptime` resolver, `deadLetterQueue: "ping-dlq"`, and an `onInvalid` that writes to the `DLQ` binding, then reduce both worker handlers to their dispatcher call. Delete `app/jobs/dead-letter.ts`.
 5. Turn the every-minute claim into an ordinary cron job: a leaf on `* * * * *` whose handler claims the due monitors, apportions their teams, and calls `checkHttp.enqueueAll(…)` — the shape `enqueuePendingDomains` already has. Delete `setQueueBatchSize` in favour of `ctx.batchSize`.
 6. Convert every `sendQueueMessage` / `sendQueueBatch` call site to `enqueue` / `enqueueAll` against the map.
 7. Delete `QueueMessageSchema`, add both tests, and update the log filters that name job identifiers.
@@ -445,15 +445,15 @@ Add `static cron` and `static enqueue()` to `Job`, and have the worker iterate a
 
 ### 3. A Positional Name Instead Of A Map Key
 
-`job("clean", { cron, monitorId })`, with each definition exported on its own and the router mapping them.
+`job("clean", { cron, monitorId })`, with each definition exported on its own and the dispatcher mapping them.
 
 **Rejected because**: the name is then written next to a key that already says it, in the module that already collects them. A map keyed by name is how the repository declares routes, and `jobs()` stamping each leaf gives back the one thing a bare key cannot: a definition that knows its own name, so `enqueue` lives on it.
 
-### 4. Enqueue Through The Router
+### 4. Enqueue Through The Dispatcher
 
-Give the router the sender instead of the map, so call sites write `router.enqueue(jobs.checkHttp, { … })`.
+Give the dispatcher the sender instead of the map, so call sites write `dispatcher.enqueue(jobs.checkHttp, { … })`.
 
-**Rejected because**: it makes every controller that enqueues import the router, and with it every loader and every middleware — where the map is the smallest thing that can be imported. Enqueuing also reads better as a property of the job.
+**Rejected because**: it makes every controller that enqueues import the dispatcher, and with it every loader and every middleware — where the map is the smallest thing that can be imported. Enqueuing also reads better as a property of the job.
 
 ### 5. Per-Job Middleware
 
@@ -465,13 +465,13 @@ Allow a middleware list on each leaf, as controllers and routes may have their o
 
 Put Cloudflare's `Message` on the context and let handlers call `message.ack()` and `message.retry()` directly.
 
-**Rejected because**: the router has to know how a delivery was settled to decide whether to ping, what to log, and whether to settle it itself. Two verbs it owns give it that; a handle to the platform object does not, and it would put `message.body` next to the parsed `input` as a second, unvalidated source of the same data.
+**Rejected because**: the dispatcher has to know how a delivery was settled to decide whether to ping, what to log, and whether to settle it itself. Two verbs it owns give it that; a handle to the platform object does not, and it would put `message.body` next to the parsed `input` as a second, unvalidated source of the same data.
 
 ### 7. More Fields On The Leaf
 
 `maxAttempts`, `timeout`, `description`, and a cron `timeZone` were each considered for the declaration.
 
-**Rejected because**: `max_retries` is a consumer-level policy that `wrangler.jsonc` states as one policy per queue, and no job reads `message.attempts`; the only timeout in either app is a monitor's configured `timeoutSeconds`, which is customer data that varies per row rather than a property of the job, and the runaway guard belongs on the router; a doc comment above the leaf already describes it; and a time zone would change nothing, since Cloudflare's triggers are UTC and `scheduled()` dispatches by matching the expression in `wrangler.jsonc`. A `queue` field is deferred rather than rejected: both apps have one work queue, and a second would grow the sender port to `send(bodies, { queue })`.
+**Rejected because**: `max_retries` is a consumer-level policy that `wrangler.jsonc` states as one policy per queue, and no job reads `message.attempts`; the only timeout in either app is a monitor's configured `timeoutSeconds`, which is customer data that varies per row rather than a property of the job, and the runaway guard belongs on the dispatcher; a doc comment above the leaf already describes it; and a time zone would change nothing, since Cloudflare's triggers are UTC and `scheduled()` dispatches by matching the expression in `wrangler.jsonc`. A `queue` field is deferred rather than rejected: both apps have one work queue, and a second would grow the sender port to `send(bodies, { queue })`.
 
 ### 8. A Nested Message Envelope
 
@@ -503,7 +503,7 @@ Have the build write `triggers.crons` in `wrangler.jsonc` from the map.
 
 ## Notes
 
-- File convention: `app/jobs/index.ts` is the map and the only thing an enqueue call site imports; `app/jobs/router.ts` holds the router, the middleware, and the loaders, and is imported by the worker alone; `app/jobs/<name>.ts` exports one handler as its default. Handlers keep the filenames they have today. The static import edge runs handler to map, and the router reaches handlers only through thunks, so there is no import cycle.
+- File convention: `app/jobs/index.ts` is the map and the only thing an enqueue call site imports; `app/jobs/dispatcher.ts` holds the dispatcher, the middleware, and the loaders, and is imported by the worker alone; `app/jobs/<name>.ts` exports one handler as its default. Handlers keep the filenames they have today. The static import edge runs handler to map, and the dispatcher reaches handlers only through thunks, so there is no import cycle.
 - `@pkg/mcp` already treats `createContextKey` as a primitive it can use away from a fetch router, and types its handler contexts as a request context plus the descriptor being executed (`ctx.input`, `ctx.tool`). `JobContext` is that idea for a unit of work with no request behind it: the leaf's own `name`, `cron`, and `monitorId` sit alongside `input` for the same reason `ctx.tool` does.
 - The uptime worker's every-minute trigger does work no declaration covers: it claims the monitors that are due, apportions the invocation's cost across their teams, and enqueues one message per monitor. That becomes a job of its own on the same cron, so the worker keeps no branch — the cost of which is that the claim runs a queue hop after the trigger instead of inside it, and attributes its cost to its own ledger rather than the trigger's.
 - `DeadLetterJob` never extended `Job`, and it does not become a leaf or a handler: it moves into the package as what `deadLetterQueue` turns on. Its two log events and the `{ invalid: body }` wrapper they distinguish move with it, and `apps/uptime` deletes the file. As with every other job, its logger identifier loses the class-name suffix: `job:dead-letter-job:…` becomes `job:dead-letter:…`.

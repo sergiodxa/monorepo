@@ -1,7 +1,7 @@
 /**
  * Exercises what happens around the handler: the timeout that aborts its signal
- * and stops the router waiting, the monitor ping a completed run sends, the
- * dead-letter batches the router records itself, and the errors it does not own.
+ * and stops the dispatcher waiting, the monitor ping a completed run sends, the
+ * dead-letter batches the dispatcher records itself, and the errors it does not own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createJobHandler, createJobRouter, job, jobs, JobTimeout } from "./index";
+import { createJobHandler, createJobDispatcher, job, jobs, JobTimeout } from "./index";
 
 const UPTIME_URL = "https://uptime.sergiodxa.com";
 const MONITOR_ID = "monitor-1";
@@ -51,7 +51,7 @@ function setup() {
 	return { queue, map };
 }
 
-/** Delivers everything pending to the router, as the worker's `queue` handler would. */
+/** Delivers everything pending to the dispatcher, as the worker's `queue` handler would. */
 function consume(
 	queue: QueueMock<unknown>,
 	handler: (batch: MessageBatch<unknown>) => Promise<void>,
@@ -77,8 +77,8 @@ describe("timeouts", () => {
 
 		vi.useFakeTimers();
 
-		let router = createJobRouter({ timeout: "1 second" });
-		router.map(
+		let dispatcher = createJobDispatcher({ timeout: "1 second" });
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, ({ signal }) => {
 				signal.addEventListener("abort", () => aborted());
@@ -88,7 +88,7 @@ describe("timeouts", () => {
 
 		await map.clean.enqueue();
 
-		let running = consume(queue, (batch) => router.queue(batch));
+		let running = consume(queue, (batch) => dispatcher.queue(batch));
 		await vi.advanceTimersByTimeAsync(1_000);
 		expect(aborted).toHaveBeenCalledTimes(1);
 
@@ -104,8 +104,8 @@ describe("timeouts", () => {
 
 		vi.useFakeTimers();
 
-		let router = createJobRouter({ timeout: "1 second" });
-		router.map(
+		let dispatcher = createJobDispatcher({ timeout: "1 second" });
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, async ({ signal, ack }) => {
 				await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()));
@@ -115,7 +115,7 @@ describe("timeouts", () => {
 
 		await map.clean.enqueue();
 
-		let running = consume(queue, (batch) => router.queue(batch));
+		let running = consume(queue, (batch) => dispatcher.queue(batch));
 		await vi.advanceTimersByTimeAsync(1_000);
 		let result = await running;
 
@@ -126,8 +126,8 @@ describe("timeouts", () => {
 	test("reports a thrown JobTimeout as a timeout", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter({ timeout: "1 minute" });
-		router.map(
+		let dispatcher = createJobDispatcher({ timeout: "1 minute" });
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {
 				throw new JobTimeout();
@@ -135,7 +135,7 @@ describe("timeouts", () => {
 		);
 
 		await map.clean.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.retried).toHaveLength(1);
 		expect(events()).toContain("job.timed-out");
@@ -144,8 +144,8 @@ describe("timeouts", () => {
 	test("waits indefinitely when no timeout is configured", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, ({ signal }) => {
 				expect(signal.aborted).toBe(false);
@@ -153,7 +153,7 @@ describe("timeouts", () => {
 		);
 
 		await map.clean.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 	});
@@ -171,14 +171,14 @@ describe("the monitor ping", () => {
 			}),
 		);
 
-		let router = createJobRouter({ uptime: () => "token-1" });
-		router.map(
+		let dispatcher = createJobDispatcher({ uptime: () => "token-1" });
+		dispatcher.map(
 			map.watched,
 			createJobHandler(map.watched, () => {}),
 		);
 
 		await map.watched.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(pinged).toHaveBeenCalledWith("Bearer token-1");
 		expect(result.acked).toHaveLength(1);
@@ -188,14 +188,14 @@ describe("the monitor ping", () => {
 	test("skips the ping when the job names no monitor", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter({ uptime: () => "token-1" });
-		router.map(
+		let dispatcher = createJobDispatcher({ uptime: () => "token-1" });
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
 		);
 
 		await map.clean.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 	});
@@ -209,14 +209,14 @@ describe("the monitor ping", () => {
 			),
 		);
 
-		let router = createJobRouter({ uptime: () => "token-1" });
-		router.map(
+		let dispatcher = createJobDispatcher({ uptime: () => "token-1" });
+		dispatcher.map(
 			map.watched,
 			createJobHandler(map.watched, () => {}),
 		);
 
 		await map.watched.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 		expect(events()).toContain("job.uptime-failed");
@@ -224,13 +224,13 @@ describe("the monitor ping", () => {
 });
 
 describe("the dead-letter queue", () => {
-	test("records a body the router refused, and acks it", async () => {
+	test("records a body the dispatcher refused, and acks it", async () => {
 		let dlq = createQueue({ name: "ping-dlq" }) as QueueMock<unknown>;
 
-		let router = createJobRouter({ deadLetterQueue: "ping-dlq" });
+		let dispatcher = createJobDispatcher({ deadLetterQueue: "ping-dlq" });
 
 		await dlq.send({ invalid: { type: "nobodyHome" } });
-		let result = await consume(dlq, (batch) => router.queue(batch));
+		let result = await consume(dlq, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 		expect(events()).toContain("job.dead_letter.invalid_message");
@@ -239,10 +239,10 @@ describe("the dead-letter queue", () => {
 	test("records a body that exhausted its retries, and acks it", async () => {
 		let dlq = createQueue({ name: "ping-dlq" }) as QueueMock<unknown>;
 
-		let router = createJobRouter({ deadLetterQueue: "ping-dlq" });
+		let dispatcher = createJobDispatcher({ deadLetterQueue: "ping-dlq" });
 
 		await dlq.send({ type: "clean" });
-		let result = await consume(dlq, (batch) => router.queue(batch));
+		let result = await consume(dlq, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 		expect(events()).toContain("job.dead_letter.retries_exhausted");
@@ -253,8 +253,8 @@ describe("errors the package does not own", () => {
 	test("re-throws so the platform retries the invocation", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {
 				throw new Error("boom");
@@ -263,22 +263,22 @@ describe("errors the package does not own", () => {
 
 		await map.clean.enqueue();
 
-		await expect(consume(queue, (batch) => router.queue(batch))).rejects.toThrow("boom");
+		await expect(consume(queue, (batch) => dispatcher.queue(batch))).rejects.toThrow("boom");
 		expect(events()).toContain("job.failed");
 	});
 
 	test("refuses a handler written for a different job", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.watched, () => {}),
 		);
 
 		await map.clean.enqueue();
 
-		await expect(consume(queue, (batch) => router.queue(batch))).rejects.toThrow(
+		await expect(consume(queue, (batch) => dispatcher.queue(batch))).rejects.toThrow(
 			/mapped to a handler written for/,
 		);
 	});

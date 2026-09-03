@@ -2,7 +2,7 @@
  * `jobs()`, which turns declared leaves into the map an app enqueues through. It
  * stamps each leaf with the key it is filed under — the message `type` — and binds
  * every one of them to the sender the app passes, so a definition is a complete
- * value: importing the map is enough to enqueue, with no router and no registration.
+ * value: importing the map is enough to enqueue, with no dispatcher and no registration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,7 +48,7 @@ export type EnqueueArgs<Schema> = Schema extends StandardSchemaV1
 
 /**
  * Where a definition keeps the map's queue write. Not part of the public surface:
- * the router reaches for it to batch one cron's jobs into a single send, which a
+ * the dispatcher reaches for it to batch one cron's jobs into a single send, which a
  * definition cannot do for itself.
  */
 export const sender: unique symbol = Symbol("jobs.send");
@@ -70,7 +70,7 @@ export interface JobDefinition<Schema extends StandardSchemaV1 | undefined = und
 	 * @param inputs One payload per message.
 	 */
 	enqueueAll(inputs: EnqueueInput<Schema>[]): Promise<void>;
-	/** The map's queue write, for the router's own batching. */
+	/** The map's queue write, for the dispatcher's own batching. */
 	readonly [sender]: SendMessages;
 }
 

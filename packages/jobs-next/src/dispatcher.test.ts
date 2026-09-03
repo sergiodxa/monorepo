@@ -1,5 +1,5 @@
 /**
- * Exercises the router against a recording queue: what it dispatches, what it
+ * Exercises the dispatcher against a recording queue: what it dispatches, what it
  * refuses, what its middleware installs, how a delivery is settled, and the
  * cron trigger that enqueues without running anything.
  *
@@ -15,11 +15,11 @@ import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { JobMiddleware, JobRouterContext } from "./index";
+import type { JobMiddleware, JobDispatcherContext } from "./index";
 
 import {
 	createJobHandler,
-	createJobRouter,
+	createJobDispatcher,
 	job,
 	jobs,
 	NonRetriableError,
@@ -54,7 +54,7 @@ function setup() {
 	return { queue, map };
 }
 
-/** Delivers everything pending to the router, as the worker's `queue` handler would. */
+/** Delivers everything pending to the dispatcher, as the worker's `queue` handler would. */
 function consume(
 	queue: QueueMock<unknown>,
 	handler: (batch: MessageBatch<unknown>) => Promise<void>,
@@ -67,14 +67,14 @@ describe("queue()", () => {
 		let { queue, map } = setup();
 		let seen: string[] = [];
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.checkHttp,
 			createJobHandler(map.checkHttp, ({ input }) => void seen.push(input.monitorId)),
 		);
 
 		await map.checkHttp.enqueue({ monitorId: "m1" });
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(seen).toEqual(["m1"]);
 		expect(result.acked).toHaveLength(1);
@@ -84,10 +84,10 @@ describe("queue()", () => {
 		let { queue } = setup();
 		let onInvalid = vi.fn();
 
-		let router = createJobRouter({ onInvalid });
+		let dispatcher = createJobDispatcher({ onInvalid });
 
 		await queue.send({ type: "nobodyHome" });
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(onInvalid).toHaveBeenCalledTimes(1);
 		expect(onInvalid.mock.calls[0]?.[1]).toEqual({ invalid: { type: "nobodyHome" } });
@@ -100,11 +100,11 @@ describe("queue()", () => {
 			default: createJobHandler(map.checkHttp, () => {}),
 		}));
 
-		let router = createJobRouter();
-		router.map(map.checkHttp, load);
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(map.checkHttp, load);
 
 		await queue.send({ type: "checkHttp", monitorId: 42 });
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(load).not.toHaveBeenCalled();
 		expect(result.acked).toHaveLength(1);
@@ -114,12 +114,12 @@ describe("queue()", () => {
 		let { queue, map } = setup();
 		let load = vi.fn(async () => ({ default: createJobHandler(map.clean, () => {}) }));
 
-		let router = createJobRouter();
-		router.map(map.clean, load);
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(map.clean, load);
 
 		await map.clean.enqueue();
 		await map.clean.enqueue();
-		await consume(queue, (batch) => router.queue(batch));
+		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(load).toHaveBeenCalledTimes(1);
 	});
@@ -127,8 +127,8 @@ describe("queue()", () => {
 	test("retries a message whose handler throws RetryError", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {
 				throw new RetryError("later");
@@ -136,7 +136,7 @@ describe("queue()", () => {
 		);
 
 		await map.clean.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.retried).toHaveLength(1);
 		expect(result.acked).toHaveLength(0);
@@ -145,8 +145,8 @@ describe("queue()", () => {
 	test("acks a message whose handler throws NonRetriableError", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {
 				throw new NonRetriableError("never");
@@ -154,7 +154,7 @@ describe("queue()", () => {
 		);
 
 		await map.clean.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 		expect(result.retried).toHaveLength(0);
@@ -163,14 +163,14 @@ describe("queue()", () => {
 	test("settles a delivery the handler retried itself", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, ({ retry }) => retry()),
 		);
 
 		await map.clean.enqueue();
-		let result = await consume(queue, (batch) => router.queue(batch));
+		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.retried).toHaveLength(1);
 	});
@@ -179,14 +179,14 @@ describe("queue()", () => {
 		let { queue, map } = setup();
 		let sizes: number[] = [];
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.checkHttp,
 			createJobHandler(map.checkHttp, ({ batchSize }) => void sizes.push(batchSize)),
 		);
 
 		await map.checkHttp.enqueueAll([{ monitorId: "a" }, { monitorId: "b" }]);
-		await consume(queue, (batch) => router.queue(batch));
+		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(sizes).toEqual([2, 2]);
 	});
@@ -208,12 +208,12 @@ describe("middleware", () => {
 			};
 		}
 
-		let router = createJobRouter({ middleware: [database()] });
+		let dispatcher = createJobDispatcher({ middleware: [database()] });
 		let seen: string[] = [];
 
-		type Context = JobRouterContext<typeof router>;
+		type Context = JobDispatcherContext<typeof dispatcher>;
 
-		router.map(
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => {
 				let context = ctx as Context;
@@ -222,7 +222,7 @@ describe("middleware", () => {
 		);
 
 		await map.clean.enqueue();
-		await consume(queue, (batch) => router.queue(batch));
+		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(seen).toEqual(["live"]);
 	});
@@ -243,14 +243,14 @@ describe("middleware", () => {
 			order.push("second:after");
 		};
 
-		let router = createJobRouter({ middleware: [first, second] });
-		router.map(
+		let dispatcher = createJobDispatcher({ middleware: [first, second] });
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => void order.push("handler")),
 		);
 
 		await map.clean.enqueue();
-		await consume(queue, (batch) => router.queue(batch));
+		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(order).toEqual([
 			"first:before",
@@ -267,11 +267,11 @@ describe("scheduled()", () => {
 		let { queue, map } = setup();
 		let ran = vi.fn();
 
-		let router = createJobRouter();
-		router.map(map.clean, createJobHandler(map.clean, ran));
-		router.map(map.sweep, createJobHandler(map.sweep, ran));
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(map.clean, createJobHandler(map.clean, ran));
+		dispatcher.map(map.sweep, createJobHandler(map.sweep, ran));
 
-		await router.scheduled({ cron: "0 0 * * *", scheduledTime: 0, noRetry() {} });
+		await dispatcher.scheduled({ cron: "0 0 * * *", scheduledTime: 0, noRetry() {} });
 
 		expect(ran).not.toHaveBeenCalled();
 		expect(queue.messages.map((message) => message.body)).toEqual([
@@ -283,13 +283,13 @@ describe("scheduled()", () => {
 	test("enqueues nothing for a cron no job declares", async () => {
 		let { queue, map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
 		);
 
-		await router.scheduled({ cron: "*/5 * * * *", scheduledTime: 0, noRetry() {} });
+		await dispatcher.scheduled({ cron: "*/5 * * * *", scheduledTime: 0, noRetry() {} });
 
 		expect(queue.messages).toHaveLength(0);
 	});
@@ -297,21 +297,21 @@ describe("scheduled()", () => {
 	test("reports the distinct crons its mapped jobs declare", () => {
 		let { map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
 		);
-		router.map(
+		dispatcher.map(
 			map.sweep,
 			createJobHandler(map.sweep, () => {}),
 		);
-		router.map(
+		dispatcher.map(
 			map.checkHttp,
 			createJobHandler(map.checkHttp, () => {}),
 		);
 
-		expect(router.crons).toEqual(["0 0 * * *"]);
+		expect(dispatcher.crons).toEqual(["0 0 * * *"]);
 	});
 });
 
@@ -319,14 +319,14 @@ describe("map()", () => {
 	test("refuses to map one name twice", () => {
 		let { map } = setup();
 
-		let router = createJobRouter();
-		router.map(
+		let dispatcher = createJobDispatcher();
+		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
 		);
 
 		expect(() =>
-			router.map(
+			dispatcher.map(
 				map.clean,
 				createJobHandler(map.clean, () => {}),
 			),

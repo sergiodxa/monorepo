@@ -1,7 +1,7 @@
 /**
  * `createJobHandler()`, which pairs a handler with the job it runs. Passing the
  * definition is what types the payload; an app that augments {@link JobTypes}
- * with its router's context also gets whatever its middleware installed, so a
+ * with its dispatcher's context also gets whatever its middleware installed, so a
  * handler reads `ctx.input` and `ctx.database` with their real types.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -20,7 +20,7 @@ import type { JobDefinition } from "./jobs";
  * @example
  * declare module "@pkg/jobs-next" {
  * 	interface JobTypes {
- * 		context: JobRouterContext<typeof router>;
+ * 		context: JobDispatcherContext<typeof dispatcher>;
  * 	}
  * }
  */
@@ -50,7 +50,7 @@ export type JobHandlerFunction<Schema extends StandardSchemaV1 | undefined = und
 /** The work, paired with the job it was written for. */
 export interface JobHandler<Schema extends StandardSchemaV1 | undefined = undefined> {
 	(context: JobHandlerContext<Schema>): Promise<void> | void;
-	/** The job this handler was created for, which the router checks it was mapped to. */
+	/** The job this handler was created for, which the dispatcher checks it was mapped to. */
 	readonly job: JobDefinition<Schema>;
 }
 

@@ -1,5 +1,5 @@
 /**
- * The middleware chain a router runs every job inside, and the types that carry
+ * The middleware chain a dispatcher runs every job inside, and the types that carry
  * what each middleware publishes into the context. The effect a middleware
  * declares rides along as type-only metadata, so an inline `middleware: [...]`
  * array is enough for a handler to see `ctx.database` with its real type.
@@ -30,7 +30,7 @@ export interface EmptyContextEffect {
 declare const contextEffect: unique symbol;
 
 /**
- * Runs around every job the router dispatches. Must call `next()`; a middleware
+ * Runs around every job, in the order declared. Must call `next()`; a middleware
  * that returns without calling it never reaches the handler.
  *
  * @example

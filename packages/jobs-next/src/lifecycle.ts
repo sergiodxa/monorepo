@@ -26,7 +26,7 @@ import { ping, UptimeFetchError, UptimeNetworkError } from "./uptime";
 
 /**
  * How long a handler has to give up on its own after its timeout aborts the
- * signal, before the router settles the delivery for it. Sized to unwind, not
+ * signal, before the dispatcher settles the delivery for it. Sized to unwind, not
  * to keep working: the choice between acking durable work and letting the
  * message come back is the handler's, and only for as long as it takes to make it.
  */
@@ -81,7 +81,7 @@ function isTimeout(error: unknown, signal: AbortSignal): boolean {
 
 /**
  * Runs the middleware chain, ending in the handler.
- * @param chain The router's middleware, in the order it was declared.
+ * @param chain The dispatcher's middleware, in the order it was declared.
  * @param context The delivery's context, shared by every link.
  * @param handler What runs once the chain reaches its end.
  */
@@ -187,7 +187,7 @@ export async function runJob(options: RunOptions): Promise<void> {
 		);
 
 		/**
-		 * A run reports a timeout when the router stopped waiting, when the handler gave up
+		 * A run reports a timeout when the dispatcher stopped waiting, when the handler gave up
 		 * by throwing, when its I/O was cancelled by the signal, and when the signal aborted
 		 * at all — a handler that gave up early has not done the work its monitor watches
 		 * for, even when it acked the message on the way out to keep durable work from repeating.
