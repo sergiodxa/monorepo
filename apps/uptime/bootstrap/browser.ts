@@ -13,33 +13,47 @@ import { createTranslator } from "@pkg/i18n";
 import { setIntl } from "@pkg/i18n/ui";
 import { run } from "remix/ui";
 
-import de from "~/app/locales/de";
-import en from "~/app/locales/en";
-import es from "~/app/locales/es";
-import fr from "~/app/locales/fr";
-import it from "~/app/locales/it";
-import ja from "~/app/locales/ja";
-
 const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"];
 const DEFAULT_LANGUAGE = "en";
+
+/**
+ * Dynamic imports keyed by language, one per {@link SUPPORTED_LANGUAGES}
+ * entry, so the client bundle ships only the locale(s) a page actually
+ * renders in instead of every language's translation bundle.
+ */
+const localeLoaders: Record<string, () => Promise<{ default: Record<string, unknown> }>> = {
+	en: () => import("~/app/locales/en"),
+	es: () => import("~/app/locales/es"),
+	de: () => import("~/app/locales/de"),
+	ja: () => import("~/app/locales/ja"),
+	fr: () => import("~/app/locales/fr"),
+	it: () => import("~/app/locales/it"),
+};
+
+let requestedLanguage = document.documentElement.lang;
+let locale = SUPPORTED_LANGUAGES.includes(requestedLanguage) ? requestedLanguage : DEFAULT_LANGUAGE;
+
+let localesToLoad = new Set([locale, DEFAULT_LANGUAGE]);
+
+let resources = Object.fromEntries(
+	await Promise.all(
+		Array.from(localesToLoad, async (language) => {
+			let { default: translation } = await localeLoaders[language]();
+			return [language, { translation }] as const;
+		}),
+	),
+);
 
 /**
  * Disables i18next's interpolation escaping because JSX already escapes
  * text nodes when rendering, so values pass through a single encoding pass.
  */
 let { i18n } = await createTranslator({
-	resources: {
-		en: { translation: en },
-		es: { translation: es },
-		de: { translation: de },
-		ja: { translation: ja },
-		fr: { translation: fr },
-		it: { translation: it },
-	},
+	resources,
 	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: DEFAULT_LANGUAGE,
 	i18next: { interpolation: { escapeValue: false } },
-})(document.documentElement.lang);
+})(locale);
 
 setIntl(i18n);
 

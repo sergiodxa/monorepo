@@ -16,10 +16,7 @@ import { defineConfig } from "vite";
 const clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
 
 export default defineConfig({
-	build: {
-		sourcemap: true,
-		rollupOptions: { output: { codeSplitting: { maxSize: 500000 } } },
-	},
+	build: { sourcemap: true },
 
 	server: { port: 3000 },
 
