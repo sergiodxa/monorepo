@@ -291,7 +291,7 @@ A route reads it from the context; a job imports the instance directly:
 // a controller
 let checkout = await context.billing.checkouts.create({ product: "pro", customer, returnTo });
 if (isFailure(checkout)) return serverError();
-return redirect(checkout.value.url, { status: redirect.Status.SeeOther });
+return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
 ```
 
 ```ts

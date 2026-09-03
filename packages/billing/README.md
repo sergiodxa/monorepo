@@ -33,10 +33,12 @@ Providers live behind their own subpaths and are never re-exported from the root
 A provider is a class, built once at module scope. Nothing reaches the network in the constructor, so an instance costs no startup work and can be imported anywhere:
 
 ```typescript
+import type { Billing } from "@pkg/billing";
+
 import { PolarBilling } from "@pkg/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
-export let polar = new PolarBilling({
+export let billing: Billing = new PolarBilling({
 	accessToken: () => env.POLAR_ACCESS_TOKEN,
 	webhookSecret: env.POLAR_WEBHOOK_SECRET,
 	products: { pro: "019...", team: "019..." },
@@ -46,6 +48,8 @@ export let polar = new PolarBilling({
 ```
 
 Products, meters, and features are configured as our own slugs mapped to the platform's ids, which is what keeps a vendor identifier out of every call site: a checkout is opened for `"pro"`, and a subscription read reports `productSlug: "pro"`.
+
+Annotate the export as `Billing` rather than letting it infer the concrete class. It keeps the rest of the app written against the contract, so changing platform is this one line, and it is what makes `supports()` usable: a concrete `PolarBilling` statically has `usage`, so a guard against it narrows its own false branch away and the compiler rejects the code inside. Reach for the concrete type only where an app deliberately depends on one platform's extras through `native`.
 
 ### Configuring a credential
 
@@ -110,13 +114,13 @@ import { supports } from "@pkg/billing";
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 
-import { polar } from "~/app/services/billing";
+import { billing } from "~/app/services/billing";
 
 export class IngestUsageJob extends Job {
 	async perform(): Promise<void> {
-		if (!supports(polar, "usage")) return;
+		if (!supports(billing, "usage")) return;
 
-		let result = await polar.usage.ingest([
+		let result = await billing.usage.ingest([
 			{ name: "pings", customer: { externalId: "u_1" }, externalId: "ping_2026_09_02" },
 		]);
 
@@ -1001,13 +1005,13 @@ export class ReportUsageJob extends Job {
 	static override monitorId = "…";
 
 	async perform(): Promise<void> {
-		if (!supports(polar, "usage")) {
-			return this.logger.info("billing.usage.unsupported", { connection: polar.connection });
+		if (!supports(billing, "usage")) {
+			return this.logger.info("billing.usage.unsupported", { connection: billing.connection });
 		}
 
 		let consumption = await readConsumptionSinceLastRun();
 
-		let result = await polar.usage.ingest(
+		let result = await billing.usage.ingest(
 			consumption.map((row) => ({
 				name: "pings",
 				customer: { externalId: row.teamId },
