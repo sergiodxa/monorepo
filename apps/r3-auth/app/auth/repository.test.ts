@@ -149,7 +149,7 @@ describe("sessions", () => {
 	});
 
 	test("creates a session whose id is the refresh token the client will present", async () => {
-		let { id } = await repository.createSession(subjectId, clientId, null, null);
+		let { id } = await repository.createSession(subjectId, clientId, null, null, ["openid"]);
 
 		expect(await repository.findSessionById(id)).not.toBeNull();
 	});

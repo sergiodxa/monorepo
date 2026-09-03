@@ -30,7 +30,8 @@ export default class Session {
 	/**
 	 * Opens a session for a subject on a client and returns it. The generated id is the
 	 * refresh token the client will present, and `expires_at` is stamped here because
-	 * the column carries no database default.
+	 * the column carries no database default. `scope` is stored so a later refresh can
+	 * reissue tokens as broad as the ones the session started with.
 	 */
 	static async create(
 		db: Database,
@@ -38,6 +39,7 @@ export default class Session {
 		clientId: string,
 		ip: string | null,
 		ua: string | null,
+		scope: string[] = ["openid"],
 	): Promise<SelectSession> {
 		return await db.create(
 			sessions,
@@ -48,6 +50,7 @@ export default class Session {
 				ip_address: ip,
 				user_agent: ua,
 				expires_at: Date.now() + SESSION_TTL,
+				scope: scope.join(" "),
 			},
 			{ touch: true, returnRow: true },
 		);

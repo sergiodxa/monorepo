@@ -93,6 +93,7 @@ export const sessions = table({
 		client_id: c.text(),
 		user_agent: c.text().nullable(),
 		ip_address: c.text().nullable(),
+		scope: c.text().default("openid"),
 	},
 });
 

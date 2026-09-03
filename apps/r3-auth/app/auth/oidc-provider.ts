@@ -282,6 +282,7 @@ export namespace OIDC {
 				subjectId: string;
 				expiresAt: Date;
 				createdAt: Date;
+				scope: string[];
 			}>
 		>;
 
@@ -337,6 +338,7 @@ export namespace OIDC {
 			clientId: string,
 			ip: string | null,
 			ua: string | null,
+			scope: string[],
 		): Promise<{ id: string }>;
 
 		findOrCreateGrant(subjectId: string, clientId: string): Promise<Grant>;
@@ -800,7 +802,13 @@ export class OIDC {
 			let authTime = Math.floor(Date.now() / 1000);
 
 			let [session, _grant] = await Promise.all([
-				this.repository.createSession(input.subjectId, input.clientId, input.ip, input.ua),
+				this.repository.createSession(
+					input.subjectId,
+					input.clientId,
+					input.ip,
+					input.ua,
+					input.scope ?? ["openid"],
+				),
 				this.repository.findOrCreateGrant(input.subjectId, input.clientId),
 			]);
 
@@ -1294,9 +1302,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Stamps the refreshed access token with the baseline `openid` scope so /userinfo
-	 * will serve it. A session records no scope of its own, so the token stays as narrow
-	 * as the id_token issued alongside it.
+	 * Reissues access and id tokens with the scope the session was originally granted,
+	 * so a refresh does not drop the claims sensitive to `scope` (e.g. `picture`, `name`)
+	 * that the client got at sign-in.
 	 */
 	private async refreshTokenGrant(args: { refreshToken: string }) {
 		let session = await this.repository.findSessionById(args.refreshToken);
@@ -1321,7 +1329,7 @@ export class OIDC {
 				audience: session.clientId,
 				subjectId: session.subjectId,
 				clientId: session.clientId,
-				scope: ["openid"],
+				scope: session.scope,
 			}),
 		);
 
@@ -1338,7 +1346,7 @@ export class OIDC {
 					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: session.clientId },
-				{ authTime },
+				{ authTime, scope: session.scope },
 			),
 		);
 

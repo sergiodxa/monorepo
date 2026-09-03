@@ -75,6 +75,7 @@ function toEngineSession(session: SelectSession) {
 		subjectId: session.subject_id,
 		expiresAt: new Date(session.expires_at),
 		createdAt: new Date(session.created_at),
+		scope: session.scope.split(" "),
 	};
 }
 
@@ -254,8 +255,8 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 		},
 
 		/** Opens a session, whose id is the refresh token the client will present. */
-		async createSession(subjectId, clientId, ip, ua) {
-			let session = await Session.create(db, subjectId, clientId, ip, ua);
+		async createSession(subjectId, clientId, ip, ua, scope) {
+			let session = await Session.create(db, subjectId, clientId, ip, ua, scope);
 			return { id: session.id };
 		},
 
