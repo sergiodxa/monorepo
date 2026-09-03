@@ -1,18 +1,28 @@
 /**
- * The signature algorithms tokens are signed with and verified against, kept in
- * a module of their own so a caller that needs only the names carries nothing
- * else to read them.
+ * The signature algorithms tokens are signed with and verified against, one
+ * export each, kept in a module of its own so a caller that needs only the
+ * names carries nothing else to read them.
+ *
+ * Import the whole set as a namespace, or a single name on its own:
+ *
+ * @example
+ * import * as Algorithm from "@pkg/jwt/algorithm";
+ * Object.values(Algorithm);
+ * @example
+ * import { ES256 } from "@pkg/jwt/algorithm";
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/**
- * ES256 is issued here; RS256 verifies tokens from upstream identity
- * providers; EdDSA derives its nonce from the key and message, keeping the
- * ECDSA nonce-reuse leak that exposes a private key out of reach.
- */
-export const Algorithm = { ES256: "ES256", RS256: "RS256", EdDSA: "EdDSA" } as const;
+/** Issued here, and the only algorithm this repository's own tokens carry. */
+export const ES256 = "ES256";
 
-/** One of the supported signature algorithms. */
-export type Algorithm = (typeof Algorithm)[keyof typeof Algorithm];
+/** Verifies tokens from upstream identity providers. */
+export const RS256 = "RS256";
+
+/**
+ * Derives its nonce from the key and message, keeping the ECDSA nonce-reuse
+ * leak that exposes a private key out of reach.
+ */
+export const EdDSA = "EdDSA";

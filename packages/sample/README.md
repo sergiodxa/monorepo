@@ -17,6 +17,11 @@ them with `systemSeed()` and logs what it got. For the same reason the `date`
 module measures from a reference instant the caller supplies rather than reading
 the clock.
 
+Fifteen modules cover what a fixture asks for: people and the work they do,
+places down to the unit number, companies, prose, dates, identifiers, numbers in
+any base, colors, booleans, repository furniture, technical filler, phone
+numbers, files and paths, and the helpers that turn one value into fifty.
+
 Contact details are unroutable by construction: addresses and links land on the
 domains [RFC 2606](https://datatracker.ietf.org/doc/html/rfc2606) reserves for
 documentation, and phone numbers come from the `555-01xx` range reserved for
@@ -33,8 +38,9 @@ import { createSample } from "@pkg/sample";
 let sample = createSample({ seed: "signup-suite" });
 
 sample.person.record();
-// { firstName: "Alejandro", lastName: "Yamamoto", fullName: "Alejandro Yamamoto",
-//   email: "alejandro.yamamoto43@example.org", username: "alejandro.yamamoto" }
+// { firstName: "Jisoo", lastName: "Esposito", fullName: "Jisoo Esposito",
+//   email: "jisoo.esposito57@example.net", username: "jisoo.esposito",
+//   sex: "female", jobTitle: "Corporate Group Consultant", phone: "(555) 555-0159" }
 
 sample.helpers.multiple(() => sample.person.record(), { count: 50 });
 ```
@@ -150,126 +156,199 @@ An independent generator named by `label`, on the same dataset and reference
 instant. Its values hold still as calls are added to the parent, which is what
 keeps one part of a fixture from moving another.
 
-**Example:**
-
 ```typescript
 let orders = sample.derive("orders"); // unaffected by what `sample` draws
 ```
 
 #### `sample.person`
 
-| Method                   | Returns                                               |
-| ------------------------ | ----------------------------------------------------- |
-| `firstName(): string`    | A given name from the dataset                         |
-| `lastName(): string`     | A family name from the dataset                        |
-| `fullName(): string`     | Both, joined by a space                               |
-| `phone(): string`        | A number in the `555-01xx` range reserved for fiction |
-| `record(): PersonRecord` | One person, consistent across every field             |
-
-**Example:**
-
-```typescript
-let person = sample.person.record();
-person.email; // matches person.firstName and person.lastName
-```
+| Method                                        | Returns                                              |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `firstName(options?)`                         | A given name; `{ sex }` draws from one list          |
+| `lastName()`                                  | A family name                                        |
+| `middleName(options?)`                        | A second given name                                  |
+| `fullName(options?)`                          | Both names; `withPrefix` and `withSuffix` add titles |
+| `prefix()` / `suffix()`                       | `"Dr."` / `"PhD"`                                    |
+| `sex()` / `sexType()`                         | The word / `"female"` or `"male"`                    |
+| `gender()`                                    | A gender identity                                    |
+| `zodiacSign()`                                | A sign                                               |
+| `jobArea()` / `jobDescriptor()` / `jobType()` | The three parts of a title                           |
+| `jobTitle()`                                  | The three, joined                                    |
+| `bio()`                                       | A one-line profile blurb                             |
+| `phone()`                                     | A number, from the `phone` module                    |
+| `record()`                                    | One person, every field agreeing with the others     |
 
 #### `sample.internet`
 
-| Method                                        | Returns                                   |
-| --------------------------------------------- | ----------------------------------------- |
-| `email(options?: NameOptions): string`        | An address on a reserved domain           |
-| `username(options?: NameOptions): string`     | A lowercase handle, `first.last`          |
-| `domain(): string`                            | One of the reserved documentation domains |
-| `url(): string`                               | An `https` link on a reserved domain      |
-| `password(options?: PasswordOptions): string` | A password, 16 characters by default      |
-
-`NameOptions` takes `firstName` and `lastName`; either one that is left out is
-generated. A handle folds accents onto their base letter and drops punctuation,
-so `Lucía Ibáñez` becomes `lucia.ibanez`.
-
-**Example:**
-
-```typescript
-sample.internet.email({ firstName: "Ana", lastName: "Moreau" });
-// "ana.moreau35@example.com"
-```
+| Method                                             | Returns                                                 |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| `email(options?)`                                  | An address on a reserved domain                         |
+| `username(options?)`                               | `first.last`                                            |
+| `displayName(options?)`                            | `"Ana M."`                                              |
+| `domainName()` / `domainSuffix()` / `domainWord()` | The parts of a domain                                   |
+| `url(options?)`                                    | An `https` link; `protocol` and `appendSlash` adjust it |
+| `password(options?)`                               | 16 legible characters by default                        |
+| `emoji()`                                          | One emoji                                               |
+| `httpMethod()` / `httpStatusCode()`                | A verb / a status code                                  |
+| `ip()` / `ipv4()` / `ipv6()` / `mac()`             | Addresses                                               |
+| `port()` / `protocol()`                            | A port above 1024 / `http` or `https`                   |
+| `jwtAlgorithm()`                                   | One of the algorithms tokens here are signed with       |
+| `jwt(options?)`                                    | A token shaped like a JWT, claims readable              |
+| `userAgent()`                                      | A browser user-agent string                             |
 
 #### `sample.location`
 
-| Method                                | Returns                                   |
-| ------------------------------------- | ----------------------------------------- |
-| `city(options?: CityOptions): string` | A city, from `options.country` when named |
-| `country(): string`                   | A country name from the dataset           |
-
-Asking for a city by country reads the cities that belong to it, so a generated
-address stays internally consistent. A country the dataset does not carry raises
-a `RangeError` naming it.
-
-**Example:**
-
-```typescript
-sample.location.city({ country: "Japan" }); // "Kyoto"
-sample.location.city({ country: "Atlantis" }); // RangeError
-```
+| Method                                                       | Returns                                               |
+| ------------------------------------------------------------ | ----------------------------------------------------- |
+| `city(options?)`                                             | A city, from `{ country }` when named                 |
+| `country()` / `countryCode()`                                | A name / an ISO 3166-1 alpha-2 code                   |
+| `continent()` / `county()`                                   | A continent / a county                                |
+| `state(options?)`                                            | A name, or `{ abbreviated: true }` for the short form |
+| `street()` / `buildingNumber()`                              | `"Juniper Lane"` / `"1402"`                           |
+| `streetAddress(options?)`                                    | The two joined; `useFullAddress` adds a unit          |
+| `secondaryAddress()`                                         | `"Apt. 12"`                                           |
+| `zipCode()`                                                  | Five digits                                           |
+| `postalAddress()`                                            | A whole address on one line                           |
+| `direction()` / `cardinalDirection()` / `ordinalDirection()` | Compass points                                        |
+| `language()` / `timeZone()`                                  | A language / an IANA zone                             |
+| `latitude(options?)` / `longitude(options?)`                 | Coordinates, bounded on request                       |
+| `nearbyGPSCoordinate(options)`                               | A point within `radius` km of `origin`                |
 
 #### `sample.company`
 
-| Method           | Returns                                       |
-| ---------------- | --------------------------------------------- |
-| `name(): string` | A distinctive word and a closing word, joined |
+| Method                                                                     | Returns                 |
+| -------------------------------------------------------------------------- | ----------------------- |
+| `name()`                                                                   | `"Ridgeline Analytics"` |
+| `catchPhrase()`                                                            | A slogan                |
+| `catchPhraseAdjective()` / `catchPhraseDescriptor()` / `catchPhraseNoun()` | Its parts               |
+| `buzzPhrase()`                                                             | A sentence of jargon    |
+| `buzzAdjective()` / `buzzNoun()` / `buzzVerb()`                            | Its parts               |
 
 #### `sample.lorem`
 
-| Method                                          | Returns                                  |
-| ----------------------------------------------- | ---------------------------------------- |
-| `words(count: number): string`                  | `count` words joined by spaces           |
-| `sentence(): string`                            | A capitalized sentence, ending in `.`    |
-| `paragraph(options?: ParagraphOptions): string` | Sentences joined by spaces, 4 by default |
-
-#### `sample.number`
-
-| Method                                  | Returns                                                              |
-| --------------------------------------- | -------------------------------------------------------------------- |
-| `int(options?: IntOptions): number`     | An integer in `[min, max]`, `0`–`100` by default                     |
-| `float(options?: FloatOptions): number` | A number in `[min, max)`, rounded to `fractionDigits` (2 by default) |
-
-#### `sample.string`
-
-| Method                                 | Returns                                       |
-| -------------------------------------- | --------------------------------------------- |
-| `uuid(): string`                       | A version 4 UUID drawn from the seeded stream |
-| `alphanumeric(length: number): string` | `length` lowercase letters and digits         |
-| `hex(length: number): string`          | `length` lowercase hexadecimal digits         |
-
-`uuid()` carries the format of a version 4 identifier and reproduces from the
-seed like every other value here.
+| Method                                         | Returns                     |
+| ---------------------------------------------- | --------------------------- |
+| `word()` / `words(n)`                          | One word / `n` words        |
+| `sentence()` / `sentences(n)`                  | One sentence / `n` of them  |
+| `paragraph(options?)` / `paragraphs(options?)` | 4 sentences / 3 paragraphs  |
+| `lines(n)`                                     | `n` sentences, one per line |
+| `slug(count?)`                                 | Dashed words for a URL      |
+| `text()`                                       | A few sentences             |
 
 #### `sample.date`
 
-| Method                                   | Returns                                       |
-| ---------------------------------------- | --------------------------------------------- |
-| `past(options?: SpanOptions): Date`      | An instant in the `days` before the reference |
-| `future(options?: SpanOptions): Date`    | An instant in the `days` after the reference  |
-| `between(options: BetweenOptions): Date` | An instant in `[from, to]`                    |
+| Method                                   | Returns                                    |
+| ---------------------------------------- | ------------------------------------------ |
+| `past(options?)` / `future(options?)`    | Within `days` of the reference             |
+| `recent(options?)` / `soon(options?)`    | Within a day of it                         |
+| `anytime()`                              | Within a year either side                  |
+| `between(options)` / `betweens(options)` | One / several, in order                    |
+| `birthdate(options?)`                    | Putting the person between `min` and `max` |
+| `month(options?)` / `weekday(options?)`  | Names, abbreviated on request              |
+| `timeZone()`                             | An IANA zone                               |
 
-`SpanOptions.days` defaults to 30. `between()` raises a `RangeError` when an end
-is an invalid date, or when `to` falls before `from`.
+#### `sample.string`
+
+| Method                                     | Returns                                       |
+| ------------------------------------------ | --------------------------------------------- |
+| `uuid()` / `ulid()` / `nanoid(length?)`    | Identifiers                                   |
+| `alpha(length, options?)`                  | Letters; `casing` adjusts them                |
+| `alphanumeric(length)` / `numeric(length)` | Letters and digits / digits                   |
+| `hexadecimal(length, options?)`            | Hex digits; `prefix` and `casing` adjust them |
+| `binary(length)` / `octal(length)`         | Prefixed `0b` / `0o`                          |
+| `symbol(length)` / `sample(length)`        | Punctuation / printable ASCII                 |
+| `fromCharacters(characters, length)`       | Drawn from your own alphabet                  |
+
+#### `sample.number`
+
+| Method                           | Returns                                          |
+| -------------------------------- | ------------------------------------------------ |
+| `int(options?)`                  | An integer in `[min, max]`, `0`–`100` by default |
+| `float(options?)`                | Rounded to `fractionDigits`, 2 by default        |
+| `hex()` / `binary()` / `octal()` | An integer written in that base                  |
+| `romanNumeral(options?)`         | `"MCMXCIV"`                                      |
+| `bigInt(options?)`               | Past what a `number` holds                       |
+
+#### `sample.color`
+
+| Method                                                       | Returns                                 |
+| ------------------------------------------------------------ | --------------------------------------- |
+| `human()`                                                    | `"teal"`                                |
+| `rgb(options?)`                                              | `#rrggbb`, or channels, or CSS notation |
+| `hsl()` / `hwb()` / `lab()` / `lch()` / `cmyk()`             | Channels, or CSS with `format: "css"`   |
+| `space()` / `cssSupportedSpace()` / `cssSupportedFunction()` | CSS color words                         |
+| `colorByCSSColorSpace(options?)`                             | A color in a named space                |
+
+#### `sample.datatype`
+
+| Method              | Returns                                    |
+| ------------------- | ------------------------------------------ |
+| `boolean(options?)` | `true` with `probability`, half by default |
+
+#### `sample.git`
+
+| Method                | Returns                               |
+| --------------------- | ------------------------------------- |
+| `branch()`            | `"parse-the-cursor"`                  |
+| `commitSha(options?)` | 40 hex characters, or `{ length: 7 }` |
+| `commitMessage()`     | A subject line                        |
+| `commitDate()`        | A date in `git log` format            |
+| `commitEntry()`       | A whole log entry                     |
+
+#### `sample.hacker`
+
+| Method                                                               | Returns          |
+| -------------------------------------------------------------------- | ---------------- |
+| `abbreviation()` / `adjective()` / `noun()` / `verb()` / `ingverb()` | Words            |
+| `phrase()`                                                           | A whole sentence |
+
+#### `sample.phone`
+
+| Method             | Returns                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| `number(options?)` | `555-0142`; `style` gives the national or international form |
+| `imei()`           | 15 digits, closing with a valid check digit                  |
+
+#### `sample.system`
+
+| Method                                            | Returns                      |
+| ------------------------------------------------- | ---------------------------- |
+| `fileName(options?)` / `commonFileName(options?)` | A name with an extension     |
+| `fileExt()` / `commonFileExt()`                   | An extension                 |
+| `fileType()` / `commonFileType()`                 | A broad kind                 |
+| `mimeType()`                                      | `"image/png"`                |
+| `directoryPath()` / `filePath()`                  | An absolute directory / file |
+| `networkInterface(options?)`                      | `"enp3s0"`                   |
+| `semver()` / `cron()`                             | `"3.7.1"` / `"15 3 * * 1"`   |
 
 #### `sample.helpers`
 
-| Method                                                                    | Returns                                         |
-| ------------------------------------------------------------------------- | ----------------------------------------------- |
-| `pick<T>(items: readonly T[]): T`                                         | One element                                     |
-| `pickMany<T>(items: readonly T[], options: PickManyOptions): T[]`         | `count` distinct elements, shuffled             |
-| `shuffle<T>(items: readonly T[]): T[]`                                    | A shuffled copy                                 |
-| `multiple<T>(build: (index: number) => T, options: MultipleOptions): T[]` | `count` built values                            |
-| `maybe<T>(build: () => T, options?: MaybeOptions): T \| null`             | The value, or `null` (`chance`, 0.5 by default) |
-
-**Example:**
+| Method                                                              | Returns                                  |
+| ------------------------------------------------------------------- | ---------------------------------------- |
+| `pick(items)` / `pickMany(items, options)`                          | One element / `count` distinct ones      |
+| `shuffle(items)`                                                    | A shuffled copy                          |
+| `multiple(build, options)`                                          | `count` built values                     |
+| `maybe(build, options?)`                                            | The value, or `null`                     |
+| `weightedPick(choices)`                                             | One choice, by weight                    |
+| `uniqueArray(source, count)`                                        | Distinct values from a list or generator |
+| `objectKey(values)` / `objectValue(values)` / `objectEntry(values)` | Parts of an object                       |
+| `enumValue(values)`                                                 | One value of an enum-shaped object       |
+| `rangeToNumber(range)`                                              | A number, or one drawn from a range      |
+| `slugify(text)`                                                     | `"como-usar-remix-v3"`                   |
+| `replaceSymbols(pattern)`                                           | `#` a digit, `?` a letter, `*` either    |
+| `replaceCreditCardSymbols(pattern?)`                                | The same, with a Luhn check digit        |
+| `fromRegExp(pattern)`                                               | A string matching a pattern              |
+| `mustache(text, values)`                                            | `{{key}}` replaced by your values        |
+| `fake(template)`                                                    | `{{module.method}}` replaced by a draw   |
 
 ```typescript
-sample.helpers.pickMany(plans, { count: 2 });
-sample.helpers.maybe(() => sample.internet.url(), { chance: 0.3 });
+sample.helpers.weightedPick([
+	{ weight: 9, value: "common" },
+	{ weight: 1, value: "rare" },
+]);
+
+sample.helpers.fromRegExp("SKU-[A-Z]{2}[0-9]{4}"); // "SKU-QP4817"
+sample.helpers.fake("{{person.firstName}} of {{location.city}}"); // "Marta of Kyoto"
 ```
 
 ### `Random`
@@ -410,6 +489,7 @@ let profile = {
   places its values with
 - [`@pkg/duration`](/packages/duration) - Durations written as text, which spell
   the day a date window is measured in
+- [`@pkg/jwt`](/packages/jwt) - The signature algorithms a generated token names
 
 ## Tips
 
@@ -429,4 +509,8 @@ let profile = {
    every list you did not mean to change.
 7. **Keep generated identifiers out of security decisions** - Everything here
    reproduces from the seed, which is the point for a fixture and the opposite of
-   what a secret needs.
+   what a secret needs. `internet.jwt()` follows the same rule: its claims decode
+   and its signature is drawn, so it fills a header but never verifies.
+8. **Reach for `helpers.fake()` when a string mixes several draws** -
+   `fake("{{person.firstName}} of {{location.city}}")` beats concatenating the
+   calls by hand.

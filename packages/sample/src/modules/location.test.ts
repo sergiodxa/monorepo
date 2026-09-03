@@ -90,9 +90,9 @@ describe("addresses", () => {
 	});
 
 	test("adds a unit on request", () => {
-		expect(module("units").streetAddress({ useFullAddress: true }).split(" ").length).toBeGreaterThan(
-			3,
-		);
+		expect(
+			module("units").streetAddress({ useFullAddress: true }).split(" ").length,
+		).toBeGreaterThan(3);
 	});
 
 	test("writes a secondary address and a postal code", () => {

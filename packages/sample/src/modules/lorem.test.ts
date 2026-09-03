@@ -101,9 +101,9 @@ describe("the wider prose", () => {
 	});
 
 	test("honors a separator it is given", () => {
-		expect(module("paragraphs").paragraphs({ count: 2, separator: " | " }).split(" | ")).toHaveLength(
-			2,
-		);
+		expect(
+			module("paragraphs").paragraphs({ count: 2, separator: " | " }).split(" | "),
+		).toHaveLength(2);
 	});
 
 	test("writes one sentence per line", () => {

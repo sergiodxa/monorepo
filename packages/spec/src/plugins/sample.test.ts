@@ -89,12 +89,26 @@ describe("the plugin's shape", () => {
 		}
 	});
 
-	test("exposes the six tools a suite calls", () => {
+	test("exposes one tool per module, and one per generator that takes an argument", () => {
 		expect(PLUGIN.describe().map((descriptor) => descriptor.name)).toEqual([
 			"person",
+			"internet",
+			"location",
+			"company",
+			"lorem",
+			"date",
+			"string",
+			"number",
+			"color",
+			"datatype",
+			"git",
+			"hacker",
+			"phone",
+			"system",
 			"email",
 			"uuid",
 			"int",
+			"float",
 			"words",
 			"pick",
 		]);
@@ -105,7 +119,8 @@ describe("the plugin's shape", () => {
 
 		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain('sample has no tool "nickname"');
-		expect(error.message).toContain("person, email, uuid, int, words, pick");
+		expect(error.message).toContain("person, internet, location");
+		expect(error.message).toContain("int, float, words, pick");
 	});
 });
 
@@ -113,13 +128,9 @@ describe("person", () => {
 	test("returns a person whose fields agree, in the suite's key style", async () => {
 		let person = asObject(expectSuccess(await PLUGIN.call("person", [], buildContext())));
 
-		expect(Object.keys(person)).toEqual([
-			"first_name",
-			"last_name",
-			"full_name",
-			"email",
-			"username",
-		]);
+		expect(Object.keys(person)).toContain("first_name");
+		expect(Object.keys(person)).toContain("job_title");
+		expect(Object.keys(person)).toContain("zodiac_sign");
 		expect(asString(person.full_name)).toBe(
 			`${asString(person.first_name)} ${asString(person.last_name)}`,
 		);
@@ -253,5 +264,95 @@ describe("pick", () => {
 		let error = expectFailure(await PLUGIN.call("pick", [value([])], buildContext()));
 
 		expect(error.message).toContain("sample.pick needs a list with at least one item");
+	});
+});
+
+describe("one tool per module", () => {
+	/** Every field a module record carries, for a spec to read by path. */
+	async function fields(tool: string): Promise<ValueObject> {
+		return asObject(expectSuccess(await PLUGIN.call(tool, [], buildContext())));
+	}
+
+	test("gives each module a record whose fields are named in snake case", async () => {
+		for (let tool of [
+			"person",
+			"internet",
+			"location",
+			"company",
+			"lorem",
+			"date",
+			"string",
+			"number",
+			"color",
+			"datatype",
+			"git",
+			"hacker",
+			"phone",
+			"system",
+		]) {
+			let record = await fields(tool);
+
+			expect(Object.keys(record).length).toBeGreaterThan(0);
+			for (let key of Object.keys(record)) expect(key).toMatch(/^[a-z][a-z0-9_]*$/);
+		}
+	});
+
+	test("puts a whole address on the location record, with a city in its country", async () => {
+		let location = await fields("location");
+
+		expect(asString(location.zip_code)).toMatch(/^\d{5}$/);
+		expect(asString(location.street_address)).toMatch(/^\d{1,4} /);
+		expect(asString(location.postal_address)).toContain(asString(location.country));
+	});
+
+	test("writes dates as ISO timestamps a spec can compare", async () => {
+		let dates = await fields("date");
+
+		for (let key of ["past", "future", "recent", "soon", "anytime", "birthdate"]) {
+			expect(asString(dates[key])).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+		}
+	});
+
+	test("keeps the internet record's contact details unroutable", async () => {
+		let internet = await fields("internet");
+
+		expect(asString(internet.email)).toMatch(/@example\.(com|org|net)$/);
+		expect(asString(internet.url)).toMatch(/^https:\/\/[a-z0-9]+\.example\.(com|org|net)/);
+	});
+
+	test("returns numbers and booleans as themselves, not as text", async () => {
+		let numbers = await fields("number");
+		let datatype = await fields("datatype");
+
+		expect(typeof numbers.int).toBe("number");
+		expect(typeof numbers.float).toBe("number");
+		expect(typeof datatype.boolean).toBe("boolean");
+	});
+
+	test("replays every module record from the seed", async () => {
+		for (let tool of ["person", "location", "git", "system"]) {
+			let first = expectSuccess(await PLUGIN.call(tool, [], buildContext("run")));
+			let second = expectSuccess(await PLUGIN.call(tool, [], buildContext("run")));
+
+			expect(first).toEqual(second);
+		}
+	});
+});
+
+describe("float", () => {
+	test("stays between the bounds it is given", async () => {
+		let context = buildContext();
+
+		for (let count = 0; count < 50; count++) {
+			let drawn = expectSuccess(await PLUGIN.call("float", [value(0), value(10)], context));
+			expect(drawn).toBeGreaterThanOrEqual(0);
+			expect(drawn).toBeLessThanOrEqual(10);
+		}
+	});
+
+	test("refuses a bound that is not a number", async () => {
+		let error = expectFailure(await PLUGIN.call("float", [value("low"), value(1)], buildContext()));
+
+		expect(error.message).toContain('sample.float needs a number for "min"');
 	});
 });

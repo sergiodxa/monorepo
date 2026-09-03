@@ -230,6 +230,20 @@ JWK.Algorithm.EdDSA; // "EdDSA"
 
 `RS256` earns its place on the verifying side: an upstream identity provider signs with what it chooses, and that is commonly `RS256`. `EdDSA` derives each signature's nonce from the key and the message rather than drawing a fresh one, which puts the nonce reuse that recovers an ECDSA private key out of reach.
 
+The names are also importable on their own, for a caller that needs to read or list them without the key machinery behind them:
+
+```typescript
+import * as Algorithm from "@pkg/jwt/algorithm";
+
+Object.values(Algorithm); // ["ES256", "RS256", "EdDSA"]
+```
+
+```typescript
+import { ES256 } from "@pkg/jwt/algorithm";
+```
+
+That entry point holds the three constants and nothing else, so importing it costs nothing beyond the names.
+
 All three coexist in one key set. Verification picks a key by the `kid` and the algorithm a token names, so a set publishing several resolves the same way a set of one does.
 
 #### `JWK.generateKeyPair(alg: JWK.Algorithm): Promise<JWK.SerializedKeyPair>`

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { Base64Url } from "@pkg/crypto";
-import { Algorithm } from "@pkg/jwt/algorithm";
+import * as Algorithm from "@pkg/jwt/algorithm";
 
 import type { Dataset } from "../dataset";
 import type { Random } from "../random";

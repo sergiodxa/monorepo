@@ -92,3 +92,21 @@ test "a generated identifier names a file" {
 		expect file target.path contains "generated"
 	}
 }
+
+test "a module arrives as one record" {
+	given {
+		# A call target carries at most one dot, so each module is a single
+		# zero-argument tool whose record holds every field it generates.
+		let place = sample.location
+		let files = sample.system
+	}
+	then {
+		expect place.country
+		expect place.city
+		expect place.street_address
+		expect place.zip_code
+		expect files.file_name
+		expect files.mime_type
+		expect files.cron
+	}
+}

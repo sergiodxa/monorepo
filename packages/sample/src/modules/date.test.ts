@@ -149,7 +149,8 @@ describe("the wider calendar", () => {
 		let dates = module("birthdays");
 
 		for (let count = 0; count < 50; count++) {
-			let age = (REFERENCE.getTime() - dates.birthdate({ min: 20, max: 30 }).getTime()) / (365 * DAY);
+			let age =
+				(REFERENCE.getTime() - dates.birthdate({ min: 20, max: 30 }).getTime()) / (365 * DAY);
 			expect(age).toBeGreaterThanOrEqual(20);
 			expect(age).toBeLessThanOrEqual(30);
 		}

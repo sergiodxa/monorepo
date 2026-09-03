@@ -10,6 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en";
 import { createRandom } from "../random";
+
 import { createSystemModule } from "./system";
 
 function module(seed: string) {

@@ -8,6 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createRandom } from "../random";
+
 import { createPhoneModule } from "./phone";
 
 function module(seed: string) {

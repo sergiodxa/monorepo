@@ -577,37 +577,64 @@ typed into the suite. Pure computation over the test's own stream — no network
 no filesystem, no grant — and every value reproduces: the same test draws the
 same data on every run, so a failure on generated input is replayable.
 
-- `sample.person` — a person: `first_name`, `last_name`, `full_name`, `email`,
-  `username`, all agreeing with each other.
-- `sample.email` — an address on a domain reserved for documentation, so a
-  generated address can never reach a real inbox.
-- `sample.uuid` — a version 4 UUID.
-- `sample.int <min> <max>` — an integer, both bounds included.
-- `sample.words <count>` — that many words of placeholder prose.
-- `sample.pick <list>` — one element of a list a tool returned.
-
-Every tool is an **action**, not an observation: a draw advances the stream, so
-`sample` may not head an `eventually` — polling until a random value matches is
-never what an author meant.
+A call target carries at most one dot, so **each module is one tool** returning a
+record of everything that module generates. Bind it, then read fields by path:
 
 ```
 use sample
 
-test "signing up stores the address given" {
+test "a visitor signs up from somewhere" {
 	given {
-		let person = sample.person
+		let who = sample.person
+		let where = sample.location
 	}
 	when {
-		let response = http.post "http://localhost:3000/signup" form {
-			email: person.email
-			name: person.full_name
+		let created = http.post "http://localhost:3000/signup" json {
+			email: who.email
+			name: who.full_name
+			job: who.job_title
+			city: where.city
+			country: where.country
 		}
 	}
 	then {
-		expect response.status 201
+		expect created.status 201
 	}
 }
 ```
+
+| Tool              | The record holds                                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample.person`   | `first_name`, `last_name`, `full_name`, `prefix`, `suffix`, `sex`, `gender`, `zodiac_sign`, `job_title`, `bio`, `email`, `username`, `phone`                            |
+| `sample.internet` | `email`, `username`, `url`, `domain_name`, `password`, `ip`, `ipv4`, `ipv6`, `mac`, `port`, `protocol`, `http_method`, `http_status_code`, `jwt`, `user_agent`, `emoji` |
+| `sample.location` | `country`, `city`, `country_code`, `state`, `county`, `street`, `street_address`, `zip_code`, `postal_address`, `latitude`, `longitude`, `time_zone`                    |
+| `sample.company`  | `name`, `catch_phrase`, `buzz_phrase`, and their parts                                                                                                                  |
+| `sample.lorem`    | `word`, `words`, `sentence`, `paragraph`, `lines`, `slug`, `text`                                                                                                       |
+| `sample.date`     | `past`, `future`, `recent`, `soon`, `anytime`, `birthdate`, `month`, `weekday`, `time_zone` — dates as ISO timestamps                                                   |
+| `sample.string`   | `uuid`, `ulid`, `nanoid`, `alpha`, `alphanumeric`, `numeric`, `hexadecimal`, `binary`, `octal`, `symbol`                                                                |
+| `sample.number`   | `int`, `float`, `hex`, `binary`, `octal`, `roman_numeral`, `big_int`                                                                                                    |
+| `sample.color`    | `human`, `hex`, `rgb`, `hsl`, `space`, `css_function`                                                                                                                   |
+| `sample.datatype` | `boolean`                                                                                                                                                               |
+| `sample.git`      | `branch`, `commit_sha`, `short_sha`, `commit_message`, `commit_date`, `commit_entry`                                                                                    |
+| `sample.hacker`   | `abbreviation`, `adjective`, `noun`, `verb`, `ingverb`, `phrase`                                                                                                        |
+| `sample.phone`    | `number`, `national`, `international`, `imei`                                                                                                                           |
+| `sample.system`   | `file_name`, `file_ext`, `file_type`, `mime_type`, `directory_path`, `file_path`, `network_interface`, `semver`, `cron`                                                 |
+
+A record's fields agree with each other: a person's address matches their name,
+and a location's postal address names its own city and country.
+
+The generators that take an argument keep a tool of their own, alongside two
+shortcuts for the values a suite reaches for most:
+
+- `sample.int <min> <max>` — an integer, both bounds included.
+- `sample.float <min> <max>` — a number between the bounds, two decimals.
+- `sample.words <count>` — that many words of placeholder prose.
+- `sample.pick <list>` — one element of a list another tool returned.
+- `sample.email`, `sample.uuid` — the two single values worth their own name.
+
+Every tool is an **action**, not an observation: a draw advances the stream, so
+`sample` may not head an `eventually` — polling until a random value matches is
+never what an author meant.
 
 A test's data follows its **identity** — the run's seed, the test's file inside
 the suite, and its title — and nothing else. Two runs of a suite generate the
