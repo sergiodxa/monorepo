@@ -209,7 +209,7 @@ The package takes a `send` function rather than a `Queue` binding because the bi
 waitUntil(jobs.verifyDomainOwnership.enqueue({ teamDomainId: domain.id }));
 
 // app/jobs/enqueue-pending-domains.ts
-await jobs.verifyDomainOwnership.enqueueAll(domains.map((d) => ({ teamDomainId: d.id })));
+await jobs.verifyDomainOwnership.enqueueMany(domains.map((d) => ({ teamDomainId: d.id })));
 ```
 
 `enqueue` takes exactly the job's input type, and takes no argument at all for a job without a schema. Both forms funnel into one `send` call, so a batch stays one write, and neither loads a handler.
@@ -393,7 +393,7 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 2. Build the context on `createContextKey` from `remix/router`, with `get` / `has` / `set(key, value, { property })` and the entry typing that makes an installed property visible to handlers.
 3. Port the lifecycle — logger identifier, ack/retry classification, uptime ping — from `@pkg/jobs`, keeping its log event names.
 4. Export `RetryError`, `NonRetriableError`, and `JobTimeout` at the top level.
-5. Tests: naming from map keys including nested paths, dispatch by `type`, a loader resolved once and reused, a handler module left unloaded for a body that fails its schema, middleware ordering and its `RetryError` classification, settlement precedence across `ctx.ack()` / `ctx.retry()` / a later throw / the dispatcher's own ack, a `delay` converted to whole seconds and reaching the platform from both spellings, a context property installed by middleware and read by a handler, a timeout aborting `ctx.signal`, a thrown `JobTimeout` and a cooperative `ctx.ack()` both winning inside the grace, the dispatcher settling after it, an `AbortError` from the shared signal reported as a timeout, and `job.timed-out` logged with no ping, a dead-letter batch recorded and acked with both body shapes told apart, `ctx.batchSize` reporting the batch, `scheduled()` matching one cron across several jobs and enqueuing them rather than running them, `enqueue` / `enqueueAll` batching into one `send`, duplicate-name rejection, and the unchanged ack/retry/ping behavior.
+5. Tests: naming from map keys including nested paths, dispatch by `type`, a loader resolved once and reused, a handler module left unloaded for a body that fails its schema, middleware ordering and its `RetryError` classification, settlement precedence across `ctx.ack()` / `ctx.retry()` / a later throw / the dispatcher's own ack, a `delay` converted to whole seconds and reaching the platform from both spellings, a context property installed by middleware and read by a handler, a timeout aborting `ctx.signal`, a thrown `JobTimeout` and a cooperative `ctx.ack()` both winning inside the grace, the dispatcher settling after it, an `AbortError` from the shared signal reported as a timeout, and `job.timed-out` logged with no ping, a dead-letter batch recorded and acked with both body shapes told apart, `ctx.batchSize` reporting the batch, `scheduled()` matching one cron across several jobs and enqueuing them rather than running them, `enqueue` / `enqueueMany` batching into one `send`, duplicate-name rejection, and the unchanged ack/retry/ping behavior.
 6. Write the README around the new API. `@pkg/jobs` is not touched in this phase and keeps serving both apps.
 
 ### Phase 2: `apps/r3-auth`
@@ -416,8 +416,8 @@ The work happens in a new package, `@pkg/jobs-next`, rather than beside the clas
 2. Reduce each job file to a handler, folding the `validate()` preamble into the signature and the container lookups into context reads.
 3. Write the `database()` and `costLedger()` middleware, retiring `setJobUsageTracker(trackJobCost)`.
 4. Add `app/jobs/dispatcher.ts` with the 20 `map()` calls, the `uptime` resolver, `deadLetterQueue: "ping-dlq"`, and an `onInvalid` that writes to the `DLQ` binding, then reduce both worker handlers to their dispatcher call. Delete `app/jobs/dead-letter.ts`.
-5. Turn the every-minute claim into an ordinary cron job: a leaf on `* * * * *` whose handler claims the due monitors, apportions their teams, and calls `checkHttp.enqueueAll(…)` — the shape `enqueuePendingDomains` already has. Delete `setQueueBatchSize` in favour of `ctx.batchSize`.
-6. Convert every `sendQueueMessage` / `sendQueueBatch` call site to `enqueue` / `enqueueAll` against the map.
+5. Turn the every-minute claim into an ordinary cron job: a leaf on `* * * * *` whose handler claims the due monitors, apportions their teams, and calls `checkHttp.enqueueMany(…)` — the shape `enqueuePendingDomains` already has. Delete `setQueueBatchSize` in favour of `ctx.batchSize`.
+6. Convert every `sendQueueMessage` / `sendQueueBatch` call site to `enqueue` / `enqueueMany` against the map.
 7. Delete `QueueMessageSchema`, add both tests, and update the log filters that name job identifiers.
 
 ### Phase 4: Delete The Old Package And Take Its Name

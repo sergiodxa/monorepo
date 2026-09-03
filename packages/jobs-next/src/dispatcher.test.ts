@@ -185,7 +185,7 @@ describe("queue()", () => {
 			createJobHandler(map.checkHttp, ({ batchSize }) => void sizes.push(batchSize)),
 		);
 
-		await map.checkHttp.enqueueAll([{ monitorId: "a" }, { monitorId: "b" }]);
+		await map.checkHttp.enqueueMany([{ monitorId: "a" }, { monitorId: "b" }]);
 		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(sizes).toEqual([2, 2]);

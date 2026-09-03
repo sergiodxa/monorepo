@@ -128,7 +128,7 @@ declare module "@pkg/jobs-next" {
 
 ```typescript
 await jobs.checkHttp.enqueue({ monitorId: monitor.id });
-await jobs.checkHttp.enqueueAll(monitors.map((monitor) => ({ monitorId: monitor.id })));
+await jobs.checkHttp.enqueueMany(monitors.map((monitor) => ({ monitorId: monitor.id })));
 ```
 
 `enqueue` takes exactly what the job's schema accepts, and takes no argument at all for

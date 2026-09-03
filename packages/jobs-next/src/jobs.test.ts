@@ -72,12 +72,12 @@ describe("enqueue()", () => {
 	});
 });
 
-describe("enqueueAll()", () => {
+describe("enqueueMany()", () => {
 	test("turns many payloads into one write", async () => {
 		let send = sender();
 		let map = jobs({ notify: job({ input: s.object({ id: s.string() }) }) }, { send });
 
-		await map.notify.enqueueAll([{ id: "a" }, { id: "b" }]);
+		await map.notify.enqueueMany([{ id: "a" }, { id: "b" }]);
 
 		expect(send).toHaveBeenCalledTimes(1);
 		expect(send).toHaveBeenCalledWith([
@@ -90,7 +90,7 @@ describe("enqueueAll()", () => {
 		let send = sender();
 		let map = jobs({ notify: job({ input: s.object({ id: s.string() }) }) }, { send });
 
-		await map.notify.enqueueAll([]);
+		await map.notify.enqueueMany([]);
 
 		expect(send).not.toHaveBeenCalled();
 	});

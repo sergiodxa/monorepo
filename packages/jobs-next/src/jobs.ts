@@ -69,7 +69,7 @@ export interface JobDefinition<Schema extends StandardSchemaV1 | undefined = und
 	 * Enqueues one message per input, in a single write. Enqueuing nothing does nothing.
 	 * @param inputs One payload per message.
 	 */
-	enqueueAll(inputs: EnqueueInput<Schema>[]): Promise<void>;
+	enqueueMany(inputs: EnqueueInput<Schema>[]): Promise<void>;
 	/** The map's queue write, for the dispatcher's own batching. */
 	readonly [sender]: SendMessages;
 }
@@ -117,7 +117,7 @@ function define(name: string, declared: AnyJobLeaf, send: SendMessages): AnyJobD
 		async enqueue(input?: unknown) {
 			await send([messageBody(name, input)]);
 		},
-		async enqueueAll(inputs: unknown[]) {
+		async enqueueMany(inputs: unknown[]) {
 			if (inputs.length === 0) return;
 			await send(inputs.map((input) => messageBody(name, input)));
 		},
