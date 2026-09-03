@@ -63,18 +63,15 @@ Model jobs the way the repository already models HTTP: a **map** of definitions,
 import { job, jobs } from "@pkg/jobs";
 import * as s from "remix/data-schema";
 
-export default jobs(
-	{
-		clean: job({
-			cron: "0 0 * * *",
-			monitorId: "80294988-476e-4e99-9f5c-abfeb369316a",
-		}),
-		checkHttp: job({
-			input: s.object({ id: s.string(), monitorId: s.string(), scheduledAt: s.number() }),
-		}),
-	},
-	{ send: sendQueueBatch },
-);
+export default jobs({
+	clean: job({
+		cron: "0 0 * * *",
+		monitorId: "80294988-476e-4e99-9f5c-abfeb369316a",
+	}),
+	checkHttp: job({
+		input: s.object({ id: s.string(), monitorId: s.string(), scheduledAt: s.number() }),
+	}),
+});
 ```
 
 The key is the job's name, and the name is the message `type` — the same way a route map's key names a route. `jobs()` stamps each leaf with its key, so a definition is a complete value: `jobs.checkHttp.enqueue({ … })` works anywhere the map is imported, with no router in sight.
@@ -189,27 +186,27 @@ test("deletes pings past the retention window", async () => {
 
 The verbs throw whether or not a delivery is behind the context, so an ending is asserted by catching it — `await expect(handler(ctx)).rejects.toBeInstanceOf(Job.Retry)` — with no queue and nothing to mock.
 
-### 4. Enqueuing Goes Through The Map
+### 4. Enqueuing Goes Through The Dispatcher
 
-The second argument to `jobs()` is how the map reaches its queue:
+The dispatcher owns the app's queue write, and everything that enqueues goes through it or through the body it would have built.
 
 | Option | Type                                     | Purpose                                                                        |
 | ------ | ---------------------------------------- | ------------------------------------------------------------------------------ |
 | `send` | `(bodies: JSONValue[]) => Promise<void>` | The app's queue write. `apps/uptime` passes its cost-counting `sendQueueBatch` |
 
-Enqueuing is the one thing that cannot come from the dispatcher: `jobs.checkHttp.enqueue()` is called from controllers that have no business importing a dispatcher, which is exactly the module-graph problem the map exists to solve. The sender therefore arrives where the map is built — the one module every call site already imports — so there is no registration call to make, no order to get wrong, and no entry point that can forget to make it. A map that exists can enqueue.
-
-The package takes a `send` function rather than a `Queue` binding because the binding is not the whole write anywhere it is used: `apps/uptime` prices each queue operation on the way out, and chunking a batch at the platform's 100-message limit already lives in the app. Passing a function also keeps the map's own module free of work at import time: nothing reads a binding until something enqueues.
-
 ```typescript
-// app/http/controllers/actions/team-domains.ts
-waitUntil(jobs.verifyDomainOwnership.enqueue({ teamDomainId: domain.id }));
-
-// app/jobs/enqueue-pending-domains.ts
-await jobs.verifyDomainOwnership.enqueueMany(domains.map((d) => ({ teamDomainId: d.id })));
+await dispatcher.enqueue(jobs.checkHttp, { monitorId: monitor.id });
+await dispatcher.enqueueMany(
+	jobs.checkHttp,
+	due.map((m) => ({ monitorId: m.id })),
+);
 ```
 
-`enqueue` takes exactly the job's input type, and takes no argument at all for a job without a schema. Both forms funnel into one `send` call, so a batch stays one write, and neither loads a handler.
+The dispatcher needs a sender whatever else is true, because `scheduled()` enqueues; putting the app's only sender there means there is exactly one, and no module-level state to register it through.
+
+That leaves one call site shape unserved. A controller enqueuing on the request path should not import the dispatcher, because that pulls its middleware, its loaders, and every handler behind them into the request's module graph — the cost the definition/handler split exists to avoid. For those, `messageBody(job, input)` is exported: it builds the body the dispatcher would have built, and the app sends it with the helper it already writes queue messages through. Both routes end in the same function, so an app that prices its queue operations prices all of them.
+
+The package takes a `send` function rather than a `Queue` binding because the binding is not the whole write anywhere it is used: `apps/uptime` prices each queue operation on the way out, and chunking a batch at the platform's 100-message limit already lives in the app. Passing a function also defers reading the binding until something enqueues.
 
 ### 5. `createJobDispatcher()` Maps Handlers And Owns Both Worker Handlers
 
@@ -358,7 +355,7 @@ The usage tracker is the one lifecycle feature middleware makes redundant. `setJ
 - **Both worker handlers are one line** - Every branch a worker used to carry — cron matching, type dispatch, batch bookkeeping, the dead-letter queue — is either a declaration or a mapping, so the entry point says only that jobs are routed.
 - **The dead-letter queue costs an app one option** - Naming it is all an app does; the package recognizes those batches, tells an exhausted message from a refused one, records it, and acks. `apps/uptime` deletes a job file, and `apps/r3-auth`, which has no such queue, sets nothing.
 - **A schedule is a queue message** - Every job runs through one path whatever triggered it, so a scheduled job gets the retries, the dead-letter queue, the middleware, and the timeout that a cron trigger has none of.
-- **Nothing is configured globally** - The sender is an argument to the map and the ping token an option on the dispatcher, so a job cannot be enqueued by a process that forgot to set something up.
+- **Nothing is configured globally** - The sender and the ping token are both options on the dispatcher, so there is no registration call to make and no process that can enqueue into a queue nobody wired up.
 - **Cross-cutting work is written once** - The cost ledger, the container scope, and anything else that wrapped every `perform()` becomes one middleware in one list.
 - **Shared jobs become functions** - The two team digests come from one factory returning two leaves, instead of a three-class hierarchy.
 
@@ -450,11 +447,11 @@ Add `static cron` and `static enqueue()` to `Job`, and have the worker iterate a
 
 **Rejected because**: the name is then written next to a key that already says it, in the module that already collects them. A map keyed by name is how the repository declares routes, and `jobs()` stamping each leaf gives back the one thing a bare key cannot: a definition that knows its own name, so `enqueue` lives on it.
 
-### 4. Enqueue Through The Dispatcher
+### 4. Enqueue From The Definition
 
-Give the dispatcher the sender instead of the map, so call sites write `dispatcher.enqueue(jobs.checkHttp, { … })`.
+Give the map the sender, so a leaf carries it and call sites write `jobs.checkHttp.enqueue({ … })`.
 
-**Rejected because**: it makes every controller that enqueues import the dispatcher, and with it every loader and every middleware — where the map is the smallest thing that can be imported. Enqueuing also reads better as a property of the job.
+**Rejected because**: it puts a runtime concern in the file that exists to declare things, and the dispatcher needs a sender regardless — `scheduled()` enqueues — so the map's copy is a second place for the same dependency. `messageBody()` covers what the leaf-bound version was for: a call site that must not import the dispatcher can still build the body and send it through the app's own helper.
 
 ### 5. Per-Job Middleware
 

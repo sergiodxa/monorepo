@@ -14,10 +14,7 @@ import type { NonRetriable, Retry } from "./errors";
 
 import { Job, job, JobContext, jobs } from "./index";
 
-let map = jobs(
-	{ clean: job({ cron: "0 0 * * *", monitorId: "monitor-1" }) },
-	{ send: async () => {} },
-);
+let map = jobs({ clean: job({ cron: "0 0 * * *", monitorId: "monitor-1" }) });
 
 describe("JobContext", () => {
 	test("carries the job's own declaration", () => {

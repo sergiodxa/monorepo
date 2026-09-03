@@ -5,9 +5,9 @@ Background jobs for Cloudflare Queues, declared in one map and run by one dispat
 ## Overview
 
 A job is declared, not implemented, in the map: its name, the payload it carries, the
-cron it runs on, and the monitor that watches it. The handler lives in its own module
-and is loaded only when a message for it arrives, so enqueuing a job from a request
-handler costs a schema rather than the job's whole dependency tree.
+cron it runs on, and the monitor that watches it. The map is declaration and nothing
+else — no handler, no queue — so importing it costs its schemas. The handler lives in
+its own module and is loaded only when a message for it arrives.
 
 Every job is enqueuable. A job that declares a `cron` is additionally schedulable, and
 the two share one path: a cron delivery enqueues a message and returns, so a scheduled
@@ -31,17 +31,15 @@ messages enqueued by one deploy are consumed by the next.
 import { job, jobs } from "@pkg/jobs-next";
 import * as s from "remix/data-schema";
 
-export default jobs(
-	{
-		clean: job({ cron: "0 0 * * *", monitorId: "8f1c…" }),
-		checkHttp: job({ input: s.object({ monitorId: s.string() }) }),
-		digests: {
-			daily: job({ cron: "0 8 * * *" }),
-			weekly: job({ cron: "0 9 * * 1" }),
+export default jobs({
+	clean: job({ cron: "0 0 * * *", monitorId: "8f1c…" }),
+	checkHttp: job({ input: s.object({ monitorId: s.string() }) }),
+	digests: {
+		daily: job({ cron: "0 8 * * *" }),
+		weekly: job({ cron: "0 9 * * 1" }),
 		},
 	},
-	{ send: sendQueueBatch },
-);
+});
 ```
 
 Nested keys are dot-joined, so `digests.daily` is that job's name.
@@ -67,6 +65,7 @@ import { createJobDispatcher } from "@pkg/jobs-next";
 import jobs from "~/app/jobs";
 
 export const dispatcher = createJobDispatcher({
+	send: sendQueueBatch,
 	middleware: [database()],
 	timeout: "5 minutes",
 	uptime: () => env.UPTIME_CRON_API_KEY,
@@ -93,31 +92,41 @@ export default {
 ### Enqueuing a job
 
 ```typescript
-await jobs.checkHttp.enqueue({ monitorId: monitor.id });
-await jobs.checkHttp.enqueueMany(monitors.map((monitor) => ({ monitorId: monitor.id })));
+await dispatcher.enqueue(jobs.checkHttp, { monitorId: monitor.id });
+await dispatcher.enqueueMany(
+	jobs.checkHttp,
+	monitors.map((m) => ({ monitorId: m.id })),
+);
+```
+
+A call site that should not pull the dispatcher — and its middleware, loaders, and every
+handler behind them — into its module graph builds the body instead and sends it through
+whatever the app already writes with:
+
+```typescript
+await sendQueueBatch([messageBody(jobs.checkHttp, { monitorId: monitor.id })]);
 ```
 
 ## API
 
-### `jobs(tree: JobTree, options: JobsOptions): JobMap`
+### `jobs(tree: JobTree): JobMap`
 
-Builds the app's job map, naming every leaf after the key it is filed under and binding
-it to the queue the app writes through.
+Builds the app's job map, naming every leaf after the key it is filed under.
 
 **Parameters:**
 
 - `tree`: The declared jobs, keyed by the name each is known by on the wire. Groups may
   nest, and a nested job's name is its dot-joined path
-- `options.send`: `(bodies: JSONValue[]) => Promise<void>` — the app's queue write
 
 **Returns:**
 
-- The same shape, with every leaf a `JobDefinition` that knows its name and can enqueue
+- The same shape, with every leaf a `JobDefinition` that knows its name, schedule,
+  monitor, and schema
 
 **Example:**
 
 ```typescript
-export default jobs({ clean: job({ cron: "0 0 * * *" }) }, { send: sendQueueBatch });
+export default jobs({ clean: job({ cron: "0 0 * * *" }) });
 ```
 
 ### `job(options?: JobOptions): JobLeaf`
@@ -151,30 +160,16 @@ job({ cron: "0 99 * * *" }); // Throws: out-of-range in the hour field at positi
 job({ cron: "invalid" }); // Type error: not five fields
 ```
 
-### `definition.enqueue(input): Promise<void>`
+### `messageBody(job: JobDefinition, input?): JSONValue`
 
-Enqueues one message for a job. Takes exactly what the job's schema accepts, and takes
-no argument at all for a job that declares none. Loads no handler.
-
-**Example:**
-
-```typescript
-await jobs.verifyDomain.enqueue({ teamDomainId: domain.id });
-await jobs.clean.enqueue();
-```
-
-### `definition.enqueueMany(inputs): Promise<void>`
-
-Enqueues one message per input in a single write. Enqueuing nothing writes nothing.
-
-**Parameters:**
-
-- `inputs`: One payload per message
+Builds the body one message carries: the payload's fields plus the `type` that names the
+job. For a call site that sends through the app's own queue helper rather than through
+the dispatcher.
 
 **Example:**
 
 ```typescript
-await jobs.notify.enqueueMany(changes.map((change) => ({ monitorId: change.id })));
+await sendQueueBatch([messageBody(jobs.notify, { monitorId: monitor.id })]);
 ```
 
 ### `createJobHandler(job: JobDefinition, handler: JobHandlerFunction): JobHandler`
@@ -205,6 +200,9 @@ Builds the registry both worker handlers delegate to.
 
 **Parameters:**
 
+- `options.send`: `(bodies: JSONValue[]) => Promise<void>` — the app's queue write, used
+  by `enqueue` and by the cron trigger. A dispatcher without one still runs what the
+  queue delivers, and refuses to enqueue
 - `options.middleware`: Chain every job runs inside, in the order declared
 - `options.timeout`: How long a job gets before `ctx.signal` aborts and the dispatcher
   stops waiting
@@ -237,6 +235,31 @@ Registers where a job's handler comes from. Throws when that name is already map
 
 ```typescript
 dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
+```
+
+#### `dispatcher.enqueue(job: JobDefinition, input?): Promise<void>`
+
+Enqueues one message for a job. Takes exactly what the job's schema accepts, and no
+argument at all for a job that declares none. Loads no handler.
+
+**Example:**
+
+```typescript
+await dispatcher.enqueue(jobs.verifyDomain, { teamDomainId: domain.id });
+await dispatcher.enqueue(jobs.clean);
+```
+
+#### `dispatcher.enqueueMany(job: JobDefinition, inputs): Promise<void>`
+
+Enqueues one message per input in a single write. Enqueuing nothing writes nothing.
+
+**Example:**
+
+```typescript
+await dispatcher.enqueueMany(
+	jobs.notify,
+	changes.map((change) => ({ id: change.id })),
+);
 ```
 
 #### `dispatcher.queue(batch: MessageBatch): Promise<void>`
@@ -495,7 +518,10 @@ the fan-out on the queue instead of inside the cron trigger's budget.
 ```typescript
 export default createJobHandler(jobs.enqueueDueChecks, async (ctx) => {
 	let due = await claimDue(ctx.database, Date.now());
-	await jobs.checkHttp.enqueueMany(due.map((monitor) => ({ monitorId: monitor.id })));
+	await dispatcher.enqueueMany(
+		jobs.checkHttp,
+		due.map((m) => ({ monitorId: m.id })),
+	);
 	ctx.logger.info("checks.enqueued", { count: due.length });
 });
 ```
@@ -541,7 +567,8 @@ test("asks for a retry while the API is rate limiting", async () => {
 2. **Treat a map key as a wire contract** - Renaming one renames a message type, and
    messages enqueued by the previous deploy are still in flight.
 3. **Map a loader, not a handler** - `() => import(…)` is what keeps job code out of the
-   request path's module graph.
+   request path's module graph. For the same reason, prefer `messageBody()` plus the
+   app's own queue helper when a controller enqueues, over importing the dispatcher.
 4. **Never swallow an ending** - A `catch` around a `ctx.*` call catches the thrown
    ending too; re-throw anything you did not mean to handle.
 5. **Reach for `ctx.exit()` for bad input** - Invalid data will not become valid on a

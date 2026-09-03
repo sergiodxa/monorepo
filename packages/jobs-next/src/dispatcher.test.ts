@@ -9,6 +9,7 @@
 
 import type { MessageBatch } from "@cloudflare/workers-types";
 import type { QueueMock } from "@pkg/cloudflare-mocks";
+import type { JSONValue } from "@pkg/types";
 
 import { createQueue } from "@pkg/cloudflare-mocks";
 import * as s from "remix/data-schema";
@@ -35,16 +36,18 @@ afterEach(() => {
 function setup() {
 	let queue = createQueue({ name: "ping" }) as QueueMock<unknown>;
 
-	let map = jobs(
-		{
-			clean: job({ cron: "0 0 * * *" }),
-			sweep: job({ cron: "0 0 * * *" }),
-			checkHttp: job({ input: s.object({ monitorId: s.string() }) }),
-		},
-		{ send: async (bodies) => void (await queue.sendBatch(bodies.map((body) => ({ body })))) },
-	);
+	let map = jobs({
+		clean: job({ cron: "0 0 * * *" }),
+		sweep: job({ cron: "0 0 * * *" }),
+		checkHttp: job({ input: s.object({ monitorId: s.string() }) }),
+	});
 
-	return { queue, map };
+	/** The queue write a dispatcher in these tests is built with. */
+	let send = async (bodies: JSONValue[]) => {
+		await queue.sendBatch(bodies.map((body) => ({ body })));
+	};
+
+	return { queue, map, send };
 }
 
 /** Delivers everything pending to the dispatcher, as the worker's `queue` handler would. */
@@ -57,16 +60,16 @@ function consume(
 
 describe("queue()", () => {
 	test("runs the handler the message names", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let seen: string[] = [];
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.checkHttp,
 			createJobHandler(map.checkHttp, (ctx) => void seen.push(ctx.input.monitorId)),
 		);
 
-		await map.checkHttp.enqueue({ monitorId: "m1" });
+		await dispatcher.enqueue(map.checkHttp, { monitorId: "m1" });
 		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(seen).toEqual(["m1"]);
@@ -88,12 +91,12 @@ describe("queue()", () => {
 	});
 
 	test("refuses a body that fails the job's schema without loading its handler", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let load = vi.fn(async () => ({
 			default: createJobHandler(map.checkHttp, () => {}),
 		}));
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(map.checkHttp, load);
 
 		await queue.send({ type: "checkHttp", monitorId: 42 });
@@ -104,29 +107,29 @@ describe("queue()", () => {
 	});
 
 	test("loads a handler once and reuses it", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let load = vi.fn(async () => ({ default: createJobHandler(map.clean, () => {}) }));
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(map.clean, load);
 
-		await map.clean.enqueue();
-		await map.clean.enqueue();
+		await dispatcher.enqueue(map.clean);
+		await dispatcher.enqueue(map.clean);
 		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(load).toHaveBeenCalledTimes(1);
 	});
 
 	test("retries a message whose handler asked to be retried", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => ctx.retry()),
 		);
 
-		await map.clean.enqueue();
+		await dispatcher.enqueue(map.clean);
 		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.retried).toHaveLength(1);
@@ -134,15 +137,15 @@ describe("queue()", () => {
 	});
 
 	test("acks a message whose handler gave up for good", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => ctx.exit("never")),
 		);
 
-		await map.clean.enqueue();
+		await dispatcher.enqueue(map.clean);
 		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
@@ -150,40 +153,94 @@ describe("queue()", () => {
 	});
 
 	test("acks a delivery the handler finished early", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => ctx.ack()),
 		);
 
-		await map.clean.enqueue();
+		await dispatcher.enqueue(map.clean);
 		let result = await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 	});
 
 	test("tells the batch how many messages share the invocation", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let sizes: number[] = [];
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.checkHttp,
 			createJobHandler(map.checkHttp, (ctx) => void sizes.push(ctx.batchSize)),
 		);
 
-		await map.checkHttp.enqueueMany([{ monitorId: "a" }, { monitorId: "b" }]);
+		await dispatcher.enqueueMany(map.checkHttp, [{ monitorId: "a" }, { monitorId: "b" }]);
 		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(sizes).toEqual([2, 2]);
 	});
 });
 
+describe("enqueue()", () => {
+	test("writes the payload's fields alongside the job's name", async () => {
+		let { queue, map, send } = setup();
+		let dispatcher = createJobDispatcher({ send });
+
+		await dispatcher.enqueue(map.checkHttp, { monitorId: "m1" });
+
+		expect(queue.messages.map((message) => message.body)).toEqual([
+			{ type: "checkHttp", monitorId: "m1" },
+		]);
+	});
+
+	test("writes only the name for a job that declares no payload", async () => {
+		let { queue, map, send } = setup();
+		let dispatcher = createJobDispatcher({ send });
+
+		await dispatcher.enqueue(map.clean);
+
+		expect(queue.messages.map((message) => message.body)).toEqual([{ type: "clean" }]);
+	});
+
+	test("keeps a payload from misrouting itself with a type of its own", async () => {
+		let { queue, send } = setup();
+		let dispatcher = createJobDispatcher({ send });
+		let shadowed = jobs({ clean: job({ input: s.object({ type: s.string() }) }) });
+
+		await dispatcher.enqueue(shadowed.clean, { type: "somethingElse" });
+
+		expect(queue.messages.map((message) => message.body)).toEqual([{ type: "clean" }]);
+	});
+
+	test("turns many payloads into one write", async () => {
+		let { queue, map, send } = setup();
+		let dispatcher = createJobDispatcher({ send });
+
+		await dispatcher.enqueueMany(map.checkHttp, [{ monitorId: "a" }, { monitorId: "b" }]);
+
+		expect(queue.sent).toHaveLength(2);
+		expect(queue.messages.map((message) => message.body)).toEqual([
+			{ type: "checkHttp", monitorId: "a" },
+			{ type: "checkHttp", monitorId: "b" },
+		]);
+	});
+
+	test("writes nothing when there is nothing to enqueue", async () => {
+		let { queue, map, send } = setup();
+		let dispatcher = createJobDispatcher({ send });
+
+		await dispatcher.enqueueMany(map.checkHttp, []);
+
+		expect(queue.sent).toHaveLength(0);
+	});
+});
+
 describe("middleware", () => {
 	test("installs a property the handler reads", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let Database = createContextKey<{ label: string }>();
 
 		function database(): JobMiddleware<{
@@ -197,7 +254,7 @@ describe("middleware", () => {
 			};
 		}
 
-		let dispatcher = createJobDispatcher({ middleware: [database()] });
+		let dispatcher = createJobDispatcher({ send, middleware: [database()] });
 		let seen: string[] = [];
 
 		type Context = JobDispatcherContext<typeof dispatcher>;
@@ -210,14 +267,14 @@ describe("middleware", () => {
 			}),
 		);
 
-		await map.clean.enqueue();
+		await dispatcher.enqueue(map.clean);
 		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(seen).toEqual(["live"]);
 	});
 
 	test("runs in the order declared, around the handler", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let order: string[] = [];
 
 		let first: JobMiddleware = async (_ctx, next) => {
@@ -232,13 +289,13 @@ describe("middleware", () => {
 			order.push("second:after");
 		};
 
-		let dispatcher = createJobDispatcher({ middleware: [first, second] });
+		let dispatcher = createJobDispatcher({ send, middleware: [first, second] });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => void order.push("handler")),
 		);
 
-		await map.clean.enqueue();
+		await dispatcher.enqueue(map.clean);
 		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(order).toEqual([
@@ -253,10 +310,10 @@ describe("middleware", () => {
 
 describe("scheduled()", () => {
 	test("enqueues every job on that cron in one write, running none", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 		let ran = vi.fn();
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(map.clean, createJobHandler(map.clean, ran));
 		dispatcher.map(map.sweep, createJobHandler(map.sweep, ran));
 
@@ -270,9 +327,9 @@ describe("scheduled()", () => {
 	});
 
 	test("enqueues nothing for a cron no job declares", async () => {
-		let { queue, map } = setup();
+		let { queue, map, send } = setup();
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
@@ -284,9 +341,9 @@ describe("scheduled()", () => {
 	});
 
 	test("reports the distinct crons its mapped jobs declare", () => {
-		let { map } = setup();
+		let { map, send } = setup();
 
-		let dispatcher = createJobDispatcher();
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
@@ -305,10 +362,22 @@ describe("scheduled()", () => {
 });
 
 describe("map()", () => {
-	test("refuses to map one name twice", () => {
+	test("refuses to enqueue when it was built without a queue to write to", async () => {
 		let { map } = setup();
 
 		let dispatcher = createJobDispatcher();
+		dispatcher.map(
+			map.clean,
+			createJobHandler(map.clean, () => {}),
+		);
+
+		await expect(dispatcher.enqueue(map.clean)).rejects.toThrow(/cannot enqueue/);
+	});
+
+	test("refuses to map one name twice", () => {
+		let { map, send } = setup();
+
+		let dispatcher = createJobDispatcher({ send });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),

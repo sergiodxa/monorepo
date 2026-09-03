@@ -26,9 +26,7 @@ export type {
 	EnqueueInput,
 	JobDefinition,
 	JobMap,
-	JobsOptions,
 	JobTree,
-	SendMessages,
 } from "./jobs";
 export type {
 	AnyJobMiddleware,
@@ -46,6 +44,7 @@ export type {
 	JobDispatcherOptions,
 	LoadHandler,
 	RefusalReason,
+	SendMessages,
 } from "./dispatcher";
 
 export { JobContext } from "./context";
@@ -53,4 +52,4 @@ export { createJobDispatcher } from "./dispatcher";
 export { Job } from "./errors";
 export { createJobHandler } from "./handler";
 export { job } from "./job";
-export { jobs } from "./jobs";
+export { jobs, messageBody } from "./jobs";

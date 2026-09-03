@@ -19,10 +19,10 @@ import { validate } from "@pkg/validate";
 
 import type { JobContext } from "./context";
 import type { AnyJobHandler, JobHandler } from "./handler";
-import type { AnyJobDefinition, JobDefinition } from "./jobs";
+import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs";
 import type { AnyJobMiddleware, ChainProperties } from "./middleware";
 
-import { messageBody, sender } from "./jobs";
+import { messageBody } from "./jobs";
 import { runJob } from "./lifecycle";
 
 /** A handler module, however it is reached. */
@@ -39,8 +39,20 @@ export interface InvalidMessage {
 	invalid: unknown;
 }
 
+/**
+ * Writes message bodies to the app's queue. A function rather than a `Queue` binding,
+ * because the write is rarely only the write: an app that prices its queue operations or
+ * chunks a batch at the platform's limit does that here.
+ */
+export type SendMessages = (bodies: JSONValue[]) => Promise<void>;
+
 /** What a dispatcher needs beyond the handlers mapped onto it. */
 export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] = []> {
+	/**
+	 * The app's queue write, used by `enqueue` and by the cron trigger. A dispatcher
+	 * without one can still run what the queue delivers, and refuses to enqueue.
+	 */
+	send?: SendMessages;
 	/** Runs around every job, in the order declared. Prefer an inline array. */
 	middleware?: Chain;
 	/** How long a job gets before its `ctx.signal` aborts and the dispatcher stops waiting. */
@@ -71,6 +83,25 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 		job: JobDefinition<Schema>,
 		load: (() => Promise<{ default: JobHandler<Schema> }>) | JobHandler<Schema>,
 	): void;
+	/**
+	 * Enqueues one message for a job.
+	 * @param job The job, from the app's map.
+	 * @param input The payload, typed by that job's own schema.
+	 * @example await dispatcher.enqueue(jobs.checkHttp, { monitorId: monitor.id });
+	 */
+	enqueue<Schema extends StandardSchemaV1 | undefined>(
+		job: JobDefinition<Schema>,
+		...input: EnqueueArgs<Schema>
+	): Promise<void>;
+	/**
+	 * Enqueues one message per input, in a single write. Enqueuing nothing does nothing.
+	 * @param job The job, from the app's map.
+	 * @param inputs One payload per message.
+	 */
+	enqueueMany<Schema extends StandardSchemaV1 | undefined>(
+		job: JobDefinition<Schema>,
+		inputs: EnqueueInput<Schema>[],
+	): Promise<void>;
 	/** Enqueues every mapped job this trigger is the schedule for. Runs none of them. */
 	scheduled(controller: ScheduledController): Promise<void>;
 	/** Runs every message in the batch, settling when all of them have. */
@@ -233,6 +264,21 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		});
 	}
 
+	/**
+	 * Hands bodies to the app's queue write.
+	 * @param bodies The messages to enqueue.
+	 * @throws When this dispatcher was built without a `send`.
+	 */
+	async function send(bodies: JSONValue[]): Promise<void> {
+		if (options.send === undefined) {
+			throw new Error("This dispatcher has no `send`, so it cannot enqueue anything");
+		}
+
+		if (bodies.length === 0) return;
+
+		await options.send(bodies);
+	}
+
 	return {
 		map(job, load) {
 			if (mapped.has(job.name)) throw new Error(`Job "${job.name}" is already mapped`);
@@ -245,15 +291,20 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 			return [...crons];
 		},
 
+		async enqueue(job, ...input) {
+			await send([messageBody(job, input[0])]);
+		},
+
+		async enqueueMany(job, inputs) {
+			await send(inputs.map((input) => messageBody(job, input)));
+		},
+
 		async scheduled(controller) {
 			let due = [...mapped.values()]
 				.map(({ job }) => job)
 				.filter((job) => job.cron === controller.cron);
 
-			let first = due[0];
-			if (first === undefined) return;
-
-			await first[sender](due.map((job) => messageBody(job.name, undefined)));
+			await send(due.map((job) => messageBody(job)));
 		},
 
 		async queue(batch) {
