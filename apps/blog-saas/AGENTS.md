@@ -32,8 +32,8 @@ logic), `resources/` (rendering), `config/` (ambient `*.d.ts`), `database/` (sch
 migrations). Import across them with the `~/<dir>/*` aliases declared in `tsconfig.json`;
 a relative path is only for a sibling inside the same directory.
 
-- `bootstrap/` — `worker.ts` (fetch/scheduled entry: hostname routing, page-view
-  metering, crons), `app.ts` (dashboard router), `tenant.ts` (the Blog Durable
+- `bootstrap/` — `worker.ts` (fetch/scheduled/queue entry: hostname routing, page-view
+  metering, job dispatch), `app.ts` (dashboard router), `tenant.ts` (the Blog Durable
   Object — a thin wrapper over `@pkg/blog-engine`).
 - `routes/web.ts` — dashboard + marketing routes.
 - `app/http/controllers/` — marketing, health, auth (OIDC vs the sso tenant),
@@ -41,7 +41,9 @@ a relative path is only for a sibling inside the same directory.
 - `app/models/` — control-plane rows: Account, Blog, Hostname, Subscription, UsageDaily.
 - `app/services/` — BlogProvisioner (lifecycle + DO RPC + KV), HostnameService
   (CF for SaaS), PolarService (billing), analytics (AE SQL rollups).
-- `app/jobs/` — report-usage, purge-deleted-blogs, poll-hostnames (crons).
+- `app/jobs/` — the job map (`index.ts`), the dispatcher both worker handlers delegate
+  to, the middleware every job runs inside, and one handler per job: report-usage,
+  purge-deleted-blogs, poll-hostnames.
 - `database/migrations/` — control-plane D1 schema.
 - `config/env.d.ts` — binding + secret types.
 

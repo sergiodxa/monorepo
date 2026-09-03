@@ -1,9 +1,9 @@
 /**
- * Unit tests for `reportUsage`'s metered-usage idempotency fix: each blog-day is
- * ingested into Polar with a deterministic `(blog_id, date)` external id, so a run
- * that ingests an event but fails to stamp `reported_at` re-sends the same id and
- * Polar deduplicates it on the next run. Runs against the in-memory database
- * harness with a stubbed analytics `fetch`.
+ * Unit tests for the usage-reporting job's metered-usage idempotency fix: each blog-day
+ * is ingested into Polar with a deterministic `(blog_id, date)` external id, so a run
+ * that ingests an event but fails to stamp `reported_at` re-sends the same id and Polar
+ * deduplicates it on the next run. The handler is called with a context the test builds,
+ * over the in-memory database harness and with a stubbed analytics `fetch`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,9 +32,11 @@ let Account = (await import("~/app/models/account")).default;
 let Blog = (await import("~/app/models/blog")).default;
 let UsageDaily = (await import("~/app/models/usage")).default;
 let { PolarClient } = await import("@pkg/polar");
-let { ServiceContainer } = await import("@pkg/service-container");
-let { Database } = await import("remix/data-table");
-let { reportUsage } = await import("./report-usage");
+let { createJobContext } = await import("@pkg/jobs-next");
+let jobs = (await import("~/app/jobs")).default;
+let { Database } = await import("~/app/jobs/middleware/database");
+let { Polar } = await import("~/app/jobs/middleware/polar");
+let handler = (await import("./report-usage")).default;
 
 /** The Analytics Engine SQL API endpoint `queryDailyPageViews` POSTs to. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
@@ -57,23 +59,31 @@ let ingestCalls: IngestCall[];
 let ingestOk: boolean;
 
 /**
- * A fresh container scoping a fake `PolarClient` over the real test database;
- * only `ingestPageViews` is overridden, recording calls and returning `ingestOk`.
+ * A `PolarClient` with only `ingestPageViews` overridden, recording each call and
+ * returning `ingestOk`.
  */
-function makeContainer() {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => harness.db);
-	container.singleton(PolarClient, () => {
-		let client = new PolarClient({ accessToken: "t" });
-		let fake: PolarClientType["ingestPageViews"] = async (customerId, views, day, externalId) => {
-			ingestCalls.push({ customerId, views, day, externalId });
-			return ingestOk;
-		};
-		(client as unknown as { ingestPageViews: PolarClientType["ingestPageViews"] }).ingestPageViews =
-			fake;
-		return client;
-	});
-	return container;
+function fakePolar(): PolarClientType {
+	let client = new PolarClient({ accessToken: "t" });
+	let fake: PolarClientType["ingestPageViews"] = async (customerId, views, day, externalId) => {
+		ingestCalls.push({ customerId, views, day, externalId });
+		return ingestOk;
+	};
+	(client as unknown as { ingestPageViews: PolarClientType["ingestPageViews"] }).ingestPageViews =
+		fake;
+	return client;
+}
+
+/**
+ * Builds one delivery's context over the test database and the recording Polar client:
+ * the two services this handler reads, standing in for the dispatcher's chain.
+ *
+ * @returns The context to run the handler with.
+ */
+function createContext() {
+	let ctx = createJobContext(jobs.reportUsage, { id: "message-1", attempts: 1 });
+	ctx.set(Database, harness.db, { property: "database" });
+	ctx.set(Polar, fakePolar(), { property: "polar" });
+	return ctx;
 }
 
 /** Registers an MSW handler making the analytics SQL API return the given rows. */
@@ -121,7 +131,7 @@ describe("reportUsage — metered usage idempotency", () => {
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 
 		let call = ingestCalls.find((c) => c.day === "2026-07-01");
 		expect(call).toBeDefined();
@@ -141,7 +151,7 @@ describe("reportUsage — metered usage idempotency", () => {
 		stubAnalytics([]);
 
 		ingestOk = true;
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 		let firstKeys = ingestCalls.filter((c) => c.day === "2026-07-01").map((c) => c.externalId);
 		expect(firstKeys).toEqual([`page_views:${blogId}:2026-07-01`]);
 
@@ -149,7 +159,7 @@ describe("reportUsage — metered usage idempotency", () => {
 		await harness.db.update(UsageDaily.table, { id: rows[0]!.id }, { reported_at: null });
 
 		ingestCalls = [];
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 		let secondKeys = ingestCalls.filter((c) => c.day === "2026-07-01").map((c) => c.externalId);
 		expect(secondKeys).toEqual([`page_views:${blogId}:2026-07-01`]);
 	});
@@ -159,11 +169,11 @@ describe("reportUsage — metered usage idempotency", () => {
 		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
 		stubAnalytics([]);
 
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 		expect(ingestCalls.filter((c) => c.day === "2026-07-01")).toHaveLength(1);
 
 		ingestCalls = [];
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 		expect(ingestCalls.filter((c) => c.day === "2026-07-01")).toHaveLength(0);
 	});
 
@@ -173,12 +183,12 @@ describe("reportUsage — metered usage idempotency", () => {
 		stubAnalytics([]);
 
 		ingestOk = false;
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 
 		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(1);
 		ingestOk = true;
 		ingestCalls = [];
-		await makeContainer().scope(() => reportUsage());
+		await handler(createContext());
 		expect(ingestCalls.map((c) => c.externalId)).toContain(`page_views:${blogId}:2026-07-01`);
 		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(0);
 	});

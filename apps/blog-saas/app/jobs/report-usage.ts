@@ -1,15 +1,14 @@
 /**
- * The usage-reporting cron job: materializes the previous day's Analytics Engine
- * page views into the `usage_daily` rollup, then ingests any unreported blog-days
- * into Polar's metered billing with at-most-once semantics.
+ * The usage-reporting job: materializes the previous day's Analytics Engine page views
+ * into the `usage_daily` rollup, then ingests any unreported blog-days into Polar's
+ * metered billing with at-most-once semantics.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { PolarClient } from "@pkg/polar";
-import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import { createJobHandler } from "@pkg/jobs-next";
 
+import jobs from "~/app/jobs";
 import Account from "~/app/models/account";
 import Blog from "~/app/models/blog";
 import UsageDaily from "~/app/models/usage";
@@ -38,32 +37,37 @@ function usageEventId(blogId: string, date: string): string {
 }
 
 /**
- * Daily reporting cron (01:00 UTC): materializes yesterday's Analytics Engine
- * page views into `usage_daily`, then ingests unreported blog-days into Polar
- * via {@link usageEventId} for at-most-once billing across partial failures.
- *
- * @returns A promise resolving once the day is rolled up and reported.
+ * Materializes yesterday's Analytics Engine page views into `usage_daily`, then ingests
+ * unreported blog-days into Polar via {@link usageEventId} for at-most-once billing
+ * across partial failures.
  */
-export async function reportUsage(): Promise<void> {
-	let db = getServiceContainer().get(Database);
+export default createJobHandler(jobs.reportUsage, async (ctx) => {
 	let date = yesterday();
 
 	for (let row of await queryDailyPageViews(date)) {
-		await UsageDaily.record(db, row.blogId, date, row.views);
+		await UsageDaily.record(ctx.database, row.blogId, date, row.views);
 	}
 
-	let polar = getServiceContainer().get(PolarClient);
-	for (let usage of await UsageDaily.findUnreported(db)) {
-		let blog = await Blog.findById(db, usage.blog_id);
+	let reported = 0;
+
+	for (let usage of await UsageDaily.findUnreported(ctx.database)) {
+		if (ctx.signal.aborted) ctx.ack("The next run reports the blog-days left.");
+
+		let blog = await Blog.findById(ctx.database, usage.blog_id);
 		if (!blog) continue;
-		let account = await Account.findById(db, blog.account_id);
+		let account = await Account.findById(ctx.database, blog.account_id);
 		if (!account?.polar_customer_id) continue;
-		let ok = await polar.ingestPageViews(
+		let ok = await ctx.polar.ingestPageViews(
 			account.polar_customer_id,
 			usage.page_views,
 			usage.date,
 			usageEventId(usage.blog_id, usage.date),
 		);
-		if (ok) await UsageDaily.markReported(db, usage.id);
+		if (ok) {
+			await UsageDaily.markReported(ctx.database, usage.id);
+			reported += 1;
+		}
 	}
-}
+
+	ctx.logger.info("usage.reported", { date, count: reported });
+});

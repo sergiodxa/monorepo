@@ -1,7 +1,8 @@
 /**
  * The Cloudflare Worker entrypoint: routes every request to the right destination
  * (custom domain, platform dashboard, wildcard tenant subdomain, or unknown host),
- * meters billable page views, and dispatches the cron-scheduled maintenance jobs.
+ * meters billable page views, and runs the queue and cron entrypoints the background
+ * jobs are dispatched through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,9 +10,7 @@
 import { Logger } from "@pkg/logger/request";
 import { env } from "cloudflare:workers";
 
-import { pollHostnames } from "~/app/jobs/poll-hostnames";
-import { purgeDeletedBlogs } from "~/app/jobs/purge-deleted-blogs";
-import { reportUsage } from "~/app/jobs/report-usage";
+import { dispatcher } from "~/app/jobs/dispatcher";
 import { container } from "~/app/lib/container";
 
 import { createDashboardRouter } from "./app";
@@ -192,20 +191,23 @@ export default {
 	},
 
 	/**
-	 * Cron entrypoint. Runs each scheduled maintenance job in a fresh container scope:
-	 * usage reporting at 01:00 UTC, and deleted-blog purge + hostname polling at
-	 * 02:00 UTC.
+	 * Cron entrypoint. Enqueues every job whose declared schedule is the one that fired
+	 * and returns; the work itself happens on the queue delivery.
 	 *
 	 * @param controller The scheduled controller carrying the triggering `cron`
 	 *   expression.
 	 */
 	async scheduled(controller) {
-		await container.scope(async () => {
-			if (controller.cron === "0 1 * * *") await reportUsage();
-			if (controller.cron === "0 2 * * *") {
-				await purgeDeletedBlogs();
-				await pollHostnames();
-			}
-		});
+		await dispatcher.scheduled(controller);
+	},
+
+	/**
+	 * Queue entrypoint. Runs each delivered message as the job its `type` names, inside
+	 * the dispatcher's middleware chain.
+	 *
+	 * @param batch The delivered messages.
+	 */
+	async queue(batch) {
+		await dispatcher.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

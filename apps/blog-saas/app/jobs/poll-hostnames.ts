@@ -1,37 +1,42 @@
 /**
- * The hostname-polling cron job: refreshes the validation/SSL status of pending
- * custom hostnames from Cloudflare and activates the custom domain once a hostname
- * goes live, so custom-domain onboarding is hands-off.
+ * The hostname-polling job: refreshes the validation/SSL status of pending custom
+ * hostnames from Cloudflare and activates the custom domain once a hostname goes live,
+ * so custom-domain onboarding is hands-off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { HostnameClient } from "@pkg/hostname";
-import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import { createJobHandler } from "@pkg/jobs-next";
 
+import jobs from "~/app/jobs";
 import Hostname from "~/app/models/hostname";
-import { BlogProvisioner } from "~/app/services/blog-provisioner";
 
 /**
- * Hostname polling cron (02:00 UTC): refreshes pending custom-hostname validation and
- * flips a blog to its custom domain once the hostname and SSL both report active.
- * Per-hostname errors are swallowed so a transient Cloudflare failure retries next poll.
- *
- * @returns A promise resolving once all pending hostnames have been polled.
+ * Refreshes pending custom-hostname validation and flips a blog to its custom domain
+ * once the hostname and SSL both report active. A per-hostname error is recorded and
+ * skipped, so a transient Cloudflare failure is retried by the next poll rather than
+ * stopping the hostnames behind it.
  */
-export async function pollHostnames(): Promise<void> {
-	let db = getServiceContainer().get(Database);
-	let client = getServiceContainer().get(HostnameClient);
-	let provisioner = getServiceContainer().get(BlogProvisioner);
+export default createJobHandler(jobs.pollHostnames, async (ctx) => {
+	let pending = await Hostname.findIncomplete(ctx.database);
 
-	for (let hostname of await Hostname.findIncomplete(db)) {
+	for (let hostname of pending) {
+		if (ctx.signal.aborted) ctx.ack("The next poll refreshes the hostnames left.");
+
 		try {
-			let status = await client.status(hostname.id);
-			await Hostname.setStatus(db, hostname.id, status.status, status.sslStatus);
+			let status = await ctx.hostnames.status(hostname.id);
+			await Hostname.setStatus(ctx.database, hostname.id, status.status, status.sslStatus);
 			if (HostnameClient.isActive(status)) {
-				await provisioner.activateCustomHostname(hostname.blog_id, hostname.hostname);
+				await ctx.provisioner.activateCustomHostname(hostname.blog_id, hostname.hostname);
 			}
-		} catch {}
+		} catch (error) {
+			ctx.logger.error("hostname.poll_failed", {
+				hostname: hostname.hostname,
+				message: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
-}
+
+	ctx.logger.info("hostnames.polled", { count: pending.length });
+});

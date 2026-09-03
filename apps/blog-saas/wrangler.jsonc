@@ -27,6 +27,22 @@
 		"crons": ["0 1 * * *", "0 2 * * *"],
 	},
 
+	// `blog-saas-jobs` carries every scheduled job: a cron trigger enqueues the jobs it
+	// names and returns, and each one runs on its own delivery. `wrangler queues create
+	// blog-saas-jobs` must precede any deploy that references it, or the deploy fails.
+	//
+	// `max_batch_size` of 1 gives each job its own invocation, so the two enqueued at
+	// 02:00 get a full wall-clock budget each instead of sharing one. `max_retries` of 3
+	// covers a transient D1, Cloudflare API, or Polar failure; every job here is
+	// idempotent, so a redelivery repeats work rather than double-counting it. There is
+	// no dead-letter queue: the only producer is this worker's own cron, each job runs
+	// again on the next day's trigger, and a message that outlives its retries is
+	// already recorded by the `job.failed` log the dispatcher writes.
+	"queues": {
+		"consumers": [{ "queue": "blog-saas-jobs", "max_batch_size": 1, "max_retries": 3 }],
+		"producers": [{ "binding": "QUEUE", "queue": "blog-saas-jobs" }],
+	},
+
 	"durable_objects": { "bindings": [{ "name": "BLOG", "class_name": "Blog" }] },
 	"migrations": [{ "tag": "add-blog-do", "new_sqlite_classes": ["Blog"] }],
 

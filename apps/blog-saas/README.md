@@ -20,15 +20,21 @@ Production URL: https://blog.sergiodxa.com
 | KV               | `SLUG_CACHE`  | Subdomain slug → blog id resolution (write-through)             |
 | Analytics Engine | `ANALYTICS`   | Billable page-view metering                                     |
 | Static Assets    | `ASSETS`      | Platform dashboard/marketing static files                       |
+| Queue            | `QUEUE`       | `blog-saas-jobs`: the background jobs the cron triggers enqueue |
 
 Observability is enabled.
 
-### Cron Triggers
+### Background Jobs
 
-| Schedule    | Purpose                                                         |
-| ----------- | --------------------------------------------------------------- |
-| `0 1 * * *` | Aggregate Analytics Engine page views → `usage_daily` → Polar   |
-| `0 2 * * *` | Purge soft-deleted blogs past retention; poll pending hostnames |
+A cron trigger enqueues the jobs declared on its schedule and returns; each one runs
+when the queue delivers it, so a job gets its own invocation, its own retries, and one
+log entry per run.
+
+| Schedule    | Job                 | Purpose                                                       |
+| ----------- | ------------------- | ------------------------------------------------------------- |
+| `0 1 * * *` | `reportUsage`       | Aggregate Analytics Engine page views → `usage_daily` → Polar |
+| `0 2 * * *` | `purgeDeletedBlogs` | Hard-delete blogs past the 30-day retention window            |
+| `0 2 * * *` | `pollHostnames`     | Refresh pending custom hostnames and activate live ones       |
 
 ## Features
 

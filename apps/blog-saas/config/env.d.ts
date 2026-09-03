@@ -12,6 +12,7 @@ declare namespace Cloudflare {
 		SLUG_CACHE: KVNamespace;
 		ANALYTICS: AnalyticsEngineDataset;
 		ASSETS: Fetcher;
+		QUEUE: Queue;
 
 		PLATFORM_DOMAIN: string;
 		OIDC_ISSUER: string;

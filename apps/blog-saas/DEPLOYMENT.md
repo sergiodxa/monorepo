@@ -25,12 +25,15 @@ placeholder ids in `wrangler.jsonc` as you create each resource.
 ```bash
 bunx wrangler d1 create blog-saas-platform
 bunx wrangler kv namespace create SLUG_CACHE
+bunx wrangler queues create blog-saas-jobs
 ```
 
 Copy the returned `database_id` and KV `id` into `wrangler.jsonc`
-(`d1_databases[0].database_id`, `kv_namespaces[0].id`). The Analytics Engine
-dataset (`blog-saas-analytics`) and the `BLOG` Durable Object are created on first
-deploy — no manual step.
+(`d1_databases[0].database_id`, `kv_namespaces[0].id`). The queue carries the
+background jobs the cron triggers enqueue, and a deploy referencing a queue that
+does not exist fails, so create it before step 5. The Analytics Engine dataset
+(`blog-saas-analytics`) and the `BLOG` Durable Object are created on first deploy —
+no manual step.
 
 ## 2. Apply control-plane migrations
 
