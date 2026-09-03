@@ -12,7 +12,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { NonRetriable, Retry } from "./errors";
 
-import { Job, job, JobContext, jobs } from "./index";
+import { createJobContext, Job, job, JobContext, jobs } from "./index";
 
 let map = jobs({ clean: job({ cron: "0 0 * * *", monitorId: "monitor-1" }) });
 
@@ -46,6 +46,15 @@ describe("JobContext", () => {
 		ctx.set(Database, { label: "live" }, { property: "database" });
 
 		expect((ctx as unknown as { database: { label: string } }).database).toEqual({ label: "live" });
+	});
+});
+
+describe("createJobContext()", () => {
+	test("builds a context a handler accepts, carrying the job's declaration", () => {
+		let ctx = createJobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		expect(ctx.name).toBe("clean");
+		expect(ctx.monitorId).toBe("monitor-1");
 	});
 });
 

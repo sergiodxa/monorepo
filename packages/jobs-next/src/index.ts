@@ -50,6 +50,6 @@ export type {
 export { JobContext } from "./context";
 export { createJobDispatcher } from "./dispatcher";
 export { Job } from "./errors";
-export { createJobHandler } from "./handler";
+export { createJobContext, createJobHandler } from "./handler";
 export { job } from "./job";
 export { jobs, messageBody } from "./jobs";

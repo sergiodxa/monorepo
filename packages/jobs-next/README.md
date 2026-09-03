@@ -532,24 +532,29 @@ A handler is a function over a context, so a test builds the context and calls i
 queue, no worker, no container.
 
 ```typescript
-import { Job, JobContext } from "@pkg/jobs-next";
+import { createJobContext, Job } from "@pkg/jobs-next";
 
 import handler from "~/app/jobs/clean";
 import { Database } from "~/app/jobs/middleware/database";
 
 test("deletes rows past the retention window", async () => {
-	let ctx = new JobContext(jobs.clean, { id: "message-1", attempts: 1 });
+	let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1 });
 	ctx.set(Database, await testDatabase(), { property: "database" });
 
 	await handler(ctx);
 });
 
 test("asks for a retry while the API is rate limiting", async () => {
-	let ctx = new JobContext(jobs.checkHttp, { id: "message-1", attempts: 1, input });
+	let ctx = createJobContext(jobs.checkHttp, { id: "message-1", attempts: 1, input });
 
 	await expect(handler(ctx)).rejects.toBeInstanceOf(Job.Retry);
 });
 ```
+
+`createJobContext` types the context the way the handler receives it — including whatever
+the app declared its middleware installs. Building one skips that chain, so the test
+populates what the chain would have; `new JobContext(...)` is the untyped equivalent the
+dispatcher itself uses.
 
 ## Related Packages
 

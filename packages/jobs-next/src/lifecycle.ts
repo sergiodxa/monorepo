@@ -217,7 +217,13 @@ export async function runJob(options: RunOptions): Promise<void> {
 						);
 					}
 
-					await handler(context);
+					/**
+					 * The context is handed over as the handler's own type. An app that
+					 * declares what its middleware installs makes that type wider than the
+					 * bare context built here, and the chain above is what has just made the
+					 * claim true; the package cannot see either half of that from in here.
+					 */
+					await (handler as (context: AnyJobContext) => Promise<void> | void)(context);
 				}),
 			options.timeout,
 			controller,

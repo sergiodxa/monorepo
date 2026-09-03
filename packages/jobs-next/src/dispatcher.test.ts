@@ -340,6 +340,23 @@ describe("scheduled()", () => {
 		expect(queue.messages).toHaveLength(0);
 	});
 
+	test("reports every job that has a handler, so a map can be checked against it", () => {
+		let { map, send } = setup();
+
+		let dispatcher = createJobDispatcher({ send });
+		dispatcher.map(
+			map.clean,
+			createJobHandler(map.clean, () => {}),
+		);
+		dispatcher.map(
+			map.checkHttp,
+			createJobHandler(map.checkHttp, () => {}),
+		);
+
+		expect(dispatcher.mapped.map((job) => job.name)).toEqual(["clean", "checkHttp"]);
+		expect(dispatcher.mapped).not.toContain(map.sweep);
+	});
+
 	test("reports the distinct crons its mapped jobs declare", () => {
 		let { map, send } = setup();
 

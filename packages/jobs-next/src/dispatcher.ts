@@ -106,6 +106,8 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 	scheduled(controller: ScheduledController): Promise<void>;
 	/** Runs every message in the batch, settling when all of them have. */
 	queue(batch: MessageBatch<unknown>): Promise<void>;
+	/** Every job with a handler, for asserting that a map has no leaf nobody runs. */
+	readonly mapped: AnyJobDefinition[];
 	/** The distinct schedules the mapped jobs declare, for asserting against a config. */
 	readonly crons: string[];
 	/** Type-only, carrying what the middleware chain installs. */
@@ -283,6 +285,10 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		map(job, load) {
 			if (mapped.has(job.name)) throw new Error(`Job "${job.name}" is already mapped`);
 			mapped.set(job.name, { job, load: load as LoadHandler | AnyJobHandler });
+		},
+
+		get mapped() {
+			return [...mapped.values()].map(({ job }) => job);
 		},
 
 		get crons() {

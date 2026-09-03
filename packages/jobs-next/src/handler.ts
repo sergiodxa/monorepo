@@ -10,8 +10,10 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import type { JobContext } from "./context";
+import type { JobContext, JobContextInit } from "./context";
 import type { JobDefinition } from "./jobs";
+
+import { JobContext as Context } from "./context";
 
 /**
  * Augmented by an app to name the context its handlers receive, the way
@@ -71,4 +73,26 @@ export function createJobHandler<Schema extends StandardSchemaV1 | undefined>(
 	handler: JobHandlerFunction<Schema>,
 ): JobHandler<Schema> {
 	return Object.assign((context: JobHandlerContext<Schema>) => handler(context), { job });
+}
+
+/**
+ * Builds a context typed the way a handler receives it, for calling one directly.
+ *
+ * A handler's context type is whatever the app declared its middleware installs, and
+ * building one here skips that chain — so the caller populates what the chain would
+ * have, with `set(key, value, { property })`, and the type takes them at their word.
+ *
+ * @param job The job whose handler is under test.
+ * @param init The delivery to run it for.
+ * @returns A context the handler accepts.
+ * @example
+ * let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1 });
+ * ctx.set(Database, await testDatabase(), { property: "database" });
+ * await handler(ctx);
+ */
+export function createJobContext<Schema extends StandardSchemaV1 | undefined = undefined>(
+	job: JobDefinition<Schema>,
+	init: JobContextInit<HandlerInput<Schema>>,
+): JobHandlerContext<Schema> {
+	return new Context(job, init) as JobHandlerContext<Schema>;
 }
