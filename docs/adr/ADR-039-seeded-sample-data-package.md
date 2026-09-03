@@ -339,13 +339,13 @@ is the layer that drew the seed, the line can say what to _do_ with the number
 rather than just report it, and `SuiteResult` stays a description of what the
 tests did. A seed given explicitly prints nothing — the operator already has it.
 
-### 7. Out Of Scope For v1
+### 7. Out Of Scope
 
-Deferred until something asks: `commerce`, `finance`, `image`, `music`, and the
-rest of Faker's long tail; locales beyond `en`; Faker's `unique` helper (a
-seeded stream can repeat, and the honest fix — a per-instance seen-set — is
-state this package currently does not carry); and a `sample.date` spec tool,
-which wants a frozen-clock capability decided on its own terms.
+Deferred until something asks: `airline`, `animal`, `book`, `commerce`,
+`database`, `finance`, `food`, `image`, `music`, `science`, `vehicle`, and
+`word`; locales beyond `en`; re-seeding an instance in place (`derive` covers
+what that is usually for); and a pluggable PRNG, since the one here is fixed and
+tested.
 
 ## Consequences
 
@@ -496,6 +496,18 @@ exists to avoid.
   which is a real use, but the common one is unreachable. Whether that is fixed
   by an array literal in the grammar or by leaving `pick` to structured data is
   open; nothing in the dogfood suite needs it yet, so neither was built.
+- **A module reaches a spec as a record, not as its methods.** A call target
+  carries at most one dot (`registry.ts`), so `sample.person.job_title` cannot
+  resolve. Each module is one zero-argument tool returning every field it
+  generates, which is why a spec binds `let who = sample.person` and reads
+  fields by path. It also means a module tool draws many values per call — of no
+  consequence to a stream, and it keeps a record's fields agreeing with each
+  other, which separate calls could not.
+- **A generated token is shaped, not signed.** `internet.jwt()` writes three
+  base64url segments whose claims decode, with a signature drawn from the
+  stream. Signing needs a key and is asynchronous, and every generator here is
+  synchronous, so a token that must verify is signed by the caller with a key it
+  controls.
 - **An out-of-process plugin draws from a fixed stream.** The stdio transport
   forwards the test's frozen instant, since a timestamp crosses a process
   boundary exactly. The stream does not: sending a seed would restart it on the
@@ -518,4 +530,8 @@ exists to avoid.
   - [x] `--seed=<value>` and `--seed=random` in the CLI, with the replay line
   - [x] `spec/sample.spec` in the dogfood suite, and runner tests pinning
         reproduction across runs, seeds, concurrency, and suite location
+- [x] Full Faker parity, and past it
+  - [x] Every method missing from the nine original modules
+  - [x] `color`, `datatype`, `git`, `hacker`, `phone`, `system`
+  - [x] One spec tool per module, so a suite reaches all of them
 - [ ] Phase 3: Adoption

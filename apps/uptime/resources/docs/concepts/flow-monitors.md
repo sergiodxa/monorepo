@@ -190,16 +190,43 @@ let landed = url.host granted.json.redirect_to
 
 ### sample
 
-Input a flow generates for itself, for the steps that have to send something new every time. Generating is free: only the requests your flow makes count against its limit.
+Input a flow generates for itself, for the steps that have to send something new every time — a person, a place, an identifier, a file name, a date. Generating is free: only the requests your flow makes count against its limit.
 
-| Tool                     | Returns                                                                             |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| `sample.person`          | A person: `first_name`, `last_name`, `full_name`, `email`, `username`, all matching |
-| `sample.email`           | An address on a domain reserved for documentation                                   |
-| `sample.uuid`            | A UUID                                                                              |
-| `sample.int <min> <max>` | A whole number between the two, both included                                       |
-| `sample.words <count>`   | That many words of filler text                                                      |
-| `sample.pick <list>`     | One item of a list a step returned, such as `sample.pick catalog.json.plans`        |
+Each kind of data is one tool that returns a record. Bind it once, then read the fields you need:
+
+```
+let who = sample.person
+let where = sample.location
+```
+
+| Tool              | Fields on the record                                                                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample.person`   | `first_name`, `last_name`, `full_name`, `prefix`, `suffix`, `sex`, `gender`, `zodiac_sign`, `job_title`, `bio`, `email`, `username`, `phone`                            |
+| `sample.internet` | `email`, `username`, `url`, `domain_name`, `password`, `ip`, `ipv4`, `ipv6`, `mac`, `port`, `protocol`, `http_method`, `http_status_code`, `jwt`, `user_agent`, `emoji` |
+| `sample.location` | `country`, `city`, `country_code`, `state`, `county`, `street`, `street_address`, `zip_code`, `postal_address`, `latitude`, `longitude`, `time_zone`                    |
+| `sample.company`  | `name`, `catch_phrase`, `buzz_phrase`, and the words they are built from                                                                                                |
+| `sample.lorem`    | `word`, `words`, `sentence`, `paragraph`, `lines`, `slug`, `text`                                                                                                       |
+| `sample.date`     | `past`, `future`, `recent`, `soon`, `anytime`, `birthdate`, `month`, `weekday`, `time_zone` — dates as ISO timestamps                                                   |
+| `sample.string`   | `uuid`, `ulid`, `nanoid`, `alpha`, `alphanumeric`, `numeric`, `hexadecimal`, `binary`, `octal`, `symbol`                                                                |
+| `sample.number`   | `int`, `float`, `hex`, `binary`, `octal`, `roman_numeral`, `big_int`                                                                                                    |
+| `sample.color`    | `human`, `hex`, `rgb`, `hsl`, `space`, `css_function`                                                                                                                   |
+| `sample.datatype` | `boolean`                                                                                                                                                               |
+| `sample.git`      | `branch`, `commit_sha`, `short_sha`, `commit_message`, `commit_date`, `commit_entry`                                                                                    |
+| `sample.hacker`   | `abbreviation`, `adjective`, `noun`, `verb`, `ingverb`, `phrase`                                                                                                        |
+| `sample.phone`    | `number`, `national`, `international`, `imei`                                                                                                                           |
+| `sample.system`   | `file_name`, `file_ext`, `file_type`, `mime_type`, `directory_path`, `file_path`, `network_interface`, `semver`, `cron`                                                 |
+
+A record's fields agree with each other: a person's address matches their name, and a location's postal address names its own city and country.
+
+Five more tools take an argument, or stand alone:
+
+| Tool                          | Returns                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| `sample.int <min> <max>`      | A whole number between the two, both included                                |
+| `sample.float <min> <max>`    | A number between the two, to two decimals                                    |
+| `sample.words <count>`        | That many words of filler text                                               |
+| `sample.pick <list>`          | One item of a list a step returned, such as `sample.pick catalog.json.plans` |
+| `sample.email`, `sample.uuid` | An address, and a UUID                                                       |
 
 ```
 use http

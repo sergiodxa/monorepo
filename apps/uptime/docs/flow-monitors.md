@@ -27,7 +27,7 @@ A statement does one of five things: `let` binds a step's result to a name, `exp
 
 Exactly four namespaces are registered: `http`, `url`, `jwt` and `sample`. Files, shells, databases and environment variables are **refused, not merely absent** — a spec reaching for a file is answered with the language's own permission error naming the path it tried, so a habit earns a readable sentence instead of a crash. There is no browser.
 
-`expect` compares two values for equality, asserts that one value is true, or reads an observable. There is no contains, no regex, no comparison and no range. The language has no branching, no arithmetic and no string building. `sample` covers the value a flow needs fresh each run — a name, an address, an identifier — which is what a sign-up flow drives; a flow that signs in reads its credential from a fixed account written into the source.
+`expect` compares two values for equality, asserts that one value is true, or reads an observable. There is no contains, no regex, no comparison and no range. The language has no branching, no arithmetic and no string building. `sample` covers the value a flow needs fresh each run, one tool per kind returning a record — a person, a place, an identifier, a date, a file — which is what a sign-up flow drives; a flow that signs in reads its credential from a fixed account written into the source.
 
 `eventually within Ns` retries the assertions inside it until they hold or the window closes, defaulting to a `5s` window polled every `100ms`. It retries assertions only, so it **cannot retry an `http.*` call** — those are actions, and a retried mutation is not a retried check. That is the whole retry vocabulary.
 
