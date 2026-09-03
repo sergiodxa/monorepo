@@ -135,6 +135,28 @@ export class JobContext<Input = undefined> {
 	}
 
 	/**
+	 * Reads a value some middleware published, refusing to continue without it.
+	 *
+	 * A middleware sees the context as the bare one — an earlier middleware's installed
+	 * property is not visible to it — so this is how one link reads what another put
+	 * there without carrying an `undefined` it has no answer for.
+	 *
+	 * @param key The context key to read.
+	 * @returns Its value.
+	 * @throws When nothing published a value for that key.
+	 * @example let database = ctx.require(Database);
+	 */
+	require<Key extends object>(key: Key): NonNullable<ContextValue<Key>> {
+		let value = this.get(key);
+
+		if (value === undefined || value === null) {
+			throw new Error(`Job "${this.name}" read a context key that no middleware published`);
+		}
+
+		return value as NonNullable<ContextValue<Key>>;
+	}
+
+	/**
 	 * Whether a value has been published for a key.
 	 * @param key The context key to check.
 	 */

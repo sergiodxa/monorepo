@@ -296,7 +296,7 @@ The distinct schedules the mapped jobs declare, for asserting that the code and
 **Example:**
 
 ```typescript
-expect(dispatcher.crons.toSorted()).toEqual(config.triggers.crons.toSorted());
+expect([...dispatcher.crons].sort()).toEqual([...config.triggers.crons].sort());
 ```
 
 ### `JobContext`
@@ -372,6 +372,19 @@ ran. Throws `Timeout`.
 #### `ctx.get(key: ContextKey): value | undefined`
 
 Reads a value some middleware published, falling back to the key's default.
+
+#### `ctx.require(key: ContextKey): value`
+
+The same, refusing to continue when nothing published one. This is how one middleware
+reads what an earlier middleware put on the context: inside a chain the context is the
+bare one, so an installed property like `ctx.database` is not visible there — only the
+key is.
+
+**Example:**
+
+```typescript
+let database = ctx.require(Database);
+```
 
 #### `ctx.has(key: ContextKey): boolean`
 

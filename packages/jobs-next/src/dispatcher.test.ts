@@ -16,7 +16,7 @@ import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { JobMiddleware, JobDispatcherContext } from "./index";
+import type { AnyJobContext, JobDispatcherContext, JobMiddleware } from "./index";
 
 import { createJobDispatcher, createJobHandler, job, jobs } from "./index";
 
@@ -271,6 +271,51 @@ describe("middleware", () => {
 		await consume(queue, (batch) => dispatcher.queue(batch));
 
 		expect(seen).toEqual(["live"]);
+	});
+
+	test("installs every property of a long chain, and lets a later link read an earlier one", async () => {
+		let { queue, map, send } = setup();
+		let First = createContextKey<string>();
+		let Second = createContextKey<string>();
+		let Third = createContextKey<string>();
+		let Fourth = createContextKey<string>();
+
+		function publish<Key extends object>(
+			key: Key,
+			property: string,
+			value: (ctx: AnyJobContext) => string,
+		) {
+			return (async (ctx, next) => {
+				ctx.set(key, value(ctx) as never, { property });
+				await next();
+			}) as JobMiddleware;
+		}
+
+		let dispatcher = createJobDispatcher({
+			send,
+			middleware: [
+				publish(First, "first", () => "1"),
+				publish(Second, "second", () => "2"),
+				publish(Third, "third", () => "3"),
+				/** Reads what the first link published, which is only reachable by key. */
+				publish(Fourth, "fourth", (ctx) => `${ctx.require(First)}-4`),
+			],
+		});
+
+		let seen: string[] = [];
+
+		dispatcher.map(
+			map.clean,
+			createJobHandler(map.clean, (ctx) => {
+				let context = ctx as AnyJobContext;
+				seen.push(context.require(Fourth));
+			}),
+		);
+
+		await dispatcher.enqueue(map.clean);
+		await consume(queue, (batch) => dispatcher.queue(batch));
+
+		expect(seen).toEqual(["1-4"]);
 	});
 
 	test("runs in the order declared, around the handler", async () => {

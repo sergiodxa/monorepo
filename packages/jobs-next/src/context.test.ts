@@ -39,6 +39,17 @@ describe("JobContext", () => {
 		expect(ctx.has(Region)).toBe(false);
 	});
 
+	test("reads a published value back, or refuses to continue", () => {
+		let Database = createContextKey<string>();
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		expect(() => ctx.require(Database)).toThrow(/no middleware published/);
+
+		ctx.set(Database, "live");
+
+		expect(ctx.require(Database)).toBe("live");
+	});
+
 	test("installs a value as a property when asked to", () => {
 		let Database = createContextKey<{ label: string }>();
 		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
