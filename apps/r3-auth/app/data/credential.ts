@@ -23,7 +23,7 @@ export default class Credential {
 
 	/**
 	 * Stores a password credential for a subject. `password_hash` must already be a
-	 * PBKDF2 hash, derived by the caller.
+	 * scrypt hash, derived by the caller.
 	 *
 	 * @param verifiedAt - Epoch milliseconds at which the credential became usable, or
 	 *   `null` to store it unusable — sign-in requires `verified_at`, and the column keeps
@@ -73,7 +73,7 @@ export default class Credential {
 	 * it when the subject has none. `verified_at` is stamped because the caller proved
 	 * inbox control; update-then-insert keeps the row whole without a transaction.
 	 *
-	 * @param passwordHash - An already-derived PBKDF2 hash, produced by the caller.
+	 * @param passwordHash - An already-derived scrypt hash, produced by the caller.
 	 * @param verifiedAt - Epoch milliseconds the credential became usable at.
 	 */
 	static async setVerifiedPassword(

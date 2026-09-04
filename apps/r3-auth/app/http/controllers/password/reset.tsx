@@ -5,7 +5,7 @@
  *
  * Ending the sessions is the security point: a session row's id *is* the refresh token, so one
  * left behind after a reset stays a live credential in whoever's hands prompted the reset. The
- * new hash comes from the same PBKDF2 policy registration uses.
+ * new hash comes from the same scrypt policy registration uses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

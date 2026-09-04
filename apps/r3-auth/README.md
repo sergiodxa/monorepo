@@ -88,7 +88,7 @@ written inside the shared card in `app/emails/layout.tsx`.
 - **OpenID Connect Provider** (Core 1.0): ID tokens, UserInfo, discovery, and the
   `query`, `fragment` and `form_post` response modes.
 - **Two authentication methods, and only two:** a GitHub account (`remix/auth`'s GitHub
-  provider) and email/password credentials hashed with PBKDF2-HMAC-SHA256 through
+  provider) and email/password credentials hashed with scrypt through
   `@sdxc/crypto`. There is no Google provider, no passkey, no magic link, and no other
   social provider — `/auth/:provider` accepts `github` and redirects anything else back to
   `/authorize`.

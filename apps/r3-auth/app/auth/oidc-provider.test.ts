@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { scryptSync } from "node:crypto";
+
 import { Base64Url, Hex, password, randomBytes, sha256 } from "@sdxc/crypto";
 import { JWK } from "@sdxc/jwt";
 import { unwrap } from "@sdxc/result";
@@ -1248,46 +1250,42 @@ describe("OIDC", () => {
 /** Password every credential login case signs in with. */
 const LOGIN_PASSWORD = "correct horse battery staple";
 
-/** Prefix the self-describing PBKDF2 format writes, used to recognize a stored hash. */
-const PBKDF2_PREFIX = "$pbkdf2-sha256$";
+/** Prefix the self-describing format writes, used to recognize a stored hash. */
+const SCRYPT_PREFIX = "$scrypt$";
 
-/** Iteration count standing in for a hash written before the current cost policy. */
-const OUTDATED_ITERATIONS = 1_000;
+/** Cost standing in for a hash written before the current policy, cheap enough to keep tests fast. */
+const OUTDATED_LOG_N = 12;
+
+/** Block size the current policy expects, so only the cost trails it. */
+const BLOCK_SIZE = 8;
+
+/** Repetitions this hash records, below the current policy so it asks for a replacement. */
+const PARALLELISM = 1;
 
 const SALT_BYTES = 16;
 
 const KEY_BYTES = 32;
 
-const BITS_PER_BYTE = 8;
-
 /**
- * Hashes a password at an outdated iteration count, standing in for a credential
- * stored before the current cost policy and therefore due for an upgrade on login.
+ * Hashes a password at an outdated cost, standing in for a credential stored
+ * before the current policy and therefore due for an upgrade on login.
  *
  * @param secret - Plaintext password to hash.
- * @returns An encoded PBKDF2 hash that verifies but reports as needing a rehash.
+ * @returns An encoded hash that verifies but reports as needing a rehash.
  */
-async function outdatedHash(secret: string): Promise<string> {
+function outdatedHash(secret: string): string {
 	let salt = randomBytes(SALT_BYTES);
 
-	let key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		"PBKDF2",
-		false,
-		["deriveBits"],
-	);
-
-	let bits = await crypto.subtle.deriveBits(
-		{ name: "PBKDF2", salt, iterations: OUTDATED_ITERATIONS, hash: "SHA-256" },
-		key,
-		KEY_BYTES * BITS_PER_BYTE,
-	);
+	let key = scryptSync(secret, salt, KEY_BYTES, {
+		N: 2 ** OUTDATED_LOG_N,
+		r: BLOCK_SIZE,
+		p: PARALLELISM,
+	});
 
 	let encodedSalt = Base64Url.encode(salt);
-	let encodedKey = Base64Url.encode(new Uint8Array(bits));
+	let encodedKey = Base64Url.encode(new Uint8Array(key));
 
-	return `${PBKDF2_PREFIX}i=${OUTDATED_ITERATIONS}$${encodedSalt}$${encodedKey}`;
+	return `${SCRYPT_PREFIX}ln=${OUTDATED_LOG_N},r=${BLOCK_SIZE},p=${PARALLELISM}$${encodedSalt}$${encodedKey}`;
 }
 
 /** Mutable record of what a login repository double holds and was asked to persist. */
@@ -1393,7 +1391,7 @@ function loginInput(
 
 describe("loginWithCredential()", () => {
 	test("authenticates a subject whose stored hash is behind the current cost policy", async () => {
-		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
+		let state = loginState({ storedHash: outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput());
@@ -1402,7 +1400,7 @@ describe("loginWithCredential()", () => {
 	});
 
 	test("upgrades an outdated hash to the current policy after a successful sign-in", async () => {
-		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
+		let state = loginState({ storedHash: outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
@@ -1410,13 +1408,13 @@ describe("loginWithCredential()", () => {
 		expect(state.upgraded).toHaveLength(1);
 
 		let upgraded = state.upgraded[0] ?? "";
-		expect(upgraded.startsWith(PBKDF2_PREFIX)).toBe(true);
+		expect(upgraded.startsWith(SCRYPT_PREFIX)).toBe(true);
 		expect(password.needsRehash(upgraded)).toBe(false);
 		expect(unwrap(await password.verify(upgraded, LOGIN_PASSWORD))).toBe(true);
 	});
 
 	test("verifies against the upgraded hash on the next sign-in, without upgrading again", async () => {
-		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
+		let state = loginState({ storedHash: outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		await provider.loginWithCredential(loginInput());
@@ -1430,7 +1428,7 @@ describe("loginWithCredential()", () => {
 	});
 
 	test("rejects a wrong password against an outdated hash and leaves it alone", async () => {
-		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
+		let state = loginState({ storedHash: outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
 		let result = await provider.loginWithCredential(loginInput({ password: "wrong password" }));
@@ -1440,7 +1438,7 @@ describe("loginWithCredential()", () => {
 		expect(state.upgraded).toHaveLength(0);
 	});
 
-	test("rejects a wrong password against a PBKDF2 hash", async () => {
+	test("rejects a wrong password against a stored hash", async () => {
 		let state = loginState({ storedHash: unwrap(await password.hash(LOGIN_PASSWORD)) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
@@ -1462,7 +1460,7 @@ describe("loginWithCredential()", () => {
 
 	test("still signs the subject in when persisting the upgrade fails", async () => {
 		let state = loginState({
-			storedHash: await outdatedHash(LOGIN_PASSWORD),
+			storedHash: outdatedHash(LOGIN_PASSWORD),
 			upgradeError: new Error("database unavailable"),
 		});
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
@@ -1475,7 +1473,7 @@ describe("loginWithCredential()", () => {
 
 	test("reports the failed upgrade while still signing the subject in", async () => {
 		let state = loginState({
-			storedHash: await outdatedHash(LOGIN_PASSWORD),
+			storedHash: outdatedHash(LOGIN_PASSWORD),
 			upgradeError: new Error("database unavailable"),
 		});
 		let logger = createMockLogger();
@@ -1493,7 +1491,7 @@ describe("loginWithCredential()", () => {
 
 	test("refuses an unverified credential without checking the password", async () => {
 		let state = loginState({
-			storedHash: await outdatedHash(LOGIN_PASSWORD),
+			storedHash: outdatedHash(LOGIN_PASSWORD),
 			verifiedAt: null,
 		});
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
@@ -1506,7 +1504,7 @@ describe("loginWithCredential()", () => {
 		expect(state.upgraded).toHaveLength(0);
 	});
 
-	test("writes a PBKDF2 hash when the subject has no credential yet, and refuses the sign-in", async () => {
+	test("writes a hash when the subject has no credential yet, and refuses the sign-in", async () => {
 		let state = loginState();
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
@@ -1516,7 +1514,7 @@ describe("loginWithCredential()", () => {
 		if (result.status === "failure")
 			expect(result.error).toBeInstanceOf(OIDC.MissingValidationError);
 		expect(state.created).toHaveLength(1);
-		expect((state.created[0] ?? "").startsWith(PBKDF2_PREFIX)).toBe(true);
+		expect((state.created[0] ?? "").startsWith(SCRYPT_PREFIX)).toBe(true);
 	});
 
 	test("stores that hash unverified, so a stranger cannot password-protect somebody else's account", async () => {
@@ -1528,7 +1526,7 @@ describe("loginWithCredential()", () => {
 		expect(state.createdVerifiedAt).toEqual([null]);
 	});
 
-	test("gives a brand-new subject a hex-digest gravatar and a PBKDF2 credential", async () => {
+	test("gives a brand-new subject a hex-digest gravatar and a password credential", async () => {
 		let state = loginState({ subjectMissing: true });
 		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLogger());
 
@@ -1536,7 +1534,7 @@ describe("loginWithCredential()", () => {
 
 		let expectedDigest = Hex.encode(unwrap(await sha256(testSubject.emailAddress)));
 		expect(state.avatars).toEqual([`https://gravatar.com/avatar/${expectedDigest}`]);
-		expect((state.created[0] ?? "").startsWith(PBKDF2_PREFIX)).toBe(true);
+		expect((state.created[0] ?? "").startsWith(SCRYPT_PREFIX)).toBe(true);
 	});
 
 	test("registers an unknown email and answers with a code instead of refusing it", async () => {

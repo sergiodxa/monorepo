@@ -37,7 +37,7 @@ export type SelectSubject = TableRow<typeof subjects>;
 export type InsertSubject = InsertRow<typeof subjects>;
 
 /**
- * A subject's password credential. `password_hash` holds a PBKDF2 hash, and
+ * A subject's password credential. `password_hash` holds a scrypt hash, and
  * `subject_id` is unique: a subject has at most one password.
  */
 export const credentials = table({

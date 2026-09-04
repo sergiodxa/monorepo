@@ -19,7 +19,7 @@ import * as checks from "remix/data-schema/checks";
 const MINIMUM_PASSWORD_LENGTH = 8;
 
 /**
- * Longest password accepted, so a submission cannot turn one PBKDF2 derivation into an
+ * Longest password accepted, so a submission cannot turn one scrypt derivation into an
  * arbitrarily long one. The bound is far above any real passphrase.
  */
 const MAXIMUM_PASSWORD_LENGTH = 256;

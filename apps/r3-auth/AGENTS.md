@@ -132,7 +132,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 
 ### Passwords and client credentials
 
-- MUST hash passwords with PBKDF2-HMAC-SHA256 through `@sdxc/crypto`'s `password` module, and
+- MUST hash passwords with scrypt through `@sdxc/crypto`'s `password` module, and
   MUST use `needsRehash` to upgrade a stored hash on a successful sign-in. `bcryptjs` is
   gone and MUST NOT come back: the production `credentials` table holds no rows, so no
   legacy hash exists to verify.

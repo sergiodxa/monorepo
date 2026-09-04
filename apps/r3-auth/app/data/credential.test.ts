@@ -68,14 +68,14 @@ describe("Credential.updatePasswordHash", () => {
 	test("replaces the stored hash for the subject", async () => {
 		await Credential.create(db, subjectId, "$2a$10$legacy", Date.now());
 
-		let rewritten = await Credential.updatePasswordHash(db, subjectId, "$pbkdf2-sha256$upgraded");
+		let rewritten = await Credential.updatePasswordHash(db, subjectId, "$scrypt$upgraded");
 
 		expect(rewritten).toBe(1);
-		expect((await Credential.find(db, subjectId))?.password_hash).toBe("$pbkdf2-sha256$upgraded");
+		expect((await Credential.find(db, subjectId))?.password_hash).toBe("$scrypt$upgraded");
 	});
 
 	test("creates nothing for a subject with no credential, who must stay without a password", async () => {
-		let rewritten = await Credential.updatePasswordHash(db, subjectId, "$pbkdf2-sha256$upgraded");
+		let rewritten = await Credential.updatePasswordHash(db, subjectId, "$scrypt$upgraded");
 
 		expect(rewritten).toBe(0);
 		expect(await Credential.find(db, subjectId)).toBeNull();
