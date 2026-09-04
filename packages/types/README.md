@@ -1,6 +1,6 @@
 # @sdxc/types
 
-TypeScript utility types for async return values, JSON-safe data, and type-level checks.
+TypeScript utility types for async return values, JSON boundaries, and type-level checks.
 
 ## Installation
 
@@ -58,6 +58,23 @@ enqueue({ run: () => 1 }); // Error: functions are not a JSONValue
 enqueue({ missing: undefined }); // Error: undefined is not a JSONValue
 ```
 
+### Constrain an argument to what JSON can write
+
+`JSONSerializable` is the same union plus objects carrying a `toJSON`, so a value that
+substitutes itself on the way out is accepted where `JSONValue` rejects it.
+
+```typescript
+import type { JSONSerializable } from "@sdxc/types";
+
+function write<T extends JSONSerializable>(payload: T): string {
+	return JSON.stringify(payload);
+}
+
+write({ publishedAt: new Date() }); // "{"publishedAt":"2026-09-04T00:00:00.000Z"}"
+write({ href: new URL("https://example.com") });
+write({ run: () => 1 }); // Error: functions are not a JSONSerializable
+```
+
 ## API
 
 ### `ResolvedType<T>`
@@ -86,6 +103,31 @@ function enqueue<T extends JSONValue>(payload: T): T;
 
 function enqueue(payload: JSONValue): JSONValue;
 // payload is now the union, and `payload.id` no longer exists
+```
+
+### `JSONSerializable`
+
+Any value `JSON.stringify` accepts. Adds one branch to `JSONValue` — an object that
+returns its own replacement from `toJSON` — so it covers `Date`, `URL` and every class
+that serializes itself:
+
+```typescript
+type JSONSerializable =
+	| string
+	| number
+	| boolean
+	| null
+	| JSONSerializable[]
+	| { [key: string]: JSONSerializable }
+	| { toJSON(): JSONSerializable };
+```
+
+The two types name the two directions of one boundary, and the direction decides which
+one applies. Take `JSONSerializable` where a value is written, and `JSONValue` where one
+is read back, because the replacement is what a reader receives:
+
+```typescript
+JSON.parse(JSON.stringify({ at: new Date() })).at; // a string, not a Date
 ```
 
 ### `IsAny<T>`
@@ -151,6 +193,26 @@ await queue.push("posts", { id: 1, publishedAt: new Date() }); // Error, caught 
 ```
 
 The second call fails at the call site rather than surviving as `"2026-09-04T00:00:00.000Z"` and coming back a string the consumer expected to be a `Date`.
+
+A queue that formats its own dates wants the other type on the way in, and still hands `JSONValue` to whoever reads the message:
+
+```typescript
+import type { JSONSerializable, JSONValue } from "@sdxc/types";
+
+class Queue {
+	async push<T extends JSONSerializable>(topic: string, message: T): Promise<void> {
+		await this.transport.send(topic, JSON.stringify(message));
+	}
+
+	async pull(topic: string): Promise<JSONValue> {
+		return JSON.parse(await this.transport.receive(topic));
+	}
+}
+
+await queue.push("posts", { id: 1, publishedAt: new Date() }); // accepted
+```
+
+`push` takes the `Date`; `pull` types the message as what JSON actually carries, so the reader has to narrow the field rather than assume a `Date` came back.
 
 ## Pattern: Typing array items from query results
 
