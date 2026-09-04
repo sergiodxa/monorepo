@@ -111,7 +111,7 @@ A commit touches a package when one of its paths is a shipped input of that pack
 
 Touched paths are the ground truth for attribution. With the one-workspace-per-commit convention they agree with the commit scope, and they also catch `chore(deps)` sweeps that edit many manifests at once.
 
-A package is new when its latest version on npm is absent or is a `0.0.0-pre.*` bootstrap version. The lookup is `npm view <name> --json` with `cwd` in the temp dir: `E404` means absent, and every other error aborts the run. `--force` marks every public package as touched, which also carries the run past the tag-at-HEAD exit.
+A package is new when its published version is absent or is a `0.0.0-pre.*` bootstrap version. The lookup reads the registry's packument at `https://registry.npmjs.org/<name>`: a 404 means absent, the `latest` dist-tag names the published version, the highest version stands in while no `latest` tag exists (the state after a bootstrap), and every other error aborts the run. `--force` marks every public package as touched, which also carries the run past the tag-at-HEAD exit.
 
 ### Cascade
 
@@ -236,7 +236,7 @@ TypeScript finds `./dist/index.d.ts` beside `./dist/index.js` through its standa
 
 ### Publishing
 
-Every member of the set is built before the first publish, so a compile error stops the run ahead of any upload. Publishing then follows the topological order with `npm publish` and `cwd` set to the package's staging directory; dry-run mode appends `--dry-run` and takes the same code path. Under OIDC the registry attaches provenance to each version on its own.
+Every member of the set is built before the first publish, so a compile error stops the run ahead of any upload. Publishing then follows the topological order with `npm publish --tag latest` and `cwd` set to the package's staging directory, since a dated version is a stable release; dry-run mode appends `--dry-run` and takes the same code path. Under OIDC the registry attaches provenance to each version on its own.
 
 An `E401` or `E404` at publish time is reported with the package name and the trusted-publisher fields to check on npmjs.com: provider GitHub Actions, organization `sergiodxa`, repository `monorepo`, workflow `release.yml`. Packages published before such a failure are at today's version with a clean `gitHead`, so the next run skips them and continues from the failure.
 
@@ -276,7 +276,7 @@ First release.
 1. Checks `npm whoami` for an operator session; `npm login` is run beforehand.
 2. Refuses when any dated version exists, and skips when `0.0.0-pre.1` exists.
 3. Builds and stages the package exactly as a release would, with `version: "0.0.0-pre.1"`. Internal pins take the dependency's latest npm version, which has to exist: dependencies bootstrap first, and a missing one is an error naming it.
-4. Runs `npm publish --tag latest` from staging with the operator's session. npm requires an explicit tag for a prerelease version, and `latest` is the accurate one: the placeholder is the package's only version until the dated release replaces it.
+4. Runs `npm publish --tag alpha` from staging with the operator's session. npm requires an explicit tag for a prerelease version, and `alpha` says what the placeholder is; `latest` stays unset until the first dated release, so an install of the bare package name waits for a stable version.
 5. Prints the trusted-publisher settings to enter under the package's settings on npmjs.com: provider GitHub Actions, organization `sergiodxa`, repository `monorepo`, workflow file `release.yml`, allowed action publish.
 
 The next daily run sees the `0.0.0-pre.*` version, treats the package as new, and publishes the dated version, which becomes `latest`.

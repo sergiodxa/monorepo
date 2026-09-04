@@ -47,6 +47,9 @@ import {
 	readPackages,
 } from "./workspace.js";
 
+/** Dated versions are the stable releases, so every one of them publishes as `latest`. */
+const RELEASE_TAG = "latest";
+
 /**
  * One release run from planning to the GitHub Release, returning early with a plain message
  * whenever there is nothing to do. Every failure comes back as the `Result`, and the entry
@@ -156,7 +159,7 @@ async function main(): Promise<Result<void, Error>> {
 	}
 	for (let [name, stagingDir] of staged) {
 		say(`\n${publishing ? "Publishing" : "Dry-run publishing"} ${name}@${today}`);
-		let uploaded = await publish(stagingDir, { dryRun: !publishing });
+		let uploaded = await publish(stagingDir, { dryRun: !publishing, tag: RELEASE_TAG });
 		if (isFailure(uploaded)) return uploaded;
 	}
 

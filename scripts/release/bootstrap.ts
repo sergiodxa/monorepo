@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * First publish for a package npm has never seen: `0.0.0-pre.1` goes out from the operator's
- * own npm session so the package exists and its trusted publisher can be configured; the next
- * daily release then treats the package as new and replaces the placeholder with a dated
- * version. `--dry-run` rehearses everything but the upload.
+ * First publish for a package npm has never seen: `0.0.0-pre.1` goes out under the `alpha`
+ * tag from the operator's own npm session, so the package exists for its trusted publisher to
+ * be configured while `latest` waits for the first dated release, which the next daily run
+ * publishes because it treats the package as new. `--dry-run` rehearses everything but the upload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,6 +28,9 @@ import { REPOSITORY_URL, REPO_ROOT, readPackages, topologicalOrder } from "./wor
 
 /** The placeholder every package starts with; the daily release still treats it as new. */
 const BOOTSTRAP_VERSION = "0.0.0-pre.1";
+
+/** The dist-tag the placeholder publishes under, so `latest` stays unset until a dated release. */
+const BOOTSTRAP_TAG = "alpha";
 
 /**
  * Bootstraps the requested packages (by default every public package absent from npm),
@@ -108,7 +111,7 @@ async function main(): Promise<Result<void, Error>> {
 		let built = await buildPackage(pkg, REPO_ROOT, stagingDir, manifest.data);
 		if (isFailure(built)) return built;
 		say(`${dryRun ? "Dry-run publishing" : "Publishing"} ${name}@${BOOTSTRAP_VERSION} as ${user}`);
-		let uploaded = await publish(stagingDir, { dryRun });
+		let uploaded = await publish(stagingDir, { dryRun, tag: BOOTSTRAP_TAG });
 		if (isFailure(uploaded)) return uploaded;
 		published.set(name, { version: BOOTSTRAP_VERSION, gitHead: head });
 	}
