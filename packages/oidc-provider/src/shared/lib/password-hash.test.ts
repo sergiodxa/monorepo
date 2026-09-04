@@ -18,10 +18,10 @@ import { underpoweredHash } from "../test/hashes.js";
 
 import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash.js";
 
-const CURRENT_PREFIX = "$pbkdf2-sha256$";
+const CURRENT_PREFIX = "$scrypt$";
 
 describe("hashSecret", () => {
-	test("writes the current PBKDF2 format", async () => {
+	test("writes the current hash format", async () => {
 		let stored = unwrap(await hashSecret("correct horse battery staple"));
 
 		expect(stored.startsWith(CURRENT_PREFIX)).toBe(true);

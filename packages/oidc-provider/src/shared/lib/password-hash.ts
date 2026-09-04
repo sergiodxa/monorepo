@@ -2,7 +2,7 @@
  * Hashing and verification for the two credentials this provider stores at rest:
  * subject passwords and OAuth client secrets.
  *
- * Hashes are PBKDF2-HMAC-SHA256. A correct plaintext checked against a hash whose
+ * Hashes are scrypt. A correct plaintext checked against a hash whose
  * parameters trail current policy comes back with a replacement, so stored values
  * reach the current cost as they are used.
  *
@@ -62,7 +62,7 @@ async function upgrade(plaintext: string): Promise<Result<VerifiedSecret, Crypto
  * only changes the hashing defaults, leaving each hash self-describing.
  *
  * @param plaintext Secret to hash.
- * @returns Encoded hash such as `$pbkdf2-sha256$i=600000$<salt>$<key>`.
+ * @returns Encoded hash such as `$scrypt$ln=15,r=8,p=3$<salt>$<key>`.
  * @example
  * let stored = unwrap(await hashSecret(plainSecret));
  */

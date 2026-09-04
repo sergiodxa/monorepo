@@ -215,8 +215,8 @@ host builds them into its own `assets/tenant/` directory — see
 
 ## Pattern: Upgrading stored credential hashes
 
-Subject passwords and client secrets are stored as PBKDF2-HMAC-SHA256 hashes in the
-self-describing `$pbkdf2-sha256$i=...$<salt>$<key>` format, so the cost parameters
+Subject passwords and client secrets are stored as scrypt hashes in the
+self-describing `$scrypt$ln=...,r=...,p=...$<salt>$<key>` format, so the cost parameters
 travel with each value and can be raised without a schema change.
 
 Raising the cost leaves every stored hash behind it, and there is no way to re-derive

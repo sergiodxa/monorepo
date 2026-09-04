@@ -23,7 +23,7 @@ import { underpoweredHash } from "../../shared/test/hashes.js";
 import Secret from "./secret.js";
 
 /** Prefix identifying the format written for new hashes. */
-const CURRENT_PREFIX = "$pbkdf2-sha256$";
+const CURRENT_PREFIX = "$scrypt$";
 
 describe("Secret", () => {
 	let sqliteDb: SqliteDatabase;

@@ -21,7 +21,7 @@ import { underpoweredHash } from "../../shared/test/hashes.js";
 
 import Credential from "./credential.js";
 
-const CURRENT_PREFIX = "$pbkdf2-sha256$";
+const CURRENT_PREFIX = "$scrypt$";
 
 describe("Credential", () => {
 	let sqliteDb: SqliteDatabase;

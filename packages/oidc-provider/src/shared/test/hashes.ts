@@ -7,10 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { scryptSync } from "node:crypto";
+
 import { Base64Url, randomBytes } from "@sdxc/crypto";
 
-/** Iteration count standing in for one an earlier policy would have recorded. */
-const UNDERPOWERED_ITERATIONS = 1_000;
+/** Cost standing in for one an earlier policy would have recorded, cheap enough to keep tests fast. */
+const UNDERPOWERED_LOG_N = 12;
+
+/** Block size the current policy expects, so only the cost trails it. */
+const BLOCK_SIZE = 8;
+
+/** Repetitions this hash records, below the current policy so it asks for a replacement. */
+const PARALLELISM = 1;
 
 /** Salt length the current policy expects, so only the cost trails it. */
 const SALT_BYTES = 16;
@@ -18,34 +26,24 @@ const SALT_BYTES = 16;
 /** Derived key length the current policy expects, so only the cost trails it. */
 const KEY_BYTES = 32;
 
-/** Converts the key length into the bit count Web Crypto asks for. */
-const BITS_PER_BYTE = 8;
-
 /**
- * Derives a hash of `secret` in the stored format, recording an iteration count
- * below current policy so verifying it both succeeds and asks for a replacement.
+ * Derives a hash of `secret` in the stored format, recording a cost below current
+ * policy so verifying it both succeeds and asks for a replacement.
  *
  * @param secret Plaintext to derive from.
- * @returns Encoded hash such as `$pbkdf2-sha256$i=1000$<salt>$<key>`.
+ * @returns Encoded hash such as `$scrypt$ln=12,r=8,p=1$<salt>$<key>`.
  * @example
  * let stored = await underpoweredHash("s3cret");
  */
 export async function underpoweredHash(secret: string): Promise<string> {
 	let salt = randomBytes(SALT_BYTES);
-	let key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		"PBKDF2",
-		false,
-		["deriveBits"],
-	);
-	let bits = await crypto.subtle.deriveBits(
-		{ name: "PBKDF2", salt, iterations: UNDERPOWERED_ITERATIONS, hash: "SHA-256" },
-		key,
-		KEY_BYTES * BITS_PER_BYTE,
-	);
+	let key = scryptSync(secret, salt, KEY_BYTES, {
+		N: 2 ** UNDERPOWERED_LOG_N,
+		r: BLOCK_SIZE,
+		p: PARALLELISM,
+	});
 
 	let encodedSalt = Base64Url.encode(salt);
-	let encodedKey = Base64Url.encode(new Uint8Array(bits));
-	return `$pbkdf2-sha256$i=${UNDERPOWERED_ITERATIONS}$${encodedSalt}$${encodedKey}`;
+	let encodedKey = Base64Url.encode(new Uint8Array(key));
+	return `$scrypt$ln=${UNDERPOWERED_LOG_N},r=${BLOCK_SIZE},p=${PARALLELISM}$${encodedSalt}$${encodedKey}`;
 }
