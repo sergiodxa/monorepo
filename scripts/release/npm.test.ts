@@ -7,17 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { parsePublished } from "./npm.js";
 
 describe("parsePublished", () => {
 	test("reads a bare version string, which npm prints when gitHead is absent", () => {
-		expect(parsePublished('"2026.9.3"\n')).toEqual({ version: "2026.9.3", gitHead: null });
+		expect(unwrap(parsePublished('"2026.9.3"\n'))).toEqual({ version: "2026.9.3", gitHead: null });
 	});
 
 	test("reads version and gitHead from an object", () => {
-		expect(parsePublished('{"version":"2026.9.3","gitHead":"abc"}')).toEqual({
+		expect(unwrap(parsePublished('{"version":"2026.9.3","gitHead":"abc"}'))).toEqual({
 			version: "2026.9.3",
 			gitHead: "abc",
 		});
@@ -25,27 +26,38 @@ describe("parsePublished", () => {
 
 	test("takes the last entry when several versions match", () => {
 		expect(
-			parsePublished('[{"version":"1.0.0","gitHead":"a"},{"version":"1.1.0","gitHead":"b"}]'),
+			unwrap(
+				parsePublished('[{"version":"1.0.0","gitHead":"a"},{"version":"1.1.0","gitHead":"b"}]'),
+			),
 		).toEqual({ version: "1.1.0", gitHead: "b" });
-		expect(parsePublished('["1.0.0","1.1.0"]')).toEqual({ version: "1.1.0", gitHead: null });
-		expect(parsePublished("[]")).toBeNull();
+		expect(unwrap(parsePublished('["1.0.0","1.1.0"]'))).toEqual({
+			version: "1.1.0",
+			gitHead: null,
+		});
+		expect(unwrap(parsePublished("[]"))).toBeNull();
 	});
 
 	test("treats E404 and empty output as never published", () => {
-		expect(parsePublished('{"error":{"code":"E404","summary":"Not Found"}}')).toBeNull();
-		expect(parsePublished("")).toBeNull();
+		expect(unwrap(parsePublished('{"error":{"code":"E404","summary":"Not Found"}}'))).toBeNull();
+		expect(unwrap(parsePublished(""))).toBeNull();
 	});
 
-	test("throws any other npm error with its code and summary", () => {
-		expect(() => parsePublished('{"error":{"code":"E401","summary":"Unauthorized"}}')).toThrow(
-			"E401",
-		);
-		expect(() =>
-			parsePublished('{"error":{"code":"ECONNRESET","summary":"socket hang up"}}'),
-		).toThrow("socket hang up");
+	test("fails any other npm error with its code and summary", () => {
+		let unauthorized = parsePublished('{"error":{"code":"E401","summary":"Unauthorized"}}');
+		let reset = parsePublished('{"error":{"code":"ECONNRESET","summary":"socket hang up"}}');
+
+		expect(isFailure(unauthorized)).toBe(true);
+		if (isFailure(unauthorized)) expect(unauthorized.error.message).toContain("E401");
+		expect(isFailure(reset)).toBe(true);
+		if (isFailure(reset)) expect(reset.error.message).toContain("socket hang up");
 	});
 
 	test("rejects output it cannot read as a version", () => {
-		expect(() => parsePublished('{"name":"x"}')).toThrow();
+		let unknownShape = parsePublished('{"name":"x"}');
+		let notJson = parsePublished("npm WARN something");
+
+		expect(isFailure(unknownShape)).toBe(true);
+		if (isFailure(unknownShape)) expect(unknownShape.error.message).toContain('{"name":"x"}');
+		expect(isFailure(notJson)).toBe(true);
 	});
 });

@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { Commit } from "./commits.js";
@@ -61,7 +62,7 @@ describe("parseCommits", () => {
 			record("d".repeat(40), "merge: styles into main", "", []),
 		].join("");
 
-		expect(parseCommits(log)).toEqual([
+		expect(unwrap(parseCommits(log))).toEqual([
 			{
 				sha: "a".repeat(40),
 				type: "feat",
@@ -117,14 +118,24 @@ describe("parseCommits", () => {
 			),
 		].join("");
 
-		expect(parseCommits(log).map((entry) => entry.body)).toEqual([
+		expect(unwrap(parseCommits(log)).map((entry) => entry.body)).toEqual([
 			"",
 			"Note: this keeps working.\nSee the ADR for why.",
 		]);
 	});
 
 	test("returns nothing for an empty log", () => {
-		expect(parseCommits("")).toEqual([]);
+		expect(unwrap(parseCommits(""))).toEqual([]);
+	});
+
+	test("fails on a record short of its four fields, quoting its start", () => {
+		let result = parseCommits(`${RECORD}${"a".repeat(40)}${FIELD}feat: half a record\n`);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.message).toContain("Malformed git log record: ");
+			expect(result.error.message).toContain("a".repeat(40));
+		}
 	});
 });
 

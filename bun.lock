@@ -6,6 +6,7 @@
       "name": "monorepo",
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.21.3",
+        "@sdxc/result": "workspace:*",
         "@sdxc/spec": "workspace:*",
         "@total-typescript/ts-reset": "^0.6.1",
         "@total-typescript/tsconfig": "^1.0.4",

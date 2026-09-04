@@ -7,6 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
+import { failure, success } from "@sdxc/result";
+
 import type { Package } from "./workspace.js";
 
 /** `%x1e`, the byte the release's `git log` format starts every record with. */
@@ -43,10 +47,10 @@ export interface Commit {
 
 /**
  * Commits from `git log <range> --format=%x1e%H%x1f%s%x1f%b%x1f --name-only`, in the order
- * given. A subject without the `type(scope)!: title` shape becomes a `chore` whose title is
- * the whole subject; a body loses its trailing git trailers (`Co-Authored-By:` and the like).
+ * given; a record short of its four fields is a failure. A subject without the `type(scope)!:
+ * title` shape becomes a `chore` titled with the whole subject; a body loses its git trailers.
  */
-export function parseCommits(log: string): Commit[] {
+export function parseCommits(log: string): Result<Commit[], Error> {
 	let commits: Commit[] = [];
 	for (let record of log.split(RECORD_SEPARATOR)) {
 		if (record.trim() === "") continue;
@@ -54,7 +58,7 @@ export function parseCommits(log: string): Commit[] {
 		let second = record.indexOf(FIELD_SEPARATOR, first + 1);
 		let last = record.lastIndexOf(FIELD_SEPARATOR);
 		if (first === -1 || second === -1 || last <= second) {
-			throw new Error(`Malformed git log record: ${record.slice(0, 80)}`);
+			return failure(new Error(`Malformed git log record: ${record.slice(0, 80)}`));
 		}
 		commits.push({
 			sha: record.slice(0, first).trim(),
@@ -67,7 +71,7 @@ export function parseCommits(log: string): Commit[] {
 				.filter((line) => line !== ""),
 		});
 	}
-	return commits;
+	return success(commits);
 }
 
 /**

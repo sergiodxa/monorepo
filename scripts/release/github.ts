@@ -6,12 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import type { Result } from "@sdxc/result";
 
+import { isFailure, success } from "@sdxc/result";
+
+import type { CommandError } from "./command.js";
+
+import { run } from "./command.js";
 import { REPO_ROOT } from "./workspace.js";
-
-const execFileAsync = promisify(execFile);
 
 export interface ReleaseInput {
 	tag: string;
@@ -21,8 +23,8 @@ export interface ReleaseInput {
 }
 
 /** Creates the release, and its tag at `target`, with the notes file as body; resolves to the release URL. */
-export async function createRelease(input: ReleaseInput): Promise<string> {
-	let { stdout } = await execFileAsync(
+export async function createRelease(input: ReleaseInput): Promise<Result<string, CommandError>> {
+	let result = await run(
 		"gh",
 		[
 			"release",
@@ -37,5 +39,6 @@ export async function createRelease(input: ReleaseInput): Promise<string> {
 		],
 		{ cwd: REPO_ROOT },
 	);
-	return stdout.trim();
+	if (isFailure(result)) return result;
+	return success(result.data.stdout.trim());
 }

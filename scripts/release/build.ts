@@ -2,7 +2,7 @@
  * Builds one package into a staging directory the way npm will see it: `src/` compiled to
  * `dist/` with declarations through the TypeScript compiler API on the package's own
  * tsconfig, the documents and verbatim export targets copied beside it, and the publish
- * manifest written last. Two assertions then prove the staged tree is self-contained.
+ * manifest written last. Two checks then prove the staged tree is self-contained.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +21,9 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 
+import type { Result } from "@sdxc/result";
+
+import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import ts from "typescript";
 
 import type { Package, PackageManifest } from "./workspace.js";
@@ -53,19 +56,23 @@ const FORMAT_HOST: ts.FormatDiagnosticsHost = {
 /**
  * Stages `pkg` into `stagingDir`, replacing whatever was there: compiles `src/` into `dist/`,
  * copies the documents and the non-TypeScript export targets at their relative paths, writes
- * `manifest` as `package.json`, then asserts the result is self-contained.
+ * `manifest` as `package.json`, then checks the result is self-contained.
  */
 export async function buildPackage(
 	pkg: Package,
 	root: string,
 	stagingDir: string,
 	manifest: PackageManifest,
-): Promise<void> {
+): Promise<Result<void, Error>> {
 	let packageDir = join(root, "packages", pkg.dir);
-	await rm(stagingDir, { recursive: true, force: true });
-	await mkdir(stagingDir, { recursive: true });
-	emitDist(packageDir, join(stagingDir, "dist"));
-	await Promise.all([
+	let prepared = await wrap(async () => {
+		await rm(stagingDir, { recursive: true, force: true });
+		await mkdir(stagingDir, { recursive: true });
+	});
+	if (isFailure(prepared)) return prepared;
+	let emitted = emitDist(packageDir, join(stagingDir, "dist"));
+	if (isFailure(emitted)) return emitted;
+	let copies = await Promise.all([
 		...DOCUMENTS.map((document) =>
 			copyIfPresent(join(packageDir, document), join(stagingDir, document)),
 		),
@@ -73,63 +80,77 @@ export async function buildPackage(
 			copyTarget(pkg.name, packageDir, stagingDir, target),
 		),
 	]);
-	await writeFile(join(stagingDir, "package.json"), `${JSON.stringify(manifest, null, "\t")}\n`);
-	await assertDistSpecifiers(stagingDir);
-	await assertExportTargets(stagingDir, manifest);
+	for (let copy of copies) {
+		if (isFailure(copy)) return copy;
+	}
+	let written = await wrap(() =>
+		writeFile(join(stagingDir, "package.json"), `${JSON.stringify(manifest, null, "\t")}\n`),
+	);
+	if (isFailure(written)) return written;
+	let specifiers = await checkDistSpecifiers(stagingDir);
+	if (isFailure(specifiers)) return specifiers;
+	return checkExportTargets(stagingDir, manifest);
 }
 
 /** A fresh directory under the OS temp dir, so a run never leaves build output inside the repo. */
-export async function createStagingRoot(): Promise<string> {
-	return mkdtemp(join(tmpdir(), "sdxc-release-"));
+export async function createStagingRoot(): Promise<Result<string, Error>> {
+	return wrap(() => mkdtemp(join(tmpdir(), "sdxc-release-")));
 }
 
 /**
- * Throws when an emitted `.js` or `.d.ts` file imports through `/src/` or resolves outside
- * `dist/`, either of which means the build reached into the workspace instead of a dependency.
+ * Fails when an emitted `.js` or `.d.ts` file imports through `/src/` or resolves outside
+ * `dist/`, either of which means the build reached into the workspace for what a dependency
+ * should provide.
  */
-export async function assertDistSpecifiers(stagingDir: string): Promise<void> {
+export async function checkDistSpecifiers(stagingDir: string): Promise<Result<void, Error>> {
 	let distDir = join(stagingDir, "dist");
-	let files = (await walk(distDir)).filter((file) => EMITTED_FILE.test(file));
-	let sources = await Promise.all(files.map((file) => readFile(file, "utf8")));
+	let sources = await wrap(() => emittedSources(distDir));
+	if (isFailure(sources)) return sources;
 	let offenders: string[] = [];
-	for (let [index, file] of files.entries()) {
-		for (let specifier of specifiersIn(sources[index] ?? "")) {
+	for (let [file, source] of sources.data) {
+		for (let specifier of specifiersIn(source)) {
 			if (escapesDist(specifier, file, distDir)) {
 				offenders.push(`${relative(stagingDir, file)}: ${specifier}`);
 			}
 		}
 	}
 	if (offenders.length > 0) {
-		throw new Error(`Emitted files reach outside dist/:\n${offenders.join("\n")}`);
+		return failure(new Error(`Emitted files reach outside dist/:\n${offenders.join("\n")}`));
 	}
+	return success(undefined);
 }
 
 /**
- * Throws when a target of the rewritten manifest has no file in the staging tree (for a `*`
+ * Fails when a target of the rewritten manifest has no file in the staging tree (for a `*`
  * pattern, no directory before the `*`).
  */
-export async function assertExportTargets(
+export async function checkExportTargets(
 	stagingDir: string,
 	manifest: PackageManifest,
-): Promise<void> {
+): Promise<Result<void, Error>> {
 	let targets = collectExportTargets(manifest);
 	let present = await Promise.all(
 		targets.map((target) => exists(join(stagingDir, patternBase(target)))),
 	);
 	let missing = targets.filter((_, index) => present[index] !== true);
 	if (missing.length > 0) {
-		throw new Error(
-			`${manifest.name} exports targets missing from the staged package: ${missing.join(", ")}`,
+		return failure(
+			new Error(
+				`${manifest.name} exports targets missing from the staged package: ${missing.join(", ")}`,
+			),
 		);
 	}
+	return success(undefined);
 }
 
 /**
  * Compiles the package through its own tsconfig so the root's `types`, `paths` and `lib`
  * resolve exactly as they do for `bun check`; only the emit-related options are overridden.
+ * Every error diagnostic, from reading the config to emitting, is the failure.
  */
-function emitDist(packageDir: string, outDir: string): void {
+function emitDist(packageDir: string, outDir: string): Result<void, Error> {
 	let configPath = join(packageDir, "tsconfig.json");
+	let unreadable: ts.Diagnostic | undefined;
 	let parsed = ts.getParsedCommandLineOfConfigFile(
 		configPath,
 		{
@@ -144,11 +165,16 @@ function emitDist(packageDir: string, outDir: string): void {
 		{
 			...ts.sys,
 			onUnRecoverableConfigFileDiagnostic(diagnostic) {
-				throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, ts.sys.newLine));
+				unreadable = diagnostic;
 			},
 		},
 	);
-	if (parsed === undefined) throw new Error(`${configPath} could not be read`);
+	if (unreadable !== undefined) {
+		return failure(
+			new Error(ts.flattenDiagnosticMessageText(unreadable.messageText, ts.sys.newLine)),
+		);
+	}
+	if (parsed === undefined) return failure(new Error(`${configPath} could not be read`));
 	let program = ts.createProgram({
 		rootNames: parsed.fileNames.filter((file) => !TEST_FILE.test(file)),
 		options: parsed.options,
@@ -158,11 +184,24 @@ function emitDist(packageDir: string, outDir: string): void {
 	let diagnostics = [...ts.getPreEmitDiagnostics(program), ...program.emit().diagnostics].filter(
 		(diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
 	);
-	if (diagnostics.length > 0) throw new Error(ts.formatDiagnostics(diagnostics, FORMAT_HOST));
+	if (diagnostics.length > 0) {
+		return failure(new Error(ts.formatDiagnostics(diagnostics, FORMAT_HOST)));
+	}
+	return success(undefined);
 }
 
-async function copyIfPresent(source: string, destination: string): Promise<void> {
-	if (await exists(source)) await copyFile(source, destination);
+/** Every emitted `.js` and `.d.ts` file under `distDir` with its text, keyed by path. */
+async function emittedSources(distDir: string): Promise<Map<string, string>> {
+	let files = (await walk(distDir)).filter((file) => EMITTED_FILE.test(file));
+	let entries = await Promise.all(
+		files.map(async (file) => [file, await readFile(file, "utf8")] as const),
+	);
+	return new Map(entries);
+}
+
+async function copyIfPresent(source: string, destination: string): Promise<Result<void, Error>> {
+	if (!(await exists(source))) return success(undefined);
+	return wrap(() => copyFile(source, destination));
 }
 
 /** Copies one verbatim target; a `*` pattern names files the build cannot enumerate, so it is refused. */
@@ -171,15 +210,19 @@ async function copyTarget(
 	packageDir: string,
 	stagingDir: string,
 	target: string,
-): Promise<void> {
+): Promise<Result<void, Error>> {
 	if (target.includes("*")) {
-		throw new Error(
-			`${name} exports the pattern ${target} to files the build does not compile; list them individually`,
+		return failure(
+			new Error(
+				`${name} exports the pattern ${target} to files the build does not compile; list them individually`,
+			),
 		);
 	}
 	let destination = join(stagingDir, target);
-	await mkdir(dirname(destination), { recursive: true });
-	await copyFile(join(packageDir, target), destination);
+	return wrap(async () => {
+		await mkdir(dirname(destination), { recursive: true });
+		await copyFile(join(packageDir, target), destination);
+	});
 }
 
 async function walk(dir: string): Promise<string[]> {
@@ -216,10 +259,5 @@ function patternBase(target: string): string {
 }
 
 async function exists(path: string): Promise<boolean> {
-	try {
-		await access(path);
-		return true;
-	} catch {
-		return false;
-	}
+	return isSuccess(await wrap(() => access(path)));
 }

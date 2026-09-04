@@ -10,6 +10,10 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, posix, resolve } from "node:path";
 
+import type { Result } from "@sdxc/result";
+
+import { failure, isFailure, success, wrap } from "@sdxc/result";
+
 /** Repo root, resolved from this file so every command targets the same tree from any cwd. */
 export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
@@ -98,22 +102,24 @@ export interface PrivateDependency {
 
 /**
  * Every `packages/<dir>/package.json` under `root` as a `Package`, sorted by directory so
- * plans and tables come out in a stable order. A directory without a manifest is skipped.
+ * plans and tables come out in a stable order. A directory without a manifest is skipped; a
+ * manifest that cannot be read or parsed is a failure naming its path.
  */
-export async function readPackages(root: string): Promise<Package[]> {
+export async function readPackages(root: string): Promise<Result<Package[], Error>> {
 	let packagesDir = join(root, "packages");
-	let entries = await readdir(packagesDir, { withFileTypes: true });
-	let directories = entries
+	let entries = await wrap(() => readdir(packagesDir, { withFileTypes: true }));
+	if (isFailure(entries)) return entries;
+	let directories = entries.data
 		.filter((entry) => entry.isDirectory())
 		.map((entry) => entry.name)
 		.sort();
-	let packages = await Promise.all(
-		directories.map(async (dir) => {
-			let manifest = await readManifest(join(packagesDir, dir, "package.json"));
-			return manifest === null ? null : packageFromManifest(dir, manifest);
-		}),
-	);
-	return packages.filter((pkg): pkg is Package => pkg !== null);
+	let read = await Promise.all(directories.map((dir) => readPackage(packagesDir, dir)));
+	let packages: Package[] = [];
+	for (let pkg of read) {
+		if (isFailure(pkg)) return pkg;
+		if (pkg.data !== null) packages.push(pkg.data);
+	}
+	return success(packages);
 }
 
 /**
@@ -204,33 +210,41 @@ export function closeOverDependents(
 
 /**
  * `names` ordered so every member comes after the members it depends on; edges to packages
- * outside `names` are ignored. Throws naming the cycle when members depend on each other in
- * a loop, since no publish order could satisfy them.
+ * outside `names` are ignored. Members that depend on each other in a loop are a failure
+ * naming the cycle, since no publish order could satisfy them.
  */
-export function topologicalOrder(names: Iterable<string>, packages: DependencyNode[]): string[] {
+export function topologicalOrder(
+	names: Iterable<string>,
+	packages: DependencyNode[],
+): Result<string[], Error> {
 	let members = new Set(names);
 	let byName = new Map(packages.map((node) => [node.name, node]));
 	let order: string[] = [];
 	let done = new Set<string>();
 	let path: string[] = [];
 
-	function visit(name: string): void {
-		if (done.has(name)) return;
+	/** Places `name` after its member dependencies; answers the cycle's path when the walk meets `name` again. */
+	function visit(name: string): string[] | null {
+		if (done.has(name)) return null;
 		let start = path.indexOf(name);
-		if (start !== -1) {
-			throw new Error(`Dependency cycle: ${[...path.slice(start), name].join(" -> ")}`);
-		}
+		if (start !== -1) return [...path.slice(start), name];
 		path.push(name);
 		for (let dependency of byName.get(name)?.dependencies ?? []) {
-			if (members.has(dependency)) visit(dependency);
+			if (!members.has(dependency)) continue;
+			let cycle = visit(dependency);
+			if (cycle !== null) return cycle;
 		}
 		path.pop();
 		done.add(name);
 		order.push(name);
+		return null;
 	}
 
-	for (let name of [...members].sort()) visit(name);
-	return order;
+	for (let name of [...members].sort()) {
+		let cycle = visit(name);
+		if (cycle !== null) return failure(new Error(`Dependency cycle: ${cycle.join(" -> ")}`));
+	}
+	return success(order);
 }
 
 /**
@@ -261,13 +275,23 @@ function collectTargets(entry: ExportTarget | undefined, targets: Set<string>): 
 	for (let item of Object.values(entry)) collectTargets(item, targets);
 }
 
-async function readManifest(path: string): Promise<PackageManifest | null> {
-	try {
-		return JSON.parse(await readFile(path, "utf8")) as PackageManifest;
-	} catch (error) {
-		if (isMissingFile(error)) return null;
-		throw error;
+/**
+ * The package in `packages/<dir>`, or `null` when the directory holds no manifest. Any other
+ * trouble reading or parsing the manifest is a failure that names the file.
+ */
+async function readPackage(
+	packagesDir: string,
+	dir: string,
+): Promise<Result<Package | null, Error>> {
+	let path = join(packagesDir, dir, "package.json");
+	let manifest = await wrap(
+		async () => JSON.parse(await readFile(path, "utf8")) as PackageManifest,
+	);
+	if (isFailure(manifest)) {
+		if (isMissingFile(manifest.error)) return success(null);
+		return failure(new Error(`${path}: ${manifest.error.message}`));
 	}
+	return success(packageFromManifest(dir, manifest.data));
 }
 
 function isMissingFile(error: unknown): boolean {

@@ -6,9 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { Published } from "./plan.js";
+import type { Published, ReleasePlan } from "./plan.js";
 import type { Package } from "./workspace.js";
 
 import { dependencyPins, isBootstrapVersion, isNew, planRelease, releaseVersion } from "./plan.js";
@@ -65,17 +66,19 @@ function allPublished(
 	return published;
 }
 
-function plan(touched: string[], options: PlanOptions = {}) {
-	return planRelease({
-		packages: PACKAGES,
-		touched: new Set(touched),
-		published: options.published ?? allPublished(),
-		force: options.force ?? false,
-		version: "2026.9.3",
-	});
+function plan(touched: string[], options: PlanOptions = {}): ReleasePlan {
+	return unwrap(
+		planRelease({
+			packages: PACKAGES,
+			touched: new Set(touched),
+			published: options.published ?? allPublished(),
+			force: options.force ?? false,
+			version: "2026.9.3",
+		}),
+	);
 }
 
-function reasons(result: ReturnType<typeof planRelease>): Record<string, string> {
+function reasons(result: ReleasePlan): Record<string, string> {
 	return Object.fromEntries(result.members.map((member) => [member.name, member.reason]));
 }
 
@@ -177,6 +180,19 @@ describe("planRelease", () => {
 			}
 		}
 	});
+
+	test("fails on a dependency cycle among the members, naming it", () => {
+		let result = planRelease({
+			packages: [pkg("a", ["b"]), pkg("b", ["a"])],
+			touched: new Set(["@sdxc/a"]),
+			published: allPublished(),
+			force: false,
+			version: "2026.9.3",
+		});
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("Dependency cycle: ");
+	});
 });
 
 describe("dependencyPins", () => {
@@ -189,7 +205,9 @@ describe("dependencyPins", () => {
 
 		expect(spec).toBeDefined();
 		if (!spec) return;
-		expect(dependencyPins(spec, ["@sdxc/spec", "@sdxc/sample"], "2026.9.3", published)).toEqual({
+		expect(
+			unwrap(dependencyPins(spec, ["@sdxc/spec", "@sdxc/sample"], "2026.9.3", published)),
+		).toEqual({
 			"@sdxc/duration": "2026.9.1",
 			"@sdxc/result": "2026.8.30",
 			"@sdxc/sample": "2026.9.3",
@@ -202,8 +220,8 @@ describe("dependencyPins", () => {
 
 		expect(spec).toBeDefined();
 		if (!spec) return;
-		expect(() => dependencyPins(spec, ["@sdxc/spec"], "2026.9.3", published)).toThrow(
-			"@sdxc/result",
-		);
+		let result = dependencyPins(spec, ["@sdxc/spec"], "2026.9.3", published);
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("@sdxc/result");
 	});
 });

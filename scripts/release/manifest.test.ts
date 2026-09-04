@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { PackageManifest } from "./workspace.js";
@@ -38,9 +39,14 @@ function manifest(overrides: Partial<PackageManifest> = {}): PackageManifest {
 	};
 }
 
-/** The publish manifest for `manifest(overrides)` under the shared options. */
-function publish(overrides: Partial<PackageManifest> = {}): PackageManifest {
+/** The publish attempt for `manifest(overrides)` under the shared options, as a `Result`. */
+function attempt(overrides: Partial<PackageManifest> = {}) {
 	return publishManifest(packageFromManifest("example", manifest(overrides)), OPTIONS);
+}
+
+/** The publish manifest for `manifest(overrides)`, for the tests that expect one to come out. */
+function publish(overrides: Partial<PackageManifest> = {}): PackageManifest {
+	return unwrap(attempt(overrides));
 }
 
 describe("publishManifest", () => {
@@ -98,7 +104,17 @@ describe("publishManifest", () => {
 	});
 
 	test("refuses a TypeScript target outside src, which the build never emits", () => {
-		expect(() => publish({ exports: { ".": "./lib/index.ts" } })).toThrow("./lib/index.ts");
+		let result = attempt({ exports: { ".": "./lib/index.ts" } });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("./lib/index.ts");
+	});
+
+	test("refuses a TypeScript bin target outside src the same way", () => {
+		let result = attempt({ bin: { tool: "./bin/tool.ts" } });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("./bin/tool.ts");
 	});
 
 	test("drops private, scripts and devDependencies and keeps the rest", () => {
@@ -127,9 +143,10 @@ describe("publishManifest", () => {
 	});
 
 	test("refuses a workspace dependency without a pin", () => {
-		expect(() => publish({ dependencies: { "@sdxc/duration": "workspace:*" } })).toThrow(
-			"@sdxc/duration",
-		);
+		let result = attempt({ dependencies: { "@sdxc/duration": "workspace:*" } });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("@sdxc/duration");
 	});
 
 	test("injects version, gitHead, public access and the repository directory", () => {
@@ -157,10 +174,16 @@ describe("publishManifest", () => {
 
 describe("rewriteTarget", () => {
 	test("maps src TypeScript to dist JavaScript and passes other files through", () => {
-		expect(rewriteTarget("./src/index.ts")).toBe("./dist/index.js");
-		expect(rewriteTarget("./src/deep/view.tsx")).toBe("./dist/deep/view.js");
-		expect(rewriteTarget("./styles.css")).toBe("./styles.css");
-		expect(() => rewriteTarget("./scripts/run.ts")).toThrow("./scripts/run.ts");
+		expect(unwrap(rewriteTarget("./src/index.ts"))).toBe("./dist/index.js");
+		expect(unwrap(rewriteTarget("./src/deep/view.tsx"))).toBe("./dist/deep/view.js");
+		expect(unwrap(rewriteTarget("./styles.css"))).toBe("./styles.css");
+	});
+
+	test("refuses TypeScript outside src, naming the target", () => {
+		let result = rewriteTarget("./scripts/run.ts");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("./scripts/run.ts");
 	});
 });
 

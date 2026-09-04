@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { Commit } from "./commits.js";
@@ -188,7 +189,7 @@ describe("renderNotes", () => {
 			version: "2026.9.3",
 			previousTag: null,
 			members: [{ name: "@sdxc/jwt", reason: "changed" }],
-			commitsByPackage: new Map([["@sdxc/jwt", parseCommits(log)]]),
+			commitsByPackage: new Map([["@sdxc/jwt", unwrap(parseCommits(log))]]),
 			packages: PACKAGES,
 			repoUrl: REPO_URL,
 		});

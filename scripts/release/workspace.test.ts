@@ -7,9 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { join } from "node:path";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { isFailure, unwrap } from "@sdxc/result";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { DependencyNode, Package } from "./workspace.js";
 
@@ -130,9 +133,11 @@ describe("closeOverDependents", () => {
 
 describe("topologicalOrder", () => {
 	test("places every dependency before its dependents across the starter shape", () => {
-		let order = topologicalOrder(
-			STARTER.map((member) => member.name),
-			STARTER,
+		let order = unwrap(
+			topologicalOrder(
+				STARTER.map((member) => member.name),
+				STARTER,
+			),
 		);
 		let position = new Map(order.map((name, index) => [name, index]));
 
@@ -147,7 +152,7 @@ describe("topologicalOrder", () => {
 	});
 
 	test("orders only the requested names, ignoring edges to outsiders", () => {
-		expect(topologicalOrder(["@sdxc/spec", "@sdxc/sample"], STARTER)).toEqual([
+		expect(unwrap(topologicalOrder(["@sdxc/spec", "@sdxc/sample"], STARTER))).toEqual([
 			"@sdxc/sample",
 			"@sdxc/spec",
 		]);
@@ -155,10 +160,14 @@ describe("topologicalOrder", () => {
 
 	test("names the cycle it refuses", () => {
 		let graph = [node("a", ["b"]), node("b", ["c"]), node("c", ["a"]), node("d")];
+		let result = topologicalOrder(["@sdxc/a", "@sdxc/b", "@sdxc/c", "@sdxc/d"], graph);
 
-		expect(() => topologicalOrder(["@sdxc/a", "@sdxc/b", "@sdxc/c", "@sdxc/d"], graph)).toThrow(
-			"@sdxc/a -> @sdxc/b -> @sdxc/c -> @sdxc/a",
-		);
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.message).toBe(
+				"Dependency cycle: @sdxc/a -> @sdxc/b -> @sdxc/c -> @sdxc/a",
+			);
+		}
 	});
 });
 
@@ -224,13 +233,51 @@ describe("packageFromManifest", () => {
 });
 
 describe("readPackages", () => {
+	let fixtureRoot = "";
+
+	beforeAll(async () => {
+		fixtureRoot = await mkdtemp(join(tmpdir(), "sdxc-workspace-"));
+	});
+
+	afterAll(async () => {
+		await rm(fixtureRoot, { recursive: true, force: true });
+	});
+
 	test("reads every packages/* manifest in the repo", async () => {
-		let packages = await readPackages(ROOT);
+		let packages = await unwrap(readPackages(ROOT));
 		let spec = packages.find((member) => member.name === "@sdxc/spec");
 
 		expect(packages.length).toBeGreaterThan(40);
 		expect(spec?.dir).toBe("spec");
 		expect(spec?.dependencies).toEqual(["@sdxc/duration", "@sdxc/result", "@sdxc/sample"]);
 		expect(spec?.shippedPaths).toContain("packages/spec/src");
+	});
+
+	test("skips a directory without a manifest", async () => {
+		await mkdir(join(fixtureRoot, "packages/empty"), { recursive: true });
+		await mkdir(join(fixtureRoot, "packages/typed"), { recursive: true });
+		await writeFile(join(fixtureRoot, "packages/typed/package.json"), '{"name":"@sdxc/typed"}');
+
+		let packages = await unwrap(readPackages(fixtureRoot));
+
+		expect(packages.map((member) => member.name)).toEqual(["@sdxc/typed"]);
+	});
+
+	test("fails naming a manifest it cannot parse", async () => {
+		let brokenManifest = join(fixtureRoot, "packages/broken/package.json");
+		await mkdir(dirname(brokenManifest), { recursive: true });
+		await writeFile(brokenManifest, "{");
+
+		let result = await readPackages(fixtureRoot);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain(brokenManifest);
+	});
+
+	test("fails when the packages directory itself is missing", async () => {
+		let result = await readPackages(join(fixtureRoot, "nowhere"));
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("ENOENT");
 	});
 });

@@ -7,16 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
 
+import type { Result } from "@sdxc/result";
+
+import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
+
+import type { CommandError, CommandOutput } from "./command.js";
 import type { Published } from "./plan.js";
 
+import { run } from "./command.js";
 import { REPO_ROOT, TRUSTED_PUBLISHER } from "./workspace.js";
-
-const execFileAsync = promisify(execFile);
 
 const OUTPUT_LIMIT = 16 * 1024 * 1024;
 
@@ -31,12 +33,6 @@ export interface PublishOptions {
 	dryRun: boolean;
 }
 
-/** The properties `execFile` attaches to a rejection, all optional since any error may arrive. */
-interface ExecFailure {
-	stdout?: string;
-	stderr?: string;
-}
-
 interface NpmErrorOutput {
 	error: { code: string; summary?: string };
 }
@@ -44,122 +40,130 @@ interface NpmErrorOutput {
 /**
  * `npm view --json` output as what a package has published: `null` for `E404` (never
  * published) and for empty output; a bare string, an object, or the last entry of an array
- * otherwise. Any other npm error is thrown with its code and summary.
+ * otherwise. Any other npm error is a failure naming its code and summary.
  */
-export function parsePublished(output: string): Published | null {
+export function parsePublished(output: string): Result<Published | null, Error> {
 	let text = output.trim();
-	if (text === "") return null;
-	let value: unknown = JSON.parse(text);
-	if (isNpmError(value)) {
-		if (value.error.code === "E404") return null;
-		throw new Error(
-			`npm view failed with ${value.error.code}: ${value.error.summary ?? "no summary"}`,
+	if (text === "") return success(null);
+	let value = wrap(() => JSON.parse(text) as unknown);
+	if (isFailure(value)) return value;
+	if (isNpmError(value.data)) {
+		if (value.data.error.code === "E404") return success(null);
+		return failure(
+			new Error(
+				`npm view failed with ${value.data.error.code}: ${value.data.error.summary ?? "no summary"}`,
+			),
 		);
 	}
-	return publishedFrom(value);
+	return publishedFrom(value.data);
 }
 
 /** The latest version of `name` on npm with its `gitHead`, or `null` when npm has never seen it. */
-export async function viewPackage(name: string): Promise<Published | null> {
-	return parsePublished(await npmOutput(["view", name, "version", "gitHead", "--json"]));
+export async function viewPackage(name: string): Promise<Result<Published | null, Error>> {
+	return viewed(await npm(["view", name, "version", "gitHead", "--json"]));
 }
 
-/** `viewPackage` for every name at once, keyed by name. */
-export async function viewPackages(names: string[]): Promise<Map<string, Published | null>> {
+/** `viewPackage` for every name at once, keyed by name; one failure lists every name that failed. */
+export async function viewPackages(
+	names: string[],
+): Promise<Result<Map<string, Published | null>, Error>> {
 	let entries = await Promise.all(
 		names.map(async (name) => [name, await viewPackage(name)] as const),
 	);
-	return new Map(entries);
+	let published = new Map<string, Published | null>();
+	let problems: string[] = [];
+	for (let [name, result] of entries) {
+		if (isFailure(result)) problems.push(`${name}: ${result.error.message}`);
+		else published.set(name, result.data);
+	}
+	if (problems.length > 0) return failure(new Error(problems.join("\n")));
+	return success(published);
 }
 
 /** Whether `name@version` exists on npm. */
-export async function versionExists(name: string, version: string): Promise<boolean> {
-	return (
-		parsePublished(await npmOutput(["view", `${name}@${version}`, "version", "--json"])) !== null
-	);
+export async function versionExists(
+	name: string,
+	version: string,
+): Promise<Result<boolean, Error>> {
+	let published = viewed(await npm(["view", `${name}@${version}`, "version", "--json"]));
+	if (isFailure(published)) return published;
+	return success(published.data !== null);
 }
 
 /** The logged-in npm user, or `null` when this machine holds no npm session. */
 export async function whoami(): Promise<string | null> {
-	try {
-		let { stdout } = await execFileAsync("npm", ["whoami"], { cwd: REPO_ROOT });
-		return stdout.trim() || null;
-	} catch {
-		return null;
-	}
+	let result = await run("npm", ["whoami"], { cwd: REPO_ROOT });
+	if (isFailure(result)) return null;
+	return result.data.stdout.trim() || null;
 }
 
 /**
  * `npm publish` from the staged package, streaming npm's progress to the operator. A failure
- * is rethrown with npm's error code, and a rejection of the publisher adds the trusted
- * publisher settings the package needs on npmjs.com.
+ * carries npm's error code, and a rejection of the publisher adds the trusted publisher
+ * settings the package needs on npmjs.com.
  */
-export async function publish(stagingDir: string, options: PublishOptions): Promise<void> {
-	let manifest = JSON.parse(await readFile(join(stagingDir, "package.json"), "utf8")) as {
-		name: string;
-	};
-	let args = ["publish", ...(options.dryRun ? ["--dry-run"] : [])];
-	let pending = execFileAsync("npm", args, { cwd: stagingDir, maxBuffer: OUTPUT_LIMIT });
-	pending.child.stderr?.on("data", (chunk: Buffer | string) => {
-		process.stderr.write(chunk);
+export async function publish(
+	stagingDir: string,
+	options: PublishOptions,
+): Promise<Result<void, Error>> {
+	let manifest = await wrap(
+		async () =>
+			JSON.parse(await readFile(join(stagingDir, "package.json"), "utf8")) as { name: string },
+	);
+	if (isFailure(manifest)) return manifest;
+	let result = await run("npm", ["publish", ...(options.dryRun ? ["--dry-run"] : [])], {
+		cwd: stagingDir,
+		maxBuffer: OUTPUT_LIMIT,
+		onStderr: (chunk) => {
+			process.stderr.write(chunk);
+		},
 	});
-	try {
-		let { stdout } = await pending;
-		process.stdout.write(stdout);
-	} catch (error) {
-		throw publishFailure(manifest.name, error);
-	}
+	if (isFailure(result)) return failure(publishFailure(manifest.data.name, result.error));
+	process.stdout.write(result.data.stdout);
+	return success(undefined);
+}
+
+/** Runs npm at the repo root, where every registry read happens. */
+async function npm(args: string[]): Promise<Result<CommandOutput, CommandError>> {
+	return run("npm", args, { cwd: REPO_ROOT, maxBuffer: OUTPUT_LIMIT });
 }
 
 /**
- * npm's stdout even when it exits non-zero, because `--json` puts the error object there;
- * a failure with nothing on stdout (npm missing, killed) is rethrown as is.
+ * What `npm view --json` answered, read from stdout even when npm exited non-zero, because
+ * `--json` puts the error object there; a failure with nothing on stdout (npm missing, killed)
+ * passes through as the command's own error.
  */
-async function npmOutput(args: string[]): Promise<string> {
-	try {
-		let { stdout } = await execFileAsync("npm", args, {
-			cwd: REPO_ROOT,
-			maxBuffer: OUTPUT_LIMIT,
-		});
-		return stdout;
-	} catch (error) {
-		let stdout = failureStreams(error).stdout ?? "";
-		if (stdout.trim() !== "") return stdout;
-		throw error;
-	}
+function viewed(result: Result<CommandOutput, CommandError>): Result<Published | null, Error> {
+	if (isSuccess(result)) return parsePublished(result.data.stdout);
+	if (result.error.stdout.trim() !== "") return parsePublished(result.error.stdout);
+	return result;
 }
 
 /**
  * npm's own error code and first detail line, read from its stderr, so the operator sees
- * `E403` and the registry's sentence rather than a generic non-zero exit.
+ * `E403` and the registry's own sentence.
  */
-function publishFailure(name: string, error: unknown): Error {
-	let stderr = failureStreams(error).stderr ?? "";
-	let code = ERROR_CODE_LINE.exec(stderr)?.[1] ?? "no code";
-	let detail =
-		ERROR_DETAIL_LINE.exec(stderr)?.[1] ?? (error instanceof Error ? error.message : String(error));
+function publishFailure(name: string, error: CommandError): Error {
+	let code = ERROR_CODE_LINE.exec(error.stderr)?.[1] ?? "no code";
+	let detail = ERROR_DETAIL_LINE.exec(error.stderr)?.[1] ?? error.message;
 	let hint = PUBLISHER_REJECTIONS.has(code)
 		? ` npm did not accept this publisher for ${name}; configure its trusted publisher on npmjs.com (${TRUSTED_PUBLISHER}).`
 		: "";
 	return new Error(`npm publish of ${name} failed (${code}): ${detail}.${hint}`);
 }
 
-function failureStreams(error: unknown): ExecFailure {
-	return typeof error === "object" && error !== null ? (error as ExecFailure) : {};
-}
-
-function publishedFrom(value: unknown): Published | null {
-	if (typeof value === "string") return { version: value, gitHead: null };
+function publishedFrom(value: unknown): Result<Published | null, Error> {
+	if (typeof value === "string") return success({ version: value, gitHead: null });
 	if (Array.isArray(value)) {
-		return value.length === 0 ? null : publishedFrom(value[value.length - 1]);
+		return value.length === 0 ? success(null) : publishedFrom(value[value.length - 1]);
 	}
 	if (isRecord(value) && typeof value.version === "string") {
-		return {
+		return success({
 			version: value.version,
 			gitHead: typeof value.gitHead === "string" ? value.gitHead : null,
-		};
+		});
 	}
-	throw new Error(`Unexpected npm view output: ${JSON.stringify(value)}`);
+	return failure(new Error(`Unexpected npm view output: ${JSON.stringify(value)}`));
 }
 
 function isNpmError(value: unknown): value is NpmErrorOutput {

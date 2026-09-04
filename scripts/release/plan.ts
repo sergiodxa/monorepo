@@ -6,6 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
+import { failure, isFailure, success } from "@sdxc/result";
+
 import type { Package } from "./workspace.js";
 
 import { closeOverDependents, topologicalOrder } from "./workspace.js";
@@ -63,7 +67,7 @@ export function isNew(latest: string | null): boolean {
 /**
  * The public packages to release: the touched and new ones (every public one under `force`),
  * closed over their public dependents through runtime dependencies so every internal pin can
- * move to `version`, ordered dependencies first.
+ * move to `version`, ordered dependencies first. A dependency cycle among them is the failure.
  */
 export function planRelease({
 	packages,
@@ -71,7 +75,7 @@ export function planRelease({
 	published,
 	force,
 	version,
-}: PlanInput): ReleasePlan {
+}: PlanInput): Result<ReleasePlan, Error> {
 	let seeds = packages
 		.filter(
 			(pkg) =>
@@ -80,20 +84,25 @@ export function planRelease({
 		)
 		.map((pkg) => pkg.name);
 	let order = topologicalOrder(closeOverDependents(seeds, packages), packages);
-	let members = order.map((name) => ({ name, reason: reasonFor(name, touched, published, force) }));
-	return { version, members, order };
+	if (isFailure(order)) return order;
+	let members = order.data.map((name) => ({
+		name,
+		reason: reasonFor(name, touched, published, force),
+	}));
+	return success({ version, members, order: order.data });
 }
 
 /**
  * Exact versions for `pkg`'s internal dependencies: `version` for fellow members, the latest
- * npm version otherwise. Throws when a dependency is neither, since no installable pin exists.
+ * npm version otherwise. A dependency that is neither is a failure, since no installable pin
+ * exists for it.
  */
 export function dependencyPins(
 	pkg: Package,
 	members: string[],
 	version: string,
 	published: Map<string, Published | null>,
-): Record<string, string> {
+): Result<Record<string, string>, Error> {
 	let pins: Record<string, string> = {};
 	for (let dependency of pkg.dependencies) {
 		if (members.includes(dependency)) {
@@ -102,13 +111,15 @@ export function dependencyPins(
 		}
 		let current = published.get(dependency);
 		if (current === undefined || current === null) {
-			throw new Error(
-				`${pkg.name} depends on ${dependency}, which is neither in this release nor published on npm`,
+			return failure(
+				new Error(
+					`${pkg.name} depends on ${dependency}, which is neither in this release nor published on npm`,
+				),
 			);
 		}
 		pins[dependency] = current.version;
 	}
-	return pins;
+	return success(pins);
 }
 
 function reasonFor(
