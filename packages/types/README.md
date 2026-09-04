@@ -1,14 +1,18 @@
 # @sdxc/types
 
-Shared TypeScript utility types for the monorepo.
+TypeScript utility types for async return values, JSON-safe data, and type-level checks.
 
-## Overview
+## Installation
 
-This package provides reusable TypeScript utility types that are useful across multiple applications in the monorepo. It focuses on type-level utilities that improve type inference and reduce boilerplate when working with async functions, promises, and complex type transformations.
+```bash
+npm add @sdxc/types
+```
+
+Types only: the package ships no runtime code, so import everything with `import type`.
 
 ## Usage
 
-### Extracting Resolved Types from Async Functions
+### Extract the resolved type of an async function
 
 ```typescript
 import type { ResolvedType } from "@sdxc/types";
@@ -17,148 +21,175 @@ async function fetchUser(id: string): Promise<{ name: string; email: string }> {
 	// ...
 }
 
-// Extract the resolved type without calling the function
 type User = ResolvedType<typeof fetchUser>; // { name: string; email: string }
 ```
 
-### Typing Component Props from Loader Data
+### Type component props from a data function
 
 ```typescript
 import type { ResolvedType } from "@sdxc/types";
 
-import type { getHttpMonitorsData } from "./query.server";
+import type { listPosts } from "./posts";
 
+// Props stay in sync with whatever listPosts returns
 interface Props {
-	httpData: ResolvedType<typeof getHttpMonitorsData>;
-}
-
-export function HttpMonitorsCard(props: Props) {
-	// props.httpData is fully typed
+	posts: ResolvedType<typeof listPosts>;
 }
 ```
 
-## API
+Combine it with indexed access to reach nested types, such as `ResolvedType<typeof listPosts>["posts"][number]` for a single item.
 
-### `IsAny<T>`
+### Constrain an argument to valid JSON
 
-Detects if a type is `any`. Returns `true` if T is `any`, `false` otherwise.
-
-Useful for handling functions like `JSON.parse` that return `any`, allowing conditional type logic based on whether a type is `any`.
-
-**Type Parameters:**
-
-- `T`: The type to check
-
-**Returns:**
-
-- `true` if T is `any`, `false` otherwise
-
-**Example:**
-
-```typescript
-import type { IsAny } from "@sdxc/types";
-
-type A = IsAny<any>; // true
-type B = IsAny<unknown>; // false
-type C = IsAny<string>; // false
-
-// Used in conditional types
-type HandleAny<T> = IsAny<T> extends true ? "is any" : "not any";
-```
-
-### `JSONValue`
-
-Represents any JSON-serializable value. This includes primitives (`string`, `number`, `boolean`, `null`), arrays of JSON values, and plain objects with string keys and JSON values.
-
-**Example:**
+Take `JSONValue` as a bound rather than as the parameter type. The caller still gets their own shape back, and anything JSON cannot carry is rejected where it is passed.
 
 ```typescript
 import type { JSONValue } from "@sdxc/types";
 
-let obj: JSONValue = { name: "John", age: 30 };
-let arr: JSONValue = [1, "two", { three: 3 }];
-let str: JSONValue = "hello";
-let num: JSONValue = 42;
-let bool: JSONValue = true;
-let nil: JSONValue = null;
+function enqueue<T extends JSONValue>(payload: T): T {
+	return payload;
+}
+
+let job = enqueue({ id: 1, tags: ["news"], draft: false });
+job.tags; // string[] — the literal shape survives
+
+enqueue({ when: new Date() }); // Error: Date is not a JSONValue
+enqueue({ run: () => 1 }); // Error: functions are not a JSONValue
+enqueue({ missing: undefined }); // Error: undefined is not a JSONValue
 ```
+
+## API
 
 ### `ResolvedType<T>`
 
-Extracts the resolved type from an async function's return type. Combines `Awaited` and `ReturnType` utilities to unwrap both the function return type and the Promise.
+Unwraps the value an async function resolves to, where `T` is a function type `(...args: any) => Promise<any>`.
 
-**Type Parameters:**
+```typescript
+type User = ResolvedType<typeof fetchUser>;
+// same as
+type User = Awaited<ReturnType<typeof fetchUser>>;
+```
 
-- `T`: An async function type `(...args: any) => Promise<any>`
+### `JSONValue`
 
-**Returns:**
+Any JSON-serializable value. The union recurses into itself, so it is the one type here with no shorthand to expand — writing it inline means writing it out in full:
 
-- The unwrapped type that the Promise resolves to
+```typescript
+type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
+```
 
-**Example:**
+Reach for it as a generic bound. As a parameter type it widens the argument to the whole union and the caller loses their shape; as a constraint it only rules values out:
+
+```typescript
+function enqueue<T extends JSONValue>(payload: T): T;
+// payload stays { id: number; tags: string[] }
+
+function enqueue(payload: JSONValue): JSONValue;
+// payload is now the union, and `payload.id` no longer exists
+```
+
+### `IsAny<T>`
+
+Resolves to `true` when `T` is `any`, and `false` for every other type. Use it to branch on values that type as `any`, such as the result of `JSON.parse`.
+
+```typescript
+type Parsed<T> = IsAny<T> extends true ? unknown : T;
+// same as
+type Parsed<T> = (0 extends 1 & T ? true : false) extends true ? unknown : T;
+```
+
+`0 extends 1 & T` holds only for `any`, because intersecting with `any` collapses `1 & T` back to `any`, which `0` does extend. Every other type leaves `1 & T` incompatible with `0`.
+
+```typescript
+type A = IsAny<any>; // true
+type B = IsAny<unknown>; // false
+type C = IsAny<string>; // false
+```
+
+## Pattern: Typing deferred data
+
+A data function can hand back a promise instead of awaiting it, so the caller decides when to resolve. `ResolvedType` names the value on the far side of that promise, letting the consumer type itself without restating the shape.
 
 ```typescript
 import type { ResolvedType } from "@sdxc/types";
 
-async function getData(): Promise<{ items: string[] }> {
-	return { items: [] };
+import { listPosts } from "./posts";
+
+function load() {
+	return { posts: listPosts() }; // a promise, not awaited
 }
 
-type Data = ResolvedType<typeof getData>;
-// Data = { items: string[] }
+interface PostListProps {
+	posts: ResolvedType<typeof listPosts>["posts"];
+}
+
+function PostList(props: PostListProps) {
+	// props.posts is fully typed
+}
+
+let { posts } = load();
+posts.then((data) => PostList({ posts: data.posts }));
 ```
 
-## Pattern: Typing Streamed Loader Data
+## Pattern: A JSON-safe boundary
 
-When using React Router's streaming with `<Await>`, use `ResolvedType` to type the resolved data in child components.
+Anything crossing a serialization boundary — a queue message, a cache entry, a stored column — has to survive `JSON.stringify` and come back intact. Constraining the write side to `JSONValue` moves that from a runtime surprise to a compile error, while the read side still knows the shape it wrote.
+
+```typescript
+import type { JSONValue } from "@sdxc/types";
+
+class Queue {
+	async push<T extends JSONValue>(topic: string, message: T): Promise<void> {
+		await this.transport.send(topic, JSON.stringify(message));
+	}
+}
+
+let queue = new Queue();
+
+await queue.push("posts", { id: 1, publishedAt: "2026-09-04" });
+await queue.push("posts", { id: 1, publishedAt: new Date() }); // Error, caught here
+```
+
+The second call fails at the call site rather than surviving as `"2026-09-04T00:00:00.000Z"` and coming back a string the consumer expected to be a `Date`.
+
+## Pattern: Typing array items from query results
+
+Indexed access reaches into the resolved value, so a single item of a returned array gets a name of its own.
 
 ```typescript
 import type { ResolvedType } from "@sdxc/types";
 
-import type { getMonitorsData } from "./query.server";
+import type { listPosts } from "./posts";
 
-// In the parent route
-export async function loader() {
-	return {
-		monitorsData: getMonitorsData(), // Returns Promise, not awaited
-	};
-}
+type Post = ResolvedType<typeof listPosts>["posts"][number];
 
-// In a child component that receives the resolved data
-interface MonitorsTableProps {
-	monitors: ResolvedType<typeof getMonitorsData>["monitors"];
-}
-
-export function MonitorsTable(props: MonitorsTableProps) {
-	// props.monitors is fully typed
+interface PostRowProps {
+	post: Post;
 }
 ```
 
-## Pattern: Typing Array Items from Query Results
+## Versioning
 
-Access nested types from query results using indexed access.
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
 
-```typescript
-import type { ResolvedType } from "@sdxc/types";
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
 
-import type { getHttpMonitorsData } from "./query.server";
+Depend on one exact date, and move it when you are ready to take the change:
 
-// Get the type of a single monitor from the array
-type Monitor = ResolvedType<typeof getHttpMonitorsData>["httpMonitors"][number];
-
-interface MonitorRowProps {
-	monitor: Monitor;
+```json
+{
+	"dependencies": {
+		"@sdxc/types": "2026.9.4"
+	}
 }
 ```
 
-## Related Packages
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
 
-- [`@sdxc/jobs`](../jobs/README.md) - Uses JSONValue for job message payloads
-- [`@sdxc/validate`](../validate/README.md) - Works with JSONValue for validation input
+## License
 
-## Tips
+MIT
 
-1. **Use `import type`** - Always import types as type-only imports since they are purely type utilities with no runtime code
-2. **Prefer over manual typing** - Using `ResolvedType` keeps types in sync with the actual function return type, avoiding drift when the function changes
-3. **Combine with indexed access** - Use `ResolvedType<typeof fn>["property"]` to extract nested types from complex return objects
-4. **Use `JSONValue` for dynamic data** - When accepting arbitrary JSON data (e.g., API responses, queue messages), use `JSONValue` instead of `unknown` for better type safety
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
