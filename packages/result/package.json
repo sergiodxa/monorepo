@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/result",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Result type for error handling",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

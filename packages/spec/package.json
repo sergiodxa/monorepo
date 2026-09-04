@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/spec",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Executable specification runner for .spec files",
 	"license": "MIT",
 	"bin": {
 		"spec": "./src/cli.ts"

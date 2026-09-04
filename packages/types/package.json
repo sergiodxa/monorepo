@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/types",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Shared TypeScript types",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/sample",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Seeded generation of believable people, places, prose, numbers and identifiers",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

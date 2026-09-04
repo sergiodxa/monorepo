@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/jwt",
 	"version": "0.0.1",
-	"private": true,
+	"description": "JWT payload classes and the keys that sign them",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

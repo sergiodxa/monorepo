@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/dates",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Zone-aware date operations with Intl-only formatting",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

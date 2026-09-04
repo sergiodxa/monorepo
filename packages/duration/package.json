@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/duration",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Typed duration strings converted to milliseconds or seconds",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
