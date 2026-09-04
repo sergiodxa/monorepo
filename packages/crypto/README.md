@@ -388,6 +388,24 @@ let confirmed = await totp.verify(secret, form.code, { window: 1 });
 if (isSuccess(confirmed) && confirmed.data) await enableSecondFactor(secret);
 ```
 
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/crypto": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
+
 ## License
 
 MIT
