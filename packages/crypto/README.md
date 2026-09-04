@@ -8,7 +8,7 @@ WebCrypto primitives — encoding, digests, HMAC, tokens, password hashing, TOTP
 npm add @sdxc/crypto
 ```
 
-Everything runs on the [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API), through `crypto.subtle` and `crypto.getRandomValues` only, so it works on any runtime that provides them. Operations that can fail return a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs with this package and supplies `unwrap`, `isSuccess`, and `isFailure`.
+Everything runs on the [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API), through `crypto.subtle` and `crypto.getRandomValues`, with one exception: scrypt has no Web Crypto equivalent, so password hashing reaches for `node:crypto`, which Node, Bun, and Cloudflare Workers each implement natively. Operations that can fail return a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs with this package and supplies `unwrap`, `isSuccess`, and `isFailure`.
 
 ## Usage
 
@@ -46,7 +46,7 @@ import { password } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
 
 let stored = unwrap(await password.hash(form.password));
-// "$pbkdf2-sha256$i=600000$<salt>$<key>"
+// "$scrypt$ln=15,r=8,p=3$<salt>$<key>"
 
 let valid = unwrap(await password.verify(stored, form.password));
 ```
@@ -209,7 +209,7 @@ Generates a URL-safe unpadded base64url token, `randomToken({ bytes: 32, prefix:
 
 ### Password hashing
 
-PBKDF2-HMAC-SHA256 through WebCrypto, at 600,000 iterations with a 16-byte salt and a 32-byte derived key, stored as `$pbkdf2-sha256$i=600000$<salt>$<key>` with the salt and key in unpadded base64url. Each hash carries the parameters it was made with, so verification uses the stored parameters and current policy rises without a schema change or a mass reset.
+scrypt through `node:crypto`, at `ln=15, r=8, p=3` for 32 MiB of scratch memory, with a 16-byte salt and a 32-byte derived key, stored as `$scrypt$ln=15,r=8,p=3$<salt>$<key>` with the salt and key in unpadded base64url. Each hash carries the parameters it was made with, so verification uses the stored parameters and current policy rises without a schema change or a mass reset.
 
 #### `password.hash(secret: string): Promise<Result<string, CryptoError>>`
 
