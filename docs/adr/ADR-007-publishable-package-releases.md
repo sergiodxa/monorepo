@@ -339,7 +339,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: bun install --frozen-lockfile
+          package-manager-cache: false
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - run: sfw bun install --frozen-lockfile
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -354,7 +358,8 @@ jobs:
 ```
 
 - `contents: write` creates the tag and the Release; `id-token: write` lets npm exchange the GitHub OIDC token for a publish credential; `fetch-depth: 0` gives the script every tag and the full commit range.
-- `setup-node` is configured with `node-version` alone. Node 24 ships the npm the OIDC exchange requires (11.5.1 or later), and with `registry-url` absent the OIDC exchange is the single credential path.
+- `setup-node` sets `node-version` and turns `package-manager-cache` off. Node 24 ships the npm the OIDC exchange requires (11.5.1 or later); with `registry-url` absent the OIDC exchange is the single credential path; and with the cache off the action leaves the install to Bun, since the `npm` entry in the root `devEngines` would otherwise make it cache npm dependencies and fail over the missing `package-lock.json`.
+- Socket Firewall proxies the install's registry traffic and refuses versions Socket knows to be malware, which a lockfile alone cannot, since a version is often flagged after it was pinned.
 - The `release` concurrency group queues a manual dispatch behind a scheduled run, and both complete. GitHub may start a scheduled run some minutes after 00:00 UTC; the version is computed at run start, on the same UTC day.
 - The trusted-publisher entries name `release.yml`, so the workflow keeps its filename.
 

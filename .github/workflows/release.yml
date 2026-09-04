@@ -56,6 +56,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+          # Bun installs the dependencies; the action would otherwise cache npm's, because the
+          # npm entry in the root devEngines reads as "npm is the package manager", and fail
+          # over the package-lock.json this repo does not have.
+          package-manager-cache: false
 
       # Socket Firewall proxies the registry traffic of the install below and refuses any
       # version Socket knows to be malware, which a lockfile cannot do on its own: a version
